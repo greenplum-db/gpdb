@@ -60,6 +60,7 @@
 
 #include "postgres.h"
 #include "fmgr.h"
+#include "common/base64.h"
 #include "common/pg_lzcompress.h"
 #include "utils/builtins.h"
 #include "utils/bytea.h"
@@ -929,152 +930,6 @@ GpMurmurHash64A (const void * key, int len, unsigned int seed)
     return h;
 }
 
-static const char _base64[] =
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-static const int8 b64lookup[128] = {
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63,
-	52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1,
-	-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-	15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1,
-	-1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-	41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1,
-};
-
-
-int
-gp_hll_b64_encode(const char *src, unsigned len, char *dst)
-{
-	char	   *p,
-		*lend = dst + 76;
-	const char *s,
-		*end = src + len;
-	int			pos = 2;
-	uint32		buf = 0;
-
-	s = src;
-	p = dst;
-
-
-	while (s < end)
-	{
-		buf |= (unsigned char)*s << (pos << 3);
-		pos--;
-		s++;
-
-		/* write it out */
-		if (pos < 0)
-		{
-			*p++ = _base64[(buf >> 18) & 0x3f];
-			*p++ = _base64[(buf >> 12) & 0x3f];
-			*p++ = _base64[(buf >> 6) & 0x3f];
-			*p++ = _base64[buf & 0x3f];
-
-			pos = 2;
-			buf = 0;
-		}
-		if (p >= lend)
-		{
-			*p++ = '\n';
-			lend = p + 76;
-		}
-	}
-	if (pos != 2)
-	{
-		*p++ = _base64[(buf >> 18) & 0x3f];
-		*p++ = _base64[(buf >> 12) & 0x3f];
-		*p++ = (pos == 0) ? _base64[(buf >> 6) & 0x3f] : '=';
-		*p++ = '=';
-	}
-
-	return p - dst;
-}
-
-int
-gp_hll_b64_decode(const char *src, unsigned len, char *dst)
-{
-	const char *srcend = src + len,
-		*s = src;
-	char	   *p = dst;
-	char		c;
-	int			b = 0;
-	uint32		buf = 0;
-	int			pos = 0,
-		end = 0;
-
-
-	while (s < srcend)
-	{
-		c = *s++;
-
-		if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
-			continue;
-
-		if (c == '=')
-		{
-			/* end sequence */
-			if (!end)
-			{
-				if (pos == 2)
-					end = 1;
-				else if (pos == 3)
-					end = 2;
-				else
-					ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					errmsg("unexpected \"=\"")));
-			}
-			b = 0;
-		}
-		else
-		{
-			b = -1;
-			if (c > 0 && c < 127)
-				b = b64lookup[(unsigned char)c];
-			if (b < 0)
-				ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("invalid symbol")));
-		}
-		/* add it to buffer */
-		buf = (buf << 6) + b;
-		pos++;
-		if (pos == 4)
-		{
-			*p++ = (buf >> 16) & 255;
-			if (end == 0 || end > 1)
-				*p++ = (buf >> 8) & 255;
-			if (end == 0 || end > 2)
-				*p++ = buf & 255;
-			buf = 0;
-			pos = 0;
-		}
-	}
-
-	if (pos != 0)
-		ereport(ERROR,
-		(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		errmsg("invalid end sequence")));
-
-	return p - dst;
-}
-
-
-int
-gp_b64_enc_len(const char *src, unsigned srclen)
-{
-	/* 3 bytes will be converted to 4, linefeed after 76 chars */
-	return (srclen + 2) * 4 / 3 + srclen / (76 * 3 / 4);
-}
-
-int
-gp_b64_dec_len(const char *src, unsigned srclen)
-{
-	return (srclen * 3) >> 2;
-}
-
 /* PG_GETARG macros for GpHLLCounter's that does version checking */
 #define PG_GETARG_HLL_P(n) pg_check_hll_version((GpHLLCounter) PG_GETARG_BYTEA_P(n))
 #define PG_GETARG_HLL_P_COPY(n) pg_check_hll_version((GpHLLCounter) PG_GETARG_BYTEA_P_COPY(n))
@@ -1083,7 +938,7 @@ gp_b64_dec_len(const char *src, unsigned srclen)
 #define DEFAULT_NDISTINCT   1ULL << 63
 #define DEFAULT_ERROR       0.008125
 
-/* Use the PG_FUNCTION_INFO_V! macro to pass functions to postgres */
+/* Use the PG_FUNCTION_INFO_V1 macro to pass functions to postgres */
 PG_FUNCTION_INFO_V1(gp_hyperloglog_add_item_agg_default);
 
 PG_FUNCTION_INFO_V1(gp_hyperloglog_merge);
@@ -1219,9 +1074,9 @@ gp_hyperloglog_out(PG_FUNCTION_ARGS)
 	bytea    *data = PG_GETARG_BYTEA_P(0);
 
 	datalen = VARSIZE_ANY_EXHDR(data);
-	resultlen = gp_b64_enc_len(VARDATA_ANY(data), datalen);
+	resultlen = pg_b64_enc_len(datalen);
 	result = palloc(resultlen + 1);
-	res = gp_hll_b64_encode(VARDATA_ANY(data),datalen, result);
+	res = pg_b64_encode(VARDATA_ANY(data),datalen, result);
 
 	/* Make this FATAL 'cause we've trodden on memory ... */
 	if (res > resultlen)
@@ -1240,9 +1095,9 @@ gp_hyperloglog_in(PG_FUNCTION_ARGS)
 	int16      datalen, resultlen, res;
 
 	datalen = strlen(data);
-	resultlen = gp_b64_dec_len(data,datalen);
+	resultlen = pg_b64_dec_len(datalen);
 	result = palloc(VARHDRSZ + resultlen);
-	res = gp_hll_b64_decode(data, datalen, VARDATA(result));
+	res = pg_b64_decode(data, datalen, VARDATA(result));
 
 	/* Make this FATAL 'cause we've trodden on memory ... */
 	if (res > resultlen)

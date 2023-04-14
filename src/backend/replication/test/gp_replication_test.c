@@ -54,6 +54,7 @@ test_setup(int pid, WalSndState state, int count)
 	WalSndCtl->walsnds[0].pid = pid;
 	WalSndCtl->walsnds[0].state = state;
 	WalSndCtl->walsnds[0].is_for_gp_walreceiver = true;
+	WalSndCtl->walsnds[0].write = InvalidXLogRecPtr;
 	SpinLockInit(&WalSndCtl->walsnds[0].mutex);
 
 	FTSRepStatusCtl = (FTSReplicationStatusCtlData *)malloc(FTSReplicationStatusShmemSize());
@@ -86,7 +87,7 @@ test_GetMirrorStatus_Pid_Zero(void **state)
 	 */
 	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - 1;
 
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_false(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
@@ -113,7 +114,7 @@ test_GetMirrorStatus_RequestRetry(void **state)
 	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - gp_fts_mark_mirror_down_grace_period;
 
 	expect_ereport();
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_true(response.RequestRetry);
 }
@@ -148,7 +149,7 @@ test_GetMirrorStatus_Exceed_ContinuouslyReplicationAttempt(void **state)
 	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - gp_fts_mark_mirror_down_grace_period;
 
 	expect_ereport();
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_false(response.RequestRetry);
 }
@@ -179,7 +180,7 @@ test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime(void **state)
 	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL)) - gp_fts_mark_mirror_down_grace_period/2;
 
 	expect_ereport();
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_true(response.RequestRetry);
 }
@@ -199,7 +200,7 @@ test_GetMirrorStatus_Overflow(void **state)
 	data->replications[0].replica_disconnected_at = INT64_MAX;
 	PMAcceptingConnectionsStartTime = ((pg_time_t) time(NULL));
 
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_false(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
@@ -222,7 +223,7 @@ test_GetMirrorStatus_WALSNDSTATE_STARTUP(void **state)
 	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at;
 
 	expect_ereport();
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_true(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
@@ -249,7 +250,7 @@ test_GetMirrorStatus_WALSNDSTATE_BACKUP(void **state)
 	 */
 	PMAcceptingConnectionsStartTime = data->replications[0].replica_disconnected_at - 1;
 
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_false(response.RequestRetry);
 	assert_false(response.IsMirrorUp);
@@ -262,11 +263,12 @@ test_GetMirrorStatus_WALSNDSTATE_CATCHUP(void **state)
 	FtsResponse response = { .IsMirrorUp = false };
 	FTSReplicationStatusCtlData *data;
 
-	data = test_setup(1, WALSNDSTATE_CATCHUP, 0);
+	data = test_setup(1, WALSNDSTATE_CATCHUP, 3);
 
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
-	assert_true(response.IsMirrorUp);
+	/* For mirror to be up in catchup state, WalSnd.write must be a valid. */
+	assert_false(response.IsMirrorUp);
 	assert_false(response.IsInSync);
 }
 
@@ -278,10 +280,25 @@ test_GetMirrorStatus_WALSNDSTATE_STREAMING(void **state)
 
 	data = test_setup(1, WALSNDSTATE_STREAMING, 0);
 
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	assert_true(response.IsMirrorUp);
 	assert_true(response.IsInSync);
+}
+
+static void
+test_GetMirrorStatus_up_not_in_sync(void **state)
+{
+	FtsResponse response = { .IsMirrorUp = false };
+	FTSReplicationStatusCtlData *data;
+
+	data = test_setup(1, WALSNDSTATE_CATCHUP, 0);
+	WalSndCtl->walsnds[0].write = 12345;
+
+	GetMirrorStatus(&response, NULL);
+
+	assert_true(response.IsMirrorUp);
+	assert_false(response.IsInSync);
 }
 
 int
@@ -298,7 +315,8 @@ main(int argc, char* argv[])
 		unit_test(test_GetMirrorStatus_WALSNDSTATE_STARTUP),
 		unit_test(test_GetMirrorStatus_WALSNDSTATE_BACKUP),
 		unit_test(test_GetMirrorStatus_WALSNDSTATE_CATCHUP),
-		unit_test(test_GetMirrorStatus_WALSNDSTATE_STREAMING)
+		unit_test(test_GetMirrorStatus_WALSNDSTATE_STREAMING),
+		unit_test(test_GetMirrorStatus_up_not_in_sync)
 	};
 	return run_tests(tests);
 }

@@ -112,7 +112,7 @@ private:
 		CList<SDeepObjectEntry> m_list;
 
 	public:
-		typedef CList<SDeepObjectEntry> CDeepObjectList;
+		using CDeepObjectList = CList<SDeepObjectEntry>;
 
 		// ctor
 		CDeepObject()
@@ -141,12 +141,12 @@ private:
 
 
 	// accessors type definitions
-	typedef CCacheAccessor<SSimpleObject *, ULONG *> CSimpleObjectCacheAccessor;
-	typedef CCacheAccessor<CDeepObject *, CDeepObject::CDeepObjectList *>
-		CDeepObjectCacheAccessor;
+	using CSimpleObjectCacheAccessor = CCacheAccessor<SSimpleObject *, ULONG *>;
+	using CDeepObjectCacheAccessor =
+		CCacheAccessor<CDeepObject *, CDeepObject::CDeepObjectList *>;
 
 	// cache task function pointer
-	typedef void *(*TaskFuncPtr)(void *);
+	using TaskFuncPtr = void *(*) (void *);
 
 public:
 	// unittests

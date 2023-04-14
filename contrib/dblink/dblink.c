@@ -273,8 +273,13 @@ dblink_connect(PG_FUNCTION_ARGS)
 		conname_or_str = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
 	if (connname)
+	{
 		rconn = (remoteConn *) MemoryContextAlloc(TopMemoryContext,
 												  sizeof(remoteConn));
+		rconn->conn = NULL;
+		rconn->openCursorCount = 0;
+		rconn->newXactForCursor = false;
+	}
 
 	/* first check for valid foreign data server */
 	connstr = get_connect_string(conname_or_str);
@@ -2793,7 +2798,8 @@ dblink_res_error(PGconn *conn, const char *conname, PGresult *res,
 
 	ereport(level,
 			(errcode(sqlstate),
-			 message_primary ? errmsg_internal("%s", message_primary) :
+			 (message_primary != NULL && message_primary[0] != '\0') ?
+			 errmsg_internal("%s", message_primary) :
 			 errmsg("could not obtain message string for remote error"),
 			 message_detail ? errdetail_internal("%s", message_detail) : 0,
 			 message_hint ? errhint("%s", message_hint) : 0,

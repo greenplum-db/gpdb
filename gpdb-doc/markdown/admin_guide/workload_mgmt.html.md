@@ -10,7 +10,7 @@ Each database role is associated with a single resource queue; multiple roles ca
 
 When the user submits a query for execution, the query is evaluated against the resource queue's limits. If the query does not cause the queue to exceed its resource limits, then that query will run immediately. If the query causes the queue to exceed its limits \(for example, if the maximum number of active statement slots are currently in use\), then the query must wait until queue resources are free before it can run. Queries are evaluated on a first in, first out basis. If query prioritization is enabled, the active workload on the system is periodically assessed and processing resources are reallocated according to query priority \(see [How Priorities Work](#priorities)\). Roles with the `SUPERUSER` attribute are exempt from resource queue limits. Superuser queries always run immediately regardless of limits imposed by their assigned resource queue.
 
-![](graphics/resource_queues.jpg "Resource Queue Process")
+![Resource Queue Process](graphics/resource_queues.jpg "Resource Queue Process")
 
 Resource queues define classes of queries with similar resource requirements. Administrators should create resource queues for the various types of workloads in their organization. For example, you could create resource queues for the following classes of queries, corresponding to different service level agreements:
 
@@ -36,7 +36,7 @@ For example, the `pg_default` resource queue has ACTIVE\_STATEMENTS = 20.
 
 The Greenplum Database optimizer assigns a numeric cost to each query. If the cost exceeds the `MAX_COST` value set for the resource queue, the query is rejected as too expensive.
 
-**Note:** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
+> **Note** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
 
 When resource queue-based resource management is active, use the `MEMORY_LIMIT` and `ACTIVE_STATEMENTS` limits for resource queues rather than configuring cost-based limits. Even when using GPORCA, Greenplum Database may fall back to using the Postgres Planner for certain queries, so using cost-based limits can lead to unexpected results.
 
@@ -53,7 +53,7 @@ Not all SQL statements submitted through a resource queue are evaluated against 
 
 Also, an SQL statement that is run during the execution of an `EXPLAIN ANALYZE` command is excluded from resource queues.
 
-**Parent topic:**[Managing Resources](wlmgmt.html)
+**Parent topic:** [Managing Resources](wlmgmt.html)
 
 ## <a id="topic111"></a>Resource Queue Example 
 
@@ -61,7 +61,7 @@ The default resource queue, `pg_default`, allows a maximum of 20 active queries 
 
 The following illustration shows an example resource queue configuration for a Greenplum Database system with `gp_vmem_protect_limit` set to 8GB:
 
-![](graphics/resource_queue_examp.png "Resource Queue Configuration Example")
+![Resource Queue Configuration Example](graphics/resource_queue_examp.png "Resource Queue Configuration Example")
 
 This example has three classes of queries with different characteristics and service level agreements \(SLAs\). Three resource queues are configured for them. A portion of the segment memory is reserved as a safety margin.
 
@@ -122,15 +122,13 @@ For example, an administrator creates three resource queues: *adhoc* for ongoing
 
 At runtime, the CPU share of active statements is determined by these priority settings. If queries 1 and 2 from the reporting queue are running simultaneously, they have equal shares of CPU. When an ad-hoc query becomes active, it claims a smaller share of CPU. The exact share used by the reporting queries is adjusted, but remains equal due to their equal priority setting:
 
-![](graphics/gp_query_priority1.png "CPU share readjusted according to priority")
+![CPU share readjusted according to priority](graphics/gp_query_priority1.png "CPU share readjusted according to priority")
 
-**Note:**
-
-The percentages shown in these illustrations are approximate. CPU usage between high, low and maximum priority queues is not always calculated in precisely these proportions.
+> **Note** The percentages shown in these illustrations are approximate. CPU usage between high, low and maximum priority queues is not always calculated in precisely these proportions.
 
 When an executive query enters the group of running statements, CPU usage is adjusted to account for its maximum priority setting. It may be a simple query compared to the analyst and reporting queries, but until it is completed, it will claim the largest share of CPU.
 
-![](graphics/gp_query_priority2.png "CPU share readjusted for maximum priority query")
+![CPU share readjusted for maximum priority query](graphics/gp_query_priority2.png "CPU share readjusted for maximum priority query")
 
 For more information about commands to set priorities, see [Setting Priority Levels](#topic16).
 
@@ -165,20 +163,20 @@ Resource scheduling is enabled by default when you install Greenplum Database, a
     -   `gp_vmem_protect_limit` - Sets the upper boundary that all query processes can consume and should not exceed the amount of physical memory of a segment host. When a segment host reaches this limit during query execution, the queries that cause the limit to be exceeded will be cancelled.
     -   `gp_vmem_idle_resource_timeout` and `gp_vmem_protect_segworker_cache_limit` - used to free memory on segment hosts held by idle database processes. Administrators may want to adjust these settings on systems with lots of concurrency.
     -   `shared_buffers` - Sets the amount of memory a Greenplum server instance uses for shared memory buffers. This setting must be at least 128 kilobytes and at least 16 kilobytes times `max_connections`. The value must not exceed the operating system shared memory maximum allocation request size, `shmmax` on Linux. See the *Greenplum Database Installation Guide* for recommended OS memory settings for your platform.
-3.  The following parameters are related to query prioritization. Note that the following parameters are all *local* parameters, meaning they must be set in the `postgresql.conf` files of the master and all segments:
+3.  The following parameters are related to query prioritization. Note that the following parameters are all *local* parameters, meaning they must be set in the `postgresql.conf` files of the coordinator and all segments:
     -   `gp_resqueue_priority` - The query prioritization feature is enabled by default.
     -   `gp_resqueue_priority_sweeper_interval` - Sets the interval at which CPU usage is recalculated for all active statements. The default value for this parameter should be sufficient for typical database operations.
-    -   `gp_resqueue_priority_cpucores_per_segment` - Specifies the number of CPU cores allocated per segment instance on a segment host. If the segment is configured with primary-mirror segment instance pairs, use the number of primary segment instances on the host in the calculation. The default value is 4 for the master and segment hosts.
+    -   `gp_resqueue_priority_cpucores_per_segment` - Specifies the number of CPU cores allocated per segment instance on a segment host. If the segment is configured with primary-mirror segment instance pairs, use the number of primary segment instances on the host in the calculation. The default value is 4 for the coordinator and segment hosts.
 
-        Each Greenplum host checks its own `postgresql.conf` file for the value of this parameter. This parameter also affects the master host, where it should be set to a value reflecting the higher ratio of CPU cores. For example, on a cluster that has 10 CPU cores per segment host and 4 primary segments per host, you would specify the following values for `gp_resqueue_priority_cpucores_per_segment`:
+        Each Greenplum host checks its own `postgresql.conf` file for the value of this parameter. This parameter also affects the coordinator host, where it should be set to a value reflecting the higher ratio of CPU cores. For example, on a cluster that has 10 CPU cores per segment host and 4 primary segments per host, you would specify the following values for `gp_resqueue_priority_cpucores_per_segment`:
 
-        -   10 on the master and standby master hosts. Typically, only a single master segment instance runs on the master host.
+        -   10 on the coordinator and standby coordinator hosts. Typically, only a single coordinator segment instance runs on the coordinator host.
         -   2.5 on each segment host \(10 cores divided by 4 primary segments\).
         <br/>If the parameter value is not set correctly, either the CPU might not be fully utilized, or query prioritization might not work as expected. For example, if the Greenplum Database cluster has fewer than one segment instance per CPU core on your segment hosts, make sure that you adjust this value accordingly.
 
         Actual CPU core utilization is based on the ability of Greenplum Database to parallelize a query and the resources required to run the query.
 
-        **Note:** Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
+        > **Note** Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
 
 4.  If you wish to view or change any of the resource management parameter values, you can use the `gpconfig` utility.
 5.  For example, to see the setting of a particular parameter:
@@ -188,7 +186,7 @@ Resource scheduling is enabled by default when you install Greenplum Database, a
     
     ```
 
-6.  For example, to set one value on all segment instances and a different value on the master:
+6.  For example, to set one value on all segment instances and a different value on the coordinator:
 
     ```
     $ gpconfig -c gp_resqueue_priority_cpucores_per_segment -v 2 -m 8
@@ -220,9 +218,9 @@ This means that for all roles assigned to the *adhoc* resource queue, only three
 
 ### <a id="topic12"></a>Creating Queues with Memory Limits 
 
-Resource queues with a `MEMORY_LIMIT`setting control the amount of memory for all the queries submitted through the queue. The total memory should not exceed the physical memory available per-segment. Set`MEMORY_LIMIT` to 90% of memory available on a per-segment basis. For example, if a host has 48 GB of physical memory and 6 segment instances, then the memory available per segment instance is 8 GB. You can calculate the recommended `MEMORY_LIMIT` for a single queue as 0.90\*8=7.2 GB. If there are multiple queues created on the system, their total memory limits must also add up to 7.2 GB.
+Resource queues with a `MEMORY_LIMIT` setting control the amount of memory for all the queries submitted through the queue. The total memory should not exceed the physical memory available per-segment. Set `MEMORY_LIMIT` to 90% of memory available on a per-segment basis. For example, if a host has 48 GB of physical memory and 6 segment instances, then the memory available per segment instance is 8 GB. You can calculate the recommended `MEMORY_LIMIT` for a single queue as 0.90\*8=7.2 GB. If there are multiple queues created on the system, their total memory limits must also add up to 7.2 GB.
 
-When used in conjunction with `ACTIVE_STATEMENTS`, the default amount of memory allotted per query is: `MEMORY_LIMIT``/``ACTIVE_STATEMENTS`. When used in conjunction with `MAX_COST`, the default amount of memory allotted per query is: `MEMORY_LIMIT * (query_cost `/`MAX_COST)`. Use `MEMORY_LIMIT` in conjunction with `ACTIVE_STATEMENTS` rather than with `MAX_COST`.
+When used in conjunction with `ACTIVE_STATEMENTS`, the default amount of memory allotted per query is: `MEMORY_LIMIT / ACTIVE_STATEMENTS`. When used in conjunction with `MAX_COST`, the default amount of memory allotted per query is: `MEMORY_LIMIT * (query_cost / MAX_COST)`. Use `MEMORY_LIMIT` in conjunction with `ACTIVE_STATEMENTS` rather than with `MAX_COST`.
 
 For example, to create a resource queue with an active query limit of 10 and a total memory limit of 2000MB \(each query will be allocated 200MB of segment host memory at execution time\):
 
@@ -262,7 +260,7 @@ To create the *executive* queue with maximum priority, an administrator would us
 
 When the query prioritization feature is enabled, resource queues are given a `MEDIUM` priority by default if not explicitly assigned. For more information on how priority settings are evaluated at runtime, see [How Priorities Work](#priorities).
 
-**Important:** In order for resource queue priority levels to be enforced on the active query workload, you must enable the query prioritization feature by setting the associated server configuration parameters. See [Configuring Resource Management](#topic9).
+> **Important** In order for resource queue priority levels to be enforced on the active query workload, you must enable the query prioritization feature by setting the associated server configuration parameters. See [Configuring Resource Management](#topic9).
 
 ## <a id="topic17"></a>Assigning Roles \(Users\) to a Resource Queue 
 
@@ -351,14 +349,14 @@ The `gp_toolkit.gp_resqueue_status` view allows administrators to see status and
 
 ### <a id="topic24"></a>Viewing Resource Queue Statistics 
 
-If you want to track statistics and performance of resource queues over time, you can enable statistics collecting for resource queues. This is done by setting the following server configuration parameter in your master `postgresql.conf` file:
+If you want to track statistics and performance of resource queues over time, you can enable statistics collecting for resource queues. This is done by setting the following server configuration parameter in your coordinator `postgresql.conf` file:
 
 ```
 stats_queue_level = on
 
 ```
 
-Once this is enabled, you can use the `pg_stat_resqueues` system view to see the statistics collected on resource queue usage. Note that enabling this feature does incur slight performance overhead, as each query submitted through a resource queue must be tracked. It may be useful to enable statistics collecting on resource queues for initial diagnostics and administrative planning, and then disable the feature for continued use.
+Once this is enabled, you can use the `pg_stat_resqueues` system view to see the statistics collected on resource queue usage. Note that enabling this feature does incur slight performance overhead, as each query submitted through a resource queue must be tracked. It may be useful to enable statistics collecting on resource queues for initial diagnostics and administrative planning, and then deactivate the feature for continued use.
 
 See the Statistics Collector section in the PostgreSQL documentation for more information about collecting statistics in Greenplum Database.
 
@@ -427,14 +425,14 @@ rolname | rsqname |  pid  | granted | state  |         query         
   daria | webuser | 31905 | f       | active | SELECT * FROM topten;  | namesdb
 ```
 
-Use this output to identify the process id \(pid\) of the statement you want to clear from the resource queue. To clear the statement, you would then open a terminal window \(as the `gpadmin` database superuser or as root\) on the master host and cancel the corresponding process. For example:
+Use this output to identify the process id \(pid\) of the statement you want to clear from the resource queue. To clear the statement, you would then open a terminal window \(as the `gpadmin` database superuser or as root\) on the coordinator host and cancel the corresponding process. For example:
 
 ```
 =# pg_cancel_backend(31905)
 
 ```
 
-**Important:** Do not use the operating system `KILL` command.
+> **Important** Do not use the operating system `KILL` command.
 
 ### <a id="topic28"></a>Viewing the Priority of Active Statements 
 
@@ -454,5 +452,5 @@ To obtain the session ID and statement count parameters required by this functio
 -   The value of the `rqpcommand` column for the `statement_count` parameter
 -   The value of `rqppriority` column is the current priority. You can specify a string value of `MAX`, `HIGH`, `MEDIUM`, or `LOW` as the `priority`.
 
-**Note:** The `gp_adjust_priority()` function affects only the specified statement. Subsequent statements in the same resource queue are run using the queue's normally assigned priority.
+> **Note** The `gp_adjust_priority()` function affects only the specified statement. Subsequent statements in the same resource queue are run using the queue's normally assigned priority.
 

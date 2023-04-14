@@ -1157,6 +1157,10 @@ doputenv(const char *var, const char *val)
 static void
 initialize_environment(void)
 {
+	/*
+	 * Set default application_name.  (The test_function may choose to
+	 * override this, but if it doesn't, we have something useful in place.)
+	 */
 	putenv("PGAPPNAME=pg_regress");
 
 	if (nolocale)
@@ -1233,14 +1237,33 @@ initialize_environment(void)
 		 * we also use psql's -X switch consistently, so that ~/.psqlrc files
 		 * won't mess things up.)  Also, set PGPORT to the temp port, and set
 		 * PGHOST depending on whether we are using TCP or Unix sockets.
+		 *
+		 * This list should be kept in sync with TestLib.pm.
 		 */
-		unsetenv("PGDATABASE");
-		unsetenv("PGUSER");
-		unsetenv("PGSERVICE");
-		unsetenv("PGSSLMODE");
-		unsetenv("PGREQUIRESSL");
+		/* PGCLIENTENCODING, see above */
 		unsetenv("PGCONNECT_TIMEOUT");
 		unsetenv("PGDATA");
+		unsetenv("PGDATABASE");
+		unsetenv("PGGSSENCMODE");
+		unsetenv("PGGSSLIB");
+		/* PGHOSTADDR, see below */
+		unsetenv("PGKRBSRVNAME");
+		unsetenv("PGPASSFILE");
+		unsetenv("PGPASSWORD");
+		unsetenv("PGREQUIREPEER");
+		unsetenv("PGREQUIRESSL");
+		unsetenv("PGSERVICE");
+		unsetenv("PGSERVICEFILE");
+		unsetenv("PGSSLCERT");
+		unsetenv("PGSSLCRL");
+		unsetenv("PGSSLKEY");
+		unsetenv("PGSSLMODE");
+		unsetenv("PGSSLROOTCERT");
+		unsetenv("PGTARGETSESSIONATTRS");
+		unsetenv("PGUSER");
+		/* PGPORT, see below */
+		/* PGHOST, see below */
+
 #ifdef HAVE_UNIX_SOCKETS
 		if (hostname != NULL)
 			doputenv("PGHOST", hostname);
@@ -1868,7 +1891,7 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 	}
 
 	/* Add auto generated init file if it is generated */
-	snprintf(buf, sizeof(buf), "%s.ini", resultsfile);
+	snprintf(buf, sizeof(buf), "%s.initfile", resultsfile);
 	if (file_exists(buf))
 	{
 		snprintf(generated_initfile, sizeof(generated_initfile),
@@ -2454,37 +2477,53 @@ run_single_test(const char *test, test_function tfunc)
 }
 
 /*
+ * Get error message pattern based on return code
+ */
+static const char *
+get_helper_err_pattern(int rc)
+{
+	if (rc == -2)
+	{
+		return "The program \"%s\" is needed by %s "
+			"has differece in build version (check \"GpTest.pm\" import) with "
+			"\"%s\".\nPlease rebuild tests or reconfigure the project.\n";
+	}
+	/* default error message pattern */
+	return "The program \"%s\" is needed by %s "
+		"but was not found in the same directory as \"%s\".\n"
+		"Please check that file exists (or is it a regular file).\n";
+}
+
+/*
  * Find the other binaries that we need. Currently, gpdiff.pl and
  * gpstringsubs.pl.
  */
 static void
 find_helper_programs(const char *argv0)
 {
-	if (find_other_exec(argv0, "gpdiff.pl", "gpdiff.pl " GP_VERSION"\n", gpdiffprog) != 0)
+	int 		rc;
+	char		full_path[MAXPGPATH];
+	const char 	*msg;
+
+	if ((rc = find_other_exec(argv0, "gpdiff.pl", "gpdiff.pl " GP_VERSION"\n", gpdiffprog)) != 0)
 	{
-		char		full_path[MAXPGPATH];
+		msg = get_helper_err_pattern(rc);
 
 		if (find_my_exec(argv0, full_path) < 0)
 			strlcpy(full_path, progname, sizeof(full_path));
 
-		fprintf(stderr,
-				_("The program \"gpdiff.pl\" is needed by %s "
-				  "but was not found in the same directory as \"%s\".\n"),
-				progname, full_path);
+		fprintf(stderr, _(msg), "gpdiff.pl", progname, full_path);
 		exit(1);
 	}
 
-	if (find_other_exec(argv0, "gpstringsubs.pl", "gpstringsubs.pl " GP_VERSION"\n", gpstringsubsprog) != 0)
+	if ((rc = find_other_exec(argv0, "gpstringsubs.pl", "gpstringsubs.pl " GP_VERSION"\n", gpstringsubsprog)) != 0)
 	{
-		char		full_path[MAXPGPATH];
+		msg = get_helper_err_pattern(rc);
 
 		if (find_my_exec(argv0, full_path) < 0)
 			strlcpy(full_path, progname, sizeof(full_path));
 
-		fprintf(stderr,
-				_("The program \"gpstringsubs.pl\" is needed by %s "
-				  "but was not found in the same directory as \"%s\".\n"),
-				progname, full_path);
+		fprintf(stderr, _(msg), "gpstringsubs.pl", progname, full_path);
 		exit(1);
 	}
 }

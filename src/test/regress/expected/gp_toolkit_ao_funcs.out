@@ -10,12 +10,14 @@
 DROP TABLE IF EXISTS toolkit_ao_test;
 CREATE TABLE toolkit_ao_test (a INT, b INT, c INT)
   WITH (appendonly=true) DISTRIBUTED BY (c);
+CREATE INDEX ON toolkit_ao_test(a);
 INSERT INTO toolkit_ao_test SELECT i as a, i as b, 1 FROM generate_series(1,20) AS i;
 UPDATE toolkit_ao_test SET b = 0 WHERE a = 1;
 DELETE FROM toolkit_ao_test WHERE a = 2;
 DROP TABLE IF EXISTS toolkit_aocs_test;
 CREATE TABLE toolkit_aocs_test (a INT, b INT, C INT)
   WITH (appendonly=true, orientation=column) DISTRIBUTED BY (c);
+CREATE INDEX ON toolkit_aocs_test(a);
 INSERT INTO toolkit_aocs_test SELECT i as a, i as b FROM generate_series(1,20) AS i;
 UPDATE toolkit_aocs_test SET b = 0 WHERE a = 1;
 DELETE FROM toolkit_aocs_test WHERE a = 2;
@@ -66,6 +68,16 @@ SELECT count(*) FROM gp_toolkit.__gp_aoseg('toolkit_ao_test');
      1
 (1 row)
 
+SELECT * FROM gp_toolkit.__gp_aoblkdir('toolkit_ao_test');
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+(0 rows)
+
+SELECT * FROM gp_toolkit.__gp_aoblkdir('toolkit_aocs_test');
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+(0 rows)
+
 -- The same, but on the segments.
 SELECT (t).* FROM (
   SELECT gp_toolkit.__gp_aovisimap('toolkit_ao_test') AS t FROM gp_dist_random('gp_id')
@@ -83,4 +95,26 @@ SELECT (t).segno, (t).first_row_num, (t).hidden_tupcount >= 1 as hidden_tupcount
 -------+---------------+-------------------------+-----------------------
      1 |             0 | t                       | t
 (1 row)
+
+SELECT (t).* FROM (
+  SELECT gp_toolkit.__gp_aoblkdir('toolkit_ao_test') AS t FROM gp_dist_random('gp_id')
+) AS x;
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,2)   |     1 |              0 |        0 |            1 |           0 |        20
+ (0,2)   |     1 |              0 |        1 |          101 |         392 |         1
+(2 rows)
+
+SELECT (t).* FROM (
+  SELECT gp_toolkit.__gp_aoblkdir('toolkit_aocs_test') AS t FROM gp_dist_random('gp_id')
+) AS x;
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,4)   |     1 |              0 |        0 |            1 |           0 |        20
+ (0,4)   |     1 |              0 |        1 |          101 |         120 |         1
+ (0,5)   |     1 |              1 |        0 |            1 |           0 |        20
+ (0,5)   |     1 |              1 |        1 |          101 |         120 |         1
+ (0,6)   |     1 |              2 |        0 |            1 |           0 |        20
+ (0,6)   |     1 |              2 |        1 |          101 |          48 |         1
+(6 rows)
 

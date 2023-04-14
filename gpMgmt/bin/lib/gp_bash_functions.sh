@@ -89,7 +89,7 @@ MV=`findCmdInPath mv`
 MKDIR=`findCmdInPath mkdir`
 PING=`findCmdInPath ping`
 RM=`findCmdInPath rm`
-SCP=`findCmdInPath scp`
+RSYNC=`findCmdInPath rsync`
 SED=`findCmdInPath sed`
 SLEEP=`findCmdInPath sleep`
 SORT=`findCmdInPath sort`
@@ -156,7 +156,7 @@ PG_CONF=postgresql.conf
 PG_INTERNAL_CONF=internal.auto.conf
 PG_HBA=pg_hba.conf
 if [ x"$TRUSTED_SHELL" = x"" ]; then TRUSTED_SHELL="$SSH"; fi
-if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$SCP"; fi
+if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$RSYNC  "; fi
 PG_CONF_ADD_FILE=$WORKDIR/postgresql_conf_gp_additions
 DEFAULTDB=template1
 
@@ -176,13 +176,36 @@ WARN_MARK="<<<<<"
 # Functions
 #******************************************************************************
 
-IN_ARRAY () {
-    for v in $2; do
-        if [ x"$1" == x"$v" ]; then
-            return 1
-        fi
-    done
-    return 0
+#
+# Simplified version of _nl_normalize_codeset from glibc
+# https://sourceware.org/git/?p=glibc.git;a=blob;f=intl/l10nflist.c;h=078a450dfec21faf2d26dc5d0cb02158c1f23229;hb=1305edd42c44fee6f8660734d2dfa4911ec755d6#l294
+# Input parameter - string with locale define as [language[_territory][.codeset][@modifier]]
+NORMALIZE_CODESET_IN_LOCALE () {
+	local language_and_territory=$(echo $1 | perl -ne 'print for /(^.+?(?=\.|@|$))/s')
+	local codeset=$(echo $1 | perl -ne 'print for /((?<=\.).+?(?=@|$))/s')
+	local modifier=$(echo -n $1 | perl -ne 'print for /((?<=@).+)/s' )
+
+	local digit_pattern='^[0-9]+$'
+	if [[ $codeset =~ $digit_pattern ]] ;
+	then
+		codeset="iso$codeset"
+	else
+		codeset=$(echo $codeset | perl -pe 's/([[:alpha:]])/\L\1/g; s/[^[:alnum:]]//g')
+	fi
+
+	echo "$language_and_territory$([ ! -z $codeset ] && echo ".$codeset")$([ ! -z $modifier ] && echo "@$modifier")"
+}
+
+LOCALE_IS_AVAILABLE () {
+	local locale=$(NORMALIZE_CODESET_IN_LOCALE $1)
+	local all_available_locales=$(locale -a)
+
+	for v in $all_available_locales; do
+		if [ x"$locale" == x"$v" ] || [ x"$1" == x"$v" ]; then
+			return 1
+		fi
+	done
+	return 0
 }
 
 #
@@ -230,6 +253,9 @@ LOG_MSG () {
 # Limitation: If the token used for separating command output from banner appears in the begining
 # of the line in command output/banner output, in that case only partial command output will be returned
 REMOTE_EXECUTE_AND_GET_OUTPUT () {
+  INITIAL_DEBUG_LEVEL=$DEBUG_LEVEL
+  DEBUG_LEVEL=0
+
   LOG_MSG "[INFO]:-Start Function $FUNCNAME"
   HOST="$1"
   CMD="echo 'GP_DELIMITER_FOR_IGNORING_BASH_BANNER';$2"
@@ -242,6 +268,8 @@ REMOTE_EXECUTE_AND_GET_OUTPUT () {
      LOG_MSG "[INFO]:-Completed $TRUSTED_SHELL $HOST $CMD"
   fi
   LOG_MSG "[INFO]:-End Function $FUNCNAME"
+
+  DEBUG_LEVEL=$INITIAL_DEBUG_LEVEL
   #Return output
   echo "$OUTPUT"
 }
@@ -294,11 +322,9 @@ ERROR_EXIT () {
 ERROR_CHK () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ $# -ne 3 ];then
-		INITIAL_LEVEL=$DEBUG_LEVEL
-		DEBUG_LEVEL=1
-		LOG_MSG "[WARN]:-Incorrect # parameters supplied to $FUNCNAME"
-		DEBUG_LEVEL=$INITIAL_LEVEL
-		return;fi
+		LOG_MSG "[WARN]:-Incorrect # parameters supplied to $FUNCNAME" 1
+		return;
+	fi
 	RETVAL=$1;shift
 	MSG_TXT=$1;shift
 	ACTION=$1 #1=issue warn, 2=fatal
@@ -306,10 +332,7 @@ ERROR_CHK () {
 		LOG_MSG "[INFO]:-Successfully completed $MSG_TXT"
 	else
 		if [ $ACTION -eq 1 ];then
-			INITIAL_LEVEL=$DEBUG_LEVEL
-			DEBUG_LEVEL=1
-			LOG_MSG "[WARN]:-Issue with $MSG_TXT"
-			DEBUG_LEVEL=$INITIAL_LEVEL
+			LOG_MSG "[WARN]:-Issue with $MSG_TXT" 1
 		else
 			LOG_MSG "[INFO]:-End Function $FUNCNAME"
 			ERROR_EXIT "[FATAL]:-Failed to complete $MSG_TXT "
@@ -358,9 +381,9 @@ SED_PG_CONF () {
 				fi
 			else
 				if [ $KEEP_PREV -eq 0 ];then
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/" $FILENAME
+					$SED -i'.bak1' -e "s/^[ ]*${SEARCH_TXT}[ ]*=/${SUB_TXT} #${SEARCH_TXT}/" $FILENAME
 				else
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}.*/${SUB_TXT}/" $FILENAME
+					$SED -i'.bak1' -e "s/^[ ]*${SEARCH_TXT}[ ]*=.*/${SUB_TXT}/" $FILENAME
 				fi
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
@@ -369,7 +392,7 @@ SED_PG_CONF () {
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak1
 				fi
-				$SED -i'.bak2' -e "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" $FILENAME
+				$SED -i'.bak2' -e "s/^[ ]*#${SEARCH_TXT}[ ]*=/${SEARCH_TXT}/" $FILENAME
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
 					ERROR_EXIT "[FATAL]:-Failed to replace #$SEARCH_TXT in $FILENAME"
@@ -400,9 +423,9 @@ SED_PG_CONF () {
 			fi
 		else
 			if [ $KEEP_PREV -eq 0 ];then
-				SED_COMMAND="s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/"
+				SED_COMMAND="s/^[ ]*${SEARCH_TXT}[ ]*=/${SUB_TXT} #${SEARCH_TXT}/"
 			else
-				SED_COMMAND="s/${SEARCH_TXT}.*/${SUB_TXT}/"
+				SED_COMMAND="s/^[ ]*${SEARCH_TXT}[ ]*=.*/${SUB_TXT}/"
 			fi
 			$TRUSTED_SHELL $SED_HOST sed -i'.bak1' -f /dev/stdin "$FILENAME" <<< "$SED_COMMAND" > /dev/null 2>&1
 			if [ $RETVAL -ne 0 ]; then
@@ -412,7 +435,7 @@ SED_PG_CONF () {
 				$TRUSTED_SHELL $SED_HOST "$RM -f ${FILENAME}.bak1" > /dev/null 2>&1
 			fi
 
-			SED_COMMAND="s/^#${SEARCH_TXT}/${SEARCH_TXT}/"
+			SED_COMMAND="s/^[ ]*#${SEARCH_TXT}[ ]*=/${SEARCH_TXT}/"
 			$TRUSTED_SHELL $SED_HOST sed -i'.bak2' -f /dev/stdin "$FILENAME" <<< "$SED_COMMAND" > /dev/null 2>&1
 			if [ $RETVAL -ne 0 ]; then
 				ERROR_EXIT "[FATAL]:-Failed to substitute #${SEARCH_TXT} in $FILENAME on $SED_HOST"
@@ -816,32 +839,31 @@ GET_PG_PID_ACTIVE () {
 		PORT=$1;shift
 		HOST=$1
 		PG_LOCK_FILE="/tmp/.s.PGSQL.${PORT}.lock"
-		PG_LOCK_NETSTAT=""
+		PG_LOCK_SS=""
 		if [ x"" == x"$HOST" ];then
-			#See if we have a netstat entry for this local host
+			#See if we have a ss entry for this local host
 			PORT_ARRAY=(`$SS -an 2>/dev/null |$AWK '{for (i =1; i<=NF ; i++) if ($i==".s.PGSQL.${PORT}") print $i}'|$AWK -F"." '{print $NF}'|$SORT -u`)
 			for P_CHK in ${PORT_ARRAY[@]}
 			do
-				if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi
+				if [ $P_CHK -eq $PORT ];then  PG_LOCK_SS=$PORT;fi
 			done
-			#PG_LOCK_NETSTAT=`$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}"|$AWK '{print $NF}'|$HEAD -1`
 			#See if we have a lock file in /tmp
 			if [ -f ${PG_LOCK_FILE} ];then
 				PG_LOCK_TMP=1
 			else
 				PG_LOCK_TMP=0
 			fi
-			if [ x"" == x"$PG_LOCK_NETSTAT" ] && [ $PG_LOCK_TMP -eq 0 ];then
+			if [ x"" == x"$PG_LOCK_SS" ] && [ $PG_LOCK_TMP -eq 0 ];then
 				PID=0
 				LOG_MSG "[INFO]:-No socket connection or lock file in /tmp found for port=${PORT}"
 			else
 				#Now check the failure combinations
-				if [ $PG_LOCK_TMP -eq 0 ] && [ x"" != x"$PG_LOCK_NETSTAT" ];then
+				if [ $PG_LOCK_TMP -eq 0 ] && [ x"" != x"$PG_LOCK_SS" ];then
 				#Have a process but no lock file
 					LOG_MSG "[WARN]:-No lock file $PG_LOCK_FILE but process running on port $PORT" 1
 					PID=1
 				fi
-				if [ $PG_LOCK_TMP -eq 1 ] && [ x"" == x"$PG_LOCK_NETSTAT" ];then
+				if [ $PG_LOCK_TMP -eq 1 ] && [ x"" == x"$PG_LOCK_SS" ];then
 				#Have a lock file but no process
 					if [ -r ${PG_LOCK_FILE} ];then
 						PID=`$CAT ${PG_LOCK_FILE}|$HEAD -1|$AWK '{print $1}'`
@@ -851,8 +873,8 @@ GET_PG_PID_ACTIVE () {
 					fi
 					LOG_MSG "[WARN]:-Have lock file $PG_LOCK_FILE but no process running on port $PORT" 1
 				fi
-				if [ $PG_LOCK_TMP -eq 1 ] && [ x"" != x"$PG_LOCK_NETSTAT" ];then
-				#Have both a lock file and a netstat process
+				if [ $PG_LOCK_TMP -eq 1 ] && [ x"" != x"$PG_LOCK_SS" ];then
+				#Have both a lock file and a ss process
 					if [ -r ${PG_LOCK_FILE} ];then
 						PID=`$CAT ${PG_LOCK_FILE}|$HEAD -1|$AWK '{print $1}'`
 					else
@@ -867,24 +889,23 @@ GET_PG_PID_ACTIVE () {
 			if [ $RETVAL -ne 0 ];then
 				PID=0
 			else
-				PORT_ARRAY=($( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST $SS -an 2>/dev/null |$AWK '{for (i =1; i<=NF ; i++) if ($i==".s.PGSQL.${PORT}") print $i}'|$AWK -F"." '{print $NF}'|$SORT -u))
+				PORT_ARRAY=($( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$SS -an 2>/dev/null" |$AWK '{for (i =1; i<=NF ; i++) if ($i==".s.PGSQL.${PORT}") print $i}'|$AWK -F"." '{print $NF}'|$SORT -u))
 				for P_CHK in ${PORT_ARRAY[@]}
 				do
-					if [ $P_CHK -eq $PORT ];then  PG_LOCK_NETSTAT=$PORT;fi
+					if [ $P_CHK -eq $PORT ];then  PG_LOCK_SS=$PORT;fi
 				done
-				#PG_LOCK_NETSTAT=`$TRUSTED_SHELL $HOST "$NETSTAT -an 2>/dev/null |$GREP ".s.PGSQL.${PORT}" 2>/dev/null"|$AWK '{print $NF}'|$HEAD -1`
 				PG_LOCK_TMP=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "ls ${PG_LOCK_FILE} 2>/dev/null|$WC -l" )
-				if [ x"" == x"$PG_LOCK_NETSTAT" ] && [ $PG_LOCK_TMP -eq 0 ];then
+				if [ x"" == x"$PG_LOCK_SS" ] && [ $PG_LOCK_TMP -eq 0 ];then
 					PID=0
 					LOG_MSG "[INFO]:-No socket connection or lock file $PG_LOCK_FILE found for port=${PORT}"
 				else
 				#Now check the failure combinations
-					if [ $PG_LOCK_TMP -eq 0 ] && [ x"" != x"$PG_LOCK_NETSTAT" ];then
+					if [ $PG_LOCK_TMP -eq 0 ] && [ x"" != x"$PG_LOCK_SS" ];then
 					#Have a process but no lock file
 						LOG_MSG "[WARN]:-No lock file $PG_LOCK_FILE but process running on port $PORT on $HOST" 1
 						PID=1
 					fi
-					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" == x"$PG_LOCK_NETSTAT" ];then
+					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" == x"$PG_LOCK_SS" ];then
 					#Have a lock file but no process
 						CAN_READ=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "if [ -r ${PG_LOCK_FILE} ];then echo 1;else echo 0;fi" )
 
@@ -896,8 +917,8 @@ GET_PG_PID_ACTIVE () {
 						LOG_MSG "[WARN]:-Have lock file $PG_LOCK_FILE but no process running on port $PORT on $HOST" 1
 						PID=1
 					fi
-					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" != x"$PG_LOCK_NETSTAT" ];then
-					#Have both a lock file and a netstat process
+					if [ $PG_LOCK_TMP -eq 1 ] && [ x"" != x"$PG_LOCK_SS" ];then
+					#Have both a lock file and a ss process
 						CAN_READ=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "if [ -r ${PG_LOCK_FILE} ];then echo 1;else echo 0;fi" )
 						if [ $CAN_READ -eq 1 ];then
 							PID=$( REMOTE_EXECUTE_AND_GET_OUTPUT $HOST "$CAT ${PG_LOCK_FILE}|$HEAD -1 2>/dev/null"|$AWK '{print $1}' )
@@ -1158,6 +1179,29 @@ SET_GP_USER_PW () {
 
     ERROR_CHK $? "update Greenplum superuser password" 1
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
+}
+
+SET_VAR () {
+	#
+	# MPP-13617: If segment contains a ~, we assume ~ is the field delimiter.
+	# Otherwise we assume : is the delimiter.  This allows us to easily 
+	# handle IPv6 addresses which may contain a : by using a ~ as a delimiter. 
+	#
+	I=$1
+	case $I in
+		*~*)
+		S="~"
+			;;
+		*)
+		S=":"
+			;;
+	esac
+	GP_HOSTNAME=`$ECHO $I|$CUT -d$S -f1`
+	GP_HOSTADDRESS=`$ECHO $I|$CUT -d$S -f2`
+	GP_PORT=`$ECHO $I|$CUT -d$S -f3`
+	GP_DIR=`$ECHO $I|$CUT -d$S -f4`
+	GP_DBID=`$ECHO $I|$CUT -d$S -f5`
+	GP_CONTENT=`$ECHO $I|$CUT -d$S -f6`
 }
 
 #******************************************************************************

@@ -36,7 +36,6 @@ CDXLLogicalTVF::CDXLLogicalTVF(CMemoryPool *mp, IMDId *mdid_func,
 	  m_mdname(mdname),
 	  m_dxl_col_descr_array(pdrgdxlcd)
 {
-	GPOS_ASSERT(m_func_mdid->IsValid());
 	GPOS_ASSERT(m_return_type_mdid->IsValid());
 }
 

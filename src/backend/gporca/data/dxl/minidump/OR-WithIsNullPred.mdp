@@ -18,7 +18,7 @@ explain select * from test_stat where c <> 'J' or c is null;
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -178,7 +178,7 @@ explain select * from test_stat where c <> 'J' or c is null;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.32856.1.1" Name="test_stat" Rows="2001360.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.32856.1.1" Name="test_stat" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32856.1.1" Name="test_stat" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -212,7 +212,6 @@ explain select * from test_stat where c <> 'J' or c is null;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.32856.1.1.9" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -562,7 +561,7 @@ explain select * from test_stat where c <> 'J' or c is null;
           </dxl:IsNull>
         </dxl:Or>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.32856.1.1" TableName="test_stat">
+          <dxl:TableDescriptor Mdid="6.32856.1.1" TableName="test_stat">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.20.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -625,7 +624,7 @@ explain select * from test_stat where c <> 'J' or c is null;
               </dxl:IsNull>
             </dxl:Or>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.32856.1.1" TableName="test_stat">
+          <dxl:TableDescriptor Mdid="6.32856.1.1" TableName="test_stat">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.20.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

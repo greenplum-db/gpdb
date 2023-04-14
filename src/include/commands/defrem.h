@@ -50,9 +50,6 @@ extern char *ChooseRelationNameWithCache(const char *name1, const char *name2,
 										 const char *label, Oid namespaceid,
 										 bool isconstraint,
 										 struct HTAB *cache);
-extern char *ChooseIndexName(const char *tabname, Oid namespaceId,
-				List *colnames, List *exclusionOpNames,
-				bool primary, bool isconstraint);
 extern List *ChooseIndexColumnNames(List *indexElems);
 extern bool CheckIndexCompatible(Oid oldId,
 								 const char *accessMethodName,
@@ -170,9 +167,6 @@ extern Oid	get_index_am_oid(const char *amname, bool missing_ok);
 extern Oid	get_table_am_oid(const char *amname, bool missing_ok);
 extern Oid	get_am_oid(const char *amname, bool missing_ok);
 extern char *get_am_name(Oid amOid);
-
-/* Greenplum specific */
-extern Oid  get_table_am_handler_oid(const char *amname, bool missing_ok);
 
 /* support routines in commands/define.c */
 

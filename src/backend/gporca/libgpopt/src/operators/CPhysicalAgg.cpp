@@ -387,6 +387,13 @@ CPhysicalAgg::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 {
 	GPOS_ASSERT(0 == child_index);
 
+	if (prsRequired->IsOriginNLJoin())
+	{
+		CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+			CRewindabilitySpec::ErtNone, prsRequired->Emht());
+		return prs;
+	}
+
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
 }
 
@@ -464,10 +471,19 @@ CPhysicalAgg::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 			exprhdl.DeriveScalarFunctionProperties(1)->Efs())
 	{
 		return GPOS_NEW(mp) CDistributionSpecStrictSingleton(
-			CDistributionSpecSingleton::EstMaster);
+			CDistributionSpecSingleton::EstCoordinator);
 	}
 	else if (CDistributionSpec::EdtStrictReplicated == pds->Edt())
 	{
+		// Aggregate functions that are not sensitive to the order of data (eg: sum, avg, min, max, count)
+		// can be executed safely on replicated slices and do not need to be broadcasted/gathered, allowing
+		// for more performant plans in some cases
+		if (exprhdl.DeriveContainsOnlyReplicationSafeAggFuncs(1))
+		{
+			return GPOS_NEW(mp) CDistributionSpecReplicated(
+				CDistributionSpec::EdtStrictReplicated);
+		}
+
 		// Aggregate functions which are not trivial and which are sensitive to
 		// the order of their input cannot guarantee replicated data. If the child
 		// was replicated, we can no longer guarantee that property. Therefore

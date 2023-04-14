@@ -27,6 +27,7 @@ NOTICE:  winagg: tuplestore fitted in memory  (seg2 slice1 127.0.0.1:7004 pid=43
          ->  Sort  (cost=0.00..431.00 rows=1 width=8) (actual time=5.298..6.324 rows=10001 loops=1)
                Sort Key: y
                Sort Method:  quicksort  Memory: 5040kB
+               Executor Memory: 3677kB  Segments: 3  Max: 1226kB (segment 0)
                ->  Seq Scan on dummy_table  (cost=0.00..431.00 rows=1 width=8) (actual time=0.036..3.299 rows=10001 loops=1)
  Planning Time: 5.241 ms
    (slice0)    Executor memory: 48K bytes.
@@ -34,7 +35,20 @@ NOTICE:  winagg: tuplestore fitted in memory  (seg2 slice1 127.0.0.1:7004 pid=43
  Memory used:  2048kB
  Optimizer: Pivotal Optimizer (GPORCA)
  Execution Time: 17.225 ms
-(13 rows)
+(14 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -69,14 +83,29 @@ NOTICE:  winagg: tuplestore spilled to disk  (seg2 slice1 127.0.0.1:7004 pid=434
          ->  Sort  (cost=0.00..431.00 rows=1 width=8) (actual time=3.125..4.135 rows=10001 loops=1)
                Sort Key: y
                Sort Method:  external merge  Disk: 6144kB
+               Executor Memory: 1268kB  Segments: 3  Max: 423kB (segment 0)
                ->  Seq Scan on dummy_table  (cost=0.00..431.00 rows=1 width=8) (actual time=0.032..1.589 rows=10001 loops=1)
  Planning Time: 3.174 ms
    (slice0)    Executor memory: 42K bytes.
    (slice1)    Executor memory: 391K bytes avg x 3 workers, 391K bytes max (seg0).  Work_mem: 391K bytes max.
  Memory used:  1024kB
+ Memory wanted:  3924kB
  Optimizer: Pivotal Optimizer (GPORCA)
  Execution Time: 15.235 ms
-(13 rows)
+(15 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, true)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           1
+(2 rows)
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -111,6 +140,7 @@ NOTICE:  distinct winagg sortstats: sort operation fitted in memory  (seg2 slice
          ->  Sort  (cost=2446.06..2517.81 rows=28700 width=8) (actual time=3.678..4.683 rows=10001 loops=1)
                Sort Key: y
                Sort Method:  external merge  Disk: 6144kB
+               Executor Memory: 3677kB  Segments: 3  Max: 1226kB (segment 0)
                ->  Seq Scan on dummy_table  (cost=0.00..321.00 rows=28700 width=8) (actual time=0.030..1.919 rows=10001 loops=1)
  Planning Time: 1.695 ms
    (slice0)    Executor memory: 50K bytes.
@@ -118,7 +148,21 @@ NOTICE:  distinct winagg sortstats: sort operation fitted in memory  (seg2 slice
  Memory used:  1024kB
  Optimizer: Postgres query optimizer
  Execution Time: 18.747 ms
-(13 rows)
+(14 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, true)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+NOTICE:  distinct winagg sortstats: sort operation fitted in memory
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -153,14 +197,30 @@ NOTICE:  distinct winagg sortstats: sort operation spilled to disk  (seg2 slice1
          ->  Sort  (cost=2446.06..2517.81 rows=28700 width=8) (actual time=4.278..5.449 rows=10001 loops=1)
                Sort Key: y
                Sort Method:  external merge  Disk: 9216kB
+               Executor Memory: 1268kB  Segments: 3  Max: 423kB (segment 0)
                ->  Seq Scan on dummy_table  (cost=0.00..321.00 rows=28700 width=8) (actual time=0.029..1.746 rows=10001 loops=1)
  Planning Time: 1.509 ms
    (slice0)    Executor memory: 39K bytes.
    (slice1)    Executor memory: 275K bytes avg x 3 workers, 275K bytes max (seg0).  Work_mem: 275K bytes max.
  Memory used:  128kB
+ Memory wanted:  3924kB
  Optimizer: Postgres query optimizer
  Execution Time: 22.056 ms
-(13 rows)
+(15 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, true)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+NOTICE:  distinct winagg sortstats: sort operation spilled to disk
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           1
+(2 rows)
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;

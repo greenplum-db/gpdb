@@ -29,6 +29,7 @@
 #include "catalog/pg_amproc.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
+#include "catalog/pg_inherits.h"
 #include "catalog/pg_type.h"
 #include "commands/defrem.h"
 #include "nodes/makefuncs.h"
@@ -272,6 +273,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	int			rtindex;
 	ParseCallbackState pcbstate;
 	bool lockUpgraded = false;
+	LOCKMODE    lockmode;
 
 	/*
 	 * ENRs hide tables of the same name, so we need to check for them first.
@@ -318,11 +320,35 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock, &lockUpgraded);
 	}
 
+	lockmode = lockUpgraded ? ExclusiveLock : RowExclusiveLock;
+
+	if (Gp_role == GP_ROLE_DISPATCH &&
+		pstate->p_is_insert &&
+		!gp_enable_global_deadlock_detector &&
+		pstate->p_target_relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+	{
+		/*
+		 * Greenplum specific code:
+		 * When GDD is disabled, and we are inserting into a partition table,
+		 * then we need to lock all leaf partitions. The reason is:
+		 *    1. we cannot predict which leaf partitions will be inserted
+		 *    2. if we do not hold lock on leaf partitions on QD, then this
+		 *       insert statement will be dispatched to QEs, and not dispatch
+		 *       is async, so on some segments, this session's insert will
+		 *       first hold locks on leaf partition and block others; however,
+		 *       on some segments, this session's insert will be blocked by
+		 *       others. Thus we have risk to have global deadlock.
+		 * See issue https://github.com/greenplum-db/gpdb/issues/13652 for details.
+		 */
+		(void) find_all_inheritors(RelationGetRelid(pstate->p_target_relation),
+								   lockmode, NULL);
+	}
+
 	/*
 	 * Now build an RTE.
 	 */
 	rte = addRangeTableEntryForRelation(pstate, pstate->p_target_relation,
-										lockUpgraded ? ExclusiveLock : RowExclusiveLock, /* CDB */
+										lockmode, /* CDB */
 										relation->alias, inh, false);
 	pstate->p_target_rangetblentry = rte;
 
@@ -1610,21 +1636,6 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 		res_colvars = list_concat(res_colvars, l_colvars);
 		res_colnames = list_concat(res_colnames, r_colnames);
 		res_colvars = list_concat(res_colvars, r_colvars);
-
-		/*
-		 * Check alias (AS clause), if any.
-		 */
-		if (j->alias)
-		{
-			if (j->alias->colnames != NIL)
-			{
-				if (list_length(j->alias->colnames) > list_length(res_colnames))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("column alias list for \"%s\" has too many entries",
-									j->alias->aliasname)));
-			}
-		}
 
 		/*
 		 * Now build an RTE for the result of the join

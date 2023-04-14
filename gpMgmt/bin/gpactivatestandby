@@ -82,7 +82,7 @@ def parseargs():
 
     # Standby activation options section
     optgrp = OptionGroup(parser, 'Standby activation options')
-    optgrp.add_option('-d', '--master-data-directory', dest='coordinator_data_dir',
+    optgrp.add_option('-d', '--master-data-directory', '--coordinator-data-directory', dest='coordinator_data_dir',
                       type='string', help='standby coordinator data directory')
     optgrp.add_option('-f', '--force', action='store_true',
                       help='force activation if standby process not running')
@@ -104,7 +104,7 @@ def parseargs():
 
 
     if not options.coordinator_data_dir:
-        logger.info('Option -d or --master-data-directory not set. Checking environment variable COORDINATOR_DATA_DIRECTORY')
+        logger.info('Option -d or --master-data-directory or --coordinator-data-directory not set. Checking environment variable COORDINATOR_DATA_DIRECTORY')
         env_coordinator_data_dir = gp.get_coordinatordatadir()
         # check for environment variable COORDINATOR_DATA_DIRECTORY
         if not env_coordinator_data_dir:
@@ -316,20 +316,29 @@ def promote_standby(coordinator_data_dir):
     """Promote standby"""
 
     logger.info('Promoting standby...')
+    # Keeping the timeout here consistent with
+    # MIRROR_PROMOTION_TIMEOUT which is defined as 10 mins
     cmd = gp.Command('pg_ctl promote',
-                     'pg_ctl promote -D %s' % coordinator_data_dir)
+                     'pg_ctl promote -D %s -t 600' % coordinator_data_dir)
     cmd.run(validateAfter=True)
+    logger.info('Standby coordinator is promoted')
 
-    logger.debug('Waiting for connection...')
-    for i in range(50):
+    # After promotion run CHECKPOINT to force the new TimeLineID to be
+    # written to the pg_control file. This happens in async way in
+    # server since pg_ctl promote uses fast_promote. Given gpstart
+    # depends on TLI to be reflect after right after promotion mainly
+    # for testing we force CHECKPOINT here. We loop here since the
+    # pg_ctl promote wait logic simply checks for IN_PRODUCTION in the
+    # promoted coordinator's control file but the coordinator's
+    # postmaster will actually not be ready yet to accept database
+    # connections for a small period of time. Use the same
+    # MIRROR_PROMOTION_TIMEOUT of 10 minutes here as well.
+    logger.debug('forcing CHECKPOINT to reflect new TimeLineID...')
+    for i in range(600):
         try:
             dburl = dbconn.DbURL()
             conn = dbconn.connect(dburl, utility=True, logConn=False)
-            # When the new coordinator is available for connections, we should
-            # run a CHECKPOINT to force the new TimeLineID to be written to
-            # the pg_control file.
             dbconn.execSQL(conn, 'CHECKPOINT')
-            logger.info('Standby coordinator is promoted')
             conn.close()
             return True
         except pygresql.InternalError as e:
@@ -337,7 +346,6 @@ def promote_standby(coordinator_data_dir):
         time.sleep(1)
 
     return False
-
 
 #-------------------------------------------------------------------------
 # Main
@@ -371,8 +379,7 @@ try:
     if not requires_restart:
         res = promote_standby(options_.coordinator_data_dir)
         if not res:
-            raise GpActivateStandbyException('Either the set port is incorrect or '
-                                             'the postmaster could not come up.')
+            raise GpActivateStandbyException('Timed out waiting for promoted coordinator to accept database connections.')
 
     # now we can access the catalog.  promote action has already updated
     # catalog, so array.coordinator is the old (promoted) standby at this point.

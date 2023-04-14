@@ -42,10 +42,14 @@ Module contents:
     spiffInterval() - get begin/end datetime given any subset of begin/end/duration
 """
 
+import io
+import csv
 from datetime import date, datetime
 import re
 import sys
 import time
+
+csvDelimeter = '|'
 
 timestampPattern = re.compile(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d(\.\d*)?')
 # This pattern matches the date and time stamp at the beginning of a line
@@ -264,6 +268,8 @@ class CsvFlatten(object):
 
     def __init__(self,iterable):
         self.source = iter(iterable)
+        self.buffer = io.StringIO()
+        self.writer = csv.writer(self.buffer, delimiter=csvDelimeter, quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
     def __iter__(self):
         return self
@@ -273,8 +279,11 @@ class CsvFlatten(object):
         #we need to make a minor format change to the log level field so that
         # our single regex will match both.
         item[16] = item[16] + ": "
-        return '|'.join(item) + "\n"
 
+        self.buffer.truncate(0)
+        self.writer.writerow(item)
+
+        return self.buffer.getvalue()
 
 #------------------------------- Spying --------------------------------
 
@@ -697,13 +706,13 @@ def MatchColumns(iterable, cols):
                 n = 1
                 out = []
 
-                for c in s.split('|'):
+                for c in csv.reader(s, delimiter=csvDelimeter, quotechar='"'):
                     if n in cols:
                         out.append(c)
                     n += 1
                 if len(out):
                     #print out
-                    ret.append('|'.join(out) + "\n")
+                    ret.append(csvDelimeter.join(out) + "\n")
             yield ret
 
 #-------------------------------- Slicing --------------------------------

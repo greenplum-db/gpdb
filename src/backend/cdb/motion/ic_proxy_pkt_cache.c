@@ -26,7 +26,6 @@
  *-------------------------------------------------------------------------
  */
 
-#define IC_PROXY_LOG_LEVEL WARNING
 #include "ic_proxy.h"
 #include "ic_proxy_pkt_cache.h"
 
@@ -113,7 +112,8 @@ ic_proxy_pkt_cache_alloc(size_t *pkt_size)
 	memset(cpkt, 0, ic_proxy_pkt_cache.pkt_size);
 #endif
 
-	ic_proxy_log(LOG, "pkt-cache: allocated, %d free, %d total",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		   "ic-proxy: pkt-cache: allocated, %d free, %d total",
 				 ic_proxy_pkt_cache.n_free, ic_proxy_pkt_cache.n_total);
 	return cpkt;
 }
@@ -159,7 +159,8 @@ ic_proxy_pkt_cache_free(void *pkt)
 		ic_proxy_pkt_cache.freelist = cpkt;
 		ic_proxy_pkt_cache.n_free++;
 
-		ic_proxy_log(LOG, "pkt-cache: recycled, %d free, %d total",
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+			   "ic-proxy: pkt-cache: recycled, %d free, %d total",
 					 ic_proxy_pkt_cache.n_free, ic_proxy_pkt_cache.n_total);
 	}
 }

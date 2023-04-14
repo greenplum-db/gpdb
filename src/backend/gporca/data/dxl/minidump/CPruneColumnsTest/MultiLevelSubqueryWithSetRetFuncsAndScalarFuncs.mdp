@@ -173,7 +173,7 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
       <dxl:ColumnStatistics Mdid="1.49493.1.1.1" Name="c" Width="11.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.49493.1.1.0" Name="d" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.49493.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.49493.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.49493.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -204,7 +204,6 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49493.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -281,7 +280,7 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.49493.1.1" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.49493.1.1" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="d" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="c" TypeMdid="0.1042.1.0" ColWidth="10"/>
@@ -301,14 +300,14 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000046" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000079" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="13" Alias="count">
             <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="14" ColName="ColRef_0014" TypeMdid="0.20.1.0"/>
+                <dxl:Ident ColId="14" ColName="ColRef_0014" TypeMdid="0.20.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>
@@ -319,7 +318,7 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000078" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="14" Alias="ColRef_0014">
@@ -330,7 +329,7 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
           <dxl:SortingColumnList/>
           <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000049" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:GroupingColumns/>
             <dxl:ProjList>
@@ -346,7 +345,7 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
             <dxl:Filter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000049" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="12" Alias="j">
@@ -372,7 +371,7 @@ select count(*) from (select (select 1 as p) i, unnest(string_to_array(c, '|')) 
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.49493.1.1" TableName="foo">
+                <dxl:TableDescriptor Mdid="6.49493.1.1" TableName="foo">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="d" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="c" TypeMdid="0.1042.1.0" ColWidth="10"/>

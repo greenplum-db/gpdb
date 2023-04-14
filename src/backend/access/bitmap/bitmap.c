@@ -144,7 +144,7 @@ bmbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	_bitmap_init_buildstate(index, &bmstate);
 
 	/* do the heap scan */
-	reltuples = table_index_build_scan(heap, index, indexInfo, true, true,
+	reltuples = table_index_build_scan(heap, index, indexInfo, false, true,
 									   bmbuildCallback, (void *) &bmstate,
 									   NULL);
 	/* clean up the build state */
@@ -238,6 +238,26 @@ stream_begin_iterate(StreamNode *self, StreamBMIterator *iterator)
 
 		iterator->opaque = so;
 	}
+}
+
+/*
+ * bminitbitmap() -- return an empty bitmap.
+ * */
+void
+bminitbitmap(Node **bmNodeP)
+{
+    IndexStream  *is;
+
+    is = (IndexStream *)palloc0(sizeof(IndexStream));
+    is->type = BMS_INDEX;
+    is->begin_iterate = stream_begin_iterate;
+    is->free = indexstream_free;
+
+    StreamBitmap *sb = makeNode(StreamBitmap);
+    sb->streamNode = is;
+    *bmNodeP = (Node *) sb;
+
+    return;
 }
 
 /*
@@ -866,6 +886,9 @@ copy_scan_desc(IndexScanDesc scan)
  *
  * If newentry is false, we're calling the function with a partially filled
  * page table entry. Otherwise, the entry is empty.
+ *
+ * This function is only used in stream bitmap scan, more specifically, it's
+ * BitmapIndexScan + BitmapHeapScan.
  */
 
 static bool
@@ -936,7 +959,7 @@ restart:
 	 */
 	if (words->firstTid < result->nextTid)
 	{
-		Assert(words->nwords < 1);
+		Assert(words->nwords == 0);
 		return false;
 	}
 

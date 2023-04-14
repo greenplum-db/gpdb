@@ -145,6 +145,7 @@ order by 1,2;
  Sort  (cost=9.02..9.11 rows=37 width=40) (actual time=0.826..0.839 rows=7 loops=1)
    Sort Key: r.a, r.b
    Sort Method:  quicksort  Memory: 50kB
+   Executor Memory: 26kB  Segments: 1  Max: 26kB (segment -1)
    ->  Append  (cost=3.92..8.06 rows=37 width=40) (actual time=0.539..0.806 rows=7 loops=1)
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.92..4.70 rows=36 width=40) (actual time=0.538..0.744 rows=6 loops=1)
                ->  HashAggregate  (cost=3.92..4.10 rows=12 width=40) (actual time=0.356..0.364 rows=4 loops=1)
@@ -162,8 +163,26 @@ order by 1,2;
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution Time: 1.461 ms
-(20 rows)
+(21 rows)
 
+set optimizer_trace_fallback = off;
+select * from
+  test_util.extract_plan_stats($$
+select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
+order by 1,2;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
+
+set optimizer_trace_fallback = on;
 -- create a view as we otherwise have to repeat this query a few times.
 create view v_pagg_test as
 select

@@ -145,18 +145,21 @@ SET enable_hashjoin TO off;  -- otherwise hash join might win
 EXPLAIN (COSTS OFF)
 SELECT t1.ctid, t1.*, t2.ctid, t2.*
 FROM tidscan t1 JOIN tidscan t2 ON t1.ctid = t2.ctid WHERE t1.id = 1;
-                          QUERY PLAN                           
----------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (tidscan.ctid = tidscan_1.ctid)
-         ->  Seq Scan on tidscan
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: tidscan.ctid
+               ->  Seq Scan on tidscan
+                     Filter: (id = 1)
          ->  Hash
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: tidscan_1.ctid
                      ->  Seq Scan on tidscan tidscan_1
-                           Filter: (id = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(12 rows)
 
 SELECT t1.ctid, t1.*, t2.ctid, t2.*
 FROM tidscan t1 JOIN tidscan t2 ON t1.ctid = t2.ctid WHERE t1.id = 1;
@@ -168,18 +171,21 @@ FROM tidscan t1 JOIN tidscan t2 ON t1.ctid = t2.ctid WHERE t1.id = 1;
 EXPLAIN (COSTS OFF)
 SELECT t1.ctid, t1.*, t2.ctid, t2.*
 FROM tidscan t1 LEFT JOIN tidscan t2 ON t1.ctid = t2.ctid WHERE t1.id = 1;
-                      QUERY PLAN                      
-------------------------------------------------------
- Hash Right Join
-   Hash Cond: (tidscan.ctid = tidscan_1.ctid)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Seq Scan on tidscan
-   ->  Hash
-         ->  Gather Motion 3:1  (slice2; segments: 3)
-               ->  Seq Scan on tidscan tidscan_1
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (tidscan.ctid = tidscan_1.ctid)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: tidscan.ctid
+               ->  Seq Scan on tidscan
                      Filter: (id = 1)
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: tidscan_1.ctid
+                     ->  Seq Scan on tidscan tidscan_1
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(12 rows)
 
 SELECT t1.ctid, t1.*, t2.ctid, t2.*
 FROM tidscan t1 LEFT JOIN tidscan t2 ON t1.ctid = t2.ctid WHERE t1.id = 1;
@@ -325,4 +331,23 @@ SELECT count(*) FROM tenk1 t1 JOIN tenk1 t2 ON t1.ctid = t2.ctid and t1.gp_segme
 (1 row)
 
 RESET enable_hashjoin;
+-- check predicate lock on CTID
+-- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: Greenplum does not support serializable transactions,
+-- ingore the below test case.
+-- start_ignore
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+SELECT * FROM tidscan WHERE ctid = '(0,1)';
+ id 
+----
+  1
+(1 row)
+
+-- locktype should be 'tuple'
+SELECT locktype, mode FROM pg_locks WHERE pid = pg_backend_pid() AND mode = 'SIReadLock';
+ locktype | mode 
+----------+------
+(0 rows)
+
+ROLLBACK;
+-- end_ignore
 DROP TABLE tidscan;

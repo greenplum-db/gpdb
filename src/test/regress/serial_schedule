@@ -1,3 +1,6 @@
+# required setup steps
+test: test_setup
+
 # src/test/regress/serial_schedule
 # This should probably be in an order similar to parallel_schedule.
 test: tablespace
@@ -81,6 +84,7 @@ test: roleattributes
 test: create_am
 test: hash_func
 test: errors
+test: infinite_recurse
 test: sanity_check
 test: select_into
 test: select_distinct
@@ -133,6 +137,7 @@ test: dbsize
 test: misc_functions
 test: sysviews
 test: tsrf
+test: tid
 test: tidscan
 test: rules
 test: psql

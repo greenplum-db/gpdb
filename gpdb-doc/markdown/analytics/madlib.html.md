@@ -18,7 +18,7 @@ MADlib’s suite of SQL-based algorithms run at scale within a single Greenplum 
 
 MADlib is part of the database fabric with no changes to the Greenplum architecture. This makes it easy for database administrators to deploy and manage since it is not a separate daemon or separate software running outside the database.
 
-![](graphics/gp_greenplum_diagram.png "Greenplum MADlib Analytics Architecture")
+![Greenplum with MADlib](graphics/gp_greenplum_diagram.png "Greenplum MADlib Analytics Architecture")
 
 ## <a id="section_lmf_pv1_rqb"></a>Machine Learning 
 
@@ -55,7 +55,7 @@ The R package for PivotalR can be found at [https://cran.r-project.org/web/packa
 
 ## <a id="topic3"></a>Installing MADlib 
 
-**Note**: MADlib requires the `m4` macro processor version 1.4.13 or later.
+> **Note** MADlib requires the `m4` macro processor version 1.4.13 or later.
 
 To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib package and then install the MADlib function libraries on all databases that will use MADlib.
 
@@ -68,18 +68,18 @@ If you have GPUs installed on some or across all hosts in the cluster, then the 
 Before you install the MADlib package, make sure that your Greenplum database is running, you have sourced `greenplum_path.sh`, and that the`$MASTER_DATA_DIRECTORY` and `$GPHOME` variables are set.
 
 1.  Download the MADlib extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
-2.  Copy the MADlib package to the Greenplum Database master host.
+2.  Copy the MADlib package to the Greenplum Database coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics MADlib** software.
 4.  Unpack the MADlib distribution package. For example:
 
     ```
-    $ tar xzvf madlib-1.18.0+2-gp6-rhel7-x86_64.tar.gz
+    $ tar xzvf madlib-1.18.0+2-gp7-rhel8-x86_64.tar.gz
     ```
 
 5.  Install the software package by running the `gppkg` command. For example:
 
     ```
-    $ gppkg -i ./madlib-1.18.0+2-gp6-rhel7-x86_64/madlib-1.18.0+2-gp6-rhel7-x86_64.gppkg
+    $ gppkg -i ./madlib-1.18.0+2-gp7-rhel8-x86_64/madlib-1.18.0+2-gp7-rhel8-x86_64.gppkg
     ```
 
 
@@ -91,10 +91,10 @@ After installing the MADlib package, run the `madpack` command to add MADlib fun
 $ madpack [-s <schema_name>] -p greenplum -c <user>@<host>:<port>/<database> install
 ```
 
-For example, this command creates MADlib functions in the Greenplum database `testdb` running on server `mdw` on port `5432`. The `madpack` command logs in as the user `gpadmin` and prompts for password. The target schema is `madlib`.
+For example, this command creates MADlib functions in the Greenplum database `testdb` running on server `cdw` on port `5432`. The `madpack` command logs in as the user `gpadmin` and prompts for password. The target schema is `madlib`.
 
 ```
-$ madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb install
+$ madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb install
 ```
 
 After installing the functions, The Greenplum Database `gpadmin` superuser role should grant all privileges on the target schema \(in the example `madlib`\) to users who will be accessing MADlib functions. Users without access to the functions will get the error `ERROR: permission denied for schema MADlib`.
@@ -102,10 +102,10 @@ After installing the functions, The Greenplum Database `gpadmin` superuser role 
 The madpack `install-check` option runs test using Madlib modules to check the MADlib installation:
 
 ```
-$ madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb install-check
+$ madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb install-check
 ```
 
-**Note:** The command `madpack -h` displays information for the utility.
+> **Note** The command `madpack -h` displays information for the utility.
 
 ## <a id="topic_eqm_klx_hw"></a>Upgrading MADlib 
 
@@ -118,19 +118,19 @@ For information about the upgrade paths that MADlib supports, see the MADlib sup
 To upgrade MADlib, run the `gppkg` utility with the `-u` option. This command upgrades an installed MADlib package to MADlib 1.18.0+2.
 
 ```
-$ gppkg -u madlib-1.18.0+2-gp6-rhel7-x86_64.gppkg
+$ gppkg -u madlib-1.18.0+2-gp7-rhel8-x86_64.gppkg
 ```
 
 ### <a id="topic_bql_bgd_3w"></a>Upgrading MADlib Functions 
 
 After you upgrade the MADlib package from one major version to another, run `madpack upgrade` to upgrade the MADlib functions in a database schema.
 
-**Note:** Use `madpack upgrade` only if you upgraded a major MADlib package version, for example from 1.15 to 1.18.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
+> **Note** Use `madpack upgrade` only if you upgraded a major MADlib package version, for example from 1.15 to 1.18.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
 
 This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
 
 ```
-madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb upgrade
+madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb upgrade
 ```
 
 ## <a id="topic6"></a>Uninstalling MADlib 
@@ -145,7 +145,7 @@ When you remove MADlib support from a database, routines that you created in the
 Use the `madpack uninstall` command to remove MADlib objects from a Greenplum database. For example, this command removes MADlib objects from the database `testdb`.
 
 ```
-$ madpack  -s madlib -p greenplum -c gpadmin@mdw:5432/testdb uninstall
+$ madpack  -s madlib -p greenplum -c gpadmin@cdw:5432/testdb uninstall
 ```
 
 ### <a id="topic8"></a>Uninstall the Greenplum Database MADlib Package 
@@ -153,7 +153,7 @@ $ madpack  -s madlib -p greenplum -c gpadmin@mdw:5432/testdb uninstall
 If no databases use the MADlib functions, use the Greenplum `gppkg` utility with the `-r` option to uninstall the MADlib package. When removing the package you must specify the package and version. This example uninstalls MADlib package version 1.18.
 
 ```
-$ gppkg -r madlib-1.18.0+2-gp5-rhel7-x86_64
+$ gppkg -r madlib-1.18.0+2-gp5-rhel8-x86_64
 ```
 
 You can run the `gppkg` utility with the options `-q --all` to list the installed extensions and their versions.
@@ -209,7 +209,7 @@ SELECT madlib.linregr_train (
 
 The `madlib.linregr_train()` function can have additional arguments to set grouping columns and to calculate the heteroskedasticity of the model.
 
-**Note:** The intercept is computed by setting one of the independent variables to a constant `1`, as shown in the preceding example.
+> **Note** The intercept is computed by setting one of the independent variables to a constant `1`, as shown in the preceding example.
 
 Running this query against the `regr_example` table creates the `regr_example_model` table with one row of data:
 

@@ -145,7 +145,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.1" Name="j" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.0" Name="i" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1695223.1.1" Name="pt2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.1695223.1.0" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1695223.1.0" Name="pt2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -181,17 +181,16 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1695223001.1.0"/>
-          <dxl:Partition Mdid="0.1695223002.1.0"/>
-          <dxl:Partition Mdid="0.1695223003.1.0"/>
-          <dxl:Partition Mdid="0.1695223004.1.0"/>
-          <dxl:Partition Mdid="0.1695223005.1.0"/>
+          <dxl:Partition Mdid="6.1695223001.1.0"/>
+          <dxl:Partition Mdid="6.1695223002.1.0"/>
+          <dxl:Partition Mdid="6.1695223003.1.0"/>
+          <dxl:Partition Mdid="6.1695223004.1.0"/>
+          <dxl:Partition Mdid="6.1695223005.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223001.1.0" Name="pt2_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223001.1.0" Name="pt2_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -227,7 +226,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -245,7 +243,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223002.1.0" Name="pt2_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223002.1.0" Name="pt2_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -281,7 +279,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -299,7 +296,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223003.1.0" Name="pt2_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223003.1.0" Name="pt2_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -335,7 +332,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -353,7 +349,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223004.1.0" Name="pt2_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223004.1.0" Name="pt2_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -389,7 +385,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -407,7 +402,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223005.1.0" Name="pt2_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223005.1.0" Name="pt2_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -443,7 +438,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -461,7 +455,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223.1.1" Name="pt2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1695223.1.1" Name="pt2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -497,17 +491,16 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1695223001.1.1"/>
-          <dxl:Partition Mdid="0.1695223002.1.1"/>
-          <dxl:Partition Mdid="0.1695223003.1.1"/>
-          <dxl:Partition Mdid="0.1695223004.1.1"/>
-          <dxl:Partition Mdid="0.1695223005.1.1"/>
+          <dxl:Partition Mdid="6.1695223001.1.1"/>
+          <dxl:Partition Mdid="6.1695223002.1.1"/>
+          <dxl:Partition Mdid="6.1695223003.1.1"/>
+          <dxl:Partition Mdid="6.1695223004.1.1"/>
+          <dxl:Partition Mdid="6.1695223005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223001.1.1" Name="pt2_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223001.1.1" Name="pt2_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -543,7 +536,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -561,7 +553,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223002.1.1" Name="pt2_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223002.1.1" Name="pt2_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -597,7 +589,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -615,7 +606,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223003.1.1" Name="pt2_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223003.1.1" Name="pt2_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -651,7 +642,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -669,7 +659,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223004.1.1" Name="pt2_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223004.1.1" Name="pt2_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -705,7 +695,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -723,7 +712,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1695223005.1.1" Name="pt2_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1695223005.1.1" Name="pt2_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -759,7 +748,6 @@ explain select i, count(j) from pt2  where k=5 group by i;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.1695490005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -788,18 +776,18 @@ explain select i, count(j) from pt2  where k=5 group by i;
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1695490001.1.0"/>
-          <dxl:Partition Mdid="0.1695490002.1.0"/>
-          <dxl:Partition Mdid="0.1695490003.1.0"/>
-          <dxl:Partition Mdid="0.1695490004.1.0"/>
-          <dxl:Partition Mdid="0.1695490005.1.0"/>
+          <dxl:Partition Mdid="6.1695490001.1.0"/>
+          <dxl:Partition Mdid="6.1695490002.1.0"/>
+          <dxl:Partition Mdid="6.1695490003.1.0"/>
+          <dxl:Partition Mdid="6.1695490004.1.0"/>
+          <dxl:Partition Mdid="6.1695490005.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1695490001.1.0"/>
-          <dxl:Partition Mdid="0.1695490002.1.0"/>
-          <dxl:Partition Mdid="0.1695490003.1.0"/>
-          <dxl:Partition Mdid="0.1695490004.1.0"/>
-          <dxl:Partition Mdid="0.1695490005.1.0"/>
+          <dxl:Partition Mdid="6.1695490001.1.0"/>
+          <dxl:Partition Mdid="6.1695490002.1.0"/>
+          <dxl:Partition Mdid="6.1695490003.1.0"/>
+          <dxl:Partition Mdid="6.1695490004.1.0"/>
+          <dxl:Partition Mdid="6.1695490005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -879,7 +867,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
             <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.1695223.1.1" TableName="pt2">
+            <dxl:TableDescriptor Mdid="6.1695223.1.1" TableName="pt2">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -926,7 +914,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
             <dxl:ProjElem ColId="10" Alias="count">
               <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                 <dxl:ValuesList ParamType="aggargs">
-                <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.20.1.0"/>
+                  <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.20.1.0"/>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -997,7 +985,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
                     <dxl:ProjElem ColId="11" Alias="ColRef_0011">
                       <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                         <dxl:ValuesList ParamType="aggargs">
-                        <dxl:Ident ColId="1" ColName="j" TypeMdid="0.23.1.0"/>
+                          <dxl:Ident ColId="1" ColName="j" TypeMdid="0.23.1.0"/>
                         </dxl:ValuesList>
                         <dxl:ValuesList ParamType="aggdirectargs"/>
                         <dxl:ValuesList ParamType="aggorder"/>
@@ -1030,7 +1018,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
                     </dxl:SortingColumnList>
                     <dxl:LimitCount/>
                     <dxl:LimitOffset/>
-                    <dxl:Append IsTarget="false" IsZapped="false">
+                    <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="6.000159" Rows="1.000000" Width="24"/>
                       </dxl:Properties>
@@ -1046,45 +1034,31 @@ explain select i, count(j) from pt2  where k=5 group by i;
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:IndexScan IndexScanDirection="Forward">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="6.000159" Rows="1.000000" Width="24"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="12" Alias="i">
-                            <dxl:Ident ColId="12" ColName="i" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="13" Alias="j">
-                            <dxl:Ident ColId="13" ColName="j" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="14" Alias="k">
-                            <dxl:Ident ColId="14" ColName="k" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:IndexCondList>
-                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                            <dxl:Ident ColId="14" ColName="k" TypeMdid="0.23.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
-                          </dxl:Comparison>
-                        </dxl:IndexCondList>
-                        <dxl:IndexDescriptor Mdid="0.1695490003.1.0" IndexName="pt2_idx_1_prt_1"/>
-                        <dxl:TableDescriptor Mdid="0.1695223003.1.1" TableName="pt2_prt_3">
-                          <dxl:Columns>
-                            <dxl:Column ColId="12" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="13" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="14" Attno="3" ColName="k" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="15" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="16" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="17" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="18" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="19" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="20" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="21" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:IndexScan>
-                    </dxl:Append>
+                      <dxl:IndexCondList>
+                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                          <dxl:Ident ColId="2" ColName="k" TypeMdid="0.23.1.0"/>
+                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
+                        </dxl:Comparison>
+                      </dxl:IndexCondList>
+                      <dxl:Partitions>
+                        <dxl:Partition Mdid="6.1695223003.1.1"/>
+                      </dxl:Partitions>
+                      <dxl:IndexDescriptor Mdid="0.1695490.1.0" IndexName="pt2_idx_1_prt_1"/>
+                      <dxl:TableDescriptor Mdid="6.1695223.1.1" TableName="pt2">
+                        <dxl:Columns>
+                          <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
+                          <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
+                          <dxl:Column ColId="2" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
+                          <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                          <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                          <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                          <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                          <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                          <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                          <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:DynamicIndexScan>
                   </dxl:Sort>
                 </dxl:Aggregate>
               </dxl:Result>

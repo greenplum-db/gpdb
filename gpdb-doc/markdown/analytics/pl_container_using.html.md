@@ -19,7 +19,7 @@ You cannot, by default, restrict the number of running PL/Container container in
 
 With PL/Container 1.2.0 and later, you can use Greenplum Database resource groups to manage and limit the total CPU and memory resources of containers in PL/Container runtimes. For more information about enabling, configuring, and using Greenplum Database resource groups, refer to [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html) in the *Greenplum Database Administrator Guide*.
 
-**Note:** If you do not explicitly configure resource groups for a PL/Container runtime, its container instances are limited only by system resources. The containers may consume resources at the expense of the Greenplum Database server.
+> **Note** If you do not explicitly configure resource groups for a PL/Container runtime, its container instances are limited only by system resources. The containers may consume resources at the expense of the Greenplum Database server.
 
 Resource groups for external components such as PL/Container use Linux control groups \(cgroups\) to manage component-level use of memory and CPU resources. When you manage PL/Container resources with resource groups, you configure both a memory limit and a CPU limit that Greenplum Database applies to all container instances that share the same PL/Container runtime configuration.
 
@@ -62,7 +62,7 @@ Perform the following procedure to configure PL/Container to use Greenplum Datab
 
 1.  If you have not already configured and enabled resource groups in your Greenplum Database deployment, configure cgroups and enable Greenplum Database resource groups as described in [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic71717999) in the *Greenplum Database Administrator Guide*.
 
-    **Note:** If you have previously configured and enabled resource groups in your deployment, ensure that the Greenplum Database resource group `gpdb.conf` cgroups configuration file includes a `memory { }` block as described in the previous link.
+    > **Note** If you have previously configured and enabled resource groups in your deployment, ensure that the Greenplum Database resource group `gpdb.conf` cgroups configuration file includes a `memory { }` block as described in the previous link.
 
 2.  Analyze the resource usage of your Greenplum Database deployment. Determine the percentage of resource group CPU and memory resources that you want to allocate to PL/Container Docker containers.
 3.  Determine how you want to distribute the total PL/Container CPU and memory resources that you identified in the step above among the PL/Container runtimes. Identify:
@@ -107,23 +107,19 @@ Perform the following procedure to configure PL/Container to use Greenplum Datab
 
 When PL/Container logging is enabled, you can set the log level with the Greenplum Database server configuration parameter [log\_min\_messages](../ref_guide/config_params/guc-list.html). The default log level is `warning`. The parameter controls the PL/Container log level and also controls the Greenplum Database log level.
 
--   PL/Container logging is enabled or disabled for each runtime ID with the `setting` attribute `use_container_logging`. The default is no logging.
--   The PL/Container log information is the information from the UDF that is run in the Docker container. By default, the PL/Container log information is sent to a system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the `journald` service.
--   The Greenplum Database log information is sent to log file on the Greenplum Database master.
+-   PL/Container logging is enabled or deactivated for each runtime ID with the `setting` attribute `use_container_logging`. The default is no logging.
+-   The PL/Container log information is the information from the UDF that is run in the Docker container. By default, the PL/Container log information is sent to a system service. On Red Hat 8 systems, the log information is sent to the `journald` service.
+-   The Greenplum Database log information is sent to log file on the Greenplum Database coordinator.
 -   When testing or troubleshooting a PL/Container UDF, you can change the Greenplum Database log level with the `SET` command. You can set the parameter in the session before you run your PL/Container UDF. This example sets the log level to `debug1`.
 
     ```
     SET log_min_messages='debug1' ;
     ```
 
-    **Note:** The parameter `log_min_messages` controls both the Greenplum Database and PL/Container logging, increasing the log level might affect Greenplum Database performance even if a PL/Container UDF is not running.
+    > **Note** The parameter `log_min_messages` controls both the Greenplum Database and PL/Container logging, increasing the log level might affect Greenplum Database performance even if a PL/Container UDF is not running.
 
 
-## <a id="topic_rh3_p3q_dw"></a>PL/Container Functions 
-
-When you enable PL/Container in a database of a Greenplum Database system, the language `plcontainer` is registered in that database. Specify `plcontainer` as a language in a UDF definition to create and run user-defined functions in the procedural languages supported by the PL/Container Docker images.
-
-### <a id="topic_c3v_clg_wkb"></a>Limitations 
+## <a id="topic_rh3_p3q_dw"></a>PL/Container Function Limitations 
 
 Review the following limitations when creating and using PL/Container PL/Python and PL/R functions:
 
@@ -133,20 +129,21 @@ Review the following limitations when creating and using PL/Container PL/Python 
 -   The `plpy.execute()` methods `nrows()` and `status()` are not supported.
 -   The PL/Python function `plpy.SPIError()` is not supported.
 -   Running the `SAVEPOINT` command with `plpy.execute()` is not supported.
--   The `DO` command \(anonymous code block\) is supported only with PL/Container 3 \(currently a Beta feature\).
 -   Container flow control is not supported.
 -   Triggers are not supported.
 -   `OUT` parameters are not supported.
 -   The Python `dict` type cannot be returned from a PL/Python UDF. When returning the Python `dict` type from a UDF, you can convert the `dict` type to a Greenplum Database user-defined data type \(UDT\).
 
-### <a id="using_functions"></a>Using PL/Container functions 
+## <a id="using_functions"></a>Developing PL/Container functions 
 
-A UDF definition that uses PL/Container must have the these items.
+When you enable PL/Container in a database of a Greenplum Database system, the language `plcontainer` is registered in that database. Specify `plcontainer` as a language in a UDF definition to create and run user-defined functions in the procedural languages supported by the PL/Container Docker images.
+
+A UDF definition that uses PL/Container must have these items.
 
 -   The first line of the UDF must be `# container: ID`
 -   The `LANGUAGE` attribute must be `plcontainer`
 
-The ID is the name that PL/Container uses to identify a Docker image. When Greenplum Database runs a UDF on a host, the Docker image on the host is used to start a Docker container that runs the UDF. In the XML configuration file `plcontainer_configuration.xml`, there is a `runtime` XML element that contains a corresponding `id` XML element that specifies the Docker container startup information. See [../utility\_guide/ref/plcontainer-configuration.md\#](../utility_guide/ref/plcontainer-configuration.html) for information about how PL/Container maps the ID to a Docker image.
+The ID is the name that PL/Container uses to identify a Docker image. When Greenplum Database runs a UDF on a host, the Docker image on the host is used to start a Docker container that runs the UDF. In the XML configuration file `plcontainer_configuration.xml`, there is a `runtime` XML element that contains a corresponding `id` XML element that specifies the Docker container startup information. See [plcontainer Configuration File](../utility_guide/ref/plcontainer-configuration.html) for information about how PL/Container maps the ID to a Docker image.
 
 The PL/Container configuration file is read only on the first invocation of a PL/Container function in each Greenplum Database session that runs PL/Container functions. You can force the configuration file to be re-read by performing a `SELECT` command on the view `plcontainer_refresh_config` during the session. For example, this `SELECT` command forces the configuration file to be read.
 
@@ -154,7 +151,7 @@ The PL/Container configuration file is read only on the first invocation of a PL
 SELECT * FROM plcontainer_refresh_config;
 ```
 
-The command runs a PL/Container function that updates the configuration on the master and segment instances and returns the status of the refresh.
+The command runs a PL/Container function that updates the configuration on the coordinator and segment instances and returns the status of the refresh.
 
 ```
  gp_segment_id | plcontainer_refresh_local_config
@@ -171,7 +168,7 @@ Also, you can show all the configurations in the session by performing a `SELECT
 SELECT * FROM plcontainer_show_config;
 ```
 
-Running the command executes a PL/Container function that displays configuration information from the master and segment instances. This is an example of the start and end of the view output.
+Running the command executes a PL/Container function that displays configuration information from the coordinator and segment instances. This is an example of the start and end of the view output.
 
 ```
 INFO:  plcontainer: Container 'plc_py_test' configuration
@@ -216,9 +213,9 @@ If a normal \(non-superuser\) Greenplum Database user runs the function, the fun
 
 When Greenplum Database runs a PL/Container UDF, Query Executer \(QE\) processes start Docker containers and reuse them as needed. After a certain amount of idle time, a QE process quits and destroys its Docker containers. You can control the amount of idle time with the Greenplum Database server configuration parameter [gp\_vmem\_idle\_resource\_timeout](../ref_guide/config_params/guc-list.html). Controlling the idle time might help with Docker container reuse and avoid the overhead of creating and starting a Docker container.
 
-**Warning:** Changing `gp_vmem_idle_resource_timeout` value, might affect performance due to resource issues. The parameter also controls the freeing of Greenplum Database resources other than Docker containers.
+> **Caution** Changing `gp_vmem_idle_resource_timeout` value, might affect performance due to resource issues. The parameter also controls the freeing of Greenplum Database resources other than Docker containers.
 
-### <a id="function_examples"></a>Examples 
+### <a id="function_examples"></a>Basic Function Examples 
 
 The values in the `# container` lines of the examples, `plc_python_shared` and `plc_r_shared`, are the `id` XML elements defined in the `plcontainer_config.xml` file. The `id` element is mapped to the `image` element that specifies the Docker image to be started. If you configured PL/Container with a different ID, change the value of the `# container` line. For information about configuring PL/Container and viewing the configuration settings, see [plcontainer Configuration File](../utility_guide/ref/plcontainer-configuration.html).
 
@@ -243,9 +240,9 @@ $$ LANGUAGE plcontainer;
 
 If the `# container` line in a UDF specifies an ID that is not in the PL/Container configuration file, Greenplum Database returns an error when you try to run the UDF.
 
-### <a id="topic_ctk_xjg_wkb"></a>About PL/Container Running PL/Python 
+### <a id="topic_ctk_xjg_wkb"></a>About PL/Python 2 Functions in PL/Container
 
-In the Python language container, the module `plpy` is implemented. The module contains these methods:
+In the Python 2 language container, the module `plpy` is implemented. The module contains these methods:
 
 -   `plpy.execute(stmt)` - Runs the query string `stmt` and returns query result in a list of dictionary objects. To be able to access the result fields ensure your query returns named fields.
 -   `plpy.prepare(stmt[, argtypes])` - Prepares the execution plan for a query. It is called with a query string and a list of parameter types, if you have parameter references in the query.
@@ -257,7 +254,7 @@ In the Python language container, the module `plpy` is implemented. The module c
 -   `plpy.warning(msg)` - Sends a WARNING message to the Greenplum Database log.
 -   `plpy.error(msg)` - Sends an ERROR message to the Greenplum Database log. An ERROR message raised in Greenplum Database causes the query execution process to stop and the transaction to rollback.
 -   `plpy.fatal(msg)` - Sends a FATAL message to the Greenplum Database log. A FATAL message causes Greenplum Database session to be closed and transaction to be rolled back.
--   `plpy.subtransaction()` - Manages `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/9.4/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
+-   `plpy.subtransaction()` - Manages `plpy.execute` calls in an explicit subtransaction. See [Explicit Subtransactions](https://www.postgresql.org/docs/12/plpython-subtransaction.html) in the PostgreSQL documentation for additional information about `plpy.subtransaction()`.
 
 If an error of level `ERROR` or `FATAL` is raised in a nested Python function call, the message includes the list of enclosing functions.
 
@@ -273,13 +270,13 @@ PL/Container does not support this Greenplum Database PL/Python feature:
 
 -   Multi-dimensional arrays.
 
-Also, the Python module has two global dictionary objects that retain the data between function calls. They are named GD and SD. GD is used to share the data between all the function running within the same container, while SD is used for sharing the data between multiple calls of each separate function. Be aware that accessing the data is possible only within the same session, when the container process lives on a segment or master. Be aware that for idle sessions Greenplum Database terminates segment processes, which means the related containers would be shut down and the data from GD and SD lost.
+Also, the Python module has two global dictionary objects that retain the data between function calls. They are named GD and SD. GD is used to share the data between all the function running within the same container, while SD is used for sharing the data between multiple calls of each separate function. Be aware that accessing the data is possible only within the same session, when the container process lives on a segment or coordinator. Be aware that for idle sessions Greenplum Database terminates segment processes, which means the related containers would be shut down and the data from GD and SD lost.
 
 For information about PL/Python, see [PL/Python Language](pl_python.html).
 
-For information about the `plpy` methods, see [https://www.postgresql.org/docs/9.4/plpython-database.htm](https://www.postgresql.org/docs/9.4/plpython-database.html).
+For information about the `plpy` methods, see [https://www.postgresql.org/docs/12/plpython-database.htm](https://www.postgresql.org/docs/12/plpython-database.html).
 
-### <a id="topic_plc_py3"></a>About PL/Container Running PL/Python with Python 3 
+### <a id="topic_plc_py3"></a>About PL/Python 3 Functions in PL/Container 
 
 PL/Container for Greenplum Database 5 supports Python version 3.6+. PL/Container for Greenplum Database 6 supports Python 3.7+.
 
@@ -290,7 +287,173 @@ Keep in mind that UDFs that you created for Python 2 may not run in PL/Container
 -   Changes to Python - [What’s New in Python 3](https://docs.python.org/3/whatsnew/3.0.html)
 -   Porting from Python 2 to 3 - [Porting Python 2 Code to Python 3](https://docs.python.org/3/howto/pyporting.html)
 
-### <a id="topic_lqz_t3q_dw"></a>About PL/Container Running PL/R 
+### <a id="cuda"></a>Developing CUDA API Functions with PL/Container
+
+Beginning with version 2.2, PL/Container supports developing Compute Unified Device Architecture (CUDA) API functions that utilize NVIDIA GPU hardware. This is accomplished by using the NVIDIA Container Toolkit `nvidia-docker` image and the `pycuda` python library. This procedure explains how to set up PL/Container for developing these functions.
+
+#### Prerequisites
+
+To develop CUDA functions with PL/Container you require:
+- A Docker installation having Docker engine version v19.03 or newer 
+- PL/Container version 2.2.0 or newer 
+- At least one NVIDIA GPU with the required GPU driver installed on your host
+
+See the [Getting Started](https://github.com/NVIDIA/nvidia-docker) section of the NVIDIA Container Toolkit GitHub project for information about installing the NVIDIA driver or Docker engine for your Linux distribution.
+
+Follow the [Installation Guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for the NVIDIA Container Toolkit GitHub project to install the `nvidia-docker` container.
+
+Verify that the Docker image can use your installed GPU(s) by running a command similar to:
+
+```
+$ docker run --rm --gpus=all -it nvidia/cuda:11.7.0-devel-ubuntu20.04 nvidia-smi –L
+```
+
+(Substitute the actual `nvidia-docker` image name and tag that you installed.) The command output should show that GPU hardware is utilized. For example:
+
+```
+GPU 0: NVIDIA GeForce RTX 2070 (UUID: GPU-d4d626a3-bbc9-ef88-98dc-44423ad081bf) 
+```
+
+Record the name of the GPU device ID (0 in the above example) or the device UUID (GPU-d4d626a3-bbc9-ef88-98dc-44423ad081bf) that you want to assign to the PL/Container image.
+
+#### Install and Customize the PL/Container Image
+
+1. Download the `plcontainer-python3-image-2.2.0-gp7.tar.gz` file from the **Greenplum Procedural Languages** section on [Tanzu Network](https://network.pivotal.io/products/vmware-tanzu-greenplum).
+
+2. Load the downloaded PL/Container image into Docker:
+    ```
+    $ docker image load < plcontainer-python3-image-2.2.0-gp7.tar.gz
+    ```
+
+3. Customize the PL/Container image to add the required CUDA runtime and `pycuda` library. The following example Dockerfile contents show how to add CUDA 11.7 and `pycuda` 2021.1 to the PL/Container image. Use a text editor to create the Dockerfile:
+    ```
+    FROM pivotaldata/plcontainer_python3_shared:devel 
+    
+    ENV XKBLAYOUT=en 
+    ENV DEBIAN_FRONTEND=noninteractive 
+    
+    # Install CUDA from https://developer.nvidia.com/cuda-downloads 
+    # By downloading and using the software, you agree to fully comply with the terms and conditions of the CUDA EULA. 
+    RUN true &&\ 
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin && \ 
+        mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600 && \ 
+        wget https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda-repo-ubuntu1804-11-7-local_11.7.0-515.43.04-1_amd64.deb && \ 
+        dpkg -i cuda-repo-ubuntu1804-11-7-local_11.7.0-515.43.04-1_amd64.deb && \ 
+        cp /var/cuda-repo-ubuntu1804-11-7-local/cuda-*-keyring.gpg /usr/share/keyrings/ && \ 
+        apt-get update && \ 
+        apt-get -y install cuda && \ 
+        rm cuda-repo-ubuntu1804-11-7-local_11.7.0-515.43.04-1_amd64.deb &&\ 
+        rm -rf /var/lib/apt/lists/* 
+    
+    ENV PATH="/usr/local/cuda-11.7/bin/:${PATH}" 
+    ENV LD_LIBRARY_PATH="/usr/local/cuda-11.7/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" 
+    ENV CUDA_HOME="/usr/local/cuda-11.7" 
+
+    RUN true && \ 
+        python3.7 -m pip --no-cache-dir install typing-extensions==3.10.0.0 && \ 
+        python3.7 -m pip --no-cache-dir install Mako==1.2.0 && \ 
+        python3.7 -m pip --no-cache-dir install platformdirs==2.5.2 && \ 
+        python3.7 -m pip --no-cache-dir install pytools==2022.1.2 && \ 
+        python3.7 -m pip --no-cache-dir install pycuda==2021.1 
+    ```
+
+5. Build the a customized container using your Dockerfile:
+    ```
+    $ docker build . -t localhost/plcontainer_python3_cuda_shared:latest
+    ```
+    > **Note** The remaining instructions use the example image tag `localhost/plcontainer_python3_cuda_shared:latest`. Substitute the actual tag name as needed.
+
+6. Import the image runtime to PL/Container:
+    ```
+    $ plcontainer runtime-add -r plc_python_cuda_shared -I localhost/plcontainer_python3_cuda_shared:latest -l python3  
+    ```
+
+7. Edit the image runtime to assign a GPU. The following example adds GPU device ID `0` as the GPU, and `gpadmin` as the designated role. Substitute either the GPU device ID or the device UUID that you recorded earlier:
+    ```
+    $ plcontainer runtime-edit
+    ```
+    ```
+    <runtime> 
+        <id>plc_python_cuda_shared</id> 
+        <image>localhost/plcontainer_python3_cuda_shared:latest</image> 
+        <command>/clientdir/py3client.sh</command> 
+        <setting roles="gpadmin"/> 
+        <shared_directory access="ro" container="/clientdir" host="/home/sa/GPDB/install/bin/plcontainer_clients"/> 
+        <device_request type="gpu"> 
+            <deviceid>0</deviceid> 
+        </device_request> 
+    </runtime>
+    ```
+
+#### Create and Run a Sample CUDA Function
+
+1. Connect to a Greenplum database where PL/Container is installed:
+    ```
+    $ psql -d mytest -h coordinator_host -p 5432 -U `gpadmin`
+    ```
+
+2. Create a sample PL/Container function that uses the container you customized (`plc_python_cuda_shared` in this example). This simple function multiplies randomized, single-precision numbers by sending them to the CUDA constructor of `pycuda.compiler.SourceModule`:
+    ```
+    CREATE FUNCTION hello_cuda() RETURNS float4[] AS $$ 
+    # container: plc_python_cuda_shared 
+    
+    import pycuda.driver as drv 
+    import pycuda.tools 
+    import pycuda.autoinit 
+    import numpy 
+    import numpy.linalg as la 
+    from pycuda.compiler import SourceModule 
+    
+    mod = SourceModule(""" 
+    __global__ void multiply_them(float *dest, float *a, float *b) 
+    { 
+      const int i = threadIdx.x; 
+      dest[i] = a[i] * b[i]; 
+    } 
+    """) 
+    
+    multiply_them = mod.get_function("multiply_them") 
+      
+    a = numpy.random.randn(400).astype(numpy.float32) 
+    b = numpy.random.randn(400).astype(numpy.float32) 
+    
+    dest = numpy.zeros_like(a) 
+    multiply_them( 
+            drv.Out(dest), drv.In(a), drv.In(b), 
+            block=(400,1,1)) 
+      
+    return [float(i) for i in (dest-a*b)] 
+    
+    $$ LANGUAGE plcontainer; 
+    ```
+
+3. Run the sample function and verify its output:
+    ```
+    $ WITH a AS (SELECT unnest(hello) AS cuda FROM hello_cuda() AS hello) SELECT sum(cuda) FROM a; 
+    ```
+    ```
+    psql>   +-----+ 
+    psql>   | sum | 
+    psql>   |-----| 
+    psql>   | 0.0 | 
+    psql>   +-----+ 
+    psql>   SELECT 1 
+    psql>   Time: 0.012s 
+    ```
+    ```
+    $ SELECT * FROM hello_cuda();
+    ```
+    ```
+    psql>   +-----------------------+ 
+    psql>   |       hello_cuda      | 
+    psql>   |-----------------------| 
+    psql>   | {0, 0.... many 0 ...} | 
+    psql>   +-----------------------+ 
+    psql>   SELECT 1 
+    psql>   Time: 0.012s 
+   ```
+
+### <a id="topic_lqz_t3q_dw"></a>About PL/R Functions in PL/Container
 
 In the R language container, the module `pg.spi` is implemented. The module contains these methods:
 

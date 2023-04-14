@@ -420,26 +420,6 @@ testmode_getsockname(const char *caller_name, int socket,
 }
 
 /*
- * testmode_getsockopt
- * 		getsockopt function with faults injected
- */
-static int
-testmode_getsockopt(const char *caller_name, int socket, int level,
-					int option_name, void *restrict option_value,
-					socklen_t *restrict option_len)
-{
-	if (FINC_HAS_FAULT(FINC_OS_NET_INTERFACE) &&
-		testmode_inject_fault(gp_udpic_fault_inject_percent))
-	{
-		write_log("inject fault to getsockopt: FINC_OS_NET_INTERFACE");
-		errno = EFAULT;
-		return -1;
-	}
-
-	return getsockopt(socket, level, option_name, option_value, option_len);
-}
-
-/*
  * testmode_setsockopt
  * 		setsockopt with faults injected.
  */
@@ -593,9 +573,6 @@ testmode_pthread_create(const char *caller_name, pthread_t *thread,
 
 #define getsockname(socket, address, address_len) \
 	testmode_getsockname(PG_FUNCNAME_MACRO, socket, address, address_len)
-
-#define getsockopt(socket, level, option_name, option_value, option_len) \
-	testmode_getsockopt(PG_FUNCNAME_MACRO, socket, level, option_name, option_value, option_len)
 
 #define setsockopt(socket, level, option_name, option_value, option_len) \
 	testmode_setsockopt(PG_FUNCNAME_MACRO, socket, level, option_name, option_value, option_len)

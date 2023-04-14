@@ -200,13 +200,6 @@ ecpg_raise(int line, int code, const char *sqlstate, const char *str)
 					 ecpg_gettext("could not connect to database \"%s\" on line %d"), str, line);
 			break;
 
-		case ECPG_INVALID_CURSOR:
-			snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc),
-			/*------
-				translator: this string will be truncated at 149 characters expanded.  */
-					 ecpg_gettext("The cursor is invalid on line %d"), line);
-			break;
-
 		default:
 			snprintf(sqlca->sqlerrm.sqlerrmc, sizeof(sqlca->sqlerrm.sqlerrmc),
 			/*------
@@ -236,18 +229,17 @@ ecpg_raise_backend(int line, PGresult *result, PGconn *conn, int compat)
 		return;
 	}
 
-	if (result)
-	{
-		sqlstate = PQresultErrorField(result, PG_DIAG_SQLSTATE);
-		if (sqlstate == NULL)
-			sqlstate = ECPG_SQLSTATE_ECPG_INTERNAL_ERROR;
-		message = PQresultErrorField(result, PG_DIAG_MESSAGE_PRIMARY);
-	}
-	else
-	{
+	/*
+	 * PQresultErrorField will return NULL if "result" is NULL, or if there is
+	 * no such field, which will happen for libpq-generated errors.  Fall back
+	 * to PQerrorMessage in such cases.
+	 */
+	sqlstate = PQresultErrorField(result, PG_DIAG_SQLSTATE);
+	if (sqlstate == NULL)
 		sqlstate = ECPG_SQLSTATE_ECPG_INTERNAL_ERROR;
+	message = PQresultErrorField(result, PG_DIAG_MESSAGE_PRIMARY);
+	if (message == NULL)
 		message = PQerrorMessage(conn);
-	}
 
 	if (strcmp(sqlstate, ECPG_SQLSTATE_ECPG_INTERNAL_ERROR) == 0)
 	{

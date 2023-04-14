@@ -89,6 +89,7 @@ SELECT onek2.unique1, onek2.stringu1 FROM onek2
 RESET enable_seqscan;
 RESET enable_bitmapscan;
 RESET enable_sort;
+RESET optimizer_enable_tablescan;
 
 
 SELECT two, stringu1, ten, string4
@@ -148,6 +149,11 @@ SELECT 2+2, 57
 UNION ALL
 TABLE int8_tbl;
 
+-- corner case: VALUES with no columns
+CREATE TEMP TABLE nocols();
+INSERT INTO nocols DEFAULT VALUES;
+SELECT * FROM nocols n, LATERAL (VALUES(n.*)) v;
+
 --
 -- Test ORDER BY options
 --
@@ -192,6 +198,7 @@ SELECT * FROM foo ORDER BY f1 DESC NULLS LAST;
 --
 -- partial index is usable
 SET enable_seqscan TO off;
+SET optimizer_enable_tablescan TO off;
 explain (costs off)
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';

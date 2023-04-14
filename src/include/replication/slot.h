@@ -37,6 +37,14 @@ typedef enum ReplicationSlotPersistency
 	RS_TEMPORARY
 } ReplicationSlotPersistency;
 
+/* For ReplicationSlotAcquire, q.v. */
+typedef enum SlotAcquireBehavior
+{
+	SAB_Error,
+	SAB_Block,
+	SAB_Inquire
+} SlotAcquireBehavior;
+
 /*
  * On-Disk data of a replication slot, preserved across restarts.
  */
@@ -69,8 +77,16 @@ typedef struct ReplicationSlotPersistentData
 	 */
 	TransactionId catalog_xmin;
 
-	/* oldest LSN that might be required by this replication slot */
+	/*
+	 * oldest LSN that might be required by this replication slot
+	 *
+	 * GPDB sets this value more conservatively for physical replication slots
+	 * than Postgres. See comments in PhysicalConfirmReceivedLocation().
+	 */
 	XLogRecPtr	restart_lsn;
+
+	/* restart_lsn is copied here when the slot is invalidated */
+	XLogRecPtr	invalidated_at;
 
 	/*
 	 * Oldest LSN that the client has acked receipt for.  This is used as the
@@ -151,8 +167,8 @@ typedef struct ReplicationSlot
 	XLogRecPtr	candidate_restart_lsn;
 } ReplicationSlot;
 
-#define SlotIsPhysical(slot) (slot->data.database == InvalidOid)
-#define SlotIsLogical(slot) (slot->data.database != InvalidOid)
+#define SlotIsPhysical(slot) ((slot)->data.database == InvalidOid)
+#define SlotIsLogical(slot) ((slot)->data.database != InvalidOid)
 
 #define INTERNAL_WAL_REPLICATION_SLOT_NAME	"internal_wal_replication_slot"
 
@@ -187,7 +203,7 @@ extern void ReplicationSlotCreate(const char *name, bool db_specific,
 extern void ReplicationSlotPersist(void);
 extern void ReplicationSlotDrop(const char *name, bool nowait);
 
-extern void ReplicationSlotAcquire(const char *name, bool nowait);
+extern int	ReplicationSlotAcquire(const char *name, SlotAcquireBehavior behavior);
 extern void ReplicationSlotRelease(void);
 extern void ReplicationSlotCleanup(void);
 extern void ReplicationSlotSave(void);
@@ -201,6 +217,7 @@ extern void ReplicationSlotsComputeRequiredLSN(void);
 extern XLogRecPtr ReplicationSlotsComputeLogicalRestartLSN(void);
 extern bool ReplicationSlotsCountDBSlots(Oid dboid, int *nslots, int *nactive);
 extern void ReplicationSlotsDropDBSlots(Oid dboid);
+extern bool InvalidateObsoleteReplicationSlots(XLogSegNo oldestSegno);
 
 extern void StartupReplicationSlots(void);
 extern void CheckPointReplicationSlots(void);

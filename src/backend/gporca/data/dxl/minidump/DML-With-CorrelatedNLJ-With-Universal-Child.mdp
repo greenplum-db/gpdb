@@ -39,12 +39,12 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102074,102146,102120,103001,103014,103015,103021,103022,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16391.1.0" Name="t1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16391.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16391.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -72,10 +72,9 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16388.1.0" Name="target_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16388.1.0" Name="target_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -103,7 +102,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -235,7 +233,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="2">
-        <dxl:TableDescriptor Mdid="0.16388.1.0" TableName="target_table">
+        <dxl:TableDescriptor Mdid="6.16388.1.0" TableName="target_table">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
             <dxl:Column ColId="12" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -250,7 +248,7 @@
         <dxl:LogicalSelect>
           <dxl:SubqueryExists>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="t1">
+              <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="t1">
                 <dxl:Columns>
                   <dxl:Column ColId="3" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -283,7 +281,7 @@
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="16">
-      <dxl:DMLInsert Columns="1" ActionCol="14" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
+      <dxl:DMLInsert Columns="1" ActionCol="14" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="882688.057927" Rows="1.000000" Width="4"/>
         </dxl:Properties>
@@ -297,7 +295,7 @@
             <dxl:Ident ColId="1" ColName="?column?" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.16388.1.0" TableName="target_table">
+        <dxl:TableDescriptor Mdid="6.16388.1.0" TableName="target_table">
           <dxl:Columns>
             <dxl:Column ColId="15" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
             <dxl:Column ColId="16" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -391,7 +389,7 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.16391.1.0" TableName="t1">
+                          <dxl:TableDescriptor Mdid="6.16391.1.0" TableName="t1">
                             <dxl:Columns>
                               <dxl:Column ColId="2" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                               <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

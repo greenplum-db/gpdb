@@ -56,9 +56,6 @@ private:
 	// is this a temporary table
 	BOOL m_is_temp_table;
 
-	// does table have oids
-	BOOL m_has_oids;
-
 	// distribution policy
 	IMDRelation::Ereldistrpolicy m_rel_distr_policy;
 

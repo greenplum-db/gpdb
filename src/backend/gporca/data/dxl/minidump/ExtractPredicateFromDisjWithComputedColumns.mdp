@@ -181,7 +181,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         <dxl:InverseOp Mdid="0.420.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.15667435.1.1" Name="cust" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.15667435.1.1" Name="cust" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.15667435.1.1" Name="cust" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="cid" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -215,7 +215,6 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.15667489.1.1.11" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -229,7 +228,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
       <dxl:ColumnStatistics Mdid="1.15667435.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.15667435.1.1.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.15667463.1.1" Name="datedim" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.15667463.1.1" Name="datedim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.15667463.1.1" Name="datedim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -263,7 +262,6 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.15667489.1.1.5" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -282,7 +280,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         <dxl:Commutator Mdid="0.96.1.0"/>
         <dxl:InverseOp Mdid="0.518.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.15667489.1.1" Name="sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="11,5">
+      <dxl:Relation Mdid="6.15667489.1.1" Name="sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -322,7 +320,6 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBAgg Mdid="0.2147.1.0" Name="count" IsSplittable="true">
@@ -377,7 +374,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalJoin JoinType="Inner">
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.15667435.1.1" TableName="cust">
+              <dxl:TableDescriptor Mdid="6.15667435.1.1" TableName="cust">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="cid" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="2" Attno="2" ColName="firstname" TypeMdid="0.25.1.0"/>
@@ -393,7 +390,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.15667463.1.1" TableName="datedim">
+              <dxl:TableDescriptor Mdid="6.15667463.1.1" TableName="datedim">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="date_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="12" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>
@@ -428,7 +425,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.15667489.1.1" TableName="sales">
+              <dxl:TableDescriptor Mdid="6.15667489.1.1" TableName="sales">
                 <dxl:Columns>
                   <dxl:Column ColId="21" Attno="1" ColName="item_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="22" Attno="2" ColName="ticket_number" TypeMdid="0.23.1.0"/>
@@ -459,7 +456,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="3190">
+    <dxl:Plan Id="0" SpaceSize="3310">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.002852" Rows="1.000000" Width="64"/>
@@ -638,7 +635,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.15667435.1.1" TableName="cust">
+                <dxl:TableDescriptor Mdid="6.15667435.1.1" TableName="cust">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="cid" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="1" Attno="2" ColName="firstname" TypeMdid="0.25.1.0"/>
@@ -859,7 +856,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                                   </dxl:ProjElem>
                                 </dxl:ProjList>
                                 <dxl:Filter/>
-                                <dxl:TableDescriptor Mdid="0.15667489.1.1" TableName="sales">
+                                <dxl:TableDescriptor Mdid="6.15667489.1.1" TableName="sales">
                                   <dxl:Columns>
                                     <dxl:Column ColId="20" Attno="1" ColName="item_sk" TypeMdid="0.23.1.0"/>
                                     <dxl:Column ColId="21" Attno="2" ColName="ticket_number" TypeMdid="0.23.1.0"/>
@@ -912,7 +909,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
                 </dxl:Comparison>
               </dxl:Or>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.15667463.1.1" TableName="datedim">
+            <dxl:TableDescriptor Mdid="6.15667463.1.1" TableName="datedim">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="year" TypeMdid="0.23.1.0"/>

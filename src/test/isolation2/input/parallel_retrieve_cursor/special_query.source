@@ -22,6 +22,37 @@ SELECT make_record(x) FROM t1;
 1<:
 1: CLOSE c1;
 
+--------- Test1.1: test for PARALLEL RETRIEVE CURSOR on select transient record types and multi-retrieve
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record(x) FROM t1;
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+
+1<:
+1: CLOSE c1;
+
+1: CREATE OR REPLACE FUNCTION make_record2(n int) RETURNS RECORD LANGUAGE plpgsql AS ' BEGIN RETURN CASE n WHEN 1 THEN ROW(1,2,3) WHEN 2 THEN ROW(1,2,3,4) WHEN 3 THEN ROW(1,2,3,4,5) WHEN 4 THEN ROW(1,2,3,4,5,6) ELSE ROW(1,2,3,4,5,6,7) END; END; ';
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record2(x) FROM t1;
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+-- *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+-- *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+
+1<:
+1: CLOSE c1;
+
 --------- Test2: test for PARALLEL RETRIEVE CURSOR on select with join statement.
 -- there was a hang issue when declaring PARALLEL RETRIEVE CURSOR with join clause.
 -- for example: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;

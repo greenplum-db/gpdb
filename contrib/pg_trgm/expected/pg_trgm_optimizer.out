@@ -3946,18 +3946,26 @@ SELECT similarity('Szczecin', 'Warsaw');
 EXPLAIN (COSTS OFF)
 SELECT DISTINCT city, similarity(city, 'Warsaw'), show_limit()
   FROM restaurants WHERE city % 'Warsaw';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  GroupAggregate
          Group Key: city, (similarity(city, 'Warsaw'::text)), ('0.3'::real)
          ->  Sort
                Sort Key: city, (similarity(city, 'Warsaw'::text)), ('0.3'::real)
-               ->  Index Scan using restaurants_city_idx on restaurants
-                     Index Cond: (city % 'Warsaw'::text)
-                     Filter: (city % 'Warsaw'::text)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: city, (similarity(city, 'Warsaw'::text)), ('0.3'::real)
+                     ->  GroupAggregate
+                           Group Key: city, (similarity(city, 'Warsaw'::text)), ('0.3'::real)
+                           ->  Sort
+                                 Sort Key: city, (similarity(city, 'Warsaw'::text)), ('0.3'::real)
+                                 ->  Result
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             ->  Index Scan using restaurants_city_idx on restaurants
+                                                   Index Cond: (city % 'Warsaw'::text)
+                                                   Filter: (city % 'Warsaw'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(17 rows)
 
 SELECT set_limit(0.3);
  set_limit 

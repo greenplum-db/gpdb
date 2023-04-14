@@ -5,6 +5,8 @@ Feature: Tests for gpaddmirrors
           And a tablespace is created with data
          When gpaddmirrors adds 3 mirrors
           And an FTS probe is triggered
+          #gpaddmirrors triggers full recovery where old replication slot is dropped and new one is created
+          And verify replication slot internal_wal_replication_slot is available on all the segments
           And the segments are synchronized
          Then verify the database has mirrors
           And the tablespace is valid
@@ -24,6 +26,8 @@ Feature: Tests for gpaddmirrors
         And an FTS probe is triggered
         And the segments are synchronized
         And verify the database has mirrors
+        #gpaddmirrors triggers full recovery where old replication slot is dropped and new one is created
+        And verify replication slot internal_wal_replication_slot is available on all the segments
         And the tablespace is valid
         And user stops all primary processes
         And user can start transactions
@@ -51,6 +55,7 @@ Feature: Tests for gpaddmirrors
         Then gpaddmirrors should return a return code of 0
         And verify the database has mirrors
         And the segments are synchronized
+        And check segment conf: postgresql.conf
         And user can start transactions
 
     Scenario: gpaddmirrors setup recovery part two
@@ -174,7 +179,19 @@ Feature: Tests for gpaddmirrors
 
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
+        And all files in gpAdminLogs directory are deleted
 
+    Scenario: gpaddmirrors errors out if the directory for the mirror to be added is not empty
+        Given the cluster is generated with "3" primaries only
+        And all files in gpAdminLogs directory are deleted
+        And a gaddmirrors directory under '/tmp' with mode '0700' is created
+        And a gpaddmirrors input file is created
+        And edit the input file to add mirror with content 0,1,2 to a new non-empty directory with mode 0700
+        When the user runs gpaddmirrors with input file and additional args "-a"
+        Then gpaddmirrors should print "Segment directory '/tmp/.*' exists but is not empty!" to stdout
+        And all the segments are running
+        And check segment conf: postgresql.conf
         And all files in gpAdminLogs directory are deleted
 
 
@@ -214,20 +231,21 @@ Feature: Tests for gpaddmirrors
     Scenario: spread mirroring configuration
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with "spread" segment mirroring on "mdw" and "sdw1, sdw2, sdw3"
+        And a cluster is created with "spread" segment mirroring on "cdw" and "sdw1, sdw2, sdw3"
         Then verify that mirror segments are in "spread" configuration
         Given a preferred primary has failed
         When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
     Scenario Outline: gpaddmirrors can add mirrors even if <failed_count> mirrors failed during basebackup
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
+        And a cluster is created with no mirrors on "cdw" and "sdw1, sdw2"
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And a gpaddmirrors directory under '/tmp' with mode '0700' is created
         And a gpaddmirrors input file is created
@@ -269,7 +287,7 @@ Feature: Tests for gpaddmirrors
     Scenario Outline: gpaddmirrors can add mirrors even if start fails for <failed_count> mirrors
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
+        And a cluster is created with no mirrors on "cdw" and "sdw1, sdw2"
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And a gpaddmirrors directory under '/tmp' with mode '0700' is created
         And a gpaddmirrors input file is created
@@ -309,7 +327,7 @@ Feature: Tests for gpaddmirrors
     Scenario: gprecoverseg works correctly on a newly added mirror with HBA_HOSTNAMES=0
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And with HBA_HOSTNAMES "0" a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
+        And with HBA_HOSTNAMES "0" a cluster is created with no mirrors on "cdw" and "sdw1, sdw2"
         And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
         And gpaddmirrors adds mirrors
         And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains only cidr addresses
@@ -348,10 +366,10 @@ Feature: Tests for gpaddmirrors
     Scenario: gprecoverseg works correctly on a newly added mirror with HBA_HOSTNAMES=1
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And with HBA_HOSTNAMES "1" a cluster is created with no mirrors on "mdw" and "sdw1, sdw2"
-        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1"
+        And with HBA_HOSTNAMES "1" a cluster is created with no mirrors on "cdw" and "sdw1, sdw2"
+        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "cdw, sdw1"
         And gpaddmirrors adds mirrors with options "--hba-hostnames"
-        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "mdw, sdw1, sdw2, samehost"
+        And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "cdw, sdw1, sdw2, samehost"
         Then verify the database has mirrors
 
         When the mirror on content 0 is stopped with the immediate flag
@@ -385,50 +403,54 @@ Feature: Tests for gpaddmirrors
     Scenario: gpaddmirrors puts mirrors on the same hosts when there is a standby configured
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
+        And a cluster is created with no mirrors on "cdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors
         Then verify the database has mirrors
         And save the gparray to context
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
+        And a cluster is created with no mirrors on "cdw" and "sdw1, sdw2, sdw3"
         And the user runs gpinitstandby with options " "
         Then gpinitstandby should return a return code of 0
         And gpaddmirrors adds mirrors
         Then mirror hostlist matches the one saved in context
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
     Scenario: gpaddmirrors puts mirrors on different host
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
+        And a cluster is created with no mirrors on "cdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors in spread configuration
         Then verify that mirror segments are in "spread" configuration
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
     Scenario: gpaddmirrors with a default coordinator data directory
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And gpaddmirrors adds mirrors
         Then verify the database has mirrors
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
     Scenario: gpaddmirrors with a given coordinator data directory [-d <coordinator datadir>]
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And gpaddmirrors adds mirrors with temporary data dir
         Then verify the database has mirrors
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
     Scenario: gpaddmirrors mirrors are recognized after a cluster restart
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         When gpaddmirrors adds mirrors
         Then verify the database has mirrors
         When an FTS probe is triggered
@@ -438,13 +460,24 @@ Feature: Tests for gpaddmirrors
         And wait until the process "gpstart" goes down
         Then all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
+        And the user runs "gpstop -aqM fast"
+
+    @concourse_cluster
+    Scenario: gpaddmirrors should create consistent port entry on mirrors postgresql.conf file
+        Given a working directory of the test as '/tmp/gpaddmirrors'
+        And the database is not running
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
+        When gpaddmirrors adds mirrors
+        Then verify the database has mirrors
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
     Scenario: gpaddmirrors when the primaries have data
         Given a working directory of the test as '/tmp/gpaddmirrors'
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
         And database "gptest" exists
         And there is a "heap" table "public.heap_table" in "gptest" with "100" rows
         And there is a "ao" table "public.ao_table" in "gptest" with "100" rows
@@ -463,7 +496,7 @@ Feature: Tests for gpaddmirrors
     Scenario: tablespaces work on a multi-host environment
         Given a working directory of the test as '/tmp/gpaddmirrors'
           And the database is not running
-          And a cluster is created with no mirrors on "mdw" and "sdw1"
+          And a cluster is created with no mirrors on "cdw" and "sdw1"
           And a tablespace is created with data
          When gpaddmirrors adds mirrors
          Then verify the database has mirrors

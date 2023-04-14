@@ -462,9 +462,13 @@ CJoinOrder::PcompCombine(SComponent *comp1, SComponent *comp2)
 			CExpression *pexpr = pedge->m_pexpr;
 			pexpr->AddRef();
 			if (0 < pedge->m_loj_num)
+			{
 				loj_conjuncts->Append(pexpr);
+			}
 			else
+			{
 				other_conjuncts->Append(pexpr);
+			}
 		}
 	}
 

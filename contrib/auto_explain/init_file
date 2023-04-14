@@ -17,4 +17,10 @@ s/Memory used:\s+[0-9]+kB.*/Memory used:/
 m/work_mem: \d+kB  Segments: \d+  Max: \d+kB \(segment \d+\)/
 s/work_mem: \d+kB  Segments: \d+  Max: \d+kB \(segment \d+\)/work_mem: 99kB  Segments: 9  Max: 99kB/
 
+m/LOG:  statement: SELECT count\(1\) from \(select i from t1 limit 10\) t join t2 using \(i\);  \(entry db .*/
+s/LOG:  statement: SELECT count\(1\) from \(select i from t1 limit 10\) t join t2 using \(i\);  \(entry db .*/LOG:  statement: SELECT count(1) from (select i from t1 limit 10) t join t2 using (i);  (entry db)/
+
+m/Buckets: \d+  Batches: 1  Memory Usage: \d+kB/
+s/Buckets: \d+  Batches: 1  Memory Usage: \d+kB/Buckets: 1048576  Batches: 1  Memory Usage: 8192kB/
+
 -- end_matchsubs

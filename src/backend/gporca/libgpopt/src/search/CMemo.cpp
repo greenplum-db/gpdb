@@ -411,7 +411,6 @@ CMemo::PexprExtractPlan(CMemoryPool *mp, CGroup *pgroupRoot,
 }
 
 
-#ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:
 //		CMemo::Pgroup
@@ -436,7 +435,6 @@ CMemo::Pgroup(ULONG id)
 
 	return nullptr;
 }
-#endif	// GPOS_DEBUG
 
 
 //---------------------------------------------------------------------------
@@ -454,8 +452,8 @@ CMemo::MarkDuplicates(CGroup *pgroupFst, CGroup *pgroupSnd)
 	GPOS_ASSERT(nullptr != pgroupSnd);
 
 	pgroupFst->AddDuplicateGrp(pgroupSnd);
-	pgroupFst->ResolveDuplicateMaster();
-	pgroupSnd->ResolveDuplicateMaster();
+	pgroupFst->ResolveDuplicateCoordinator();
+	pgroupSnd->ResolveDuplicateCoordinator();
 }
 
 

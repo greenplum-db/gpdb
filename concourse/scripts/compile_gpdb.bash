@@ -88,16 +88,6 @@ function include_dependencies() {
 	pkgconfigs=(quicklz.pc)
 	vendored_libs=(libquicklz.so{,.1,.1.5.0} libxerces-c{,-3.1}.so)
 
-	# If not building for rhel8, vendor libzstd and libuv shared library, headers, and pkgconfig
-	if [[ "${BLD_ARCH}" != "rhel8_x86_64"* ]]; then
-		vendored_headers=(zstd*.h uv.h uv)
-		pkgconfigs+=(libzstd.pc libuv.pc)
-		vendored_libs+=(libzstd.so{,.1,.1.3.7} libuv.so{,.1,.1.0.0})
-
-		# Vendor headers - follow symlinks
-		for path in "${header_search_path[@]}"; do if [[ -d "${path}" ]]; then for header in "${vendored_headers[@]}"; do find -L $path -name $header -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/include \;; done; fi; done
-	fi
-
 	# Vendor shared libraries - follow symlinks
 	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]]; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib \;; done; fi; done
 	# vendor pkgconfig files
@@ -152,6 +142,11 @@ function _main() {
 
 	## Add CCache Support (?)
 	add_ccache_support "${OS}"
+
+
+	# The WITH_ASSERTIONS state should keep the same between build and test.
+	# Or LLVM_ABI_BREAKING_CHECKS will fail the loading of libllvmjit
+	setup_llvm
 
 	generate_build_number
 	build_gpdb "${BLD_TARGET_OPTION[@]}"

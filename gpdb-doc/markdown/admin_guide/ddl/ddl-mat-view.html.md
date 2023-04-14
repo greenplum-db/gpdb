@@ -32,7 +32,7 @@ One use of a materialized view is to allow faster access to data brought in from
 
 If a subquery is associated with a single query, consider using the `WITH` clause of the `SELECT` command instead of creating a seldom-used materialized view.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="topic_hn3_xy5_kjb"></a>Creating Materialized Views 
 
@@ -44,7 +44,7 @@ CREATE MATERIALIZED VIEW us_users AS SELECT u.id, u.name, a.zone FROM users u, a
 
 If a materialized view query contains an `ORDER BY` or `SORT` clause, the clause is ignored when a `SELECT` is performed on the materialized query.
 
-## <a id="topic_vwd_zy5_kjb"></a>Refreshing or Disabling Materialized Views 
+## <a id="topic_vwd_zy5_kjb"></a>Refreshing or Deactivating Materialized Views 
 
 The `REFRESH MATERIALIZED VIEW` command updates the materialized view data.
 

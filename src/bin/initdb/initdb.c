@@ -140,7 +140,6 @@ static const char *authmethodhost = NULL;
 static const char *authmethodlocal = NULL;
 static bool debug = false;
 static bool noclean = false;
-
 static bool do_sync = true;
 static bool sync_only = false;
 static bool show_setting = false;
@@ -164,6 +163,7 @@ static char *info_schema_file;
 static char *cdb_init_d_dir;
 static char *features_file;
 static char *system_views_file;
+static char *system_views_gp_file;
 static bool success = false;
 static bool made_new_pgdata = false;
 static bool found_existing_pgdata = false;
@@ -227,7 +227,7 @@ static const char *const subdirs[] = {
 	"pg_logical",
 	"pg_logical/snapshots",
 	"pg_logical/mappings",
-/* GPDB needs these directories */
+	/* GPDB needs these directories */
 	"pg_distributedlog",
 	"log"
 };
@@ -1026,7 +1026,7 @@ test_config_settings(void)
 		}
 		if (n_connections > 0 || i == connslen - 1)
 		{
-			pg_log_error("%s: error %d from: %s\n",
+			pg_log_error("%s: error %d from: %s",
 						 progname, status, cmd);
 			exit(1);
 		}
@@ -1075,7 +1075,7 @@ test_config_settings(void)
 	else
 		printf("%dkB\n", n_buffers * (BLCKSZ / 1024));
 
-	printf(_("selecting default timezone ... "));
+	printf(_("selecting default time zone ... "));
 	fflush(stdout);
 	default_timezone = select_default_timezone(share_path);
 	printf("%s\n", default_timezone ? default_timezone : "GMT");
@@ -1210,18 +1210,11 @@ setup_config(void)
 							  repltok);
 #endif
 
-#if 0
-/*
- * GPDB_12_MERGE_FIXME: the bgwriter section is missing from the sample
- * configuration used for this, should we keep that off the default config
- * or was it all an omission?
- */
 #if DEFAULT_BGWRITER_FLUSH_AFTER > 0
 	snprintf(repltok, sizeof(repltok), "#bgwriter_flush_after = %dkB",
 			 DEFAULT_BGWRITER_FLUSH_AFTER * (BLCKSZ / 1024));
 	conflines = replace_token(conflines, "#bgwriter_flush_after = 0",
 							  repltok);
-#endif
 #endif
 
 #if DEFAULT_CHECKPOINT_FLUSH_AFTER > 0
@@ -1235,6 +1228,12 @@ setup_config(void)
 	conflines = replace_token(conflines,
 							  "#effective_io_concurrency = 1",
 							  "#effective_io_concurrency = 0");
+#endif
+
+#ifdef WIN32
+	conflines = replace_token(conflines,
+							  "#update_process_title = on",
+							  "#update_process_title = off");
 #endif
 
 	if (strcmp(authmethodlocal, "scram-sha-256") == 0 ||
@@ -1257,16 +1256,6 @@ setup_config(void)
 								  "#log_file_mode = 0600",
 								  "log_file_mode = 0640");
 	}
-
-#ifdef WIN32
-	conflines = replace_token(conflines,
-							  "#update_process_title = on",
-							  "#update_process_title = off");
-#endif
-
-	snprintf(repltok, sizeof(repltok), "include = '%s'",
-			 GP_INTERNAL_AUTO_CONF_FILE_NAME);
-	conflines = replace_token(conflines, "#include = 'special.conf'", repltok);
 
 	snprintf(path, sizeof(path), "%s/postgresql.conf", pg_data);
 
@@ -1709,7 +1698,21 @@ setup_sysviews(FILE *cmdfd)
 	char	  **line;
 	char	  **sysviews_setup;
 
+	/* system_views.sql */
 	sysviews_setup = readfile(system_views_file);
+
+	for (line = sysviews_setup; *line != NULL; line++)
+	{
+		PG_CMD_PUTS(*line);
+		free(*line);
+	}
+
+	PG_CMD_PUTS("\n\n");
+
+	free(sysviews_setup);
+
+	/* system_views_gp.sql */
+	sysviews_setup = readfile(system_views_gp_file);
 
 	for (line = sysviews_setup; *line != NULL; line++)
 	{
@@ -1754,6 +1757,7 @@ setup_description(FILE *cmdfd)
 				" SELECT t.objoid, c.oid, t.description "
 				"  FROM tmp_pg_shdescription t, pg_class c "
 				"   WHERE c.relname = t.classname;\n\n");
+
 	/* Create default descriptions for operator implementation functions */
 	PG_CMD_PUTS("WITH funcdescs AS ( "
 				"SELECT p.oid as p_oid, o.oid as o_oid, oprname "
@@ -2740,7 +2744,7 @@ setup_bin_paths(const char *argv0)
 			pg_log_error("The program \"postgres\" is needed by %s but was not found in the\n"
 						 "same directory as \"%s\".\n"
 						 "Check your installation.",
-						 full_path, progname);
+						 progname, full_path);
 		else
 			pg_log_error("The program \"postgres\" was found by \"%s\"\n"
 						 "but was not the same version as %s.\n"
@@ -2865,6 +2869,7 @@ setup_data_file_paths(void)
 	set_input(&info_schema_file, "information_schema.sql");
 	set_input(&features_file, "sql_features.txt");
 	set_input(&system_views_file, "system_views.sql");
+	set_input(&system_views_gp_file, "system_views_gp.sql");
 
 	set_input(&cdb_init_d_dir, "cdb_init.d");
 
@@ -2897,6 +2902,7 @@ setup_data_file_paths(void)
 	check_input(info_schema_file);
 	check_input(features_file);
 	check_input(system_views_file);
+	check_input(system_views_gp_file);
 }
 
 
@@ -3234,6 +3240,11 @@ initialize_data_directory(void)
 
 	setup_depend(cmdfd);
 
+	/*
+	 * Note that no objects created after setup_depend() will be "pinned".
+	 * They are all droppable at the whim of the DBA.
+	 */
+
 	setup_sysviews(cmdfd);
 
 	setup_description(cmdfd);
@@ -3298,8 +3309,8 @@ main(int argc, char *argv[])
 		{"waldir", required_argument, NULL, 'X'},
 		{"wal-segsize", required_argument, NULL, 12},
 		{"data-checksums", no_argument, NULL, 'k'},
-        {"max_connections", required_argument, NULL, 1001},     /*CDB*/
-        {"shared_buffers", required_argument, NULL, 1003},      /*CDB*/
+		{"max_connections", required_argument, NULL, 1001},     /*CDB*/
+		{"shared_buffers", required_argument, NULL, 1003},      /*CDB*/
 		{"allow-group-access", no_argument, NULL, 'g'},
 		{NULL, 0, NULL, 0}
 	};
@@ -3309,6 +3320,7 @@ main(int argc, char *argv[])
 	 * their short version value
 	 */
 	int			c;
+	int			option_index;
 	char	   *effective_user;
 	PQExpBuffer start_db_cmd;
 	char		pg_ctl_path[MAXPGPATH];
@@ -3346,7 +3358,7 @@ main(int argc, char *argv[])
 
 	/* process command-line options */
 
-	while ((c = getopt_long(argc, argv, "dD:E:kL:nNU:WA:sST:X:g", long_options, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "A:dD:E:gkL:nNsST:U:WX:", long_options, &option_index)) != -1)
 	{
 		switch (c)
 		{
@@ -3607,6 +3619,9 @@ main(int argc, char *argv[])
 	get_parent_directory(pg_ctl_path);
 	/* ... and tag on pg_ctl instead */
 	join_path_components(pg_ctl_path, pg_ctl_path, "pg_ctl");
+
+	/* Convert the path to use native separators */
+	make_native_path(pg_ctl_path);
 
 	/* path to pg_ctl, properly quoted */
 	appendShellString(start_db_cmd, pg_ctl_path);

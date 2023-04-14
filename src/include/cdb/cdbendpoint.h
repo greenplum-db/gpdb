@@ -127,6 +127,8 @@ extern bool retrieve_conn_authenticated;
 /* Endpoint shared memory context init */
 extern Size EndpointShmemSize(void);
 extern void EndpointShmemInit(void);
+extern Size ParallelCursorCountSize(void);
+extern void ParallelCursorCountInit(void);
 
 /*
  * Below functions should run on the QD.

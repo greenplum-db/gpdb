@@ -118,4 +118,15 @@ SELECT count(*) FROM tenk1 t1 JOIN tenk1 t2 ON t1.ctid = t2.ctid and t1.gp_segme
 SELECT count(*) FROM tenk1 t1 JOIN tenk1 t2 ON t1.ctid = t2.ctid and t1.gp_segment_id = t2.gp_segment_id;
 RESET enable_hashjoin;
 
+-- check predicate lock on CTID
+-- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: Greenplum does not support serializable transactions,
+-- ingore the below test case.
+-- start_ignore
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+SELECT * FROM tidscan WHERE ctid = '(0,1)';
+-- locktype should be 'tuple'
+SELECT locktype, mode FROM pg_locks WHERE pid = pg_backend_pid() AND mode = 'SIReadLock';
+ROLLBACK;
+-- end_ignore
+
 DROP TABLE tidscan;

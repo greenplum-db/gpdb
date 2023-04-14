@@ -100,7 +100,7 @@ typedef z_stream *z_streamp;
 #define K_VERS_MAJOR 1
 #define K_VERS_MINOR 14
 #define K_VERS_REV 0
-#define K_VERS_SELF MAKE_ARCHIVE_VERSION(K_VERS_MAJOR, K_VERS_MINOR, K_VERS_REV);
+#define K_VERS_SELF MAKE_ARCHIVE_VERSION(K_VERS_MAJOR, K_VERS_MINOR, K_VERS_REV)
 
 /* Newest format we can read */
 #define K_VERS_MAX	MAKE_ARCHIVE_VERSION(K_VERS_MAJOR, K_VERS_MINOR, 255)
@@ -211,10 +211,14 @@ typedef enum
  * data restore failures.  On the other hand, matview REFRESH commands should
  * come out after ACLs, as otherwise non-superuser-owned matviews might not
  * be able to execute.  (If the permissions at the time of dumping would not
- * allow a REFRESH, too bad; we won't fix that for you.)  These considerations
- * force us to make three passes over the TOC, restoring the appropriate
- * subset of items in each pass.  We assume that the dependency sort resulted
- * in an appropriate ordering of items within each subset.
+ * allow a REFRESH, too bad; we won't fix that for you.)  We also want event
+ * triggers to be restored after ACLs, so that they can't mess those up.
+ *
+ * These considerations force us to make three passes over the TOC,
+ * restoring the appropriate subset of items in each pass.  We assume that
+ * the dependency sort resulted in an appropriate ordering of items within
+ * each subset.
+ *
  * XXX This mechanism should be superseded by tracking dependencies on ACLs
  * properly; but we'll still need it for old dump files even after that.
  */
@@ -222,9 +226,9 @@ typedef enum
 {
 	RESTORE_PASS_MAIN = 0,		/* Main pass (most TOC item types) */
 	RESTORE_PASS_ACL,			/* ACL item types */
-	RESTORE_PASS_REFRESH		/* Matview REFRESH items */
+	RESTORE_PASS_POST_ACL		/* Event trigger and matview refresh items */
 
-#define RESTORE_PASS_LAST RESTORE_PASS_REFRESH
+#define RESTORE_PASS_LAST RESTORE_PASS_POST_ACL
 } RestorePass;
 
 typedef enum
@@ -254,15 +258,21 @@ struct _archiveHandle
 	time_t		createDate;		/* Date archive created */
 
 	/*
-	 * Fields used when discovering header. A format can always get the
-	 * previous read bytes from here...
+	 * Fields used when discovering archive format.  For tar format, we load
+	 * the first block into the lookahead buffer, and verify that it looks
+	 * like a tar header.  The tar module must then consume bytes from the
+	 * lookahead buffer before reading any more from the file.  For custom
+	 * format, we load only the "PGDMP" marker into the buffer, and then set
+	 * readHeader after confirming it matches.  The buffer is vestigial in
+	 * this case, as the subsequent code just checks readHeader and doesn't
+	 * examine the buffer.
 	 */
-	int			readHeader;		/* Used if file header has been read already */
+	int			readHeader;		/* Set if we already read "PGDMP" marker */
 	char	   *lookahead;		/* Buffer used when reading header to discover
 								 * format */
-	size_t		lookaheadSize;	/* Size of allocated buffer */
-	size_t		lookaheadLen;	/* Length of data in lookahead */
-	pgoff_t		lookaheadPos;	/* Current read position in lookahead buffer */
+	size_t		lookaheadSize;	/* Allocated size of buffer */
+	size_t		lookaheadLen;	/* Length of valid data in lookahead */
+	size_t		lookaheadPos;	/* Current read position in lookahead buffer */
 
 	ArchiveEntryPtrType ArchiveEntryPtr;	/* Called for each metadata object */
 	StartDataPtrType StartDataPtr;	/* Called when table data is about to be
@@ -301,7 +311,6 @@ struct _archiveHandle
 
 	/* Stuff for direct DB connection */
 	char	   *archdbname;		/* DB name *read* from archive */
-	trivalue	promptPassword;
 	char	   *savedPassword;	/* password for ropt->username, if known */
 	char	   *use_role;
 	PGconn	   *connection;
@@ -380,7 +389,7 @@ struct _tocEntry
 	int			nDeps;			/* number of dependencies */
 
 	DataDumperPtr dataDumper;	/* Routine to dump data for object */
-	void	   *dataDumperArg;	/* Arg for above routine */
+	const void *dataDumperArg;	/* Arg for above routine */
 	void	   *formatData;		/* TOC Entry data specific to file format */
 
 	/* working state while dumping/restoring */
@@ -419,7 +428,7 @@ typedef struct _archiveOpts
 	const DumpId *deps;
 	int			nDeps;
 	DataDumperPtr dumpFn;
-	void	   *dumpArg;
+	const void *dumpArg;
 } ArchiveOpts;
 #define ARCHIVE_OPTS(...) &(ArchiveOpts){__VA_ARGS__}
 /* Called to add a TOC entry */
@@ -469,7 +478,7 @@ extern void InitArchiveFmt_Tar(ArchiveHandle *AH);
 
 extern bool isValidTarHeader(char *header);
 
-extern void ReconnectToServer(ArchiveHandle *AH, const char *dbname, const char *newUser);
+extern void ReconnectToServer(ArchiveHandle *AH, const char *dbname);
 extern void DropBlobIfExists(ArchiveHandle *AH, Oid oid);
 
 void		ahwrite(const void *ptr, size_t size, size_t nmemb, ArchiveHandle *AH);

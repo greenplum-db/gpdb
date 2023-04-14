@@ -14,9 +14,9 @@ In Greenplum Database, GPORCA co-exists with the Postgres Planner. By default, G
 
 The following figure shows how GPORCA fits into the query planning architecture.
 
-![](../../graphics/piv-opt.png)
+![Query planning architecture with GPORCA](../../graphics/piv-opt.png)
 
-**Note:** All Postgres Planner server configuration parameters are ignored by GPORCA. However, if Greenplum Database falls back to the Postgres Planner, the planner server configuration parameters will impact the query plan generation. For a list of Postgres Planner server configuration parameters, see [Query Tuning Parameters](../../../ref_guide/config_params/guc_category-list.html).
+> **Note** All Postgres Planner server configuration parameters are ignored by GPORCA. However, if Greenplum Database falls back to the Postgres Planner, the planner server configuration parameters will impact the query plan generation. For a list of Postgres Planner server configuration parameters, see [Query Tuning Parameters](../../../ref_guide/config_params/guc_category-list.html).
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 

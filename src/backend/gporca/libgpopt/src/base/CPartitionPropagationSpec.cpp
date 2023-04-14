@@ -56,7 +56,7 @@ CPartitionPropagationSpec::SPartPropSpecInfo::CmpFunc(const void *val1,
 
 CPartitionPropagationSpec::CPartitionPropagationSpec(CMemoryPool *mp)
 {
-	m_part_prop_spec_infos = GPOS_NEW(mp) SPartPropSpecInfoArray(mp);
+	m_part_prop_spec_infos = GPOS_NEW(mp) UlongToSPartPropSpecInfoMap(mp);
 	m_scan_ids = GPOS_NEW(mp) CBitSet(mp);
 }
 
@@ -84,26 +84,24 @@ CPartitionPropagationSpec::Equals(const CPartitionPropagationSpec *pps) const
 
 	GPOS_ASSERT(m_part_prop_spec_infos != nullptr &&
 				pps->m_part_prop_spec_infos != nullptr);
-	GPOS_ASSERT(m_part_prop_spec_infos->IsSorted(SPartPropSpecInfo::CmpFunc));
-	GPOS_ASSERT(
-		pps->m_part_prop_spec_infos->IsSorted(SPartPropSpecInfo::CmpFunc));
 
 	if (m_part_prop_spec_infos->Size() != pps->m_part_prop_spec_infos->Size())
 	{
 		return false;
 	}
 
-	ULONG size = m_part_prop_spec_infos->Size();
-	for (ULONG ul = 0; ul < size; ++ul)
+	UlongToSPartPropSpecInfoMapIter hmulpi(m_part_prop_spec_infos);
+	UlongToSPartPropSpecInfoMapIter hmulpi_other(pps->m_part_prop_spec_infos);
+	while (hmulpi.Advance() && hmulpi_other.Advance())
 	{
-		if (!(*m_part_prop_spec_infos)[ul]->Equals(
-				(*pps->m_part_prop_spec_infos)[ul]))
+		const SPartPropSpecInfo *info = hmulpi.Value();
+		const SPartPropSpecInfo *info_other = hmulpi_other.Value();
+		if (!info->Equals(info_other))
 		{
 			return false;
 		}
 	}
-
-	return true;
+	return hmulpi.Advance() == hmulpi_other.Advance();
 }
 
 CPartitionPropagationSpec::SPartPropSpecInfo *
@@ -114,18 +112,10 @@ CPartitionPropagationSpec::FindPartPropSpecInfo(ULONG scan_id) const
 		return nullptr;
 	}
 
-	// GPDB_12_MERGE_FIXME: Use binary search here instead!
-	for (ULONG ut = 0; ut < m_part_prop_spec_infos->Size(); ut++)
-	{
-		SPartPropSpecInfo *part_info = (*m_part_prop_spec_infos)[ut];
+	SPartPropSpecInfo *info = m_part_prop_spec_infos->Find(&scan_id);
+	GPOS_RTL_ASSERT(info != nullptr);
 
-		if (part_info->m_scan_id == scan_id)
-		{
-			return part_info;
-		}
-	}
-
-	GPOS_RTL_ASSERT(!"Unreachable");
+	return info;
 }
 
 const CBitSet *
@@ -150,24 +140,38 @@ CPartitionPropagationSpec::Insert(ULONG scan_id, EPartPropSpecInfoType type,
 
 	CMemoryPool *mp = COptCtxt::PoctxtFromTLS()->Pmp();
 	rool_rel_mdid->AddRef();
+
+	// Constructing 'SPartPropSpecInfo' for the received scan-id & PartPropSpecInfoType
+	// This structure is a data member of CPartitionPropagationSpec and hence
+	// required to create new object.
 	SPartPropSpecInfo *info =
 		GPOS_NEW(mp) SPartPropSpecInfo(scan_id, type, rool_rel_mdid);
 
+	// If we are adding a consumer, then the selector_ids field will
+	// not be NULL. For this consumer, we add the details of all the
+	// partition selectors which will feed to this particular consumer.
+	// If partition selector already exist for this scan id
+	// then we take union of the existing ids with the new coming with this call
 	if (selector_ids != nullptr)
 	{
 		info->m_selector_ids->Union(selector_ids);
 	}
 
+	// When we add Consumer, exp is nullptr; for propagator it is not Null
+	// we only add propagator if we have predicate on the partition key
 	if (expr != nullptr)
 	{
 		expr->AddRef();
 		info->m_filter_expr = expr;
 	}
-
 	m_scan_ids->ExchangeSet(scan_id);
-	m_part_prop_spec_infos->Append(info);
-	// GPDB_12_MERGE_FIXME: Use CKHeap or CHashMap instead of sorting every insert!
-	m_part_prop_spec_infos->Sort(SPartPropSpecInfo::CmpFunc);
+
+	// Insertion is done only if the value doesn't exist in the map
+	// Case - Insert called from PPSRequired(); For a given scan id,
+	// a case of consecutive propagator, consumer request
+	// cannot happen, as the PPSRequired() is called for a given child index
+	// and the child index decide if we will add propagator/consumer
+	m_part_prop_spec_infos->Insert(GPOS_NEW(mp) ULONG(scan_id), info);
 }
 
 void
@@ -180,9 +184,11 @@ CPartitionPropagationSpec::Insert(SPartPropSpecInfo *other)
 void
 CPartitionPropagationSpec::InsertAll(CPartitionPropagationSpec *pps)
 {
-	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
+	UlongToSPartPropSpecInfoMapIter hmulpi(pps->m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
+		SPartPropSpecInfo *other_info =
+			const_cast<SPartPropSpecInfo *>(hmulpi.Value());
 
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(other_info->m_scan_id);
@@ -209,9 +215,11 @@ void
 CPartitionPropagationSpec::InsertAllowedConsumers(
 	CPartitionPropagationSpec *pps, CBitSet *allowed_scan_ids)
 {
-	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
+	UlongToSPartPropSpecInfoMapIter hmulpi(pps->m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
+		SPartPropSpecInfo *other_info =
+			const_cast<SPartPropSpecInfo *>(hmulpi.Value());
 
 		// only process allowed_scan_ids ...
 		if (allowed_scan_ids != nullptr &&
@@ -226,6 +234,8 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 			continue;
 		}
 
+		// We check if info for the other_info->m_scan_id exist for the calling
+		// object. eg pps_result->InsertAllowedConsumers(pppsRequired, allowed_scan_ids);
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(other_info->m_scan_id);
 
@@ -238,7 +248,7 @@ CPartitionPropagationSpec::InsertAllowedConsumers(
 		GPOS_ASSERT(found_info->m_root_rel_mdid == other_info->m_root_rel_mdid);
 
 		// for a given scan-id, only a consumer request can be merged with an
-		// existing consumer request; so bail in all other cases; eg: merging a
+		// existing consumer request; so bail in all other cases; eg: merging
 		// a propagator or merging a consumer when a propagator was already inserted
 		GPOS_RTL_ASSERT(found_info->m_type == EpptConsumer &&
 						other_info->m_type == EpptConsumer);
@@ -251,9 +261,11 @@ void
 CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 										   ULONG scan_id)
 {
-	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
+	UlongToSPartPropSpecInfoMapIter hmulpi(pps->m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
+		SPartPropSpecInfo *other_info =
+			const_cast<SPartPropSpecInfo *>(hmulpi.Value());
 
 		if (other_info->m_scan_id == scan_id)
 		{
@@ -284,9 +296,11 @@ CPartitionPropagationSpec::InsertAllExcept(CPartitionPropagationSpec *pps,
 void
 CPartitionPropagationSpec::InsertAllResolve(CPartitionPropagationSpec *pps)
 {
-	for (ULONG ul = 0; ul < pps->m_part_prop_spec_infos->Size(); ++ul)
+	UlongToSPartPropSpecInfoMapIter hmulpi(pps->m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *other_info = (*pps->m_part_prop_spec_infos)[ul];
+		SPartPropSpecInfo *other_info =
+			const_cast<SPartPropSpecInfo *>(hmulpi.Value());
 
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(other_info->m_scan_id);
@@ -331,9 +345,10 @@ CPartitionPropagationSpec::FSatisfies(
 		return true;
 	}
 
-	for (ULONG ul = 0; ul < pps_reqd->m_part_prop_spec_infos->Size(); ul++)
+	UlongToSPartPropSpecInfoMapIter hmulpi(pps_reqd->m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *reqd_info = (*pps_reqd->m_part_prop_spec_infos)[ul];
+		const SPartPropSpecInfo *reqd_info = hmulpi.Value();
 		SPartPropSpecInfo *found_info =
 			FindPartPropSpecInfo(reqd_info->m_scan_id);
 
@@ -343,6 +358,34 @@ CPartitionPropagationSpec::FSatisfies(
 		}
 	}
 	return true;
+}
+
+// Check if there is a matching partition propogation between two specs
+// This is used to ensure that there aren't partition selectors in places that
+// are unsupported by the executor
+BOOL
+CPartitionPropagationSpec::IsUnsupportedPartSelector(
+	const CPartitionPropagationSpec *pps_reqd) const
+{
+	if (pps_reqd->m_part_prop_spec_infos == nullptr)
+	{
+		return false;
+	}
+
+	UlongToSPartPropSpecInfoMapIter hmulpi(pps_reqd->m_part_prop_spec_infos);
+	while (hmulpi.Advance())
+	{
+		const SPartPropSpecInfo *reqd_info = hmulpi.Value();
+		SPartPropSpecInfo *found_info =
+			FindPartPropSpecInfo(reqd_info->m_scan_id);
+		if (found_info != nullptr &&
+			found_info->m_scan_id == reqd_info->m_scan_id &&
+			found_info->m_type != reqd_info->m_type)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 //---------------------------------------------------------------------------
@@ -360,9 +403,10 @@ CPartitionPropagationSpec::AppendEnforcers(CMemoryPool *mp,
 										   CExpressionArray *pdrgpexpr,
 										   CExpression *expr)
 {
-	for (ULONG ul = 0; ul < m_part_prop_spec_infos->Size(); ++ul)
+	UlongToSPartPropSpecInfoMapIter hmulpi(m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *info = (*m_part_prop_spec_infos)[ul];
+		const SPartPropSpecInfo *info = hmulpi.Value();
 
 		if (info->m_type != CPartitionPropagationSpec::EpptPropagator)
 		{
@@ -414,10 +458,11 @@ CPartitionPropagationSpec::OsPrint(IOstream &os) const
 		return os;
 	}
 
-	ULONG size = m_part_prop_spec_infos->Size();
-	for (ULONG ul = 0; ul < size; ++ul)
+	ULONG ul = 0;
+	UlongToSPartPropSpecInfoMapIter hmulpi(m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *part_info = (*m_part_prop_spec_infos)[ul];
+		const SPartPropSpecInfo *part_info = hmulpi.Value();
 
 		switch (part_info->m_type)
 		{
@@ -435,10 +480,12 @@ CPartitionPropagationSpec::OsPrint(IOstream &os) const
 		part_info->m_selector_ids->OsPrint(os);
 		os << ")";
 
-		if (ul < (size - 1))
+		if (ul < (m_part_prop_spec_infos->Size() - 1))
 		{
 			os << ", ";
 		}
+
+		ul += 1;
 	}
 	return os;
 }
@@ -451,9 +498,10 @@ CPartitionPropagationSpec::ContainsAnyConsumers() const
 		return false;
 	}
 
-	for (ULONG ul = 0; ul < m_part_prop_spec_infos->Size(); ++ul)
+	UlongToSPartPropSpecInfoMapIter hmulpi(m_part_prop_spec_infos);
+	while (hmulpi.Advance())
 	{
-		SPartPropSpecInfo *info = (*m_part_prop_spec_infos)[ul];
+		const SPartPropSpecInfo *info = hmulpi.Value();
 
 		if (info->m_type == CPartitionPropagationSpec::EpptConsumer)
 		{

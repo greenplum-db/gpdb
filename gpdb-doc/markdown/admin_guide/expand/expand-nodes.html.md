@@ -10,9 +10,9 @@ Run performance tests first on the new hosts and then all hosts. Run the tests o
 
 Generally, you should run performance tests when an administrator modifies host networking or other special conditions in the system. For example, if you will run the expanded system on two network clusters, run tests on each cluster.
 
-**Note:** Preparing host systems for use by a Greenplum Database system assumes that the new hosts' operating system has been properly configured to match the existing hosts, described in [Configuring Your Systems](../../install_guide/prep_os.html).
+> **Note** Preparing host systems for use by a Greenplum Database system assumes that the new hosts' operating system has been properly configured to match the existing hosts, described in [Configuring Your Systems](../../install_guide/prep_os.html).
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## <a id="topic18"></a>Adding New Hosts to the Trusted Host Environment 
 
@@ -24,14 +24,14 @@ First perform the process as `root`, for administration convenience, and then as
 2.  [To create the gpadmin user](#no160595)
 3.  [To exchange SSH keys as the gpadmin user](#sshexch_gpadmin)
 
-**Note:** The Greenplum Database segment host naming convention is `sdwN` where `sdw` is a prefix and `N` is an integer \( `sdw1`, `sdw2` and so on\). For hosts with multiple interfaces, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`.
+> **Note** The Greenplum Database segment host naming convention is `sdwN` where `sdw` is a prefix and `N` is an integer \( `sdw1`, `sdw2` and so on\). For hosts with multiple interfaces, the convention is to append a dash \(`-`\) and number to the host name. For example, `sdw1-1` and `sdw1-2` are the two interface names for host `sdw1`.
 
 ### <a id="no160715"></a>To exchange SSH keys as root 
 
-1.  Create a host file with the existing host names in your array and a separate host file with the new expansion host names. For existing hosts, you can use the same host file used to set up SSH keys in the system. In the files, list all hosts \(master, backup master, and segment hosts\) with one name per line and no extra lines or spaces. Exchange SSH keys using the configured host names for a given host if you use a multi-NIC configuration. In this example, `mdw` is configured with a single NIC, and `sdw1`, `sdw2`, and `sdw3` are configured with 4 NICs:
+1.  Create a host file with the existing host names in your array and a separate host file with the new expansion host names. For existing hosts, you can use the same host file used to set up SSH keys in the system. In the files, list all hosts \(coordinator, backup coordinator, and segment hosts\) with one name per line and no extra lines or spaces. Exchange SSH keys using the configured host names for a given host if you use a multi-NIC configuration. In this example, `cdw` is configured with a single NIC, and `sdw1`, `sdw2`, and `sdw3` are configured with 4 NICs:
 
     ```
-    mdw
+    cdw
     sdw1-1
     sdw1-2
     sdw1-3
@@ -46,7 +46,7 @@ First perform the process as `root`, for administration convenience, and then as
     sdw3-4
     ```
 
-2.  Log in as `root` on the master host, and source the `greenplum_path.sh` file from your Greenplum installation.
+2.  Log in as `root` on the coordinator host, and source the `greenplum_path.sh` file from your Greenplum installation.
 
     ```
     $ su - 

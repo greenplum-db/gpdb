@@ -1616,7 +1616,7 @@ FROM gp_single_row;
 --------------------------
 (0 rows)
 
--- From Python List of compatable values
+-- From Python List of compatible values
 SELECT test_return_setof_circle('[None, ((3,1),4), "((5,3),1)"]');
  test_return_setof_circle 
 --------------------------

@@ -38,5 +38,5 @@ The following options specify how to import fixed width data.
     ```
 
 
-**Parent topic:**[Using a Custom Format](../../load/topics/g-using-a-custom-format.html)
+**Parent topic:** [Using a Custom Format](../../load/topics/g-using-a-custom-format.html)
 

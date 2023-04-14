@@ -140,7 +140,9 @@ CBindingTest::EresUnittest_Basic()
 	GPOS_RESULT eres = GPOS_FAILED;
 
 	if (bindings_for_xform == EXPECTED_BINDING)
+	{
 		eres = GPOS_OK;
+	}
 
 	// clean up
 	pexprPlan->Release();

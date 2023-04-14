@@ -24,10 +24,13 @@
 #include "catalog/pg_collation.h"
 #include "catalog/pg_statistic_ext.h"
 #include "catalog/pg_statistic_ext_data.h"
+#include "commands/progress.h"
 #include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/optimizer.h"
+#include "parser/parsetree.h"
+#include "pgstat.h"
 #include "postmaster/autovacuum.h"
 #include "statistics/extended_stats_internal.h"
 #include "statistics/statistics.h"
@@ -60,7 +63,7 @@ typedef struct StatExtEntry
 	char	   *schema;			/* statistics object's schema */
 	char	   *name;			/* statistics object's name */
 	Bitmapset  *columns;		/* attribute numbers covered by the object */
-	List	   *types;			/* 'char' list of enabled statistic kinds */
+	List	   *types;			/* 'char' list of enabled statistics kinds */
 } StatExtEntry;
 
 
@@ -89,15 +92,33 @@ BuildRelationExtStatistics(Relation onerel, double totalrows,
 	List	   *stats;
 	MemoryContext cxt;
 	MemoryContext oldcxt;
+	int64		ext_cnt;
 
+	pg_stext = table_open(StatisticExtRelationId, RowExclusiveLock);
+	stats = fetch_statentries_for_relation(pg_stext, RelationGetRelid(onerel));
+
+	/* memory context for building each statistics object */
 	cxt = AllocSetContextCreate(CurrentMemoryContext,
 								"BuildRelationExtStatistics",
 								ALLOCSET_DEFAULT_SIZES);
 	oldcxt = MemoryContextSwitchTo(cxt);
 
-	pg_stext = table_open(StatisticExtRelationId, RowExclusiveLock);
-	stats = fetch_statentries_for_relation(pg_stext, RelationGetRelid(onerel));
+	/* report this phase */
+	if (stats != NIL)
+	{
+		const int	index[] = {
+			PROGRESS_ANALYZE_PHASE,
+			PROGRESS_ANALYZE_EXT_STATS_TOTAL
+		};
+		const int64 val[] = {
+			PROGRESS_ANALYZE_PHASE_COMPUTE_EXT_STATS,
+			list_length(stats)
+		};
 
+		pgstat_progress_update_multi_param(2, index, val);
+	}
+
+	ext_cnt = 0;
 	foreach(lc, stats)
 	{
 		StatExtEntry *stat = (StatExtEntry *) lfirst(lc);
@@ -148,12 +169,21 @@ BuildRelationExtStatistics(Relation onerel, double totalrows,
 
 		/* store the statistics in the catalog */
 		statext_store(stat->statOid, ndistinct, dependencies, mcv, stats);
-	}
 
-	table_close(pg_stext, RowExclusiveLock);
+		/* for reporting progress */
+		pgstat_progress_update_param(PROGRESS_ANALYZE_EXT_STATS_COMPUTED,
+									 ++ext_cnt);
+
+		/* free the data used for building this statistics object */
+		MemoryContextReset(cxt);
+	}
 
 	MemoryContextSwitchTo(oldcxt);
 	MemoryContextDelete(cxt);
+
+	list_free(stats);
+
+	table_close(pg_stext, RowExclusiveLock);
 }
 
 /*
@@ -322,12 +352,14 @@ statext_store(Oid statOid,
 			  MVNDistinct *ndistinct, MVDependencies *dependencies,
 			  MCVList *mcv, VacAttrStats **stats)
 {
+	Relation	pg_stextdata;
 	HeapTuple	stup,
 				oldtup;
 	Datum		values[Natts_pg_statistic_ext_data];
 	bool		nulls[Natts_pg_statistic_ext_data];
 	bool		replaces[Natts_pg_statistic_ext_data];
-	Relation	pg_stextdata;
+
+	pg_stextdata = table_open(StatisticExtDataRelationId, RowExclusiveLock);
 
 	memset(nulls, true, sizeof(nulls));
 	memset(replaces, false, sizeof(replaces));
@@ -371,8 +403,6 @@ statext_store(Oid statOid,
 		elog(ERROR, "cache lookup failed for statistics object %u", statOid);
 
 	/* replace it */
-	pg_stextdata = table_open(StatisticExtDataRelationId, RowExclusiveLock);
-
 	stup = heap_modify_tuple(oldtup,
 							 RelationGetDescr(pg_stextdata),
 							 values,
@@ -697,15 +727,20 @@ has_stats_of_kind(List *stats, char requiredkind)
  *		there's no match.
  *
  * The current selection criteria is very simple - we choose the statistics
- * object referencing the most of the requested attributes, breaking ties
- * in favor of objects with fewer keys overall.
+ * object referencing the most attributes in covered (and still unestimated
+ * clauses), breaking ties in favor of objects with fewer keys overall.
+ *
+ * The clause_attnums is an array of bitmaps, storing attnums for individual
+ * clauses. A NULL element means the clause is either incompatible or already
+ * estimated.
  *
  * XXX If multiple statistics objects tie on both criteria, then which object
  * is chosen depends on the order that they appear in the stats list. Perhaps
  * further tiebreakers are needed.
  */
 StatisticExtInfo *
-choose_best_statistics(List *stats, Bitmapset *attnums, char requiredkind)
+choose_best_statistics(List *stats, char requiredkind,
+					   Bitmapset **clause_attnums, int nclauses)
 {
 	ListCell   *lc;
 	StatisticExtInfo *best_match = NULL;
@@ -714,17 +749,33 @@ choose_best_statistics(List *stats, Bitmapset *attnums, char requiredkind)
 
 	foreach(lc, stats)
 	{
+		int			i;
 		StatisticExtInfo *info = (StatisticExtInfo *) lfirst(lc);
+		Bitmapset  *matched = NULL;
 		int			num_matched;
 		int			numkeys;
-		Bitmapset  *matched;
 
 		/* skip statistics that are not of the correct type */
 		if (info->kind != requiredkind)
 			continue;
 
-		/* determine how many attributes of these stats can be matched to */
-		matched = bms_intersect(attnums, info->keys);
+		/*
+		 * Collect attributes in remaining (unestimated) clauses fully covered
+		 * by this statistic object.
+		 */
+		for (i = 0; i < nclauses; i++)
+		{
+			/* ignore incompatible/estimated clauses */
+			if (!clause_attnums[i])
+				continue;
+
+			/* ignore clauses that are not covered by this object */
+			if (!bms_is_subset(clause_attnums[i], info->keys))
+				continue;
+
+			matched = bms_add_members(matched, clause_attnums[i]);
+		}
+
 		num_matched = bms_num_members(matched);
 		bms_free(matched);
 
@@ -796,21 +847,13 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause,
 		RangeTblEntry *rte = root->simple_rte_array[relid];
 		OpExpr	   *expr = (OpExpr *) clause;
 		Var		   *var;
-		bool		varonleft = true;
-		bool		ok;
 
 		/* Only expressions with two arguments are considered compatible. */
 		if (list_length(expr->args) != 2)
 			return false;
 
-		/* see if it actually has the right shape (one Var, one Const) */
-		ok = (NumRelids((Node *) expr) == 1) &&
-			(is_pseudo_constant_clause(lsecond(expr->args)) ||
-			 (varonleft = false,
-			  is_pseudo_constant_clause(linitial(expr->args))));
-
-		/* unsupported structure (two variables or so) */
-		if (!ok)
+		/* Check if the expression the right shape (one Var, one Const) */
+		if (!examine_opclause_expression(expr, &var, NULL, NULL))
 			return false;
 
 		/*
@@ -849,8 +892,6 @@ statext_is_compatible_clause_internal(PlannerInfo *root, Node *clause,
 		if (rte->securityQuals != NIL &&
 			!get_func_leakproof(get_opcode(expr->opno)))
 			return false;
-
-		var = (varonleft) ? linitial(expr->args) : lsecond(expr->args);
 
 		return statext_is_compatible_clause_internal(root, (Node *) var,
 													 relid, attnums);
@@ -1048,7 +1089,6 @@ statext_mcv_clauselist_selectivity(PlannerInfo *root, List *clauses, int varReli
 								   RelOptInfo *rel, Bitmapset **estimatedclauses)
 {
 	ListCell   *l;
-	Bitmapset  *clauses_attnums = NULL;
 	Bitmapset **list_attnums;
 	int			listidx;
 	StatisticExtInfo *stat;
@@ -1059,6 +1099,17 @@ statext_mcv_clauselist_selectivity(PlannerInfo *root, List *clauses, int varReli
 				mcv_totalsel,
 				other_sel,
 				sel;
+	RangeTblEntry *rte = planner_rt_fetch(rel->relid, root);
+
+	/*
+	 * When dealing with regular inheritance trees, ignore extended stats
+	 * (which were built without data from child rels, and thus do not
+	 * represent them). For partitioned tables data there's no data in the
+	 * non-leaf relations, so we build stats only for the inheritance tree.
+	 * So for partitioned tables we do consider extended stats.
+	 */
+	if (rte->inh && rte->relkind != RELKIND_PARTITIONED_TABLE)
+		return 1.0;
 
 	/* check if there's any stats that might be useful for us. */
 	if (!has_stats_of_kind(rel->statlist, STATS_EXT_MCV))
@@ -1086,22 +1137,16 @@ statext_mcv_clauselist_selectivity(PlannerInfo *root, List *clauses, int varReli
 
 		if (!bms_is_member(listidx, *estimatedclauses) &&
 			statext_is_compatible_clause(root, clause, rel->relid, &attnums))
-		{
 			list_attnums[listidx] = attnums;
-			clauses_attnums = bms_add_members(clauses_attnums, attnums);
-		}
 		else
 			list_attnums[listidx] = NULL;
 
 		listidx++;
 	}
 
-	/* We need at least two attributes for multivariate statistics. */
-	if (bms_membership(clauses_attnums) != BMS_MULTIPLE)
-		return 1.0;
-
 	/* find the best suited statistics object for these attnums */
-	stat = choose_best_statistics(rel->statlist, clauses_attnums, STATS_EXT_MCV);
+	stat = choose_best_statistics(rel->statlist, STATS_EXT_MCV,
+								  list_attnums, list_length(clauses));
 
 	/* if no matching stats could be found then we've nothing to do */
 	if (!stat)
@@ -1196,4 +1241,66 @@ statext_clauselist_selectivity(PlannerInfo *root, List *clauses, int varRelid,
 											   estimatedclauses);
 
 	return sel;
+}
+
+/*
+ * examine_operator_expression
+ *		Split expression into Var and Const parts.
+ *
+ * Attempts to match the arguments to either (Var op Const) or (Const op Var),
+ * possibly with a RelabelType on top. When the expression matches this form,
+ * returns true, otherwise returns false.
+ *
+ * Optionally returns pointers to the extracted Var/Const nodes, when passed
+ * non-null pointers (varp, cstp and varonleftp). The varonleftp flag specifies
+ * on which side of the operator we found the Var node.
+ */
+bool
+examine_opclause_expression(OpExpr *expr, Var **varp, Const **cstp, bool *varonleftp)
+{
+	Var	   *var;
+	Const  *cst;
+	bool	varonleft;
+	Node   *leftop,
+		   *rightop;
+
+	/* enforced by statext_is_compatible_clause_internal */
+	Assert(list_length(expr->args) == 2);
+
+	leftop = linitial(expr->args);
+	rightop = lsecond(expr->args);
+
+	/* strip RelabelType from either side of the expression */
+	if (IsA(leftop, RelabelType))
+		leftop = (Node *) ((RelabelType *) leftop)->arg;
+
+	if (IsA(rightop, RelabelType))
+		rightop = (Node *) ((RelabelType *) rightop)->arg;
+
+	if (IsA(leftop, Var) && IsA(rightop, Const))
+	{
+		var = (Var *) leftop;
+		cst = (Const *) rightop;
+		varonleft = true;
+	}
+	else if (IsA(leftop, Const) && IsA(rightop, Var))
+	{
+		var = (Var *) rightop;
+		cst = (Const *) leftop;
+		varonleft = false;
+	}
+	else
+		return false;
+
+	/* return pointers to the extracted parts if requested */
+	if (varp)
+		*varp = var;
+
+	if (cstp)
+		*cstp = cst;
+
+	if (varonleftp)
+		*varonleftp = varonleft;
+
+	return true;
 }

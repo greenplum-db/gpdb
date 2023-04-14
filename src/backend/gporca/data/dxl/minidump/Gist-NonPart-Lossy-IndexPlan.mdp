@@ -32,7 +32,7 @@ Optimizer status: PQO version 2.65.1
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -128,7 +128,7 @@ Optimizer status: PQO version 2.65.1
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.573684.1.0" Name="gist_tbl" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.573684.1.0" Name="gist_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.573684.1.0" Name="gist_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.603.1.0" Nullable="true" ColWidth="32">
             <dxl:DefaultValue/>
@@ -164,7 +164,6 @@ Optimizer status: PQO version 2.65.1
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.573703.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.573703.1.0" Name="gist_tbl_point_index" IsClustered="false" IndexType="Gist" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
@@ -239,7 +238,7 @@ Optimizer status: PQO version 2.65.1
           <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAaAQAAAAAAAAAAAAUQAAAAAAAABRAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRAAAAAAAAAFEAAAAAAAAAUQAAA&#10;AAAAABRAAAAAAAAAAAA="/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.573684.1.0" TableName="gist_tbl">
+          <dxl:TableDescriptor Mdid="6.573684.1.0" TableName="gist_tbl">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="b" TypeMdid="0.603.1.0" ColWidth="32"/>
               <dxl:Column ColId="2" Attno="2" ColName="p" TypeMdid="0.604.1.0" ColWidth="101"/>
@@ -289,8 +288,9 @@ Optimizer status: PQO version 2.65.1
               <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAaAQAAAAAAAAAAAAUQAAAAAAAABRAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRAAAAAAAAAFEAAAAAAAAAUQAAA&#10;AAAAABRAAAAAAAAAAAA="/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.573703.1.0" IndexName="gist_tbl_point_index"/>
-          <dxl:TableDescriptor Mdid="0.573684.1.0" TableName="gist_tbl">
+          <dxl:TableDescriptor Mdid="6.573684.1.0" TableName="gist_tbl">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="2" ColName="p" TypeMdid="0.604.1.0" ColWidth="101"/>
               <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

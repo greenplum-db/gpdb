@@ -26,8 +26,8 @@ configure workflow.
 The following workflow should be followed:
 
 * Edit the template file (`templates/gpdb-tpl.yml`).
-* Generate the pipeline. During this step, the pipeline release jobs will be validated.
-* Use the Concourse `fly` command to set the pipeline (`gpdb_master-generated.yml`).
+* Generate the pipelines. During this step, the pipeline release jobs will be validated.
+* Use the Concourse `fly` command to set the pipeline (`gpdb_main-generated.yml`).
 * Once the pipeline is validated to function properly, commit the updated template and pipeline.
 
 ## Requirements
@@ -54,10 +54,10 @@ gen_pipeline.py -h|--help
 
 ## Examples of usage
 
-### Create Production Pipeline
+### Create and Update Production Pipelines
 
 The `./gen_pipeline.py -t prod` command will generate the production
-pipeline (`gpdb_master-generated.yml`). All supported platforms and
+pipeline (`gpdb_main-generated.yml`). Default platform and
 test sections are included. The pipeline release jobs will be
 validated. The output of the utility will provide details of the
 pipeline generated. Following standard conventions, two `fly`
@@ -71,55 +71,66 @@ $ ./gen_pipeline.py -t prod
 ======================================================================
 Validate Pipeline Release Jobs
 ----------------------------------------------------------------------
-all jobs accounted for
+Pipeline validated: all jobs accounted for
 
 ======================================================================
-  Generate Pipeline type: .. : prod
-  Pipeline file ............ : gpdb_master-generated.yml
+  Pipeline target: ......... : prod
+  Pipeline file ............ : gpdb_main-generated.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos6', 'centos7', 'win']
-  Test sections ............ : ['ICW', 'CS', 'MPP', 'MM', 'DPM', 'UD', 'FileRep']
+  OS Type .................. : rocky8
+  Test sections ............ : ['ICW', 'ResourceGroups', 'Interconnect', 'CLI', 'Extensions']
   test_trigger ............. : True
+  use_ICW_workers .......... : True
+  build_test_rc_rpm ........ : False
+  directed_release ......... : False
 ======================================================================
 
 NOTE: You can set the production pipelines with the following:
 
-fly -t gpdb-prod \
+fly -t prod \
     set-pipeline \
-    -p gpdb_master \
-    -c gpdb_master-generated.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml \
+    -p gpdb_main \
+    -c gpdb_main-generated.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
-    -v gpdb-git-branch=master \
-    -v pipeline-name=gpdb_master
+    -v gpdb-git-branch=main \
+    -v pipeline-name=gpdb_main
 
-fly -t gpdb-prod \
+fly -t prod \
     set-pipeline \
-    -p gpdb_master_without_asserts \
-    -c gpdb_master-generated.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml \
+    -p gpdb_main_without_asserts \
+    -c gpdb_main-generated.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/without_asserts_common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
-    -v gpdb-git-branch=master \
-    -v pipeline-name=gpdb_master_without_asserts
+    -v gpdb-git-branch=main \
+    -v pipeline-name=gpdb_main_without_asserts
 ```
 
-The generated pipeline file `gpdb_master-generated.yml` will be set,
+The generated pipeline file `gpdb_main-generated.yml` will be set,
 validated and ultimately committed (including the updated pipeline
 template) to the source repository.
+
+Create and update gpdb_main_rhel8, gpdb_main_oel8 pipelines:
+
+```
+./gen_pipeline.py  -t prod -O rhel8
+./gen_pipeline.py  -t prod -O oel8
+```
+
+
 
 ### Creating Developer pipelines
 
 As an example of generating a pipeline with a targeted test subset,
 the following can be used to generate a pipeline with supporting
-builds (default: centos7 platform) and `CLI` only jobs.
+builds (default: rhel8 platform) and `CLI` only jobs.
 
 The generated pipeline and helper `fly` command are intended encourage
 engineers to set the pipeline with a team-name-string (-t) and engineer
 (-u) identifiable names.
 
-NOTE: The majority of jobs are only available for the `centos7`
+NOTE: The majority of jobs are only available for the `rhel8`
       platform.
 
 ```
@@ -129,48 +140,46 @@ $ ./gen_pipeline.py -t dpm -u curry -a CLI
   Generate Pipeline type: .. : dpm
   Pipeline file ............ : gpdb-dpm-curry.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos7']
+  OS Types ................. : ['rhel8']
   Test sections ............ : ['CLI']
   test_trigger ............. : True
 ======================================================================
 
 NOTE: You can set the developer pipeline with the following:
 
-fly -t gpdb-dev \
+fly -t dev \
     set-pipeline \
     -p gpdb-dpm-curry \
     -c gpdb-dpm-curry.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_dev.yml \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
 ```
 
 Use the following to generate a pipeline with `ICW` and `CS` test jobs
-for `centos7` and `ubuntu18.04` platforms.
+for `rhel8` platforms.
 
 ```
-$ ./gen_pipeline.py -t cs -u durant -O {centos7,ubuntu18.04} -a {ICW,CS}
+$ ./gen_pipeline.py -t cs -u durant -O {rhel8} -a {ICW,CS}
 
 ======================================================================
   Generate Pipeline type: .. : cs
   Pipeline file ............ : gpdb-cs-durant.yml
   Template file ............ : gpdb-tpl.yml
-  OS Types ................. : ['centos7', 'ubuntu18.04']
+  OS Types ................. : ['rhel8']
   Test sections ............ : ['ICW', 'CS']
   test_trigger ............. : True
 ======================================================================
 
 NOTE: You can set the developer pipeline with the following:
 
-fly -t gpdb-dev \
+fly -t dev \
     set-pipeline \
     -p gpdb-cs-durant \
     -c gpdb-cs-durant.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_dev.yml \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
 ```

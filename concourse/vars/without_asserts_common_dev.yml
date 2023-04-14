@@ -1,0 +1,13 @@
+---
+aws-bucket: gpdb5-concourse-builds-dev
+google-project-id: data-sandbox-2
+google-zone: us-central1-a
+gcs-bucket: pivotal-gpdb-concourse-resources-dev
+gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-dev
+gcs-bucket-coverage: pivotal-gpdb-cli-coverage-dev
+rc-build-type: prod
+rc-build-type-gcs: ""
+reduced-frequency-trigger-start: 1:00 AM
+reduced-frequency-trigger-stop: 2:00 AM
+configure_flags: "--enable-tap-tests"
+configure_flags_with_extensions: "--enable-tap-tests --enable-debug-extensions"

@@ -362,7 +362,8 @@ static Size AllocSetGetChunkSpace(MemoryContext context, void *pointer);
 static bool AllocSetIsEmpty(MemoryContext context);
 static void AllocSetStats(MemoryContext context,
 						  MemoryStatsPrintFunc printfunc, void *passthru,
-						  MemoryContextCounters *totals);
+						  MemoryContextCounters *totals,
+						  bool print_to_stderr);
 
 static void AllocSetDeclareAccountingRoot(MemoryContext context);
 static Size AllocSetGetCurrentUsage(MemoryContext context);
@@ -1469,11 +1470,6 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 		/* Disallow external access to private part of chunk header. */
 		VALGRIND_MAKE_MEM_NOACCESS(chunk, ALLOCCHUNK_PRIVATE_LEN);
 
-		/*
-		 * no need to update memory accounting summaries, since chunk->size
-		 * didn't change
-		 */
-
 		return pointer;
 	}
 	else
@@ -1569,11 +1565,12 @@ AllocSetIsEmpty(MemoryContext context)
  * printfunc: if not NULL, pass a human-readable stats string to this.
  * passthru: pass this pointer through to printfunc.
  * totals: if not NULL, add stats about this context into *totals.
+ * print_to_stderr: print stats to stderr if true, elog otherwise.
  */
 static void
 AllocSetStats(MemoryContext context,
 			  MemoryStatsPrintFunc printfunc, void *passthru,
-			  MemoryContextCounters *totals)
+			  MemoryContextCounters *totals, bool print_to_stderr)
 {
 	AllocSet	set = (AllocSet) context;
 	Size		nblocks = 0;
@@ -1612,7 +1609,7 @@ AllocSetStats(MemoryContext context,
 				 "%zu total in %zd blocks; %zu free (%zd chunks); %zu used",
 				 totalspace, nblocks, freespace, freechunks,
 				 totalspace - freespace);
-		printfunc(context, passthru, stats_string);
+		printfunc(context, passthru, stats_string, print_to_stderr);
 	}
 
 	if (totals)
@@ -1699,9 +1696,10 @@ AllocSetSetPeakUsage(MemoryContext context, Size nbytes)
 void
 AllocSetTransferAccounting(MemoryContext context, MemoryContext new_parent)
 {
-	/* GPDB_12_MERGE_FIXME: If you mix AllocSetContexts and other contexts,
-	 * what happens to accounting? */
-	if (!IsA(context, AllocSetContext))
+	/*
+	 * Mixing AllocSetContexts and other contexts will lose the accounting info.
+	 */
+	if (!IsA(context, AllocSetContext) || (new_parent != NULL && !IsA(new_parent, AllocSetContext)))
 		return;
 
 	AllocSet set = (AllocSet)context;

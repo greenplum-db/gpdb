@@ -118,6 +118,13 @@ typedef enum IndexUniqueCheck
 } IndexUniqueCheck;
 
 
+/* Nullable "ORDER BY col op const" distance */
+typedef struct IndexOrderByDistance
+{
+	double		value;
+	bool		isnull;
+} IndexOrderByDistance;
+
 /*
  * generalized index_ interface routines (in indexam.c)
  */
@@ -165,6 +172,7 @@ extern bool index_fetch_heap(IndexScanDesc scan, struct TupleTableSlot *slot);
 extern bool index_getnext_slot(IndexScanDesc scan, ScanDirection direction,
 							   struct TupleTableSlot *slot);
 extern int64 index_getbitmap(IndexScanDesc scan, Node **bitmapP);
+extern void index_initbitmap(IndexScanDesc scan, Node **bitmapP);
 
 extern IndexBulkDeleteResult *index_bulk_delete(IndexVacuumInfo *info,
 												IndexBulkDeleteResult *stats,
@@ -179,8 +187,7 @@ extern FmgrInfo *index_getprocinfo(Relation irel, AttrNumber attnum,
 								   uint16 procnum);
 extern void index_store_float8_orderby_distances(IndexScanDesc scan,
 												 Oid *orderByTypes,
-												 double *distanceValues,
-												 bool *distanceNulls,
+												 IndexOrderByDistance *distances,
 												 bool recheckOrderBy);
 
 /*

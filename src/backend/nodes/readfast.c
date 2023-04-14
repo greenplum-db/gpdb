@@ -541,6 +541,10 @@ _readAExpr(void)
 
 			READ_NODE_FIELD(name);
 			break;
+		case AEXPR_NOT_DISTINCT:
+
+			READ_NODE_FIELD(name);
+			break;
 		case AEXPR_NULLIF:
 
 			READ_NODE_FIELD(name);
@@ -737,6 +741,7 @@ _readCreateStmt_common(CreateStmt *local_node)
 	READ_STRING_FIELD(tablespacename);
 	READ_STRING_FIELD(accessMethod);
 	READ_BOOL_FIELD(if_not_exists);
+	READ_BOOL_FIELD(gp_style_alter_part);
 
 	READ_NODE_FIELD(distributedBy);
 	READ_NODE_FIELD(partitionBy);
@@ -948,6 +953,19 @@ _readSequence(void)
 	READ_DONE();
 }
 
+static DynamicSeqScan *
+_readDynamicSeqScan(void)
+{
+	READ_LOCALS(DynamicSeqScan);
+
+	ReadCommonScan(&local_node->seqscan);
+	READ_NODE_FIELD(partOids);
+	READ_NODE_FIELD(part_prune_info);
+	READ_NODE_FIELD(join_prune_paramids);
+
+	READ_DONE();
+}
+
 /*
  * _readExternalScanInfo
  */
@@ -958,7 +976,7 @@ _readExternalScanInfo(void)
 
 	READ_NODE_FIELD(uriList);
 	READ_CHAR_FIELD(fmtType);
-	READ_BOOL_FIELD(isMasterOnly);
+	READ_BOOL_FIELD(isCoordinatorOnly);
 	READ_INT_FIELD(rejLimit);
 	READ_BOOL_FIELD(rejLimitInRows);
 	READ_CHAR_FIELD(logErrors);
@@ -1057,7 +1075,6 @@ _readSplitUpdate(void)
 	READ_LOCALS(SplitUpdate);
 
 	READ_INT_FIELD(actionColIdx);
-	READ_INT_FIELD(tupleoidColIdx);
 	READ_NODE_FIELD(insertColIdx);
 	READ_NODE_FIELD(deleteColIdx);
 
@@ -1744,6 +1761,9 @@ readNodeBinary(void)
 			case T_SeqScan:
 				return_value = _readSeqScan();
 				break;
+			case T_DynamicSeqScan:
+				return_value = _readDynamicSeqScan();
+				break;
 			case T_ExternalScanInfo:
 				return_value = _readExternalScanInfo();
 				break;
@@ -1753,11 +1773,20 @@ readNodeBinary(void)
 			case T_IndexOnlyScan:
 				return_value = _readIndexOnlyScan();
 				break;
+			case T_DynamicIndexScan:
+				return_value = _readDynamicIndexScan();
+				break;
 			case T_BitmapIndexScan:
 				return_value = _readBitmapIndexScan();
 				break;
+			case T_DynamicBitmapIndexScan:
+				return_value = _readDynamicBitmapIndexScan();
+				break;
 			case T_BitmapHeapScan:
 				return_value = _readBitmapHeapScan();
+				break;
+			case T_DynamicBitmapHeapScan:
+				return_value = _readDynamicBitmapHeapScan();
 				break;
 			case T_CteScan:
 				return_value = _readCteScan();
@@ -1785,6 +1814,9 @@ readNodeBinary(void)
 				break;
 			case T_ForeignScan:
 				return_value = _readForeignScan();
+				break;
+			case T_DynamicForeignScan:
+				return_value = _readDynamicForeignScan();
 				break;
 			case T_CustomScan:
 				return_value = _readCustomScan();
@@ -2187,6 +2219,9 @@ readNodeBinary(void)
 			case T_ReplicaIdentityStmt:
 				return_value = _readReplicaIdentityStmt();
 				break;
+			case T_AlterDatabaseStmt:
+				return_value = _readAlterDatabaseStmt();
+			break;
 			case T_AlterTableStmt:
 				return_value = _readAlterTableStmt();
 				break;

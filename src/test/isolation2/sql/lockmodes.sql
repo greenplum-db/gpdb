@@ -319,17 +319,22 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 -- For detailed behavior and notes, please refer below
 -- cases's comments.
 -- Details: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/wAPKpJzhbpM
--- start_ignore
-1:DROP TABLE IF EXISTS t_lockmods_part_tbl_upd_del;
--- end_ignore
+-- Issue: https://github.com/greenplum-db/gpdb/issues/13652
+1:DROP TABLE IF EXISTS t_lockmods_part_tbl_dml;
 
-1:CREATE TABLE t_lockmods_part_tbl_upd_del (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
-1:INSERT INTO t_lockmods_part_tbl_upd_del SELECT i, 1, i FROM generate_series(1,10)i;
+1:CREATE TABLE t_lockmods_part_tbl_dml (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
+1:INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
 
 -- 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del;
+1: DELETE FROM t_lockmods_part_tbl_dml;
 -- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+
+1: BEGIN;
+1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
+-- without GDD, it will lock all leaf partitions on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 
@@ -357,21 +362,21 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml SET c = 1 WHERE c = 1;
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+1: DELETE FROM t_lockmods_part_tbl_dml_1_prt_1;
 -- since the delete operation is on leaf part, there will be a lock on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml_1_prt_1 SET c = 1 WHERE c = 1;
 -- since the update operation is on leaf part, there will be a lock on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
@@ -677,38 +682,144 @@ ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 -- cases's comments.
 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del;
+1: DELETE FROM t_lockmods_part_tbl_dml;
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml SET c = 1 WHERE c = 1;
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+1: DELETE FROM t_lockmods_part_tbl_dml_1_prt_1;
 -- since the delete operation is on leaf part, there will be a lock on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml_1_prt_1 SET c = 1 WHERE c = 1;
 -- since the update operation is on leaf part, there will be a lock on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
+1: BEGIN;
+1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
+-- With GDD enabled, QD will only hold lock on root for insert
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+-- 2.8 Verify behaviors of select with locking clause (i.e. select for update)
+-- when running concurrently with index creation, for Heap tables.
+-- For AO/CO tables, refer to create_index_allows_readonly.source.
+
+1: CREATE TABLE create_index_select_for_update_tbl(a int, b int);
+1: INSERT INTO create_index_select_for_update_tbl SELECT i,i FROM generate_series(1,10)i;
+1: set optimizer = off;
+
+-- 2.8.1 with GDD enabled, expect no blocking
+1: show gp_enable_global_deadlock_detector;
+
+1: BEGIN;
+1: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;
+
+2: set optimizer = off;
+
+2: BEGIN;
+-- expect no blocking
+2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
+2: COMMIT;
+
+1: COMMIT;
+
+2: DROP INDEX create_index_select_for_update_idx;
+
+2: BEGIN;
+2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
+
+1: BEGIN;
+-- expect no blocking
+1: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;
+1: COMMIT;
+-- close session to avoid renew session failure after restart
+1q:
+
+2: COMMIT;
+
+2: DROP INDEX create_index_select_for_update_idx;
+
+-- 2.8.2 with GDD disabled, expect blocking
 -- reset gdd
 2: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
+-- close session to avoid renew session failure after restart
+2q:
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
 
+1: set optimizer = off;
 1: show gp_enable_global_deadlock_detector;
+
+1: BEGIN;
+1: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;
+
+2: set optimizer = off;
+
+2: BEGIN;
+-- expect blocking
+2&: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
+
+1: COMMIT;
+
+2<:
+2: COMMIT;
+
+2: DROP INDEX create_index_select_for_update_idx;
+
+2: BEGIN;
+2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
+
+1: BEGIN;
+-- expect blocking
+1&: SELECT * FROM create_index_select_for_update_tbl WHERE a = 2 FOR UPDATE;
+
+2: COMMIT;
+
+1<:
+1: COMMIT;
 
 1: drop table lockmodes_datadir;
 1q:
+2q:
+
+-- Check that concurrent DROP on leaf partition won't impact analyze on the
+-- parent since analyze will hold a ShareUpdateExclusiveLock and DROP will 
+-- require an AccessExclusiveLock.
+-- Case 1. The analyze result is expected when there's concurrent drop on child.
+1:create table analyzedrop(a int) partition by range(a);
+1:create table analyzedrop_1 partition of analyzedrop for values from (0) to (10);
+1:create table analyzedrop_2 partition of analyzedrop for values from (10) to (20);
+1:insert into analyzedrop select * from generate_series(0,19);
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1&: analyze analyzedrop; 
+2&: drop table analyzedrop_1;
+3:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1<:
+2<:
+3:select * from pg_stats where tablename like 'analyzedrop%';
+-- Case 2. No failure should happen when there's concurrent drop on parent as well.
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1&: analyze analyzedrop; 
+2&: drop table analyzedrop_2;
+3&: drop table analyzedrop;
+4:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1<:
+2<:
+3<:
+--empty as table is dropped
+4:select * from pg_stats where tablename like 'analyzedrop%';

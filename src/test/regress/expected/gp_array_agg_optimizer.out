@@ -151,6 +151,7 @@ order by 1,2;
    ->  Sort  (cost=0.00..862.06 rows=8 width=16) (actual time=1.839..1.855 rows=5 loops=1)
          Sort Key: mergeappend_test.a, mergeappend_test.b
          Sort Method:  quicksort  Memory: 150kB
+         Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
          ->  Append  (cost=0.00..862.06 rows=8 width=16) (actual time=0.333..1.826 rows=5 loops=1)
                ->  HashAggregate  (cost=0.00..431.05 rows=7 width=16) (actual time=0.332..0.341 rows=4 loops=1)
                      Group Key: mergeappend_test.a, mergeappend_test.b
@@ -169,8 +170,26 @@ order by 1,2;
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA)
  Execution Time: 2.943 ms
-(23 rows)
+(24 rows)
 
+set optimizer_trace_fallback = off;
+select * from
+  test_util.extract_plan_stats($$
+select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
+order by 1,2;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ workmem_wanted_lines |           0
+ executor_mem_lines   |           1
+(2 rows)
+
+set optimizer_trace_fallback = on;
 -- create a view as we otherwise have to repeat this query a few times.
 create view v_pagg_test as
 select
@@ -324,14 +343,10 @@ INSERT INTO arrtest (a, b[1:2][1:2][1:2], c, d, e, f, g)
 VALUES ('{1,2}', '{{{0,0},{1,2}},{{3,4},{5,6}}}', '{"foo"}',
         '{{"elt1", "elt2"}}', '{1.1, 2.2}',
         '{"abc","abcde"}', '{"abc","abcde"}');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
 INSERT INTO arrtest (a, b[1:2][1:2][1:2], c, d, e, f, g)
 VALUES ('{1,2}', '{{{7,8},{9,10}},{{11,12},{13,14}}}', '{"bar"}',
         '{{"elt1", "elt2"}}', '{"3.3", "4.4"}',
         '{"abc","abcde"}', '{"abc","abcde"}');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
 SELECT $query$
 select
   array_agg(a) agg_a,

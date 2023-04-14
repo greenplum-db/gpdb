@@ -3,16 +3,6 @@
 -- exist at the time of running upgrades. If objects are to be manipulated
 -- in other databases, make sure to change to the correct database first.
 
--- GPDB_12_MERGE_FIXME: We don't need to drop partitioned table with indexes
--- anymore, do we?
---partition tables with indexes requires dropping for now
---NOTE: 'isolation2test' and 'regression' database must already exist
---\c isolation2test;
---\i test_gpdb_pre_drop_partition_indices.sql;
-
---\c regression;
---\i test_gpdb_pre_drop_partition_indices.sql;
-
 -- The isolation tests are run in utility mode, and the objects left behind
 -- are not consistent between the QD and QEs.
 DROP DATABASE IF EXISTS isolation_regression;

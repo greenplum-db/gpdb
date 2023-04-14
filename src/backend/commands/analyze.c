@@ -85,6 +85,7 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_statistic_ext.h"
 #include "commands/dbcommands.h"
+#include "commands/progress.h"
 #include "commands/tablecmds.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
@@ -163,6 +164,7 @@ static MemoryContext anl_context = NULL;
 static BufferAccessStrategy vac_strategy;
 
 Bitmapset	**acquire_func_colLargeRowIndexes;
+double		 *acquire_func_colLargeRowLength;
 
 
 static void do_analyze_rel(Relation onerel,
@@ -392,6 +394,8 @@ analyze_rel_internal(Oid relid, RangeVar *relation,
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 	MyPgXact->vacuumFlags |= PROC_IN_ANALYZE;
 	LWLockRelease(ProcArrayLock);
+	pgstat_progress_start_command(PROGRESS_COMMAND_ANALYZE,
+								  RelationGetRelid(onerel));
 
 	/*
 	 * Do the normal non-recursive ANALYZE.  We can skip this for partitioned
@@ -438,6 +442,8 @@ analyze_rel_internal(Oid relid, RangeVar *relation,
 	 */
 	relation_close(onerel, NoLock);
 
+	pgstat_progress_end_command();
+
 	/*
 	 * Reset my PGXACT flag.  Note: we need this here, and not in vacuum_rel,
 	 * because the vacuum flag is cleared by the end-of-xact code.
@@ -481,6 +487,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	int			save_sec_context;
 	int			save_nestlevel;
 	Bitmapset **colLargeRowIndexes;
+	double     *colLargeRowLength;
 	bool		sample_needed;
 
 	if (inh)
@@ -669,6 +676,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	 * Maintain information if the row of a column exceeds WIDTH_THRESHOLD
 	 */
 	colLargeRowIndexes = (Bitmapset **) palloc0(sizeof(Bitmapset *) * onerel->rd_att->natts);
+	colLargeRowLength = (double *)palloc0(sizeof(double) * onerel->rd_att->natts);
 
 	if ((params->options & VACOPT_FULLSCAN) != 0)
 	{
@@ -680,20 +688,32 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		}
 	}
 
-	sample_needed = needs_sample(vacattrstats, attr_cnt);
-	if (sample_needed)
+	sample_needed = needs_sample(onerel, vacattrstats, attr_cnt);
+	if (ctx || sample_needed)
 	{
 		if (ctx)
 			MemoryContextSwitchTo(caller_context);
 		rows = (HeapTuple *) palloc(targrows * sizeof(HeapTuple));
 
+		pgstat_progress_update_param(PROGRESS_ANALYZE_PHASE,
+								 inh ? PROGRESS_ANALYZE_PHASE_ACQUIRE_SAMPLE_ROWS_INH :
+								 PROGRESS_ANALYZE_PHASE_ACQUIRE_SAMPLE_ROWS);
+
 		/*
 		 * Acquire the sample rows
 		 *
-		 * colLargeRowindexes is passed out-of-band, in a global variable,
+		 * colLargeRowIndexes is passed out-of-band, in a global variable,
 		 * to avoid changing the function signature from upstream's.
+		 *
+		 * The same as colLargeRowIndexes. colLargeRowLength stores total
+		 * length of too wide rows in the sample for every attribute of
+		 * the target relation. ANALYZE ignores too wide columns during
+		 * analysis(See comments of WIDTH_THRESHOLD), the stawidth can be
+		 * far smaller than the real average width for varlena datums which
+		 * are larger than WIDTH_THRESHOLD but stored uncompressed.
 		 */
 		acquire_func_colLargeRowIndexes = colLargeRowIndexes;
+		acquire_func_colLargeRowLength = colLargeRowLength;
 		if (inh)
 			numrows = acquire_inherited_sample_rows(onerel, elevel,
 													rows, targrows,
@@ -703,6 +723,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 									  rows, targrows,
 									  &totalrows, &totaldeadrows);
 		acquire_func_colLargeRowIndexes = NULL;
+		acquire_func_colLargeRowLength = NULL;
 		if (ctx)
 			MemoryContextSwitchTo(anl_context);
 	}
@@ -741,6 +762,10 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		HeapTuple *validRows = (HeapTuple *) palloc(numrows * sizeof(HeapTuple));
 		MemoryContext col_context,
 					old_context;
+		bool		build_ext_stats;
+
+		pgstat_progress_update_param(PROGRESS_ANALYZE_PHASE,
+									 PROGRESS_ANALYZE_PHASE_COMPUTE_STATS);
 
 		col_context = AllocSetContextCreate(anl_context,
 											"Analyze Column",
@@ -750,6 +775,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		for (i = 0; i < attr_cnt; i++)
 		{
 			VacAttrStats *stats = vacattrstats[i];
+			stats->tupDesc = onerel->rd_att;
 			/*
 			 * utilize hyperloglog and merge utilities to derive
 			 * root table statistics by directly calling merge_leaf_stats()
@@ -791,7 +817,12 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 			AttributeOpts *aopt =
 			get_attribute_options(onerel->rd_id, stats->attr->attnum);
 
-			stats->tupDesc = onerel->rd_att;
+			/*
+			 * get total length and number of too wide rows in the sample,
+			 * in case get wrong stawidth.
+			 */
+			stats->totalwidelength = colLargeRowLength[stats->attr->attnum - 1];
+			stats->widerow_num = numrows - validRowsLength;
 
 			if (validRowsLength > 0)
 			{
@@ -801,9 +832,16 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 									 totalrows);
 				/*
 				 * Store HLL/HLL fullscan information for leaf partitions in
-				 * the stats object
+				 * the stats object. If table was created with "analyze_hll_non_part_table" option, also collect
+				 * HLL stats for non-leaf tables
 				 */
-				if (onerel->rd_rel->relkind == RELKIND_RELATION && onerel->rd_rel->relispartition)
+				bool analyze_hll_non_part_table = false;
+				if (onerel->rd_options != NULL &&
+							((StdRdOptions *) onerel->rd_options)->analyze_hll_non_part_table)
+				{
+					analyze_hll_non_part_table = true;
+				}
+				if (onerel->rd_rel->relkind == RELKIND_RELATION && (onerel->rd_rel->relispartition || analyze_hll_non_part_table))
 				{
 					MemoryContext old_context;
 					Datum *hll_values;
@@ -844,7 +882,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 				// that every item was >= WIDTH_THRESHOLD in width.
 				stats->stats_valid = true;
 				stats->stanullfrac = 0.0;
-				stats->stawidth = WIDTH_THRESHOLD;
+				stats->stawidth = stats->totalwidelength/numrows;
 				stats->stadistinct = 0.0;		/* "unknown" */
 			}
 			stats->rows = rows; // Reset to original rows
@@ -896,10 +934,34 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 							thisdata->attr_cnt, thisdata->vacattrstats);
 		}
 
-		/* Build extended statistics (if there are any). */
-		BuildRelationExtStatistics(onerel, totalrows, numrows, rows, attr_cnt,
-								   vacattrstats);
+		/*
+		 * Should we build extended statistics for this relation?
+		 *
+		 * The extended statistics catalog does not include an inheritance
+		 * flag, so we can't store statistics built both with and without
+		 * data from child relations. We can store just one set of statistics
+		 * per relation. For plain relations that's fine, but for inheritance
+		 * trees we have to pick whether to store statistics for just the
+		 * one relation or the whole tree. For plain inheritance we store
+		 * the (!inh) version, mostly for backwards compatibility reasons.
+		 * For partitioned tables that's pointless (the non-leaf tables are
+		 * always empty), so we store stats representing the whole tree.
+		 */
+		build_ext_stats = (onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE) ? inh : (!inh);
+
+		/*
+		 * Build extended statistics (if there are any).
+		 *
+		 * For now we only build extended statistics on individual relations,
+		 * not for relations representing inheritance trees.
+		 */
+		if (build_ext_stats)
+			BuildRelationExtStatistics(onerel, totalrows, numrows, rows,
+									   attr_cnt, vacattrstats);
 	}
+
+	pgstat_progress_update_param(PROGRESS_ANALYZE_PHASE,
+								 PROGRESS_ANALYZE_PHASE_FINALIZE_ANALYZE);
 
 	/*
 	 * Update pages/tuples stats in pg_class ... but not if we're doing
@@ -1391,6 +1453,8 @@ acquire_sample_rows(Relation onerel, int elevel,
 	ReservoirStateData rstate;
 	TupleTableSlot *slot;
 	TableScanDesc scan;
+	BlockNumber nblocks;
+	BlockNumber blksdone = 0;
 
 	Assert(targrows > 0);
 
@@ -1434,7 +1498,12 @@ acquire_sample_rows(Relation onerel, int elevel,
 	OldestXmin = GetOldestXmin(onerel, PROCARRAY_FLAGS_VACUUM);
 
 	/* Prepare for sampling block numbers */
-	BlockSampler_Init(&bs, totalblocks, targrows, random());
+	nblocks = BlockSampler_Init(&bs, totalblocks, targrows, random());
+
+	/* Report sampling block numbers */
+	pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_TOTAL,
+								 nblocks);
+
 	/* Prepare for sampling rows */
 	reservoir_init_selection_state(&rstate, targrows);
 
@@ -1495,6 +1564,9 @@ acquire_sample_rows(Relation onerel, int elevel,
 
 			samplerows += 1;
 		}
+
+		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
+									 ++blksdone);
 	}
 
 	ExecDropSingleTupleTableSlot(slot);
@@ -1611,18 +1683,6 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	bool		has_child;
 
 	/*
-	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
-	 * from segments.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		return acquire_sample_rows_dispatcher(onerel,
-											  true, /* inherited stats */
-											  elevel, rows, targrows,
-											  totalrows, totaldeadrows);
-	}
-
-	/*
 	 * Find all members of inheritance set.  We only need AccessShareLock on
 	 * the children.
 	 */
@@ -1635,6 +1695,7 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	 * child but no longer does.  In that case, we can clear the
 	 * relhassubclass field so as not to make the same mistake again later.
 	 * (This is safe because we hold ShareUpdateExclusiveLock.)
+	 * Please refer to https://github.com/greenplum-db/gpdb/issues/14644
 	 */
 	if (list_length(tableOIDs) < 2)
 	{
@@ -1647,7 +1708,20 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 				(errmsg("skipping analyze of \"%s.%s\" inheritance tree --- this inheritance tree contains no child tables",
 						get_namespace_name(RelationGetNamespace(onerel)),
 						RelationGetRelationName(onerel))));
-		return 0;
+		if (Gp_role == GP_ROLE_EXECUTE)
+			return 0;
+	}
+
+	/*
+	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
+	 * from segments.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		return acquire_sample_rows_dispatcher(onerel,
+											  true, /* inherited stats */
+											  elevel, rows, targrows,
+											  totalrows, totaldeadrows);
 	}
 
 	/*
@@ -1754,6 +1828,8 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	 * rels have radically different free-space percentages, but it's not
 	 * clear that it's worth working harder.)
 	 */
+	pgstat_progress_update_param(PROGRESS_ANALYZE_CHILD_TABLES_TOTAL,
+								 nrels);
 	numrows = 0;
 	*totalrows = 0;
 	*totaldeadrows = 0;
@@ -1762,6 +1838,9 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 		Relation	childrel = rels[i];
 		AcquireSampleRowsFunc acquirefunc = acquirefuncs[i];
 		double		childblocks = relblocks[i];
+
+		pgstat_progress_update_param(PROGRESS_ANALYZE_CURRENT_CHILD_TABLE_RELID,
+									 RelationGetRelid(childrel));
 
 		if (childblocks > 0)
 		{
@@ -1820,6 +1899,8 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 		 * pointers to their TOAST tables in the sampled rows.
 		 */
 		table_close(childrel, NoLock);
+		pgstat_progress_update_param(PROGRESS_ANALYZE_CHILD_TABLES_DONE,
+									 i + 1);
 	}
 
 	return numrows;
@@ -2165,6 +2246,7 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	 * global variable to avoid changing the AcquireSampleRowsFunc prototype.
 	 */
 	Bitmapset **colLargeRowIndexes = acquire_func_colLargeRowIndexes;
+	double     *colLargeRowLength = acquire_func_colLargeRowLength;
 	TupleDesc	relDesc = RelationGetDescr(onerel);
 	TupleDesc	funcTupleDesc;
 	TupleDesc	sampleTupleDesc;
@@ -2251,7 +2333,7 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	funcTupleDesc = CreateTemplateTupleDesc(ncolumns);
 	TupleDescInitEntry(funcTupleDesc, (AttrNumber) 1, "", FLOAT8OID, -1, 0);
 	TupleDescInitEntry(funcTupleDesc, (AttrNumber) 2, "", FLOAT8OID, -1, 0);
-	TupleDescInitEntry(funcTupleDesc, (AttrNumber) 3, "", TEXTOID, -1, 0);
+	TupleDescInitEntry(funcTupleDesc, (AttrNumber) 3, "", FLOAT8ARRAYOID, -1, 0);
 	
 	for (i = 0; i < relDesc->natts; i++)
 	{
@@ -2350,12 +2432,17 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 				/* Read the 'toolarge' bitmap, if any */
 				if (colLargeRowIndexes && !funcRetNulls[2])
 				{
-					char	   *toolarge;
-					toolarge = funcRetValues[2];
-					if (strlen(toolarge) != numLiveColumns)
-						elog(ERROR, "'toolarge' bitmap has incorrect length");
+					ArrayType  *arrayVal;
+					Datum	   *largelength;
+					bool	   *nulls;
+					int	    numelems;
+					arrayVal = DatumGetArrayTypeP(OidFunctionCall3(F_ARRAY_IN,
+											CStringGetDatum(funcRetValues[2]),
+											FLOAT8OID,
+											-1));
+					deconstruct_array(arrayVal, FLOAT8OID, 8, true, 'd',
+								&largelength, &nulls, &numelems);
 
-					index = 0;
 					for (i = 0; i < relDesc->natts; i++)
 					{
 						Form_pg_attribute attr = TupleDescAttr(relDesc, i);
@@ -2363,9 +2450,11 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 						if (attr->attisdropped)
 							continue;
 
-						if (toolarge[index] == '1')
+						if (largelength[i] != (Datum) 0)
+						{
 							colLargeRowIndexes[i] = bms_add_member(colLargeRowIndexes[i], sampleTuples);
-						index++;
+							colLargeRowLength[i] += DatumGetFloat8(largelength[i]);
+						}
 					}
 				}
 
@@ -2378,10 +2467,10 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 					if (attr->attisdropped)
 						continue;
 
-					if (funcRetNulls[3 + index])
+					if (funcRetNulls[FIX_ATTR_NUM + index])
 						values[i] = NULL;
 					else
-						values[i] = funcRetValues[3 + index];
+						values[i] = funcRetValues[FIX_ATTR_NUM + index];
 					index++; /* Move index to the next result set attribute */
 				}
 
@@ -3014,7 +3103,7 @@ compute_distinct_stats(VacAttrStatsP stats,
 		/* Do the simple null-frac and width stats */
 		stats->stanullfrac = (double) null_cnt / (double) samplerows;
 		if (is_varwidth)
-			stats->stawidth = total_width / (double) nonnull_cnt;
+			stats->stawidth = (total_width + stats->totalwidelength) / (double) (nonnull_cnt + stats->widerow_num);
 		else
 			stats->stawidth = stats->attrtype->typlen;
 
@@ -3196,7 +3285,7 @@ compute_distinct_stats(VacAttrStatsP stats,
 			stats->stawidth = 0;	/* "unknown" */
 		else
 			stats->stawidth = stats->attrtype->typlen;
-		stats->stadistinct = 0.0;	/* "unknown" */
+		stats->stadistinct = 0.0;		/* "unknown" */
 	}
 
 	/* We don't need to bother cleaning up any of our temporary palloc's */
@@ -3407,7 +3496,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 		/* Do the simple null-frac and width stats */
 		stats->stanullfrac = (double) null_cnt / (double) samplerows;
 		if (is_varwidth)
-			stats->stawidth = total_width / (double) nonnull_cnt;
+			stats->stawidth = (total_width + stats->totalwidelength) / (double) (nonnull_cnt + stats->widerow_num);
 		else
 			stats->stawidth = stats->attrtype->typlen;
 
@@ -3746,7 +3835,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 		/* Do the simple null-frac and width stats */
 		stats->stanullfrac = (double) null_cnt / (double) samplerows;
 		if (is_varwidth)
-			stats->stawidth = total_width / (double) nonnull_cnt;
+			stats->stawidth = (total_width + stats->totalwidelength) / (double) (nonnull_cnt + stats->widerow_num);
 		else
 			stats->stawidth = stats->attrtype->typlen;
 		/* Assume all too-wide values are distinct, so it's a unique column */
@@ -3830,11 +3919,17 @@ merge_leaf_stats(VacAttrStatsP stats,
 			(errmsg("Merging leaf partition stats to calculate root partition stats : column %s",
 					get_attname(stats->attr->attrelid, stats->attr->attnum, false))));
 
-	/* GPDB_12_MERGE_FIXME: what's the appropriate lock level? AccessShareLock
-	 * is enough to scan the table, but are we updating them, too? If not,
-	 * NoLock might be enough?
+	/* 
+	 * Since we have acquired ShareUpdateExclusiveLock on the parent table when
+	 * ANALYZE'ing it, we don't need extra lock to guard against concurrent DROP
+	 * of either the parent or the child (which requries AccessExclusiveLock on
+	 * the parent).
+	 * Concurrent UPDATE is possible but because we are not updating the table
+	 * ourselves, NoLock is sufficient here.
 	 */
-	all_children_list = find_all_inheritors(stats->attr->attrelid, AccessShareLock, NULL);
+	all_children_list = find_all_inheritors(stats->attr->attrelid, NoLock, NULL);
+	SIMPLE_FAULT_INJECTOR("merge_leaf_stats_after_find_children");
+
 	oid_list = NIL;
 	foreach (lc, all_children_list)
 	{

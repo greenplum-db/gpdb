@@ -88,6 +88,29 @@ reset enable_indexscan;
 reset enable_bitmapscan;
 reset enable_sort;
 
+-- Also check LIKE optimization with binary-compatible cases
+
+create temp table btree_bpchar (f1 text collate "C");
+create index on btree_bpchar(f1 bpchar_ops);
+insert into btree_bpchar values ('foo'), ('foo  '), ('fool'), ('bar'), ('quux');
+-- doesn't match index:
+explain (costs off)
+select * from btree_bpchar where f1 like 'foo';
+select * from btree_bpchar where f1 like 'foo';
+explain (costs off)
+select * from btree_bpchar where f1 like 'foo%';
+select * from btree_bpchar where f1 like 'foo%';
+-- these do match the index:
+explain (costs off)
+select * from btree_bpchar where f1::bpchar like 'foo';
+select * from btree_bpchar where f1::bpchar like 'foo';
+explain (costs off)
+select * from btree_bpchar where f1::bpchar like 'foo%';
+select * from btree_bpchar where f1::bpchar like 'foo%';
+
+explain (costs off)
+select * from btree_bpchar where f1::bpchar ='foo';
+select * from btree_bpchar where f1::bpchar ='foo';
 --
 -- Test B-tree fast path (cache rightmost leaf page) optimization.
 --
@@ -145,3 +168,46 @@ VACUUM delete_test_table;
 -- The vacuum above should've turned the leaf page into a fast root. We just
 -- need to insert some rows to cause the fast root page to split.
 INSERT INTO delete_test_table SELECT i, 1, 2, 3 FROM generate_series(1,1000) i;
+
+--
+-- GPDB: Test correctness of B-tree stats in consecutively VACUUM.
+--
+CREATE TABLE btree_stats_tbl(col_int int, col_text text, col_numeric numeric, col_unq int) DISTRIBUTED BY (col_int);
+CREATE INDEX btree_stats_idx ON btree_stats_tbl(col_int);
+INSERT INTO btree_stats_tbl VALUES (1, 'aa', 1001, 101), (2, 'bb', 1002, 102);
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_tbl';
+-- inspect the state of the stats on segments
+SELECT gp_segment_id, relname, reltuples FROM gp_dist_random('pg_class') WHERE relname = 'btree_stats_idx';
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_idx';
+-- 1st VACUUM, expect reltuples = 2
+vacuum btree_stats_tbl;
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_tbl';
+-- inspect the state of the stats on segments
+SELECT gp_segment_id, relname, reltuples FROM gp_dist_random('pg_class') WHERE relname = 'btree_stats_idx';
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_idx';
+-- 2nd VACUUM, expect reltuples = 2
+vacuum btree_stats_tbl;
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_tbl';
+-- inspect the state of the stats on segments
+SELECT gp_segment_id, relname, reltuples FROM gp_dist_random('pg_class') WHERE relname = 'btree_stats_idx';
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_idx';
+
+-- Prior to this fix, the case would be failed here. Given the
+-- scenario of updating stats during VACUUM:
+-- 1) coordinator vacuums and updates stats of its own;
+-- 2) then coordinator dispatches vacuum to segments;
+-- 3) coordinator combines stats received from segments to overwrite the stats of its own.
+-- Because upstream introduced a feature which could skip full index scan uring cleanup
+-- of B-tree indexes when possible (refer to:
+-- https://github.com/postgres/postgres/commit/857f9c36cda520030381bd8c2af20adf0ce0e1d4),
+-- there was a case in QD-QEs distributed deployment that some QEs could skip full index scan and
+-- stop updating statistics, result in QD being unable to collect all QEs' stats thus overwrote
+-- a paritial accumulated value to index->reltuples. More interesting, it usually happened starting
+-- from the 3rd time of consecutively VACUUM after fresh inserts due to above skipping index scan
+-- criteria.
+-- 3rd VACUUM, expect reltuples = 2
+vacuum btree_stats_tbl;
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_tbl';
+-- inspect the state of the stats on segments
+SELECT gp_segment_id, relname, reltuples FROM gp_dist_random('pg_class') WHERE relname = 'btree_stats_idx';
+SELECT reltuples FROM pg_class WHERE relname='btree_stats_idx';

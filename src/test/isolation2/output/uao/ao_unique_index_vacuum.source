@@ -1,0 +1,124 @@
+-- Test cases to cover VACUUM and concurrent INSERT behavior on append-optimized
+-- tables with unique indexes.
+
+-- Case 1: Basic case with a few deleted tuples---------------------------------
+CREATE TABLE unique_index_vacuum_@amname@(i int UNIQUE) USING @amname@ DISTRIBUTED REPLICATED;
+CREATE
+INSERT INTO unique_index_vacuum_@amname@ SELECT generate_series(1, 5);
+INSERT 5
+DELETE FROM unique_index_vacuum_@amname@ WHERE i = 5;
+DELETE 1
+-- should succeed (and not raise conflicts for rows [1,4] while moving rows [1,4])
+VACUUM unique_index_vacuum_@amname@;
+VACUUM
+-- There should be 1 visible blkdir row with all 4 visible tuples
+SELECT (gp_toolkit.__gp_aoblkdir('unique_index_vacuum_@amname@')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,3)   | 2     | 0              | 0        | 1            | 0           | 4         
+(1 row)
+DROP TABLE unique_index_vacuum_@amname@;
+DROP
+
+-- Case 2: Concurrent case showcasing that a placeholder block directory row is
+-- not necessary to be inserted for the rows transferred to a new segment by
+-- a VACUUM operation.
+CREATE TABLE unique_index_vacuum_@amname@(i int UNIQUE) USING @amname@ DISTRIBUTED REPLICATED;
+CREATE
+INSERT INTO unique_index_vacuum_@amname@ SELECT generate_series(1, 5);
+INSERT 5
+DELETE FROM unique_index_vacuum_@amname@ WHERE i = 5;
+DELETE 1
+
+SELECT gp_inject_fault('appendonly_insert', 'suspend', '', '', 'unique_index_vacuum_@amname@', 2, 2, 0, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+
+1&: VACUUM unique_index_vacuum_@amname@;  <waiting ...>
+
+-- Wait until tuple with key i = 1 has been moved by the vacuum operation
+SELECT gp_wait_until_triggered_fault('appendonly_insert', 2, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+(3 rows)
+-- Even though a new index entry has been written for the moved tuple with key
+-- i = 1, the old index entry (pointing to the old segfile) will still be live
+-- and will always be used in detecting the conflict (chosen over the new index
+-- entry and its associated block directory entry).
+INSERT INTO unique_index_vacuum_@amname@ VALUES(1);
+ERROR:  duplicate key value violates unique constraint "unique_index_vacuum_@amname@_i_key"  (seg1 192.168.0.148:7003 pid=3197772)
+DETAIL:  Key (i)=(1) already exists.
+
+-- Inserting a key not moved yet should also result in a conflict.
+INSERT INTO unique_index_vacuum_@amname@ VALUES(2);
+ERROR:  duplicate key value violates unique constraint "unique_index_vacuum_@amname@_i_key"  (seg1 192.168.0.148:7003 pid=3197772)
+DETAIL:  Key (i)=(2) already exists.
+
+SELECT gp_inject_fault('appendonly_insert', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+
+1<:  <... completed>
+VACUUM
+DROP TABLE unique_index_vacuum_@amname@;
+DROP
+
+-- Case 3: Concurrent case with a conflicting insert where the vacuum is hung
+-- just after it has bulk deleted the old index entries.
+CREATE TABLE unique_index_vacuum_@amname@(i int UNIQUE) USING @amname@ DISTRIBUTED REPLICATED;
+CREATE
+INSERT INTO unique_index_vacuum_@amname@ SELECT generate_series(1, 5);
+INSERT 5
+DELETE FROM unique_index_vacuum_@amname@ WHERE i = 5;
+DELETE 1
+
+SELECT gp_inject_fault('vacuum_ao_after_index_delete', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+
+1&: VACUUM unique_index_vacuum_@amname@;  <waiting ...>
+
+-- Wait until all old index entries have been deleted by the VACUUM.
+SELECT gp_wait_until_triggered_fault('vacuum_ao_after_index_delete', 1, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+(3 rows)
+
+-- Now trying to insert key = 1 will also be detected as a conflict, even
+-- though the old index entries are no longer present. We have the new index
+-- entries (and the new block directory rows) to thank, which have already been
+-- persisted at end of insert, within the VACUUM.
+2: INSERT INTO unique_index_vacuum_@amname@ VALUES (1);
+ERROR:  duplicate key value violates unique constraint "unique_index_vacuum_@amname@_i_key"  (seg1 192.168.0.148:7003 pid=3197808)
+DETAIL:  Key (i)=(1) already exists.
+
+SELECT gp_inject_fault('vacuum_ao_after_index_delete', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+
+1<:  <... completed>
+VACUUM
+DROP TABLE unique_index_vacuum_@amname@;
+DROP

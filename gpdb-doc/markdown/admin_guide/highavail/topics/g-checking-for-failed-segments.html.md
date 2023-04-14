@@ -6,9 +6,9 @@ With mirroring enabled, you can have failed segment instances in the system with
 
 ## <a id="use_gpstate"></a>Check for failed segments using gpstate 
 
-The `gpstate` utility provides the status of each individual component of a Greenplum Database system, including primary segments, mirror segments, master, and standby master.
+The `gpstate` utility provides the status of each individual component of a Greenplum Database system, including primary segments, mirror segments, coordinator, and standby coordinator.
 
-On the master host, run the [gpstate](../../../utility_guide/ref/gpstate.html) utility with the `-e` option to show segment instances with error conditions:
+On the coordinator host, run the [gpstate](../../../utility_guide/ref/gpstate.html) utility with the `-e` option to show segment instances with error conditions:
 
 ```
 $ gpstate -e
@@ -36,13 +36,13 @@ $ gpstate -m
 
 ## <a id="check_log_files"></a>Check for failed segments by examining log files 
 
-Log files can provide information to help determine an error's cause. The master and segment instances each have their own log file in `log` of the data directory. The master log file contains the most information and you should always check it first.
+Log files can provide information to help determine an error's cause. The coordinator and segment instances each have their own log file in `log` of the data directory. The coordinator log file contains the most information and you should always check it first.
 
 Use the [gplogfilter](../../../utility_guide/ref/gplogfilter.html) utility to check the Greenplum Database log files for additional information. To check the segment log files, run `gplogfilter` on the segment hosts using [gpssh](../../../utility_guide/ref/gpssh.html).
 
 ## <a id="ki170080"></a>To check the log files 
 
-1.  Use `gplogfilter` to check the master log file for `WARNING`, `ERROR`, `FATAL` or `PANIC` log level messages:
+1.  Use `gplogfilter` to check the coordinator log file for `WARNING`, `ERROR`, `FATAL` or `PANIC` log level messages:
 
     ```
     $ gplogfilter -t
@@ -58,5 +58,5 @@ Use the [gplogfilter](../../../utility_guide/ref/gplogfilter.html) utility to ch
     ```
 
 
-**Parent topic:**[How Greenplum Database Detects a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
+**Parent topic:** [How Greenplum Database Detects a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
 

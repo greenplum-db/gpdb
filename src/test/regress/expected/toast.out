@@ -7,6 +7,11 @@ ALTER TABLE toastable_ao ALTER COLUMN a SET STORAGE EXTERNAL;
 CREATE FUNCTION randomtext(len int) returns text as $$
   select string_agg(md5(random()::text),'') from generate_series(1, $1 / 32)
 $$ language sql;
+create function get_rel_toast_count(relname text) returns int as $$
+reltoastoid = plpy.execute("select \'"+ relname +"\'::regclass::oid;")[0]['oid']
+count = plpy.execute("select count(*) from pg_toast.pg_toast_"+str(reltoastoid)+";")[0]['count']
+return count
+$$ language plpython3u;
 -- INSERT 
 -- uses the toast call to store the large tuples
 INSERT INTO toastable_heap VALUES(repeat('a',100000), repeat('b',100001), 1);
@@ -32,6 +37,19 @@ SELECT char_length(a), char_length(b), c FROM toastable_ao ORDER BY c;
       100000 |      100001 | 1
       100000 |      100001 | 2
     10000000 |    10000032 | 3
+(3 rows)
+
+-- Check that small tuples can be correctly toasted as long as it's beyond the toast
+-- target size (about 1/4 of the table's blocksize)
+CREATE TABLE toastable_ao2(a int, b int[]) WITH (appendonly=true, blocksize=8192);
+INSERT INTO toastable_ao2 SELECT 1, array_agg(x) from generate_series(1, 1000) x;
+INSERT INTO toastable_ao2 SELECT 1, array_agg(x) from generate_series(1, 2030) x;
+SELECT gp_segment_id, get_rel_toast_count('toastable_ao2') FROM gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                   0
+             1 |                   2
+             2 |                   0
 (3 rows)
 
 -- UPDATE 
@@ -71,6 +89,22 @@ SELECT char_length(a), char_length(b), c, d FROM toastable_ao ORDER BY c;
 -- remove reference to toast table and create a new one with different values
 TRUNCATE toastable_heap;
 TRUNCATE toastable_ao;
+select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                   0
+             1 |                   0
+             2 |                   0
+(3 rows)
+
+select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                   0
+             1 |                   0
+             2 |                   0
+(3 rows)
+
 INSERT INTO toastable_heap VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
 INSERT INTO toastable_ao VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
 SELECT char_length(a), char_length(b), c, d FROM toastable_heap;
@@ -85,7 +119,41 @@ SELECT char_length(a), char_length(b), c, d FROM toastable_ao;
       100002 |      100003 | 2 | 20
 (1 row)
 
--- TODO: figure out a way to verify that toasted data is removed after the truncate.
+select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                   0
+             1 |                   0
+             2 |                   0
+(3 rows)
+
+select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                  13
+             1 |                   0
+             2 |                   0
+(3 rows)
+
+delete from toastable_heap;
+delete from toastable_ao;
+vacuum toastable_heap, toastable_ao;
+select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                   0
+             1 |                   0
+             2 |                   0
+(3 rows)
+
+select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                   0
+             1 |                   0
+             2 |                   0
+(3 rows)
+
 DROP TABLE toastable_heap;
 DROP TABLE toastable_ao;
 -- TODO: figure out a way to verify that the toast tables are dropped

@@ -17,5 +17,5 @@ Creates a readable external table, *ext\_expenses,* from all files with the *txt
     ```
 
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

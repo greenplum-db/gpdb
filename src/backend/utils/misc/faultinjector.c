@@ -27,6 +27,7 @@
 #include "catalog/pg_type.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
+#include "common/hashfn.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "postmaster/autovacuum.h"
@@ -35,7 +36,6 @@
 #include "storage/shmem.h"
 #include "tcop/dest.h"
 #include "utils/faultinjector.h"
-#include "utils/hsearch.h"
 #include "miscadmin.h"
 
 /*
@@ -324,7 +324,7 @@ FaultInjector_InjectFaultIfSet_out_of_line(
 			/* fault injection is not set for the specified database name */
 			break;
 	
-		if (strcmp(entryShared->tableName, tableNameLocal) != 0)
+		if (strlen(entryShared->tableName) > 0 && strcmp(entryShared->tableName, tableNameLocal) != 0)
 			/* fault injection is not set for the specified table name */
 			break;
 

@@ -776,7 +776,8 @@ CExpressionPreprocessorTest::EresTestLOJ(
 					{
 						CAutoTrace at(mp);
 						at.Os() << std::endl
-								<< "WindowFunction: " << fAddWindowFunction
+								<< "Test Number: " << ulTestCases
+								<< ", WindowFunction: " << fAddWindowFunction
 								<< ", IntermediateInnerjoin: "
 								<< fIntermediateInnerjoin
 								<< ", CascadedLOJ: " << fCascadedLOJ
@@ -1854,7 +1855,7 @@ CExpressionPreprocessorTest::EresUnittest_PreProcessOrPrefilters()
 			"   |  +--CScalarBoolOp (EboolopAnd)\n"
 			"   |     |--CScalarArrayCmp Any (=)\n"
 			"   |     |  |--CScalarIdent \"column_0000\" (3)\n"
-			"   |     |  +--CScalarArray: {eleMDId: (23,1.0), arrayMDId: (1007,1.0)}\n"
+			"   |     |  +--CScalarArray: {eleMDId: (0.23.1.0), arrayMDId: (0.1007.1.0)}\n"
 			"   |     |     |--CScalarConst (1)\n"
 			"   |     |     +--CScalarConst (2)\n"
 			"   |     +--CScalarBoolOp (EboolopOr)\n"
@@ -1883,7 +1884,7 @@ CExpressionPreprocessorTest::EresUnittest_PreProcessOrPrefilters()
 			"   |     |     +--CScalarConst (2)\n"
 			"   |     +--CScalarArrayCmp Any (=)\n"
 			"   |        |--CScalarIdent \"column_0000\" (0)\n"
-			"   |        +--CScalarArray: {eleMDId: (23,1.0), arrayMDId: (1007,1.0)}\n"
+			"   |        +--CScalarArray: {eleMDId: (0.23.1.0), arrayMDId: (0.1007.1.0)}\n"
 			"   |           |--CScalarConst (1)\n"
 			"   |           +--CScalarConst (2)\n"
 			"   +--CScalarBoolOp (EboolopAnd)\n"

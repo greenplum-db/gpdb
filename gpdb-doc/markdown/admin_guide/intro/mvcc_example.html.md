@@ -14,9 +14,9 @@ For Greenplum Database, the transaction ID \(XID\) value an incrementing 32-bit 
     -   When Greenplum Database compares XIDs using the modulo calculations, the frozen XID is always smaller, earlier, when compared to any other XID. If a row's XID is not set to the frozen XID and 2<sup>31</sup> new transactions are run, the row appears to be run in the future based on the modulo calculation.
     -   When the row's XID is set to the frozen XID, the original XID can be used, without duplicating the XID. This keeps the number of data rows on disk with assigned XIDs below \(2<sup>32</sup>\).
 
-**Note:** Greenplum Database assigns XID values only to transactions that involve DDL or DML operations, which are typically the only transactions that require an XID.
+> **Note** Greenplum Database assigns XID values only to transactions that involve DDL or DML operations, which are typically the only transactions that require an XID.
 
-**Parent topic:**[About Concurrency Control in Greenplum Database](../intro/about_mvcc.html)
+**Parent topic:** [About Concurrency Control in Greenplum Database](../intro/about_mvcc.html)
 
 ## <a id="topic_zsw_yck_wv"></a>Simple MVCC Example 
 

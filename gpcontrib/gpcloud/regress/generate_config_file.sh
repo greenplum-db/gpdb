@@ -53,6 +53,13 @@ if [ -n "$gpcloud_access_key_id" ] && [ -n "$gpcloud_secret_access_key" ]; then
 	threadnum = 3
 	chunksize = 16777217
 	proxy = socks5://127.0.0.1:1090
+
+	[no_accessid_secret]
+	accessid = ""
+	secret = ""
+
+	threadnum = 3
+	chunksize = 16777217
 	EOF
 else
 	echo "Error: environment varibles \$gpcloud_access_key_id and \$gpcloud_secret_access_key are not set."

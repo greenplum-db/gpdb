@@ -736,7 +736,7 @@
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.9255103.1.1" Name="test_fct_unnest" Rows="3000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.9255103.1.1" Name="test_fct_unnest" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
+      <dxl:Relation Mdid="6.9255103.1.1" Name="test_fct_unnest" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="field1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -761,7 +761,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.9255103.1.1.1" Name="field2" Width="33.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
@@ -1164,7 +1163,7 @@
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.9255103.1.1" TableName="test_fct_unnest">
+          <dxl:TableDescriptor Mdid="6.9255103.1.1" TableName="test_fct_unnest">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="field1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="field2" TypeMdid="0.1043.1.0"/>
@@ -1178,10 +1177,10 @@
         </dxl:LogicalGet>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="324625">
+    <dxl:Plan Id="0" SpaceSize="70119">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="9309.072916" Rows="3000000.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="9309.074116" Rows="3000000.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="field1">
@@ -1222,7 +1221,7 @@
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="9213.072916" Rows="1000.000000" Width="23"/>
+            <dxl:Cost StartupCost="0" TotalCost="9213.074116" Rows="1000.000000" Width="23"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="field1">
@@ -1251,7 +1250,7 @@
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="9212.969646" Rows="1000.000000" Width="23"/>
+              <dxl:Cost StartupCost="0" TotalCost="9212.970846" Rows="1000.000000" Width="23"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="field1">
@@ -1277,7 +1276,7 @@
                   <dxl:ParamList/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000006" Rows="1.000000" Width="5"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000106" Rows="1.000000" Width="5"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="8" Alias="a">
@@ -1288,7 +1287,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.000006" Rows="1.000000" Width="5"/>
+                        <dxl:Cost StartupCost="0" TotalCost="0.000106" Rows="1.000000" Width="5"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="28" Alias="ColRef_0028">
@@ -1327,7 +1326,7 @@
                   <dxl:ParamList/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000006" Rows="1.000000" Width="5"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000106" Rows="1.000000" Width="5"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="11" Alias="b">
@@ -1338,7 +1337,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.000006" Rows="1.000000" Width="5"/>
+                        <dxl:Cost StartupCost="0" TotalCost="0.000106" Rows="1.000000" Width="5"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="29" Alias="ColRef_0029">
@@ -1377,7 +1376,7 @@
                   <dxl:ParamList/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000006" Rows="1.000000" Width="5"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000106" Rows="1.000000" Width="5"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="14" Alias="c">
@@ -1388,7 +1387,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.000006" Rows="1.000000" Width="5"/>
+                        <dxl:Cost StartupCost="0" TotalCost="0.000106" Rows="1.000000" Width="5"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="30" Alias="ColRef_0030">
@@ -1421,7 +1420,7 @@
             <dxl:OneTimeFilter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1440.898906" Rows="1000.000000" Width="21"/>
+                <dxl:Cost StartupCost="0" TotalCost="1440.899006" Rows="1000.000000" Width="21"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="field1">
@@ -1438,7 +1437,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.9255103.1.1" TableName="test_fct_unnest">
+              <dxl:TableDescriptor Mdid="6.9255103.1.1" TableName="test_fct_unnest">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="field1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="field2" TypeMdid="0.1043.1.0"/>

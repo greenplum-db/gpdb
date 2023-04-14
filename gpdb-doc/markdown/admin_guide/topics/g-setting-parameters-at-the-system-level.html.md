@@ -2,7 +2,7 @@
 title: Setting Parameters at the System Level 
 ---
 
-Master parameter settings in the master `postgresql.conf`file are the system-wide default. To set a master parameter:
+Coordinator parameter settings in the coordinator `postgresql.conf`file are the system-wide default. To set a coordinator parameter:
 
 1.  Edit the `$COORDINATOR_DATA_DIRECTORY/postgresql.conf` file.
 2.  Find the parameter to set, uncomment it \(remove the preceding `#` character\), and type the desired value.
@@ -22,5 +22,5 @@ Master parameter settings in the master `postgresql.conf`file are the system-wid
 
 For details about the server configuration parameters, see the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[Setting a Master Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
+**Parent topic:** [Setting a Coordinator Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
 

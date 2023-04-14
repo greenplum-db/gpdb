@@ -265,8 +265,11 @@ public:
 	// get the function properties of a child
 	CFunctionProp *PfpChild(ULONG child_index) const;
 
-	// check whether an expression's children have a volatile function
+	// check whether an expression's children have a volatile function scan
 	BOOL FChildrenHaveVolatileFuncScan() const;
+
+	// check whether an expression's children have a volatile function
+	BOOL FChildrenHaveVolatileFunc() const;
 
 	// return a representative (inexact) scalar child at given index
 	CExpression *PexprScalarRepChild(ULONG child_index) const;
@@ -334,6 +337,8 @@ public:
 	ULONG DeriveTotalDistinctAggs(ULONG child_index) const;
 	BOOL DeriveHasMultipleDistinctAggs(ULONG child_index) const;
 	BOOL DeriveHasScalarArrayCmp(ULONG child_index) const;
+	BOOL DeriveHasScalarFuncProject(ULONG child_index) const;
+	BOOL DeriveContainsOnlyReplicationSafeAggFuncs(ULONG child_index) const;
 
 };	// class CExpressionHandle
 

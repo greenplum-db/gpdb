@@ -98,8 +98,8 @@ private:
 	// segment ids on target system
 	IntPtrArray *m_pdrgpiSegments;
 
-	// id of master node
-	INT m_iMasterId;
+	// id of coordinator node
+	INT m_iCoordinatorId;
 
 	// private copy ctor
 	CTranslatorExprToDXL(const CTranslatorExprToDXL &);
@@ -332,6 +332,19 @@ private:
 		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
 		BOOL *pfDML);
 
+	// translate a dynamic foreign scan
+	CDXLNode *PdxlnDynamicForeignScan(CExpression *pexprDFS,
+									  CColRefArray *colref_array,
+									  CDistributionSpecArray *pdrgpdsBaseTables,
+									  ULONG *pulNonGatherMotions, BOOL *pfDML);
+
+	// translate a dynamic foreign scan with a scalar condition
+	CDXLNode *PdxlnDynamicForeignScan(CExpression *pexprDFS,
+									  CColRefArray *colref_array,
+									  CDistributionSpecArray *pdrgpdsBaseTables,
+									  CExpression *pexprScalarCond,
+									  CDXLPhysicalProperties *dxl_properties);
+
 	// Construct a table descr for a child partition
 	CTableDescriptor *MakeTableDescForPart(const IMDRelation *part,
 										   CTableDescriptor *root_table_desc);
@@ -406,11 +419,6 @@ private:
 	CDXLNode *PdxlnAssert(CExpression *pexprAssert, CColRefArray *colref_array,
 						  CDistributionSpecArray *pdrgpdsBaseTables,
 						  ULONG *pulNonGatherMotions, BOOL *pfDML);
-
-	// translate a row trigger operator
-	CDXLNode *PdxlnRowTrigger(CExpression *pexpr, CColRefArray *colref_array,
-							  CDistributionSpecArray *pdrgpdsBaseTables,
-							  ULONG *pulNonGatherMotions, BOOL *pfDML);
 
 	// translate a scalar If statement
 	CDXLNode *PdxlnScIfStmt(CExpression *pexprScIf);
@@ -535,16 +543,6 @@ private:
 									const CColRefArray *part_colrefs,
 									const CColRefArray *root_colrefs,
 									CExpression *pred);
-
-	CDXLNode *PdxlnBitmapIndexProbeForChildPart(
-		const ColRefToUlongMap *root_col_mapping,
-		const CColRefArray *part_colrefs, const CColRefArray *root_colrefs,
-		const IMDRelation *part, CExpression *pexprBitmapIndexProbe);
-
-	CDXLNode *PdxlnBitmapIndexPathForChildPart(
-		const ColRefToUlongMap *root_col_mapping,
-		const CColRefArray *part_colrefs, const CColRefArray *root_colrefs,
-		const IMDRelation *part, CExpression *pexprBitmapIndexPath);
 
 	// translate a project list expression into a DXL proj list node
 	// according to the order specified in the dynamic array

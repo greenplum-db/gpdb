@@ -5936,7 +5936,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="2452648"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Relation Mdid="0.1977341.1.1" Name="store_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1977341.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6030,17 +6030,16 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1977341001.1.1"/>
-          <dxl:Partition Mdid="0.1977341002.1.1"/>
-          <dxl:Partition Mdid="0.1977341003.1.1"/>
-          <dxl:Partition Mdid="0.1977341004.1.1"/>
-          <dxl:Partition Mdid="0.1977341005.1.1"/>
+          <dxl:Partition Mdid="6.1977341001.1.1"/>
+          <dxl:Partition Mdid="6.1977341002.1.1"/>
+          <dxl:Partition Mdid="6.1977341003.1.1"/>
+          <dxl:Partition Mdid="6.1977341004.1.1"/>
+          <dxl:Partition Mdid="6.1977341005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341001.1.1" Name="store_sales_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341001.1.1" Name="store_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6134,7 +6133,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6152,7 +6150,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341002.1.1" Name="store_sales_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341002.1.1" Name="store_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6246,7 +6244,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6264,7 +6261,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341003.1.1" Name="store_sales_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341003.1.1" Name="store_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6358,7 +6355,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6376,7 +6372,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341004.1.1" Name="store_sales_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341004.1.1" Name="store_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6470,7 +6466,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6488,7 +6483,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1977341005.1.1" Name="store_sales_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1977341005.1.1" Name="store_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;28,29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6582,7 +6577,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6601,7 +6595,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.1962503.1.1" Name="date_dim" Rows="73049.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1962503.1.1" Name="date_dim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1962503.1.1" Name="date_dim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6710,17 +6704,16 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1962503001.1.1"/>
-          <dxl:Partition Mdid="0.1962503002.1.1"/>
-          <dxl:Partition Mdid="0.1962503003.1.1"/>
-          <dxl:Partition Mdid="0.1962503004.1.1"/>
-          <dxl:Partition Mdid="0.1962503005.1.1"/>
+          <dxl:Partition Mdid="6.1962503001.1.1"/>
+          <dxl:Partition Mdid="6.1962503002.1.1"/>
+          <dxl:Partition Mdid="6.1962503003.1.1"/>
+          <dxl:Partition Mdid="6.1962503004.1.1"/>
+          <dxl:Partition Mdid="6.1962503005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503001.1.1" Name="date_dim_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503001.1.1" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6829,7 +6822,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6847,7 +6839,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503002.1.1" Name="date_dim_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503002.1.1" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6956,7 +6948,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -6974,7 +6965,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503003.1.1" Name="date_dim_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503003.1.1" Name="date_dim_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -7083,7 +7074,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -7101,7 +7091,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503004.1.1" Name="date_dim_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503004.1.1" Name="date_dim_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -7210,7 +7200,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -7228,7 +7217,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962503005.1.1" Name="date_dim_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1962503005.1.1" Name="date_dim_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;33,34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -7337,7 +7326,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -15462,7 +15450,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1974718.1.1" Name="customer" Rows="100138.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1974718.1.1" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
+      <dxl:Relation Mdid="6.1974718.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -15541,7 +15529,6 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
@@ -15657,7 +15644,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
             </dxl:ProjList>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.1974718.1.1" TableName="customer">
+                <dxl:TableDescriptor Mdid="6.1974718.1.1" TableName="customer">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -15688,7 +15675,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.1977341.1.1" TableName="store_sales">
+                <dxl:TableDescriptor Mdid="6.1977341.1.1" TableName="store_sales">
                   <dxl:Columns>
                     <dxl:Column ColId="26" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="27" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -15724,7 +15711,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.1962503.1.1" TableName="date_dim">
+                <dxl:TableDescriptor Mdid="6.1962503.1.1" TableName="date_dim">
                   <dxl:Columns>
                     <dxl:Column ColId="56" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="57" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -15971,10 +15958,10 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                 <dxl:ProjElem ColId="90" Alias="sum">
                   <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                     <dxl:ValuesList ParamType="aggargs">
-                    <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0" OperatorType="0.1700.1.0">
-                      <dxl:Ident ColId="42" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                      <dxl:Ident ColId="39" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                    </dxl:OpExpr>
+                      <dxl:OpExpr OperatorName="-" OperatorMdid="0.1759.1.0" OperatorType="0.1700.1.0">
+                        <dxl:Ident ColId="42" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
+                        <dxl:Ident ColId="39" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
+                      </dxl:OpExpr>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>
@@ -16117,11 +16104,33 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                         <dxl:Ident ColId="55" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                       </dxl:Comparison>
                     </dxl:HashCondList>
-                    <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="0">
+                    <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="561.720656" Rows="2880896.000000" Width="22"/>
                       </dxl:Properties>
-                      <dxl:TableDescriptor Mdid="0.1977341.1.1" TableName="store_sales">
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="25" Alias="ss_sold_date_sk">
+                          <dxl:Ident ColId="25" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="28" Alias="ss_customer_sk">
+                          <dxl:Ident ColId="28" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="39" Alias="ss_ext_discount_amt">
+                          <dxl:Ident ColId="39" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="42" Alias="ss_ext_list_price">
+                          <dxl:Ident ColId="42" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:Partitions>
+                        <dxl:Partition Mdid="6.1977341001.1.1"/>
+                        <dxl:Partition Mdid="6.1977341002.1.1"/>
+                        <dxl:Partition Mdid="6.1977341003.1.1"/>
+                        <dxl:Partition Mdid="6.1977341004.1.1"/>
+                        <dxl:Partition Mdid="6.1977341005.1.1"/>
+                      </dxl:Partitions>
+                      <dxl:TableDescriptor Mdid="6.1977341.1.1" TableName="store_sales">
                         <dxl:Columns>
                           <dxl:Column ColId="25" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="27" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
@@ -16138,293 +16147,8 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                           <dxl:Column ColId="54" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                         </dxl:Columns>
                       </dxl:TableDescriptor>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="25" Alias="ss_sold_date_sk">
-                          <dxl:Ident ColId="25" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="28" Alias="ss_customer_sk">
-                          <dxl:Ident ColId="28" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="39" Alias="ss_ext_discount_amt">
-                          <dxl:Ident ColId="39" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="42" Alias="ss_ext_list_price">
-                          <dxl:Ident ColId="42" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:TableScan>
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="561.720656" Rows="2880896.000000" Width="22"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="93" Alias="ss_sold_date_sk">
-                            <dxl:Ident ColId="93" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="96" Alias="ss_customer_sk">
-                            <dxl:Ident ColId="96" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="107" Alias="ss_ext_discount_amt">
-                            <dxl:Ident ColId="107" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="110" Alias="ss_ext_list_price">
-                            <dxl:Ident ColId="110" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.1977341001.1.1" TableName="store_sales_prt_1">
-                          <dxl:Columns>
-                            <dxl:Column ColId="93" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="94" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="95" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="96" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="97" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="98" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="99" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="100" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="101" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="102" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="103" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="104" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="105" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="106" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="107" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="108" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="109" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="110" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                            <dxl:Column ColId="111" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="112" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="113" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="114" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="115" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="116" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="117" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="118" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="119" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="120" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="121" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="122" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:TableScan>
-                      <dxl:TableScan>
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="561.720656" Rows="2880896.000000" Width="22"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="123" Alias="ss_sold_date_sk">
-                            <dxl:Ident ColId="123" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="126" Alias="ss_customer_sk">
-                            <dxl:Ident ColId="126" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="137" Alias="ss_ext_discount_amt">
-                            <dxl:Ident ColId="137" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="140" Alias="ss_ext_list_price">
-                            <dxl:Ident ColId="140" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.1977341002.1.1" TableName="store_sales_prt_2">
-                          <dxl:Columns>
-                            <dxl:Column ColId="123" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="124" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="125" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="126" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="127" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="128" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="129" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="130" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="131" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="132" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="133" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="134" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="135" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="136" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="137" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="138" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="139" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="140" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                            <dxl:Column ColId="141" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="142" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="143" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="144" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="145" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="146" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="147" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="148" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="149" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="150" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="151" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="152" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:TableScan>
-                      <dxl:TableScan>
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="561.720656" Rows="2880896.000000" Width="22"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="153" Alias="ss_sold_date_sk">
-                            <dxl:Ident ColId="153" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="156" Alias="ss_customer_sk">
-                            <dxl:Ident ColId="156" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="167" Alias="ss_ext_discount_amt">
-                            <dxl:Ident ColId="167" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="170" Alias="ss_ext_list_price">
-                            <dxl:Ident ColId="170" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.1977341003.1.1" TableName="store_sales_prt_3">
-                          <dxl:Columns>
-                            <dxl:Column ColId="153" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="154" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="155" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="156" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="157" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="158" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="159" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="160" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="161" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="162" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="163" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="164" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="165" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="166" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="167" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="168" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="169" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="170" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                            <dxl:Column ColId="171" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="172" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="173" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="174" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="175" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="176" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="177" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="178" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="179" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="180" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="181" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="182" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:TableScan>
-                      <dxl:TableScan>
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="561.720656" Rows="2880896.000000" Width="22"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="183" Alias="ss_sold_date_sk">
-                            <dxl:Ident ColId="183" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="186" Alias="ss_customer_sk">
-                            <dxl:Ident ColId="186" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="197" Alias="ss_ext_discount_amt">
-                            <dxl:Ident ColId="197" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="200" Alias="ss_ext_list_price">
-                            <dxl:Ident ColId="200" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.1977341004.1.1" TableName="store_sales_prt_4">
-                          <dxl:Columns>
-                            <dxl:Column ColId="183" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="184" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="185" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="186" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="187" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="188" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="189" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="190" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="191" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="192" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="193" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="194" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="195" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="196" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="197" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="198" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="199" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="200" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                            <dxl:Column ColId="201" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="202" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="203" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="204" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="205" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="206" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="207" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="208" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="209" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="210" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="211" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="212" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:TableScan>
-                      <dxl:TableScan>
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="561.720656" Rows="2880896.000000" Width="22"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="213" Alias="ss_sold_date_sk">
-                            <dxl:Ident ColId="213" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="216" Alias="ss_customer_sk">
-                            <dxl:Ident ColId="216" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="227" Alias="ss_ext_discount_amt">
-                            <dxl:Ident ColId="227" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="230" Alias="ss_ext_list_price">
-                            <dxl:Ident ColId="230" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.1977341005.1.1" TableName="store_sales_prt_5">
-                          <dxl:Columns>
-                            <dxl:Column ColId="213" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="214" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="215" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="216" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="217" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="218" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="219" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="220" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="221" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="222" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="223" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="224" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="225" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="226" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="227" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="228" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="229" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="230" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                            <dxl:Column ColId="231" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="232" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                            <dxl:Column ColId="233" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="234" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="235" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="236" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="237" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="238" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="239" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="240" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="241" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="242" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:TableScan>
-                    </dxl:Append>
-                    <dxl:PartitionSelector RelationMdid="0.1977341.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
+                    </dxl:DynamicTableScan>
+                    <dxl:PartitionSelector RelationMdid="6.1977341.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="438.249254" Rows="12874.750453" Width="12"/>
                       </dxl:Properties>
@@ -16462,11 +16186,55 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
-                        <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="2" SelectorIds="">
+                        <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="436.227274" Rows="6437.375227" Width="12"/>
                           </dxl:Properties>
-                          <dxl:TableDescriptor Mdid="0.1962503.1.1" TableName="date_dim">
+                          <dxl:ProjList>
+                            <dxl:ProjElem ColId="55" Alias="d_date_sk">
+                              <dxl:Ident ColId="55" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="61" Alias="d_year">
+                              <dxl:Ident ColId="61" ColName="d_year" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="63" Alias="d_moy">
+                              <dxl:Ident ColId="63" ColName="d_moy" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                          </dxl:ProjList>
+                          <dxl:Filter>
+                            <dxl:Or>
+                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                <dxl:Ident ColId="61" ColName="d_year" TypeMdid="0.23.1.0"/>
+                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
+                              </dxl:Comparison>
+                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                <dxl:Ident ColId="61" ColName="d_year" TypeMdid="0.23.1.0"/>
+                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
+                              </dxl:Comparison>
+                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                <dxl:Ident ColId="63" ColName="d_moy" TypeMdid="0.23.1.0"/>
+                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
+                              </dxl:Comparison>
+                              <dxl:And>
+                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                  <dxl:Ident ColId="61" ColName="d_year" TypeMdid="0.23.1.0"/>
+                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
+                                </dxl:Comparison>
+                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                  <dxl:Ident ColId="63" ColName="d_moy" TypeMdid="0.23.1.0"/>
+                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
+                                </dxl:Comparison>
+                              </dxl:And>
+                            </dxl:Or>
+                          </dxl:Filter>
+                          <dxl:Partitions>
+                            <dxl:Partition Mdid="6.1962503001.1.1"/>
+                            <dxl:Partition Mdid="6.1962503002.1.1"/>
+                            <dxl:Partition Mdid="6.1962503003.1.1"/>
+                            <dxl:Partition Mdid="6.1962503004.1.1"/>
+                            <dxl:Partition Mdid="6.1962503005.1.1"/>
+                          </dxl:Partitions>
+                          <dxl:TableDescriptor Mdid="6.1962503.1.1" TableName="date_dim">
                             <dxl:Columns>
                               <dxl:Column ColId="55" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="61" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
@@ -16480,424 +16248,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                               <dxl:Column ColId="89" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                             </dxl:Columns>
                           </dxl:TableDescriptor>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="55" Alias="d_date_sk">
-                              <dxl:Ident ColId="55" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="61" Alias="d_year">
-                              <dxl:Ident ColId="61" ColName="d_year" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="63" Alias="d_moy">
-                              <dxl:Ident ColId="63" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter/>
-                          <dxl:TableScan>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="436.227274" Rows="6437.375227" Width="12"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="243" Alias="d_date_sk">
-                                <dxl:Ident ColId="243" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="249" Alias="d_year">
-                                <dxl:Ident ColId="249" ColName="d_year" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="251" Alias="d_moy">
-                                <dxl:Ident ColId="251" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:Or>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="249" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="249" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="251" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                </dxl:Comparison>
-                                <dxl:And>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="249" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                  </dxl:Comparison>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="251" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                  </dxl:Comparison>
-                                </dxl:And>
-                              </dxl:Or>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.1962503001.1.1" TableName="date_dim_prt_1">
-                              <dxl:Columns>
-                                <dxl:Column ColId="243" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="244" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                                <dxl:Column ColId="245" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="246" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="247" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="248" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="249" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="250" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="251" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="252" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="253" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="254" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="255" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="256" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="257" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                                <dxl:Column ColId="258" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="259" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="260" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="261" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="262" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="263" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="264" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="265" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="266" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="267" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="268" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="269" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="270" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="271" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="272" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="273" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="274" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="275" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="276" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="277" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
-                          <dxl:TableScan>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="436.227274" Rows="6437.375227" Width="12"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="278" Alias="d_date_sk">
-                                <dxl:Ident ColId="278" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="284" Alias="d_year">
-                                <dxl:Ident ColId="284" ColName="d_year" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="286" Alias="d_moy">
-                                <dxl:Ident ColId="286" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:Or>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="284" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="284" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="286" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                </dxl:Comparison>
-                                <dxl:And>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="284" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                  </dxl:Comparison>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="286" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                  </dxl:Comparison>
-                                </dxl:And>
-                              </dxl:Or>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.1962503002.1.1" TableName="date_dim_prt_2">
-                              <dxl:Columns>
-                                <dxl:Column ColId="278" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="279" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                                <dxl:Column ColId="280" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="281" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="282" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="283" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="284" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="285" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="286" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="287" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="288" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="289" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="290" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="291" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="292" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                                <dxl:Column ColId="293" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="294" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="295" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="296" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="297" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="298" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="299" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="300" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="301" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="302" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="303" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="304" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="305" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="306" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="307" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="308" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="309" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="310" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="311" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="312" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
-                          <dxl:TableScan>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="436.227274" Rows="6437.375227" Width="12"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="313" Alias="d_date_sk">
-                                <dxl:Ident ColId="313" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="319" Alias="d_year">
-                                <dxl:Ident ColId="319" ColName="d_year" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="321" Alias="d_moy">
-                                <dxl:Ident ColId="321" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:Or>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="319" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="319" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="321" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                </dxl:Comparison>
-                                <dxl:And>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="319" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                  </dxl:Comparison>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="321" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                  </dxl:Comparison>
-                                </dxl:And>
-                              </dxl:Or>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.1962503003.1.1" TableName="date_dim_prt_3">
-                              <dxl:Columns>
-                                <dxl:Column ColId="313" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="314" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                                <dxl:Column ColId="315" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="316" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="317" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="318" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="319" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="320" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="321" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="322" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="323" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="324" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="325" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="326" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="327" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                                <dxl:Column ColId="328" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="329" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="330" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="331" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="332" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="333" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="334" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="335" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="336" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="337" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="338" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="339" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="340" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="341" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="342" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="343" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="344" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="345" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="346" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="347" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
-                          <dxl:TableScan>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="436.227274" Rows="6437.375227" Width="12"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="348" Alias="d_date_sk">
-                                <dxl:Ident ColId="348" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="354" Alias="d_year">
-                                <dxl:Ident ColId="354" ColName="d_year" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="356" Alias="d_moy">
-                                <dxl:Ident ColId="356" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:Or>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="354" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="354" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="356" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                </dxl:Comparison>
-                                <dxl:And>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="354" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                  </dxl:Comparison>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="356" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                  </dxl:Comparison>
-                                </dxl:And>
-                              </dxl:Or>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.1962503004.1.1" TableName="date_dim_prt_4">
-                              <dxl:Columns>
-                                <dxl:Column ColId="348" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="349" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                                <dxl:Column ColId="350" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="351" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="352" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="353" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="354" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="355" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="356" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="357" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="358" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="359" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="360" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="361" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="362" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                                <dxl:Column ColId="363" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="364" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="365" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="366" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="367" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="368" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="369" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="370" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="371" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="372" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="373" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="374" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="375" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="376" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="377" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="378" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="379" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="380" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="381" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="382" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
-                          <dxl:TableScan>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="436.227274" Rows="6437.375227" Width="12"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="383" Alias="d_date_sk">
-                                <dxl:Ident ColId="383" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="389" Alias="d_year">
-                                <dxl:Ident ColId="389" ColName="d_year" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                              <dxl:ProjElem ColId="391" Alias="d_moy">
-                                <dxl:Ident ColId="391" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:Or>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="389" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="389" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="391" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                </dxl:Comparison>
-                                <dxl:And>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="389" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2002"/>
-                                  </dxl:Comparison>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="391" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
-                                  </dxl:Comparison>
-                                </dxl:And>
-                              </dxl:Or>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.1962503005.1.1" TableName="date_dim_prt_5">
-                              <dxl:Columns>
-                                <dxl:Column ColId="383" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="384" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                                <dxl:Column ColId="385" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="386" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="387" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="388" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="389" Attno="7" ColName="d_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="390" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="391" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="392" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="393" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="394" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="395" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="396" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="397" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                                <dxl:Column ColId="398" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="399" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="400" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="401" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="402" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="403" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="404" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="405" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="406" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="407" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="408" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="409" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="410" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                                <dxl:Column ColId="411" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                                <dxl:Column ColId="412" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="413" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="414" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="415" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="416" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="417" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
-                        </dxl:Append>
+                        </dxl:DynamicTableScan>
                       </dxl:BroadcastMotion>
                     </dxl:PartitionSelector>
                   </dxl:HashJoin>
@@ -16965,7 +16316,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.1974718.1.1" TableName="customer">
+                    <dxl:TableDescriptor Mdid="6.1974718.1.1" TableName="customer">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="1" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

@@ -8,7 +8,7 @@ In an MPP shared nothing environment, overall response time for a query is measu
 
 Optimal distributions are critical when joining large tables together. To perform a join, matching rows must be located together on the same segment. If data is not distributed on the same join column, the rows needed from one of the tables are dynamically redistributed to the other segments. In some cases a broadcast motion, in which each segment sends its individual rows to all other segments, is performed rather than a redistribution motion, where each segment rehashes the data and sends the rows to the appropriate segments according to the hash key.
 
-**Parent topic:**[Greenplum Database Administrator Guide](admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](admin_guide.html)
 
 ## <a id="topic1"></a>Local \(Co-located\) Joins 
 

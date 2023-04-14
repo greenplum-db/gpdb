@@ -46,12 +46,6 @@ private:
 	// insert col ids
 	ULongPtrArray *m_insert_colid_array;
 
-	// does update preserve oids
-	BOOL m_preserve_oids;
-
-	// tuple oid column id
-	ULONG m_tuple_oid_col_oid;
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace

@@ -7,7 +7,7 @@
 
 #include <cstddef>
 
-typedef struct RelationData *Relation;
+using Relation = struct RelationData *;
 
 namespace gpdb
 {

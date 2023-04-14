@@ -72,7 +72,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:TableDescriptor Mdid="0.899640.1.1" TableName="r">
+          <dxl:TableDescriptor Mdid="6.899640.1.1" TableName="r">
             <dxl:Columns>
               <dxl:Column ColId="270" Attno="1" ColName="r1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="271" Attno="2" ColName="r2" TypeMdid="0.23.1.0"/>

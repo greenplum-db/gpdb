@@ -108,11 +108,6 @@ private:
 
 #endif	// GPOS_DEBUG
 
-#if 0
-	// check if the expression satisfies partition enforcer condition
-	BOOL FValidPartEnforcers(CDrvdPropCtxtPlan *pdpctxtplan);
-#endif
-
 	// check if the distributions of all children are compatible
 	BOOL FValidChildrenDistribution(CDrvdPropCtxtPlan *pdpctxtplan);
 
@@ -310,6 +305,9 @@ public:
 	ULONG DeriveTotalDistinctAggs();
 	BOOL DeriveHasMultipleDistinctAggs();
 	BOOL DeriveHasScalarArrayCmp();
+	BOOL DeriveHasScalarFuncProject();
+	BOOL DeriveContainsOnlyReplicationSafeAggFuncs();
+	ULONG DeriveTotalOrderedAggs();
 
 };	// class CExpression
 

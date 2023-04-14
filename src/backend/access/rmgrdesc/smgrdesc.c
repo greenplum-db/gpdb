@@ -27,8 +27,7 @@ smgr_desc(StringInfo buf, XLogReaderState *record)
 	{
 		xl_smgr_create *xlrec = (xl_smgr_create *) rec;
 		char	   *path = relpathperm(xlrec->rnode, xlrec->forkNum);
-
-		appendStringInfoString(buf, path);
+		appendStringInfo(buf, "%s; smgr: %s", path, xlrec->impl == SMGR_MD ? "heap" : "ao");
 		pfree(path);
 	}
 	else if (info == XLOG_SMGR_TRUNCATE)

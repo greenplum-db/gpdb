@@ -19,6 +19,7 @@
 #define BROADCAST_THRESHOLD ULONG(10000000)
 #define PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD ULONG(10)
 #define XFORM_BIND_THRESHOLD ULONG(0)
+#define SKEW_FACTOR ULONG(0)
 
 
 namespace gpopt
@@ -36,8 +37,6 @@ using namespace gpos;
 class CHint : public CRefCount
 {
 private:
-	ULONG m_ulMinNumOfPartsToRequireSortOnInsert;
-
 	ULONG m_ulJoinArityForAssociativityCommutativity;
 
 	ULONG m_ulArrayExpansionThreshold;
@@ -52,18 +51,18 @@ private:
 
 	ULONG m_ulXform_bind_threshold;
 
+	ULONG m_ulSkewFactor;
+
 public:
 	CHint(const CHint &) = delete;
 
 	// ctor
-	CHint(ULONG min_num_of_parts_to_require_sort_on_insert,
-		  ULONG join_arity_for_associativity_commutativity,
+	CHint(ULONG join_arity_for_associativity_commutativity,
 		  ULONG array_expansion_threshold, ULONG ulJoinOrderDPLimit,
 		  ULONG broadcast_threshold, BOOL enforce_constraint_on_dml,
-		  ULONG push_group_by_below_setop_threshold, ULONG xform_bind_threshold)
-		: m_ulMinNumOfPartsToRequireSortOnInsert(
-			  min_num_of_parts_to_require_sort_on_insert),
-		  m_ulJoinArityForAssociativityCommutativity(
+		  ULONG push_group_by_below_setop_threshold, ULONG xform_bind_threshold,
+		  ULONG skew_factor)
+		: m_ulJoinArityForAssociativityCommutativity(
 			  join_arity_for_associativity_commutativity),
 		  m_ulArrayExpansionThreshold(array_expansion_threshold),
 		  m_ulJoinOrderDPLimit(ulJoinOrderDPLimit),
@@ -71,16 +70,9 @@ public:
 		  m_fEnforceConstraintsOnDML(enforce_constraint_on_dml),
 		  m_ulPushGroupByBelowSetopThreshold(
 			  push_group_by_below_setop_threshold),
-		  m_ulXform_bind_threshold(xform_bind_threshold)
+		  m_ulXform_bind_threshold(xform_bind_threshold),
+		  m_ulSkewFactor(skew_factor)
 	{
-	}
-
-	// Minimum number of partitions required for sorting tuples during
-	// insertion in an append only row-oriented partitioned table
-	ULONG
-	UlMinNumOfPartsToRequireSortOnInsert() const
-	{
-		return m_ulMinNumOfPartsToRequireSortOnInsert;
 	}
 
 	// Maximum number of relations in an n-ary join operator where ORCA will
@@ -144,20 +136,27 @@ public:
 		return m_ulXform_bind_threshold;
 	}
 
+	// User defined skew multiplier, multiplied to the skew ratio calculated from 1000 samples
+	ULONG
+	UlSkewFactor() const
+	{
+		return m_ulSkewFactor;
+	}
+
 	// generate default hint configurations, which disables sort during insert on
 	// append only row-oriented partitioned tables by default
 	static CHint *
 	PhintDefault(CMemoryPool *mp)
 	{
 		return GPOS_NEW(mp) CHint(
-			gpos::int_max, /* min_num_of_parts_to_require_sort_on_insert */
 			gpos::int_max, /* join_arity_for_associativity_commutativity */
 			gpos::int_max, /* array_expansion_threshold */
 			JOIN_ORDER_DP_THRESHOLD,			 /*ulJoinOrderDPLimit*/
 			BROADCAST_THRESHOLD,				 /*broadcast_threshold*/
 			true,								 /* enforce_constraint_on_dml */
 			PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD, /* push_group_by_below_setop_threshold */
-			XFORM_BIND_THRESHOLD				 /* xform_bind_threshold */
+			XFORM_BIND_THRESHOLD,				 /* xform_bind_threshold */
+			SKEW_FACTOR							 /* skew_factor */
 		);
 	}
 

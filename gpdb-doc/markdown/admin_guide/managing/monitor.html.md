@@ -8,11 +8,11 @@ Observing the Greenplum Database system day-to-day performance helps administrat
 
 Also, be sure to review [Recommended Monitoring and Maintenance Tasks](../monitoring/monitoring.html) for monitoring activities you can script to quickly detect problems in the system.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## <a id="topic2"></a>Monitoring Database Activity and Performance 
 
-Tanzu Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://gpcc.docs.pivotal.io) web site.
+VMware Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site.
 
 ## <a id="topic3"></a>Monitoring System State 
 
@@ -23,13 +23,14 @@ As a Greenplum Database administrator, you must monitor the system for problem e
 -   [Checking for Data Distribution Skew](#topic20)
 -   [Viewing Metadata Information about Database Objects](#topic24)
 -   [Viewing Session Memory Usage Information](#topic_slt_ddv_1q)
+-   [Viewing and Logging Per-Process Memory Usage Information](#topic_memcontext)
 -   [Viewing Query Workfile Usage Information](#topic27)
 
 ## <a id="topic12"></a>Checking System State 
 
-A Greenplum Database system is comprised of multiple PostgreSQL instances \(the master and segments\) spanning multiple machines. To monitor a Greenplum Database system, you need to know information about the system as a whole, as well as status information of the individual instances. The `gpstate` utility provides status information about a Greenplum Database system.
+A Greenplum Database system is comprised of multiple PostgreSQL instances \(the coordinator and segments\) spanning multiple machines. To monitor a Greenplum Database system, you need to know information about the system as a whole, as well as status information of the individual instances. The `gpstate` utility provides status information about a Greenplum Database system.
 
-### <a id="topic13"></a>Viewing Master and Segment Status and Configuration 
+### <a id="topic13"></a>Viewing Coordinator and Segment Status and Configuration 
 
 The default `gpstate` action is to check segment instances and show a brief status of the valid and failed segments. For example, to see a quick status of your Greenplum Database system:
 
@@ -61,7 +62,7 @@ $ gpstate -c
 
 ```
 
-To see the status of the standby master mirror:
+To see the status of the standby coordinator mirror:
 
 ```
 $ gpstate -f
@@ -70,7 +71,7 @@ $ gpstate -f
 
 ## <a id="topic15"></a>Checking Disk Space Usage 
 
-A database administrator's most important monitoring task is to make sure the file systems where the master and segment data directories reside do not grow to more than 70 percent full. A filled data disk will not result in data corruption, but it may prevent normal database activity from continuing. If the disk grows too full, it can cause the database server to shut down.
+A database administrator's most important monitoring task is to make sure the file systems where the coordinator and segment data directories reside do not grow to more than 70 percent full. A filled data disk will not result in data corruption, but it may prevent normal database activity from continuing. If the disk grows too full, it can cause the database server to shut down.
 
 You can use the `gp_disk_free` external table in the `gp_toolkit` administrative schema to check for remaining free space \(in kilobytes\) on the segment host file systems. For example:
 
@@ -163,7 +164,7 @@ To see the data distribution of a table's rows \(the number of rows on each segm
 
 A table is considered to have a balanced distribution if all segments have roughly the same number of rows.
 
-**Note:** If you run this query on a replicated table, it fails because Greenplum Database does not permit user queries to reference the system column `gp_segment_id` \(or the system columns `ctid`, `cmin`, `cmax`, `xmin`, and `xmax`\) in replicated tables. Because every segment has all of the tables' rows, replicated tables are evenly distributed by definition.
+> **Note** If you run this query on a replicated table, it fails because Greenplum Database does not permit user queries to reference the system column `gp_segment_id` \(or the system columns `ctid`, `cmin`, `cmax`, `xmin`, and `xmax`\) in replicated tables. Because every segment has all of the tables' rows, replicated tables are evenly distributed by definition.
 
 ### <a id="topic23"></a>Checking for Query Processing Skew 
 
@@ -268,6 +269,65 @@ The `is_runaway`, `runaway_vmem_mb`, and `runaway_command_cnt` columns are not a
 |`runaway_command_cnt`|integer| |Command count for the session when it was marked as a runaway session.|
 |`idle_start`|timestamptz| |The last time a query process in this session became idle.|
 
+## <a id="topic_memcontext"></a>Viewing and Logging Per-Process Memory Usage Information
+
+Greenplum Database allocates all memory within memory contexts. Memory contexts provide a convenient way to manage allocations made in different places that need to live for differing amounts of time. Destroying a context releases all of the memory that was allocated in it.
+
+Tracking the amount of memory used by a server process or a long-running query can help detect the source of a potential out-of-memory condition. Greenplum Database provides a system view and administration functions that you can use for this purpose.
+
+### <a id="topic_memcontext_view"></a>About the pg_backend_memory_contexts View
+
+To display the memory usage of all active memory contexts in the server process attached to the current session, use the [pg_backend_memory_contexts](../../ref_guide/system_catalogs/pg_backend_memory_contexts.html) system view. This view is restricted to superusers, but access may be granted to other roles.
+
+``` sql
+SELECT * FROM pg_backend_memory_contexts;
+```
+
+### <a id="topic_memcontext_func"></a>About the Memory Context Admin Functions
+
+You can use the system administration function `pg_log_backend_memory_contexts()` to instruct Greenplum Database to dump the memory usage of other sessions running on the coordinator host into the server log. Execution of this function is restricted to superusers only, and cannot be granted to other roles.
+
+The signature of `pg_log_backend_memory_contexts()` function follows:
+
+``` pre
+pg_log_backend_memory_contexts( pid integer )
+```
+
+where `pid` identifies the process whose memory contexts you want dumped.
+
+`pg_log_backend_memory_contexts()` returns `true` when memory context logging is successfully activated for the process on the local host. When logging is activated, Greenplum writes one message to the log for each memory context at the `LOG` message level. The log messages appear in the server log based on the log configuration set; refer to [Error Reporting and Logging](https://www.postgresql.org/docs/12/runtime-config-logging.html) in the PostgreSQL documentation for more information. *The memory context log messages are not sent to the client*.
+
+Memory context logging functions that dump memory usage across all Greenplum segments, or dump usage for a specific segment are named `gp_log_backend_memory_contexts()`.
+
+`gp_log_backend_memory_contexts()` has two signatures:
+
+``` pre
+gp_log_backend_memory_contexts( sess_id integer )
+gp_log_backend_memory_contexts( sess_id integer, contentId integer )
+```
+
+where `sess_id` is the Greenplum Database identifier assigned to the session (typically obtained from the `pg_stat_activity` view), and `contentID` in the second signature identifies the segment instance of interest.
+
+When you invoke `gp_log_backend_memory_contexts()` on the Greenplum Database coordinator host, it invokes `pg_log_backend_memory_contexts()` on the individual segments, which in turn triggers a memory usage dump to each segment log. The functions return an integer identifying the number of segments on which memory context logging was successfully activated.
+
+### <a id="topic_memcontext_samplelog"></a>Sample Log Messages
+
+The command:
+
+``` sql
+SELECT pg_log_backend_memory_contexts( pg_backend_pid() );
+```
+
+triggered the dumping of the following (subset of) memory context messages to the local server log file:
+
+``` pre
+2023-03-23 16:45:57.228512 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","logging memory contexts of PID 16389",,,,,,"SELECT pg_log_backend_memory_contexts(pg_backend_pid());",0,,"mcxt.c",1278,
+2023-03-23 16:45:57.229275 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 0; TopMemoryContext: 108384 total in 6 blocks; 23248 free (21 chunks); 85136 used",,,,,,,0,,"mcxt.c",884,
+2023-03-23 16:45:57.229822 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 1; pgstat TabStatusArray lookup hash table: 8192 total in 1 blocks; 1416 free (0 chunks); 6776 used",,,,,,,0,,"mcxt.c",884,
+2023-03-23 16:45:57.230387 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 1; TopTransactionContext: 8192 total in 1 blocks; 7576 free (1 chunks); 616 used",,,,,,,0,,"mcxt.c",884,
+2023-03-23 16:45:57.230961 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 1; TableSpace cache: 8192 total in 1 blocks; 2056 free (0 chunks); 6136 used",,,,,,,0,,"mcxt.c",884,
+```
+
 ## <a id="topic27"></a>Viewing Query Workfile Usage Information 
 
 The Greenplum Database administrative schema *gp\_toolkit* contains views that display information about Greenplum Database workfiles. Greenplum Database creates workfiles on disk if it does not have sufficient memory to run the query in memory. This information can be used for troubleshooting and tuning queries. The information in the views can also be used to specify the values for the Greenplum Database configuration parameters `gp_workfile_limit_per_query` and `gp_workfile_limit_per_segment`.
@@ -282,7 +342,7 @@ For information about using *gp\_toolkit*, see [Using gp\_toolkit](#topic31).
 
 ## <a id="topic28"></a>Viewing the Database Server Log Files 
 
-Every database instance in Greenplum Database \(master and segments\) runs a PostgreSQL database server with its own server log file. Log files are created in the `log` directory of the master and each segment data directory.
+Every database instance in Greenplum Database \(coordinator and segments\) runs a PostgreSQL database server with its own server log file. Log files are created in the `log` directory of the coordinator and each segment data directory.
 
 ### <a id="topic29"></a>Log File Format 
 
@@ -297,13 +357,13 @@ The following fields are written to the log:
 |3|database\_name|varchar\(100\)|The database name|
 |4|process\_id|varchar\(10\)|The system process ID \(prefixed with "p"\)|
 |5|thread\_id|varchar\(50\)|The thread count \(prefixed with "th"\)|
-|6|remote\_host|varchar\(100\)|On the master, the hostname/address of the client machine. On the segment, the hostname/address of the master.|
-|7|remote\_port|varchar\(10\)|The segment or master port number|
+|6|remote\_host|varchar\(100\)|On the coordinator, the hostname/address of the client machine. On the segment, the hostname/address of the coordinator.|
+|7|remote\_port|varchar\(10\)|The segment or coordinator port number|
 |8|session\_start\_time|timestamp with time zone|Time session connection was opened|
-|9|transaction\_id|int|Top-level transaction ID on the master. This ID is the parent of any subtransactions.|
+|9|transaction\_id|int|Top-level transaction ID on the coordinator. This ID is the parent of any subtransactions.|
 |10|gp\_session\_id|text|Session identifier number \(prefixed with "con"\)|
 |11|gp\_command\_count|text|The command number within a session \(prefixed with "cmd"\)|
-|12|gp\_segment|text|The segment content identifier \(prefixed with "seg" for primaries or "mir" for mirrors\). The master always has a content ID of -1.|
+|12|gp\_segment|text|The segment content identifier \(prefixed with "seg" for primaries or "mir" for mirrors\). The coordinator always has a content ID of -1.|
 |13|slice\_id|text|The slice ID \(portion of the query plan being executed\)|
 |14|distr\_tranx\_id|text|Distributed transaction ID|
 |15|local\_tranx\_id|text|Local transaction ID|
@@ -325,7 +385,7 @@ The following fields are written to the log:
 
 ### <a id="topic30"></a>Searching the Greenplum Server Log Files 
 
-Greenplum Database provides a utility called `gplogfilter` can search through a Greenplum Database log file for entries matching the specified criteria. By default, this utility searches through the Greenplum Database master log file in the default logging location. For example, to display the last three lines of each of the log files under the master directory:
+Greenplum Database provides a utility called `gplogfilter` can search through a Greenplum Database log file for entries matching the specified criteria. By default, this utility searches through the Greenplum Database coordinator log file in the default logging location. For example, to display the last three lines of each of the log files under the coordinator directory:
 
 ```
 $ gplogfilter -n 3
@@ -360,7 +420,7 @@ The following table lists all the defined error codes. Some are not used, but ar
 
 The PL/pgSQL condition name for each error code is the same as the phrase shown in the table, with underscores substituted for spaces. For example, code 22012, DIVISION BY ZERO, has condition name DIVISION\_BY\_ZERO. Condition names can be written in either upper or lower case.
 
-**Note:** PL/pgSQL does not recognize warning, as opposed to error, condition names; those are classes 00, 01, and 02.
+> **Note** PL/pgSQL does not recognize warning, as opposed to error, condition names; those are classes 00, 01, and 02.
 
 |Error Code|Meaning|Constant|
 |----------|-------|--------|

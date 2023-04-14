@@ -11,13 +11,13 @@ Set these in your user's startup shell profile \(such as `~/.bashrc` or `~/.bash
 -   **[Optional Environment Variables](env_var_ref.html)**  
 
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic2"></a>Required Environment Variables 
 
-**Note:** `GPHOME`, `PATH` and `LD_LIBRARY_PATH` can be set by sourcing the `greenplum_path.sh` file from your Greenplum Database installation directory
+> **Note** `GPHOME`, `PATH` and `LD_LIBRARY_PATH` can be set by sourcing the `greenplum_path.sh` file from your Greenplum Database installation directory
 
-**Parent topic:**[Greenplum Environment Variables](env_var_ref.html)
+**Parent topic:** [Greenplum Environment Variables](env_var_ref.html)
 
 ### <a id="topic3"></a>GPHOME 
 
@@ -59,7 +59,7 @@ export MASTER_DATA_DIRECTORY
 
 The following are standard PostgreSQL environment variables, which are also recognized in Greenplum Database. You may want to add the connection-related environment variables to your profile for convenience, so you do not have to type so many options on the command line for client connections. Note that these environment variables should be set on the Greenplum Database coordinator host only.
 
-**Parent topic:**[Greenplum Environment Variables](env_var_ref.html)
+**Parent topic:** [Greenplum Environment Variables](env_var_ref.html)
 
 ### <a id="topic8"></a>PGAPPNAME 
 
@@ -83,7 +83,7 @@ The password used if the server demands password authentication. Use of this env
 
 ### <a id="topic13"></a>PGPASSFILE 
 
-The name of the password file to use for lookups. If not set, it defaults to `~/.pgpass`. See the topic about [The Password File](https://www.postgresql.org/docs/9.4/libpq-pgpass.html) in the PostgreSQL documentation for more information.
+The name of the password file to use for lookups. If not set, it defaults to `~/.pgpass`. See the topic about [The Password File](https://www.postgresql.org/docs/12/libpq-pgpass.html) in the PostgreSQL documentation for more information.
 
 ### <a id="topic14"></a>PGOPTIONS 
 

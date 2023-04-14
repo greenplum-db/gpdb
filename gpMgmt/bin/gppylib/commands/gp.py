@@ -81,6 +81,32 @@ def getPostmasterPID(hostname, datadir):
     except:
         return -1
 
+
+"""
+Given the segment data directory and the hostname,
+return all the postgres processes associated
+with that segment as a list.
+Returns an empty list if there is any error.
+"""
+def get_postgres_segment_processes(datadir, host):
+    postmaster_pid = getPostmasterPID(host, datadir)
+    if postmaster_pid == -1:
+        return []
+
+    postgres_pids = [postmaster_pid]
+    cmd = Command("get children pids", ("pgrep -P {0}".format(postmaster_pid)), ctxt=REMOTE, remoteHost=host)
+    cmd.run()
+
+    if cmd.get_results().rc == 0:
+        pids = cmd.get_results().stdout.split()
+        for pid in pids:
+            try:
+                postgres_pids.append(int(pid))
+            except ValueError:
+                pass # Ignore any error while converting to int from str
+
+    return postgres_pids
+
 #-----------------------------------------------
 
 class CmdArgs(list):
@@ -176,13 +202,8 @@ class PgCtlBackendOptions(CmdArgs):
 
     """
 
-    def __init__(self, port):
-        """
-        @param port: backend port
-        """
-        CmdArgs.__init__(self, [
-            "-p", str(port),
-        ])
+    def __init__(self):
+        CmdArgs.__init__(self, [])
 
     #
     # coordinator/segment-specific options
@@ -305,7 +326,7 @@ class CoordinatorStart(Command):
         self.wrapper_args=wrapper_args
 
         # build backend options
-        b = PgCtlBackendOptions(port)
+        b = PgCtlBackendOptions()
         if utilityMode:
             b.set_utility()
         else:
@@ -363,7 +384,7 @@ class SegmentStart(Command):
         datadir = gpdb.getSegmentDataDirectory()
 
         # build backend options
-        b = PgCtlBackendOptions(port)
+        b = PgCtlBackendOptions()
         if utilityMode:
             b.set_utility()
         else:
@@ -1146,8 +1167,8 @@ def distribute_tarball(queue,list,tarball):
             hostname = db.getSegmentHostName()
             datadir = db.getSegmentDataDirectory()
             (head,tail)=os.path.split(datadir)
-            scp_cmd=Scp(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head)
-            queue.addCommand(scp_cmd)
+            rsync_cmd=Rsync(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head)
+            queue.addCommand(rsync_cmd)
         queue.join()
         queue.check_results()
         logger.debug("distributeTarBall finished")
@@ -1539,12 +1560,12 @@ def chk_local_db_running(datadir, port):
     tmpfile_exists = os.path.exists("/tmp/.s.PGSQL.%d" % port)
     lockfile_exists = os.path.exists(get_lockfile_name(port))
 
-    netstat_port_active = PgPortIsActive.local('check ss for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
+    ss_port_active = PgPortIsActive.local('check ss for postmaster port',"/tmp/.s.PGSQL.%d" % port, port)
 
     logger.debug("postmaster_pid_exists: %s tmpfile_exists: %s lockfile_exists: %s ss port: %s  pid: %s" %\
-                (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value))
+                (postmaster_pid_exists, tmpfile_exists, lockfile_exists, ss_port_active, pid_value))
 
-    return (postmaster_pid_exists, tmpfile_exists, lockfile_exists, netstat_port_active, pid_value)
+    return (postmaster_pid_exists, tmpfile_exists, lockfile_exists, ss_port_active, pid_value)
 
 def get_lockfile_name(port):
     return "/tmp/.s.PGSQL.%d.lock" % port

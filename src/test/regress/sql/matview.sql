@@ -14,8 +14,8 @@ SELECT * FROM mvtest_tv ORDER BY type;
 
 -- create a materialized view with no data, and confirm correct behavior
 EXPLAIN (costs off)
-  CREATE MATERIALIZED VIEW mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
-CREATE MATERIALIZED VIEW mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
+  CREATE MATERIALIZED VIEW IF NOT EXISTS mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
+CREATE MATERIALIZED VIEW IF NOT EXISTS mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
 SELECT relispopulated FROM pg_class WHERE oid = 'mvtest_tm'::regclass;
 SELECT * FROM mvtest_tm ORDER BY type;
 REFRESH MATERIALIZED VIEW mvtest_tm;
@@ -210,7 +210,15 @@ DROP TABLE mvtest_v CASCADE;
 -- make sure running as superuser works when MV owned by another role (bug #11208)
 CREATE ROLE regress_user_mvtest;
 SET ROLE regress_user_mvtest;
-CREATE TABLE mvtest_foo_data AS SELECT i, md5(random()::text)
+-- this test case also checks for ambiguity in the queries issued by
+-- refresh_by_match_merge(), by choosing column names that intentionally
+-- duplicate all the aliases used in those queries
+CREATE TABLE mvtest_foo_data AS SELECT i,
+  i+1 AS tid,
+  md5(random()::text) AS mv,
+  md5(random()::text) AS newdata,
+  md5(random()::text) AS newdata2,
+  md5(random()::text) AS diff
   FROM generate_series(1, 10) i;
 CREATE MATERIALIZED VIEW mvtest_mv_foo AS SELECT * FROM mvtest_foo_data distributed by(i);
 CREATE MATERIALIZED VIEW mvtest_mv_foo AS SELECT * FROM mvtest_foo_data distributed by(i);

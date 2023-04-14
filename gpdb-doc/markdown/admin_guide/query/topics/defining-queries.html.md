@@ -9,7 +9,7 @@ This topic describes how to construct SQL queries in Greenplum Database.
 -   [SQL Lexicon](#topic3)
 -   [SQL Value Expressions](#topic4)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic3"></a>SQL Lexicon 
 
@@ -53,7 +53,7 @@ A column reference has the form:
 <correlation>.<columnname>
 ```
 
-Here, `correlation` is the name of a table \(possibly qualified with a schema name\) or an alias for a table defined with a `FROM` clause or one of the keywords `NEW` or `OLD`. `NEW` and `OLD` can appear only in rewrite rules, but you can use other correlation names in any SQL statement. If the column name is unique across all tables in the query, you can omit the "`correlation.`" part of the column reference.
+Here, `<correlation>` is the name of a table (possibly qualified with a schema name) or an alias for a table defined with a `FROM` clause or one of the keywords `NEW` or `OLD`. `NEW` and `OLD` can appear only in rewrite rules, but you can use other correlation names in any SQL statement. If the column name is unique across all tables in the query, you can omit the `<correlation>` part of the column reference.
 
 ### <a id="topic6"></a>Positional Parameters 
 
@@ -82,7 +82,7 @@ If an expression yields a value of an array type, you can extract a specific ele
 
 ```
 
-You can extract multiple adjacent elements, called an array slice, as follows \(including the brackets\):
+You can extract multiple adjacent elements, called an array slice, as follows (including the brackets):
 
 ```
 <expression>[<lower_subscript>:<upper_subscript>]
@@ -91,7 +91,7 @@ You can extract multiple adjacent elements, called an array slice, as follows \(
 
 Each subscript is an expression and yields an integer value.
 
-Array expressions usually must be in parentheses, but you can omit the parentheses when the expression to be subscripted is a column reference or positional parameter. You can concatenate multiple subscripts when the original array is multidimensional. For example \(including the parentheses\):
+Array expressions usually must be in parentheses, but you can omit the parentheses when the expression to be subscripted is a column reference or positional parameter. You can concatenate multiple subscripts when the original array is multidimensional. For example (including the parentheses):
 
 ```
 mytable.arraycolumn[4]
@@ -121,17 +121,14 @@ The row expression usually must be in parentheses, but you can omit these parent
 
 ```
 mytable.mycolumn
-
 ```
 
 ```
 $1.somecolumn
-
 ```
 
 ```
 (rowfunction(a,b)).col3
-
 ```
 
 A qualified column reference is a special case of field selection syntax.
@@ -152,7 +149,7 @@ Operator invocations have the following possible syntaxes:
 <expression operator>(unary postfix operator)
 ```
 
-Where *operator* is an operator token, one of the key words `AND`, `OR`, or `NOT`, or qualified operator name in the form:
+Where `operator` is an operator token, one of the key words `AND`, `OR`, or `NOT`, or qualified operator name in the form:
 
 ```
 OPERATOR(<schema>.<operatorname>)
@@ -162,7 +159,7 @@ Available operators and whether they are unary or binary depends on the operator
 
 ### <a id="topic10"></a>Function Calls 
 
-The syntax for a function call is the name of a function \(possibly qualified with a schema name\), followed by its argument list enclosed in parentheses:
+The syntax for a function call is the name of a function (possibly qualified with a schema name), followed by its argument list enclosed in parentheses:
 
 ```
 function ([expression [, expression ... ]])
@@ -185,11 +182,11 @@ An aggregate expression applies an aggregate function across the rows that a que
 -   `aggregate_name(DISTINCT expression [ , ... ] ) [ FILTER ( WHERE filter_clause ) ]` — operates across all distinct non-null values of input rows.
 -   `aggregate_name(*) [ FILTER ( WHERE filter_clause ) ]` — operates on all rows with values both null and non-null. Generally, this form is most useful for the `count(*)` aggregate function.
 
-Where *aggregate\_name* is a previously defined aggregate \(possibly schema-qualified\) and *expression* is any value expression that does not contain an aggregate expression.
+Where `aggregate_name` is a previously defined aggregate (possibly schema-qualified) and `expression` is any value expression that does not contain an aggregate expression.
 
 For example, `count(*)` yields the total number of input rows, `count(f1)` yields the number of input rows in which `f1` is non-null, and`count(distinct f1)` yields the number of distinct non-null values of `f1`.
 
-If `FILTER` is specified, then only the input rows for which the filter\_clause evaluates to true are fed to the aggregate function; other rows are discarded. For example:
+If `FILTER` is specified, then only the input rows for which the `filter_clause` evaluates to true are fed to the aggregate function; other rows are discarded. For example:
 
 ```
 SELECT
@@ -202,18 +199,16 @@ FROM generate_series(1,10) AS s(i);
 (1 row)
 ```
 
-For predefined aggregate functions, see [Built-in Functions and Operators](functions-operators.html). You can also add custom aggregate functions.
+For predefined aggregate functions, see [Built-in Functions and Operators](functions-operators.html#topic29). You can also add custom aggregate functions.
 
 Greenplum Database provides the `MEDIAN` aggregate function, which returns the fiftieth percentile of the `PERCENTILE_CONT` result and special aggregate expressions for inverse distribution functions as follows:
 
 ```
-PERCENTILE_CONT(_percentage_) WITHIN GROUP (ORDER BY _expression_)
-
+PERCENTILE_CONT(<percentage>) WITHIN GROUP (ORDER BY <expression>)
 ```
 
 ```
-PERCENTILE_DISC(_percentage_) WITHIN GROUP (ORDER BY _expression_)
-
+PERCENTILE_DISC(<percentage>) WITHIN GROUP (ORDER BY <expression>)
 ```
 
 Currently you can use only these two expressions with the keyword `WITHIN GROUP`.
@@ -222,57 +217,68 @@ Currently you can use only these two expressions with the keyword `WITHIN GROUP`
 
 The following are current limitations of the aggregate expressions:
 
--   Greenplum Database does not support the following keywords: `ALL`, `DISTINCT`, and `OVER`. See [Table 5](functions-operators.html#in2073121) for more details.
+-   Greenplum Database does not support the following keywords: `ALL`, `DISTINCT`, and `OVER`. See [Table 5](functions-operators.html#topic31__in2073121) for more details.
 -   An aggregate expression can appear only in the result list or `HAVING` clause of a `SELECT` command. It is forbidden in other clauses, such as `WHERE`, because those clauses are logically evaluated before the results of aggregates form. This restriction applies to the query level to which the aggregate belongs.
--   When an aggregate expression appears in a subquery, the aggregate is normally evaluated over the rows of the subquery. If the aggregate's arguments \(and filter\_clause if any\) contain only outer-level variables, the aggregate belongs to the nearest such outer level and evaluates over the rows of that query. The aggregate expression as a whole is then an outer reference for the subquery in which it appears, and the aggregate expression acts as a constant over any one evaluation of that subquery. The restriction about appearing only in the result list or ``HAVING`` clause applies with respect to the query level at which the aggregate appears. See [Scalar Subqueries](#topic15) and [Table 3](functions-operators.html#in204913).
+-   When an aggregate expression appears in a subquery, the aggregate is normally evaluated over the rows of the subquery. If the aggregate's arguments (and `filter_clause` if any) contain only outer-level variables, the aggregate belongs to the nearest such outer level and evaluates over the rows of that query. The aggregate expression as a whole is then an outer reference for the subquery in which it appears, and the aggregate expression acts as a constant over any one evaluation of that subquery. The restriction about appearing only in the result list or ``HAVING`` clause applies with respect to the query level at which the aggregate appears. See [Scalar Subqueries](#topic15) and [Table 3](functions-operators.html#topic29__in204913).
 -   Greenplum Database does not support specifying an aggregate function as an argument to another aggregate function.
 -   Greenplum Database does not support specifying a window function as an argument to an aggregate function.
 
 ### <a id="topic13"></a>Window Expressions 
 
-Window expressions allow application developers to more easily compose complex online analytical processing \(OLAP\) queries using standard SQL commands. For example, with window expressions, users can calculate moving averages or sums over various intervals, reset aggregations and ranks as selected column values change, and express complex ratios in simple terms.
+Window expressions allow application developers to more easily compose complex online analytical processing (OLAP) queries using standard SQL commands. For example, with window expressions, users can calculate moving averages or sums over various intervals, reset aggregations and ranks as selected column values change, and express complex ratios in simple terms.
 
-A window expression represents the application of a *window function* to a *window frame*, which is defined with an `OVER()` clause. This is comparable to the type of calculation that can be done with an aggregate function and a `GROUP BY` clause. Unlike aggregate functions, which return a single result value for each group of rows, window functions return a result value for every row, but that value is calculated with respect to the set of rows in the window frame to which the row belongs. The `OVER()` clause allows dividing the rows into *partitions* and then further restricting the window frame by specifying which rows preceding or following the current row within its partition to include in the calculation.
+A window expression represents the application of a `<window function>` to a `<window frame>`, which is defined with an `OVER()` clause. This is comparable to the type of calculation that can be done with an aggregate function and a `GROUP BY` clause. Unlike aggregate functions, which return a single result value for each group of rows, window functions return a result value for every row, but that value is calculated with respect to the set of rows in the window frame to which the row belongs. The `OVER()` clause allows dividing the rows into *partitions* and then further restricting the window frame by specifying which rows preceding or following the current row within its partition to include in the calculation.
 
 Greenplum Database does not support specifying a window function as an argument to another window function.
 
 The syntax of a window expression is:
 
 ```
-window_function ( [expression [, ...]] ) [ FILTER ( WHERE filter_clause ) ] OVER ( window_specification )
+<window_function> ( [<expression> [, ...]] ) [ FILTER ( WHERE <filter_clause> ) ] OVER ( <window_specification> )
 ```
 
-Where *`window_function`* is one of the functions listed in [Table 4](functions-operators.html#in164369) or a user-defined window function, *`expression`* is any value expression that does not contain a window expression, and *`window_specification`* is:
+Where `<window_function>` is one of the functions listed in [Table 4](functions-operators.html#topic30__in164369) or a user-defined window function, `<expression>` is any value expression that does not contain a window expression, and `<window_specification>` is:
 
 ```
-[window_name]
-[PARTITION BY expression [, ...]]
-[[ORDER BY expression [ASC | DESC | USING operator] [NULLS {FIRST | LAST}] [, ...]
-    [{RANGE | ROWS} 
-       { UNBOUNDED PRECEDING
-       | expression PRECEDING
-       | CURRENT ROW
-       | BETWEEN window_frame_bound AND window_frame_bound }]]
+[<window_name>]
+[PARTITION BY <expression> [, ...]]
+[[ORDER BY <expression> [ASC | DESC | USING operator] [NULLS {FIRST | LAST}] [, ...]
+[ <frame_clause> ]
 ```
 
-    and where `window_frame_bound` can be one of:
+The optional `<frame_clause>` can be one of the following:
 
 ```
-    UNBOUNDED PRECEDING
-    expression PRECEDING
-    CURRENT ROW
-    expression FOLLOWING
-    UNBOUNDED FOLLOWING
+{ RANGE | ROWS | GROUPS } <frame_start> [ <frame_exclusion> ]
+{ RANGE | ROWS | GROUPS } BETWEEN <frame_start> AND <frame_end> [ <frame_exclusion> ]
+```
+
+Where `<frame_start>` and `<frame_end>` can be one of the following:
+
+```
+UNBOUNDED PRECEDING
+<offset> PRECEDING
+CURRENT ROW
+<offset> FOLLOWING
+UNBOUNDED FOLLOWING
+```
+
+and `<frame_exclusion>` can be one of the following:
+
+```
+EXCLUDE CURRENT ROW
+EXCLUDE GROUP
+EXCLUDE TIES
+EXCLUDE NO OTHERS
 ```
 
 A window expression can appear only in the select list of a `SELECT` command. For example:
 
 ```
 SELECT count(*) OVER(PARTITION BY customer_id), * FROM sales;
-
 ```
 
-If `FILTER` is specified, then only the input rows for which the filter\_clause evaluates to true are fed to the window function; other rows are discarded. In a window expression, a `FILTER` clause can be used only with a window\_function that is an aggregate function.
+If `FILTER` is specified, then only the input rows for which the `<filter_clause>` evaluates to true are fed to the window function; other rows are discarded. In a window expression, a `FILTER` clause can be used only with a `<window_function>` that is an aggregate function.
 
 In a window expression, the expression must contain an `OVER` clause. The `OVER` clause specifies the window frame—the rows to be processed by the window function. This syntactically distinguishes the function from a regular or aggregate function.
 
@@ -281,11 +287,33 @@ In a window aggregate function that is used in a window expression, Greenplum Da
 A window specification has the following characteristics:
 
 -   The `PARTITION BY` clause defines the window partitions to which the window function is applied. If omitted, the entire result set is treated as one partition.
--   The `ORDER BY` clause defines the expression\(s\) for sorting rows within a window partition. The `ORDER BY` clause of a window specification is separate and distinct from the `ORDER BY` clause of a regular query expression. The `ORDER BY` clause is required for the window functions that calculate rankings, as it identifies the measure\(s\) for the ranking values. For OLAP aggregations, the `ORDER BY` clause is required to use window frames \(the `ROWS` or `RANGE` clause\).
+-   The `ORDER BY` clause defines the expression(s) for sorting rows within a window partition. The `ORDER BY` clause of a window specification is separate and distinct from the `ORDER BY` clause of a regular query expression. The `ORDER BY` clause is required for the window functions that calculate rankings, as it identifies the measure(s) for the ranking values. For OLAP aggregations, the `ORDER BY` clause is required to use window frames (the `ROWS`, `RANGE` or `GROUPS` clause).
 
-**Note:** Columns of data types without a coherent ordering, such as `time`, are not good candidates for use in the `ORDER BY` clause of a window specification. `Time`, with or without a specified time zone, lacks a coherent ordering because addition and subtraction do not have the expected effects. For example, the following is not generally true: `x::time < x::time + '2 hour'::interval`
+> **Note** Columns of data types without a coherent ordering, such as `time`, are not good candidates for use in the `ORDER BY` clause of a window specification. `Time`, with or without a specified time zone, lacks a coherent ordering because addition and subtraction do not have the expected effects. For example, the following is not generally true: `x::time < x::time + '2 hour'::interval`
 
--   The `ROWS` or `RANGE` clause defines a window frame for aggregate \(non-ranking\) window functions. A window frame defines a set of rows within a window partition. When a window frame is defined, the window function computes on the contents of this moving frame rather than the fixed contents of the entire window partition. Window frames are row-based \(`ROWS`\) or value-based \(`RANGE`\).
+- The `<frame_clause>` specifies the set of rows constituting the `<window frame>`, which is a subset of the current partition, for those window functions that act on the frame instead of the whole partition. The set of rows in the frame can vary depending on which row is the current row. The frame can be specified in `RANGE`, `ROWS` or `GROUPS` mode; in each case, it runs from the `<frame_start>` to the `<frame_end>`. If `<frame_end>` is omitted, the end defaults to `CURRENT ROW`.
+
+- A `<frame_start>` of `UNBOUNDED PRECEDING` means that the frame starts with the first row of the partition, and similarly a `<frame_end>` of `UNBOUNDED FOLLOWING` means that the frame ends with the last row of the partition.
+
+- In `RANGE` or `GROUPS` mode, a `<frame_start>` of `CURRENT ROW` means the frame starts with the current row's first peer row (a row that the window's `ORDER BY` clause sorts as equivalent to the current row), while a `<frame_end>` of `CURRENT ROW` means the frame ends with the current row's last peer row. In `ROWS` mode, `CURRENT ROW` simply means the current row.
+
+- In the `<offset> PRECEDING` and `<offset> FOLLOWING` frame options, the `<offset>` must be an expression not containing any variables, aggregate functions, or window functions. The meaning of the `<offset>` depends on the frame mode:
+
+    - In `ROWS` mode, the `<offset>` must yield a non-null, non-negative integer, and the option means that the frame starts or ends the specified number of rows before or after the current row.
+
+    - In `GROUPS` mode, the `<offset>` again must yield a non-null, non-negative integer, and the option means that the frame starts or ends the specified number of peer groups before or after the current row's peer group, where a peer group is a set of rows that are equivalent in the `ORDER BY` ordering. (There must be an `ORDER BY` clause in the window definition to use `GROUPS` mode).
+
+    - In `RANGE` mode, these options require that the `ORDER BY` clause specifies exactly one column. The `<offset>` specifies the maximum difference between the value of that column in the current row and its value in preceding or following rows of the frame. The data type of the `<offset>` expression varies depending on the data type of the ordering column. For numeric ordering columns it is typically of the same type as the ordering column, but for datetime ordering columns it is an `interval`. For example, if the ordering column is of type `date` or `timestamp`, one could write `RANGE BETWEEN '1 day' PRECEDING AND '10 days' FOLLOWING`. The `<offset>` is still required to be non-null and non-negative, though the meaning of “non-negative” depends on its data type.
+
+    In any case, the distance to the end of the frame is limited by the distance to the end of the partition, so that for rows near the partition ends the frame might contain fewer rows than elsewhere.
+
+- Notice that in both `ROWS` and `GROUPS` mode, `0 PRECEDING` and `0 FOLLOWING` are equivalent to `CURRENT ROW`. This normally holds in `RANGE` mode as well, for an appropriate data-type-specific meaning of “zero”.
+
+- The `<frame_exclusion>` option allows rows around the current row to be excluded from the frame, even if they would be included according to the frame start and frame end options. `EXCLUDE CURRENT ROW` excludes the current row from the frame. `EXCLUDE GROUP` excludes the current row and its ordering peers from the frame. `EXCLUDE TIES` excludes any peers of the current row from the frame, but not the current row itself. `EXCLUDE NO OTHERS` simply specifies explicitly the default behavior of not excluding the current row or its peers.
+
+- The default framing option is `RANGE UNBOUNDED PRECEDING`, which is the same as `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`. With `ORDER BY`, this sets the frame to be all rows from the partition start up through the current row's last `ORDER BY` peer. Without `ORDER BY`, this means all rows of the partition are included in the window frame, since all rows become peers of the current row.
+
+- Restrictions are that `<frame_start>` cannot be `UNBOUNDED FOLLOWING`, `<frame_end>` cannot be `UNBOUNDED PRECEDING`, and the `<frame_end>` choice cannot appear earlier in the above list than the `<frame_start>` choice. for example `RANGE BETWEEN CURRENT ROW AND value PRECEDING` is not allowed.
 
 #### <a id="topic_qck_12r_2gb"></a>Window Examples 
 
@@ -353,7 +381,7 @@ FROM empsalary;
 
 ##### <a id="ex3"></a>Example 3 – Aggregate Function over a Row Window Frame 
 
-A `RANGE` or `ROWS` clause defines the window frame—a set of rows within a partition—that the window function includes in the calculation. `ROWS` specifies a physical set of rows to process, for example all rows from the beginning of the partition to the current row.
+A `RANGE`, `ROWS` or `GROUPS` clause defines the window frame—a set of rows within a partition—that the window function includes in the calculation. `ROWS` specifies a physical set of rows to process, for example all rows from the beginning of the partition to the current row.
 
 This example calculates a running total of employee's salaries by department using the `sum()` function to total rows from the start of the partition to the current row:
 
@@ -377,9 +405,9 @@ FROM empsalary ORDER BY depname, sum;
 (10 rows)
 ```
 
-##### <a id="ex4"></a>Example 4 – Aggregate Function for a Range Window Frame 
+##### <a id="ex4"></a>Example 4 – Aggregate Function for a Range or Groups Window Frame 
 
-`RANGE` specifies logical values based on values of the `ORDER BY` expression in the `OVER` clause. This example demonstrates the difference between `ROWS` and `RANGE`. The frame contains all rows with salary values less than or equal to the current row. Unlike the previous example, for employees with the same salary, the sum is the same and includes the salaries of all of those employees.
+`RANGE` and `GROUPS` modes specify logical values based on values of the `ORDER BY` expression in the `OVER` clause. This example demonstrates the difference between `ROWS` and `RANGE` or `GROUPS`. The frame contains all rows with salary values less than or equal to the current row. Unlike the previous example, for employees with the same salary, the sum is the same and includes the salaries of all of those employees.
 
 ```
 SELECT depname, empno, salary,
@@ -400,6 +428,72 @@ FROM empsalary ORDER BY depname, sum;
  sales     |     1 |   5000 | 14600
 (10 rows)
 ```
+
+In this example, since the `<frame_start>` and `<frame_end>` are not using an `<offset>`, `RANGE` and `GROUPS` mode provide identical results:
+
+```
+SELECT depname, empno, salary,
+    sum(salary) OVER (PARTITION BY depname ORDER BY salary
+        GROUPS between UNBOUNDED PRECEDING AND CURRENT ROW)
+FROM empsalary ORDER BY depname, sum;
+  depname  | empno | salary |  sum
+-----------+-------+--------+-------
+ develop   |     7 |   4200 |  4200
+ develop   |     9 |   4500 |  8700
+ develop   |    11 |   5200 | 19100
+ develop   |    10 |   5200 | 19100
+ develop   |     8 |   6000 | 25100
+ personnel |     5 |   3500 |  3500
+ personnel |     2 |   3900 |  7400
+ sales     |     4 |   4800 |  9600
+ sales     |     3 |   4800 |  9600
+ sales     |     1 |   5000 | 14600
+(10 rows)
+```
+
+##### <a id="ex4"></a>Example 5 – Aggregate Function for a Range and a Groups Window Frame
+
+This example demonstrates the difference between `RANGE` and `GROUPS`. The table `sales` lists the sales a company's two shops during a period of four days. 
+
+When using `GROUPS` mode, the value of `<offset>` indicates the number of peer groups before the current row's peer group. The different peer groups are set by the `ORDER BY` clause, in this case the date. Since the query does not specify a value for `<frame_end>`, the end defaults to `CURRENT ROW`.
+
+```
+SELECT date, shop, total, sum(total) OVER (PARTITION BY shop ORDER BY date asc GROUPS 2 PRECEDING) 
+FROM sales ORDER BY shop, date;
+    date    |  shop  |  total  |   sum    
+------------+--------+---------+----------
+ 2022-01-07 | Shop 1 | 3000.00 |  3000.00
+ 2022-01-08 | Shop 1 | 1000.00 |  4000.00
+ 2022-01-09 | Shop 1 | 5000.00 | 11000.00
+ 2022-01-09 | Shop 1 | 2000.00 | 11000.00
+ 2022-01-07 | Shop 2 | 4000.00 | 10000.00
+ 2022-01-07 | Shop 2 | 6000.00 | 10000.00
+ 2022-01-09 | Shop 2 | 7000.00 | 21000.00
+ 2022-01-09 | Shop 2 | 4000.00 | 21000.00
+ 2022-01-10 | Shop 2 | 2000.00 | 23000.00
+(9 rows)
+```
+
+In order to get the equivalent result when using the `RANGE` mode, the `<frame_clause>` must specify an `<offset>` using the same data type as the ordering column, in this case `date`. Using the numberic value `2` will return an error.
+
+```
+SELECT date, shop, total, sum(total) OVER (PARTITION BY shop ORDER BY date asc RANGE '2 days' PRECEDING) 
+FROM sales ORDER BY shop, date;
+    date    |  shop  |  total  |   sum    
+------------+--------+---------+----------
+ 2022-01-07 | Shop 1 | 3000.00 |  3000.00
+ 2022-01-08 | Shop 1 | 1000.00 |  4000.00
+ 2022-01-09 | Shop 1 | 5000.00 | 11000.00
+ 2022-01-09 | Shop 1 | 2000.00 | 11000.00
+ 2022-01-07 | Shop 2 | 4000.00 | 10000.00
+ 2022-01-07 | Shop 2 | 6000.00 | 10000.00
+ 2022-01-09 | Shop 2 | 7000.00 | 21000.00
+ 2022-01-09 | Shop 2 | 4000.00 | 21000.00
+ 2022-01-10 | Shop 2 | 2000.00 | 13000.00
+(9 rows)
+```
+
+Note that the above outputs differ in the last row because `RANGE` mode uses the entries from the previous two days and there is no entry for `2022-01-08` for Shop 2, but `GROUPS` mode uses the previous two peer groups, which are `2022-01-07` and `2022-01-09`.
 
 ### <a id="topic14"></a>Type Casts 
 
@@ -429,7 +523,7 @@ Greenplum Database supports three types of casts applied to a value expression:
     ```
 
 
-You can usually omit an explicit type cast if there is no ambiguity about the type a value expression must produce \(for example, when it is assigned to a table column\); the system automatically applies a type cast. Greenplum Database implicitly applies casts only to casts defined with a cast context of assignment or explicit in the system catalogs. Other casts must be invoked with explicit casting syntax to prevent unexpected conversions from being applied without the user's knowledge.
+You can usually omit an explicit type cast if there is no ambiguity about the type a value expression must produce (for example, when it is assigned to a table column); the system automatically applies a type cast. Greenplum Database implicitly applies casts only to casts defined with a cast context of assignment or explicit in the system catalogs. Other casts must be invoked with explicit casting syntax to prevent unexpected conversions from being applied without the user's knowledge.
 
 You can display cast information with the `psql` meta-command `\dC`. Cast information is stored in the catalog table `pg_cast`, and type information is stored in the catalog table `pg_type`.
 
@@ -439,7 +533,7 @@ A scalar subquery is a `SELECT` query in parentheses that returns exactly one ro
 
 ### <a id="topic16"></a>Correlated Subqueries 
 
-A correlated subquery \(CSQ\) is a `SELECT` query with a `WHERE` clause or target list that contains references to the parent outer clause. CSQs efficiently express results in terms of results of another query. Greenplum Database supports correlated subqueries that provide compatibility with many existing applications. A CSQ is a scalar or table subquery, depending on whether it returns one or multiple rows. Greenplum Database does not support correlated subqueries with skip-level correlations.
+A correlated subquery (CSQ) is a `SELECT` query with a `WHERE` clause or target list that contains references to the parent outer clause. CSQs efficiently express results in terms of results of another query. Greenplum Database supports correlated subqueries that provide compatibility with many existing applications. A CSQ is a scalar or table subquery, depending on whether it returns one or multiple rows. Greenplum Database does not support correlated subqueries with skip-level correlations.
 
 ### <a id="topic17"></a>Correlated Subquery Examples 
 
@@ -448,7 +542,6 @@ A correlated subquery \(CSQ\) is a `SELECT` query with a `WHERE` clause or targe
 ```
 SELECT * FROM t1 WHERE t1.x 
             > (SELECT MAX(t2.x) FROM t2 WHERE t2.y = t1.y);
-
 ```
 
 #### <a id="topic19"></a>Example 2 – Correlated EXISTS subquery 
@@ -456,7 +549,6 @@ SELECT * FROM t1 WHERE t1.x
 ```
 SELECT * FROM t1 WHERE 
 EXISTS (SELECT 1 FROM t2 WHERE t2.x = t1.x);
-
 ```
 
 Greenplum Database uses one of the following methods to run CSQs:
@@ -487,7 +579,6 @@ SELECT t1.a, dt2 FROM t1
               FROM t1, t2 WHERE t1.x = t2.y 
               GROUP BY t1.x) 
        ON (t1.x = csq_y);
-
 ```
 
 ### <a id="topic21"></a>Example 4 - CSQs connected by OR Clauses 
@@ -499,7 +590,6 @@ SELECT * FROM t1
 WHERE 
 x > (SELECT COUNT(*) FROM t2 WHERE t1.x = t2.x) 
 OR x < (SELECT COUNT(*) FROM t3 WHERE t1.y = t3.y)
-
 ```
 
 Rewrite this query to separate it into two parts with a union on the `OR` conditions.
@@ -512,7 +602,6 @@ WHERE x > (SELECT count(*) FROM t2 WHERE t1.x = t2.x)
 UNION 
 SELECT * FROM t1 
 WHERE x < (SELECT count(*) FROM t3 WHERE t1.y = t3.y)
-
 ```
 
 To view the query plan, use `EXPLAIN SELECT` or `EXPLAIN ANALYZE SELECT`. Subplan nodes in the query plan indicate that the query will run on every row of the outer query, and the query is a candidate for rewriting. For more information about these statements, see [Query Profiling](query-profiling.html).
@@ -526,7 +615,6 @@ SELECT ARRAY[1,2,3+4];
   array
 ---------
  {1,2,7}
-
 ```
 
 The array element type is the common type of its member expressions, determined using the same rules as for `UNION` or `CASE` constructs.
@@ -539,7 +627,6 @@ SELECT ARRAY[[1,2],[3,4]];
      array
 ---------------
  {{1,2},{3,4}}
-
 ```
 
 Since multidimensional arrays must be rectangular, inner constructors at the same level must produce sub-arrays of identical dimensions.
@@ -554,7 +641,6 @@ SELECT ARRAY[f1, f2, '{{9,10},{11,12}}'::int[]] FROM arr;
                      array
 ------------------------------------------------
  {{{1,2},{3,4}},{{5,6},{7,8}},{{9,10},{11,12}}}
-
 ```
 
 You can construct an array from the results of a subquery. Write the array constructor with the keyword `ARRAY` followed by a subquery in parentheses. For example:
@@ -564,18 +650,16 @@ SELECT ARRAY(SELECT oid FROM pg_proc WHERE proname LIKE 'bytea%');
                           ?column?
 -----------------------------------------------------------
  {2011,1954,1948,1952,1951,1244,1950,2005,1949,1953,2006,31}
-
 ```
 
 The subquery must return a single column. The resulting one-dimensional array has an element for each row in the subquery result, with an element type matching that of the subquery's output column. The subscripts of an array value built with `ARRAY` always begin with `1`.
 
 ### <a id="topic24"></a>Row Constructors 
 
-A row constructor is an expression that builds a row value \(also called a composite value\) from values for its member fields. For example,
+A row constructor is an expression that builds a row value (also called a composite value) from values for its member fields. For example,
 
 ```
 SELECT ROW(1,2.5,'this is a test');
-
 ```
 
 Row constructors have the syntax `rowvalue.*`, which expands to a list of the elements of the row value, as when you use the syntax `.*` at the top level of a `SELECT` list. For example, if table `t` has columns `f1` and `f2`, the following queries are the same:
@@ -583,7 +667,6 @@ Row constructors have the syntax `rowvalue.*`, which expands to a list of the el
 ```
 SELECT ROW(t.*, 42) FROM t;
 SELECT ROW(t.f1, t.f2, 42) FROM t;
-
 ```
 
 By default, the value created by a `ROW` expression has an anonymous record type. If necessary, it can be cast to a named composite type — either the row type of a table, or a composite type created with `CREATE TYPE AS`. To avoid ambiguity, you can explicitly cast the value if necessary. For example:
@@ -592,7 +675,6 @@ By default, the value created by a `ROW` expression has an anonymous record type
 CREATE TABLE mytable(f1 int, f2 float, f3 text);
 CREATE FUNCTION getf1(mytable) RETURNS int AS 'SELECT $1.f1' 
 LANGUAGE SQL;
-
 ```
 
 In the following query, you do not need to cast the value because there is only one `getf1()` function and therefore no ambiguity:
@@ -605,7 +687,6 @@ SELECT getf1(ROW(1,2.5,'this is a test'));
 CREATE TYPE myrowtype AS (f1 int, f2 text, f3 numeric);
 CREATE FUNCTION getf1(myrowtype) RETURNS int AS 'SELECT 
 $1.f1' LANGUAGE SQL;
-
 ```
 
 Now we need a cast to indicate which function to call:
@@ -613,7 +694,6 @@ Now we need a cast to indicate which function to call:
 ```
 SELECT getf1(ROW(1,2.5,'this is a test'));
 ERROR:  function getf1(record) is not unique
-
 ```
 
 ```
@@ -626,7 +706,6 @@ myrowtype));
  getf1
 -------
     11
-
 ```
 
 You can use row constructors to build composite values to be stored in a composite-type table column or to be passed to a function that accepts a composite parameter.
@@ -639,25 +718,22 @@ If you can determine the result of an expression by evaluating only some parts o
 
 ```
 SELECT true OR somefunc();
-
 ```
 
 `somefunc()` would probably not be called at all. The same is true in the following expression:
 
 ```
 SELECT somefunc() OR true;
-
 ```
 
 This is not the same as the left-to-right evaluation order that Boolean operators enforce in some programming languages.
 
-Do not use functions with side effects as part of complex expressions, especially in `WHERE` and `HAVING` clauses, because those clauses are extensively reprocessed when developing an execution plan. Boolean expressions \(`AND`/`OR`/`NOT` combinations\) in those clauses can be reorganized in any manner that Boolean algebra laws allow.
+Do not use functions with side effects as part of complex expressions, especially in `WHERE` and `HAVING` clauses, because those clauses are extensively reprocessed when developing an execution plan. Boolean expressions (`AND`/`OR`/`NOT` combinations) in those clauses can be reorganized in any manner that Boolean algebra laws allow.
 
 Use a `CASE` construct to force evaluation order. The following example is an untrustworthy way to avoid division by zero in a `WHERE` clause:
 
 ```
 SELECT ... WHERE x <> 0 AND y/x > 1.5;
-
 ```
 
 The following example shows a trustworthy evaluation order:
@@ -665,7 +741,6 @@ The following example shows a trustworthy evaluation order:
 ```
 SELECT ... WHERE CASE WHEN x <> 0 THEN y/x > 1.5 ELSE false 
 END;
-
 ```
 
 This `CASE` construct usage defeats optimization attempts; use it only when necessary.

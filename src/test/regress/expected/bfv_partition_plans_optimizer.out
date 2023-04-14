@@ -1,9 +1,24 @@
 -- start_matchsubs
 -- m/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/
 -- s/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/xxx xx xx xx:xx:xx xxxx"/
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory: \d+kB/
+-- s/Memory: \d+kB/Memory: ###kB/
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
+-- m/segment \d+/
+-- s/segment \d+/segment ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 create schema bfv_partition_plans;
 set search_path=bfv_partition_plans;
+SET optimizer_trace_fallback=on;
 --
 -- Initial setup for all the partitioning test for this suite
 --
@@ -72,6 +87,8 @@ distributed by (subscription_id, bill_stmt_id)
     
 -- TEST
 select count_operator('select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -115,9 +132,11 @@ insert into mpp23195_t1 values (generate_series(1,19));
 insert into mpp23195_t2 values (1);
 -- TEST
 select find_operator('select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
- ['false']
+ ['true']
 (1 row)
 
 select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;
@@ -153,12 +172,16 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 -- TEST
 set optimizer_enable_hashjoin = off;
 select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['false']
 (1 row)
 
 select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Nested Loop');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -192,9 +215,11 @@ insert into mpp23288(a) select generate_series(1,20);
 analyze mpp23288;
 -- TEST
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2.a =10) order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              0
+              2
 (1 row)
 
 select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2.a =10) order by t2.a, t1.a;
@@ -212,9 +237,11 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2
 (9 rows)
 
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t2.a = 10 or t2.a = 5 or t2.a = 12)) order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              0
+              2
 (1 row)
 
 select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t2.a = 10 or t2.a = 5 or t2.a = 12)) order by t2.a, t1.a;
@@ -247,9 +274,11 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t
 (24 rows)
 
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.a = 1 or t2.a < 10 order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              0
+              2
 (1 row)
 
 select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.a = 1 or t2.a < 10 order by t2.a, t1.a;
@@ -443,244 +472,6 @@ drop table if exists mpp23288;
 set optimizer_enable_broadcast_nestloop_outer_child=off;
 -- end_ignore
 --
--- Tests if DynamicIndexScan sets tuple descriptor of the planstate->ps_ResultTupleSlot
---
--- SETUP
--- start_ignore
-drop table if exists mpp24151_t;
-NOTICE:  table "mpp24151_t" does not exist, skipping
-drop table if exists mpp24151_pt;
-NOTICE:  table "mpp24151_pt" does not exist, skipping
--- end_ignore
-create table mpp24151_t(dist int, tid int, t1 text, t2 text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dist' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table mpp24151_pt(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
-DISTRIBUTED BY (dist)
-PARTITION BY RANGE(ptid) 
-          (
-          START (0) END (5) EVERY (1),
-          DEFAULT PARTITION junk_data
-          )
-;
-create index pt1_idx on mpp24151_pt using btree (pt1);
-create index ptid_idx on mpp24151_pt using btree (ptid);
-insert into mpp24151_pt select i, 'hello' || 0, 'world', 'drop this', i % 6 from generate_series(0,100)i;
-insert into mpp24151_pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(0,200000)i;
-insert into mpp24151_t select i, i % 6, 'hello' || i, 'bar' from generate_series(0,10)i;
-analyze mpp24151_pt;
-analyze mpp24151_t;
--- TEST
-set optimizer_enable_dynamictablescan = off;
--- GPDB_12_MERGE_FIXME: With the big refactoring t how Partition Selectors are
--- implemented during the v12 merge, I'm not sure if this test is testing anything
--- useful anymore. And/or it redundant with the tests in 'dpe'?
-select count_operator('select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = E''hello0'';','->  Partition Selector');
- count_operator 
-----------------
-              0
-(1 row)
-
-select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
- dist | tid |   t1    | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
-------+-----+---------+-----+------+--------+-------+-----------+------
-    9 |   3 | hello9  | bar |    9 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   27 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   45 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   81 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   93 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   99 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   15 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   33 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   51 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   63 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   69 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |    3 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   21 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   39 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   57 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   75 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   87 | hello0 | world | drop this |    3
-   10 |   4 | hello10 | bar |   10 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   46 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   58 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   64 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   82 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   94 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |  100 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   16 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   28 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   34 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   52 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   70 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |    4 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   22 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   40 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   76 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   88 | hello0 | world | drop this |    4
-    3 |   3 | hello3  | bar |    9 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   27 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   45 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   81 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   93 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   99 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   15 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   33 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   51 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   63 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   69 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |    3 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   21 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   39 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   57 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   75 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   87 | hello0 | world | drop this |    3
-    4 |   4 | hello4  | bar |   10 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   46 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   58 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   64 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   82 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   94 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |  100 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   16 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   28 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   34 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   52 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   70 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |    4 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   22 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   40 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   76 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   88 | hello0 | world | drop this |    4
-    5 |   5 | hello5  | bar |   11 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   23 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   47 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   59 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   65 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   95 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   17 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   29 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   35 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   71 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   83 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |    5 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   41 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   53 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   77 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   89 | hello0 | world | drop this |    5
-    8 |   2 | hello8  | bar |    8 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   26 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   32 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   44 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   62 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   80 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   92 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   98 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |    2 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   14 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   50 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   68 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   86 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   20 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   38 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   56 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   74 | hello0 | world | drop this |    2
-    0 |   0 | hello0  | bar |   12 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   24 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   60 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   66 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   78 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |    0 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   30 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   36 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   48 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   72 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   84 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |    0 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |    6 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   18 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   42 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   54 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   90 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   96 | hello0 | world | drop this |    0
-    1 |   1 | hello1  | bar |   25 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   43 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   61 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   67 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   79 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |    1 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   13 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   31 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   37 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   49 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   85 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |    7 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   19 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   55 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   73 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   91 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   97 | hello0 | world | drop this |    1
-    2 |   2 | hello2  | bar |    8 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   26 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   32 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   44 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   62 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   80 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   92 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   98 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |    2 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   14 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   50 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   68 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   86 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   20 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   38 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   56 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   74 | hello0 | world | drop this |    2
-    6 |   0 | hello6  | bar |   12 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   24 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   60 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   66 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   78 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |    0 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   30 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   36 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   48 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   72 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   84 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |    0 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |    6 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   18 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   42 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   54 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   90 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   96 | hello0 | world | drop this |    0
-    7 |   1 | hello7  | bar |   25 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   43 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   61 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   67 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   79 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |    1 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   13 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   31 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   37 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   49 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   85 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |    7 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   19 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   55 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   73 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   91 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   97 | hello0 | world | drop this |    1
-(188 rows)
-
--- CLEANUP
-drop index ptid_idx;
-drop index pt1_idx;
-drop table if exists mpp24151_t;
-drop table if exists mpp24151_pt;
-reset optimizer_enable_dynamictablescan;
---
 -- No DPE (Dynamic Partition Elimination) on second child of a union under a join
 --
 -- SETUP
@@ -723,63 +514,83 @@ analyze p3;
 analyze p;
 -- TEST
 select count_operator('select * from (select * from p1 union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              4
+              2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              4
+              2
 (1 row)
 
 select count_operator('select * from (select * from p1 except all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
 (1 row)
 
 select count_operator('select * from (select * from p1 except select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              4
+              2
 (1 row)
 
 select count_operator('select * from (select * from p1 intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              4
+              2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 union all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              6
+              3
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 union all select * from p) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              4
+              2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              4
+              2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 intersect all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              6
+              3
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              4
+              2
 (1 row)
 
 -- CLEANUP
@@ -815,9 +626,11 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create index dbs_index on dbs using bitmap(c3);
 -- TEST
 select find_operator('(select * from dts where c2 = 1) union (select * from dts where c2 = 2) union (select * from dts where c2 = 3) union (select * from dts where c2 = 4) union (select * from dts where c2 = 5) union (select * from dts where c2 = 6) union (select * from dts where c2 = 7) union (select * from dts where c2 = 8) union (select * from dts where c2 = 9) union (select * from dts where c2 = 10);', 'Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
- ['false']
+ ['true']
 (1 row)
 
 (select * from dts where c2 = 1) union
@@ -836,9 +649,11 @@ select find_operator('(select * from dts where c2 = 1) union (select * from dts 
 
 set optimizer_enable_dynamictablescan = off;
 select find_operator('(select * from dis where c3 = 1) union (select * from dis where c3 = 2) union (select * from dis where c3 = 3) union (select * from dis where c3 = 4) union (select * from dis where c3 = 5) union (select * from dis where c3 = 6) union (select * from dis where c3 = 7) union (select * from dis where c3 = 8) union (select * from dis where c3 = 9) union (select * from dis where c3 = 10);', 'Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
- ['false']
+ ['true']
 (1 row)
 
 (select * from dis where c3 = 1) union
@@ -856,6 +671,8 @@ select find_operator('(select * from dis where c3 = 1) union (select * from dis 
 (0 rows)
 
 select find_operator('select * from dbs where c2= 15 and c3 = 5;', 'Bitmap Heap Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['false']
@@ -901,11 +718,17 @@ create index pp_rest_2_idx on pp_1_prt_3(c,a);
 -- TEST
 set optimizer_enable_dynamictablescan = off;
 select * from pp where b=2 and c=2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  a | b | c 
 ---+---+---
 (0 rows)
 
 select count_operator('select * from pp where b=2 and c=2;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  count_operator 
 ----------------
               0
@@ -952,6 +775,8 @@ select * from ds_4 where month_id = '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id = E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -963,6 +788,8 @@ select * from ds_4 where month_id > '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id > E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -974,6 +801,8 @@ select * from ds_4 where month_id <= '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id <= E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -985,9 +814,11 @@ select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > 
 (0 rows)
 
 select count_operator('select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
-              2
+              1
 (1 row)
 
 -- CLEANUP
@@ -1039,16 +870,15 @@ SELECT b FROM bar GROUP BY b;
 (20 rows)
 
 EXPLAIN SELECT b FROM bar GROUP BY b;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.05 rows=20 width=4)
    ->  HashAggregate  (cost=0.00..431.05 rows=7 width=4)
-         Group Key: bar_1_prt_1.b
-         ->  Append  (cost=0.00..431.01 rows=334 width=4)
-               ->  Seq Scan on bar_1_prt_1  (cost=0.00..431.01 rows=334 width=4)
-               ->  Seq Scan on bar_1_prt_2  (cost=0.00..431.01 rows=334 width=4)
+         Group Key: b
+         ->  Dynamic Seq Scan on bar  (cost=0.00..431.01 rows=334 width=4)
+               Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(6 rows)
 
 -- CLEANUP
 DROP TABLE IF EXISTS foo;
@@ -1072,30 +902,25 @@ EVERY ('2 mons'::interval)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'oid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
-                                                             QUERY PLAN                                                             
-------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16) (actual time=3.292..3.293 rows=0 loops=1)
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16) (actual time=2.533..2.533 rows=0 loops=1)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=16) (never executed)
-         Hash Cond: (mpp8031_1_prt_foo_1.oid = mpp8031_1_prt_foo_1_1.oid)
-         ->  Append  (cost=0.00..431.00 rows=1 width=16) (never executed)
-               ->  Seq Scan on mpp8031_1_prt_foo_1  (cost=0.00..431.00 rows=1 width=16) (never executed)
-               ->  Seq Scan on mpp8031_1_prt_2  (cost=0.00..431.00 rows=1 width=16) (never executed)
-               ->  Seq Scan on mpp8031_1_prt_3  (cost=0.00..431.00 rows=1 width=16) (never executed)
-               ->  Seq Scan on mpp8031_1_prt_4  (cost=0.00..431.00 rows=1 width=16) (never executed)
+         Hash Cond: (mpp8031.oid = mpp8031_1.oid)
+         ->  Dynamic Seq Scan on mpp8031  (cost=0.00..431.00 rows=1 width=16) (never executed)
+               Number of partitions to scan: 4 (out of 4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4) (never executed)
                Buckets: 524288  Batches: 1  Memory Usage: 4096kB
-               ->  Append  (cost=0.00..431.00 rows=1 width=4) (never executed)
-                     ->  Seq Scan on mpp8031_1_prt_foo_1 mpp8031_1_prt_foo_1_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
-                     ->  Seq Scan on mpp8031_1_prt_2 mpp8031_1_prt_2_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
-                     ->  Seq Scan on mpp8031_1_prt_3 mpp8031_1_prt_3_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
-                     ->  Seq Scan on mpp8031_1_prt_4 mpp8031_1_prt_4_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
- Planning Time: 8.666 ms
-   (slice0)    Executor memory: 51K bytes.
-   (slice1)    Executor memory: 4147K bytes avg x 3 workers, 4147K bytes max (seg0).  Work_mem: 4096K bytes max.
+               ->  Dynamic Seq Scan on mpp8031 mpp8031_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
+                     Number of partitions to scan: 4 (out of 4)
+                     Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
+ Planning Time: 4.433 ms
+   (slice0)    Executor memory: 31K bytes.
+   (slice1)    Executor memory: 4156K bytes avg x 3 workers, 4156K bytes max (seg0).  Work_mem: 4096K bytes max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA)
- Execution Time: 3.539 ms
-(21 rows)
+ Execution Time: 3.231 ms
+(16 rows)
 
 drop table mpp8031;
 -- Partitioned tables with default partitions and indexes on all parts,
@@ -1120,10 +945,16 @@ SUBPARTITION TEMPLATE
 END (2015111100::numeric) WITH (appendonly=false)
 );
 INSERT INTO part_tbl VALUES (2015111000, 479534741, 99999999);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 INSERT INTO part_tbl VALUES (2015111000, 479534742, 99999999);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 CREATE INDEX part_tbl_idx 
 ON part_tbl(profile_key);
 EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.07 rows=2 width=25)
@@ -1136,6 +967,8 @@ EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
 (7 rows)
 
 SELECT * FROM part_tbl WHERE profile_key = 99999999;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  time_client_key | ngin_service_key | profile_key 
 -----------------+------------------+-------------
       2015111000 |        479534742 |    99999999
@@ -1187,36 +1020,26 @@ explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate par
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.53 rows=8 width=16)
    ->  Nested Loop  (cost=0.00..1324032.53 rows=3 width=16)
          Join Filter: true
-         ->  Append  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_1 r_part_1_prt_1_1  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_2  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_3  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_4  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_5  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_6  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_7  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_8  (cost=0.00..431.00 rows=3 width=8)
-               ->  Seq Scan on r_part_1_prt_9  (cost=0.00..431.00 rows=3 width=8)
+         ->  Dynamic Seq Scan on r_part r_part_1  (cost=0.00..431.00 rows=3 width=8)
+               Number of partitions to scan: 9 (out of 9)
          ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Append  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Seq Scan on r_part_1_prt_1  (cost=0.00..431.00 rows=1 width=8)
-                                 Filter: (a = 1)
+                     ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
+                           Number of partitions to scan: 1 (out of 9)
+                           Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(19 rows)
+(11 rows)
 
 -- the numbers in the filter should be both on segment 0
 explain select * from r_part where a in (7,8); -- should eliminate partitions
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=3 width=8)
-   ->  Append  (cost=0.00..431.00 rows=1 width=8)
-         ->  Seq Scan on r_part_1_prt_7  (cost=0.00..431.00 rows=1 width=8)
-               Filter: (a = ANY ('{7,8}'::integer[]))
-         ->  Seq Scan on r_part_1_prt_8  (cost=0.00..431.00 rows=1 width=8)
-               Filter: (a = ANY ('{7,8}'::integer[]))
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=8)
+   ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
+         Number of partitions to scan: 2 (out of 9)
+         Filter: (a = ANY ('{7,8}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(5 rows)
 
 -- Test partition elimination in prepared statements
 prepare f1(int) as select * from r_part where a = 1 order by a,b; 
@@ -1240,43 +1063,43 @@ execute f2(2);
 (1 row)
 
 explain select * from r_part where a = 1 order by a,b; -- should eliminate partitions
-                                    QUERY PLAN                                    
-----------------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
-   Merge Key: r_part_1_prt_1.a, r_part_1_prt_1.b
+   Merge Key: a, b
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-         Sort Key: r_part_1_prt_1.a, r_part_1_prt_1.b
-         ->  Append  (cost=0.00..431.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_1  (cost=0.00..431.00 rows=1 width=8)
-                     Filter: (a = 1)
+         Sort Key: a, b
+         ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
+               Number of partitions to scan: 1 (out of 9)
+               Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 --force_explain
 explain execute f1(1); -- should eliminate partitions 
-                                    QUERY PLAN                                    
-----------------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
-   Merge Key: r_part_1_prt_1.a, r_part_1_prt_1.b
+   Merge Key: a, b
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-         Sort Key: r_part_1_prt_1.a, r_part_1_prt_1.b
-         ->  Append  (cost=0.00..431.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_1  (cost=0.00..431.00 rows=1 width=8)
-                     Filter: (a = 1)
+         Sort Key: a, b
+         ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
+               Number of partitions to scan: 1 (out of 9)
+               Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 --force_explain
 explain execute f2(2); -- should eliminate partitions
-                                    QUERY PLAN                                    
-----------------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
-   Merge Key: r_part_1_prt_2.a, r_part_1_prt_2.b
+   Merge Key: a, b
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-         Sort Key: r_part_1_prt_2.a, r_part_1_prt_2.b
-         ->  Append  (cost=0.00..431.00 rows=1 width=8)
-               ->  Seq Scan on r_part_1_prt_2  (cost=0.00..431.00 rows=1 width=8)
-                     Filter: (a = 2)
+         Sort Key: a, b
+         ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
+               Number of partitions to scan: 1 (out of 9)
+               Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
@@ -1287,9 +1110,9 @@ explain select * from r_co where a=2; -- should eliminate partitions
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
-   ->  Append  (cost=0.00..431.00 rows=1 width=8)
-         ->  Seq Scan on r_co_1_prt_2  (cost=0.00..431.00 rows=1 width=8)
-               Filter: (a = 2)
+   ->  Dynamic Seq Scan on r_co  (cost=0.00..431.00 rows=1 width=8)
+         Number of partitions to scan: 1 (out of 9)
+         Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1297,15 +1120,15 @@ explain select * from r_co where a=2; -- should eliminate partitions
 prepare f3(int) as select * from r_co where a = $1 order by a,b; 
 --force_explain
 explain execute f3(2); -- should eliminate partitions
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
-   Merge Key: r_co_1_prt_2.a, r_co_1_prt_2.b
+   Merge Key: a, b
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-         Sort Key: r_co_1_prt_2.a, r_co_1_prt_2.b
-         ->  Append  (cost=0.00..431.00 rows=1 width=8)
-               ->  Seq Scan on r_co_1_prt_2  (cost=0.00..431.00 rows=1 width=8)
-                     Filter: (a = 2)
+         Sort Key: a, b
+         ->  Dynamic Seq Scan on r_co  (cost=0.00..431.00 rows=1 width=8)
+               Number of partitions to scan: 1 (out of 9)
+               Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
@@ -1337,9 +1160,9 @@ explain select * from fact where dd < '2009-01-02'::date; -- partitions eliminat
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on fact_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (dd < '01-02-2009'::date)
+   ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 1 (out of 4)
+         Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1347,22 +1170,21 @@ explain select * from fact where dd < to_date('2009-01-02','YYYY-MM-DD'); -- par
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on fact_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (dd < '01-02-2009'::date)
+   ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 1 (out of 4)
+         Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain select * from fact where dd < current_date; --partitions eliminated
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.10 rows=4 width=40)
-   ->  Append  (cost=0.00..4.02 rows=2 width=40)
-         Subplans Removed: 3
-         ->  Seq Scan on fact_1_prt_1  (cost=0.00..1.00 rows=1 width=40)
-               Filter: (dd < CURRENT_DATE)
- Optimizer: Postgres query optimizer
-(6 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+   ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 1 (out of 4)
+         Filter: (dd < '09-30-2022'::date)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 -- Test partition elimination in prepared statements
 prepare f1(date) as select * from fact where dd < $1;
@@ -1371,9 +1193,9 @@ explain execute f1('2009-01-02'::date); -- should eliminate partitions
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on fact_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (dd < '01-02-2009'::date)
+   ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 1 (out of 4)
+         Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1382,9 +1204,9 @@ explain execute f1(to_date('2009-01-02', 'YYYY-MM-DD')); -- should eliminate par
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on fact_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (dd < '01-02-2009'::date)
+   ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 1 (out of 4)
+         Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1399,6 +1221,8 @@ create table mpp6247_bar (like mpp6247_foo);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- EXPECT: Single HJ after partition elimination instead of sequence of HJ under Append
 select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_foo.c1 = mpp6247_bar.c1 and mpp6247_foo.dt = ''2009-05-03''', 'Hash Join');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               1
@@ -1406,6 +1230,102 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 
 drop table mpp6247_bar;
 drop table mpp6247_foo;
+-- Validate that basic DELETE on partition table with index functions properly
+CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);
+INSERT INTO delete_from_indexed_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Delete on delete_from_indexed_pt
+   ->  Dynamic Seq Scan on delete_from_indexed_pt
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (b = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+DELETE FROM delete_from_indexed_pt WHERE b=1;
+SELECT * FROM delete_from_indexed_pt;
+ a  | b 
+----+---
+  6 | 0
+  5 | 5
+  9 | 3
+ 10 | 4
+  2 | 2
+  8 | 2
+  3 | 3
+  4 | 4
+(8 rows)
+
+-- Validate that basic DELETE on partition table using DPE functions properly
+CREATE TABLE delete_from_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE t(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO delete_from_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+INSERT INTO t VALUES (1);
+ANALYZE delete_from_pt, t;
+EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt WHERE b IN (SELECT b FROM delete_from_pt, t WHERE t.a=delete_from_pt.b);
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Delete on delete_from_pt (actual rows=0 loops=1)
+   ->  Hash Join (actual rows=1 loops=1)
+         Hash Cond: (delete_from_pt.b = delete_from_pt_1.b)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
+         ->  Dynamic Seq Scan on delete_from_pt (actual rows=3 loops=1)
+               Number of partitions to scan: 3 (out of 3)
+               Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+         ->  Hash (actual rows=1 loops=1)
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+               ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
+                           ->  GroupAggregate (actual rows=1 loops=1)
+                                 Group Key: delete_from_pt_1.b
+                                 ->  Sort (actual rows=2 loops=1)
+                                       Sort Key: delete_from_pt_1.b
+                                       Sort Method:  quicksort  Memory: 75kB
+                                       Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
+                                             Hash Key: delete_from_pt_1.b
+                                             ->  GroupAggregate (actual rows=1 loops=1)
+                                                   Group Key: delete_from_pt_1.b
+                                                   ->  Sort (actual rows=1 loops=1)
+                                                         Sort Key: delete_from_pt_1.b
+                                                         Sort Method:  quicksort  Memory: 75kB
+                                                         Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
+                                                         ->  Hash Join (actual rows=1 loops=1)
+                                                               Hash Cond: (delete_from_pt_1.b = t.a)
+                                                               Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
+                                                               ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_1 (actual rows=3 loops=1)
+                                                                     Number of partitions to scan: 3 (out of 3)
+                                                                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+                                                               ->  Hash (actual rows=1 loops=1)
+                                                                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                                                                     ->  Partition Selector (selector id: $1) (actual rows=1 loops=1)
+                                                                           ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=1 loops=1)
+                                                                                 ->  Seq Scan on t (actual rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(37 rows)
+
+SELECT * FROM delete_from_pt order by a;
+ a  | b 
+----+---
+  2 | 2
+  3 | 3
+  4 | 4
+  5 | 5
+  6 | 0
+  8 | 2
+  9 | 3
+ 10 | 4
+(8 rows)
+
+RESET optimizer_trace_fallback;
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition_plans cascade;

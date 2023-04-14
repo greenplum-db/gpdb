@@ -126,7 +126,7 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.899663.1.1" TableName="s">
+                        <dxl:TableDescriptor Mdid="6.899663.1.1" TableName="s">
                           <dxl:Columns>
                             <dxl:Column ColId="397" Attno="1" ColName="s1" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="398" Attno="2" ColName="s2" TypeMdid="0.23.1.0"/>
@@ -147,7 +147,7 @@
               </dxl:Aggregate>
             </dxl:SubPlan>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.899686.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.899686.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="387" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="388" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>

@@ -43,6 +43,11 @@ private:
 	// Hash op families of the operators used in the join conditions
 	IMdIdArray *m_hash_opfamilies;
 
+	// if the join condition is null-aware
+	// true by default, and false if the join condition doesn't contain
+	// any INDF predicates
+	BOOL m_is_null_aware;
+
 	// array redistribute request sent to the first hash join child
 	CDistributionSpecArray *m_pdrgpdsRedistributeRequests;
 
@@ -109,13 +114,26 @@ protected:
 	// create optimization requests
 	virtual void CreateOptRequests(CMemoryPool *mp);
 
+	CPartitionPropagationSpec *PppsRequiredForJoins(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const;
+
+	CExpression *PexprJoinPredOnPartKeys(CMemoryPool *mp,
+										 CExpression *pexprScalar,
+										 CPartKeysArray *pdrgppartkeys,
+										 CColRefSet *pcrsAllowedRefs) const;
+
+	CPartitionPropagationSpec *PppsDeriveForJoins(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+
 public:
 	CPhysicalHashJoin(const CPhysicalHashJoin &) = delete;
 
 	// ctor
 	CPhysicalHashJoin(CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 					  CExpressionArray *pdrgpexprInnerKeys,
-					  IMdIdArray *hash_opfamilies,
+					  IMdIdArray *hash_opfamilies, BOOL is_null_aware = true,
 					  CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor

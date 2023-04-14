@@ -193,10 +193,91 @@ ClearOidAssignmentsOnCommit(void)
 	preserve_oids_on_commit = false;
 }
 
-extern void
+/*
+ * Comments for SaveOidAssignments and RestoreOidAssignments
+ * The two functions should come together, before some procedures
+ * that do not want to touch the global vars (dispatch_oids or preassigned_oids),
+ * we need to first save the oid assignments, and then do the job, finally
+ * restore oid assignments. A typical usage should be as below:
+ *    List *l = SaveOidAssignments();
+ *    do_the_job();
+ *    RestoreOidAssignments(l);
+ *
+ * The global var dispatch_oids is only used on QD, and the global
+ * var preassigned_oids is only used on QEs. They are both Lists,
+ * in a specific memorycontext, normally the memorycontext will be
+ * reset at the end of transaction.
+ *
+ * Greenplum's MPP architecture need to make some OIDs consistent
+ * among coordinator and segments (like table OIDs). The oid assignments
+ * are generated on QD and then dispatched to QEs. A single SQL might
+ * involve sever dispatch events, for example, there are some functions
+ * involving SQLs and these functions are evaluated during planning stage
+ * before we dispatch the final Utility plan. We do not want to the dispatches
+ * during plannign stage to touch oid assignments.
+ *
+ * Another subtle case that the pair of functions are useful is that
+ * subtransaction abort will lead to reset  of the oid assignments memory context.
+ * Subtransaction abort might happen for UDF with exception handling and nothing
+ * to do with the main statement needed to dispatch. That is why we deep copy
+ * the content to CurrentMemoryContext and reset oid assignment context during
+ * SaveOidAssignments and bring everything back during RestoreOidAssignments.
+ *
+ * Note: these two functions only do memory related operations when the gloabl
+ * vars are not empty.
+ */
+List *
+SaveOidAssignments(void)
+{
+	List     *l   = NIL;
+	List     *src = NIL;
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		src = dispatch_oids;
+		dispatch_oids = NIL;
+	}
+	else if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		src = preassigned_oids;
+		preassigned_oids = NIL;
+	}
+	else
+		return NIL;
+
+	if (src == NIL)
+		return NIL;
+
+	Assert(CurrentMemoryContext != get_oids_context());
+
+	l = copyObject(src);
+	MemoryContextReset(get_oids_context());
+	return l;
+}
+
+void
 RestoreOidAssignments(List *oid_assignments)
 {
-	dispatch_oids = oid_assignments;
+	MemoryContext   old;
+	List          **target;
+
+	if (oid_assignments == NIL)
+		return;
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		target = &dispatch_oids;
+	else if (Gp_role == GP_ROLE_EXECUTE)
+		target = &preassigned_oids;
+	else
+		return;
+
+	Assert(CurrentMemoryContext != get_oids_context());
+
+	old = MemoryContextSwitchTo(get_oids_context());
+	*target = copyObject(oid_assignments);
+	MemoryContextSwitchTo(old);
+
+	list_free_deep(oid_assignments);
 }
 
 /* ----------------------------------------------------------------

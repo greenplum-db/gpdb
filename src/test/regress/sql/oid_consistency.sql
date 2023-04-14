@@ -434,3 +434,16 @@ $$ language plpgsql no sql;
 create trigger troid_trigger after insert on trigger_oid for each row execute procedure trig_func();
 
 select verify('trigger_oid');
+
+-- Case for Issue: https://github.com/greenplum-db/gpdb/issues/14465
+create function func_fail_14465(int) returns int
+        immutable language plpgsql as $$
+begin
+        perform unwanted_grant();
+        raise warning 'owned';
+        return 1;
+exception when others then
+        return 2;
+end$$;
+create materialized view mv_14465 as select 1 as c;
+create index on mv_14465 (c) where func_fail_14465(1) > 0;

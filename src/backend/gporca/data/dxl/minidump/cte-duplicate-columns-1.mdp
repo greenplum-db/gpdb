@@ -128,7 +128,7 @@ with x as (select a a1, a a2, b from foo) select * from x where a1 = 1;
       <dxl:ColumnStatistics Mdid="1.783736.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.783736.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.783736.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.783736.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.783736.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -159,7 +159,6 @@ with x as (select a a1, a a2, b from foo) select * from x where a1 = 1;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.783736.1.1.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
@@ -200,7 +199,7 @@ with x as (select a a1, a a2, b from foo) select * from x where a1 = 1;
       <dxl:CTEList>
         <dxl:LogicalCTEProducer CTEId="1" Columns="1,1,2">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.783736.1.1" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.783736.1.1" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -279,7 +278,7 @@ with x as (select a a1, a a2, b from foo) select * from x where a1 = 1;
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.783736.1.1" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.783736.1.1" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

@@ -1945,33 +1945,43 @@ CJoinOrderDPv2::OsPrintProperty(IOstream &os, SExpressionProperties &props)
 		if (props.Satisfies(EJoinOrderMincard))
 		{
 			if (!is_first)
+			{
 				os << ", ";
+			}
 			os << "Mincard";
 			is_first = false;
 		}
 		if (props.Satisfies(EJoinOrderGreedyAvoidXProd))
 		{
 			if (!is_first)
+			{
 				os << ", ";
+			}
 			os << "GreedyAvoidXProd";
 			is_first = false;
 		}
 		if (props.Satisfies(EJoinOrderHasPS))
 		{
 			if (!is_first)
+			{
 				os << ", ";
+			}
 			os << "HasPS";
 		}
 		if (props.Satisfies(EJoinOrderStats))
 		{
 			if (!is_first)
+			{
 				os << ", ";
+			}
 			os << "Stats";
 		}
 		if (props.Satisfies(EJoinOrderDP))
 		{
 			if (!is_first)
+			{
 				os << ", ";
+			}
 			os << "DP";
 		}
 	}

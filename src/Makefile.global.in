@@ -194,6 +194,7 @@ bitcodedir = $(pkglibdir)/bitcode
 with_icu	= @with_icu@
 with_perl	= @with_perl@
 with_python	= @with_python@
+with_pythonsrc_ext = @with_pythonsrc_ext@
 with_tcl	= @with_tcl@
 with_openssl	= @with_openssl@
 with_selinux	= @with_selinux@
@@ -203,7 +204,7 @@ with_krb_srvnam	= @with_krb_srvnam@
 with_ldap	= @with_ldap@
 with_libxml	= @with_libxml@
 with_libxslt	= @with_libxslt@
-with_llvm	= @with_llvm@
+with_llvm	?= @with_llvm@
 with_system_tzdata = @with_system_tzdata@
 with_uuid	= @with_uuid@
 with_zlib	= @with_zlib@
@@ -223,7 +224,6 @@ enable_strong_random	= @enable_strong_random@
 enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
 enable_gpfdist		= @enable_gpfdist@
-enable_pxf			= @enable_pxf@
 enable_debug_extensions = @enable_debug_extensions@
 enable_orafce		= @enable_orafce@
 enable_mapreduce    = @enable_mapreduce@
@@ -294,6 +294,7 @@ GCC = @GCC@
 SUN_STUDIO_CC = @SUN_STUDIO_CC@
 CXX = @CXX@
 CFLAGS = @CFLAGS@
+CFLAGS_SL = @CFLAGS_SL@
 CFLAGS_VECTOR = @CFLAGS_VECTOR@
 CFLAGS_SSE42 = @CFLAGS_SSE42@
 CFLAGS_ARMV8_CRC32C = @CFLAGS_ARMV8_CRC32C@
@@ -482,16 +483,36 @@ with_temp_install = \
 	$(with_temp_install_extra)
 
 ifeq ($(enable_tap_tests),yes)
+
+ifndef PGXS
 define prove_installcheck
 rm -rf '$(CURDIR)'/tmp_check
 $(MKDIR_P) '$(CURDIR)'/tmp_check
-cd $(srcdir) && TESTDIR='$(CURDIR)' PATH="$(bindir):$$PATH" PGPORT='6$(DEF_PGPORT)' top_builddir='$(CURDIR)/$(top_builddir)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' REGRESS_SHLIB='$(abs_top_builddir)/src/test/regress/regress$(DLSUFFIX)' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
+cd $(srcdir) && \
+   TESTDIR='$(CURDIR)' PATH="$(bindir):$$PATH" PGPORT='6$(DEF_PGPORT)' \
+   top_builddir='$(CURDIR)/$(top_builddir)' \
+   PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' \
+   $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
 endef
+else # PGXS case
+define prove_installcheck
+rm -rf '$(CURDIR)'/tmp_check
+$(MKDIR_P) '$(CURDIR)'/tmp_check
+cd $(srcdir) && \
+   TESTDIR='$(CURDIR)' PATH="$(bindir):$$PATH" PGPORT='6$(DEF_PGPORT)' \
+   top_builddir='$(top_builddir)' \
+   PG_REGRESS='$(top_builddir)/src/test/regress/pg_regress' \
+   $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
+endef
+endif # PGXS
 
 define prove_check
 rm -rf '$(CURDIR)'/tmp_check
 $(MKDIR_P) '$(CURDIR)'/tmp_check
-cd $(srcdir) && TESTDIR='$(CURDIR)' $(with_temp_install) PGPORT='6$(DEF_PGPORT)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' REGRESS_SHLIB='$(abs_top_builddir)/src/test/regress/regress$(DLSUFFIX)' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
+cd $(srcdir) && \
+   TESTDIR='$(CURDIR)' $(with_temp_install) PGPORT='6$(DEF_PGPORT)' \
+   PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' \
+   $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
 endef
 
 else

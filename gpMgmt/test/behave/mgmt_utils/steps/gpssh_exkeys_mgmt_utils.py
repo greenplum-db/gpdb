@@ -209,7 +209,7 @@ def impl(context, works):
         'gpssh',
         '-e',
         ] + host_opts + [
-        '{}ssh -o BatchMode=yes -o StrictHostKeyChecking=yes mdw true'.format(
+        '{}ssh -o BatchMode=yes -o StrictHostKeyChecking=yes cdw true'.format(
             "" if (works == 'can') else "! "
         )
     ])
@@ -217,12 +217,12 @@ def impl(context, works):
 
 @then('the coordinator host "{works}" reach itself')
 def impl(context, works):
-    result = subprocess.call(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', 'mdw', 'true'])
+    result = subprocess.call(['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', 'cdw', 'true'])
     should_work = (works == 'can')
     did_work = (result == 0)
     if should_work != did_work:
         expected_code = '0' if should_work else 'not 0'
-        raise Exception('actual result of ssh mdw: %s (expected: %s)', result, expected_code)
+        raise Exception('actual result of ssh cdw: %s (expected: %s)', result, expected_code)
 
 
 @given('all SSH configurations are backed up and stripped')
@@ -245,7 +245,7 @@ def impl(context):
         '&& cp -fp /tmp/ssh.bak/authorized_keys ~/.ssh/'
     )])
 
-    # Also backup .ssh on mdw, leaving the key configuration in .ssh
+    # Also backup .ssh on cdw, leaving the key configuration in .ssh
     home_ssh = path.expanduser('~/.ssh')
     backup_path = '/tmp/ssh.bak/'
     os.makedirs(backup_path)
@@ -273,7 +273,7 @@ def impl(context):
     Strips out part of the ssh secrets to setup the cluster so only ssh from
     the local to the remotes works.
     """
-    # Also backup .ssh on mdw, leaving the key configuration in .ssh
+    # Also backup .ssh on cdw, leaving the key configuration in .ssh
     home_ssh = path.expanduser('~/.ssh')
     backup_path = tempfile.mkdtemp()
     for ssh_file in os.listdir(home_ssh):
@@ -295,7 +295,7 @@ def impl(context):
 
     # This blows away any existing authorized_keys file on the segments.
     subprocess.check_call([
-        'gpscp',
+        'gpsync',
         '-v',
         ] + host_opts + [
         '~/.ssh/id_rsa.pub',

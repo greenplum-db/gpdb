@@ -15,12 +15,12 @@ select * from like_error where some_text LIKE ANY (ARRAY['%text1%']);
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="like_error" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16385.1.0" Name="like_error" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="like_error" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="some_text" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -48,7 +48,6 @@ select * from like_error where some_text LIKE ANY (ARRAY['%text1%']);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -178,7 +177,7 @@ select * from like_error where some_text LIKE ANY (ARRAY['%text1%']);
           </dxl:Array>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="like_error">
+          <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="like_error">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="some_text" TypeMdid="0.25.1.0" ColWidth="8"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -222,7 +221,7 @@ select * from like_error where some_text LIKE ANY (ARRAY['%text1%']);
               </dxl:Array>
             </dxl:ArrayComp>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="like_error">
+          <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="like_error">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="some_text" TypeMdid="0.25.1.0" ColWidth="8"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

@@ -80,5 +80,5 @@ Declare custom protocols with the SQL command `CREATE TRUSTED PROTOCOL`, then us
     ```
 
 
-**Parent topic:**[Loading and Writing Non-HDFS Custom Data](../../load/topics/g-loading-and-writing-non-hdfs-custom-data.html)
+**Parent topic:** [Loading and Writing Non-HDFS Custom Data](../../load/topics/g-loading-and-writing-non-hdfs-custom-data.html)
 

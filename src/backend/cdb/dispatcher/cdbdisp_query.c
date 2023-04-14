@@ -37,7 +37,6 @@
 #include "utils/faultinjector.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
 #include "utils/session_state.h"
 #include "utils/typcache.h"
 #include "miscadmin.h"
@@ -54,6 +53,7 @@
 
 extern bool Test_print_direct_dispatch_info;
 
+extern bool gp_print_create_gang_time;
 typedef struct ParamWalkerContext
 {
 	plan_tree_base_prefix base; /* Required prefix for
@@ -267,21 +267,6 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 		verify_shared_snapshot_ready(gp_command_count);
 	}
 
-	/* In the final stage, add the resource information needed for QE by the resource group */
-	stmt->total_memory_coordinator = 0;
-	stmt->nsegments_coordinator = 0;
-
-	if (IsResGroupEnabled() && gp_resource_group_enable_recalculate_query_mem &&
-		memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
-	{
-		/*
-		 * We enable resource group re-calculate the query_mem on QE, and we are not in
-		 * fall back mode (use statement_mem).
-		 */
-		stmt->total_memory_coordinator = ResGroupOps_GetTotalMemory();
-		stmt->nsegments_coordinator = ResGroupGetSegmentNum();
-	}
-
 	cdbdisp_dispatchX(queryDesc, planRequiresTxn, cancelOnError);
 }
 
@@ -334,6 +319,8 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
 	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbcomponent_getCdbComponentsList());
+	if (gp_print_create_gang_time)
+		printCreateGangTime(-1, primaryGang);
 
 	/* put all idle segment to a gang so QD can send SET command to them */
 	AllocateGang(ds, GANGTYPE_PRIMARY_READER, formIdleSegmentIdList());
@@ -505,6 +492,8 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
 	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, segments);
+	if (gp_print_create_gang_time)
+		printCreateGangTime(-1, primaryGang);
 	Assert(primaryGang);
 
 	cdbdisp_makeDispatchResults(ds, 1, flags & DF_CANCEL_ON_ERROR);
@@ -641,11 +630,8 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 
 	int			splan_len,
 				splan_len_uncompressed,
-				sddesc_len,
-				rootIdx;
+				sddesc_len;
 	Oid			save_userid;
-
-	rootIdx = RootSliceIndex(queryDesc->estate);
 
 	DispatchCommandQueryParms *pQueryParms = (DispatchCommandQueryParms *) palloc0(sizeof(*pQueryParms));
 
@@ -1033,7 +1019,7 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		pos += resgroupInfo.len;
 	}
 
-	/* in-process variable for temporary namespace */
+	/* pass process local variables to QEs */
 	GetTempNamespaceState(&tempNamespaceId, &tempToastNamespaceId);
 	tempNamespaceId = htonl(tempNamespaceId);
 	tempToastNamespaceId = htonl(tempToastNamespaceId);
@@ -1169,6 +1155,8 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		}
 
 		primaryGang = slice->primaryGang;
+		if (gp_print_create_gang_time)
+			printCreateGangTime(si, primaryGang);
 		Assert(primaryGang != NULL);
 		AssertImply(queryDesc->extended_query,
 					primaryGang->type == GANGTYPE_PRIMARY_READER ||
@@ -1361,6 +1349,8 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
 	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbCopy->seglist);
+	if (gp_print_create_gang_time)
+		printCreateGangTime(-1, primaryGang);
 	Assert(primaryGang);
 
 	cdbdisp_makeDispatchResults(ds, 1, flags & DF_CANCEL_ON_ERROR);
@@ -1418,6 +1408,16 @@ formIdleSegmentIdList(void)
 		for (i = 0; i < cdbs->total_segment_dbs; i++)
 		{
 			CdbComponentDatabaseInfo *cdi = &cdbs->segment_db_info[i];
+			for (j = 0; j < cdi->numIdleQEs; j++)
+				segments = lappend_int(segments, cdi->config->segindex);
+		}
+	}
+
+	if (cdbs->entry_db_info != NULL)
+	{
+		for (i = 0; i < cdbs->total_entry_dbs; i++)
+		{
+			CdbComponentDatabaseInfo *cdi = &cdbs->entry_db_info[i];
 			for (j = 0; j < cdi->numIdleQEs; j++)
 				segments = lappend_int(segments, cdi->config->segindex);
 		}

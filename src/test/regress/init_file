@@ -85,6 +85,12 @@ m/Distributed randomly/
 m/WARNING:  interconnect may encountered a network error, please check your network/
 m/Failing to send packet/
 
+# When JIT enabled, the following output can be generated but indicate nothing wrong. so ignore it.
+m/^DEBUG:  successfully loaded JIT provider/
+m/^DEBUG:  probing availability of JIT provider/
+m/^DEBUG:  LLVMJIT detected CPU/
+m/^DEBUG:  time to inline:/
+
 -- end_matchignore
 
 -- start_matchsubs
@@ -111,6 +117,20 @@ s/\d+ was concurrently dropped/##### was concurrently dropped/
 # Mask out linenumber of the erroring file
 m/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/
 s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)/
+m/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/
+s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)/
+m/ERROR:  invalid partition constraint on "[^"]+".*/
+s/ERROR:  invalid partition constraint on "[^"]+".*/ERROR:  invalid partition constraint on "[^"]+".*(cdbpartition.c:XXX)/
+m/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/
+s/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode (openssl.c:XXX)/
+m/ERROR:  requested functionality not allowed in FIPS mode .*/
+s/ERROR:  requested functionality not allowed in FIPS mode .*/ERROR:  requested functionality not allowed in FIPS mode (openssl.c:XXX)/
+
+# Mask out OpenSSL behavior change in different version
+m/ERROR:  Cannot use "md5": No such hash algorithm/
+s/ERROR:  Cannot use "md5": No such hash algorithm/ERROR:  Cannot use "md5": /
+m/ERROR:  Cannot use "md5": Some PX error \(not specified\)/
+s/ERROR:  Cannot use "md5": Some PX error \(not specified\)/ERROR:  Cannot use "md5": /
 
 # Mask out gp_execution_segment()
 m/One-Time Filter: \(gp_execution_segment\(\) = \d+/
@@ -138,5 +158,31 @@ s/.//gs
 
 m/\(dbsize\.c\:\d+\)/
 s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
+
+# remove the cdbdisp_async suffix of some ERROR messages
+m/ \(cdbdisp_async\.c.*\)/
+s/ \(cdbdisp_async\.c.*\)//
+
+# remove the parse_utilcmd suffix of some ERROR messages
+m/ \(parse_utilcmd\.c\:\d+\)/
+s/ \(parse_utilcmd\.c:\d+\)//
+
+# ignore establish time and segindex num
+m/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/
+s/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/ The shortest establish conn time: xx\.xx ms, segindex: xx,/
+m/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/
+s/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/ The longest  establish conn time: xx\.xx ms, segindex: xx/
+
+# convert QUERY PLAN header to a fixed-width format. The width of header
+# SHOULD NOT be taken into account when compared with the expected one.
+# This is important because we invoke same test with different sets of
+# PGOPTIONS and non-default ones among them are reported by EXPLAIN
+# VERBOSE or EXPLAIN (SETTINGS on). As a result, the width of EXPLAIN output
+# and its header can vary.
+m/^\s+QUERY PLAN\s*$/
+s/^\s+QUERY PLAN\s*$/ QUERY PLAN \n/
+
+m/^------------+\s*$/
+s/^------------+\s*$/------------\n/
 
 -- end_matchsubs

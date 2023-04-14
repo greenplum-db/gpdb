@@ -32,9 +32,9 @@ using namespace gpopt;
 CPhysicalRightOuterHashJoin::CPhysicalRightOuterHashJoin(
 	CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
-	CXform::EXformId origin_xform)
+	BOOL is_null_aware, CXform::EXformId origin_xform)
 	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
-						hash_opfamilies, origin_xform)
+						hash_opfamilies, is_null_aware, origin_xform)
 {
 	ULONG ulDistrReqs = 1 + NumDistrReq();
 	SetDistrRequests(ulDistrReqs);
@@ -119,5 +119,24 @@ CPhysicalRightOuterHashJoin::CreateOptRequests(CMemoryPool *mp)
 	SetDistrRequests(ulDistrReqs);
 
 	SetPartPropagateRequests(2);
+}
+
+CPartitionPropagationSpec *
+CPhysicalRightOuterHashJoin::PppsRequired(
+	CMemoryPool *mp, CExpressionHandle &exprhdl,
+	CPartitionPropagationSpec *pppsRequired, ULONG child_index,
+	CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const
+{
+	return PppsRequiredForJoins(mp, exprhdl, pppsRequired, child_index,
+								pdrgpdpCtxt, ulOptReq);
+}
+
+// In the following function, we are generating the Derived property :
+// "Partition Propagation Spec" of Right Outer Hash join.
+CPartitionPropagationSpec *
+CPhysicalRightOuterHashJoin::PppsDerive(CMemoryPool *mp,
+										CExpressionHandle &exprhdl) const
+{
+	return PppsDeriveForJoins(mp, exprhdl);
 }
 // EOF

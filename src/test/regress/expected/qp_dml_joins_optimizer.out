@@ -2312,7 +2312,8 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 DELETE FROM dml_heap_s WHERE a = (SELECT dml_heap_r.a FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg0 slice1 10.138.0.30:7002 pid=2841924)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_heap_s;
  count 
 -------
@@ -2616,7 +2617,8 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 DELETE FROM dml_heap_pt_s WHERE a = (SELECT dml_heap_pt_r.a FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg1 10.138.0.30:7003 pid=706789)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
 -------
@@ -3321,7 +3323,8 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_pt_s ) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg0 slice1 10.138.0.30:7002 pid=527664)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
 ------
@@ -3336,7 +3339,8 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET b = (SELECT dml_heap_pt_r.b FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a );
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg0 10.138.0.30:7002 pid=527290)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------
@@ -3971,11 +3975,9 @@ SELECT SUM(a) FROM dml_heap_r;
  5106
 (1 row)
 
--- start_ignore
-GPDB_12_MERGE_FIXME: Unsupported exec location fallback
--- end_ignore
+ANALYZE dml_heap_s, dml_heap_r;
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  more than one row returned by a subquery used as an expression  (seg0 slice1 10.138.0.30:7002 pid=3043178)
 SELECT SUM(a) FROM dml_heap_r;
  sum  
 ------
@@ -3990,7 +3992,7 @@ SELECT SUM(b) FROM dml_heap_r;
 (1 row)
 
 UPDATE dml_heap_r SET b = (SELECT dml_heap_r.b FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a );
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  more than one row returned by a subquery used as an expression  (seg0 10.138.0.30:7002 pid=3036540)
 SELECT SUM(b) FROM dml_heap_r;
  sum  
 ------
@@ -4015,8 +4017,8 @@ SELECT SUM(b) FROM dml_heap_r;
 (1 row)
 
 --Negative test - Update WHERE join returns more than one tuple with different values.
-CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i;
-CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i;
+CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i distributed by (a);
+CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i distributed by (a);
 SELECT SUM(a) FROM dml_heap_v;
  sum 
 -----

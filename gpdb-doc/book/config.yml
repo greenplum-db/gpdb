@@ -45,28 +45,23 @@ sections:
   directory: 7-0/analytics
   subnav_template: analytics-subnav
   
-dita_sections:
-
 - repository:
-    name: dita
+    name: markdown
     at_path: security-guide
   directory: 7-0/security-guide
-  ditamap_location: security-guide.ditamap
-  ditaval_location: ../gpdb-oss-webhelp.ditaval
+  subnav_template: security-subnav
 
 - repository:
-    name: dita
+    name: markdown
     at_path: utility_guide
   directory: 7-0/utility_guide
-  ditamap_location: utility_guide.ditamap
-  ditaval_location: ../gpdb-oss-webhelp.ditaval
+  subnav_template: utility-subnav
 
 - repository:
-    name: dita
+    name: markdown
     at_path: ref_guide
   directory: 7-0/ref_guide
-  ditamap_location: ref_guide.ditamap
-  ditaval_location: ../gpdb-oss-webhelp.ditaval
+  subnav_template: reference-subnav
 
 template_variables:
   book_title: Greenplum Database Documentation

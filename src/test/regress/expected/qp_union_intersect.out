@@ -652,8 +652,6 @@ SELECT COUNT(*) FROM dml_union_r;
    120
 (1 row)
 
--- GPDB_12_MERGE_FIXME: ORCA doesn't produce the right intersect plan
-set optimizer=off;
 SELECT COUNT(*) FROM (SELECT dml_union_r.* FROM dml_union_r INTERSECT (SELECT dml_union_r.* FROM dml_union_r UNION ALL SELECT dml_union_s.* FROM dml_union_s) EXCEPT SELECT dml_union_s.* FROM dml_union_s)foo;
  count 
 -------
@@ -667,7 +665,6 @@ SELECT COUNT(*) FROM dml_union_r;
    221
 (1 row)
 
-reset optimizer;
 rollback;
 -- @description union_test30: INSERT NON ATOMICS with union/intersect/except
 begin;
@@ -1725,6 +1722,7 @@ DETAIL:  Failing row contains (5, null, s, 5).
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
 set optimizer_segments=2;
+ANALYZE dml_union_r, dml_union_s;
 SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
  count 
 -------
@@ -2039,10 +2037,12 @@ order by 1,2;
                ->  Sort  (cost=8.82..9.23 rows=167 width=12) (actual time=0.221..0.265 rows=301 loops=1)
                      Sort Key: r.a, r.b
                      Sort Method:  quicksort  Memory: 202kB
+                     Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
                      ->  Seq Scan on mergeappend_test r  (cost=0.00..2.67 rows=167 width=12) (actual time=0.102..0.147 rows=301 loops=1)
    ->  Sort  (cost=3.19..3.19 rows=1 width=40) (actual time=1.142..1.145 rows=1 loops=1)
          Sort Key: (NULL::integer), (NULL::integer)
          Sort Method:  quicksort  Memory: 50kB
+         Executor Memory: 26kB  Segments: 1  Max: 26kB (segment -1)
          ->  Finalize Aggregate  (cost=3.15..3.17 rows=1 width=40) (actual time=1.135..1.135 rows=1 loops=1)
                ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.09..3.14 rows=3 width=32) (actual time=0.014..1.105 rows=3 loops=1)
                      ->  Partial Aggregate  (cost=3.09..3.10 rows=1 width=32) (actual time=0.261..0.261 rows=1 loops=1)
@@ -2054,7 +2054,23 @@ order by 1,2;
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
  Execution Time: 2.406 ms
-(24 rows)
+(26 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select a, b, array_dims(array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
+order by 1,2;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           2
+ workmem_wanted_lines |           0
+(2 rows)
 
 CREATE TABLE t1(c1 int, c2 int, c3 int);
 CREATE TABLE t2(c1 int, c2 int, c3 int);

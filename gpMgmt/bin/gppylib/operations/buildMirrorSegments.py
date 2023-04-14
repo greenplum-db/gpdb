@@ -19,7 +19,7 @@ from gppylib.gp_era import read_era
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
-from gppylib.commands.unix import check_pid_on_remotehost, Scp
+from gppylib.commands.unix import check_pid_on_remotehost
 from gppylib.programs.clsRecoverSegment_triples import RecoveryTriplet
 
 logger = gplog.get_default_logger()
@@ -477,7 +477,7 @@ class GpMirrorListToBuild:
     def _run_recovery(self, action_name, recovery_info_by_host, gpEnv):
         completed_recovery_results = self._do_recovery(recovery_info_by_host, gpEnv)
         recovery_results = RecoveryResult(action_name, completed_recovery_results, self.__logger)
-        recovery_results.print_bb_rewind_and_start_errors()
+        recovery_results.print_bb_rewind_update_and_start_errors()
 
         self._remove_progress_files(recovery_info_by_host, recovery_results)
         return recovery_results

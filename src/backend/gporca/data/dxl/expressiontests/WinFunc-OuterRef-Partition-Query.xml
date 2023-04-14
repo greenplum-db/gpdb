@@ -19,7 +19,7 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16422594.1.1" Name="x" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16422594.1.0" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.16422594.1.0" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -56,10 +56,9 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
           <dxl:IndexInfo Mdid="0.17159874.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.17159920.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.16422594.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.16422594.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -96,7 +95,6 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
           <dxl:IndexInfo Mdid="0.17159874.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.17159920.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.15.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
@@ -641,7 +639,7 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.16414481.1.1" Name="y" Rows="49829.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16414481.1.1" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.16414481.1.1" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -675,7 +673,6 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16414481.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -723,7 +720,7 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.16414481.1.1" TableName="y">
+              <dxl:TableDescriptor Mdid="6.16414481.1.1" TableName="y">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -741,7 +738,7 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
           </dxl:LogicalWindow>
         </dxl:SubqueryAny>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16422594.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.16422594.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

@@ -58,7 +58,7 @@ static int32 startupChunks = 0;
 /* Vmem quota in chunk unit */
 static int32 vmemChunksQuota = 0;
 /*
- * Chunk size in bits. By default a chunk is 1MB, but it can be larger
+ * Chunk size in bits. By default, a chunk is 1MB, but it can be larger
  * depending on the vmem quota.
  */
 static int chunkSizeInBits = BITS_IN_MB;
@@ -215,12 +215,6 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 
 	bool waiverUsed = false;
 
-	if (!ResGroupReserveMemory(numChunksToReserve, waivedChunks, &waiverUsed))
-	{
-		pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
-		return MemoryFailure_ResourceGroupMemoryExhausted;
-	}
-
 	/*
 	 * Query vmem quota exhausted, so rollback the reservation and return error.
 	 * For non-QE processes and processes in critical section, we don't enforce
@@ -235,8 +229,6 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 		{
 			/* Revert the reserved space, but don't revert the prev_alloc as we have already set the firstTime to false */
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
-			/* Revert resgroup memory reservation */
-			ResGroupReleaseMemory(numChunksToReserve);
 			return MemoryFailure_QueryMemoryExhausted;
 		}
 		waiverUsed = true;
@@ -260,8 +252,6 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
 			/* Revert vmem reservation */
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)segmentVmemChunks, numChunksToReserve);
-			/* Revert resgroup memory reservation */
-			ResGroupReleaseMemory(numChunksToReserve);
 
 			return MemoryFailure_VmemExhausted;
 		}
@@ -300,7 +290,6 @@ VmemTracker_ReleaseVmemChunks(int reduction)
 	Assert(*segmentVmemChunks >= 0);
 	Assert(NULL != MySessionState);
 	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, reduction);
-	ResGroupReleaseMemory(reduction);
 	Assert(0 <= MySessionState->sessionVmem);
 	trackedVmemChunks -= reduction;
 }
@@ -318,7 +307,7 @@ ReleaseAllVmemChunks()
 
 /*
  * Returns the available VMEM in "chunks" unit. If the available chunks
- * is less than 0, it return 0.
+ * is less than 0, it returns 0.
  */
 static int32
 VmemTracker_GetNonNegativeAvailableVmemChunks()
@@ -337,7 +326,7 @@ VmemTracker_GetNonNegativeAvailableVmemChunks()
 
 /*
  * Returns the available query chunks. If the available chunks
- * is less than 0, it return 0.
+ * is less than 0, it returns 0.
  */
 static int32
 VmemTracker_GetNonNegativeAvailableQueryChunks()
@@ -354,21 +343,21 @@ VmemTracker_GetNonNegativeAvailableQueryChunks()
 	}
 }
 
-/* Converts chunks to MB */
+/* Convert chunks to MB */
 int32
 VmemTracker_ConvertVmemChunksToMB(int chunks)
 {
 	return CHUNKS_TO_MB(chunks);
 }
 
-/* Converts MB to chunks */
+/* Convert MB to chunks */
 int32
 VmemTracker_ConvertVmemMBToChunks(int mb)
 {
 	return MB_TO_CHUNKS(mb);
 }
 
-/* Converts chunks to bytes */
+/* Convert chunks to bytes */
 int64
 VmemTracker_ConvertVmemChunksToBytes(int chunks)
 {
@@ -428,16 +417,13 @@ int32
 VmemTracker_GetVmemLimitChunks(void)
 {
 	/*
+	 * TODO:
 	 * For backend who has vmem tracker initialized and resource
 	 * group enabled, the vmem limit is not expected to be used
 	 * until resource group is activated, otherwise, there might
 	 * be an inconsistency about the vmem limit.
 	 */
-	AssertImply(vmemTrackerInited && IsResGroupEnabled(),
-				IsResGroupActivated());
-
-	return IsResGroupEnabled() ?
-		ResGroupGetVmemLimitChunks() : vmemChunksQuota;
+	return vmemChunksQuota;
 }
 
 /*
@@ -453,8 +439,7 @@ VmemTracker_GetChunkSizeInBits(void)
 	 * until resource group is activated, otherwise, there might
 	 * be an inconsistency about the chunk size.
 	 */
-	return IsResGroupEnabled() ?
-		ResGroupGetVmemChunkSizeInBits() : chunkSizeInBits;
+	return chunkSizeInBits;
 }
 
 /*
@@ -463,8 +448,7 @@ VmemTracker_GetChunkSizeInBits(void)
 static int32
 VmemTracker_GetMaxChunksPerQuery(void)
 {
-	return IsResGroupEnabled() ?
-		ResGroupGetMaxChunksPerQuery() : maxChunksPerQuery;
+	return maxChunksPerQuery;
 }
 
 /*

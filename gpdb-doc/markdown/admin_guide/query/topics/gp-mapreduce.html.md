@@ -8,7 +8,7 @@ You configure a Greenplum MapReduce job via a YAML-formatted configuration file,
 
 Refer to [gpmapreduce](../../../utility_guide/ref/gpmapreduce.html) for details about running the Greenplum MapReduce program.
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic2"></a>About the Greenplum MapReduce Configuration File 
 
@@ -78,23 +78,23 @@ In this example, you create a MapReduce job that processes text documents and re
 
 This example MapReduce job utilizes the untrusted `plpythonu` language; as such, you must run the job as a user with Greenplum Database administrative privileges.
 
-1.  Log in to the Greenplum Database master host as the `gpadmin` administrative user and set up your environment. For example:
+1.  Log in to the Greenplum Database coordinator host as the `gpadmin` administrative user and set up your environment. For example:
 
     ```
-    $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    $ ssh gpadmin@<gpcoordinator>
+    gpadmin@gpcoordinator$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2.  Create a new database for the MapReduce example: For example:
 
     ```
-    gpadmin@gpmaster$ createdb mapredex_db
+    gpadmin@gpcoordinator$ createdb mapredex_db
     ```
 
 3.  Start the `psql` subsystem, connecting to the new database:
 
     ```
-    gpadmin@gpmaster$ psql -d mapredex_db
+    gpadmin@gpcoordinator$ psql -d mapredex_db
     ```
 
 4.  Register the PL/Python language in the database. For example:
@@ -388,7 +388,7 @@ This example MapReduce job utilizes the untrusted `plpythonu` language; as such,
 9.  Run the MapReduce job. For example:
 
     ```
-    gpadmin@gpmaster$ gpmapreduce -f mymrjob.yaml
+    gpadmin@gpcoordinator$ gpmapreduce -f mymrjob.yaml
     ```
 
     The job displays the number of occurrences of each keyword in each document to `stdout`.
@@ -398,5 +398,5 @@ This example MapReduce job utilizes the untrusted `plpythonu` language; as such,
 
 The following diagram shows the job flow of the MapReduce job defined in the example:
 
-![](../../graphics/mapreducejob.jpg)
+![MapReduce job flow](../../graphics/mapreducejob.jpg)
 

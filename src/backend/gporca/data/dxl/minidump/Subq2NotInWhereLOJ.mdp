@@ -59,7 +59,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102043,102074,102113,102120,102144,102147,103001,103014,103015,103022,103027,103029,103033,103037,104003,104004,104005,104006,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -110,7 +110,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.368662.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.368662.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="id2" Attno="1" Mdid="0.1042.1.0" TypeModifier="11" Nullable="false" ColWidth="7">
             <dxl:DefaultValue/>
@@ -141,7 +141,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.531.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
@@ -198,7 +197,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.368659.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.368659.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.1042.1.0" TypeModifier="11" Nullable="false" ColWidth="7">
             <dxl:DefaultValue/>
@@ -232,7 +231,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBScalarOp Mdid="0.664.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
@@ -337,7 +335,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.368665.1.0" Name="t3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.368665.1.0" Name="t3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="id3" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -371,7 +369,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBFunc Mdid="0.669.1.0" Name="varchar" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">
@@ -550,7 +547,7 @@
                             </dxl:Comparison>
                           </dxl:And>
                           <dxl:LogicalGet>
-                            <dxl:TableDescriptor Mdid="0.368662.1.0" TableName="t2">
+                            <dxl:TableDescriptor Mdid="6.368662.1.0" TableName="t2">
                               <dxl:Columns>
                                 <dxl:Column ColId="21" Attno="1" ColName="id2" TypeMdid="0.1042.1.0" TypeModifier="11" ColWidth="7"/>
                                 <dxl:Column ColId="22" Attno="2" ColName="att2" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="1"/>
@@ -571,7 +568,7 @@
                 </dxl:And>
                 <dxl:LogicalJoin JoinType="Left">
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.368659.1.0" TableName="t1">
+                    <dxl:TableDescriptor Mdid="6.368659.1.0" TableName="t1">
                       <dxl:Columns>
                         <dxl:Column ColId="1" Attno="1" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11" ColWidth="7"/>
                         <dxl:Column ColId="2" Attno="2" ColName="descr" TypeMdid="0.1042.1.0" TypeModifier="179" ColWidth="175"/>
@@ -587,7 +584,7 @@
                     </dxl:TableDescriptor>
                   </dxl:LogicalGet>
                   <dxl:LogicalGet>
-                    <dxl:TableDescriptor Mdid="0.368659.1.0" TableName="t1">
+                    <dxl:TableDescriptor Mdid="6.368659.1.0" TableName="t1">
                       <dxl:Columns>
                         <dxl:Column ColId="11" Attno="1" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11" ColWidth="7"/>
                         <dxl:Column ColId="12" Attno="2" ColName="descr" TypeMdid="0.1042.1.0" TypeModifier="179" ColWidth="175"/>
@@ -643,7 +640,7 @@
               </dxl:LogicalSelect>
             </dxl:LogicalProject>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.368665.1.0" TableName="t3">
+              <dxl:TableDescriptor Mdid="6.368665.1.0" TableName="t3">
                 <dxl:Columns>
                   <dxl:Column ColId="34" Attno="1" ColName="id3" TypeMdid="0.20.1.0" ColWidth="8"/>
                   <dxl:Column ColId="35" Attno="2" ColName="desc3" TypeMdid="0.1043.1.0" TypeModifier="54" ColWidth="50"/>
@@ -679,7 +676,7 @@
     <dxl:Plan Id="0" SpaceSize="1680">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1724.003881" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1724.004114" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="30" Alias="s1">
@@ -696,7 +693,7 @@
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1724.003792" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="1724.004025" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="30"/>
@@ -717,7 +714,7 @@
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1724.003763" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="1724.003996" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="s1">
@@ -740,7 +737,7 @@
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1724.003763" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="1724.003996" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="30" Alias="s1">
@@ -768,7 +765,7 @@
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1724.003725" Rows="1.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1724.003959" Rows="1.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="30"/>
@@ -789,7 +786,7 @@
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1724.003705" Rows="2.000000" Width="24"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1724.003938" Rows="2.000000" Width="24"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="43" Alias="coalesce">
@@ -812,7 +809,7 @@
                   <dxl:LimitOffset/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1724.003705" Rows="2.000000" Width="24"/>
+                      <dxl:Cost StartupCost="0" TotalCost="1724.003938" Rows="2.000000" Width="24"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="43" Alias="coalesce">
@@ -832,7 +829,7 @@
                     <dxl:OneTimeFilter/>
                     <dxl:HashJoin JoinType="Left">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="1724.003689" Rows="2.000000" Width="24"/>
+                        <dxl:Cost StartupCost="0" TotalCost="1724.003922" Rows="2.000000" Width="24"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="30" Alias="s1">
@@ -859,7 +856,7 @@
                       </dxl:HashCondList>
                       <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="1293.002612" Rows="2.000000" Width="24"/>
+                          <dxl:Cost StartupCost="0" TotalCost="1293.002846" Rows="2.000000" Width="24"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="30" Alias="s1">
@@ -881,7 +878,7 @@
                         </dxl:HashExprList>
                         <dxl:Result>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="1293.002462" Rows="2.000000" Width="24"/>
+                            <dxl:Cost StartupCost="0" TotalCost="1293.002695" Rows="2.000000" Width="24"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="30" Alias="s1">
@@ -929,7 +926,7 @@
                           <dxl:OneTimeFilter/>
                           <dxl:HashJoin JoinType="LeftAntiSemiJoinNotIn">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="1293.002414" Rows="2.000000" Width="24"/>
+                              <dxl:Cost StartupCost="0" TotalCost="1293.002447" Rows="2.000000" Width="24"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="0" Alias="id">
@@ -1045,7 +1042,7 @@
                                       </dxl:Comparison>
                                     </dxl:And>
                                   </dxl:Filter>
-                                  <dxl:TableDescriptor Mdid="0.368659.1.0" TableName="t1">
+                                  <dxl:TableDescriptor Mdid="6.368659.1.0" TableName="t1">
                                     <dxl:Columns>
                                       <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11" ColWidth="7"/>
                                       <dxl:Column ColId="2" Attno="3" ColName="att" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="1"/>
@@ -1118,7 +1115,7 @@
                                       </dxl:Comparison>
                                     </dxl:And>
                                   </dxl:Filter>
-                                  <dxl:TableDescriptor Mdid="0.368659.1.0" TableName="t1">
+                                  <dxl:TableDescriptor Mdid="6.368659.1.0" TableName="t1">
                                     <dxl:Columns>
                                       <dxl:Column ColId="10" Attno="1" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11" ColWidth="7"/>
                                       <dxl:Column ColId="11" Attno="2" ColName="descr" TypeMdid="0.1042.1.0" TypeModifier="179" ColWidth="175"/>
@@ -1137,7 +1134,7 @@
                             </dxl:HashJoin>
                             <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="431.000262" Rows="3.000000" Width="8"/>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000296" Rows="3.000000" Width="8"/>
                               </dxl:Properties>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="29" Alias="btrim">
@@ -1148,7 +1145,7 @@
                               <dxl:SortingColumnList/>
                               <dxl:Result>
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="431.000119" Rows="1.000000" Width="8"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="431.000152" Rows="1.000000" Width="8"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="29" Alias="btrim">
@@ -1193,7 +1190,7 @@
                                       </dxl:Comparison>
                                     </dxl:And>
                                   </dxl:Filter>
-                                  <dxl:TableDescriptor Mdid="0.368662.1.0" TableName="t2">
+                                  <dxl:TableDescriptor Mdid="6.368662.1.0" TableName="t2">
                                     <dxl:Columns>
                                       <dxl:Column ColId="20" Attno="1" ColName="id2" TypeMdid="0.1042.1.0" TypeModifier="11" ColWidth="7"/>
                                       <dxl:Column ColId="21" Attno="2" ColName="att2" TypeMdid="0.1042.1.0" TypeModifier="5" ColWidth="1"/>
@@ -1249,7 +1246,7 @@
                               <dxl:ConstValue TypeMdid="0.1114.1.0" Value="ACBkc/fmgAM=" DoubleValue="252455529600000000.000000"/>
                             </dxl:Comparison>
                           </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.368665.1.0" TableName="t3">
+                          <dxl:TableDescriptor Mdid="6.368665.1.0" TableName="t3">
                             <dxl:Columns>
                               <dxl:Column ColId="33" Attno="1" ColName="id3" TypeMdid="0.20.1.0" ColWidth="8"/>
                               <dxl:Column ColId="34" Attno="2" ColName="desc3" TypeMdid="0.1043.1.0" TypeModifier="54" ColWidth="50"/>

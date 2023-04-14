@@ -151,7 +151,7 @@
       <dxl:ColumnStatistics Mdid="1.156718.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.156718.1.1.4" Name="xmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.156718.1.1" Name="x" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.156718.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.156718.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -185,7 +185,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -236,7 +235,7 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+            <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -395,7 +394,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+                  <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

@@ -1,10 +1,25 @@
 -- start_matchsubs
 -- m/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/
 -- s/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/xxx xx xx xx:xx:xx xxxx"/
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory: \d+kB/
+-- s/Memory: \d+kB/Memory: ###kB/
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
+-- m/segment \d+/
+-- s/segment \d+/segment ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 
 create schema bfv_partition_plans;
 set search_path=bfv_partition_plans;
+SET optimizer_trace_fallback=on;
 
 --
 -- Initial setup for all the partitioning test for this suite
@@ -185,52 +200,6 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.
 drop table if exists mpp23288;
 set optimizer_enable_broadcast_nestloop_outer_child=off;
 -- end_ignore
-
-
---
--- Tests if DynamicIndexScan sets tuple descriptor of the planstate->ps_ResultTupleSlot
---
-
--- SETUP
--- start_ignore
-drop table if exists mpp24151_t;
-drop table if exists mpp24151_pt;
--- end_ignore
-
-create table mpp24151_t(dist int, tid int, t1 text, t2 text);
-create table mpp24151_pt(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
-DISTRIBUTED BY (dist)
-PARTITION BY RANGE(ptid) 
-          (
-          START (0) END (5) EVERY (1),
-          DEFAULT PARTITION junk_data
-          )
-;
-create index pt1_idx on mpp24151_pt using btree (pt1);
-create index ptid_idx on mpp24151_pt using btree (ptid);
-insert into mpp24151_pt select i, 'hello' || 0, 'world', 'drop this', i % 6 from generate_series(0,100)i;
-insert into mpp24151_pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(0,200000)i;
-
-insert into mpp24151_t select i, i % 6, 'hello' || i, 'bar' from generate_series(0,10)i;
-analyze mpp24151_pt;
-analyze mpp24151_t;
-
--- TEST
-set optimizer_enable_dynamictablescan = off;
-
--- GPDB_12_MERGE_FIXME: With the big refactoring t how Partition Selectors are
--- implemented during the v12 merge, I'm not sure if this test is testing anything
--- useful anymore. And/or it redundant with the tests in 'dpe'?
-select count_operator('select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = E''hello0'';','->  Partition Selector');
-select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
-
--- CLEANUP
-drop index ptid_idx;
-drop index pt1_idx;
-drop table if exists mpp24151_t;
-drop table if exists mpp24151_pt;
-reset optimizer_enable_dynamictablescan;
-
 
 --
 -- No DPE (Dynamic Partition Elimination) on second child of a union under a join
@@ -628,6 +597,32 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 
 drop table mpp6247_bar;
 drop table mpp6247_foo;
+
+-- Validate that basic DELETE on partition table with index functions properly
+
+CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);
+
+INSERT INTO delete_from_indexed_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+
+EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
+DELETE FROM delete_from_indexed_pt WHERE b=1;
+
+SELECT * FROM delete_from_indexed_pt;
+
+-- Validate that basic DELETE on partition table using DPE functions properly
+CREATE TABLE delete_from_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+CREATE TABLE t(a int);
+
+INSERT INTO delete_from_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+INSERT INTO t VALUES (1);
+
+ANALYZE delete_from_pt, t;
+EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt WHERE b IN (SELECT b FROM delete_from_pt, t WHERE t.a=delete_from_pt.b);
+
+SELECT * FROM delete_from_pt order by a;
+
+RESET optimizer_trace_fallback;
 
 -- CLEANUP
 -- start_ignore

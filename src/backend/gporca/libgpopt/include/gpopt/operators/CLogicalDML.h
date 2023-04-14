@@ -40,7 +40,6 @@ public:
 		EdmlSentinel
 	};
 
-	static const WCHAR m_rgwszDml[EdmlSentinel][10];
 
 private:
 	// dml operator
@@ -58,17 +57,14 @@ private:
 	// action column
 	CColRef *m_pcrAction;
 
-	// table oid column
-	CColRef *m_pcrTableOid;
-
 	// ctid column
 	CColRef *m_pcrCtid;
 
 	// segmentId column
 	CColRef *m_pcrSegmentId;
 
-	// tuple oid column if one exists
-	CColRef *m_pcrTupleOid;
+	// Split Update
+	BOOL m_fSplit;
 
 public:
 	CLogicalDML(const CLogicalDML &) = delete;
@@ -79,8 +75,8 @@ public:
 	// ctor
 	CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 				CTableDescriptor *ptabdesc, CColRefArray *colref_array,
-				CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrTableOid,
-				CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid);
+				CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrCtid,
+				CColRef *pcrSegmentId, BOOL fSplit);
 
 	// dtor
 	~CLogicalDML() override;
@@ -127,13 +123,6 @@ public:
 		return m_pcrAction;
 	}
 
-	// table oid column
-	CColRef *
-	PcrTableOid() const
-	{
-		return m_pcrTableOid;
-	}
-
 	// ctid column
 	CColRef *
 	PcrCtid() const
@@ -155,11 +144,11 @@ public:
 		return m_ptabdesc;
 	}
 
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
+	// Is update using split
+	BOOL
+	FSplit() const
 	{
-		return m_pcrTupleOid;
+		return m_fSplit;
 	}
 
 	// operator specific hash function
@@ -253,6 +242,9 @@ public:
 
 	// debug print
 	IOstream &OsPrint(IOstream &) const override;
+
+	// Helper function to print DML operator type.
+	static void PrintOperatorType(IOstream &os, EDMLOperator, BOOL fSplit);
 
 };	// class CLogicalDML
 }  // namespace gpopt

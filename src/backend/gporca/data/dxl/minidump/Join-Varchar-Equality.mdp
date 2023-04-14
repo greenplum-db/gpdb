@@ -2405,7 +2405,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.353643.1.1" Name="shop" Rows="100.000000"/>
       <dxl:RelationStatistics Mdid="2.353591.1.1" Name="products" Rows="10412.000000"/>
-      <dxl:Relation Mdid="0.353643.1.1" Name="shop" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.353643.1.1" Name="shop" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="shop_code" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="6">
             <dxl:DefaultValue/>
@@ -2451,10 +2451,9 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.353591.1.1" Name="products" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
+      <dxl:Relation Mdid="6.353591.1.1" Name="products" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="prod_code" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="10">
             <dxl:DefaultValue/>
@@ -2506,7 +2505,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.353643.1.1.7" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -3194,7 +3192,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.328293.1.1" Name="calendar" Rows="10683.000000"/>
-      <dxl:Relation Mdid="0.328293.1.1" Name="calendar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.328293.1.1" Name="calendar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="ymd" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3234,11 +3232,10 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.328475.1.1" Name="fact_sales" Rows="15255100416.000000"/>
-      <dxl:Relation Mdid="0.328475.1.1" Name="fact_sales" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" PartitionColumns="0">
+      <dxl:Relation Mdid="6.328475.1.1" Name="fact_sales" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" PartitionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3272,16 +3269,15 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.328475001.1.1"/>
-          <dxl:Partition Mdid="0.328475002.1.1"/>
-          <dxl:Partition Mdid="0.328475003.1.1"/>
-          <dxl:Partition Mdid="0.328475004.1.1"/>
+          <dxl:Partition Mdid="6.328475001.1.1"/>
+          <dxl:Partition Mdid="6.328475002.1.1"/>
+          <dxl:Partition Mdid="6.328475003.1.1"/>
+          <dxl:Partition Mdid="6.328475004.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.328475001.1.1" Name="fact_sales_prt_1" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475001.1.1" Name="fact_sales_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3315,7 +3311,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -3333,7 +3328,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.328475002.1.1" Name="fact_sales_prt_2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475002.1.1" Name="fact_sales_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3367,7 +3362,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -3385,7 +3379,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.328475003.1.1" Name="fact_sales_prt_3" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475003.1.1" Name="fact_sales_prt_3" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3419,7 +3413,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -3437,7 +3430,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.328475004.1.1" Name="fact_sales_prt_4" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.328475004.1.1" Name="fact_sales_prt_4" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3471,7 +3464,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -3941,7 +3933,7 @@
         </dxl:ProjList>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.328475.1.1" TableName="fact_sales">
+            <dxl:TableDescriptor Mdid="6.328475.1.1" TableName="fact_sales">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
@@ -3957,7 +3949,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.353591.1.1" TableName="products">
+            <dxl:TableDescriptor Mdid="6.353591.1.1" TableName="products">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
                 <dxl:Column ColId="12" Attno="2" ColName="prod_name" TypeMdid="0.1043.1.0" ColWidth="100"/>
@@ -3979,7 +3971,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.328293.1.1" TableName="calendar">
+            <dxl:TableDescriptor Mdid="6.328293.1.1" TableName="calendar">
               <dxl:Columns>
                 <dxl:Column ColId="27" Attno="1" ColName="ymd" TypeMdid="0.1082.1.0"/>
                 <dxl:Column ColId="28" Attno="2" ColName="year" TypeMdid="0.1042.1.0" ColWidth="4"/>
@@ -3997,7 +3989,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.353643.1.1" TableName="shop">
+            <dxl:TableDescriptor Mdid="6.353643.1.1" TableName="shop">
               <dxl:Columns>
                 <dxl:Column ColId="39" Attno="1" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
                 <dxl:Column ColId="40" Attno="2" ColName="shop_name" TypeMdid="0.1043.1.0" ColWidth="40"/>
@@ -4052,7 +4044,7 @@
     <dxl:Plan Id="0" SpaceSize="80990">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3422679.529071" Rows="19136.250000" Width="31"/>
+          <dxl:Cost StartupCost="0" TotalCost="3422679.547303" Rows="19136.250000" Width="31"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="27" Alias="year">
@@ -4072,7 +4064,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3422676.865496" Rows="19136.250000" Width="31"/>
+            <dxl:Cost StartupCost="0" TotalCost="3422676.883729" Rows="19136.250000" Width="31"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="27" Alias="year">
@@ -4092,7 +4084,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="3422676.865496" Rows="19136.250000" Width="31"/>
+              <dxl:Cost StartupCost="0" TotalCost="3422676.883729" Rows="19136.250000" Width="31"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="27"/>
@@ -4113,7 +4105,7 @@
               <dxl:ProjElem ColId="52" Alias="sales">
                 <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="53" ColName="ColRef_0053" TypeMdid="0.20.1.0"/>
+                    <dxl:Ident ColId="53" ColName="ColRef_0053" TypeMdid="0.20.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -4127,7 +4119,7 @@
             <dxl:Filter/>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="3422671.973515" Rows="19136.250000" Width="34"/>
+                <dxl:Cost StartupCost="0" TotalCost="3422671.991747" Rows="19136.250000" Width="34"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="27" Alias="year">
@@ -4164,7 +4156,7 @@
               </dxl:HashExprList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="3422670.955275" Rows="19136.250000" Width="34"/>
+                  <dxl:Cost StartupCost="0" TotalCost="3422670.973507" Rows="19136.250000" Width="34"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="27" Alias="year">
@@ -4187,7 +4179,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="3422670.955275" Rows="19136.250000" Width="34"/>
+                    <dxl:Cost StartupCost="0" TotalCost="3422670.973507" Rows="19136.250000" Width="34"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns>
                     <dxl:GroupingColumn ColId="27"/>
@@ -4199,7 +4191,7 @@
                     <dxl:ProjElem ColId="53" Alias="ColRef_0053">
                       <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                         <dxl:ValuesList ParamType="aggargs">
-                        <dxl:Ident ColId="6" ColName="sales" TypeMdid="0.23.1.0"/>
+                          <dxl:Ident ColId="6" ColName="sales" TypeMdid="0.23.1.0"/>
                         </dxl:ValuesList>
                         <dxl:ValuesList ParamType="aggdirectargs"/>
                         <dxl:ValuesList ParamType="aggorder"/>
@@ -4222,7 +4214,7 @@
                   <dxl:Filter/>
                   <dxl:HashJoin JoinType="Inner">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="2087869.893271" Rows="5288759693.059181" Width="30"/>
+                      <dxl:Cost StartupCost="0" TotalCost="2087869.911503" Rows="5288759693.059181" Width="30"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="6" Alias="sales">
@@ -4284,22 +4276,10 @@
                           </dxl:Cast>
                         </dxl:Comparison>
                       </dxl:HashCondList>
-                      <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="10">
+                      <dxl:DynamicTableScan SelectorIds="10">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
                         </dxl:Properties>
-                        <dxl:TableDescriptor Mdid="0.328475.1.1" TableName="fact_sales">
-                          <dxl:Columns>
-                            <dxl:Column ColId="0" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0"/>
-                            <dxl:Column ColId="1" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="2" Attno="3" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
-                            <dxl:Column ColId="3" Attno="4" ColName="cust_code" TypeMdid="0.1043.1.0" ColWidth="14"/>
-                            <dxl:Column ColId="6" Attno="7" ColName="sales" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="7" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                            <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                            <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="0" Alias="sales_date">
                             <dxl:Ident ColId="0" ColName="sales_date" TypeMdid="0.1082.1.0"/>
@@ -4315,143 +4295,25 @@
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="54" Alias="sales_date">
-                              <dxl:Ident ColId="54" ColName="sales_date" TypeMdid="0.1082.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="55" Alias="shop_code">
-                              <dxl:Ident ColId="55" ColName="shop_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="56" Alias="prod_code">
-                              <dxl:Ident ColId="56" ColName="prod_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="60" Alias="sales">
-                              <dxl:Ident ColId="60" ColName="sales" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.328475001.1.1" TableName="fact_sales_prt_1">
-                            <dxl:Columns>
-                              <dxl:Column ColId="54" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="55" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="56" Attno="3" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
-                              <dxl:Column ColId="57" Attno="4" ColName="cust_code" TypeMdid="0.1043.1.0" ColWidth="14"/>
-                              <dxl:Column ColId="58" Attno="5" ColName="receipt_no" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="59" Attno="6" ColName="receipt_subno" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="60" Attno="7" ColName="sales" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="61" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="62" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="63" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="64" Alias="sales_date">
-                              <dxl:Ident ColId="64" ColName="sales_date" TypeMdid="0.1082.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="65" Alias="shop_code">
-                              <dxl:Ident ColId="65" ColName="shop_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="66" Alias="prod_code">
-                              <dxl:Ident ColId="66" ColName="prod_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="70" Alias="sales">
-                              <dxl:Ident ColId="70" ColName="sales" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.328475002.1.1" TableName="fact_sales_prt_2">
-                            <dxl:Columns>
-                              <dxl:Column ColId="64" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="65" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="66" Attno="3" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
-                              <dxl:Column ColId="67" Attno="4" ColName="cust_code" TypeMdid="0.1043.1.0" ColWidth="14"/>
-                              <dxl:Column ColId="68" Attno="5" ColName="receipt_no" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="69" Attno="6" ColName="receipt_subno" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="70" Attno="7" ColName="sales" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="71" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="72" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="73" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="74" Alias="sales_date">
-                              <dxl:Ident ColId="74" ColName="sales_date" TypeMdid="0.1082.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="75" Alias="shop_code">
-                              <dxl:Ident ColId="75" ColName="shop_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="76" Alias="prod_code">
-                              <dxl:Ident ColId="76" ColName="prod_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="80" Alias="sales">
-                              <dxl:Ident ColId="80" ColName="sales" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.328475003.1.1" TableName="fact_sales_prt_3">
-                            <dxl:Columns>
-                              <dxl:Column ColId="74" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="75" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="76" Attno="3" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
-                              <dxl:Column ColId="77" Attno="4" ColName="cust_code" TypeMdid="0.1043.1.0" ColWidth="14"/>
-                              <dxl:Column ColId="78" Attno="5" ColName="receipt_no" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="79" Attno="6" ColName="receipt_subno" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="80" Attno="7" ColName="sales" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="81" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="82" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="83" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="96421.988429" Rows="5288759693.059181" Width="26"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="84" Alias="sales_date">
-                              <dxl:Ident ColId="84" ColName="sales_date" TypeMdid="0.1082.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="85" Alias="shop_code">
-                              <dxl:Ident ColId="85" ColName="shop_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="86" Alias="prod_code">
-                              <dxl:Ident ColId="86" ColName="prod_code" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="90" Alias="sales">
-                              <dxl:Ident ColId="90" ColName="sales" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.328475004.1.1" TableName="fact_sales_prt_4">
-                            <dxl:Columns>
-                              <dxl:Column ColId="84" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="85" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="86" Attno="3" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
-                              <dxl:Column ColId="87" Attno="4" ColName="cust_code" TypeMdid="0.1043.1.0" ColWidth="14"/>
-                              <dxl:Column ColId="88" Attno="5" ColName="receipt_no" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="89" Attno="6" ColName="receipt_subno" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                              <dxl:Column ColId="90" Attno="7" ColName="sales" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="91" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="92" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="93" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:Append>
+                        <dxl:Partitions>
+                          <dxl:Partition Mdid="6.328475001.1.1"/>
+                          <dxl:Partition Mdid="6.328475002.1.1"/>
+                          <dxl:Partition Mdid="6.328475003.1.1"/>
+                          <dxl:Partition Mdid="6.328475004.1.1"/>
+                        </dxl:Partitions>
+                        <dxl:TableDescriptor Mdid="6.328475.1.1" TableName="fact_sales">
+                          <dxl:Columns>
+                            <dxl:Column ColId="0" Attno="1" ColName="sales_date" TypeMdid="0.1082.1.0"/>
+                            <dxl:Column ColId="1" Attno="2" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
+                            <dxl:Column ColId="2" Attno="3" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
+                            <dxl:Column ColId="3" Attno="4" ColName="cust_code" TypeMdid="0.1043.1.0" ColWidth="14"/>
+                            <dxl:Column ColId="6" Attno="7" ColName="sales" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="7" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                            <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                            <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                          </dxl:Columns>
+                        </dxl:TableDescriptor>
+                      </dxl:DynamicTableScan>
                       <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="435.650572" Rows="20824.000000" Width="11"/>
@@ -4473,7 +4335,7 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.353591.1.1" TableName="products">
+                          <dxl:TableDescriptor Mdid="6.353591.1.1" TableName="products">
                             <dxl:Columns>
                               <dxl:Column ColId="10" Attno="1" ColName="prod_code" TypeMdid="0.1043.1.0" ColWidth="10"/>
                               <dxl:Column ColId="19" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -4488,9 +4350,9 @@
                         </dxl:TableScan>
                       </dxl:BroadcastMotion>
                     </dxl:HashJoin>
-                    <dxl:PartitionSelector RelationMdid="0.328475.1.1" SelectorId="10" ScanId="1" Partitions="0,1,2,3">
+                    <dxl:PartitionSelector RelationMdid="6.328475.1.1" SelectorId="10" ScanId="1" Partitions="0,1,2,3">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="1552.578227" Rows="607744.000000" Width="30"/>
+                        <dxl:Cost StartupCost="0" TotalCost="1552.596459" Rows="607744.000000" Width="30"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4517,7 +4379,7 @@
                       </dxl:PartFilterExpr>
                       <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="1552.578227" Rows="607744.000000" Width="30"/>
+                          <dxl:Cost StartupCost="0" TotalCost="1552.596459" Rows="607744.000000" Width="30"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4540,7 +4402,7 @@
                         <dxl:SortingColumnList/>
                         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="1313.962739" Rows="303872.000000" Width="30"/>
+                            <dxl:Cost StartupCost="0" TotalCost="1313.980971" Rows="303872.000000" Width="30"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4590,7 +4452,7 @@
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="0.353643.1.1" TableName="shop">
+                              <dxl:TableDescriptor Mdid="6.353643.1.1" TableName="shop">
                                 <dxl:Columns>
                                   <dxl:Column ColId="38" Attno="1" ColName="shop_code" TypeMdid="0.1043.1.0" ColWidth="6"/>
                                   <dxl:Column ColId="39" Attno="2" ColName="shop_name" TypeMdid="0.1043.1.0" ColWidth="40"/>
@@ -4605,9 +4467,9 @@
                               </dxl:TableDescriptor>
                             </dxl:TableScan>
                           </dxl:BroadcastMotion>
-                          <dxl:TableScan>
+                          <dxl:Materialize Eager="false">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.551944" Rows="3038.720000" Width="12"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.570177" Rows="3038.720000" Width="12"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="26" Alias="ymd">
@@ -4620,34 +4482,51 @@
                                 <dxl:Ident ColId="29" ColName="month" TypeMdid="0.1042.1.0"/>
                               </dxl:ProjElem>
                             </dxl:ProjList>
-                            <dxl:Filter>
-                              <dxl:And>
-                                <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1061.1.0">
-                                  <dxl:Ident ColId="28" ColName="ym" TypeMdid="0.1042.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACjE5ODYwMQ==" LintValue="266216246"/>
-                                </dxl:Comparison>
-                                <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.1059.1.0">
+                            <dxl:Filter/>
+                            <dxl:TableScan>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="431.551944" Rows="3038.720000" Width="12"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="26" Alias="ymd">
+                                  <dxl:Ident ColId="26" ColName="ymd" TypeMdid="0.1082.1.0"/>
+                                </dxl:ProjElem>
+                                <dxl:ProjElem ColId="27" Alias="year">
                                   <dxl:Ident ColId="27" ColName="year" TypeMdid="0.1042.1.0"/>
-                                  <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACDE5OTc=" LintValue="123134828"/>
-                                </dxl:Comparison>
-                              </dxl:And>
-                            </dxl:Filter>
-                            <dxl:TableDescriptor Mdid="0.328293.1.1" TableName="calendar">
-                              <dxl:Columns>
-                                <dxl:Column ColId="26" Attno="1" ColName="ymd" TypeMdid="0.1082.1.0"/>
-                                <dxl:Column ColId="27" Attno="2" ColName="year" TypeMdid="0.1042.1.0" ColWidth="4"/>
-                                <dxl:Column ColId="28" Attno="3" ColName="ym" TypeMdid="0.1042.1.0" ColWidth="7"/>
-                                <dxl:Column ColId="29" Attno="4" ColName="month" TypeMdid="0.1042.1.0" ColWidth="2"/>
-                                <dxl:Column ColId="31" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                <dxl:Column ColId="32" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                <dxl:Column ColId="33" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                <dxl:Column ColId="34" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                <dxl:Column ColId="35" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                <dxl:Column ColId="36" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                <dxl:Column ColId="37" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
+                                </dxl:ProjElem>
+                                <dxl:ProjElem ColId="29" Alias="month">
+                                  <dxl:Ident ColId="29" ColName="month" TypeMdid="0.1042.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter>
+                                <dxl:And>
+                                  <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1061.1.0">
+                                    <dxl:Ident ColId="28" ColName="ym" TypeMdid="0.1042.1.0"/>
+                                    <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACjE5ODYwMQ==" LintValue="266216246"/>
+                                  </dxl:Comparison>
+                                  <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.1059.1.0">
+                                    <dxl:Ident ColId="27" ColName="year" TypeMdid="0.1042.1.0"/>
+                                    <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAACDE5OTc=" LintValue="123134828"/>
+                                  </dxl:Comparison>
+                                </dxl:And>
+                              </dxl:Filter>
+                              <dxl:TableDescriptor Mdid="6.328293.1.1" TableName="calendar">
+                                <dxl:Columns>
+                                  <dxl:Column ColId="26" Attno="1" ColName="ymd" TypeMdid="0.1082.1.0"/>
+                                  <dxl:Column ColId="27" Attno="2" ColName="year" TypeMdid="0.1042.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="28" Attno="3" ColName="ym" TypeMdid="0.1042.1.0" ColWidth="7"/>
+                                  <dxl:Column ColId="29" Attno="4" ColName="month" TypeMdid="0.1042.1.0" ColWidth="2"/>
+                                  <dxl:Column ColId="31" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                  <dxl:Column ColId="32" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                  <dxl:Column ColId="33" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                  <dxl:Column ColId="34" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                  <dxl:Column ColId="35" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                  <dxl:Column ColId="36" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                  <dxl:Column ColId="37" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                </dxl:Columns>
+                              </dxl:TableDescriptor>
+                            </dxl:TableScan>
+                          </dxl:Materialize>
                         </dxl:NestedLoopJoin>
                       </dxl:BroadcastMotion>
                     </dxl:PartitionSelector>

@@ -4,9 +4,9 @@ title: Loading Data with gpload
 
 The Greenplum `gpload` utility loads data using readable external tables and the Greenplum parallel file server \(gpfdist or `gpfdists`\). It handles parallel file-based external table setup and allows users to configure their data format, external table definition, and gpfdist or `gpfdists` setup in a single configuration file.
 
-**Note:** `gpfdist` and `gpload` are compatible only with the Greenplum Database major version in which they are shipped. For example, a `gpfdist` utility that is installed with Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.
+> **Note** `gpfdist` and `gpload` are compatible only with the Greenplum Database major version in which they are shipped. For example, a `gpfdist` utility that is installed with Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.
 
-**Note:** `MERGE` and `UPDATE` operations are not supported if the target table column name is a reserved keyword, has capital letters, or includes any character that requires quotes \(" "\) to identify the column.
+> **Note** `MERGE` and `UPDATE` operations are not supported if the target table column name is a reserved keyword, has capital letters, or includes any character that requires quotes \(" "\) to identify the column.
 
 ## <a id="du168147"></a>To use gpload 
 
@@ -25,7 +25,7 @@ The Greenplum `gpload` utility loads data using readable external tables and the
     VERSION: 1.0.0.1
     DATABASE: ops
     USER: gpadmin
-    HOST: mdw-1
+    HOST: cdw-1
     PORT: 5432
     GPLOAD:
        INPUT:
@@ -67,5 +67,5 @@ The Greenplum `gpload` utility loads data using readable external tables and the
     ```
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

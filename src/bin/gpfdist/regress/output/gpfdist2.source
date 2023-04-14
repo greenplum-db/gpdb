@@ -960,7 +960,7 @@ LOCATION
 FORMAT 'text'
 (
         DELIMITER AS ','
-)
+) LOG ERRORS SEGMENT REJECT LIMIT 2
 ;
 SELECT count(*) FROM ext_test;
 ERROR:  gpfdist error - line too long in file @abs_srcdir@/data/gpfdist2/longline.txt near (0 bytes)  (seg1 slice1 172.17.0.4:25433 pid=36416)

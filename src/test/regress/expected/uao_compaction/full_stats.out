@@ -26,6 +26,8 @@ SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats';
  uao_full_stats |        85
 (1 row)
 
+-- Compaction is always triggered in VACUUM FULL, expecting
+-- reltuples of both table and index are equal.
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats_index';
        relname        | reltuples 
 ----------------------+-----------

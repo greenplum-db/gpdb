@@ -16,5 +16,5 @@ If the `COPY` operation does not reach the error limit, Greenplum loads all corr
 
 See [Viewing Bad Rows in the Error Log](g-viewing-bad-rows-in-the-error-table-or-error-log.html) for information about investigating error rows.
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

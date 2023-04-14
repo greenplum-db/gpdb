@@ -40,6 +40,7 @@ CDrvdPropScalar::CDrvdPropScalar(CMemoryPool *mp)
 	  m_fHasNonScalarFunction(false),
 	  m_ulDistinctAggs(0),
 	  m_fHasMultipleDistinctAggs(false),
+	  m_ulOrderedAggs(0),
 	  m_fHasScalarArrayCmp(false),
 	  m_is_complete(false)
 {
@@ -98,9 +99,13 @@ CDrvdPropScalar::Derive(CMemoryPool *, CExpressionHandle &exprhdl,
 
 	DeriveTotalDistinctAggs(exprhdl);
 
+	DeriveHasScalarFuncProject(exprhdl);
+
 	DeriveHasMultipleDistinctAggs(exprhdl);
 
 	DeriveHasScalarArrayCmp(exprhdl);
+
+	DeriveContainsOnlyReplicationSafeAggFuncs(exprhdl);
 
 	m_is_complete = true;
 }
@@ -355,6 +360,26 @@ CDrvdPropScalar::DeriveTotalDistinctAggs(CExpressionHandle &exprhdl)
 	return m_ulDistinctAggs;
 }
 
+BOOL
+CDrvdPropScalar::HasScalarFuncProject() const
+{
+	GPOS_RTL_ASSERT(IsComplete());
+	return m_fHasScalarFunc;
+}
+
+BOOL
+CDrvdPropScalar::DeriveHasScalarFuncProject(CExpressionHandle &exprhdl)
+{
+	if (!m_is_prop_derived->ExchangeSet(EdptFHasScalarFuncProject))
+	{
+		if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid())
+		{
+			m_fHasScalarFunc = CScalarProjectList::FHasScalarFunc(exprhdl);
+		}
+	}
+	return m_fHasScalarFunc;
+}
+
 // does operator define Distinct Aggs on different arguments, only applicable to project lists
 BOOL
 CDrvdPropScalar::HasMultipleDistinctAggs() const
@@ -393,6 +418,41 @@ CDrvdPropScalar::DeriveHasScalarArrayCmp(CExpressionHandle &exprhdl)
 		m_fHasScalarArrayCmp = popScalar->FHasScalarArrayCmp(exprhdl);
 	}
 	return m_fHasScalarArrayCmp;
+}
+
+ULONG
+CDrvdPropScalar::DeriveTotalOrderedAggs(CExpressionHandle &exprhdl)
+{
+	if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid() &&
+		!m_is_prop_derived->ExchangeSet(EdptUlOrderedAggs))
+	{
+		m_ulOrderedAggs = CScalarProjectList::UlOrderedAggs(exprhdl);
+	}
+	return m_ulOrderedAggs;
+}
+
+BOOL
+CDrvdPropScalar::ContainsOnlyReplicationSafeAggFuncs() const
+{
+	GPOS_RTL_ASSERT(IsComplete());
+	return m_fContainsOnlyReplicationSafeAggFuncs;
+}
+
+BOOL
+CDrvdPropScalar::DeriveContainsOnlyReplicationSafeAggFuncs(
+	CExpressionHandle &exprhdl)
+{
+	if (!m_is_prop_derived->ExchangeSet(
+			EdptFContainsOnlyReplicationSafeAggFuncs))
+	{
+		if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid())
+		{
+			m_fContainsOnlyReplicationSafeAggFuncs =
+				CScalarProjectList::FContainsOnlyReplicationSafeAggFuncs(
+					exprhdl);
+		}
+	}
+	return m_fContainsOnlyReplicationSafeAggFuncs;
 }
 
 

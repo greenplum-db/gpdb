@@ -49,10 +49,11 @@ extern void SS_make_initplan_from_plan(PlannerInfo *root,
 									   Param *prm, bool is_initplan_func_sublink);
 
 extern bool IsSubqueryCorrelated(Query *sq);
-extern bool IsSubqueryMultiLevelCorrelated(Query *sq);
+extern void check_multi_subquery_correlated(PlannerInfo *root, Var *var);
 
 extern List *generate_subquery_vars(PlannerInfo *root, List *tlist,
 					   Index varno);
 extern bool QueryHasDistributedRelation(Query *q, bool recursive);
+extern bool contain_outer_selfref(Node *node);
 
 #endif							/* SUBSELECT_H */

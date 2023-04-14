@@ -24,7 +24,8 @@
 # "postgres -c log_connections=on".  Some parameters can be changed at run time
 # with the "SET" SQL command.
 #
-# Memory units:  kB = kilobytes        Time units:  ms  = milliseconds
+# Memory units:  B  = bytes            Time units:  us  = microseconds
+#                kB = kilobytes                     ms  = milliseconds
 #                MB = megabytes                     s   = seconds
 #                GB = gigabytes                     min = minutes
 #                TB = terabytes                     h   = hours
@@ -61,14 +62,14 @@
 					# defaults to '*', '*' = all
 					# (change requires restart)
 
-#port = 5432				# sets the database listener port for 
-      					# a Greenplum instance. The master and 
-					# each segment has its own port number. 
+#port = 5432				# sets the database listener port for
+      					# a Greenplum instance. The master and
+					# each segment has its own port number.
 # note: Port numbers for the Greenplum system must also be changed in the
-# gp_configuration catalog. See the Greenplum Database Administrator Guide 
+# gp_configuration catalog. See the Greenplum Database Administrator Guide
 # for instructions!
 #
-# WARNING: YOU MUST SHUT DOWN YOUR GREENPLUM SYSTEM BEFORE CHANGING 
+# WARNING: YOU MUST SHUT DOWN YOUR GREENPLUM SYSTEM BEFORE CHANGING
 # THE PORT NUMBER IN THIS FILE.
 
 #max_connections = 200			# (change requires restart)
@@ -102,7 +103,7 @@
 #db_user_namespace = off
 
 # GSSAPI using Kerberos
-#krb_server_keyfile = ''
+#krb_server_keyfile = 'FILE:${sysconfdir}/krb5.keytab'
 #krb_caseins_users = off
 
 # - SSL -
@@ -203,7 +204,7 @@ max_prepared_transactions = 250		# can be 0 or more
 #wal_sync_method = fsync		# the default is the first option
 					# supported by the operating system:
 					#   open_datasync
-					#   fdatasync (default on Linux)
+					#   fdatasync (default on Linux and FreeBSD)
 					#   fsync
 					#   fsync_writethrough
 					#   open_sync
@@ -288,7 +289,8 @@ max_prepared_transactions = 250		# can be 0 or more
 
 #max_wal_senders = 10		# max number of walsender processes
 				# (change requires restart)
-#wal_keep_segments = 0		# in logfile segments; 0 disables
+#wal_keep_size = 0		# in megabytes; 0 disables
+#max_slot_wal_keep_size = -1	# measured in bytes; -1 disables
 #wal_sender_timeout = 60s	# in milliseconds; 0 disables
 
 #max_replication_slots = 10	# max number of replication slots
@@ -374,7 +376,6 @@ max_prepared_transactions = 250		# can be 0 or more
 #gp_selectivity_damping_for_joins = off
 
 #gp_enable_sort_limit = on
-#gp_enable_sort_distinct = on
 
 # - Planner Cost Constants -
 
@@ -476,14 +477,10 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					#   fatal
 					#   panic (effectively off)
 
-#log_min_duration_statement = -1	# logs statements and their durations
-					# according to log_statement_sample_rate. -1 is disabled,
-					# 0 logs all statements, > 0 logs only statements running
-					# at least this number of milliseconds.
-
-#log_statement_sample_rate = 1.0	# Fraction of logged statements exceeding
-					# log_min_duration_statement to be logged.
-					# 1.0 logs all such statements, 0.0 never logs.
+#log_min_duration_statement = -1	# -1 is disabled, 0 logs all statements
+					# and their durations, > 0 logs only
+					# statements running at least this number
+					# of milliseconds
 
 #log_transaction_sample_rate = 0.0	# Fraction of transactions whose statements
 					# are logged regardless of their duration. 1.0 logs all
@@ -564,6 +561,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #track_activities = on
 #track_counts = off
 #track_io_timing = off
+#track_wal_io_timing = off
 #track_functions = none			# none, pl, all
 #track_activity_query_size = 1024	# (change requires restart)
 #stats_temp_directory = 'pg_stat_tmp'
@@ -608,6 +606,8 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #autovacuum_vacuum_cost_limit = -1	# default vacuum cost limit for
 					# autovacuum, -1 means use
 					# vacuum_cost_limit
+#gp_autovacuum_scope = 'catalog' # default to autovacuuming only catalog tables
+                    # 'catalog_ao_aux' # autovacuum catalog and append-optimized auxiliary tables
 
 #------------------------------------------------------------------------------
 # CLIENT CONNECTION DEFAULTS
@@ -628,6 +628,9 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #search_path = '"$user", public'	# schema names
 #row_security = on
 #default_tablespace = ''		# a tablespace name, '' uses the default
+#temp_tablespaces = ''			# a list of tablespace names, '' uses
+					# only default tablespace
+#default_table_access_method = 'heap'
 #check_function_bodies = on
 #default_transaction_isolation = 'read committed'
 #default_transaction_read_only = off
@@ -712,7 +715,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 #resource_select_only = on		# resource lock SELECT queries only.
 #resource_cleanup_gangs_on_wait = on	# Cleanup idle reader gangs before
 										# resource lockwait.
-gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing. 
+gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 									# eager_free, auto or none
 
 #---------------------------------------------------------------------------
@@ -720,10 +723,6 @@ gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing.
 #---------------------------------------------------------------------------
 #gp_external_enable_exec = on   # enable external tables with EXECUTE.
 
-#---------------------------------------------------------------------------
-# APPEND ONLY TABLES
-#---------------------------------------------------------------------------
-#gp_safefswritesize = 0   # minimum size for safe AO writes in a non-mature fs
 #------------------------------------------------------------------------------
 # VERSION AND PLATFORM COMPATIBILITY
 #------------------------------------------------------------------------------
@@ -781,12 +780,14 @@ gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
 #------------------------------------------------------------------------------
 
 # These options allow settings to be loaded from files other than the
-# default postgresql.conf.
+# default postgresql.conf.  Note that these are directives, not variable
+# assignments, so they can usefully be given more than once.
 
-#include_dir = ''			# include files ending in '.conf' from
+#include_dir = '...'			# include files ending in '.conf' from
 					# a directory, e.g., 'conf.d'
 #include_if_exists = ''			# include file only if it exists
 #include = 'special.conf'				# include file
+include = 'internal.auto.conf'		# GP_INTERNAL_AUTO_CONF_FILE_NAME which sets the gp_dbid
 
 
 #------------------------------------------------------------------------------

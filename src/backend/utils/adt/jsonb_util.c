@@ -14,9 +14,9 @@
 #include "postgres.h"
 
 #include "catalog/pg_collation.h"
+#include "common/hashfn.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
-#include "utils/hashutils.h"
 #include "utils/jsonb.h"
 #include "utils/memutils.h"
 #include "utils/varlena.h"
@@ -1728,14 +1728,6 @@ convertJsonbScalar(StringInfo buffer, JEntry *jentry, JsonbValue *scalarVal)
 			break;
 
 		case jbvNumeric:
-			/* replace numeric NaN with string "NaN" */
-			if (numeric_is_nan(scalarVal->val.numeric))
-			{
-				appendToBuffer(buffer, "NaN", 3);
-				*jentry = 3;
-				break;
-			}
-
 			numlen = VARSIZE_ANY(scalarVal->val.numeric);
 			padlen = padBufferToInt(buffer);
 

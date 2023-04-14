@@ -90,11 +90,7 @@
  * (if any) is passed using the standard fmgr mechanism, so that the estimator
  * function can fetch it with PG_GET_COLLATION().  Note, however, that all
  * statistics in pg_statistic are currently built using the relevant column's
- * collation.  Thus, in most cases where we are looking at statistics, we
- * should ignore the operator collation and use the stats entry's collation.
- * We expect that the error induced by doing this is usually not large enough
- * to justify complicating matters.  In any case, doing otherwise would yield
- * entirely garbage results for ordered stats data such as histograms.
+ * collation.
  *----------
  */
 
@@ -104,17 +100,17 @@
 #include <math.h>
 
 #include "access/brin.h"
+#include "access/brin_page.h"
 #include "access/gin.h"
 #include "access/table.h"
 #include "access/tableam.h"
-#include "catalog/index.h"
+#include "access/visibilitymap.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_statistic_ext.h"
-#include "executor/executor.h"
 #include "executor/nodeAgg.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -128,6 +124,7 @@
 #include "parser/parse_clause.h"
 #include "parser/parsetree.h"
 #include "statistics/statistics.h"
+#include "storage/bufmgr.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/datum.h"
@@ -135,6 +132,7 @@
 #include "utils/fmgroids.h"
 #include "utils/index_selfuncs.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 #include "utils/pg_locale.h"
 #include "utils/rel.h"
 #include "utils/selfuncs.h"
@@ -149,19 +147,23 @@
 #include "cdb/cdbvars.h"
 #include "optimizer/restrictinfo.h"
 
+/* source-code-compatibility hacks for pull_varnos() API change */
+#define pull_varnos(a,b) pull_varnos_new(a,b)
+#define NumRelids(a,b) NumRelids_new(a,b)
+
 /* Hooks for plugins to get control when we ask for stats */
 get_relation_stats_hook_type get_relation_stats_hook = NULL;
 get_index_stats_hook_type get_index_stats_hook = NULL;
 
 static double eqsel_internal(PG_FUNCTION_ARGS, bool negate);
-static double eqjoinsel_inner(Oid opfuncoid,
+static double eqjoinsel_inner(Oid opfuncoid, Oid collation,
 							  VariableStatData *vardata1, VariableStatData *vardata2,
 							  double nd1, double nd2,
 							  bool isdefault1, bool isdefault2,
 							  AttStatsSlot *sslot1, AttStatsSlot *sslot2,
 							  Form_pg_statistic stats1, Form_pg_statistic stats2,
 							  bool have_mcvs1, bool have_mcvs2);
-static double eqjoinsel_semi(Oid opfuncoid,
+static double eqjoinsel_semi(Oid opfuncoid, Oid collation,
 							 VariableStatData *vardata1, VariableStatData *vardata2,
 							 double nd1, double nd2,
 							 bool isdefault1, bool isdefault2,
@@ -197,11 +199,21 @@ static char *convert_string_datum(Datum value, Oid typid, Oid collid,
 static void examine_simple_variable(PlannerInfo *root, Var *var,
 									VariableStatData *vardata);
 static bool get_variable_range(PlannerInfo *root, VariableStatData *vardata,
-							   Oid sortop, Datum *min, Datum *max);
+							   Oid sortop, Oid collation,
+							   Datum *min, Datum *max);
 static bool get_actual_variable_range(PlannerInfo *root,
 									  VariableStatData *vardata,
-									  Oid sortop,
+									  Oid sortop, Oid collation,
 									  Datum *min, Datum *max);
+static bool get_actual_variable_endpoint(Relation heapRel,
+										 Relation indexRel,
+										 ScanDirection indexscandir,
+										 ScanKey scankeys,
+										 int16 typLen,
+										 bool typByVal,
+										 TupleTableSlot *tableslot,
+										 MemoryContext outercontext,
+										 Datum *endpointDatum);
 static RelOptInfo *find_join_input_rel(PlannerInfo *root, Relids relids);
 
 static void try_fetch_rel_stats(RangeTblEntry *rte, const char *attname,
@@ -234,6 +246,7 @@ eqsel_internal(PG_FUNCTION_ARGS, bool negate)
 	Oid			operator = PG_GETARG_OID(1);
 	List	   *args = (List *) PG_GETARG_POINTER(2);
 	int			varRelid = PG_GETARG_INT32(3);
+	Oid			collation = PG_GET_COLLATION();
 	VariableStatData vardata;
 	Node	   *other;
 	bool		varonleft;
@@ -267,10 +280,10 @@ eqsel_internal(PG_FUNCTION_ARGS, bool negate)
 	 * in the query.)
 	 */
 	if (IsA(other, Const))
-		selec = var_eq_const(&vardata, operator,
-							 ((Const *) other)->constvalue,
-							 ((Const *) other)->constisnull,
-							 varonleft, negate);
+		selec = var_eq_const_ext(&vardata, operator, collation,
+								 ((Const *) other)->constvalue,
+								 ((Const *) other)->constisnull,
+								 varonleft, negate);
 	else
 		selec = var_eq_non_const(&vardata, operator, other,
 								 varonleft, negate);
@@ -289,6 +302,16 @@ double
 var_eq_const(VariableStatData *vardata, Oid operator,
 			 Datum constval, bool constisnull,
 			 bool varonleft, bool negate)
+{
+	return var_eq_const_ext(vardata, operator, DEFAULT_COLLATION_OID,
+							constval, constisnull,
+							varonleft, negate);
+}
+
+double
+var_eq_const_ext(VariableStatData *vardata, Oid operator, Oid collation,
+				 Datum constval, bool constisnull,
+				 bool varonleft, bool negate)
 {
 	double		selec;
 	double		nullfrac = 0.0;
@@ -353,12 +376,12 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 				/* be careful to apply operator right way 'round */
 				if (varonleft)
 					match = DatumGetBool(FunctionCall2Coll(&eqproc,
-														   sslot.stacoll,
+														   collation,
 														   sslot.values[i],
 														   constval));
 				else
 					match = DatumGetBool(FunctionCall2Coll(&eqproc,
-														   sslot.stacoll,
+														   collation,
 														   constval,
 														   sslot.values[i]));
 				if (match)
@@ -555,6 +578,7 @@ neqsel(PG_FUNCTION_ARGS)
  */
 static double
 scalarineqsel(PlannerInfo *root, Oid operator, bool isgt, bool iseq,
+			  Oid collation,
 			  VariableStatData *vardata, Datum constval, Oid consttype)
 {
 	Form_pg_statistic stats;
@@ -654,16 +678,17 @@ scalarineqsel(PlannerInfo *root, Oid operator, bool isgt, bool iseq,
 	 * to the result selectivity.  Also add up the total fraction represented
 	 * by MCV entries.
 	 */
-	mcv_selec = mcv_selectivity(vardata, &opproc, constval, true,
-								&sumcommon);
+	mcv_selec = mcv_selectivity_ext(vardata, &opproc, collation, constval, true,
+									&sumcommon);
 
 	/*
 	 * If there is a histogram, determine which bin the constant falls in, and
 	 * compute the resulting contribution to selectivity.
 	 */
-	hist_selec = ineq_histogram_selectivity(root, vardata,
-											&opproc, isgt, iseq,
-											constval, consttype);
+	hist_selec = ineq_histogram_selectivity_ext(root, vardata,
+												&opproc, isgt, iseq,
+												collation,
+												constval, consttype);
 
 	/*
 	 * Now merge the results from the MCV and histogram calculations,
@@ -708,6 +733,15 @@ mcv_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
 				Datum constval, bool varonleft,
 				double *sumcommonp)
 {
+	return mcv_selectivity_ext(vardata, opproc, DEFAULT_COLLATION_OID,
+							   constval, varonleft, sumcommonp);
+}
+
+double
+mcv_selectivity_ext(VariableStatData *vardata, FmgrInfo *opproc, Oid collation,
+					Datum constval, bool varonleft,
+					double *sumcommonp)
+{
 	double		mcv_selec,
 				sumcommon;
 	AttStatsSlot sslot;
@@ -726,11 +760,11 @@ mcv_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
 		{
 			if (varonleft ?
 				DatumGetBool(FunctionCall2Coll(opproc,
-											   sslot.stacoll,
+											   collation,
 											   sslot.values[i],
 											   constval)) :
 				DatumGetBool(FunctionCall2Coll(opproc,
-											   sslot.stacoll,
+											   collation,
 											   constval,
 											   sslot.values[i])))
 				mcv_selec += sslot.numbers[i];
@@ -781,6 +815,20 @@ histogram_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
 					  int min_hist_size, int n_skip,
 					  int *hist_size)
 {
+	return histogram_selectivity_ext(vardata,
+									 opproc, DEFAULT_COLLATION_OID,
+									 constval, varonleft,
+									 min_hist_size, n_skip,
+									 hist_size);
+}
+
+double
+histogram_selectivity_ext(VariableStatData *vardata,
+						  FmgrInfo *opproc, Oid collation,
+						  Datum constval, bool varonleft,
+						  int min_hist_size, int n_skip,
+						  int *hist_size)
+{
 	double		result;
 	AttStatsSlot sslot;
 
@@ -804,11 +852,11 @@ histogram_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
 			{
 				if (varonleft ?
 					DatumGetBool(FunctionCall2Coll(opproc,
-												   sslot.stacoll,
+												   collation,
 												   sslot.values[i],
 												   constval)) :
 					DatumGetBool(FunctionCall2Coll(opproc,
-												   sslot.stacoll,
+												   collation,
 												   constval,
 												   sslot.values[i])))
 					nmatch++;
@@ -849,6 +897,19 @@ ineq_histogram_selectivity(PlannerInfo *root,
 						   FmgrInfo *opproc, bool isgt, bool iseq,
 						   Datum constval, Oid consttype)
 {
+	return ineq_histogram_selectivity_ext(root, vardata,
+										  opproc, isgt, iseq,
+										  DEFAULT_COLLATION_OID,
+										  constval, consttype);
+}
+
+double
+ineq_histogram_selectivity_ext(PlannerInfo *root,
+							   VariableStatData *vardata,
+							   FmgrInfo *opproc, bool isgt, bool iseq,
+							   Oid collation,
+							   Datum constval, Oid consttype)
+{
 	double		hist_selec;
 	AttStatsSlot sslot;
 
@@ -860,9 +921,11 @@ ineq_histogram_selectivity(PlannerInfo *root,
 	 * column type.  However, to make that work we will need to figure out
 	 * which staop to search for --- it's not necessarily the one we have at
 	 * hand!  (For example, we might have a '<=' operator rather than the '<'
-	 * operator that will appear in staop.)  For now, assume that whatever
-	 * appears in pg_statistic is sorted the same way our operator sorts, or
-	 * the reverse way if isgt is true.
+	 * operator that will appear in staop.)  The collation might not agree
+	 * either.  For now, just assume that whatever appears in pg_statistic is
+	 * sorted the same way our operator sorts, or the reverse way if isgt is
+	 * true.  This could result in a bogus estimate, but it still seems better
+	 * than falling back to the default estimate.
 	 */
 	if (HeapTupleIsValid(vardata->statsTuple) &&
 		statistic_proc_security_check(vardata, opproc->fn_oid) &&
@@ -908,6 +971,7 @@ ineq_histogram_selectivity(PlannerInfo *root,
 				have_end = get_actual_variable_range(root,
 													 vardata,
 													 sslot.staop,
+													 collation,
 													 &sslot.values[0],
 													 &sslot.values[1]);
 
@@ -925,17 +989,19 @@ ineq_histogram_selectivity(PlannerInfo *root,
 					have_end = get_actual_variable_range(root,
 														 vardata,
 														 sslot.staop,
+														 collation,
 														 &sslot.values[0],
 														 NULL);
 				else if (probe == sslot.nvalues - 1 && sslot.nvalues > 2)
 					have_end = get_actual_variable_range(root,
 														 vardata,
 														 sslot.staop,
+														 collation,
 														 NULL,
 														 &sslot.values[probe]);
 
 				ltcmp = DatumGetBool(FunctionCall2Coll(opproc,
-													   sslot.stacoll,
+													   collation,
 													   sslot.values[probe],
 													   constval));
 				if (isgt)
@@ -1020,7 +1086,7 @@ ineq_histogram_selectivity(PlannerInfo *root,
 				 * values to a uniform comparison scale, and do a linear
 				 * interpolation within this bin.
 				 */
-				if (convert_to_scalar(constval, consttype, sslot.stacoll,
+				if (convert_to_scalar(constval, consttype, collation,
 									  &val,
 									  sslot.values[i - 1], sslot.values[i],
 									  vardata->vartype,
@@ -1160,6 +1226,7 @@ scalarineqsel_wrapper(PG_FUNCTION_ARGS, bool isgt, bool iseq)
 	Oid			operator = PG_GETARG_OID(1);
 	List	   *args = (List *) PG_GETARG_POINTER(2);
 	int			varRelid = PG_GETARG_INT32(3);
+	Oid			collation = PG_GET_COLLATION();
 	VariableStatData vardata;
 	Node	   *other;
 	bool		varonleft;
@@ -1212,7 +1279,7 @@ scalarineqsel_wrapper(PG_FUNCTION_ARGS, bool isgt, bool iseq)
 	}
 
 	/* The rest of the work is done by scalarineqsel(). */
-	selec = scalarineqsel(root, operator, isgt, iseq,
+	selec = scalarineqsel(root, operator, isgt, iseq, collation,
 						  &vardata, constval, consttype);
 
 	ReleaseVariableStats(vardata);
@@ -1277,8 +1344,8 @@ boolvarsel(PlannerInfo *root, Node *arg, int varRelid)
 		 * A boolean variable V is equivalent to the clause V = 't', so we
 		 * compute the selectivity as if that is what we have.
 		 */
-		selec = var_eq_const(&vardata, BooleanEqualOperator,
-							 BoolGetDatum(true), false, true, false);
+		selec = var_eq_const_ext(&vardata, BooleanEqualOperator, InvalidOid,
+								 BoolGetDatum(true), false, true, false);
 	}
 	else
 	{
@@ -1986,7 +2053,7 @@ rowcomparesel(PlannerInfo *root,
 		/*
 		 * Otherwise, it's a join if there's more than one relation used.
 		 */
-		is_join_clause = (NumRelids((Node *) opargs) > 1);
+		is_join_clause = (NumRelids(root, (Node *) opargs) > 1);
 	}
 
 	if (is_join_clause)
@@ -2024,6 +2091,7 @@ eqjoinsel(PG_FUNCTION_ARGS)
 	JoinType	jointype = (JoinType) PG_GETARG_INT16(3);
 #endif
 	SpecialJoinInfo *sjinfo = (SpecialJoinInfo *) PG_GETARG_POINTER(4);
+	Oid			collation = PG_GET_COLLATION();
 	double		selec;
 	double		selec_inner;
 	VariableStatData vardata1;
@@ -2074,7 +2142,7 @@ eqjoinsel(PG_FUNCTION_ARGS)
 	}
 
 	/* We need to compute the inner-join selectivity in all cases */
-	selec_inner = eqjoinsel_inner(opfuncoid,
+	selec_inner = eqjoinsel_inner(opfuncoid, collation,
 								  &vardata1, &vardata2,
 								  nd1, nd2,
 								  isdefault1, isdefault2,
@@ -2102,7 +2170,7 @@ eqjoinsel(PG_FUNCTION_ARGS)
 			inner_rel = find_join_input_rel(root, sjinfo->min_righthand);
 
 			if (!join_is_reversed)
-				selec = eqjoinsel_semi(opfuncoid,
+				selec = eqjoinsel_semi(opfuncoid, collation,
 									   &vardata1, &vardata2,
 									   nd1, nd2,
 									   isdefault1, isdefault2,
@@ -2115,7 +2183,7 @@ eqjoinsel(PG_FUNCTION_ARGS)
 				Oid			commop = get_commutator(operator);
 				Oid			commopfuncoid = OidIsValid(commop) ? get_opcode(commop) : InvalidOid;
 
-				selec = eqjoinsel_semi(commopfuncoid,
+				selec = eqjoinsel_semi(commopfuncoid, collation,
 									   &vardata2, &vardata1,
 									   nd2, nd1,
 									   isdefault2, isdefault1,
@@ -2163,7 +2231,7 @@ eqjoinsel(PG_FUNCTION_ARGS)
  * that it's worth trying to distinguish them here.
  */
 static double
-eqjoinsel_inner(Oid opfuncoid,
+eqjoinsel_inner(Oid opfuncoid, Oid collation,
 				VariableStatData *vardata1, VariableStatData *vardata2,
 				double nd1, double nd2,
 				bool isdefault1, bool isdefault2,
@@ -2225,7 +2293,7 @@ eqjoinsel_inner(Oid opfuncoid,
 				if (hasmatch2[j])
 					continue;
 				if (DatumGetBool(FunctionCall2Coll(&eqproc,
-												   sslot1->stacoll,
+												   collation,
 												   sslot1->values[i],
 												   sslot2->values[j])))
 				{
@@ -2343,7 +2411,7 @@ eqjoinsel_inner(Oid opfuncoid,
  * Unlike eqjoinsel_inner, we have to cope with opfuncoid being InvalidOid.
  */
 static double
-eqjoinsel_semi(Oid opfuncoid,
+eqjoinsel_semi(Oid opfuncoid, Oid collation,
 			   VariableStatData *vardata1, VariableStatData *vardata2,
 			   double nd1, double nd2,
 			   bool isdefault1, bool isdefault2,
@@ -2437,7 +2505,7 @@ eqjoinsel_semi(Oid opfuncoid,
 				if (hasmatch2[j])
 					continue;
 				if (DatumGetBool(FunctionCall2Coll(&eqproc,
-												   sslot1->stacoll,
+												   collation,
 												   sslot1->values[i],
 												   sslot2->values[j])))
 				{
@@ -2521,6 +2589,7 @@ neqjoinsel(PG_FUNCTION_ARGS)
 	List	   *args = (List *) PG_GETARG_POINTER(2);
 	JoinType	jointype = (JoinType) PG_GETARG_INT16(3);
 	SpecialJoinInfo *sjinfo = (SpecialJoinInfo *) PG_GETARG_POINTER(4);
+	Oid			collation = PG_GET_COLLATION();
 	float8		result;
 
 	if (jointype == JOIN_SEMI || jointype == JOIN_ANTI)
@@ -2567,12 +2636,14 @@ neqjoinsel(PG_FUNCTION_ARGS)
 
 		if (eqop)
 		{
-			result = DatumGetFloat8(DirectFunctionCall5(eqjoinsel,
-														PointerGetDatum(root),
-														ObjectIdGetDatum(eqop),
-														PointerGetDatum(args),
-														Int16GetDatum(jointype),
-														PointerGetDatum(sjinfo)));
+			result =
+				DatumGetFloat8(DirectFunctionCall5Coll(eqjoinsel,
+													   collation,
+													   PointerGetDatum(root),
+													   ObjectIdGetDatum(eqop),
+													   PointerGetDatum(args),
+													   Int16GetDatum(jointype),
+													   PointerGetDatum(sjinfo)));
 		}
 		else
 		{
@@ -2657,6 +2728,7 @@ mergejoinscansel(PlannerInfo *root, Node *clause,
 	Oid			op_lefttype;
 	Oid			op_righttype;
 	Oid			opno,
+				collation,
 				lsortop,
 				rsortop,
 				lstatop,
@@ -2681,6 +2753,7 @@ mergejoinscansel(PlannerInfo *root, Node *clause,
 	if (!is_opclause(clause))
 		return;					/* shouldn't happen */
 	opno = ((OpExpr *) clause)->opno;
+	collation = ((OpExpr *) clause)->inputcollid;
 	left = get_leftop((Expr *) clause);
 	right = get_rightop((Expr *) clause);
 	if (!right)
@@ -2814,20 +2887,20 @@ mergejoinscansel(PlannerInfo *root, Node *clause,
 	/* Try to get ranges of both inputs */
 	if (!isgt)
 	{
-		if (!get_variable_range(root, &leftvar, lstatop,
+		if (!get_variable_range(root, &leftvar, lstatop, collation,
 								&leftmin, &leftmax))
 			goto fail;			/* no range available from stats */
-		if (!get_variable_range(root, &rightvar, rstatop,
+		if (!get_variable_range(root, &rightvar, rstatop, collation,
 								&rightmin, &rightmax))
 			goto fail;			/* no range available from stats */
 	}
 	else
 	{
 		/* need to swap the max and min */
-		if (!get_variable_range(root, &leftvar, lstatop,
+		if (!get_variable_range(root, &leftvar, lstatop, collation,
 								&leftmax, &leftmin))
 			goto fail;			/* no range available from stats */
-		if (!get_variable_range(root, &rightvar, rstatop,
+		if (!get_variable_range(root, &rightvar, rstatop, collation,
 								&rightmax, &rightmin))
 			goto fail;			/* no range available from stats */
 	}
@@ -2837,13 +2910,13 @@ mergejoinscansel(PlannerInfo *root, Node *clause,
 	 * fraction that's <= the right-side maximum value.  But only believe
 	 * non-default estimates, else stick with our 1.0.
 	 */
-	selec = scalarineqsel(root, leop, isgt, true, &leftvar,
+	selec = scalarineqsel(root, leop, isgt, true, collation, &leftvar,
 						  rightmax, op_righttype);
 	if (selec != DEFAULT_INEQ_SEL)
 		*leftend = selec;
 
 	/* And similarly for the right variable. */
-	selec = scalarineqsel(root, revleop, isgt, true, &rightvar,
+	selec = scalarineqsel(root, revleop, isgt, true, collation, &rightvar,
 						  leftmax, op_lefttype);
 	if (selec != DEFAULT_INEQ_SEL)
 		*rightend = selec;
@@ -2867,13 +2940,13 @@ mergejoinscansel(PlannerInfo *root, Node *clause,
 	 * minimum value.  But only believe non-default estimates, else stick with
 	 * our own default.
 	 */
-	selec = scalarineqsel(root, ltop, isgt, false, &leftvar,
+	selec = scalarineqsel(root, ltop, isgt, false, collation, &leftvar,
 						  rightmin, op_righttype);
 	if (selec != DEFAULT_INEQ_SEL)
 		*leftstart = selec;
 
 	/* And similarly for the right variable. */
-	selec = scalarineqsel(root, revltop, isgt, false, &rightvar,
+	selec = scalarineqsel(root, revltop, isgt, false, collation, &rightvar,
 						  leftmin, op_lefttype);
 	if (selec != DEFAULT_INEQ_SEL)
 		*rightstart = selec;
@@ -3597,23 +3670,40 @@ estimate_multivariate_ndistinct(PlannerInfo *root, RelOptInfo *rel,
 	Oid			statOid = InvalidOid;
 	MVNDistinct *stats;
 	Bitmapset  *matched = NULL;
+	RangeTblEntry		*rte;
 
 	/* bail out immediately if the table has no extended statistics */
 	if (!rel->statlist)
+		return false;
+
+	/*
+	 * When dealing with regular inheritance trees, ignore extended stats
+	 * (which were built without data from child rels, and thus do not
+	 * represent them). For partitioned tables data there's no data in the
+	 * non-leaf relations, so we build stats only for the inheritance tree.
+	 * So for partitioned tables we do consider extended stats.
+	 */
+	rte = planner_rt_fetch(rel->relid, root);
+	if (rte->inh && rte->relkind != RELKIND_PARTITIONED_TABLE)
 		return false;
 
 	/* Determine the attnums we're looking for */
 	foreach(lc, *varinfos)
 	{
 		GroupVarInfo *varinfo = (GroupVarInfo *) lfirst(lc);
+		AttrNumber	attnum;
 
 		Assert(varinfo->rel == rel);
 
-		if (IsA(varinfo->var, Var))
-		{
-			attnums = bms_add_member(attnums,
-									 ((Var *) varinfo->var)->varattno);
-		}
+		if (!IsA(varinfo->var, Var))
+			continue;
+
+		attnum = ((Var *) varinfo->var)->varattno;
+
+		if (!AttrNumberIsForUserDefinedAttr(attnum))
+			continue;
+
+		attnums = bms_add_member(attnums, attnum);
 	}
 
 	/* look for the ndistinct statistics matching the most vars */
@@ -3693,8 +3783,12 @@ estimate_multivariate_ndistinct(PlannerInfo *root, RelOptInfo *rel,
 			}
 
 			attnum = ((Var *) varinfo->var)->varattno;
-			if (!bms_is_member(attnum, matched))
-				newlist = lappend(newlist, varinfo);
+
+			if (AttrNumberIsForUserDefinedAttr(attnum) &&
+				bms_is_member(attnum, matched))
+				continue;
+
+			newlist = lappend(newlist, varinfo);
 		}
 
 		*varinfos = newlist;
@@ -4603,7 +4697,7 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 	 * membership.  Note that when varRelid isn't zero, only vars of that
 	 * relation are considered "real" vars.
 	 */
-	varnos = pull_varnos(basenode);
+	varnos = pull_varnos(root, basenode);
 
 	onerel = NULL;
 
@@ -4756,6 +4850,52 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 									rte->securityQuals == NIL &&
 									(pg_class_aclcheck(rte->relid, userid,
 													   ACL_SELECT) == ACLCHECK_OK);
+
+								/*
+								 * If the user doesn't have permissions to
+								 * access an inheritance child relation, check
+								 * the permissions of the table actually
+								 * mentioned in the query, since most likely
+								 * the user does have that permission.  Note
+								 * that whole-table select privilege on the
+								 * parent doesn't quite guarantee that the
+								 * user could read all columns of the child.
+								 * But in practice it's unlikely that any
+								 * interesting security violation could result
+								 * from allowing access to the expression
+								 * index's stats, so we allow it anyway.  See
+								 * similar code in examine_simple_variable()
+								 * for additional comments.
+								 */
+								if (!vardata->acl_ok &&
+									root->append_rel_array != NULL)
+								{
+									AppendRelInfo *appinfo;
+									Index		varno = index->rel->relid;
+
+									appinfo = root->append_rel_array[varno];
+									while (appinfo &&
+										   planner_rt_fetch(appinfo->parent_relid,
+															root)->rtekind == RTE_RELATION)
+									{
+										varno = appinfo->parent_relid;
+										appinfo = root->append_rel_array[varno];
+									}
+									if (varno != index->rel->relid)
+									{
+										/* Repeat access check on this rel */
+										rte = planner_rt_fetch(varno, root);
+										Assert(rte->rtekind == RTE_RELATION);
+
+										userid = rte->checkAsUser ? rte->checkAsUser : GetUserId();
+
+										vardata->acl_ok =
+											rte->securityQuals == NIL &&
+											(pg_class_aclcheck(rte->relid,
+															   userid,
+															   ACL_SELECT) == ACLCHECK_OK);
+									}
+								}
 							}
 							else
 							{
@@ -4844,7 +4984,14 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 
 		if (rte->inh && gp_statistics_pullup_from_child_partition)
 		{
-			const char *attname  = get_attname(rte->relid, var->varattno, false);
+			/*
+			 * GPDB: #13467
+			 * If var->varattno is 0 (e.g.,SELECT DISTINCT <Table_name> FROM <Table_name>),
+			 * we will get an ERROR when we invoke get_attname with missing_ok == false,
+			 * so the NULL string is all we need.
+			 */
+			bool missing_ok = var->varattno == 0 ? true : false;
+			const char *attname  = get_attname(rte->relid, var->varattno, missing_ok);
 
 			/*
 			 * The GUC gp_statistics_pullup_from_child_partition is
@@ -4881,6 +5028,88 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 									ACL_SELECT) == ACLCHECK_OK) ||
 				 (pg_attribute_aclcheck(rte->relid, var->varattno, userid,
 										ACL_SELECT) == ACLCHECK_OK));
+
+			/*
+			 * If the user doesn't have permissions to access an inheritance
+			 * child relation or specifically this attribute, check the
+			 * permissions of the table/column actually mentioned in the
+			 * query, since most likely the user does have that permission
+			 * (else the query will fail at runtime), and if the user can read
+			 * the column there then he can get the values of the child table
+			 * too.  To do that, we must find out which of the root parent's
+			 * attributes the child relation's attribute corresponds to.
+			 */
+			if (!vardata->acl_ok && var->varattno > 0 &&
+				root->append_rel_array != NULL)
+			{
+				AppendRelInfo *appinfo;
+				Index		varno = var->varno;
+				int			varattno = var->varattno;
+				bool		found = false;
+
+				appinfo = root->append_rel_array[varno];
+
+				/*
+				 * Partitions are mapped to their immediate parent, not the
+				 * root parent, so must be ready to walk up multiple
+				 * AppendRelInfos.  But stop if we hit a parent that is not
+				 * RTE_RELATION --- that's a flattened UNION ALL subquery, not
+				 * an inheritance parent.
+				 */
+				while (appinfo &&
+					   planner_rt_fetch(appinfo->parent_relid,
+										root)->rtekind == RTE_RELATION)
+				{
+					int			parent_varattno;
+					ListCell   *l;
+
+					parent_varattno = 1;
+					found = false;
+					foreach(l, appinfo->translated_vars)
+					{
+						Var		   *childvar = lfirst_node(Var, l);
+
+						/* Ignore dropped attributes of the parent. */
+						if (childvar != NULL &&
+							varattno == childvar->varattno)
+						{
+							found = true;
+							break;
+						}
+						parent_varattno++;
+					}
+
+					if (!found)
+						break;
+
+					varno = appinfo->parent_relid;
+					varattno = parent_varattno;
+
+					/* If the parent is itself a child, continue up. */
+					appinfo = root->append_rel_array[varno];
+				}
+
+				/*
+				 * In rare cases, the Var may be local to the child table, in
+				 * which case, we've got to live with having no access to this
+				 * column's stats.
+				 */
+				if (!found)
+					return;
+
+				/* Repeat the access check on this parent rel & column */
+				rte = planner_rt_fetch(varno, root);
+				Assert(rte->rtekind == RTE_RELATION);
+
+				userid = rte->checkAsUser ? rte->checkAsUser : GetUserId();
+
+				vardata->acl_ok =
+					rte->securityQuals == NIL &&
+					((pg_class_aclcheck(rte->relid, userid,
+										ACL_SELECT) == ACLCHECK_OK) ||
+					 (pg_attribute_aclcheck(rte->relid, varattno, userid,
+											ACL_SELECT) == ACLCHECK_OK));
+			}
 		}
 		else
 		{
@@ -4912,7 +5141,8 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 		 * of learning something even with it.
 		 */
 		if (subquery->setOperations ||
-			subquery->groupClause)
+			subquery->groupClause ||
+			subquery->groupingSets)
 			return;
 
 		/*
@@ -5182,9 +5412,11 @@ get_variable_numdistinct(VariableStatData *vardata, bool *isdefault)
  *
  * sortop is the "<" comparison operator to use.  This should generally
  * be "<" not ">", as only the former is likely to be found in pg_statistic.
+ * The collation must be specified too.
  */
 static bool
-get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
+get_variable_range(PlannerInfo *root, VariableStatData *vardata,
+				   Oid sortop, Oid collation,
 				   Datum *min, Datum *max)
 {
 	Datum		tmin = 0;
@@ -5205,7 +5437,7 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 	 * before enabling this.
 	 */
 #ifdef NOT_USED
-	if (get_actual_variable_range(root, vardata, sortop, min, max))
+	if (get_actual_variable_range(root, vardata, sortop, collation, min, max))
 		return true;
 #endif
 
@@ -5233,7 +5465,7 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 	 *
 	 * If there is a histogram that is sorted with some other operator than
 	 * the one we want, fail --- this suggests that there is data we can't
-	 * use.
+	 * use.  XXX consider collation too.
 	 */
 	if (get_attstatsslot(&sslot, vardata->statsTuple,
 						 STATISTIC_KIND_HISTOGRAM, sortop,
@@ -5272,18 +5504,17 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 	/*
 	 * If we have most-common-values info, look for extreme MCVs.  This is
 	 * needed even if we also have a histogram, since the histogram excludes
-	 * the MCVs.  However, usually the MCVs will not be the extreme values, so
-	 * avoid unnecessary data copying.
+	 * the MCVs.  However, if we *only* have MCVs and no histogram, we should
+	 * be pretty wary of deciding that that is a full representation of the
+	 * data.  Proceed only if the MCVs represent the whole table (to within
+	 * roundoff error).
 	 */
 	if (get_attstatsslot(&sslot, vardata->statsTuple,
 						 STATISTIC_KIND_MCV, InvalidOid,
-						 ATTSTATSSLOT_VALUES))
+						 have_data ? ATTSTATSSLOT_VALUES :
+						 (ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS)))
 	{
-		bool		tmin_is_mcv = false;
-		bool		tmax_is_mcv = false;
-		FmgrInfo	opproc;
-
-		fmgr_info(opfuncoid, &opproc);
+		bool		use_mcvs = have_data;
 
 		/*
 		 * GPDB: See the identical check, above, for histogram data.
@@ -5292,33 +5523,60 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 			elog(ERROR, "invalid MCV array of type %s, for attribute of type %s",
 				 format_type_be(sslot.valuetype), format_type_be(vardata->atttype));
 
-		for (i = 0; i < sslot.nvalues; i++)
+		if (!have_data)
 		{
-			if (!have_data)
-			{
-				tmin = tmax = sslot.values[i];
-				tmin_is_mcv = tmax_is_mcv = have_data = true;
-				continue;
-			}
-			if (DatumGetBool(FunctionCall2Coll(&opproc,
-											   sslot.stacoll,
-											   sslot.values[i], tmin)))
-			{
-				tmin = sslot.values[i];
-				tmin_is_mcv = true;
-			}
-			if (DatumGetBool(FunctionCall2Coll(&opproc,
-											   sslot.stacoll,
-											   tmax, sslot.values[i])))
-			{
-				tmax = sslot.values[i];
-				tmax_is_mcv = true;
-			}
+			double		sumcommon = 0.0;
+			double		nullfrac;
+			int			i;
+
+			for (i = 0; i < sslot.nnumbers; i++)
+				sumcommon += sslot.numbers[i];
+			nullfrac = ((Form_pg_statistic) GETSTRUCT(vardata->statsTuple))->stanullfrac;
+			if (sumcommon + nullfrac > 0.99999)
+				use_mcvs = true;
 		}
-		if (tmin_is_mcv)
-			tmin = datumCopy(tmin, typByVal, typLen);
-		if (tmax_is_mcv)
-			tmax = datumCopy(tmax, typByVal, typLen);
+
+		if (use_mcvs)
+		{
+			/*
+			 * Usually the MCVs will not be the extreme values, so avoid
+			 * unnecessary data copying.
+			 */
+			bool		tmin_is_mcv = false;
+			bool		tmax_is_mcv = false;
+			FmgrInfo	opproc;
+
+			fmgr_info(opfuncoid, &opproc);
+
+			for (i = 0; i < sslot.nvalues; i++)
+			{
+				if (!have_data)
+				{
+					tmin = tmax = sslot.values[i];
+					tmin_is_mcv = tmax_is_mcv = have_data = true;
+					continue;
+				}
+				if (DatumGetBool(FunctionCall2Coll(&opproc,
+												   collation,
+												   sslot.values[i], tmin)))
+				{
+					tmin = sslot.values[i];
+					tmin_is_mcv = true;
+				}
+				if (DatumGetBool(FunctionCall2Coll(&opproc,
+												   collation,
+												   tmax, sslot.values[i])))
+				{
+					tmax = sslot.values[i];
+					tmax_is_mcv = true;
+				}
+			}
+			if (tmin_is_mcv)
+				tmin = datumCopy(tmin, typByVal, typLen);
+			if (tmax_is_mcv)
+				tmax = datumCopy(tmax, typByVal, typLen);
+		}
+
 		free_attstatsslot(&sslot);
 	}
 
@@ -5338,10 +5596,11 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
  *		If no data available, return false.
  *
  * sortop is the "<" comparison operator to use.
+ * collation is the required collation.
  */
 static bool
 get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
-						  Oid sortop,
+						  Oid sortop, Oid collation,
 						  Datum *min, Datum *max)
 {
 	bool		have_data = false;
@@ -5381,9 +5640,11 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 			continue;
 
 		/*
-		 * The first index column must match the desired variable and sort
-		 * operator --- but we can use a descending-order index.
+		 * The first index column must match the desired variable, sortop, and
+		 * collation --- but we can use a descending-order index.
 		 */
+		if (collation != index->indexcollations[0])
+			continue;			/* test first 'cause it's cheapest */
 		if (!match_index_to_operand(vardata->var, 0, index))
 			continue;
 		switch (get_op_opfamily_strategy(sortop, index->sortopfamily[0]))
@@ -5406,30 +5667,23 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 		}
 
 		/*
-		 * Found a suitable index to extract data from.  We'll need an EState
-		 * and a bunch of other infrastructure.
+		 * Found a suitable index to extract data from.  Set up some data that
+		 * can be used by both invocations of get_actual_variable_endpoint.
 		 */
 		{
-			EState	   *estate;
-			ExprContext *econtext;
 			MemoryContext tmpcontext;
 			MemoryContext oldcontext;
 			Relation	heapRel;
 			Relation	indexRel;
-			IndexInfo  *indexInfo;
 			TupleTableSlot *slot;
 			int16		typLen;
 			bool		typByVal;
 			ScanKeyData scankeys[1];
-			IndexScanDesc index_scan;
-			Datum		values[INDEX_MAX_KEYS];
-			bool		isnull[INDEX_MAX_KEYS];
-			SnapshotData SnapshotNonVacuumable;
 
-			estate = CreateExecutorState();
-			econtext = GetPerTupleExprContext(estate);
-			/* Make sure any cruft is generated in the econtext's memory */
-			tmpcontext = econtext->ecxt_per_tuple_memory;
+			/* Make sure any cruft gets recycled when we're done */
+			tmpcontext = AllocSetContextCreate(CurrentMemoryContext,
+											   "get_actual_variable_range workspace",
+											   ALLOCSET_DEFAULT_SIZES);
 			oldcontext = MemoryContextSwitchTo(tmpcontext);
 
 			/*
@@ -5439,14 +5693,9 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 			heapRel = table_open(rte->relid, NoLock);
 			indexRel = index_open(index->indexoid, NoLock);
 
-			/* extract index key information from the index's pg_index info */
-			indexInfo = BuildIndexInfo(indexRel);
-
-			/* some other stuff */
+			/* build some stuff needed for indexscan execution */
 			slot = table_slot_create(heapRel, NULL);
-			econtext->ecxt_scantuple = slot;
 			get_typlenbyval(vardata->atttype, &typLen, &typByVal);
-			InitNonVacuumableSnapshot(SnapshotNonVacuumable, RecentGlobalXmin);
 
 			/* set up an IS NOT NULL scan key so that we ignore nulls */
 			ScanKeyEntryInitialize(&scankeys[0],
@@ -5458,94 +5707,38 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 								   InvalidOid,	/* no reg proc for this */
 								   (Datum) 0);	/* constant */
 
-			have_data = true;
-
 			/* If min is requested ... */
 			if (min)
 			{
-				/*
-				 * In principle, we should scan the index with our current
-				 * active snapshot, which is the best approximation we've got
-				 * to what the query will see when executed.  But that won't
-				 * be exact if a new snap is taken before running the query,
-				 * and it can be very expensive if a lot of recently-dead or
-				 * uncommitted rows exist at the beginning or end of the index
-				 * (because we'll laboriously fetch each one and reject it).
-				 * Instead, we use SnapshotNonVacuumable.  That will accept
-				 * recently-dead and uncommitted rows as well as normal
-				 * visible rows.  On the other hand, it will reject known-dead
-				 * rows, and thus not give a bogus answer when the extreme
-				 * value has been deleted (unless the deletion was quite
-				 * recent); that case motivates not using SnapshotAny here.
-				 *
-				 * A crucial point here is that SnapshotNonVacuumable, with
-				 * RecentGlobalXmin as horizon, yields the inverse of the
-				 * condition that the indexscan will use to decide that index
-				 * entries are killable (see heap_hot_search_buffer()).
-				 * Therefore, if the snapshot rejects a tuple and we have to
-				 * continue scanning past it, we know that the indexscan will
-				 * mark that index entry killed.  That means that the next
-				 * get_actual_variable_range() call will not have to visit
-				 * that heap entry.  In this way we avoid repetitive work when
-				 * this function is used a lot during planning.
-				 */
-				index_scan = index_beginscan(heapRel, indexRel,
-											 &SnapshotNonVacuumable,
-											 1, 0);
-				index_rescan(index_scan, scankeys, 1, NULL, 0);
-
-				/* Fetch first tuple in sortop's direction */
-				if (index_getnext_slot(index_scan, indexscandir, slot))
-				{
-					/* Extract the index column values from the slot */
-					FormIndexDatum(indexInfo, slot, estate,
-								   values, isnull);
-
-					/* Shouldn't have got a null, but be careful */
-					if (isnull[0])
-						elog(ERROR, "found unexpected null value in index \"%s\"",
-							 RelationGetRelationName(indexRel));
-
-					/* Copy the index column value out to caller's context */
-					MemoryContextSwitchTo(oldcontext);
-					*min = datumCopy(values[0], typByVal, typLen);
-					MemoryContextSwitchTo(tmpcontext);
-				}
-				else
-					have_data = false;
-
-				index_endscan(index_scan);
+				have_data = get_actual_variable_endpoint(heapRel,
+														 indexRel,
+														 indexscandir,
+														 scankeys,
+														 typLen,
+														 typByVal,
+														 slot,
+														 oldcontext,
+														 min);
+			}
+			else
+			{
+				/* If min not requested, assume index is nonempty */
+				have_data = true;
 			}
 
 			/* If max is requested, and we didn't find the index is empty */
 			if (max && have_data)
 			{
-				index_scan = index_beginscan(heapRel, indexRel,
-											 &SnapshotNonVacuumable,
-											 1, 0);
-				index_rescan(index_scan, scankeys, 1, NULL, 0);
-
-				/* Fetch first tuple in reverse direction */
-				if (index_getnext_slot(index_scan, -indexscandir, slot))
-				{
-					/* Extract the index column values from the slot */
-					FormIndexDatum(indexInfo, slot, estate,
-								   values, isnull);
-
-					/* Shouldn't have got a null, but be careful */
-					if (isnull[0])
-						elog(ERROR, "found unexpected null value in index \"%s\"",
-							 RelationGetRelationName(indexRel));
-
-					/* Copy the index column value out to caller's context */
-					MemoryContextSwitchTo(oldcontext);
-					*max = datumCopy(values[0], typByVal, typLen);
-					MemoryContextSwitchTo(tmpcontext);
-				}
-				else
-					have_data = false;
-
-				index_endscan(index_scan);
+				/* scan in the opposite direction; all else is the same */
+				have_data = get_actual_variable_endpoint(heapRel,
+														 indexRel,
+														 -indexscandir,
+														 scankeys,
+														 typLen,
+														 typByVal,
+														 slot,
+														 oldcontext,
+														 max);
 			}
 
 			/* Clean everything up */
@@ -5555,12 +5748,145 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 			table_close(heapRel, NoLock);
 
 			MemoryContextSwitchTo(oldcontext);
-			FreeExecutorState(estate);
+			MemoryContextDelete(tmpcontext);
 
 			/* And we're done */
 			break;
 		}
 	}
+
+	return have_data;
+}
+
+/*
+ * Get one endpoint datum (min or max depending on indexscandir) from the
+ * specified index.  Return true if successful, false if index is empty.
+ * On success, endpoint value is stored to *endpointDatum (and copied into
+ * outercontext).
+ *
+ * scankeys is a 1-element scankey array set up to reject nulls.
+ * typLen/typByVal describe the datatype of the index's first column.
+ * tableslot is a slot suitable to hold table tuples, in case we need
+ * to probe the heap.
+ * (We could compute these values locally, but that would mean computing them
+ * twice when get_actual_variable_range needs both the min and the max.)
+ */
+static bool
+get_actual_variable_endpoint(Relation heapRel,
+							 Relation indexRel,
+							 ScanDirection indexscandir,
+							 ScanKey scankeys,
+							 int16 typLen,
+							 bool typByVal,
+							 TupleTableSlot *tableslot,
+							 MemoryContext outercontext,
+							 Datum *endpointDatum)
+{
+	bool		have_data = false;
+	SnapshotData SnapshotNonVacuumable;
+	IndexScanDesc index_scan;
+	Buffer		vmbuffer = InvalidBuffer;
+	ItemPointer tid;
+	Datum		values[INDEX_MAX_KEYS];
+	bool		isnull[INDEX_MAX_KEYS];
+	MemoryContext oldcontext;
+
+	/*
+	 * We use the index-only-scan machinery for this.  With mostly-static
+	 * tables that's a win because it avoids a heap visit.  It's also a win
+	 * for dynamic data, but the reason is less obvious; read on for details.
+	 *
+	 * In principle, we should scan the index with our current active
+	 * snapshot, which is the best approximation we've got to what the query
+	 * will see when executed.  But that won't be exact if a new snap is taken
+	 * before running the query, and it can be very expensive if a lot of
+	 * recently-dead or uncommitted rows exist at the beginning or end of the
+	 * index (because we'll laboriously fetch each one and reject it).
+	 * Instead, we use SnapshotNonVacuumable.  That will accept recently-dead
+	 * and uncommitted rows as well as normal visible rows.  On the other
+	 * hand, it will reject known-dead rows, and thus not give a bogus answer
+	 * when the extreme value has been deleted (unless the deletion was quite
+	 * recent); that case motivates not using SnapshotAny here.
+	 *
+	 * A crucial point here is that SnapshotNonVacuumable, with
+	 * RecentGlobalXmin as horizon, yields the inverse of the condition that
+	 * the indexscan will use to decide that index entries are killable (see
+	 * heap_hot_search_buffer()).  Therefore, if the snapshot rejects a tuple
+	 * (or more precisely, all tuples of a HOT chain) and we have to continue
+	 * scanning past it, we know that the indexscan will mark that index entry
+	 * killed.  That means that the next get_actual_variable_endpoint() call
+	 * will not have to re-consider that index entry.  In this way we avoid
+	 * repetitive work when this function is used a lot during planning.
+	 *
+	 * But using SnapshotNonVacuumable creates a hazard of its own.  In a
+	 * recently-created index, some index entries may point at "broken" HOT
+	 * chains in which not all the tuple versions contain data matching the
+	 * index entry.  The live tuple version(s) certainly do match the index,
+	 * but SnapshotNonVacuumable can accept recently-dead tuple versions that
+	 * don't match.  Hence, if we took data from the selected heap tuple, we
+	 * might get a bogus answer that's not close to the index extremal value,
+	 * or could even be NULL.  We avoid this hazard because we take the data
+	 * from the index entry not the heap.
+	 */
+	InitNonVacuumableSnapshot(SnapshotNonVacuumable, RecentGlobalXmin);
+
+	index_scan = index_beginscan(heapRel, indexRel,
+								 &SnapshotNonVacuumable,
+								 1, 0);
+	/* Set it up for index-only scan */
+	index_scan->xs_want_itup = true;
+	index_rescan(index_scan, scankeys, 1, NULL, 0);
+
+	/* Fetch first/next tuple in specified direction */
+	while ((tid = index_getnext_tid(index_scan, indexscandir)) != NULL)
+	{
+		if (!VM_ALL_VISIBLE(heapRel,
+							ItemPointerGetBlockNumber(tid),
+							&vmbuffer))
+		{
+			/* Rats, we have to visit the heap to check visibility */
+			if (!index_fetch_heap(index_scan, tableslot))
+				continue;		/* no visible tuple, try next index entry */
+
+			/* We don't actually need the heap tuple for anything */
+			ExecClearTuple(tableslot);
+
+			/*
+			 * We don't care whether there's more than one visible tuple in
+			 * the HOT chain; if any are visible, that's good enough.
+			 */
+		}
+
+		/*
+		 * We expect that btree will return data in IndexTuple not HeapTuple
+		 * format.  It's not lossy either.
+		 */
+		if (!index_scan->xs_itup)
+			elog(ERROR, "no data returned for index-only scan");
+		if (index_scan->xs_recheck)
+			elog(ERROR, "unexpected recheck indication from btree");
+
+		/* OK to deconstruct the index tuple */
+		index_deform_tuple(index_scan->xs_itup,
+						   index_scan->xs_itupdesc,
+						   values, isnull);
+
+		/* Shouldn't have got a null, but be careful */
+		if (isnull[0])
+			elog(ERROR, "found unexpected null value in index \"%s\"",
+				 RelationGetRelationName(indexRel));
+
+		/* Copy the index column value out to caller's context */
+		oldcontext = MemoryContextSwitchTo(outercontext);
+		*endpointDatum = datumCopy(values[0], typByVal, typLen);
+		MemoryContextSwitchTo(oldcontext);
+		have_data = true;
+		break;
+	}
+
+	if (vmbuffer != InvalidBuffer)
+		ReleaseBuffer(vmbuffer);
+	index_endscan(index_scan);
 
 	return have_data;
 }
@@ -5742,7 +6068,7 @@ genericcostestimate(PlannerInfo *root,
 	}
 
 	/* Estimate the fraction of main-table tuples that will be visited */
-	indexSelectivity = clauselist_selectivity(root, selectivityQuals,
+	indexSelectivity = clauselist_selectivity_extended(root, selectivityQuals,
 											  index->rel->relid,
 											  JOIN_INNER,
 											  NULL,
@@ -6077,7 +6403,7 @@ btcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 		 */
 		selectivityQuals = add_predicate_to_index_quals(index, indexBoundQuals);
 
-		btreeSelectivity = clauselist_selectivity(root, selectivityQuals,
+		btreeSelectivity = clauselist_selectivity_extended(root, selectivityQuals,
 												  index->rel->relid,
 												  JOIN_INNER,
 												  NULL,
@@ -6798,7 +7124,7 @@ gincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	selectivityQuals = add_predicate_to_index_quals(index, indexQuals);
 
 	/* Estimate the fraction of main-table tuples that will be visited */
-	*indexSelectivity = clauselist_selectivity(root, selectivityQuals,
+	*indexSelectivity = clauselist_selectivity_extended(root, selectivityQuals,
 											   index->rel->relid,
 											   JOIN_INNER,
 											   NULL,
@@ -7098,12 +7424,34 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 							  &spc_seq_page_cost);
 
 	/*
-	 * Obtain some data from the index itself.  A lock should have already
-	 * been obtained on the index in plancat.c.
+	 * Obtain some data from the index itself, if possible.  Otherwise invent
+	 * some plausible internal statistics based on the relation page count.
 	 */
-	indexRel = index_open(index->indexoid, NoLock);
-	brinGetStats(indexRel, &statsData);
-	index_close(indexRel, NoLock);
+	if (!index->hypothetical)
+	{
+		/*
+		 * A lock should have already been obtained on the index in plancat.c.
+		 */
+		indexRel = index_open(index->indexoid, NoLock);
+		brinGetStats(indexRel, &statsData);
+		index_close(indexRel, NoLock);
+
+		/* work out the actual number of ranges in the index */
+		indexRanges = Max(ceil((double) baserel->pages /
+							   statsData.pagesPerRange), 1.0);
+	}
+	else
+	{
+		/*
+		 * Assume default number of pages per range, and estimate the number
+		 * of ranges based on that.
+		 */
+		indexRanges = Max(ceil((double) baserel->pages /
+							   BRIN_DEFAULT_PAGES_PER_RANGE), 1.0);
+
+		statsData.pagesPerRange = BRIN_DEFAULT_PAGES_PER_RANGE;
+		statsData.revmapNumPages = (indexRanges / REVMAP_PAGE_MAXITEMS) + 1;
+	}
 
 	/*
 	 * Compute index correlation
@@ -7199,14 +7547,10 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 		ReleaseVariableStats(vardata);
 	}
 
-	qualSelectivity = clauselist_selectivity(root, indexQuals,
+	qualSelectivity = clauselist_selectivity_extended(root, indexQuals,
 											 baserel->relid,
 											 JOIN_INNER, NULL,
 											 false /* use_damping */);
-
-	/* work out the actual number of ranges in the index */
-	indexRanges = Max(ceil((double) baserel->pages / statsData.pagesPerRange),
-					  1.0);
 
 	/*
 	 * Now calculate the minimum possible ranges we could match with if all of
@@ -7311,7 +7655,11 @@ try_fetch_rel_stats(RangeTblEntry *rte, const char *attname, VariableStatData* v
 
 	Assert(rte != NULL);
 
-	attno = get_attnum(rte->relid, attname);
+	/* attname may be NULL when 'SELECT DISTINCT <table_name> from <table_name>', and attno is set zero directly */
+	if (attname == NULL)
+		attno = InvalidAttrNumber;
+	else
+		attno = get_attnum(rte->relid, attname);
 	vardata->statsTuple = SearchSysCache3(STATRELATTINH,
 										  ObjectIdGetDatum(rte->relid),
 										  Int16GetDatum(attno),

@@ -62,7 +62,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:CheckConstraint Mdid="0.602007.1.0" Name="x_check" RelationMdid="0.601994.1.0">
+      <dxl:CheckConstraint Mdid="0.602007.1.0" Name="x_check" RelationMdid="6.601994.1.0">
         <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
           <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
           <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0">
@@ -139,13 +139,13 @@
         <dxl:OpFunc Mdid="0.177.1.0"/>
         <dxl:Commutator Mdid="0.551.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:CheckConstraint Mdid="0.602006.1.0" Name="x_c_check" RelationMdid="0.601994.1.0">
+      <dxl:CheckConstraint Mdid="0.602006.1.0" Name="x_c_check" RelationMdid="6.601994.1.0">
         <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
           <dxl:Ident ColId="3" ColName="c" TypeMdid="0.23.1.0"/>
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="0.601994.1.0" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.601994.1.0" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -179,20 +179,19 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.602008.1.0"/>
           <dxl:CheckConstraint Mdid="0.602007.1.0"/>
           <dxl:CheckConstraint Mdid="0.602006.1.0"/>
         </dxl:CheckConstraints>
       </dxl:Relation>
-      <dxl:CheckConstraint Mdid="0.602008.1.0" Name="x_check1" RelationMdid="0.601994.1.0">
+      <dxl:CheckConstraint Mdid="0.602008.1.0" Name="x_check1" RelationMdid="6.601994.1.0">
         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
           <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="0.601994.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.601994.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -226,7 +225,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.602008.1.0"/>
           <dxl:CheckConstraint Mdid="0.602007.1.0"/>
@@ -247,7 +245,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.601994.1.1" TableName="x">
+          <dxl:TableDescriptor Mdid="6.601994.1.1" TableName="x">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

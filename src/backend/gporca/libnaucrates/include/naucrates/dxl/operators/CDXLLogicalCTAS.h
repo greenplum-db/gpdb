@@ -67,9 +67,6 @@ private:
 	// is this a temporary table
 	BOOL m_is_temp_table;
 
-	// does table have oids
-	BOOL m_has_oids;
-
 	// storage type
 	IMDRelation::Erelstoragetype m_rel_storage_type;
 
@@ -90,7 +87,7 @@ public:
 					IMDRelation::Ereldistrpolicy rel_distr_policy,
 					ULongPtrArray *distr_column_pos_array,
 					IMdIdArray *distr_opfamilies, IMdIdArray *distr_opclasses,
-					BOOL fTemporary, BOOL fHasOids,
+					BOOL fTemporary,
 					IMDRelation::Erelstoragetype rel_storage_type,
 					ULongPtrArray *src_colids_array,
 					IntPtrArray *vartypemod_array);
@@ -186,13 +183,6 @@ public:
 	IsTemporary() const
 	{
 		return m_is_temp_table;
-	}
-
-	// does the table have oids
-	BOOL
-	HasOids() const
-	{
-		return m_has_oids;
 	}
 
 	// CTAS storage options

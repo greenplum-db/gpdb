@@ -77,7 +77,7 @@ The following server configuration parameters are used by PL/Java in Greenplum D
 
     The server configuration parameter `pljava_classpath_insecure` controls whether the server configuration parameter `pljava_classpath` can be set by a user without Greenplum Database superuser privileges. When `pljava_classpath_insecure` is enabled, Greenplum Database developers who are working on PL/Java functions do not have to be database superusers to change `pljava_classpath`.
 
-    **Warning:** Enabling `pljava_classpath_insecure` exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
+    > **Caution** Enabling `pljava_classpath_insecure` exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
 
 -   `pljava_statement_cache_size`
 
@@ -96,59 +96,23 @@ See the *Greenplum Database Reference Guide* for information about the Greenplum
 
 ## <a id="topic_qx1_xcp_w3b"></a>Installing Java 
 
-PL/Java requires a Java runtime environment on each Greenplum Database host. Ensure that the same Java environment is at the same location on all hosts: masters and segments. The command `java -version` displays the Java version.
+PL/Java requires a Java runtime environment on each Greenplum Database host. Ensure that the same Java environment is at the same location on all hosts: coordinators and segments. The command `java -version` displays the Java version.
 
-The commands that you use to install Java depend on the host system operating system and Java version. This list describes how to install OpenJDK 8 or 11 \(Java 8 JDK or Java 11 JDK\) on RHEL/CentOS or Ubuntu.
+The commands that you use to install Java depend on the host system operating system and Java version. To install OpenJDK 8 or 11 \(Java 8 JDK or Java 11 JDK\) on RHEL/Oracle/Rocky Linux:
 
--   RHEL 7/CentOS 7 - This `yum` command installs OpenJDK 8 or 11.
+```
+$ sudo yum install java-<version>-openjdk-devel
+```
 
-    ```
-    $ sudo yum install java-<version>-openjdk-devel
-    ```
+For OpenJDK 8 the version is `1.8.0`, for OpenJDK 11 the version is `11`.
 
-    For OpenJDK 8 the version is `1.8.0`, for OpenJDK 11 the version is `11`.
-
--   RHEL 6/CentOS 6
-    -   Java 8 - This `yum` command installs OpenJDK 8.
-
-        ```
-        $ sudo yum install java-1.8.0-openjdk-devel
-        ```
-
-    -   Java 11 - Download the OpenJDK 11 tar file from [http://jdk.java.net/archive/](http://jdk.java.net/archive/) and install and configure the operating system to use Java 11.
-        1.  This example `tar` command installs the OpenJDK 11 in `/usr/lib/jvm`.
-
-            ```
-            $ sudo tar xzf openjdk-11.0.2_linux-x64_bin.tar.gz --directory /usr/lib/jvm
-            ```
-        2.  Run these two commands to add OpenJDK 11 to the `update-alternatives` command. The `update-alternatives`command maintains symbolic links that determine the default version of operating system commands.
-
-            ```
-            $ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --install /usr/bin/$(basename $bin) $(basename $bin) $bin 100; done'
-            $ sudo sh -c 'for bin in /usr/lib/jvm/jdk-11.0.2/bin/*; do update-alternatives --set $(basename $bin) $bin; done'
-            ```
-
-            The second command returns some `failed to read link` errors that can be ignored.
-
--   Ubuntu - These `apt` commands install OpenJDK 8 or 11.
-
-    ```
-    $ sudo apt update
-    $ sudo apt install openjdk-<version>-jdk
-    ```
-
-    For OpenJDK 8 the version is `8`, for OpenJDK 11 the version is `11`.
-
-
-After installing OpenJDK on a RHEL or CentOS system, run this `update-alternatives` command to change the default Java. Enter the number that represents the OpenJDK version to use as the default.
+After installing OpenJDK on a RHEL system, run this `update-alternatives` command to change the default Java. Enter the number that represents the OpenJDK version to use as the default.
 
 ```
 $ sudo update-alternatives --config java 
 ```
 
-The `update-alternatives` command is not required on Ubuntu systems.
-
-**Note:** When configuring host systems, you can use the [gpssh](../utility_guide/ref/gpssh.html) utility to run bash shell commands on multiple remote hosts.
+> **Note** When configuring host systems, you can use the [gpssh](../utility_guide/ref/gpssh.html) utility to run bash shell commands on multiple remote hosts.
 
 ## <a id="topic4"></a>Installing PL/Java 
 
@@ -168,7 +132,7 @@ To install and use PL/Java:
 
 Before you install the PL/Java extension, make sure that your Greenplum database is running, you have sourced `greenplum_path.sh`, and that the `$MASTER_DATA_DIRECTORY` and `$GPHOME` variables are set.
 
-1.  Download the PL/Java extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) then copy it to the master host.
+1.  Download the PL/Java extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) then copy it to the coordinator host.
 2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Java** software.
 3.  Install the software extension package by running the `gppkg` command. This example installs the PL/Java extension package on a Linux system:
     ```
@@ -186,10 +150,10 @@ Before you install the PL/Java extension, make sure that your Greenplum database
         export LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:$JAVA_HOME/lib/server:$LD_LIBRARY_PATH
         ```
 
-    This example [gpscp](../utility_guide/ref/gpscp.html) command copies the file to all hosts specified in the file `gphosts_file`.
+    This example [gpsync](../utility_guide/ref/gpsync.html) command copies the file to all hosts specified in the file `gphosts_file`.
 
     ```
-    $ gpscp -f gphosts_file $GPHOME/greenplum_path.sh 
+    $ gpsync -f gphosts_file $GPHOME/greenplum_path.sh 
     =:$GPHOME/greenplum_path.sh
     ```
 
@@ -214,18 +178,18 @@ Perform the following steps as the Greenplum Database administrator `gpadmin`.
     $ psql -d testdb -c 'CREATE EXTENSION pljava;'
     ```
 
-    **Note:** The PL/Java `install.sql` script, used in previous releases to register the language, is deprecated.
+    > **Note** The PL/Java `install.sql` script, used in previous releases to register the language, is deprecated.
 
-2.  Copy your Java archives \(JAR files\) to the same directory on all Greenplum Database hosts. This example uses the Greenplum Database `gpscp` utility to copy the file `myclasses.jar` to the directory `$GPHOME/lib/postgresql/java/`:
+2.  Copy your Java archives \(JAR files\) to the same directory on all Greenplum Database hosts. This example uses the Greenplum Database `gpsync` utility to copy the file `myclasses.jar` to the directory `$GPHOME/lib/postgresql/java/`:
 
     ```
-    $ gpscp -f gphosts_file myclasses.jar 
+    $ gpsync -f gphosts_file myclasses.jar 
     =:/usr/local/greenplum-db/lib/postgresql/java/
     ```
 
     The file `gphosts_file` contains a list of the Greenplum Database hosts.
 
-3.  Set the `pljava_classpath` server configuration parameter in the master `postgresql.conf` file. For this example, the parameter value is a colon \(:\) separated list of the JAR files. For example:
+3.  Set the `pljava_classpath` server configuration parameter in the coordinator `postgresql.conf` file. For this example, the parameter value is a colon \(:\) separated list of the JAR files. For example:
 
     ```
     $ gpconfig -c pljava_classpath -v 'examples.jar:myclasses.jar'
@@ -233,7 +197,7 @@ Perform the following steps as the Greenplum Database administrator `gpadmin`.
 
     The file `examples.jar` is installed when you install the PL/Java extension package with the `gppkg` utility.
 
-    **Note:** If you install JAR files in a directory other than `$GPHOME/lib/postgresql/java/`, you must specify the absolute path to the JAR file. Each JAR file must be in the same location on all Greenplum Database hosts. For more information about specifying the location of JAR files, see the information about the `pljava_classpath` server configuration parameter in the *Greenplum Database Reference Guide*.
+    > **Note** If you install JAR files in a directory other than `$GPHOME/lib/postgresql/java/`, you must specify the absolute path to the JAR file. Each JAR file must be in the same location on all Greenplum Database hosts. For more information about specifying the location of JAR files, see the information about the `pljava_classpath` server configuration parameter in the *Greenplum Database Reference Guide*.
 
 4.  Reload the `postgresql.conf` file.
 
@@ -255,7 +219,7 @@ Perform the following steps as the Greenplum Database administrator `gpadmin`.
 
 ### <a id="topic8"></a>Remove PL/Java Support for a Database 
 
-Use the `DROP EXTENSION` command to remove support for PL/Java from a database. For example, this command disables the PL/Java language in the `testdb` database:
+Use the `DROP EXTENSION` command to remove support for PL/Java from a database. For example, this command deactivates the PL/Java language in the `testdb` database:
 
 ```
 $ psql -d testdb -c 'DROP EXTENSION pljava;'
@@ -263,7 +227,7 @@ $ psql -d testdb -c 'DROP EXTENSION pljava;'
 
 The default command fails if any existing objects \(such as functions\) depend on the language. Specify the `CASCADE` option to also drop all dependent objects, including functions that you created with PL/Java.
 
-**Note:** The PL/Java `uninstall.sql` script, used in previous releases to remove the language registration, is deprecated.
+> **Note** The PL/Java `uninstall.sql` script, used in previous releases to remove the language registration, is deprecated.
 
 ### <a id="topic_tgt_nfg_mjb"></a>Uninstall the Java JAR files and Software Package 
 
@@ -620,7 +584,7 @@ After obtaining a connection, you can prepare and run statements similar to othe
 
 You can catch and handle an exception in the Greenplum Database backend just like any other exception. The backend ErrorData structure is exposed as a property in a class called `org.postgresql.pljava.ServerException` \(derived from `java.sql.SQLException`\) and the Java try/catch mechanism is synchronized with the backend mechanism.
 
-**Important:** You will not be able to continue running backend functions until your function has returned and the error has been propagated when the backend has generated an exception unless you have used a savepoint. When a savepoint is rolled back, the exceptional condition is reset and you can continue your execution.
+> **Important** You will not be able to continue running backend functions until your function has returned and the error has been propagated when the backend has generated an exception unless you have used a savepoint. When a savepoint is rolled back, the exceptional condition is reset and you can continue your execution.
 
 ## <a id="topic26"></a>Savepoints 
 
@@ -640,7 +604,7 @@ Date(System.currentTimeMillis()));
 
 At present, the logger uses a handler that maps the current state of the Greenplum Database configuration setting `log_min_messages` to a valid Logger level and that outputs all messages using the Greenplum Database backend function `elog()`.
 
-**Note:** The `log_min_messages` setting is read from the database the first time a PL/Java function in a session is run. On the Java side, the setting does not change after the first PL/Java function execution in a specific session until the Greenplum Database session that is working with PL/Java is restarted.
+> **Note** The `log_min_messages` setting is read from the database the first time a PL/Java function in a session is run. On the Java side, the setting does not change after the first PL/Java function execution in a specific session until the Greenplum Database session that is working with PL/Java is restarted.
 
 The following mapping apply between the Logger levels and the Greenplum Database backend levels.
 
@@ -709,7 +673,7 @@ The PL/Java contains code that ensures that stale pointers are cleared when the 
 
 The following simple Java example creates a JAR file that contains a single method and runs the method.
 
-**Note:** The example requires Java SDK to compile the Java file.
+> **Note** The example requires Java SDK to compile the Java file.
 
 The following method returns a substring.
 
@@ -748,12 +712,12 @@ Create a JAR archive named analytics.jar that contains the class file and the ma
 jar cfm analytics.jar manifest.txt *.class
 ```
 
-Upload the jar file to the Greenplum master host.
+Upload the jar file to the Greenplum coordinator host.
 
-Run the `gpscp` utility to copy the jar file to the Greenplum Java directory. Use the `-f` option to specify the file that contains a list of the master and segment hosts.
+Run the `gpsync` utility to copy the jar file to the Greenplum Java directory. Use the `-f` option to specify the file that contains a list of the coordinator and segment hosts.
 
 ```
-gpscp -f gphosts_file analytics.jar 
+gpsync -f gphosts_file analytics.jar 
 =:/usr/local/greenplum-db/lib/postgresql/java/
 ```
 

@@ -98,6 +98,10 @@ typedef struct VacAttrStats
 	int			minrows;		/* Minimum # of rows wanted for stats */
 	void	   *extra_data;		/* for extra type-specific data */
 
+	/* These fields are used to compute stawidth during the compute_stats routine. */
+	double                  totalwidelength;/* total length of toowide row */
+	int                     widerow_num;    /* # of toowide row */
+
 	/*
 	 * These fields are to be filled in by the compute_stats routine. (They
 	 * are initialized to zero when the struct is created.)
@@ -149,10 +153,10 @@ typedef enum VacuumOption
 	VACOPT_FULL = 1 << 4,		/* FULL (non-concurrent) vacuum */
 	VACOPT_SKIP_LOCKED = 1 << 5,	/* skip if cannot get lock */
 	VACOPT_SKIPTOAST = 1 << 6,	/* don't process the TOAST table, if any */
-	VACOPT_DISABLE_PAGE_SKIPPING = 1 << 7	/* don't skip any pages */
+	VACOPT_DISABLE_PAGE_SKIPPING = 1 << 7,	/* don't skip any pages */
 
 	/* Extra GPDB options */
-	,
+	VACOPT_AO_AUX_ONLY = 1 << 8,
 	VACOPT_ROOTONLY = 1 << 10,
 	VACOPT_FULLSCAN = 1 << 11,
 
@@ -205,6 +209,16 @@ typedef struct VPgClassStats
 	double		rel_tuples;
 	BlockNumber relallvisible;
 } VPgClassStats;
+
+typedef struct VPgClassStatsCombo
+{
+	Oid			relid;
+	BlockNumber rel_pages;
+	double		rel_tuples;
+	BlockNumber relallvisible;
+
+	int			count; /* expect to equal to the number of dispatched segments */
+} VPgClassStatsCombo;
 
 /*
  * Parameters customizing behavior of VACUUM and ANALYZE.
@@ -318,17 +332,9 @@ extern void analyze_rel(Oid relid, RangeVar *relation,
 /* in commands/vacuumlazy.c */
 extern void lazy_vacuum_rel_heap(Relation onerel,
 							VacuumParams *params, BufferAccessStrategy bstrategy);
-extern void scan_index(Relation indrel, double num_tuples, int elevel, BufferAccessStrategy bstrategy);
+extern void scan_index(Relation indrel, Relation aorel, int elevel, BufferAccessStrategy bstrategy);
 
 /* in commands/vacuum_ao.c */
-
-extern void ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
-									  BufferAccessStrategy bstrategy);
-extern void ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
-								  BufferAccessStrategy bstrategy);
-extern void ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
-									   BufferAccessStrategy bstrategy);
-
 extern void ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy);
 
 extern bool std_typanalyze(VacAttrStats *stats);
@@ -348,5 +354,7 @@ extern int acquire_inherited_sample_rows(Relation onerel, int elevel,
 /* in commands/analyzefuncs.c */
 extern Datum gp_acquire_sample_rows(PG_FUNCTION_ARGS);
 extern Oid gp_acquire_sample_rows_col_type(Oid typid);
+
+extern bool gp_vacuum_needs_update_stats(void);
 
 #endif							/* VACUUM_H */

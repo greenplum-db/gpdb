@@ -96,6 +96,10 @@ CREATE EXTERNAL TABLE "dE_external_table"  (c1 integer)
   LOCATION ('file://localhost/dummy') FORMAT 'text';
 ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
 
+-- create table using user defined access method
+CREATE ACCESS METHOD bogus TYPE TABLE HANDLER heap_tableam_handler;
+CREATE TABLE d_bogus_heap(a int) USING bogus;
+ALTER TABLE "d_bogus_heap" OWNER TO test_psql_de_role;
 -- There's a GPDB-specific Storage column.
 \d
 \d+
@@ -125,11 +129,11 @@ comment on operator family dd_opfamily using btree is 'this is an operator famil
 -- \df+ should list all exec locations
 CREATE FUNCTION foofunc_exec_on_any() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON ANY;
 ALTER FUNCTION foofunc_exec_on_any() OWNER TO test_psql_de_role;
-CREATE FUNCTION foofunc_exec_on_coordinator() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON COORDINATOR;
+CREATE FUNCTION foofunc_exec_on_coordinator() RETURNS setof int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON COORDINATOR;
 ALTER FUNCTION foofunc_exec_on_coordinator() OWNER TO test_psql_de_role;
-CREATE FUNCTION foofunc_exec_on_all_segments() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
+CREATE FUNCTION foofunc_exec_on_all_segments() RETURNS setof int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
 ALTER FUNCTION foofunc_exec_on_all_segments() OWNER TO test_psql_de_role;
-CREATE FUNCTION foofunc_exec_on_initplan() RETURNS int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON INITPLAN;
+CREATE FUNCTION foofunc_exec_on_initplan() RETURNS setof int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON INITPLAN;
 ALTER FUNCTION foofunc_exec_on_initplan() OWNER TO test_psql_de_role;
 \df+ foofunc_exec_on_*
 

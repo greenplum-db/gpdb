@@ -687,13 +687,13 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="300"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:CheckConstraint Mdid="0.500842.1.0" Name="r_check_a" RelationMdid="0.500830.1.0">
+      <dxl:CheckConstraint Mdid="0.500842.1.0" Name="r_check_a" RelationMdid="6.500830.1.0">
         <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
           <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="-1"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="0.500830.1.0" Name="dml_union_r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.500830.1.0" Name="dml_union_r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -730,7 +730,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.500842.1.0"/>
         </dxl:CheckConstraints>
@@ -1253,7 +1252,7 @@
       <dxl:ColumnStatistics Mdid="1.500830.1.1.7" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.500830.1.1.6" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.501311.1.1" Name="dml_union_s" Rows="115.000000"/>
-      <dxl:Relation Mdid="0.501311.1.1" Name="dml_union_s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4">
+      <dxl:Relation Mdid="6.501311.1.1" Name="dml_union_s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1290,7 +1289,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.501311.1.1.7" Name="xmax" Width="4.000000"/>
@@ -1298,7 +1296,7 @@
       <dxl:ColumnStatistics Mdid="1.500830.1.1.5" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.500830.1.1.4" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.500830.1.1" Name="dml_union_r" Rows="100.000000"/>
-      <dxl:Relation Mdid="0.500830.1.1" Name="dml_union_r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.500830.1.1" Name="dml_union_r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1335,7 +1333,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.500842.1.0"/>
         </dxl:CheckConstraints>
@@ -1359,7 +1356,7 @@
               <dxl:Column ColId="13" Attno="1" ColName="b" TypeMdid="0.23.1.0"/>
             </dxl:Columns>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.500830.1.1" TableName="dml_union_r">
+              <dxl:TableDescriptor Mdid="6.500830.1.1" TableName="dml_union_r">
                 <dxl:Columns>
                   <dxl:Column ColId="12" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="13" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1376,7 +1373,7 @@
               </dxl:TableDescriptor>
             </dxl:LogicalGet>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.501311.1.1" TableName="dml_union_s">
+              <dxl:TableDescriptor Mdid="6.501311.1.1" TableName="dml_union_s">
                 <dxl:Columns>
                   <dxl:Column ColId="23" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="24" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1395,7 +1392,7 @@
           </dxl:Intersect>
         </dxl:SubqueryAny>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.500830.1.1" TableName="dml_union_r">
+          <dxl:TableDescriptor Mdid="6.500830.1.1" TableName="dml_union_r">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1504,7 +1501,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.500830.1.1" TableName="dml_union_r">
+              <dxl:TableDescriptor Mdid="6.500830.1.1" TableName="dml_union_r">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1579,7 +1576,7 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.500830.1.1" TableName="dml_union_r">
+                  <dxl:TableDescriptor Mdid="6.500830.1.1" TableName="dml_union_r">
                     <dxl:Columns>
                       <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="12" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1618,7 +1615,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.501311.1.1" TableName="dml_union_s">
+                <dxl:TableDescriptor Mdid="6.501311.1.1" TableName="dml_union_s">
                   <dxl:Columns>
                     <dxl:Column ColId="23" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="26" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

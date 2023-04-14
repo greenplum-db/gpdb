@@ -24,7 +24,7 @@ Embedding the entire field inside a set of double quotes guarantees preservation
 "Free trip to A,B ","5.89 ","Special rate ""1.79"" "
 ```
 
-**Note:** In CSV mode, all characters are significant. A quoted value surrounded by white space, or any characters other than `DELIMITER`, includes those characters. This can cause errors if you import data from a system that pads CSV lines with white space to some fixed width. In this case, preprocess the CSV file to remove the trailing white space before importing the data into Greenplum Database.
+> **Note** In CSV mode, all characters are significant. A quoted value surrounded by white space, or any characters other than `DELIMITER`, includes those characters. This can cause errors if you import data from a system that pads CSV lines with white space to some fixed width. In this case, preprocess the CSV file to remove the trailing white space before importing the data into Greenplum Database.
 
-**Parent topic:**[Escaping](../../load/topics/g-escaping.html)
+**Parent topic:** [Escaping](../../load/topics/g-escaping.html)
 

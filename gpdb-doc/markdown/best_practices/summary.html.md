@@ -89,14 +89,14 @@ See [Distributions](schema.html).
 
         ```
         gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-              total\_\#\_workfiles))) / 1.7
+              total_#_workfiles))) / 1.7
         ```
 
     -   If the total system memory is equal to or greater than 256 GB:
 
         ```
         gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-              total\_\#\_workfiles))) / 1.17
+              total_#_workfiles))) / 1.17
         ```
 
 -   Never set `gp_vmem_protect_limit` too high or larger than the physical RAM on the system.
@@ -167,13 +167,14 @@ See [System Monitoring and Maintenance](maintenance.html), [Query Profiling](../
 
 ## <a id="_Toc286661612"></a>ANALYZE 
 
--   Determine if analyzing the database is actually needed. Analyzing is not needed if g`p_autostats_mode` is set to `on_no_stats` \(the default\) and the table is not partitioned.
+-   Determine if analyzing the database is actually needed. Analyzing is not needed if `gp_autostats_mode` is set to `on_no_stats` \(the default\) and the table is not partitioned.
 -   Use `analyzedb` in preference to `ANALYZE` when dealing with large sets of tables, as it does not require analyzing the entire database. The `analyzedb` utility updates statistics data for the specified tables incrementally and concurrently. For append optimized tables, `analyzedb` updates statistics incrementally only if the statistics are not current. For heap tables, statistics are always updated. `ANALYZE` does not update the table metadata that the `analyzedb` utility uses to determine whether table statistics are up to date.
 -   Selectively run `ANALYZE` at the table level when needed.
 -   Always run `ANALYZE` after `INSERT`, `UPDATE`. and `DELETE` operations that significantly changes the underlying data.
 -   Always run `ANALYZE` after `CREATE INDEX` operations.
 -   If `ANALYZE` on very large tables takes too long, run `ANALYZE` only on the columns used in a join condition, `WHERE` clause, `SORT`, `GROUP BY`, or `HAVING` clause.
 -   When dealing with large sets of tables, use `analyzedb` instead of `ANALYZE.`
+-   Run `analyzedb` on the root partition any time that you add a new partition(s) to a partitioned table. This operation both analyzes the child leaf partitions in parallel and merges any updated statistics into the root partition.
 
 See [Updating Statistics with ANALYZE](analyze.html).
 
@@ -229,7 +230,7 @@ See [Encrypting Data and Database Connections](encryption.html)
 
 ## <a id="havail"></a>High Availability 
 
-**Note:** The following guidelines apply to actual hardware deployments, but not to public cloud-based infrastructure, where high availability solutions may already exist.
+> **Note** The following guidelines apply to actual hardware deployments, but not to public cloud-based infrastructure, where high availability solutions may already exist.
 
 -   Use a hardware RAID storage solution with 8 to 24 disks.
 -   Use RAID 1, 5, or 6 so that the disk array can tolerate a failed disk.
@@ -237,8 +238,8 @@ See [Encrypting Data and Database Connections](encryption.html)
 -   Protect against failure of the entire disk array and degradation during rebuilds by mirroring the RAID volume.
 -   Monitor disk utilization regularly and add additional space when needed.
 -   Monitor segment skew to ensure that data is distributed evenly and storage is consumed evenly at all segments.
--   Set up a standby master instance to take over if the primary master fails.
--   Plan how to switch clients to the new master instance when a failure occurs, for example, by updating the master address in DNS.
+-   Set up a standby coordinator instance to take over if the primary coordinator fails.
+-   Plan how to switch clients to the new coordinator instance when a failure occurs, for example, by updating the coordinator address in DNS.
 -   Set up monitoring to send notifications in a system monitoring application or by email when the primary fails.
 -   Set up mirrors for all segments.
 -   Locate primary segments and their mirrors on different hosts to protect against host failure.
@@ -251,5 +252,5 @@ See [Encrypting Data and Database Connections](encryption.html)
 
 See [High Availability](ha.html).
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 

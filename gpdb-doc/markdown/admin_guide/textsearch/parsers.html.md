@@ -34,9 +34,7 @@ The built-in parser is named `pg_catalog.default`. It recognizes 23 token types,
 |entity|XML entity|\&amp;|
 |blank|Space symbols|\(any whitespace or punctuation not otherwise recognized\)|
 
-**Note:**
-
-The parser's notion of a "letter" is determined by the database's locale setting, specifically `lc_ctype`. Words containing only the basic ASCII letters are reported as a separate token type, since it is sometimes useful to distinguish them. In most European languages, token types `word` and `asciiword` should be treated alike.
+> **Note** The parser's notion of a "letter" is determined by the database's locale setting, specifically `lc_ctype`. Words containing only the basic ASCII letters are reported as a separate token type, since it is sometimes useful to distinguish them. In most European languages, token types `word` and `asciiword` should be treated alike.
 
 `email` does not support all valid email characters as defined by RFC 5322. Specifically, the only non-alphanumeric characters supported for email user names are period, dash, and underscore.
 
@@ -66,5 +64,5 @@ SELECT alias, description, token FROM ts_debug('http://example.com/stuff/index.h
  url_path | URL path      | /stuff/index.html
 ```
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

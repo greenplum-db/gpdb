@@ -11,7 +11,7 @@ To estimate how much data your Greenplum Database system can accommodate, use th
 -   **[Calculating Space Requirements for Metadata and Logs](capacity_planning.html)**  
 
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic2"></a>Calculating Usable Disk Capacity 
 
@@ -51,7 +51,7 @@ In the *Greenplum Database Administrator Guide*, see these topics:
 -   [Creating and Managing Tablespaces](../admin_guide/ddl/ddl-tablespace.html) for information about moving the location of temporary and transaction files
 -   [Monitoring System State](../admin_guide/managing/monitor.html) for information about monitoring Greenplum Database disk space usage
 
-**Parent topic:**[Estimating Storage Capacity](capacity_planning.html)
+**Parent topic:** [Estimating Storage Capacity](capacity_planning.html)
 
 ## <a id="topic3"></a>Calculating User Data Size 
 
@@ -69,7 +69,7 @@ As with all databases, the size of your raw data will be slightly larger once it
     ```
 
 
-**Parent topic:**[Estimating Storage Capacity](capacity_planning.html)
+**Parent topic:** [Estimating Storage Capacity](capacity_planning.html)
 
 ## <a id="topic4"></a>Calculating Space Requirements for Metadata and Logs 
 
@@ -87,5 +87,5 @@ On each segment host, you will also want to account for space for Greenplum Data
 -   **Greenplum Database Log Files** — Each segment instance and the coordinator instance generates database log files, which will grow over time. Sufficient space should be allocated for these log files, and some type of log rotation facility should be used to ensure that to log files do not grow too large.
 -   **Command Center Data** — The data collection agents utilized by Command Center run on the same set of hosts as your Greenplum Database instance and utilize the system resources of those hosts. The resource consumption of the data collection agent processes on these hosts is minimal and should not significantly impact database performance. Historical data collected by the collection agents is stored in its own Command Center database within your Greenplum Database system. Collected data is distributed just like regular database data, so you will need to account for disk space in the data directory locations of your Greenplum segment instances. The amount of space required depends on the amount of historical data you would like to keep. Historical data is not automatically truncated. Database administrators must set up a truncation policy to maintain the size of the Command Center database.
 
-**Parent topic:**[Estimating Storage Capacity](capacity_planning.html)
+**Parent topic:** [Estimating Storage Capacity](capacity_planning.html)
 

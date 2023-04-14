@@ -1,3 +1,6 @@
+# required setup steps
+test: test_setup
+
 # do not include any partition table tests in this group
 # test 'partition' checks on pg_partition, pg_partition_templates without
 # any filters.

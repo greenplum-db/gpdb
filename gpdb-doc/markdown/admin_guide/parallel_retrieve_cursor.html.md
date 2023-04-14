@@ -1,5 +1,5 @@
 ---
-title: Retrieving Query Results with a Parallel Retrieve Cursor (Beta)</title>
+title: Retrieving Query Results with a Parallel Retrieve Cursor
 ---
 
 A *parallel retrieve cursor* is an enhanced cursor implementation that you can use to create a special kind of cursor on the Greenplum Database coordinator node, and retrieve query results, on demand and in parallel, directly from the Greenplum segments.
@@ -20,72 +20,14 @@ You use a cursor to retrieve a smaller number of rows at a time from a larger
 
 You can use the following functions and views to examine and manage parallel retrieve cursors and endpoints:
 
-
-<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_about__funcs" class="table" frame="border" border="1" rules="all">
-
-          <thead class="thead" align="left">
-            <tr class="row">
-              <th class="entry" valign="top" width="48.760330578512395%" id="d181858e131">Function, View Name</th>
-
-              <th class="entry" valign="top" width="51.2396694214876%" id="d181858e134">Description</th>
-
-            </tr>
-
-          </thead>
-
-          <tbody class="tbody">
-            <tr class="row">
-              <td class="entry" valign="top" width="48.760330578512395%" headers="d181858e131 ">gp_get_endpoints()<p class="p">
-               <a class="xref" href="../ref_guide/system_catalogs/gp_endpoints.html#topic1">gp_endpoints</a></p>
-</td>
-
-              <td class="entry" valign="top" width="51.2396694214876%" headers="d181858e134 ">List the endpoints associated with all active parallel
-                retrieve cursors declared by the current session user in the current
-                database. When the Greenplum
-                Database superuser invokes this function, it returns a list of all endpoints
-                for all parallel retrieve cursors declared by all users in the current
-                database.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry" valign="top" width="48.760330578512395%" headers="d181858e131 ">gp_get_session_endpoints()<p class="p">
-                <a class="xref" href="../ref_guide/system_catalogs/gp_session_endpoints.html#topic1">gp_session_endpoints</a></p>
-</td>
-
-              <td class="entry" valign="top" width="51.2396694214876%" headers="d181858e134 ">List the endpoints associated with all parallel retrieve
-                cursors declared in the current session for the current session user.</td>
-
-            </tr>
-    
-            <tr class="row">
-              <td class="entry" valign="top" width="48.760330578512395%" headers="d181858e131 ">gp_get_segment_endpoints()<p class="p">
-                <a class="xref" href="../ref_guide/system_catalogs/gp_segment_endpoints.html#topic1">gp_segment_endpoints</a></p>
-</td>
-
-              <td class="entry" valign="top" width="51.2396694214876%" headers="d181858e134 ">List the endpoints created in the QE for all active
-                parallel retrieve cursors declared by the current session user. When the
-                Greenplum Database superuser accesses this view, it returns a list of all
-                endpoints on the QE created for all parallel retrieve cursors declared by
-                all users.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry" valign="top" width="48.760330578512395%" headers="d181858e131 ">gp_wait_parallel_retrieve_cursor(cursorname text, timeout_sec int4 )</td>
-
-              <td class="entry" valign="top" width="51.2396694214876%" headers="d181858e134 ">Return cursor status or block and wait for results
-                to be retrieved from all endpoints associated with the specified
-                parallel retrieve cursor.</td>
-
-            </tr>
-
-          </tbody>
-        </table>
-    </div>
+|Function, View Name|Description|
+|-------------------|-----------|
+|gp\_get\_endpoints\(\)<br/><br/>[gp\_endpoints](../ref_guide/system_catalogs/gp_endpoints.html#topic1)|List the endpoints associated with all active parallel retrieve cursors declared by the current session user in the current database. When the Greenplum Database superuser invokes this function, it returns a list of all endpoints for all parallel retrieve cursors declared by all users in the current database.|
+|gp\_get\_session\_endpoints\(\)<br/><br/>[gp\_session\_endpoints](../ref_guide/system_catalogs/gp_session_endpoints.html#topic1)|List the endpoints associated with all parallel retrieve cursors declared in the current session for the current session user.|
+|gp\_get\_segment\_endpoints\(\)<br/><br/>[gp\_segment\_endpoints](../ref_guide/system_catalogs/gp_segment_endpoints.html#topic1)|List the endpoints created in the QE for all active parallel retrieve cursors declared by the current session user. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints on the QE created for all parallel retrieve cursors declared by all users.|
+|gp\_wait\_parallel\_retrieve\_cursor\(cursorname text, timeout\_sec int4 \)|Return cursor status or block and wait for results to be retrieved from all endpoints associated with the specified parallel retrieve cursor.|
 
 <div class="note">Each of these functions and views is located in the <code>pg_catalog</code> schema, and each <code>RETURNS TABLE</code>.</div>
-
 
 ## <a id="topic_using"></a>Using a Parallel Retrieve Cursor
 
@@ -151,105 +93,17 @@ SELECT * FROM gp_endpoints;
 
 These commands return the list of endpoints in a table with the following columns:
 
-
-
-<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_using__gp_get_endpoints_table" class="table" frame="border" border="1" rules="all">
-
-
-              <thead class="thead" align="left">
-                <tr class="row">
-                  <th class="entry" valign="top" width="100" id="d181858e379">Column Name</th>
-
-                  <th class="entry" valign="top" width="NaN%" id="d181858e382">Description</th>
-
-                </tr>
-
-              </thead>
-
-            <tbody class="tbody">
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">gp_segment_id</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The QE's endpoint <samp class="ph codeph">gp_segment_id</samp>.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">auth_token</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The authentication token for a retrieve session.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">cursorname</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The name of the parallel retrieve cursor.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">sessionid</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The identifier of the session in which the parallel
-                  retrieve cursor was created.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">hostname</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The name of the host from which to retrieve the data
-                  for the endpoint.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">port</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The port number from which to retrieve the data for
-                  the endpoint.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">username</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The name of the session user (not the current user);
-                  <em class="ph i">you must initiate the retrieve session as this user</em>.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">state</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The state of the endpoint; the valid states are:
-                  <p class="p">READY: The endpoint is ready to be retrieved.</p>
-
-                  <p class="p">ATTACHED: The endpoint is attached to a retrieve connection.</p>
-
-                  <p class="p">RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.</p>
-
-                  <p class="p">FINISHED: The endpoint has been fully retrieved.</p>
-
-                  <p class="p">RELEASED: Due to an error, the endpoint has been released and the connection
-                    closed.</p>
-</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e379 ">endpointname</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e382 ">The endpoint identifier; you provide this identifier
-                  to the <samp class="ph codeph">RETRIEVE</samp> command.</td>
-
-              </tr>
-
-              </tbody>
-
-            </table>
-          </div>
+|Column Name|Description|
+|-----------|-----------|
+|gp\_segment\_id|The QE's endpoint `gp_segment_id`.|
+|auth\_token|The authentication token for a retrieve session.|
+|cursorname|The name of the parallel retrieve cursor.|
+|sessionid|The identifier of the session in which the parallel retrieve cursor was created.|
+|hostname|The name of the host from which to retrieve the data for the endpoint.|
+|port|The port number from which to retrieve the data for the endpoint.|
+|username|The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
+|state|The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
+|endpointname|The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
 Refer to the [gp_endpoints](../ref_guide/system_catalogs/gp_endpoints.html#topic1) view reference page for more information about the endpoint attributes returned by these commands.
 
@@ -392,121 +246,32 @@ You can obtain segment-specific retrieve session information in two ways: from t
 
 The commands return endpoint and retrieve session information in a table with the following columns:
 
-<div class="tablenoborder"> <table cellpadding="4" cellspacing="0" summary="" id="topic_using__gp_get_segment_endpoints_table" class="table" frame="border" border="1" rules="all">
-
-
-              <thead class="thead" align="left">
-                <tr class="row">
-                  <th class="entry" valign="top" width="100" id="d181858e835">Column Name</th>
-
-                  <th class="entry" valign="top" width="NaN%" id="d181858e838">Description</th>
-
-                </tr>
-
-              </thead>
-
-            <tbody class="tbody">
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">auth_token</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The authentication token for a the retrieve
-                  session.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">databaseid</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The identifier of the database in which the parallel
-                  retrieve cursor was created.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">senderpid</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The identifier of the process sending the query
-                  results.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">receiverpid</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The process identifier of the retrieve session that is
-                  receiving the query results.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">state</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The state of the endpoint; the valid states are:
-                  <p class="p">READY: The endpoint is ready to be retrieved.</p>
-
-                  <p class="p">ATTACHED: The endpoint is attached to a retrieve connection.</p>
-
-                  <p class="p">RETRIEVING: A retrieve session is retrieving data from the endpoint at this
-                    moment.</p>
-
-                  <p class="p">FINISHED: The endpoint has been fully retrieved.</p>
-
-                  <p class="p">RELEASED: Due to an error, the endpoint has been released and the
-                    connection closed.</p>
-</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">gp_segment_id</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The QE's endpoint <samp class="ph codeph">gp_segment_id</samp>.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">sessionid</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The identifier of the session in which the parallel
-                  retrieve cursor was created.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">username</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The name of the session user that initiated the
-                  retrieve session.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">endpointname</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The endpoint identifier.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry" valign="top" width="100" headers="d181858e835 ">cursorname</td>
-
-                <td class="entry" valign="top" width="NaN%" headers="d181858e838 ">The name of the parallel retrieve cursor.</td>
-
-              </tr>
-
-              </tbody>
-
-            </table>
-            </div>
+|Column Name|Description|
+|-----------|-----------|
+|auth\_token|The authentication token for a the retrieve session.|
+|databaseid|The identifier of the database in which the parallel retrieve cursor was created.|
+|senderpid|The identifier of the process sending the query results.|
+|receiverpid|The process identifier of the retrieve session that is receiving the query results.|
+|state|The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
+|gp\_segment\_id|The QE's endpoint `gp_segment_id`.|
+|sessionid|The identifier of the session in which the parallel retrieve cursor was created.|
+|username|The name of the session user that initiated the retrieve session.|
+|endpointname|The endpoint identifier.|
+|cursorname|The name of the parallel retrieve cursor.|
 
 Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/gp_segment_endpoints.html#topic1) view reference page for more information about the endpoint attributes returned by these commands.
+
+
+## <a id="topic_cfg"></a>Limiting the Number of Concurrently Open Cursors
+
+By default, Greenplum Database does not limit the number of parallel retrieve cursors that are active in the cluster \(up to the maximum value of 1024\). The Greenplum Database superuser can set the [gp\_max\_parallel\_cursors](../ref_guide/config_params/guc-list.html#gp_max_parallel_cursors) server configuration parameter to limit the number of open cursors.
 
 
 ## <a id="topic_limits"></a>Known Issues and Limitations
 
 The parallel retrieve cursor implementation has the following limitations:
 
-- The Pivotal Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
+- The VMware Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
 - Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 - Parallel retrieve cursors cannot be declared `WITH HOLD`.
 - Parallel retrieve cursors do not support the `FETCH` and `MOVE` cursor operations.
@@ -515,7 +280,7 @@ The parallel retrieve cursor implementation has the following limitations:
 
 ## <a id="topic_addtldocs"></a>Additional Documentation
 
-Refer to the [README](https://github.com/greenplum-db/gpdb/tree/master/src/backend/cdb/endpoint/README) in the Greenplum Database `github` repository for additional information about the parallel retrieve cursor implementation.  You can also find parallel retrieve cursor [programming examples](https://github.com/greenplum-db/gpdb/tree/master/src/test/examples/) in the repository.
+Refer to the [README](https://github.com/greenplum-db/gpdb/tree/main/src/backend/cdb/endpoint/README) in the Greenplum Database `github` repository for additional information about the parallel retrieve cursor implementation.  You can also find parallel retrieve cursor [programming examples](https://github.com/greenplum-db/gpdb/tree/main/src/test/examples/) in the repository.
 
 
 ## <a id="topic_examples"></a>Example

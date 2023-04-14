@@ -448,3 +448,17 @@ string TruncateOptions(const string &urlWithOptions) {
         return urlWithOptions.substr(0, firstSpace);
     }
 }
+
+string ReplaceNewlineWithSpace(const string &urlWithOptions)
+{
+   string urlWithOptionsProcessed = urlWithOptions;
+   size_t urlLen = urlWithOptionsProcessed.size();
+   for(size_t index = 0; index < urlLen; ++index)
+   {
+       if(urlWithOptionsProcessed[index] == '\n' ||
+          urlWithOptionsProcessed[index] == '\t' ||
+          urlWithOptionsProcessed[index] == '\r')
+           urlWithOptionsProcessed[index] = ' ';
+   }
+   return urlWithOptionsProcessed;
+}

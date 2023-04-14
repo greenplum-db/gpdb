@@ -181,7 +181,7 @@
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.13" Name="value" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.12" Name="measurename" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17306732.1.1" Name="mr_star1_deltas_dh" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.17306732.1.1" Name="mr_star1_deltas_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17306732.1.1" Name="mr_star1_deltas_dh" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -281,14 +281,13 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.17306732001.1.1"/>
-          <dxl:Partition Mdid="0.17306732002.1.1"/>
+          <dxl:Partition Mdid="6.17306732001.1.1"/>
+          <dxl:Partition Mdid="6.17306732002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.17306732001.1.1" Name="mr_star1_deltas_dh_prt_1" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17306732001.1.1" Name="mr_star1_deltas_dh_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -388,7 +387,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -406,7 +404,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.17306732002.1.1" Name="mr_star1_deltas_dh_prt_2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17306732002.1.1" Name="mr_star1_deltas_dh_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -506,7 +504,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -575,7 +572,7 @@
         <dxl:IntermediateResultType Mdid="0.701.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.17327104.1.1" Name="mr_star1_gammas_dh" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.17327104.1.1" Name="mr_star1_gammas_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17327104.1.1" Name="mr_star1_gammas_dh" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -675,14 +672,13 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.17327104001.1.1"/>
-          <dxl:Partition Mdid="0.17327104002.1.1"/>
+          <dxl:Partition Mdid="6.17327104001.1.1"/>
+          <dxl:Partition Mdid="6.17327104002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.17327104001.1.1" Name="mr_star1_gammas_dh_prt_1" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17327104001.1.1" Name="mr_star1_gammas_dh_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -782,7 +778,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -800,7 +795,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.17327104002.1.1" Name="mr_star1_gammas_dh_prt_2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17327104002.1.1" Name="mr_star1_gammas_dh_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -900,7 +895,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -964,7 +958,7 @@
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.0" Name="riskrunid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17306732.1.1.9" Name="contractid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17298420.1.1" Name="mr_star1_cashflows_dh" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.17298420.1.1" Name="mr_star1_cashflows_dh" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.17298420.1.1" Name="mr_star1_cashflows_dh" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1064,14 +1058,13 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.17298420001.1.1"/>
-          <dxl:Partition Mdid="0.17298420002.1.1"/>
+          <dxl:Partition Mdid="6.17298420001.1.1"/>
+          <dxl:Partition Mdid="6.17298420002.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.17298420001.1.1" Name="mr_star1_cashflows_dh_prt_1" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17298420001.1.1" Name="mr_star1_cashflows_dh_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1171,7 +1164,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1189,7 +1181,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.17298420002.1.1" Name="mr_star1_cashflows_dh_prt_2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.17298420002.1.1" Name="mr_star1_cashflows_dh_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="9,18,19" Keys="30,31,29">
         <dxl:Columns>
           <dxl:Column Name="riskrunid" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -1289,7 +1281,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1390,7 +1381,7 @@
                 </dxl:Comparison>
               </dxl:And>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.17298420.1.1" TableName="mr_star1_cashflows_dh" ExecuteAsUser="10">
+                <dxl:TableDescriptor Mdid="6.17298420.1.1" TableName="mr_star1_cashflows_dh" ExecuteAsUser="10">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0"/>
@@ -1460,7 +1451,7 @@
                 </dxl:Comparison>
               </dxl:And>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.17306732.1.1" TableName="mr_star1_deltas_dh" ExecuteAsUser="10">
+                <dxl:TableDescriptor Mdid="6.17306732.1.1" TableName="mr_star1_deltas_dh" ExecuteAsUser="10">
                   <dxl:Columns>
                     <dxl:Column ColId="34" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0"/>
                     <dxl:Column ColId="35" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0"/>
@@ -1531,7 +1522,7 @@
               </dxl:Comparison>
             </dxl:And>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.17327104.1.1" TableName="mr_star1_gammas_dh" ExecuteAsUser="10">
+              <dxl:TableDescriptor Mdid="6.17327104.1.1" TableName="mr_star1_gammas_dh" ExecuteAsUser="10">
                 <dxl:Columns>
                   <dxl:Column ColId="67" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0"/>
                   <dxl:Column ColId="68" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0"/>
@@ -1624,7 +1615,7 @@
               <dxl:ProjElem ColId="32" Alias="value">
                 <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="101" ColName="ColRef_0101" TypeMdid="0.701.1.0"/>
+                    <dxl:Ident ColId="101" ColName="ColRef_0101" TypeMdid="0.701.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -1709,7 +1700,7 @@
                       <dxl:ProjElem ColId="101" Alias="ColRef_0101">
                         <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Ident ColId="13" ColName="value" TypeMdid="0.701.1.0"/>
+                            <dxl:Ident ColId="13" ColName="value" TypeMdid="0.701.1.0"/>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>
@@ -1752,25 +1743,10 @@
                       </dxl:SortingColumnList>
                       <dxl:LimitCount/>
                       <dxl:LimitOffset/>
-                      <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
+                      <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="431.000264" Rows="1.000000" Width="32"/>
                         </dxl:Properties>
-                        <dxl:TableDescriptor Mdid="0.17298420.1.1" TableName="mr_star1_cashflows_dh" ExecuteAsUser="10">
-                          <dxl:Columns>
-                            <dxl:Column ColId="2" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                            <dxl:Column ColId="9" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="12" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                            <dxl:Column ColId="13" Attno="14" ColName="value" TypeMdid="0.701.1.0"/>
-                            <dxl:Column ColId="18" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="19" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="23" Attno="24" ColName="bookid" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="28" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                            <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                            <dxl:Column ColId="30" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                            <dxl:Column ColId="31" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="2" Alias="businessdate">
                             <dxl:Ident ColId="2" ColName="businessdate" TypeMdid="0.1082.1.0"/>
@@ -1788,84 +1764,43 @@
                             <dxl:Ident ColId="28" ColName="bookname" TypeMdid="0.1043.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000264" Rows="1.000000" Width="32"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="104" Alias="businessdate">
-                              <dxl:Ident ColId="104" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="114" Alias="measurename">
-                              <dxl:Ident ColId="114" ColName="measurename" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="115" Alias="value">
-                              <dxl:Ident ColId="115" ColName="value" TypeMdid="0.701.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="125" Alias="bookid">
-                              <dxl:Ident ColId="125" ColName="bookid" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="130" Alias="bookname">
-                              <dxl:Ident ColId="130" ColName="bookname" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter>
-                            <dxl:And>
-                              <dxl:Not>
-                                <dxl:IsNull>
-                                  <dxl:Ident ColId="125" ColName="bookid" TypeMdid="0.23.1.0"/>
-                                </dxl:IsNull>
-                              </dxl:Not>
-                              <dxl:Not>
-                                <dxl:IsNull>
-                                  <dxl:Ident ColId="114" ColName="measurename" TypeMdid="0.1043.1.0"/>
-                                </dxl:IsNull>
-                              </dxl:Not>
-                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
-                                <dxl:Ident ColId="104" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
-                              </dxl:Comparison>
-                            </dxl:And>
-                          </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.118550817.1.1" TableName="mr_star1_cashflows_dh_prt_1" ExecuteAsUser="10">
-                            <dxl:Columns>
-                              <dxl:Column ColId="102" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="103" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="104" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="105" Attno="4" ColName="ticket" TypeMdid="0.1042.1.0" ColWidth="12"/>
-                              <dxl:Column ColId="106" Attno="5" ColName="longticket" TypeMdid="0.1042.1.0" ColWidth="12"/>
-                              <dxl:Column ColId="107" Attno="6" ColName="counterpartyid" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                              <dxl:Column ColId="108" Attno="7" ColName="entity" TypeMdid="0.1042.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="109" Attno="8" ColName="tradetype" TypeMdid="0.1043.1.0" ColWidth="32"/>
-                              <dxl:Column ColId="110" Attno="9" ColName="subtype" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="111" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="112" Attno="11" ColName="tradingaccount" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                              <dxl:Column ColId="113" Attno="12" ColName="productidtype" TypeMdid="0.1043.1.0" ColWidth="32"/>
-                              <dxl:Column ColId="114" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="115" Attno="14" ColName="value" TypeMdid="0.701.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="116" Attno="15" ColName="uomname" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="117" Attno="16" ColName="marketstatename" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="118" Attno="17" ColName="process2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="119" Attno="18" ColName="observablename" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="120" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="121" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="122" Attno="21" ColName="errormessage" TypeMdid="0.25.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="123" Attno="22" ColName="partyid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="124" Attno="23" ColName="entityid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="125" Attno="24" ColName="bookid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="126" Attno="25" ColName="ccyid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="127" Attno="26" ColName="productid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="128" Attno="27" ColName="tradetypeid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="129" Attno="28" ColName="valuationmodelid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="130" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="131" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="132" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="133" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:Append>
+                        <dxl:Filter>
+                          <dxl:And>
+                            <dxl:Not>
+                              <dxl:IsNull>
+                                <dxl:Ident ColId="23" ColName="bookid" TypeMdid="0.23.1.0"/>
+                              </dxl:IsNull>
+                            </dxl:Not>
+                            <dxl:Not>
+                              <dxl:IsNull>
+                                <dxl:Ident ColId="12" ColName="measurename" TypeMdid="0.1043.1.0"/>
+                              </dxl:IsNull>
+                            </dxl:Not>
+                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
+                              <dxl:Ident ColId="2" ColName="businessdate" TypeMdid="0.1082.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
+                            </dxl:Comparison>
+                          </dxl:And>
+                        </dxl:Filter>
+                        <dxl:Partitions>
+                          <dxl:Partition Mdid="6.118550817.1.1"/>
+                        </dxl:Partitions>
+                        <dxl:TableDescriptor Mdid="6.17298420.1.1" TableName="mr_star1_cashflows_dh" ExecuteAsUser="10">
+                          <dxl:Columns>
+                            <dxl:Column ColId="2" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
+                            <dxl:Column ColId="9" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="12" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
+                            <dxl:Column ColId="13" Attno="14" ColName="value" TypeMdid="0.701.1.0"/>
+                            <dxl:Column ColId="18" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="19" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="23" Attno="24" ColName="bookid" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="28" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
+                            <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                            <dxl:Column ColId="30" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                            <dxl:Column ColId="31" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                          </dxl:Columns>
+                        </dxl:TableDescriptor>
+                      </dxl:DynamicTableScan>
                     </dxl:Sort>
                   </dxl:Aggregate>
                 </dxl:Result>
@@ -1890,7 +1825,7 @@
               <dxl:ProjElem ColId="65" Alias="value">
                 <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="100" ColName="ColRef_0100" TypeMdid="0.701.1.0"/>
+                    <dxl:Ident ColId="100" ColName="ColRef_0100" TypeMdid="0.701.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -1975,7 +1910,7 @@
                       <dxl:ProjElem ColId="100" Alias="ColRef_0100">
                         <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Ident ColId="46" ColName="value" TypeMdid="0.701.1.0"/>
+                            <dxl:Ident ColId="46" ColName="value" TypeMdid="0.701.1.0"/>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>
@@ -2018,25 +1953,10 @@
                       </dxl:SortingColumnList>
                       <dxl:LimitCount/>
                       <dxl:LimitOffset/>
-                      <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="2" SelectorIds="">
+                      <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="431.000264" Rows="1.000000" Width="32"/>
                         </dxl:Properties>
-                        <dxl:TableDescriptor Mdid="0.17306732.1.1" TableName="mr_star1_deltas_dh" ExecuteAsUser="10">
-                          <dxl:Columns>
-                            <dxl:Column ColId="35" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                            <dxl:Column ColId="42" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="45" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                            <dxl:Column ColId="46" Attno="14" ColName="value" TypeMdid="0.701.1.0"/>
-                            <dxl:Column ColId="51" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="52" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="56" Attno="24" ColName="bookid" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="61" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                            <dxl:Column ColId="62" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                            <dxl:Column ColId="63" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                            <dxl:Column ColId="64" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="35" Alias="businessdate">
                             <dxl:Ident ColId="35" ColName="businessdate" TypeMdid="0.1082.1.0"/>
@@ -2054,84 +1974,43 @@
                             <dxl:Ident ColId="61" ColName="bookname" TypeMdid="0.1043.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000264" Rows="1.000000" Width="32"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="136" Alias="businessdate">
-                              <dxl:Ident ColId="136" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="146" Alias="measurename">
-                              <dxl:Ident ColId="146" ColName="measurename" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="147" Alias="value">
-                              <dxl:Ident ColId="147" ColName="value" TypeMdid="0.701.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="157" Alias="bookid">
-                              <dxl:Ident ColId="157" ColName="bookid" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="162" Alias="bookname">
-                              <dxl:Ident ColId="162" ColName="bookname" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter>
-                            <dxl:And>
-                              <dxl:Not>
-                                <dxl:IsNull>
-                                  <dxl:Ident ColId="157" ColName="bookid" TypeMdid="0.23.1.0"/>
-                                </dxl:IsNull>
-                              </dxl:Not>
-                              <dxl:Not>
-                                <dxl:IsNull>
-                                  <dxl:Ident ColId="146" ColName="measurename" TypeMdid="0.1043.1.0"/>
-                                </dxl:IsNull>
-                              </dxl:Not>
-                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
-                                <dxl:Ident ColId="136" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
-                              </dxl:Comparison>
-                            </dxl:And>
-                          </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.126862817.1.1" TableName="mr_star1_deltas_dh_prt_1" ExecuteAsUser="10">
-                            <dxl:Columns>
-                              <dxl:Column ColId="134" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="135" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="136" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="137" Attno="4" ColName="ticket" TypeMdid="0.1042.1.0" ColWidth="12"/>
-                              <dxl:Column ColId="138" Attno="5" ColName="longticket" TypeMdid="0.1042.1.0" ColWidth="12"/>
-                              <dxl:Column ColId="139" Attno="6" ColName="counterpartyid" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                              <dxl:Column ColId="140" Attno="7" ColName="entity" TypeMdid="0.1042.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="141" Attno="8" ColName="tradetype" TypeMdid="0.1043.1.0" ColWidth="32"/>
-                              <dxl:Column ColId="142" Attno="9" ColName="subtype" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="143" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="144" Attno="11" ColName="tradingaccount" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                              <dxl:Column ColId="145" Attno="12" ColName="productidtype" TypeMdid="0.1043.1.0" ColWidth="32"/>
-                              <dxl:Column ColId="146" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="147" Attno="14" ColName="value" TypeMdid="0.701.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="148" Attno="15" ColName="uomname" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="149" Attno="16" ColName="marketstatename" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="150" Attno="17" ColName="process2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="151" Attno="18" ColName="observablename" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="152" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="153" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="154" Attno="21" ColName="errormessage" TypeMdid="0.25.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="155" Attno="22" ColName="partyid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="156" Attno="23" ColName="entityid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="157" Attno="24" ColName="bookid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="158" Attno="25" ColName="ccyid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="159" Attno="26" ColName="productid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="160" Attno="27" ColName="tradetypeid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="161" Attno="28" ColName="valuationmodelid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="162" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="163" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="164" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="165" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:Append>
+                        <dxl:Filter>
+                          <dxl:And>
+                            <dxl:Not>
+                              <dxl:IsNull>
+                                <dxl:Ident ColId="56" ColName="bookid" TypeMdid="0.23.1.0"/>
+                              </dxl:IsNull>
+                            </dxl:Not>
+                            <dxl:Not>
+                              <dxl:IsNull>
+                                <dxl:Ident ColId="45" ColName="measurename" TypeMdid="0.1043.1.0"/>
+                              </dxl:IsNull>
+                            </dxl:Not>
+                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
+                              <dxl:Ident ColId="35" ColName="businessdate" TypeMdid="0.1082.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
+                            </dxl:Comparison>
+                          </dxl:And>
+                        </dxl:Filter>
+                        <dxl:Partitions>
+                          <dxl:Partition Mdid="6.126862817.1.1"/>
+                        </dxl:Partitions>
+                        <dxl:TableDescriptor Mdid="6.17306732.1.1" TableName="mr_star1_deltas_dh" ExecuteAsUser="10">
+                          <dxl:Columns>
+                            <dxl:Column ColId="35" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
+                            <dxl:Column ColId="42" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="45" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
+                            <dxl:Column ColId="46" Attno="14" ColName="value" TypeMdid="0.701.1.0"/>
+                            <dxl:Column ColId="51" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="52" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="56" Attno="24" ColName="bookid" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="61" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
+                            <dxl:Column ColId="62" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                            <dxl:Column ColId="63" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                            <dxl:Column ColId="64" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                          </dxl:Columns>
+                        </dxl:TableDescriptor>
+                      </dxl:DynamicTableScan>
                     </dxl:Sort>
                   </dxl:Aggregate>
                 </dxl:Result>
@@ -2156,7 +2035,7 @@
               <dxl:ProjElem ColId="98" Alias="value">
                 <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="99" ColName="ColRef_0099" TypeMdid="0.701.1.0"/>
+                    <dxl:Ident ColId="99" ColName="ColRef_0099" TypeMdid="0.701.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -2241,7 +2120,7 @@
                       <dxl:ProjElem ColId="99" Alias="ColRef_0099">
                         <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Ident ColId="79" ColName="value" TypeMdid="0.701.1.0"/>
+                            <dxl:Ident ColId="79" ColName="value" TypeMdid="0.701.1.0"/>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>
@@ -2284,25 +2163,10 @@
                       </dxl:SortingColumnList>
                       <dxl:LimitCount/>
                       <dxl:LimitOffset/>
-                      <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="3" SelectorIds="">
+                      <dxl:DynamicTableScan PartIndexId="3" SelectorIds="">
                         <dxl:Properties>
                           <dxl:Cost StartupCost="0" TotalCost="431.000264" Rows="1.000000" Width="32"/>
                         </dxl:Properties>
-                        <dxl:TableDescriptor Mdid="0.17327104.1.1" TableName="mr_star1_gammas_dh" ExecuteAsUser="10">
-                          <dxl:Columns>
-                            <dxl:Column ColId="68" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                            <dxl:Column ColId="75" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="78" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                            <dxl:Column ColId="79" Attno="14" ColName="value" TypeMdid="0.701.1.0"/>
-                            <dxl:Column ColId="84" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="85" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                            <dxl:Column ColId="89" Attno="24" ColName="bookid" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="94" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                            <dxl:Column ColId="95" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                            <dxl:Column ColId="96" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                            <dxl:Column ColId="97" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="68" Alias="businessdate">
                             <dxl:Ident ColId="68" ColName="businessdate" TypeMdid="0.1082.1.0"/>
@@ -2320,84 +2184,43 @@
                             <dxl:Ident ColId="94" ColName="bookname" TypeMdid="0.1043.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000264" Rows="1.000000" Width="32"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="168" Alias="businessdate">
-                              <dxl:Ident ColId="168" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="178" Alias="measurename">
-                              <dxl:Ident ColId="178" ColName="measurename" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="179" Alias="value">
-                              <dxl:Ident ColId="179" ColName="value" TypeMdid="0.701.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="189" Alias="bookid">
-                              <dxl:Ident ColId="189" ColName="bookid" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="194" Alias="bookname">
-                              <dxl:Ident ColId="194" ColName="bookname" TypeMdid="0.1043.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter>
-                            <dxl:And>
-                              <dxl:Not>
-                                <dxl:IsNull>
-                                  <dxl:Ident ColId="189" ColName="bookid" TypeMdid="0.23.1.0"/>
-                                </dxl:IsNull>
-                              </dxl:Not>
-                              <dxl:Not>
-                                <dxl:IsNull>
-                                  <dxl:Ident ColId="178" ColName="measurename" TypeMdid="0.1043.1.0"/>
-                                </dxl:IsNull>
-                              </dxl:Not>
-                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
-                                <dxl:Ident ColId="168" ColName="businessdate" TypeMdid="0.1082.1.0"/>
-                                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
-                              </dxl:Comparison>
-                            </dxl:And>
-                          </dxl:Filter>
-                          <dxl:TableDescriptor Mdid="0.147234817.1.1" TableName="mr_star1_gammas_dh_prt_1" ExecuteAsUser="10">
-                            <dxl:Columns>
-                              <dxl:Column ColId="166" Attno="1" ColName="riskrunid" TypeMdid="0.20.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="167" Attno="2" ColName="riskrunsubid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="168" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="169" Attno="4" ColName="ticket" TypeMdid="0.1042.1.0" ColWidth="12"/>
-                              <dxl:Column ColId="170" Attno="5" ColName="longticket" TypeMdid="0.1042.1.0" ColWidth="12"/>
-                              <dxl:Column ColId="171" Attno="6" ColName="counterpartyid" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                              <dxl:Column ColId="172" Attno="7" ColName="entity" TypeMdid="0.1042.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="173" Attno="8" ColName="tradetype" TypeMdid="0.1043.1.0" ColWidth="32"/>
-                              <dxl:Column ColId="174" Attno="9" ColName="subtype" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="175" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="176" Attno="11" ColName="tradingaccount" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                              <dxl:Column ColId="177" Attno="12" ColName="productidtype" TypeMdid="0.1043.1.0" ColWidth="32"/>
-                              <dxl:Column ColId="178" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="179" Attno="14" ColName="value" TypeMdid="0.701.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="180" Attno="15" ColName="uomname" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="181" Attno="16" ColName="marketstatename" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="182" Attno="17" ColName="process2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="183" Attno="18" ColName="observablename" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="184" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="185" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
-                              <dxl:Column ColId="186" Attno="21" ColName="errormessage" TypeMdid="0.25.1.0" ColWidth="8"/>
-                              <dxl:Column ColId="187" Attno="22" ColName="partyid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="188" Attno="23" ColName="entityid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="189" Attno="24" ColName="bookid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="190" Attno="25" ColName="ccyid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="191" Attno="26" ColName="productid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="192" Attno="27" ColName="tradetypeid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="193" Attno="28" ColName="valuationmodelid" TypeMdid="0.23.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="194" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
-                              <dxl:Column ColId="195" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                              <dxl:Column ColId="196" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                              <dxl:Column ColId="197" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:Append>
+                        <dxl:Filter>
+                          <dxl:And>
+                            <dxl:Not>
+                              <dxl:IsNull>
+                                <dxl:Ident ColId="89" ColName="bookid" TypeMdid="0.23.1.0"/>
+                              </dxl:IsNull>
+                            </dxl:Not>
+                            <dxl:Not>
+                              <dxl:IsNull>
+                                <dxl:Ident ColId="78" ColName="measurename" TypeMdid="0.1043.1.0"/>
+                              </dxl:IsNull>
+                            </dxl:Not>
+                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
+                              <dxl:Ident ColId="68" ColName="businessdate" TypeMdid="0.1082.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
+                            </dxl:Comparison>
+                          </dxl:And>
+                        </dxl:Filter>
+                        <dxl:Partitions>
+                          <dxl:Partition Mdid="6.147234817.1.1"/>
+                        </dxl:Partitions>
+                        <dxl:TableDescriptor Mdid="6.17327104.1.1" TableName="mr_star1_gammas_dh" ExecuteAsUser="10">
+                          <dxl:Columns>
+                            <dxl:Column ColId="68" Attno="3" ColName="businessdate" TypeMdid="0.1082.1.0"/>
+                            <dxl:Column ColId="75" Attno="10" ColName="contractid" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="78" Attno="13" ColName="measurename" TypeMdid="0.1043.1.0" ColWidth="64"/>
+                            <dxl:Column ColId="79" Attno="14" ColName="value" TypeMdid="0.701.1.0"/>
+                            <dxl:Column ColId="84" Attno="19" ColName="axis1" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="85" Attno="20" ColName="axis2" TypeMdid="0.1043.1.0" ColWidth="128"/>
+                            <dxl:Column ColId="89" Attno="24" ColName="bookid" TypeMdid="0.23.1.0"/>
+                            <dxl:Column ColId="94" Attno="29" ColName="bookname" TypeMdid="0.1043.1.0" ColWidth="64"/>
+                            <dxl:Column ColId="95" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                            <dxl:Column ColId="96" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                            <dxl:Column ColId="97" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                          </dxl:Columns>
+                        </dxl:TableDescriptor>
+                      </dxl:DynamicTableScan>
                     </dxl:Sort>
                   </dxl:Aggregate>
                 </dxl:Result>

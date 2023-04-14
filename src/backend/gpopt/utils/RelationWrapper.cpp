@@ -11,7 +11,9 @@ namespace gpdb
 RelationWrapper::~RelationWrapper() noexcept(false)
 {
 	if (m_relation)
+	{
 		CloseRelation(m_relation);
+	}
 }
 
 void

@@ -542,7 +542,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.174698.1.1" Name="tt" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.174698.1.1" Name="tt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.174698.1.1" Name="tt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -573,11 +573,10 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.174451.1.1" Name="p2" Rows="10000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.174451.1.1" Name="p2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.174451.1.1" Name="p2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -608,17 +607,16 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.174451001.1.1"/>
-          <dxl:Partition Mdid="0.174451002.1.1"/>
-          <dxl:Partition Mdid="0.174451003.1.1"/>
-          <dxl:Partition Mdid="0.174451004.1.1"/>
-          <dxl:Partition Mdid="0.174451005.1.1"/>
+          <dxl:Partition Mdid="6.174451001.1.1"/>
+          <dxl:Partition Mdid="6.174451002.1.1"/>
+          <dxl:Partition Mdid="6.174451003.1.1"/>
+          <dxl:Partition Mdid="6.174451004.1.1"/>
+          <dxl:Partition Mdid="6.174451005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.174451001.1.1" Name="p2_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451001.1.1" Name="p2_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -649,7 +647,6 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -667,7 +664,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.174451002.1.1" Name="p2_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451002.1.1" Name="p2_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -698,7 +695,6 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -716,7 +712,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.174451003.1.1" Name="p2_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451003.1.1" Name="p2_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -747,7 +743,6 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -765,7 +760,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.174451004.1.1" Name="p2_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451004.1.1" Name="p2_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -796,7 +791,6 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -814,7 +808,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.174451005.1.1" Name="p2_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.174451005.1.1" Name="p2_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -845,7 +839,6 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -1086,7 +1079,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
             <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.174698.1.1" TableName="tt">
+            <dxl:TableDescriptor Mdid="6.174698.1.1" TableName="tt">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1101,7 +1094,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.174451.1.1" TableName="p2">
+            <dxl:TableDescriptor Mdid="6.174451.1.1" TableName="p2">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1117,7 +1110,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
           </dxl:LogicalGet>
         </dxl:UnionAll>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.174698.1.1" TableName="tt">
+          <dxl:TableDescriptor Mdid="6.174698.1.1" TableName="tt">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1210,7 +1203,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.174698.1.1" TableName="tt">
+              <dxl:TableDescriptor Mdid="6.174698.1.1" TableName="tt">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1224,11 +1217,27 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:TableScan>
-            <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="0">
+            <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
               </dxl:Properties>
-              <dxl:TableDescriptor Mdid="0.174451.1.1" TableName="p2">
+              <dxl:ProjList>
+                <dxl:ProjElem ColId="9" Alias="a">
+                  <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="10" Alias="b">
+                  <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Filter/>
+              <dxl:Partitions>
+                <dxl:Partition Mdid="6.174451001.1.1"/>
+                <dxl:Partition Mdid="6.174451002.1.1"/>
+                <dxl:Partition Mdid="6.174451003.1.1"/>
+                <dxl:Partition Mdid="6.174451004.1.1"/>
+                <dxl:Partition Mdid="6.174451005.1.1"/>
+              </dxl:Partitions>
+              <dxl:TableDescriptor Mdid="6.174451.1.1" TableName="p2">
                 <dxl:Columns>
                   <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -1241,153 +1250,9 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
                   <dxl:Column ColId="17" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="9" Alias="a">
-                  <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="10" Alias="b">
-                  <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="27" Alias="a">
-                    <dxl:Ident ColId="27" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="28" Alias="b">
-                    <dxl:Ident ColId="28" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.174451001.1.1" TableName="p2_prt_1">
-                  <dxl:Columns>
-                    <dxl:Column ColId="27" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="28" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="30" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="31" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="32" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="33" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="34" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="35" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="36" Alias="a">
-                    <dxl:Ident ColId="36" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="37" Alias="b">
-                    <dxl:Ident ColId="37" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.174451002.1.1" TableName="p2_prt_2">
-                  <dxl:Columns>
-                    <dxl:Column ColId="36" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="37" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="38" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="39" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="40" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="41" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="42" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="43" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="44" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="45" Alias="a">
-                    <dxl:Ident ColId="45" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="46" Alias="b">
-                    <dxl:Ident ColId="46" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.174451003.1.1" TableName="p2_prt_3">
-                  <dxl:Columns>
-                    <dxl:Column ColId="45" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="46" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="47" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="48" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="49" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="50" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="51" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="52" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="53" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="54" Alias="a">
-                    <dxl:Ident ColId="54" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="55" Alias="b">
-                    <dxl:Ident ColId="55" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.174451004.1.1" TableName="p2_prt_4">
-                  <dxl:Columns>
-                    <dxl:Column ColId="54" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="55" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="56" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="57" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="58" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="59" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="60" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="61" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="62" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="63" Alias="a">
-                    <dxl:Ident ColId="63" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="64" Alias="b">
-                    <dxl:Ident ColId="64" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.174451005.1.1" TableName="p2_prt_5">
-                  <dxl:Columns>
-                    <dxl:Column ColId="63" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="64" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="65" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="66" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="67" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="68" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="69" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="70" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="71" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-            </dxl:Append>
+            </dxl:DynamicTableScan>
           </dxl:Append>
-          <dxl:PartitionSelector RelationMdid="0.174451.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
+          <dxl:PartitionSelector RelationMdid="6.174451.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.022729" Rows="200.000000" Width="8"/>
             </dxl:Properties>
@@ -1432,7 +1297,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.174698.1.1" TableName="tt">
+                <dxl:TableDescriptor Mdid="6.174698.1.1" TableName="tt">
                   <dxl:Columns>
                     <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="19" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

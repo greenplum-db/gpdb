@@ -67,7 +67,9 @@ public:
 	Pop()
 	{
 		if (!m_list.IsEmpty())
+		{
 			return m_list.RemoveHead();
+		}
 		return nullptr;
 	}
 

@@ -7,15 +7,15 @@ CREATE DATABASE oid_wraparound;
 -- Create the functions that we will be using to set and observe the Oid counter
 -- on the master and the segments.
 CREATE OR REPLACE FUNCTION gp_set_next_oid_master(new_oid Oid)
-	RETURNS VOID
+	RETURNS SETOF VOID
 	AS '@abs_builddir@/regress.so', 'gp_set_next_oid'
 	LANGUAGE C EXECUTE ON COORDINATOR;
 CREATE OR REPLACE FUNCTION gp_set_next_oid_segments(new_oid Oid)
-	RETURNS VOID
+	RETURNS SETOF VOID
 	AS '@abs_builddir@/regress.so', 'gp_set_next_oid'
 	LANGUAGE C EXECUTE ON ALL SEGMENTS;
 CREATE OR REPLACE FUNCTION gp_get_next_oid_master()
-	RETURNS OID
+	RETURNS SETOF OID
 	AS '@abs_builddir@/regress.so', 'gp_get_next_oid'
 	LANGUAGE C EXECUTE ON COORDINATOR;
 CREATE OR REPLACE FUNCTION gp_get_next_oid_segments()

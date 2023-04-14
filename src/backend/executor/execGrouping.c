@@ -21,10 +21,10 @@
 #include <limits.h>
 
 #include "access/parallel.h"
+#include "common/hashfn.h"
 #include "executor/executor.h"
 #include "miscadmin.h"
 #include "utils/lsyscache.h"
-#include "utils/hashutils.h"
 #include "utils/memutils.h"
 
 static int	TupleHashTableMatch(struct tuplehash_hash *tb, const MinimalTuple tuple1, const MinimalTuple tuple2);
@@ -171,6 +171,7 @@ BuildTupleHashTableExt(PlanState *parent,
 	TupleHashTable hashtable;
 	Size		entrysize = sizeof(TupleHashEntryData) + additionalsize;
 	MemoryContext oldcontext;
+	bool		allow_jit;
 
 	/*
 	 * Many callers pass "long" values for nbuckets, which means that we can
@@ -224,13 +225,23 @@ BuildTupleHashTableExt(PlanState *parent,
 	hashtable->tableslot = MakeSingleTupleTableSlot(CreateTupleDescCopy(inputDesc),
 													&TTSOpsMinimalTuple);
 
+	/*
+	 * If the old reset interface is used (i.e. BuildTupleHashTable, rather
+	 * than BuildTupleHashTableExt), allowing JIT would lead to the generated
+	 * functions to a) live longer than the query b) be re-generated each time
+	 * the table is being reset. Therefore prevent JIT from being used in that
+	 * case, by not providing a parent node (which prevents accessing the
+	 * JitContext in the EState).
+	 */
+	allow_jit = metacxt != tablecxt;
+
 	/* build comparator for all columns */
 	/* XXX: should we support non-minimal tuples for the inputslot? */
 	hashtable->tab_eq_func = ExecBuildGroupingEqual(inputDesc, inputDesc,
 													&TTSOpsMinimalTuple, &TTSOpsMinimalTuple,
 													numCols,
 													keyColIdx, eqfuncoids, collations,
-													NULL);
+													allow_jit ? parent : NULL);
 
 	/*
 	 * While not pretty, it's ok to not shut down this context, but instead

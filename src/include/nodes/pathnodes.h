@@ -329,7 +329,8 @@ struct PlannerInfo
 
 	List	   *init_plans;		/* init SubPlans for query */
 
-	List	   *cte_plan_ids;	/* per-CTE-item list of subplan IDs */
+	List	   *cte_plan_ids;	/* per-CTE-item list of subplan IDs (or -1 if
+								 * no subplan was made for that CTE) */
 
 	List	   *multiexpr_params;	/* List of Lists of Params for MULTIEXPR
 									 * subquery outputs */
@@ -463,6 +464,8 @@ struct PlannerInfo
 	bool		is_split_update;	/* true if UPDATE that modifies
 									 * distribution key columns */
 	bool		is_correlated_subplan; /* true for correlated subqueries nested within subplans */
+
+	bool		is_from_orca; /* true if this PlannerInfo was created from Orca*/
 };
 
 /*
@@ -853,7 +856,7 @@ typedef struct RelOptInfo
 	BlockNumber pages;			/* size estimates derived from pg_class */
 	double		tuples;
     struct GpPolicy   *cdbpolicy;      /* distribution of stored tuples */
-	Oid			amhandler;			/* from relcache entry */
+	Oid			relam;			/* form_pg_class access method */
 	double		allvisfrac;
 	PlannerInfo *subroot;		/* if subquery (in GPDB: or CTE) */
 	List	   *subplan_params; /* if subquery */
@@ -930,12 +933,11 @@ typedef struct RelOptInfo
 	 (rel)->part_rels && (rel)->partexprs && (rel)->nullable_partexprs)
 
 /*
- * Convenience macro to verify if a relation supports TID scans.  Caution: it
- * suffers from double evaluation.
+ * Convenience macro to verify if a relation supports TID scans
  */
 #define REL_SUPPORTS_TID_SCAN(rel) \
-	((rel)->amhandler != AO_ROW_TABLE_AM_HANDLER_OID &&	\
-	 (rel)->amhandler != AO_COLUMN_TABLE_AM_HANDLER_OID)
+	((rel)->relam != AO_ROW_TABLE_AM_OID &&	\
+	 (rel)->relam != AO_COLUMN_TABLE_AM_OID)
 
 /*
  * IndexOptInfo
@@ -1025,7 +1027,7 @@ struct IndexOptInfo
 	bool		amhasgettuple;	/* does AM have amgettuple interface? */
 	bool		amhasgetbitmap; /* does AM have amgetbitmap interface? */
 	bool		amcanparallel;	/* does AM support parallel scan? */
-
+	bool		amcanmarkpos;	/* does AM support mark/restore? */
 	/* Rather than include amapi.h here, we declare amcostestimate like this */
 	void		(*amcostestimate) ();	/* AM's cost estimator */
 };
@@ -1073,7 +1075,7 @@ typedef struct StatisticExtInfo
 
 	Oid			statOid;		/* OID of the statistics row */
 	RelOptInfo *rel;			/* back-link to statistic's table */
-	char		kind;			/* statistic kind of this entry */
+	char		kind;			/* statistics kind of this entry */
 	Bitmapset  *keys;			/* attnums of the columns covered */
 } StatisticExtInfo;
 

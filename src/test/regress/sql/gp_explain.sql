@@ -31,7 +31,7 @@ $$ language plpgsql;
 
 --
 -- Test explain_memory_verbosity option
--- 
+--
 CREATE TABLE explaintest (id int4);
 INSERT INTO explaintest SELECT generate_series(1, 10);
 ANALYZE explaintest;
@@ -68,8 +68,8 @@ SELECT
 
 reset explain_memory_verbosity;
 
-EXPLAIN ANALYZE SELECT id FROM 
-( SELECT id 
+EXPLAIN ANALYZE SELECT id FROM
+( SELECT id
 	FROM explaintest
 	WHERE id > (
 		SELECT avg(id)
@@ -79,6 +79,22 @@ EXPLAIN ANALYZE SELECT id FROM
 ORDER BY id
 LIMIT 1;
 
+select * from
+  test_util.extract_plan_stats($$
+SELECT id FROM
+( SELECT id
+    FROM explaintest
+    WHERE id > (
+        SELECT avg(id)
+        FROM explaintest
+    )
+) as foo
+ORDER BY id
+LIMIT 1;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
 
 -- Verify that the column references are OK. This tests for an old ORCA bug,
 -- where the Filter clause in the IndexScan of this query was incorrectly
@@ -100,20 +116,18 @@ CREATE TABLE mpp22263 (
         tenthous        int4,
         odd                     int4,
         even            int4,
-        stringu1        name,
-        stringu2        name,
-        string4         name
+        stringu1        name    COLLATE pg_catalog."default",
+        stringu2        name    COLLATE pg_catalog."default",
+        string4         name    COLLATE pg_catalog."default"
 ) distributed by (unique1);
 
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
--- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
 -- Extract the Filter explicitly.
--- GPDB_12_MERGE_FIXME: Non default collation
 SELECT * from
   get_explain_output($$
 select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
@@ -128,7 +142,7 @@ WHERE et like '%Filter: %';
 create table foo (a int) distributed randomly;
 -- "outer", "inner" prefix must also be prefixed to variable name as length of rtable > 1
 SELECT trim(et) et from
-get_explain_output($$ 
+get_explain_output($$
 	select * from (values (1),(2)) as f(a) join (values(1),(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
 WHERE et like '%Join Filter:%' or et like '%Hash Cond:%';
 

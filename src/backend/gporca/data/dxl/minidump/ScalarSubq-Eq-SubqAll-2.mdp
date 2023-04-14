@@ -16,7 +16,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0"/>
       <dxl:TraceFlags Value="102001,102002,102003,102043,102074,102120,102144,103001,103003,103014,103021,103022,103026,103027,103029,103033,103038,103040,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -224,7 +224,7 @@
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="452414966.423292" Rows="2.000000" Width="5"/>
+          <dxl:Cost StartupCost="0" TotalCost="452415071.280892" Rows="2.000000" Width="5"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="5" Alias="?column?">
@@ -240,7 +240,7 @@
               </dxl:ParamList>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="441380.314547" Rows="1000.000000" Width="9"/>
+                  <dxl:Cost StartupCost="0" TotalCost="441380.416947" Rows="1000.000000" Width="9"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="2" Alias="generate_series">
@@ -254,7 +254,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="441380.314547" Rows="1000.000000" Width="9"/>
+                    <dxl:Cost StartupCost="0" TotalCost="441380.416947" Rows="1000.000000" Width="9"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="6" Alias="ColRef_0006">
@@ -303,7 +303,7 @@
                   <dxl:OneTimeFilter/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000105" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="2" Alias="generate_series">

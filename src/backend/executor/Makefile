@@ -42,4 +42,10 @@ OBJS += nodeMotion.o \
        nodeTupleSplit.o \
        nodePartitionSelector.o
 
+OBJS += nodeDynamicSeqscan.o \
+        nodeDynamicIndexscan.o \
+        nodeDynamicBitmapHeapscan.o \
+        nodeDynamicBitmapIndexscan.o \
+        nodeDynamicForeignscan.o
+
 include $(top_srcdir)/src/backend/common.mk

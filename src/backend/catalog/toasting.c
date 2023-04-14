@@ -37,9 +37,11 @@
 #include "utils/syscache.h"
 
 static void CheckAndCreateToastTable(Oid relOid, Datum reloptions,
-									 LOCKMODE lockmode, bool check);
+									 LOCKMODE lockmode, bool check,
+									 Oid OIDOldToast);
 static bool create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
-							   Datum reloptions, LOCKMODE lockmode, bool check);
+							   Datum reloptions, LOCKMODE lockmode, bool check,
+							   Oid OIDOldToast);
 static bool needs_toast_table(Relation rel);
 
 
@@ -58,30 +60,34 @@ static bool needs_toast_table(Relation rel);
 void
 AlterTableCreateToastTable(Oid relOid, Datum reloptions, LOCKMODE lockmode)
 {
-	CheckAndCreateToastTable(relOid, reloptions, lockmode, true);
+	CheckAndCreateToastTable(relOid, reloptions, lockmode, true, InvalidOid);
 }
 
 void
-NewHeapCreateToastTable(Oid relOid, Datum reloptions, LOCKMODE lockmode)
+NewHeapCreateToastTable(Oid relOid, Datum reloptions, LOCKMODE lockmode,
+						Oid OIDOldToast)
 {
-	CheckAndCreateToastTable(relOid, reloptions, lockmode, false);
+	CheckAndCreateToastTable(relOid, reloptions, lockmode, false, OIDOldToast);
 }
 
 void
 NewRelationCreateToastTable(Oid relOid, Datum reloptions)
 {
-	CheckAndCreateToastTable(relOid, reloptions, AccessExclusiveLock, false);
+	CheckAndCreateToastTable(relOid, reloptions, AccessExclusiveLock, false,
+							 InvalidOid);
 }
 
 static void
-CheckAndCreateToastTable(Oid relOid, Datum reloptions, LOCKMODE lockmode, bool check)
+CheckAndCreateToastTable(Oid relOid, Datum reloptions, LOCKMODE lockmode,
+						 bool check, Oid OIDOldToast)
 {
 	Relation	rel;
 
 	rel = table_open(relOid, lockmode);
 
 	/* create_toast_table does all the work */
-	(void) create_toast_table(rel, InvalidOid, InvalidOid, reloptions, lockmode, check);
+	(void) create_toast_table(rel, InvalidOid, InvalidOid, reloptions, lockmode,
+							  check, OIDOldToast);
 
 	table_close(rel, NoLock);
 }
@@ -107,7 +113,7 @@ BootstrapToastTable(char *relName, Oid toastOid, Oid toastIndexOid)
 
 	/* create_toast_table does all the work */
 	if (!create_toast_table(rel, toastOid, toastIndexOid, (Datum) 0,
-							AccessExclusiveLock, false))
+							AccessExclusiveLock, false, InvalidOid))
 		elog(ERROR, "\"%s\" does not require a toast table",
 			 relName);
 
@@ -124,7 +130,8 @@ BootstrapToastTable(char *relName, Oid toastOid, Oid toastIndexOid)
  */
 static bool
 create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
-				   Datum reloptions, LOCKMODE lockmode, bool check)
+				   Datum reloptions, LOCKMODE lockmode, bool check,
+				   Oid OIDOldToast)
 {
 	Oid			relOid = RelationGetRelid(rel);
 	HeapTuple	reltup;
@@ -194,24 +201,17 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 		 * If we tried to create a TOAST table anyway, we would have the
 		 * problem that it might take up an OID that will conflict with some
 		 * old-cluster table we haven't seen yet.
-		 *
-		 * Starting GPDB7 don't create TOAST table for CO tables. Prior
-		 * versions created but never inserted any data to these
-		 * tables. Hence, even if binary upgrade provides TOAST table oid
-		 * ignore and avoid creating toast table. Regular code TOAST table
-		 * creation for CO table is avoided by consulting table AM API
-		 * table_relation_needs_toast_table().
 		 */
-		if (RelationIsAoCols(rel))
-			return false;
-
-		Assert(toastOid == InvalidOid);
-		toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
-		if (!OidIsValid(toastOid))
-			return false;
-		toast_typid = GetPreassignedOidForType(namespaceid, toast_relname);
-		if (!OidIsValid(toast_typid))
-			return false;
+		if (IsBinaryUpgrade)
+		{
+			Assert(toastOid == InvalidOid);
+			toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
+			if (!OidIsValid(toastOid))
+				return false;
+			toast_typid = GetPreassignedOidForType(namespaceid, toast_relname);
+			if (!OidIsValid(toast_typid))
+				return false;
+		}
 	}
 
 	/*
@@ -284,7 +284,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 										   false,
 										   true,
 										   true,
-										   InvalidOid,
+										   OIDOldToast,
 										   NULL,
 										   /* valid_opts */ false);
 	Assert(toast_relid != InvalidOid);

@@ -43,7 +43,7 @@ WHERE buyer_name = 'ABC'
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102144,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -329,7 +329,7 @@ WHERE buyer_name = 'ABC'
       <dxl:ColumnStatistics Mdid="1.32885.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.32885.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.32885.1.1" Name="networks" Rows="2342.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.32885.1.1" Name="networks" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32885.1.1" Name="networks" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="network_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -360,7 +360,6 @@ WHERE buyer_name = 'ABC'
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -411,7 +410,7 @@ WHERE buyer_name = 'ABC'
               </dxl:LogicalConstTable>
             </dxl:LogicalProject>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.32885.1.1" TableName="networks">
+              <dxl:TableDescriptor Mdid="6.32885.1.1" TableName="networks">
                 <dxl:Columns>
                   <dxl:Column ColId="4" Attno="1" ColName="network_id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="5" Attno="2" ColName="network_name" TypeMdid="0.1043.1.0" ColWidth="255"/>
@@ -522,7 +521,7 @@ WHERE buyer_name = 'ABC'
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   </dxl:Comparison>
                 </dxl:Filter>
-                <dxl:TableDescriptor Mdid="0.32885.1.1" TableName="networks">
+                <dxl:TableDescriptor Mdid="6.32885.1.1" TableName="networks">
                   <dxl:Columns>
                     <dxl:Column ColId="3" Attno="1" ColName="network_id" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="4" Attno="2" ColName="network_name" TypeMdid="0.1043.1.0" ColWidth="255"/>

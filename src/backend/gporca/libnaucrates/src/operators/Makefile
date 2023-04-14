@@ -31,7 +31,7 @@ OBJS        = CDXLColDescr.o \
               CDXLLogicalCTEProducer.o \
               CDXLLogicalConstTable.o \
               CDXLLogicalDelete.o \
-              CDXLLogicalExternalGet.o \
+              CDXLLogicalForeignGet.o \
               CDXLLogicalGet.o \
               CDXLLogicalGroupBy.o \
               CDXLLogicalInsert.o \
@@ -58,7 +58,10 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalCTEConsumer.o \
               CDXLPhysicalCTEProducer.o \
               CDXLPhysicalDML.o \
-              CDXLPhysicalExternalScan.o \
+              CDXLPhysicalDynamicBitmapTableScan.o \
+              CDXLPhysicalDynamicIndexScan.o \
+              CDXLPhysicalDynamicTableScan.o \
+              CDXLPhysicalForeignScan.o \
               CDXLPhysicalGatherMotion.o \
               CDXLPhysicalHashJoin.o \
               CDXLPhysicalIndexOnlyScan.o \
@@ -68,6 +71,7 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalMaterialize.o \
               CDXLPhysicalMergeJoin.o \
               CDXLPhysicalMotion.o \
+              CDXLPhysicalDynamicForeignScan.o \
               CDXLPhysicalNLJoin.o \
               CDXLPhysicalPartitionSelector.o \
               CDXLPhysicalProperties.o \
@@ -75,7 +79,6 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalRedistributeMotion.o \
               CDXLPhysicalResult.o \
               CDXLPhysicalRoutedDistributeMotion.o \
-              CDXLPhysicalRowTrigger.o \
               CDXLPhysicalSequence.o \
               CDXLPhysicalSort.o \
               CDXLPhysicalSplit.o \
@@ -126,13 +129,6 @@ OBJS        = CDXLColDescr.o \
               CDXLScalarOneTimeFilter.o \
               CDXLScalarOpExpr.o \
               CDXLScalarOpList.o \
-              CDXLScalarPartBound.o \
-              CDXLScalarPartBoundInclusion.o \
-              CDXLScalarPartBoundOpen.o \
-              CDXLScalarPartDefault.o \
-              CDXLScalarPartListNullTest.o \
-              CDXLScalarPartListValues.o \
-              CDXLScalarPartOid.o \
               CDXLScalarProjElem.o \
               CDXLScalarProjList.o \
               CDXLScalarRecheckCondFilter.o \

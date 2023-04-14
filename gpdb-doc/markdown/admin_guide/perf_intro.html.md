@@ -6,7 +6,7 @@ Managing system performance includes measuring performance, identifying the caus
 
 Greenplum measures database performance based on the rate at which the database management system \(DBMS\) supplies information to requesters.
 
-**Parent topic:**[Managing Performance](partV.html)
+**Parent topic:** [Managing Performance](partV.html)
 
 ## <a id="topic2"></a>Understanding the Performance Factors 
 
@@ -22,7 +22,7 @@ Several key performance factors influence database performance. Understanding th
 
 Database performance relies heavily on disk I/O and memory usage. To accurately set performance expectations, you need to know the baseline performance of the hardware on which your DBMS is deployed. Performance of hardware components such as CPUs, hard disks, disk controllers, RAM, and network interfaces will significantly affect how fast your database performs.
 
-**Note:** Do not install anti-virus software on Greenplum Database hosts as the software might cause extra CPU and IO load that interferes with Greenplum Database operations.
+> **Note** Do not install anti-virus software on Greenplum Database hosts as the software might cause extra CPU and IO load that interferes with Greenplum Database operations.
 
 ### <a id="topic4"></a>Workload 
 

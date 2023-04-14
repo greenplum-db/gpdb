@@ -4,7 +4,7 @@ title: Transforming External Data with gpfdist and gpload
 
 The `gpfdist` parallel file server allows you to set up transformations that enable Greenplum Database external tables to read and write files in formats that are not supported with the `CREATE EXTERNAL TABLE` command's `FORMAT` clause. An *input* transformation reads a file in the foreign data format and outputs rows to `gpfdist` in the CSV or other text format specified in the external table's `FORMAT` clause. An *output* transformation receives rows from `gpfdist` in text format and converts them to the foreign data format.
 
-**Note:** `gpfdist` and `gpload` are compatible only with the Greenplum Database major version in which they are shipped. For example, a `gpfdist` utility that is installed with Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.
+> **Note** `gpfdist` and `gpload` are compatible only with the Greenplum Database major version in which they are shipped. For example, a `gpfdist` utility that is installed with Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.
 
 This topic describes the tasks to set up data transformations that work with `gpfdist` to read or write external data files with formats that Greenplum Database does not support.
 
@@ -16,7 +16,7 @@ This topic describes the tasks to set up data transformations that work with `gp
 -   [Configuration File Format](#topic83)
 -   [XML Transformation Examples](#topic91)
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 
 ## <a id="topic_mdl_thm_pbb"></a>About gpfdist Transformations 
 
@@ -28,7 +28,7 @@ If you want to load the external data into a table in the Greenplum database, yo
 
 Accessing data in external XML files from within the database is a common example requiring transformation. The following diagram shows *gpfdist* performing a transformation on XML files on an ETL server.
 
-![](../../graphics/ext-tables-xml.png "External Tables using XML Transformations")
+![External Tables using XML Transformations](../../graphics/ext-tables-xml.png "External Tables using XML Transformations")
 
 Following are the high-level steps to set up a `gpfdist` transformation for external data files. The process is illustrated with an XML example.
 
@@ -173,7 +173,7 @@ java \
 
 The `input_transform.sh` file uses the Joost STX engine with the AWK interpreter. The following diagram shows the process flow as gpfdist runs the transformation.
 
-![](../../graphics/02-pipeline.png)
+![gpfdist process flow](../../graphics/02-pipeline.png)
 
 ## <a id="topic80"></a>Transfer the Data 
 
@@ -230,7 +230,7 @@ In the `gpload` control file, the optional parameter `MAX_LINE_LENGTH` specifies
 
 The following diagram shows the relationships between the `gpload` control file, the gpfdist configuration file, and the XML data file.
 
-![](../../graphics/03-gpload-files.jpg)
+![Relationships between gpload files](../../graphics/03-gpload-files.jpg)
 
 ### <a id="topic82"></a>Transforming with gpfdist and INSERT INTO SELECT FROM 
 
@@ -319,11 +319,11 @@ This setting specifies how to handle standard error output from the transformati
 
 ## <a id="topic91"></a>XML Transformation Examples 
 
-The following examples demonstrate the complete process for different types of XML data and STX transformations. Files and detailed instructions associated with these examples are in the GitHub repo `github.com://greenplum-db/gpdb` in the [gpMgmt/demo/gpfdist\_transform](https://github.com/greenplum-db/gpdb/blob/master/gpMgmt/demo/gpfdist_transform) directory. Read the README file in the *Before You Begin* section before you run the examples. The README file explains how to download the example data file used in the examples.
+The following examples demonstrate the complete process for different types of XML data and STX transformations. Files and detailed instructions associated with these examples are in the GitHub repo `github.com://greenplum-db/gpdb` in the [gpMgmt/demo/gpfdist\_transform](https://github.com/greenplum-db/gpdb/blob/main/gpMgmt/demo/gpfdist_transform) directory. Read the README file in the *Before You Begin* section before you run the examples. The README file explains how to download the example data file used in the examples.
 
 ### <a id="topic32"></a>Command-based External Web Tables 
 
-The output of a shell command or script defines command-based web table data. Specify the command in the `EXECUTE` clause of `CREATE EXTERNAL WEB TABLE`. The data is current as of the time the command runs. The `EXECUTE` clause runs the shell command or script on the specified master, and/or segment host or hosts. The command or script must reside on the hosts corresponding to the host\(s\) defined in the `EXECUTE` clause.
+The output of a shell command or script defines command-based web table data. Specify the command in the `EXECUTE` clause of `CREATE EXTERNAL WEB TABLE`. The data is current as of the time the command runs. The `EXECUTE` clause runs the shell command or script on the specified coordinator, and/or segment host or hosts. The command or script must reside on the hosts corresponding to the host\(s\) defined in the `EXECUTE` clause.
 
 By default, the command is run on segment hosts when active segments have output rows to process. For example, if each segment host runs four primary segment instances that have output rows to process, the command runs four times per segment host. You can optionally limit the number of segment instances that run the web table command. All segments included in the web table definition in the `ON` clause run the command in parallel.
 
@@ -336,7 +336,7 @@ The command that you specify in the external table definition runs from the data
 
 ```
 
-Scripts must be executable by the `gpadmin` user and reside in the same location on the master or segment hosts.
+Scripts must be executable by the `gpadmin` user and reside in the same location on the coordinator or segment hosts.
 
 The following command defines a web table that runs a script. The script runs on each segment host where a segment has output rows to process.
 
@@ -405,7 +405,7 @@ Load the data into Greenplum Database.
 
 This example demonstrates loading sample data describing an oil rig using a Joost STX transformation. The data is in the form of a complex XML file downloaded from energistics.org.
 
-The Wellsite Information Transfer Standard Markup Language \(WITSML™\) is an oil industry initiative to provide open, non-proprietary, standard interfaces for technology and software to share information among oil companies, service companies, drilling contractors, application vendors, and regulatory agencies. For more information about WITSML™, see [http://www.energistics.org/](http://www.energistics.org/).
+The Wellsite Information Transfer Standard Markup Language \(WITSML™\) is an oil industry initiative to provide open, non-proprietary, standard interfaces for technology and software to share information among oil companies, service companies, drilling contractors, application vendors, and regulatory agencies. For more information about WITSML™, see [https://www.energistics.org/](https://www.energistics.org/).
 
 The oil rig information consists of a top level `<rigs>` element with multiple child elements such as `<documentInfo>, <rig>`, and so on. The following excerpt from the file shows the type of information in the `<rig>` tag.
 
@@ -413,9 +413,9 @@ The oil rig information consists of a top level `<rigs>` element with multiple c
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet href="../stylesheets/rig.xsl" type="text/xsl" media="screen"?>
 <rigs 
- xmlns="http://www.energistics.org/schemas/131" 
- xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
- xsi:schemaLocation="http://www.energistics.org/schemas/131 ../obj_rig.xsd" 
+ xmlns="https://www.energistics.org/schemas/131" 
+ xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" 
+ xsi:schemaLocation="https://www.energistics.org/schemas/131 ../obj_rig.xsd" 
  version="1.3.1.1">
  <documentInfo>
  ... misc data ...

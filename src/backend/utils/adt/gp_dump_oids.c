@@ -14,12 +14,13 @@
 
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_proc.h"
+#include "common/hashfn.h"
 #include "tcop/tcopprot.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/planmain.h"
+#include "parser/analyze.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/hsearch.h"
 #include "utils/syscache.h"
 
 static List *proc_oids_for_dump = NIL;
@@ -119,11 +120,15 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 		RawStmt    *parsetree = lfirst_node(RawStmt, lc);
 		List	   *queryTree_sublist;
 
-		queryTree_sublist = pg_analyze_and_rewrite(parsetree,
-												   sqlText,
-												   NULL,
-												   0,
-												   NULL);
+
+		Query	*query = parse_analyze(parsetree, sqlText, NULL, 0, NULL);
+		if (query->commandType == CMD_UTILITY && IsA(query->utilityStmt, ExplainStmt))
+		{
+			query = (Query *)((ExplainStmt *) query->utilityStmt)->query;
+		}
+		query->expandMatViews = true;
+		queryTree_sublist = pg_rewrite_query(query);
+
 		flat_query_list = list_concat(flat_query_list,
 									  list_copy(queryTree_sublist));
 	}

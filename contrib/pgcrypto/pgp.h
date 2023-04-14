@@ -325,3 +325,6 @@ int			pgp_rsa_encrypt(PGP_PubKey *pk, PGP_MPI *m, PGP_MPI **c);
 int			pgp_rsa_decrypt(PGP_PubKey *pk, PGP_MPI *c, PGP_MPI **m);
 
 extern struct PullFilterOps pgp_decrypt_filter;
+
+void		pgp_disable_fipsmode(void);
+void		pgp_enable_fipsmode(void);

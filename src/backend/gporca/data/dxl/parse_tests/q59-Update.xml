@@ -7,8 +7,8 @@
       <dxl:Ident ColId="3" ColName="t3" TypeMdid="0.23.1.0"/>
     </dxl:OutputColumns>
     <dxl:CTEList/>
-    <dxl:LogicalUpdate DeleteColumns="1,2,3" InsertColumns="1,11,3" CtidCol="4" SegmentIdCol="10" PreserveOids="false">
-      <dxl:TableDescriptor Mdid="0.899686.1.1" TableName="t">
+    <dxl:LogicalUpdate DeleteColumns="1,2,3" InsertColumns="1,11,3" CtidCol="4" SegmentIdCol="10">
+      <dxl:TableDescriptor Mdid="6.899686.1.1" TableName="t">
         <dxl:Columns>
           <dxl:Column ColId="12" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="13" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>
@@ -34,7 +34,7 @@
             <dxl:ConstValue TypeMdid="0.23.1.0" Value="7"/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.899686.1.1" TableName="t">
+            <dxl:TableDescriptor Mdid="6.899686.1.1" TableName="t">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>

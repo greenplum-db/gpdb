@@ -75,6 +75,7 @@ typedef struct CdbExplain_SliceWorker
 {
 	double		peakmemused;	/* bytes alloc in per-query mem context tree */
 	double		vmem_reserved;	/* vmem reserved by a QE */
+	JitInstrumentation ji;      /* used by QD to print JIT summary of QEs */
 } CdbExplain_SliceWorker;
 
 
@@ -123,7 +124,7 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg workmemused;
 	CdbExplain_Agg workmemwanted;
 	CdbExplain_Agg totalWorkfileCreated;
-	/* Used for DynamicSeqScan, DynamicIndexScan and DynamicBitmapHeapScan */
+	/* Used for DynamicSeqScan, DynamicIndexScan, DynamicBitmapHeapScan, and DynamicForeignScan */
 	CdbExplain_Agg totalPartTableScanned;
 	/* Summary of space used by sort */
 	CdbExplain_Agg sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
@@ -710,6 +711,8 @@ cdbexplain_collectSliceStats(PlanState *planstate,
 		(double) MemoryContextGetPeakSpace(estate->es_query_cxt);
 
 	out_worker->vmem_reserved = (double) VmemTracker_GetMaxReservedVmemBytes();
+	if (estate->es_jit != NULL)
+		out_worker->ji = estate->es_jit->instr;
 }								/* cdbexplain_collectSliceStats */
 
 
@@ -816,8 +819,15 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	if (si->bnotes < si->enotes)
 		appendStringInfoChar(ctx->notebuf, '\0');
 
-	if (planstate->node_context)
+	/* Use the instrument's memory record if exists, or query the memory context. */
+	if (instr->execmemused)
+	{
+		si->execmemused = instr->execmemused;
+	}
+	else if (planstate->node_context)
+	{
 		si->execmemused = (double) MemoryContextGetPeakSpace(planstate->node_context);
+	}
 
 	/* Transfer this node's statistics from Instrumentation into StatInst. */
 	si->starttime = instr->starttime;
@@ -966,6 +976,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	 */
 	CdbExplain_NodeSummary *ns;
 	CdbExplain_DepStatAcc ntuples;
+	CdbExplain_DepStatAcc nloops;
 	CdbExplain_DepStatAcc execmemused;
 	CdbExplain_DepStatAcc workmemused;
 	CdbExplain_DepStatAcc workmemwanted;
@@ -992,19 +1003,15 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 
 	/* Initialize per-node accumulators. */
 	cdbexplain_depStatAcc_init0(&ntuples);
+	cdbexplain_depStatAcc_init0(&nloops);
 	cdbexplain_depStatAcc_init0(&execmemused);
 	cdbexplain_depStatAcc_init0(&workmemused);
 	cdbexplain_depStatAcc_init0(&workmemwanted);
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
 	for (int i = 0; i < NUM_SORT_METHOD; i++)
-	{
 		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
 			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
-			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
-		}
-	}
 
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
@@ -1037,19 +1044,12 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 
 		/* Update per-node accumulators. */
 		cdbexplain_depStatAcc_upd(&ntuples, rsi->ntuples, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&nloops, rsi->nloops, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&execmemused, rsi->execmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&workmemused, rsi->workmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&workmemwanted, rsi->workmemwanted, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
-		Assert(rsi->sortstats.sortMethod < NUM_SORT_METHOD);
-		Assert(rsi->sortstats.spaceType < NUM_SORT_SPACE_TYPE);
-		if (rsi->sortstats.sortMethod != SORT_TYPE_STILL_IN_PROGRESS)
-		{
-			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortstats.spaceType][rsi->sortstats.sortMethod],
-									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
-		}
-
 		Assert(rsi->sortstats.sortMethod < NUM_SORT_METHOD);
 		Assert(rsi->sortstats.spaceType < NUM_SORT_SPACE_TYPE);
 		if (rsi->sortstats.sortMethod != SORT_TYPE_STILL_IN_PROGRESS)
@@ -1071,13 +1071,8 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
 	for (int i = 0; i < NUM_SORT_METHOD; i++)
-	{
 		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
 			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
-			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
-		}
-	}
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
 	ctx->workmemused_max = Max(ctx->workmemused_max, workmemused.agg.vmax);
@@ -1107,6 +1102,9 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		instr->workfileCreated = ntuples.nsimax->workfileCreated;
 		instr->firststart = ntuples.nsimax->firststart;
 	}
+	/* Save non-zero nloops even when 0 tuple is returned */
+	else if (nloops.agg.vcnt > 0)
+		instr->nloops = nloops.nsimax->nloops;
 
 	/* Save extra message text for the most interesting winning qExecs. */
 	if (ctx->extratextbuf)
@@ -1144,11 +1142,10 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	}
 
 	/*
-	 * If this is a HashState, construct a SharedHashInfo with the stats from
-	 * all the QEs. In PostgreSQL, SharedHashInfo is used to show stats of all
-	 * the worker processes, we use it to show stats from all the QEs instead.
-	 *
-	 * GPDB_12_MERGE_FIXME: Should we do the same for Sort stats nowadays?
+	 * If this is a HashState/SortState, construct a SharedHashInfo with the
+	 * stats from all the QEs. In PostgreSQL, SharedHashInfo is used to show
+	 * stats of all the worker processes, we use it to show stats from all
+	 * the QEs instead.
 	 */
 	if (IsA(planstate, HashState))
 	{
@@ -1174,6 +1171,28 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		}
 
 		hashstate->shared_info = shared_state;
+	}
+	else if (IsA(planstate, SortState))
+	{
+		/* GPDB: Collect the results from all QE processes */
+		SortState *sortstate = (SortState *) planstate;
+		size_t size = offsetof(SharedSortInfo, sinstrument) +
+			ctx->nmsgptr * sizeof(TuplesortInstrumentation);
+		SharedSortInfo *shared_state = palloc0(size);
+
+		shared_state->num_workers = ctx->nmsgptr;
+
+		/* Examine the statistics from each qExec. */
+		for (imsgptr = 0; imsgptr < ctx->nmsgptr; imsgptr++)
+		{
+			/* Locate PlanState node's StatInst received from this qExec. */
+			rsh = ctx->msgptrs[imsgptr];
+			rsi = &rsh->inst[ctx->iStatInst];
+
+			memcpy(&shared_state->sinstrument[imsgptr], &rsi->sortstats, sizeof(TuplesortInstrumentation));
+		}
+
+		sortstate->shared_info = shared_state;
 	}
 }								/* cdbexplain_depositStatsToNode */
 
@@ -1394,6 +1413,27 @@ cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
 }								/* cdbexplain_showExecStatsBegin */
 
 /*
+ * cdbexplain_showStatCtxFree
+ *	  Release memory allocated for CdbExplain_ShowStatCtx structure and its
+ *	  internals. Memory for insides of the slices array elements is allocated
+ *	  in ExplainPrintPlan(). If ExplainPrintPlan() is called from the
+ *	  auto_explain extension, then this memory is released in
+ *	  standard_ExecutorEnd() -> FreeExecutorState() to avoid memory leak in the
+ *	  case of queries with multiple call of SQL functions.
+ *	  If ExplainPrintPlan() is called from ExplainOnePlan(), then this memory
+ *	  is released in PortalDrop().
+ */
+void
+cdbexplain_showStatCtxFree(struct CdbExplain_ShowStatCtx *ctx)
+{
+	Assert(ctx != NULL);
+
+	pfree(ctx->extratextbuf.data);
+	pfree(ctx->slices);
+	pfree(ctx);
+}
+
+/*
  * nodeSupportWorkfileCaching
  *	 Return true if a given node supports workfile caching.
  */
@@ -1539,6 +1579,92 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		}
 	}
 
+	/*
+	 * Print number of partitioned tables scanned for dynamic scans.
+	 */
+	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
+												|| T_DynamicIndexScanState == planstate->type
+												|| T_DynamicBitmapHeapScanState == planstate->type
+												|| T_DynamicForeignScanState == planstate->type))
+	{
+		/*
+		 * FIXME: Only displayed in TEXT format
+		 * [#159443692]
+		 */
+		if (es->format == EXPLAIN_FORMAT_TEXT)
+		{
+			double		nPartTableScanned_avg = cdbexplain_agg_avg(&ns->totalPartTableScanned);
+
+			if (0 == nPartTableScanned_avg)
+			{
+				if (T_DynamicBitmapHeapScanState == planstate->type)
+				{
+					appendStringInfoSpaces(es->str, es->indent * 2);
+					appendStringInfo(es->str,
+									 "Partitions scanned:  0 .\n");
+				}
+			}
+			else
+			{
+				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->totalPartTableScanned.imax, ns->ninst);
+
+				appendStringInfoSpaces(es->str, es->indent * 2);
+
+				/* only 1 segment scans partitions */
+				if (1 == ns->totalPartTableScanned.vcnt)
+				{
+					/* rescan */
+					if (1 < instr->nloops)
+					{
+						double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+
+						appendStringInfo(es->str,
+										 "Partitions scanned:  %.0f %s of %ld scans.\n",
+										 totalPartTableScannedPerRescan,
+										 segbuf,
+										 instr->nloops);
+					}
+					else
+					{
+						appendStringInfo(es->str,
+										 "Partitions scanned:  %.0f %s.\n",
+										 ns->totalPartTableScanned.vmax,
+										 segbuf);
+					}
+				}
+				else
+				{
+					/* rescan */
+					if (1 < instr->nloops)
+					{
+						double		totalPartTableScannedPerRescan = nPartTableScanned_avg / instr->nloops;
+						double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+
+						appendStringInfo(es->str,
+										 "Partitions scanned:  Avg %.1f x %d workers of %ld scans."
+										 "  Max %.0f parts%s.\n",
+										 totalPartTableScannedPerRescan,
+										 ns->totalPartTableScanned.vcnt,
+										 instr->nloops,
+										 maxPartTableScannedPerRescan,
+										 segbuf
+							);
+					}
+					else
+					{
+						appendStringInfo(es->str,
+										 "Partitions scanned:  Avg %.1f x %d workers."
+										 "  Max %.0f parts%s.\n",
+										 nPartTableScanned_avg,
+										 ns->totalPartTableScanned.vcnt,
+										 ns->totalPartTableScanned.vmax,
+										 segbuf);
+					}
+				}
+			}
+		}
+	}
+
 	bool 			haveExtraText = false;
 	StringInfoData	extraData;
 
@@ -1556,7 +1682,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 				ExplainOpenGroup("Segment", NULL, true, es);
 				haveExtraText = true;
 			}
-			
+
 			resetStringInfo(&extraData);
 
 			cdbexplain_formatExtraText(&extraData,
@@ -1740,7 +1866,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
     {
         CdbExplain_SliceSummary *ss = &showstatctx->slices[sliceIndex];
         CdbExplain_DispatchSummary *ds = &ss->dispatchSummary;
-        
+
         flag = es->str->len;
         if (es->format == EXPLAIN_FORMAT_TEXT)
         {
@@ -1751,7 +1877,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
 
             appendStringInfoString(es->str, "  ");
         }
-        else 
+        else
         {
             ExplainOpenGroup("Slice", NULL, true, es);
             ExplainPropertyInteger("Slice", NULL, sliceIndex, es);
@@ -2129,4 +2255,160 @@ void ExplainParallelRetrieveCursor(ExplainState *es, QueryDesc* queryDesc)
 	}
 	ExplainPropertyText("Endpoint", endpointInfoStr.data, es);
 	ExplainCloseGroup("Cursor", "Cursor", true, es);
+}
+
+/*
+ * cdbexplain_printJITSummary -
+ *    Print summarized JIT instrumentation from all QEs
+ */
+void
+cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
+{
+	CdbExplain_SliceSummary *ss;
+	CdbExplain_SliceWorker *ssw;
+	JitInstrumentation 		*ji;
+	instr_time		 total_time;
+
+	/* don't print information if no JITing happened */
+	int jit_flags = queryDesc->estate->es_jit_flags;
+	if (!(jit_flags & PGJIT_PERFORM))
+		return;
+
+	ExplainOpenGroup("JIT", "JIT", true, es);
+	es->indent += 1;
+
+	if (es->format == EXPLAIN_FORMAT_TEXT)
+	{
+		appendStringInfo(es->str, "JIT:\n");
+		appendStringInfoSpaces(es->str, es->indent * 2);
+		appendStringInfo(es->str, "Options: %s %s, %s %s, %s %s, %s %s.\n",
+						 "Inlining", jit_flags & PGJIT_INLINE ? "true" : "false",
+						 "Optimization", jit_flags & PGJIT_OPT3 ? "true" : "false",
+						 "Expressions", jit_flags & PGJIT_EXPR ? "true" : "false",
+						 "Deforming", jit_flags & PGJIT_DEFORM ? "true" : "false");
+	}
+	else
+	{
+		ExplainOpenGroup("Options", "Options", true, es);
+		ExplainPropertyBool("Inlining", jit_flags & PGJIT_INLINE, es);
+		ExplainPropertyBool("Optimization", jit_flags & PGJIT_OPT3, es);
+		ExplainPropertyBool("Expressions", jit_flags & PGJIT_EXPR, es);
+		ExplainPropertyBool("Deforming", jit_flags & PGJIT_DEFORM, es);
+		ExplainCloseGroup("Options", "Options", true, es);
+	}
+
+	for (int slice_index = 0; slice_index < es->showstatctx->nslice; slice_index++)
+	{
+		int idx1 = 0, idx2 = 0, nworker = 0;
+		double avg_functions = 0.0, max_functions = 0.0, avg_time = 0.0, max_time = 0.0;
+		ss = es->showstatctx->slices + slice_index;
+
+		/* collect information from workers */
+		for (int j = 0; j < ss->nworker; j++)
+		{
+			ssw = ss->workers + j;
+			ji = &ssw->ji;
+
+			// jit is not performed on current worker
+			if (ji->created_functions == 0)
+				continue;
+
+			avg_functions += ji->created_functions;
+			if (ji->created_functions > max_functions)
+			{
+				max_functions = ji->created_functions;
+				idx1 = j;
+			}
+
+			/* calculate total time */
+			INSTR_TIME_SET_ZERO(total_time);
+			INSTR_TIME_ADD(total_time, ji->generation_counter);
+			INSTR_TIME_ADD(total_time, ji->inlining_counter);
+			INSTR_TIME_ADD(total_time, ji->optimization_counter);
+			INSTR_TIME_ADD(total_time, ji->emission_counter);
+
+			elog(DEBUG5, "JIT Instrumentation(slice%d seg%d): functions %zu, generation_counter %.3f ms,"
+						 "inlining_counter %.3f ms, optimization_counter %.3f ms, emission_counter %.3f ms,"
+						 "total_time %.3f ms.",
+						 slice_index,
+						 ss->segindex0 + j,
+						 ji->created_functions,
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(total_time));
+
+			avg_time += INSTR_TIME_GET_DOUBLE(total_time);
+			if (INSTR_TIME_GET_DOUBLE(total_time) > max_time)
+			{
+				max_time = INSTR_TIME_GET_DOUBLE(total_time);
+				idx2 = j;
+			}
+			nworker++;
+		}
+
+		// print nothing if jit is not performed on all workers in current slice
+		if (nworker == 0)
+			continue;
+
+		avg_functions /= nworker;
+		avg_time /= nworker;
+		if (es->format == EXPLAIN_FORMAT_TEXT)
+		{
+			appendStringInfoSpaces(es->str, es->indent * 2);
+			appendStringInfo(es->str, "(slice%d): ", slice_index);
+			appendStringInfo(es->str, "Functions: ");
+			if (ss->nworker == 1)
+				appendStringInfo(es->str, "%.2f. ", max_functions);
+			else
+				appendStringInfo(es->str, "%.2f avg x %d workers, %.2f max (seg%d). ",
+								 avg_functions, nworker, max_functions, ss->segindex0 + idx1);
+
+			if (es->analyze && es->timing)
+			{
+				appendStringInfo(es->str, "Timing: ");
+				if (ss->nworker == 1)
+					appendStringInfo(es->str, "%.3f ms total.\n", 1000.0 * max_time);
+				else
+					appendStringInfo(es->str, "%.3f ms avg x %d workers, %.3f ms max (seg%d).\n",
+									 1000.0 * avg_time, nworker, 1000.0 * max_time, ss->segindex0 + idx2);
+			}
+		}
+		else
+		{
+			ExplainOpenGroup("slice", "slice", true, es);
+			ExplainPropertyInteger("slice", NULL, slice_index, es);
+			if (ss->nworker == 1)
+				ExplainPropertyFloat("functions", NULL, max_functions, 2, es);
+			else
+			{
+				ExplainOpenGroup("Functions", "Functions", true, es);
+				ExplainPropertyFloat("avg", NULL, avg_functions, 2, es);
+				ExplainPropertyInteger("nworker", NULL, nworker, es);
+				ExplainPropertyFloat("max", NULL, max_functions, 2, es);
+				ExplainPropertyInteger("segid", NULL, ss->segindex0 + idx1, es);
+				ExplainCloseGroup("Functions", "Functions", true, es);
+			}
+
+			if (es->analyze && es->timing)
+			{
+				if (ss->nworker == 1)
+					ExplainPropertyFloat("Timing", NULL, max_time, 3, es);
+				else
+				{
+					ExplainOpenGroup("Timing", "Timing", true, es);
+					ExplainPropertyFloat("avg", NULL, 1000.0 * avg_time, 3, es);
+					ExplainPropertyInteger("nworker", NULL, nworker, es);
+					ExplainPropertyFloat("max", NULL, 1000.0 * max_time, 3, es);
+					ExplainPropertyInteger("segid", NULL, ss->segindex0 + idx2, es);
+					ExplainCloseGroup("Timing", "Timing", true, es);
+				}
+			}
+			ExplainCloseGroup("slice", "slice", true, es);
+		}
+	}
+
+	es->indent -= 1;
+	ExplainCloseGroup("JIT", "JIT", true, es);
 }

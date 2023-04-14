@@ -143,9 +143,7 @@ select * from distcheck where rel like 'atsdb%';
 alter table atsdb set distributed by (j);
 select * from distcheck where rel like 'atsdb%';
 select * from atsdb order by 1, 2, 3;
-alter table atsdb set with(appendonly = true);
-select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where
-relname  like 'atsdb%' and c.oid = a.relid order by 1;
+select relname, reloptions from pg_class c where relname  like 'atsdb%' order by 1;
 select * from atsdb order by 1, 2, 3;
 insert into atsdb select i+2, i+1, i from generate_series(1, 9) i;
 select * from atsdb order by 1, 2, 3;
@@ -307,11 +305,6 @@ create table abc (a int, b int, c int) distributed by (a);
 Alter table abc set distributed randomly;
 Alter table abc set with (reorganize=false) distributed randomly;
 drop table abc;
-
--- disallow, so fails
-create table atsdb (i int, j text) distributed by (j);
-alter table atsdb set with(appendonly = true);
-drop table atsdb;
 
 -- MPP-18660: duplicate entry in gp_distribution_policy
 set enable_indexscan=on;

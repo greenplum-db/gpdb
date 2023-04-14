@@ -1,0 +1,69 @@
+ALTER SYSTEM SET gp_max_parallel_cursors TO 3;
+ALTER
+SELECT pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
+
+-- @Description Tests concurrency for the PARALLEL RETRIEVE CURSOR statement
+--
+DROP TABLE IF EXISTS t1;
+DROP
+CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
+CREATE
+insert into t1 select generate_series(1,100);
+INSERT 100
+
+-- Test: concurrency limit in the same session
+BEGIN;
+BEGIN
+DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+COMMIT;
+COMMIT
+
+BEGIN;
+BEGIN
+DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+ERROR:  Opened parallel cursor number exceeded allowed concurrency: 3
+COMMIT;
+COMMIT
+
+-- Test: concurrency limit in different session
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+2: BEGIN;
+BEGIN
+2: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+ERROR:  Opened parallel cursor number exceeded allowed concurrency: 3
+2: ABORT;
+ABORT
+1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+DECLARE
+1: COMMIT;
+COMMIT
+
+ALTER SYSTEM RESET gp_max_parallel_cursors;
+ALTER
+SELECT pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)

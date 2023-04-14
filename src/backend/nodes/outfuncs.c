@@ -388,9 +388,6 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 
-	WRITE_INT_FIELD(total_memory_coordinator);
-	WRITE_INT_FIELD(nsegments_coordinator);
-
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
 	WRITE_NODE_FIELD(refreshClause);
@@ -589,6 +586,7 @@ _outModifyTable(StringInfo str, const ModifyTable *node)
 	WRITE_UINT_FIELD(exclRelRTI);
 	WRITE_NODE_FIELD(exclRelTlist);
 	WRITE_NODE_FIELD(isSplitUpdates);
+	WRITE_BOOL_FIELD(forceTupleRouting);
 }
 
 static void
@@ -713,6 +711,17 @@ _outSeqScan(StringInfo str, const SeqScan *node)
 }
 
 static void
+_outDynamicSeqScan(StringInfo str, const DynamicSeqScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICSEQSCAN");
+
+	_outScanInfo(str, (Scan *)node);
+	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
+}
+
+static void
 _outSampleScan(StringInfo str, const SampleScan *node)
 {
 	WRITE_NODE_TYPE("SAMPLESCAN");
@@ -729,7 +738,7 @@ _outExternalScanInfo(StringInfo str, const ExternalScanInfo *node)
 
 	WRITE_NODE_FIELD(uriList);
 	WRITE_CHAR_FIELD(fmtType);
-	WRITE_BOOL_FIELD(isMasterOnly);
+	WRITE_BOOL_FIELD(isCoordinatorOnly);
 	WRITE_INT_FIELD(rejLimit);
 	WRITE_BOOL_FIELD(rejLimitInRows);
 	WRITE_CHAR_FIELD(logErrors);
@@ -769,9 +778,21 @@ _outIndexOnlyScan(StringInfo str, const IndexOnlyScan *node)
 
 	WRITE_OID_FIELD(indexid);
 	WRITE_NODE_FIELD(indexqual);
+	WRITE_NODE_FIELD(recheckqual);
 	WRITE_NODE_FIELD(indexorderby);
 	WRITE_NODE_FIELD(indextlist);
 	WRITE_ENUM_FIELD(indexorderdir, ScanDirection);
+}
+
+static void
+_outDynamicIndexScan(StringInfo str, const DynamicIndexScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICINDEXSCAN");
+
+	outIndexScanFields(str, &node->indexscan);
+	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
 }
 
 static void
@@ -794,6 +815,14 @@ _outBitmapIndexScan(StringInfo str, const BitmapIndexScan *node)
 }
 
 static void
+_outDynamicBitmapIndexScan(StringInfo str, const DynamicBitmapIndexScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICBITMAPINDEXSCAN");
+
+	_outBitmapIndexScanFields(str, &node->biscan);
+}
+
+static void
 outBitmapHeapScanFields(StringInfo str, const BitmapHeapScan *node)
 {
 	_outScanInfo(str, (const Scan *) node);
@@ -807,6 +836,17 @@ _outBitmapHeapScan(StringInfo str, const BitmapHeapScan *node)
 	WRITE_NODE_TYPE("BITMAPHEAPSCAN");
 
 	outBitmapHeapScanFields(str, node);
+}
+
+static void
+_outDynamicBitmapHeapScan(StringInfo str, const DynamicBitmapHeapScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICBITMAPHEAPSCAN");
+
+	outBitmapHeapScanFields(str, &node->bitmapheapscan);
+	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
 }
 
 static void
@@ -895,10 +935,8 @@ _outWorkTableScan(StringInfo str, const WorkTableScan *node)
 }
 
 static void
-_outForeignScan(StringInfo str, const ForeignScan *node)
+outForeignScanFields(StringInfo str, const ForeignScan *node)
 {
-	WRITE_NODE_TYPE("FOREIGNSCAN");
-
 	_outScanInfo(str, (const Scan *) node);
 
 	WRITE_ENUM_FIELD(operation, CmdType);
@@ -909,6 +947,25 @@ _outForeignScan(StringInfo str, const ForeignScan *node)
 	WRITE_NODE_FIELD(fdw_recheck_quals);
 	WRITE_BITMAPSET_FIELD(fs_relids);
 	WRITE_BOOL_FIELD(fsSystemCol);
+}
+static void
+_outForeignScan(StringInfo str, const ForeignScan *node)
+{
+	WRITE_NODE_TYPE("FOREIGNSCAN");
+
+	outForeignScanFields(str, node);
+}
+
+static void
+_outDynamicForeignScan(StringInfo str, const DynamicForeignScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICFOREIGNSCAN");
+
+	outForeignScanFields(str, &node->foreignscan);
+	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
+	WRITE_NODE_FIELD(fdw_private_list);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -982,6 +1039,9 @@ _outHashJoin(StringInfo str, const HashJoin *node)
 
 	WRITE_NODE_FIELD(hashclauses);
 	WRITE_NODE_FIELD(hashqualclauses);
+	WRITE_NODE_FIELD(hashoperators);
+	WRITE_NODE_FIELD(hashcollations);
+	WRITE_NODE_FIELD(hashkeys);
 }
 
 static void
@@ -1104,9 +1164,6 @@ _outSort(StringInfo str, const Sort *node)
     WRITE_OID_ARRAY(sortOperators, node->numCols);
     WRITE_OID_ARRAY(collations, node->numCols);
     WRITE_BOOL_ARRAY(nullsFirst, node->numCols);
-
-	/* CDB */
-    WRITE_BOOL_FIELD(noduplicates);
 }
 
 static void
@@ -1129,6 +1186,8 @@ _outHash(StringInfo str, const Hash *node)
 
 	_outPlanInfo(str, (const Plan *) node);
 	WRITE_BOOL_FIELD(rescannable);          /*CDB*/
+
+	WRITE_NODE_FIELD(hashkeys);
 	WRITE_OID_FIELD(skewTable);
 	WRITE_INT_FIELD(skewColumn);
 	WRITE_BOOL_FIELD(skewInherit);
@@ -1294,7 +1353,6 @@ _outSplitUpdate(StringInfo str, const SplitUpdate *node)
 	WRITE_NODE_TYPE("SplitUpdate");
 
 	WRITE_INT_FIELD(actionColIdx);
-	WRITE_INT_FIELD(tupleoidColIdx);
 	WRITE_NODE_FIELD(insertColIdx);
 	WRITE_NODE_FIELD(deleteColIdx);
 
@@ -3094,6 +3152,7 @@ _outCreateStmtInfo(StringInfo str, const CreateStmt *node)
 	WRITE_STRING_FIELD(tablespacename);
 	WRITE_STRING_FIELD(accessMethod);
 	WRITE_BOOL_FIELD(if_not_exists);
+	WRITE_BOOL_FIELD(gp_style_alter_part);
 
 	WRITE_NODE_FIELD(distributedBy);
 	WRITE_NODE_FIELD(partitionBy);
@@ -3426,6 +3485,7 @@ _outAlteredTableInfo(StringInfo str, const AlteredTableInfo *node)
 	WRITE_NODE_FIELD(newvals);
 	WRITE_BOOL_FIELD(verify_new_notnull);
 	WRITE_INT_FIELD(rewrite);
+	WRITE_OID_FIELD(newAccessMethod);
 	WRITE_BOOL_FIELD(dist_opfamily_changed);
 	WRITE_OID_FIELD(new_opclass);
 	WRITE_OID_FIELD(newTableSpace);
@@ -3447,6 +3507,9 @@ _outAlteredTableInfo(StringInfo str, const AlteredTableInfo *node)
 	wrapStringList(node->changedIndexDefs);
 	WRITE_NODE_FIELD(changedIndexDefs);
 	unwrapStringList(node->changedIndexDefs);
+
+	WRITE_STRING_FIELD(replicaIdentityIndex);
+	WRITE_STRING_FIELD(clusterOnIndex);
 }
 
 static void
@@ -4063,6 +4126,7 @@ _outTableLikeClause(StringInfo str, const TableLikeClause *node)
 
 	WRITE_NODE_FIELD(relation);
 	WRITE_UINT_FIELD(options);
+	WRITE_OID_FIELD(relationOid);
 }
 
 static void
@@ -5490,6 +5554,9 @@ outNode(StringInfo str, const void *obj)
 			case T_SeqScan:
 				_outSeqScan(str, obj);
 				break;
+			case T_DynamicSeqScan:
+				_outDynamicSeqScan(str, obj);
+				break;
 			case T_ExternalScanInfo:
 				_outExternalScanInfo(str, obj);
 				break;
@@ -5499,14 +5566,23 @@ outNode(StringInfo str, const void *obj)
 			case T_IndexScan:
 				_outIndexScan(str, obj);
 				break;
+			case T_DynamicIndexScan:
+				_outDynamicIndexScan(str,obj);
+				break;
 			case T_IndexOnlyScan:
 				_outIndexOnlyScan(str, obj);
 				break;
 			case T_BitmapIndexScan:
 				_outBitmapIndexScan(str, obj);
 				break;
+			case T_DynamicBitmapIndexScan:
+				_outDynamicBitmapIndexScan(str, obj);
+				break;
 			case T_BitmapHeapScan:
 				_outBitmapHeapScan(str, obj);
+				break;
+			case T_DynamicBitmapHeapScan:
+				_outDynamicBitmapHeapScan(str, obj);
 				break;
 			case T_TidScan:
 				_outTidScan(str, obj);
@@ -5534,6 +5610,9 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_ForeignScan:
 				_outForeignScan(str, obj);
+				break;
+			case T_DynamicForeignScan:
+				_outDynamicForeignScan(str, obj);
 				break;
 			case T_CustomScan:
 				_outCustomScan(str, obj);

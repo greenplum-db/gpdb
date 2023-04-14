@@ -2,20 +2,21 @@
 -- CIRCLE
 --
 
--- avoid bit-exact output here because operations may not be bit-exact.
-SET extra_float_digits = 0;
+-- Back off displayed precision a little bit to reduce platform-to-platform
+-- variation in results.
+SET extra_float_digits = -1;
 
 CREATE TABLE CIRCLE_TBL (f1 circle);
 
 INSERT INTO CIRCLE_TBL VALUES ('<(5,1),3>');
 
-INSERT INTO CIRCLE_TBL VALUES ('<(1,2),100>');
+INSERT INTO CIRCLE_TBL VALUES ('((1,2),100)');
 
-INSERT INTO CIRCLE_TBL VALUES ('1,3,5');
+INSERT INTO CIRCLE_TBL VALUES (' 1 , 3 , 5 ');
 
-INSERT INTO CIRCLE_TBL VALUES ('((1,2),3)');
+INSERT INTO CIRCLE_TBL VALUES (' ( ( 1 , 2 ) , 3 ) ');
 
-INSERT INTO CIRCLE_TBL VALUES ('<(100,200),10>');
+INSERT INTO CIRCLE_TBL VALUES (' ( 100 , 200 ) , 10 ');
 
 INSERT INTO CIRCLE_TBL VALUES (' < ( 100 , 1 ) , 115 > ');
 

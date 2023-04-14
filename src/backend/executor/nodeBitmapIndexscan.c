@@ -96,6 +96,10 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	{
 		ExecReScan((PlanState *) node);
 		doscan = node->biss_RuntimeKeysReady;
+
+        /* Return an empty bitmap if biss_RuntimeKeysReady still false.*/
+        if (!doscan)
+            index_initbitmap(scandesc, &bitmap);
 	}
 	else
 		doscan = true;
@@ -199,9 +203,12 @@ ExecEndBitmapIndexScan(BitmapIndexScanState *node)
 	indexScanDesc = node->biss_ScanDesc;
 
 	/*
-	 * Free the exprcontext ... now dead code, see ExecFreeExprContext
+	 * Free the exprcontext(s) ... now dead code, see ExecFreeExprContext
+	 *
+	 * GPDB: This is not dead code in GPDB, because we don't want to leak
+	 * exprcontexts in a dynamic bitmap index scan.
 	 */
-#ifdef NOT_USED
+#if 1
 	if (node->biss_RuntimeContext)
 		FreeExprContext(node->biss_RuntimeContext, true);
 #endif

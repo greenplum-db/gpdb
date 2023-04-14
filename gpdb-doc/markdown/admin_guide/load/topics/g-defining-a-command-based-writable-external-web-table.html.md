@@ -23,8 +23,8 @@ The following Greenplum Database variables are available for use in OS commands 
 |$GP\_CID|Command count of the transaction running the external table statement.|
 |$GP\_DATABASE|The database in which the external table definition resides.|
 |$GP\_DATE|The date on which the external table command ran.|
-|$GP\_MASTER\_HOST|The host name of the Greenplum master host from which the external table statement was dispatched.|
-|$GP\_MASTER\_PORT|The port number of the Greenplum master instance from which the external table statement was dispatched.|
+|$GP\_MASTER\_HOST|The host name of the Greenplum coordinator host from which the external table statement was dispatched.|
+|$GP\_MASTER\_PORT|The port number of the Greenplum coordinator instance from which the external table statement was dispatched.|
 |$GP\_QUERY\_STRING|The SQL command \(DML or SQL query\) run by Greenplum Database.|
 |$GP\_SEG\_DATADIR|The location of the data directory of the segment instance running the external table command.|
 |$GP\_SEG\_PG\_CONF|The location of the `postgresql.conf` file of the segment instance running the external table command.|
@@ -37,8 +37,8 @@ The following Greenplum Database variables are available for use in OS commands 
 |$GP\_USER|The database user running the external table statement.|
 |$GP\_XID|The transaction ID of the external table statement.|
 
--   **[Disabling EXECUTE for Web or Writable External Tables](../../load/topics/g-disabling-execute-for-web-or-writable-external-tables.html)**  
+-   **[Deactivating EXECUTE for Web or Writable External Tables](../../load/topics/g-disabling-execute-for-web-or-writable-external-tables.html)**  
 
 
-**Parent topic:**[Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
+**Parent topic:** [Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
 

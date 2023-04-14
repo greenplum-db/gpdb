@@ -111,6 +111,3 @@ select relfrozenxid from gp_dist_random('pg_class') c, pg_namespace n where
             0
 (3 rows)
 
--- Verify that unique index is not allowed
-CREATE UNIQUE INDEX uni_index ON sto_alt_uao3_idx (text_col);
-ERROR:  append-only tables do not support unique indexes

@@ -13,7 +13,7 @@ You can display information about partitioned tables in several ways, including 
 -   The `pg_constraint` system catalog table contains information on table constraints.
 -   The psql meta command \\d+ tablename displays the table constraints for child leaf tables of a partitioned table.
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
 ## <a id="topic_zn1_m3m_ss"></a>Example 
 
@@ -61,7 +61,7 @@ WITH tbl AS (SELECT oid, partitionlevel AS level,
     WHERE tbl.oid = conrelid ORDER BY consrc;
 ```
 
-**Note:** You will need modify the query for more complex partitioned tables. For example, the query does not account for table names in different schemas.
+> **Note** You will need modify the query for more complex partitioned tables. For example, the query does not account for table names in different schemas.
 
 The `consrc` column displays constraints on the subpartitions. The set of region constraints for the subpartitions in `mlp_1_prt_1` match the constraints for the subpartitions in `mlp_1_prt_2`. The constraints for year are inherited from the parent branch tables.
 
@@ -105,5 +105,5 @@ Also, if you add a partition `canada` under `mlp_1_prt_21`, the partitioning hie
 
 However, if you add the subpartition `canada` to both `mlp_1_prt_21` and `mlp_1_prt_11` the of the original partitioned table, it remains a uniform partitioned table.
 
-**Note:** Only the constraints on the sets of partitions at a partition level must be the same. The names of the partitions can be different.
+> **Note** Only the constraints on the sets of partitions at a partition level must be the same. The names of the partitions can be different.
 

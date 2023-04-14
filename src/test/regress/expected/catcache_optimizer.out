@@ -1,0 +1,81 @@
+-- Test abort transaction should invalidate reader gang's cat cache
+-- Discussion: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/u3-D7isdvmM
+set optimizer_force_multistage_agg = 1;
+create table dml_14027_union_s (a int not null, b numeric default 10.00) distributed by (a) partition by range(b);
+create table dml_14027_union_s_1_prt_2 partition of dml_14027_union_s for values from (1) to (1001);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table dml_14027_union_s_1_prt_def partition of dml_14027_union_s default;
+NOTICE:  table has parent, setting distribution columns to match parent table
+insert into dml_14027_union_s select generate_series(1,1), generate_series(1,1);
+begin;
+drop table dml_14027_union_s_1_prt_def;
+explain select count(distinct(b)) from dml_14027_union_s;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..431.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+               Group Key: b
+               ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                     Sort Key: b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                           Hash Key: b
+                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+                                 Group Key: b
+                                 ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                       Sort Key: b
+                                       ->  Dynamic Seq Scan on dml_14027_union_s  (cost=0.00..431.00 rows=1 width=8)
+                                             Number of partitions to scan: 1 (out of 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
+
+select count(distinct(b)) from dml_14027_union_s;
+ count 
+-------
+     1
+(1 row)
+
+rollback;
+explain update dml_14027_union_s set a = (select null union select null)::numeric;
+                                                                        QUERY PLAN                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Update on dml_14027_union_s  (cost=0.00..882689.29 rows=1 width=1)
+   ->  Result  (cost=0.00..882689.22 rows=2 width=30)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..882689.22 rows=2 width=26)
+               Hash Key: dml_14027_union_s_1.a
+               ->  Split  (cost=0.00..882689.22 rows=1 width=26)
+                     ->  Nested Loop Left Join  (cost=0.00..882689.22 rows=1 width=30)
+                           Join Filter: true
+                           ->  Dynamic Seq Scan on dml_14027_union_s  (cost=0.00..431.00 rows=1 width=22)
+                                 Number of partitions to scan: 2 (out of 2)
+                           ->  Assert  (cost=0.00..0.00 rows=1 width=8)
+                                 Assert Cond: ((row_number() OVER (?)) = 1)
+                                 ->  Materialize  (cost=0.00..0.00 rows=1 width=16)
+                                       ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=0.00..0.00 rows=1 width=16)
+                                             ->  WindowAgg  (cost=0.00..0.00 rows=1 width=16)
+                                                   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..0.00 rows=1 width=8)
+                                                         ->  GroupAggregate  (cost=0.00..0.00 rows=1 width=8)
+                                                               Group Key: (NULL::text)
+                                                               ->  Sort  (cost=0.00..0.00 rows=1 width=8)
+                                                                     Sort Key: (NULL::text)
+                                                                     ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..0.00 rows=1 width=8)
+                                                                           Hash Key: (NULL::text)
+                                                                           ->  GroupAggregate  (cost=0.00..0.00 rows=1 width=8)
+                                                                                 Group Key: (NULL::text)
+                                                                                 ->  Sort  (cost=0.00..0.00 rows=1 width=8)
+                                                                                       Sort Key: (NULL::text)
+                                                                                       ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                                                                                             One-Time Filter: (gp_execution_segment() = 1)
+                                                                                             ->  Append  (cost=0.00..0.00 rows=1 width=8)
+                                                                                                   ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                                                                                   ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(31 rows)
+
+-- Should not raise error due to stale catcache in reader gang.
+-- eg: ERROR: expected partdefid 134733, but got 0
+update dml_14027_union_s set a = (select null union select null)::numeric;
+ERROR:  null value in column "a" violates not-null constraint  (seg0 127.0.1.1:7002 pid=27466)
+DETAIL:  Failing row contains (null, 1).
+drop table dml_14027_union_s;
+reset optimizer_force_multistage_agg;

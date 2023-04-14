@@ -13,11 +13,11 @@ This topic describes the setup and management tasks for using gpfdist with exter
 -   [Starting and Stopping gpfdist](#topic17)
 -   [Troubleshooting gpfdist](#topic18)
 
-**Parent topic:**[Working with External Data](../external/g-working-with-file-based-ext-tables.html)
+**Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)
 
 ## <a id="topic_xkt_vjy_4bb"></a>About gpfdist and External Tables 
 
-The `gpfdist` file server utility is located in the `$GPHOME/bin` directory on your Greenplum Database master host and on each segment host. When you start a `gpfdist` instance you specify a listen port and the path to a directory containing files to read or where files are to be written. For example, this command runs `gpfdist` in the background, listening on port 8801, and serving files in the `/home/gpadmin/external_files` directory:
+The `gpfdist` file server utility is located in the `$GPHOME/bin` directory on your Greenplum Database coordinator host and on each segment host. When you start a `gpfdist` instance you specify a listen port and the path to a directory containing files to read or where files are to be written. For example, this command runs `gpfdist` in the background, listening on port 8801, and serving files in the `/home/gpadmin/external_files` directory:
 
 ```
 $ gpfdist -p 8801 -d /home/gpadmin/external_files &
@@ -35,21 +35,21 @@ You can run `gpfdist` instances on multiple hosts and you can run multiple `gpfd
 
 -   Allow network traffic to use all ETL host network interfaces simultaneously. Run one instance of gpfdist for each interface on the ETL host, then declare the host name of each NIC in the `LOCATION` clause of your external table definition \(see [Examples for Creating External Tables](g-creating-external-tables---examples.html)\).
 
-![](../graphics/ext_tables_multinic.jpg "External Table Using Single gpfdist Instance with Multiple NICs")
+![External Table Using Single gpfdist Instance with Multiple NICs](../graphics/ext_tables_multinic.jpg "External Table Using Single gpfdist Instance with Multiple NICs")
 
 -   Divide external table data equally among multiple gpfdist instances on the ETL host. For example, on an ETL system with two NICs, run two gpfdist instances \(one on each NIC\) to optimize data load performance and divide the external table data files evenly between the two gpfdist servers.
 
-![](../graphics/ext_tables.jpg "External Tables Using Multiple gpfdist Instances with Multiple NICs")
+![External Tables Using Multiple gpfdist Instances with Multiple NICs](../graphics/ext_tables.jpg "External Tables Using Multiple gpfdist Instances with Multiple NICs")
 
-**Note:** Use pipes \(\|\) to separate formatted text when you submit files to gpfdist. Greenplum Database encloses comma-separated text strings in single or double quotes. gpfdist has to remove the quotes to parse the strings. Using pipes to separate formatted text avoids the extra step and improves performance.
+> **Note** Use pipes \(\|\) to separate formatted text when you submit files to gpfdist. Greenplum Database encloses comma-separated text strings in single or double quotes. gpfdist has to remove the quotes to parse the strings. Using pipes to separate formatted text avoids the extra step and improves performance.
 
 ## <a id="topic15"></a>Controlling Segment Parallelism 
 
-The `gp_external_max_segs` server configuration parameter controls the number of segment instances that can access a single gpfdist instance simultaneously. 64 is the default. You can set the number of segments such that some segments process external data files and some perform other database processing. Set this parameter in the `postgresql.conf` file of your master instance.
+The `gp_external_max_segs` server configuration parameter controls the number of segment instances that can access a single gpfdist instance simultaneously. 64 is the default. You can set the number of segments such that some segments process external data files and some perform other database processing. Set this parameter in the `postgresql.conf` file of your coordinator instance.
 
 ## <a id="topic16"></a>Installing gpfdist 
 
-gpfdist is installed in `$GPHOME/bin` of your Greenplum Database master host installation. Run gpfdist on a machine other than the Greenplum Database master or standby master, such as on a machine devoted to ETL processing. Running gpfdist on the master or standby master can have a performance impact on query execution. To install gpfdist on your ETL server, get it from the *Greenplum Clients* package and follow its installation instructions.
+gpfdist is installed in `$GPHOME/bin` of your Greenplum Database coordinator host installation. Run gpfdist on a machine other than the Greenplum Database coordinator or standby coordinator, such as on a machine devoted to ETL processing. Running gpfdist on the coordinator or standby coordinator can have a performance impact on query execution. To install gpfdist on your ETL server, get it from the *Greenplum Clients* package and follow its installation instructions.
 
 ## <a id="topic17"></a>Starting and Stopping gpfdist 
 
@@ -95,7 +95,7 @@ $ kill 3456
 
 ## <a id="topic18"></a>Troubleshooting gpfdist 
 
-The segments access gpfdist at runtime. Ensure that the Greenplum segment hosts have network access to gpfdist. gpfdist is a web server: test connectivity by running the following command from each host in the Greenplum array \(segments and master\):
+The segments access gpfdist at runtime. Ensure that the Greenplum segment hosts have network access to gpfdist. gpfdist is a web server: test connectivity by running the following command from each host in the Greenplum array \(segments and coordinator\):
 
 ```
 $ wget http://<gpfdist_hostname>:<port>/<filename>
@@ -104,7 +104,7 @@ $ wget http://<gpfdist_hostname>:<port>/<filename>
 
 The `CREATE EXTERNAL TABLE` definition must have the correct host name, port, and file names for gpfdist. Specify file names and paths relative to the directory from which gpfdist serves files \(the directory path specified when gpfdist started\). See [Examples for Creating External Tables](g-creating-external-tables---examples.html).
 
-If you start gpfdist on your system and IPv6 networking is disabled, gpfdist displays this warning message when testing for an IPv6 port.
+If you start gpfdist on your system and IPv6 networking is deactivated, gpfdist displays this warning message when testing for an IPv6 port.
 
 ```
 [WRN gpfdist.c:2050] Creating the socket failed

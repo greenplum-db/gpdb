@@ -162,7 +162,7 @@ CCardinalityTestUtils::PpointGeneric(CMemoryPool *mp, OID oid,
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(oid);
+	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, oid);
 	IDatum *datum = CTestUtils::CreateGenericDatum(mp, md_accessor, mdid,
 												   pstrEncodedValue, value);
 	CPoint *point = GPOS_NEW(mp) CPoint(datum);
@@ -202,7 +202,7 @@ CCardinalityTestUtils::PpointDouble(CMemoryPool *mp, OID oid, CDouble value)
 {
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(oid);
+	IMDId *mdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, oid);
 	IDatum *datum = CTestUtils::CreateDoubleDatum(mp, md_accessor, mdid, value);
 	CPoint *point = GPOS_NEW(mp) CPoint(datum);
 

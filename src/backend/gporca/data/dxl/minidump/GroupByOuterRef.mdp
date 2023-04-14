@@ -193,7 +193,7 @@ where t.a in (select count(s.i) from s);
       <dxl:ColumnStatistics Mdid="1.839942.1.1.4" Name="cmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:RelationStatistics Mdid="2.839968.1.1" Name="s" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.839942.1.1" Name="t" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.839968.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.839968.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -224,10 +224,9 @@ where t.a in (select count(s.i) from s);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.839942.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.839942.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -258,7 +257,6 @@ where t.a in (select count(s.i) from s);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.839968.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000"/>
@@ -292,7 +290,7 @@ where t.a in (select count(s.i) from s);
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.839968.1.1" TableName="s">
+              <dxl:TableDescriptor Mdid="6.839968.1.1" TableName="s">
                 <dxl:Columns>
                   <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="11" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -309,7 +307,7 @@ where t.a in (select count(s.i) from s);
           </dxl:LogicalGroupBy>
         </dxl:SubqueryAny>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.839942.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.839942.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -375,7 +373,7 @@ where t.a in (select count(s.i) from s);
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.839942.1.1" TableName="t">
+            <dxl:TableDescriptor Mdid="6.839942.1.1" TableName="t">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -447,7 +445,7 @@ where t.a in (select count(s.i) from s);
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.839968.1.1" TableName="s">
+                <dxl:TableDescriptor Mdid="6.839968.1.1" TableName="s">
                   <dxl:Columns>
                     <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

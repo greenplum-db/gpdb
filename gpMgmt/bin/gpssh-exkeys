@@ -181,10 +181,6 @@ class Host:
                     print('    ', line.rstrip(), file=sys.stderr)
                     print('    One or more existing authentication files may be replaced on %s' % self.m_host, file=sys.stderr)
 
-            # TODO: Paramiko previously prevented us from extracting
-            # the tarfile contents here. Now that we no longer use
-            # Paramiko, that can be revisited.
-
     def popen(self, cmd):
         'Run a command and save popen handle in this Host instance.'
         if self.m_popen:
@@ -755,7 +751,7 @@ try:
 
 
         for h in GV.newHosts:
-            cmd = ('scp -q -o "BatchMode yes" -o "NumberOfPasswordPrompts 0" ' +
+            cmd = ('rsync -q -e "ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0" ' +
                    '%s %s %s %s %s:.ssh/ 2>&1'
                    % (GV.authorized_keys_fname,
                       GV.known_hosts_fname,
@@ -796,7 +792,7 @@ try:
                     remoteIdentity = GV.id_rsa_fname
                     remoteIdentityPub = GV.id_rsa_pub_fname
 
-                cmd = ('scp -q -o "BatchMode yes" -o "NumberOfPasswordPrompts 0" ' +
+                cmd = ('rsync -q -e "ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0" ' +
                        '%s %s %s %s %s:.ssh/ 2>&1'
                        % (remoteAuthKeysFile,
                           remoteKnownHostsFile,

@@ -12,18 +12,12 @@ ifeq ($(DEBUG_S3_SYMBOL),y)
 	PG_CPPFLAGS += -g
 endif
 
-# GPDB_12_MERGE_FIXME: I had to add these to make "make install" work
-# with --with--lvm. I don't undertand what's going on, but I found this
-# cure at https://github.com/rdkit/rdkit/issues/2192. Seems to be the
-# same issue, whatever it is.
-COMPILE.cxx.bc = $(CLANG) -xc++ -Wno-ignored-attributes $(BITCODE_CXXFLAGS) $(CPPFLAGS) -emit-llvm -c
-%.bc : %.cpp
-	$(COMPILE.cxx.bc) -o $@ $<
-	$(LLVM_BINPATH)/opt -module-summary -f $@ -o $@
-
 # Targets
 MODULE_big = gpcloud
 OBJS = src/gpcloud.o lib/http_parser.o lib/ini.o $(addprefix src/,$(COMMON_OBJS))
+
+# Avoid building LLVM Bitcode for gpcloud module.
+with_llvm = no
 
 # Launch
 ifdef USE_PGXS

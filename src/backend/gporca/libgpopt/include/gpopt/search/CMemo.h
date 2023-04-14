@@ -167,11 +167,8 @@ public:
 	// print memo to output logger
 	void Trace();
 
-#ifdef GPOS_DEBUG
 	// get group by id
 	CGroup *Pgroup(ULONG id);
-
-#endif	// GPOS_DEBUG
 
 };	// class CMemo
 

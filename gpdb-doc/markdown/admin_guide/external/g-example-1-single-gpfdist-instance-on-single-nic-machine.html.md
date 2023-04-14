@@ -11,5 +11,5 @@ Creates a readable external table, `ext_expenses`, using the `gpfdist` protocol.
 FORMAT 'TEXT' (DELIMITER '|');
 ```
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

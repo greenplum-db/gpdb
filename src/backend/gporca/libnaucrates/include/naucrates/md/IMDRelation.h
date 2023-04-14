@@ -50,8 +50,9 @@ public:
 		ErelstorageHeap,
 		ErelstorageAppendOnlyCols,
 		ErelstorageAppendOnlyRows,
-		ErelstorageExternal,
+		ErelstorageForeign,
 		ErelstorageMixedPartitioned,
+		ErelstorageCompositeType,
 		ErelstorageSentinel
 	};
 
@@ -61,7 +62,7 @@ public:
 	//-------------------------------------------------------------------
 	enum Ereldistrpolicy
 	{
-		EreldistrMasterOnly,
+		EreldistrCoordinatorOnly,
 		EreldistrHash,
 		EreldistrRandom,
 		EreldistrReplicated,
@@ -141,17 +142,11 @@ public:
 	// return true if a hash distributed table needs to be considered as random
 	virtual BOOL ConvertHashToRandom() const = 0;
 
-	// does this table have oids
-	virtual BOOL HasOids() const = 0;
-
 	// is this a partitioned table
 	virtual BOOL IsPartitioned() const = 0;
 
 	// number of partition columns
 	virtual ULONG PartColumnCount() const = 0;
-
-	// number of partitions
-	virtual ULONG PartitionCount() const = 0;
 
 	// retrieve the partition column at the given position
 	virtual const IMDColumn *PartColAt(ULONG pos) const = 0;
@@ -165,14 +160,8 @@ public:
 	// number of indices
 	virtual ULONG IndexCount() const = 0;
 
-	// number of triggers
-	virtual ULONG TriggerCount() const = 0;
-
 	// retrieve the id of the metadata cache index at the given position
 	virtual IMDId *IndexMDidAt(ULONG pos) const = 0;
-
-	// retrieve the id of the metadata cache trigger at the given position
-	virtual IMDId *TriggerMDidAt(ULONG pos) const = 0;
 
 	// number of check constraints
 	virtual ULONG CheckConstraintCount() const = 0;
@@ -205,6 +194,9 @@ public:
 		return st == ErelstorageAppendOnlyCols ||
 			   st == ErelstorageAppendOnlyRows;
 	}
+
+	// get oid of foreign server for foreign table
+	virtual IMDId *ForeignServer() const = 0;
 };
 
 // common structure over relation and external relation metadata for index info

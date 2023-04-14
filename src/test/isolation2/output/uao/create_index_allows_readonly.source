@@ -1,0 +1,94 @@
+-- This is intended to verify read-only transactions is able to run
+-- concurently with index creation.
+
+set default_table_access_method=@amname@;
+SET
+
+create table @amname@_create_index_with_select_tbl(a int, b int);
+CREATE
+insert into @amname@_create_index_with_select_tbl select a,a from generate_series(1,10) a;
+INSERT 10
+
+-- Verify readonly transaction is able to run concurrently with index creation.
+
+1: begin;
+BEGIN
+1: select * from @amname@_create_index_with_select_tbl where a = 2;
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+
+2: begin;
+BEGIN
+-- expect no hang
+2: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);
+CREATE
+-- expect no hang
+3: select * from @amname@_create_index_with_select_tbl where a = 2;
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+
+1: end;
+END
+2: end;
+END
+
+-- Verify behaviors of select with locking clause (i.e. select for update)
+-- when running concurrently with index creation, expect blocking with each other.
+-- This is only for AO/CO tables, for Heap tables, refer to lockmodes.sql.
+
+drop index @amname@_create_index_with_select_idx;
+DROP
+
+1: begin;
+BEGIN
+1: select * from @amname@_create_index_with_select_tbl where a = 2 for update;
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+
+2: begin;
+BEGIN
+-- expect blocking
+2&: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);  <waiting ...>
+
+1: commit;
+COMMIT
+
+2<:  <... completed>
+CREATE
+2: commit;
+COMMIT
+
+drop index @amname@_create_index_with_select_idx;
+DROP
+
+2: begin;
+BEGIN
+2: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);
+CREATE
+
+1: begin;
+BEGIN
+-- expect blocking
+1&: select * from @amname@_create_index_with_select_tbl where a = 2 for update;  <waiting ...>
+
+2: commit;
+COMMIT
+
+1<:  <... completed>
+ a | b 
+---+---
+ 2 | 2 
+(1 row)
+1: commit;
+COMMIT
+
+drop table @amname@_create_index_with_select_tbl;
+DROP
+reset default_table_access_method;
+RESET

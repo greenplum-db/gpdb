@@ -50,6 +50,16 @@
 #define MAX_IV		(128/8)
 
 /*
+ * Fips mode
+ */
+static bool fips = false;
+
+#define NOT_FIPS_CERTIFIED \
+	if (fips) \
+		ereport(ERROR, \
+				(errmsg("requested functionality not allowed in FIPS mode")));
+
+/*
  * Hashes
  */
 
@@ -118,16 +128,24 @@ static unsigned
 digest_result_size(PX_MD *h)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
+	int			result = EVP_MD_CTX_size(digest->ctx);
 
-	return EVP_MD_CTX_size(digest->ctx);
+	if (result < 0)
+		elog(ERROR, "EVP_MD_CTX_size() failed");
+
+	return result;
 }
 
 static unsigned
 digest_block_size(PX_MD *h)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
+	int			result = EVP_MD_CTX_block_size(digest->ctx);
 
-	return EVP_MD_CTX_block_size(digest->ctx);
+	if (result < 0)
+		elog(ERROR, "EVP_MD_CTX_block_size() failed");
+
+	return result;
 }
 
 static void
@@ -135,7 +153,8 @@ digest_reset(PX_MD *h)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
 
-	EVP_DigestInit_ex(digest->ctx, digest->algo, NULL);
+	if (!EVP_DigestInit_ex(digest->ctx, digest->algo, NULL))
+		elog(ERROR, "EVP_DigestInit_ex() failed");
 }
 
 static void
@@ -143,7 +162,8 @@ digest_update(PX_MD *h, const uint8 *data, unsigned dlen)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
 
-	EVP_DigestUpdate(digest->ctx, data, dlen);
+	if (!EVP_DigestUpdate(digest->ctx, data, dlen))
+		elog(ERROR, "EVP_DigestUpdate() failed");
 }
 
 static void
@@ -151,7 +171,8 @@ digest_finish(PX_MD *h, uint8 *dst)
 {
 	OSSLDigest *digest = (OSSLDigest *) h->p.ptr;
 
-	EVP_DigestFinal_ex(digest->ctx, dst, NULL);
+	if (!EVP_DigestFinal_ex(digest->ctx, dst, NULL))
+		elog(ERROR, "EVP_DigestFinal_ex() failed");
 }
 
 static void
@@ -206,6 +227,7 @@ px_find_digest(const char *name, PX_MD **res)
 	}
 	if (EVP_DigestInit_ex(ctx, md, NULL) == 0)
 	{
+		EVP_MD_CTX_destroy(ctx);
 		pfree(digest);
 		return -1;
 	}
@@ -371,6 +393,8 @@ gen_ossl_decrypt(PX_Cipher *c, const uint8 *data, unsigned dlen,
 	{
 		if (!EVP_DecryptInit_ex(od->evp_ctx, od->evp_ciph, NULL, NULL, NULL))
 			return PXE_CIPHER_INIT;
+		if (!EVP_CIPHER_CTX_set_padding(od->evp_ctx, 0))
+			return PXE_CIPHER_INIT;
 		if (!EVP_CIPHER_CTX_set_key_length(od->evp_ctx, od->klen))
 			return PXE_CIPHER_INIT;
 		if (!EVP_DecryptInit_ex(od->evp_ctx, NULL, NULL, od->key, od->iv))
@@ -394,6 +418,8 @@ gen_ossl_encrypt(PX_Cipher *c, const uint8 *data, unsigned dlen,
 	if (!od->init)
 	{
 		if (!EVP_EncryptInit_ex(od->evp_ctx, od->evp_ciph, NULL, NULL, NULL))
+			return PXE_CIPHER_INIT;
+		if (!EVP_CIPHER_CTX_set_padding(od->evp_ctx, 0))
 			return PXE_CIPHER_INIT;
 		if (!EVP_CIPHER_CTX_set_key_length(od->evp_ctx, od->klen))
 			return PXE_CIPHER_INIT;
@@ -635,7 +661,7 @@ ossl_aes_cbc_init(PX_Cipher *c, const uint8 *key, unsigned klen, const uint8 *iv
  * aliases
  */
 
-static PX_Alias ossl_aliases[] = {
+static PX_Alias ossl_aliases_all[] = {
 	{"bf", "bf-cbc"},
 	{"blowfish", "bf-cbc"},
 	{"blowfish-cbc", "bf-cbc"},
@@ -652,6 +678,8 @@ static PX_Alias ossl_aliases[] = {
 	{"rijndael-ecb", "aes-ecb"},
 	{NULL}
 };
+
+static PX_Alias *ossl_aliases = ossl_aliases_all;
 
 static const struct ossl_cipher ossl_bf_cbc = {
 	bf_init,
@@ -730,7 +758,7 @@ struct ossl_cipher_lookup
 	const struct ossl_cipher *ciph;
 };
 
-static const struct ossl_cipher_lookup ossl_cipher_types[] = {
+static const struct ossl_cipher_lookup ossl_cipher_types_all[] = {
 	{"bf-cbc", &ossl_bf_cbc},
 	{"bf-ecb", &ossl_bf_ecb},
 	{"bf-cfb", &ossl_bf_cfb},
@@ -745,6 +773,8 @@ static const struct ossl_cipher_lookup ossl_cipher_types[] = {
 	{NULL}
 };
 
+static const struct ossl_cipher_lookup *ossl_cipher_types = ossl_cipher_types_all;
+
 /* PUBLIC functions */
 
 int
@@ -754,6 +784,8 @@ px_find_cipher(const char *name, PX_Cipher **res)
 	PX_Cipher  *c = NULL;
 	EVP_CIPHER_CTX *ctx;
 	OSSLCipher *od;
+
+	NOT_FIPS_CERTIFIED
 
 	name = px_resolve_alias(ossl_aliases, name);
 	for (i = ossl_cipher_types; i->name; i++)
@@ -807,3 +839,97 @@ px_find_cipher(const char *name, PX_Cipher **res)
 	*res = c;
 	return 0;
 }
+
+void
+px_disable_fipsmode(void)
+{
+#ifndef OPENSSL_FIPS
+	/*
+	 * If this build doesn't support FIPS mode at all, we shouldn't be able
+	 * to reach this point, so Assert that and return to handle production
+	 * builds gracefully.
+	 */
+	Assert(!fips);
+#else
+	ossl_aliases = ossl_aliases_all;
+	ossl_cipher_types = ossl_cipher_types_all;
+	fips = false;
+
+	if (!FIPS_mode_set)
+		return;
+
+	FIPS_mode_set(0);
+#endif
+
+	return;
+}
+
+void
+px_enable_fipsmode(void)
+{
+#ifndef OPENSSL_FIPS
+	ereport(ERROR,
+			(errmsg("FIPS enabled OpenSSL is required for strict FIPS mode"),
+			 errhint("Recompile OpenSSL with the FIPS module, or install a FIPS enabled OpenSSL distribution.")));
+#else
+
+	/*
+	 * While AES and 3DES are allowed ciphers under FIPS-140 level 2, pgcrypto
+	 * is calling the lowlevel API for these which is disallowed under FIPS.
+	 * However, rather than returning NULL as is done when calling the high
+	 * level functions, the lowlevel API throws a SIGABORT so we need to avoid
+	 * calling this altogether.
+	 */
+	ossl_aliases = NULL;
+	ossl_cipher_types = NULL;
+
+	/* Make sure that we are linked against a FIPS enabled OpenSSL */
+	if (!FIPS_mode_set)
+	{
+		ereport(ERROR,
+				(errmsg("FIPS enabled OpenSSL is required for strict FIPS mode"),
+				 errhint("Recompile OpenSSL with the FIPS module, or install a FIPS enabled OpenSSL distribution.")));
+	}
+
+	/*
+	 * A non-zero return value means that FIPS mode was enabled, but the
+	 * full range of possible non-zero return values is not documented so
+	 * rather than checking for success we check for failure.
+	 */
+	if (FIPS_mode_set(1) == 0)
+	{
+		char		errbuf[128];
+
+		ERR_load_crypto_strings();
+		ERR_error_string_n(ERR_get_error(), errbuf, sizeof(errbuf));
+		ERR_free_strings();
+
+		ereport(ERROR,
+				(errmsg("unable to enable FIPS mode: %lx, %s",
+						ERR_get_error(), errbuf)));
+	}
+
+	fips = true;
+#endif
+}
+
+void
+px_check_fipsmode(void)
+{
+#ifndef OPENSSL_FIPS
+	ereport(ERROR,
+			(errmsg("FIPS enabled OpenSSL is required for strict FIPS mode"),
+			 errhint("Recompile OpenSSL with the FIPS module, or install a FIPS enabled OpenSSL distribution.")));
+#else
+
+	/* Make sure that we are linked against a FIPS enabled OpenSSL */
+	if (!FIPS_mode_set)
+	{
+		ereport(ERROR,
+				(errmsg("FIPS enabled OpenSSL is required for strict FIPS mode"),
+				 errhint("Recompile OpenSSL with the FIPS module, or install a FIPS enabled OpenSSL distribution.")));
+	}
+
+#endif
+}
+

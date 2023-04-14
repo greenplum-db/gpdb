@@ -2,7 +2,7 @@
 create schema subselect_gp;
 set search_path to subselect_gp, public;
 -- end_ignore
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
 
@@ -144,7 +144,7 @@ explain select array(select x from csq_d1); -- initplan
 select array(select x from csq_d1); -- {1}
 
 --
--- CSQs involving master-only and distributed tables
+-- CSQs involving coordinator-only and distributed tables
 --
 
 drop table if exists t3cozlib;
@@ -180,7 +180,7 @@ ORDER BY a.attnum
 ; -- expect to see 2 rows
 
 --
--- More CSQs involving master-only and distributed relations
+-- More CSQs involving coordinator-only and distributed relations
 --
 
 drop table if exists csq_m1;
@@ -202,14 +202,14 @@ select * from csq_m1;
 select * from csq_d1;
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 
 explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- gather motion
 select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 
 explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- broadcast motion
@@ -745,6 +745,24 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
   WHERE (f1, f2) IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
                      WHERE f3 IS NOT NULL) ORDER BY 2;
 
+-- Test simplify group-by/order-by inside subquery if sublink pull-up is possible
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1 GROUP BY f2);
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1  GROUP BY f2 LIMIT 3);
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1 ORDER BY f2);
+
+EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1  ORDER BY f2 LIMIT 3);
+
+
 --
 -- Test cases to catch unpleasant interactions between IN-join processing
 -- and subquery pullup.
@@ -1190,3 +1208,135 @@ explain (costs off, verbose)
 select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j desc);
 
 select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issue_12656 order by i, j desc);
+
+-- case 3, check correlated DISTINCT ON
+explain select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+
+select * from issue_12656 a where (i, j) in
+(select distinct on (i) i, j from issue_12656 b where a.i=b.i order by i, j asc);
+
+---
+--- Test param info is preserved when bringing a path to OuterQuery locus
+---
+drop table if exists param_t;
+
+create table param_t (i int, j int);
+insert into param_t select i, i from generate_series(1,10)i;
+analyze param_t;
+
+explain (costs off)
+select * from param_t a where a.i in
+	(select count(b.j) from param_t b, param_t c,
+		lateral (select * from param_t d where d.j = c.j limit 10) s
+	where s.i = a.i
+	);
+select * from param_t a where a.i in
+	(select count(b.j) from param_t b, param_t c,
+		lateral (select * from param_t d where d.j = c.j limit 10) s
+	where s.i = a.i
+	);
+
+
+drop table if exists param_t;
+
+-- A guard test case for gpexpand's populate SQL
+-- Some simple notes and background is: we want to compute
+-- table size efficiently, it is better to avoid invoke
+-- pg_relation_size() in serial on QD, since this function
+-- will dispatch for each tuple. The bad pattern SQL is like
+--   select pg_relation_size(oid) from pg_class where xxx
+-- The idea is force pg_relations_size is evaluated on each
+-- segment and the sum the result together to get the final
+-- result. To make sure correctness, we have to evaluate
+-- pg_relation_size before any motion. The skill here is
+-- to wrap this in a subquery, due to volatile of pg_relation_size,
+-- this subquery won't be pulled up. Plus the skill of
+-- gp_dist_random('pg_class') we can achieve this goal.
+
+-- the below test is to verify the plan, we should see pg_relation_size
+-- is evaludated on each segment and then motion then sum together. The
+-- SQL pattern is a catalog join a table size "dict".
+
+set gp_enable_multiphase_agg = on;
+-- force nestloop join to make test stable since we
+-- are testing plan and do not care about where we
+-- put hash table.
+set enable_hashjoin = off;
+set enable_nestloop = on;
+set enable_indexscan = off;
+set enable_bitmapscan = off;
+
+explain (verbose on, costs off)
+with cte(table_oid, size) as
+(
+   select
+     table_oid,
+     sum(size) size
+   from (
+     select oid,
+          pg_relation_size(oid)
+     from gp_dist_random('pg_class')
+   ) x(table_oid, size)
+  group by table_oid
+)
+select pc.relname, ts.size
+from pg_class pc, cte ts
+where pc.oid = ts.table_oid;
+
+set gp_enable_multiphase_agg = off;
+
+explain (verbose on, costs off)
+with cte(table_oid, size) as
+(
+   select
+     table_oid,
+     sum(size) size
+   from (
+     select oid,
+          pg_relation_size(oid)
+     from gp_dist_random('pg_class')
+   ) x(table_oid, size)
+  group by table_oid
+)
+select pc.relname, ts.size
+from pg_class pc, cte ts
+where pc.oid = ts.table_oid;
+
+reset gp_enable_multiphase_agg;
+reset enable_hashjoin;
+reset enable_nestloop;
+reset enable_indexscan;
+reset enable_bitmapscan;
+create table sublink_outer_table(a int, b int) distributed by(b);
+create table sublink_inner_table(x int, y bigint) distributed by(y);
+
+set optimizer to off;
+explain select t.* from sublink_outer_table t join (select y ,10*avg(x) s from sublink_inner_table group by y) RR on RR.y = t.b and t.a > rr.s;
+explain select * from sublink_outer_table T where a > (select 10*avg(x) from sublink_inner_table R where T.b=R.y);
+
+set enable_hashagg to off;
+explain select t.* from sublink_outer_table t join (select y ,10*avg(x) s from sublink_inner_table group by y) RR on RR.y = t.b and t.a > rr.s;
+explain select * from sublink_outer_table T where a > (select 10*avg(x) from sublink_inner_table R where T.b=R.y);
+drop table sublink_outer_table;
+drop table sublink_inner_table;
+reset optimizer;
+reset enable_hashagg;
+
+-- Ensure sub-queries with order by outer reference can be decorrelated and executed correctly.
+create table r(a int, b int, c int) distributed by (a);
+create table s(a int, b int, c int) distributed by (a);
+insert into r values (1,2,3);
+insert into s values (1,2,10);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c);
+select * from r where b in (select b from s where c=10 order by r.c);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c limit 2);
+select * from r where b in (select b from s where c=10 order by r.c limit 2);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b);
+select * from r where b in (select b from s where c=10 order by r.c, b);
+explain (costs off) select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+select * from r where b in (select b from s where c=10 order by r.c, b limit 2);
+explain (costs off) select * from r where b in (select b from s where c=10 order by c);
+select * from r where b in (select b from s where c=10 order by c);
+explain (costs off) select * from r where b in (select b from s where c=10 order by c limit 2);
+select * from r where b in (select b from s where c=10 order by c limit 2);

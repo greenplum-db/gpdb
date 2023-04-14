@@ -23,6 +23,12 @@
 #include "utils/snapmgr.h"
 #include "storage/procarray.h"
 
+int
+GetMaxSnapshotDistributedXidCount()
+{
+	return GetMaxSnapshotXidCount();
+}
+
 /*
  * DistributedSnapshotWithLocalMapping_CommittedTest
  *		Is the given XID still-in-progress according to the
@@ -80,23 +86,15 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 
 	/*
 	 * Is this local xid in a process-local cache we maintain?
+	 *
+	 * If we found xact in cache, the distribXid must be a valid gxid.
+	 * We added it to cache in LocalDistribXactCache_AddCommitted()
+	 * and there is nowhere to update distribXid to InvalidDistributedTransactionId.
+	 * So that distribXid in cache must be valid or we don't find it
+	 * in cache (never added or removed by cache LRU).
 	 */
-	if (LocalDistribXactCache_CommittedFind(localXid,
+	if (!LocalDistribXactCache_CommittedFind(localXid,
 											&distribXid))
-	{
-		/*
-		 * We cache local-only committed transactions for better performance,
-		 * too.
-		 */
-		if (distribXid == InvalidDistributedTransactionId)
-			return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
-
-		/*
-		 * Fall below and evaluate the committed distributed transaction
-		 * against the distributed snapshot.
-		 */
-	}
-	else
 	{
 		/*
 		 * Ok, now we must consult the distributed log.
@@ -105,12 +103,6 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 		{
 			/*
 			 * We found it in the distributed log.
-			 */
-			Assert(distribXid != InvalidDistributedTransactionId);
-
-			/*
-			 * We have a distributed committed xid that corresponds to the
-			 * local xid.
 			 */
 			Assert(distribXid != InvalidDistributedTransactionId);
 
@@ -131,6 +123,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 		}
 	}
 
+	Assert(distribXid != InvalidDistributedTransactionId);
 	Assert(ds->xminAllDistributedSnapshots != InvalidDistributedTransactionId);
 
 	/*
@@ -228,7 +221,7 @@ DistributedSnapshot_Reset(DistributedSnapshot *distributedSnapshot)
 	if (distributedSnapshot->inProgressXidArray == NULL)
 	{
 		distributedSnapshot->inProgressXidArray =
-			(DistributedTransactionId*) malloc(GetMaxSnapshotXidCount() * sizeof(DistributedTransactionId));
+			(DistributedTransactionId*) malloc(GetMaxSnapshotDistributedXidCount() * sizeof(DistributedTransactionId));
 		if (distributedSnapshot->inProgressXidArray == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
@@ -267,17 +260,7 @@ DistributedSnapshot_Copy(DistributedSnapshot *target,
 	if (source->count == 0)
 		return;
 
-	if (target->inProgressXidArray == NULL)
-	{
-		target->inProgressXidArray =
-			(DistributedTransactionId*) malloc(GetMaxSnapshotXidCount() * sizeof(DistributedTransactionId));
-		if (target->inProgressXidArray == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 errmsg("out of memory")));
-	}
-
-	Assert(source->count <= GetMaxSnapshotXidCount());
+	Assert(source->count <= GetMaxSnapshotDistributedXidCount());
 	memcpy(target->inProgressXidArray,
 			source->inProgressXidArray,
 			source->count * sizeof(DistributedTransactionId));

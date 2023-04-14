@@ -16,17 +16,17 @@
 
   Plan:
 
-                                        QUERY PLAN
--------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.08 rows=1 width=6)
-   ->  Hash Join  (cost=0.00..862.08 rows=1 width=6)
+                                       QUERY PLAN
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.06 rows=1 width=6)
+   ->  Hash Join  (cost=0.00..862.06 rows=1 width=6)
          Hash Cond: ((infer_vc.a)::text = (infer_vc_1.a)::text)
-         ->  Table Scan on infer_vc  (cost=0.00..431.02 rows=1 width=3)
+         ->  Seq Scan on infer_vc  (cost=0.00..431.02 rows=1 width=3)
                Filter: ((a)::text = 'K'::text)
-         ->  Hash  (cost=431.01..431.01 rows=334 width=3)
-               ->  Table Scan on infer_vc infer_vc_1  (cost=0.00..431.01 rows=334 width=3)
- Planning time: 204.591 ms
- Optimizer: PQO version 3.9.0
+         ->  Hash  (cost=431.02..431.02 rows=134 width=3)
+               ->  Seq Scan on infer_vc infer_vc_1  (cost=0.00..431.02 rows=134 width=3)
+                     Filter: ('K'::text = (a)::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
@@ -40,7 +40,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102074,102120,103001,103014,103015,103022,103027,104003,104004,104005,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -61,7 +61,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.40981.1.0" Name="infer_vc" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.40981.1.0" Name="infer_vc" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="3">
             <dxl:DefaultValue/>
@@ -89,7 +89,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.1043.1.0" Name="varchar" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="true" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -232,7 +231,7 @@
         </dxl:Comparison>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.40981.1.0" TableName="infer_vc">
+            <dxl:TableDescriptor Mdid="6.40981.1.0" TableName="infer_vc">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="3"/>
                 <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -246,7 +245,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.40981.1.0" TableName="infer_vc">
+            <dxl:TableDescriptor Mdid="6.40981.1.0" TableName="infer_vc">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="3"/>
                 <dxl:Column ColId="10" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -273,7 +272,7 @@
     <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.081171" Rows="1.000000" Width="6"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.057401" Rows="1.000000" Width="6"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -287,7 +286,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.081148" Rows="1.000000" Width="6"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.057379" Rows="1.000000" Width="6"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -326,7 +325,7 @@
                 <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUs=" LintValue="160784940"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.40981.1.0" TableName="infer_vc">
+            <dxl:TableDescriptor Mdid="6.40981.1.0" TableName="infer_vc">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="3"/>
                 <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -341,15 +340,22 @@
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.006050" Rows="1000.000000" Width="3"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.017761" Rows="400.000000" Width="3"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="8" Alias="a">
                 <dxl:Ident ColId="8" ColName="a" TypeMdid="0.1043.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.40981.1.0" TableName="infer_vc">
+            <dxl:Filter>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUs=" LintValue="160784940"/>
+                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                  <dxl:Ident ColId="8" ColName="a" TypeMdid="0.1043.1.0"/>
+                </dxl:Cast>
+              </dxl:Comparison>
+            </dxl:Filter>
+            <dxl:TableDescriptor Mdid="6.40981.1.0" TableName="infer_vc">
               <dxl:Columns>
                 <dxl:Column ColId="8" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="3"/>
                 <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

@@ -19,7 +19,7 @@ explain select 1 from push_t3 where exists (
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="102074,102120,102146,102152,103001,103014,103022,103027,103029,103038,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -154,7 +154,7 @@ explain select 1 from push_t3 where exists (
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.16439.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.16439.1.0" Name="push_t1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16439.1.0" Name="push_t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16439.1.0" Name="push_t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -185,14 +185,13 @@ explain select 1 from push_t3 where exists (
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16442.1.0" Name="push_t2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16442.1.0" Name="push_t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16442.1.0" Name="push_t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -223,14 +222,13 @@ explain select 1 from push_t3 where exists (
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16445.1.0" Name="push_t3" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16445.1.0" Name="push_t3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16445.1.0" Name="push_t3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -261,7 +259,6 @@ explain select 1 from push_t3 where exists (
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -307,7 +304,7 @@ explain select 1 from push_t3 where exists (
             <dxl:LogicalJoin JoinType="Left">
               <dxl:LogicalJoin JoinType="Inner">
                 <dxl:LogicalGet>
-                  <dxl:TableDescriptor Mdid="0.16439.1.0" TableName="push_t1">
+                  <dxl:TableDescriptor Mdid="6.16439.1.0" TableName="push_t1">
                     <dxl:Columns>
                       <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -322,7 +319,7 @@ explain select 1 from push_t3 where exists (
                   </dxl:TableDescriptor>
                 </dxl:LogicalGet>
                 <dxl:LogicalGet>
-                  <dxl:TableDescriptor Mdid="0.16439.1.0" TableName="push_t1">
+                  <dxl:TableDescriptor Mdid="6.16439.1.0" TableName="push_t1">
                     <dxl:Columns>
                       <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                       <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -342,7 +339,7 @@ explain select 1 from push_t3 where exists (
                 </dxl:Comparison>
               </dxl:LogicalJoin>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.16442.1.0" TableName="push_t2">
+                <dxl:TableDescriptor Mdid="6.16442.1.0" TableName="push_t2">
                   <dxl:Columns>
                     <dxl:Column ColId="28" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="29" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -363,7 +360,7 @@ explain select 1 from push_t3 where exists (
             </dxl:LogicalJoin>
           </dxl:SubqueryExists>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.16445.1.0" TableName="push_t3">
+            <dxl:TableDescriptor Mdid="6.16445.1.0" TableName="push_t3">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -471,7 +468,7 @@ explain select 1 from push_t3 where exists (
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.16439.1.0" TableName="push_t1">
+                        <dxl:TableDescriptor Mdid="6.16439.1.0" TableName="push_t1">
                           <dxl:Columns>
                             <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                             <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -494,7 +491,7 @@ explain select 1 from push_t3 where exists (
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.16439.1.0" TableName="push_t1">
+                        <dxl:TableDescriptor Mdid="6.16439.1.0" TableName="push_t1">
                           <dxl:Columns>
                             <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                             <dxl:Column ColId="20" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -541,7 +538,7 @@ explain select 1 from push_t3 where exists (
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.16442.1.0" TableName="push_t2">
+                      <dxl:TableDescriptor Mdid="6.16442.1.0" TableName="push_t2">
                         <dxl:Columns>
                           <dxl:Column ColId="27" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -581,7 +578,7 @@ explain select 1 from push_t3 where exists (
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.16445.1.0" TableName="push_t3">
+              <dxl:TableDescriptor Mdid="6.16445.1.0" TableName="push_t3">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

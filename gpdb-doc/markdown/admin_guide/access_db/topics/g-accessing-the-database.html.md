@@ -17,5 +17,5 @@ This topic describes the various client tools you can use to connect to Greenplu
 -   **[Troubleshooting Connection Problems](../../access_db/topics/g-troubleshooting-connection-problems.html)**  
 
 
-**Parent topic:**[Managing a Greenplum System](../../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../../managing/partII.html)
 

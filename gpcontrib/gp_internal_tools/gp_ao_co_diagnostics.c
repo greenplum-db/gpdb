@@ -49,6 +49,9 @@ extern Datum
 gp_aocsseg_history(PG_FUNCTION_ARGS);
 
 extern Datum
+gp_aoblkdir(PG_FUNCTION_ARGS);
+
+extern Datum
 gp_aovisimap(PG_FUNCTION_ARGS);
 
 extern Datum
@@ -67,6 +70,7 @@ PG_FUNCTION_INFO_V1(gp_aoseg_history_wrapper);
 PG_FUNCTION_INFO_V1(gp_aoseg_wrapper);
 PG_FUNCTION_INFO_V1(gp_aocsseg_wrapper);
 PG_FUNCTION_INFO_V1(gp_aocsseg_history_wrapper);
+PG_FUNCTION_INFO_V1(gp_aoblkdir_wrapper);
 PG_FUNCTION_INFO_V1(gp_aovisimap_wrapper);
 PG_FUNCTION_INFO_V1(gp_aovisimap_entry_wrapper);
 PG_FUNCTION_INFO_V1(gp_aovisimap_hidden_info_wrapper);
@@ -83,6 +87,8 @@ extern Datum
 gp_aocsseg_wrapper(PG_FUNCTION_ARGS);
 extern Datum
 gp_aocsseg_history_wrapper(PG_FUNCTION_ARGS);
+extern Datum
+gp_aoblkdir_wrapper(PG_FUNCTION_ARGS);
 extern Datum
 gp_aovisimap_wrapper(PG_FUNCTION_ARGS);
 extern Datum
@@ -226,6 +232,21 @@ gp_aocsseg_history_wrapper(PG_FUNCTION_ARGS)
   Datum returnValue = gp_aocsseg_history(fcinfo);
 
   PG_RETURN_DATUM(returnValue);
+}
+
+/*
+ * Interface to gp_aoblkdir_wrapper function.
+ *
+ * CREATE FUNCTION gp_aoblkdir_wrapper(regclass) RETURNS TABLE
+ * (segno integer, columngroup_no integer, first_row_no bigint, file_offset bigint, row_count bigint)
+ * AS '$libdir/gp_ao_co_diagnostics.so', 'gp_aoblkdir_wrapper' LANGUAGE C STRICT;
+ */
+Datum
+gp_aoblkdir_wrapper(PG_FUNCTION_ARGS)
+{
+	Datum returnValue = gp_aoblkdir(fcinfo);
+
+	PG_RETURN_DATUM(returnValue);
 }
 
 /* 

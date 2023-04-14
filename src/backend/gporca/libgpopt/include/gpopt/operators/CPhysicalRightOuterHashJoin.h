@@ -39,6 +39,7 @@ public:
 	CPhysicalRightOuterHashJoin(
 		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 		CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
+		BOOL is_null_aware = true,
 		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor
@@ -76,6 +77,14 @@ public:
 						   CReqdPropPlan *prppInput, ULONG child_index,
 						   CDrvdPropArray *pdrgpdpCtxt,
 						   ULONG ulOptReq) override;
+
+	CPartitionPropagationSpec *PppsRequired(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const override;
+
+	CPartitionPropagationSpec *PppsDerive(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 };	// class CPhysicalRightOuterHashJoin
 

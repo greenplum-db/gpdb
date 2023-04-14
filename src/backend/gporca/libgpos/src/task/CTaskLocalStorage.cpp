@@ -18,9 +18,8 @@ using namespace gpos;
 
 
 // shorthand for HT accessor
-typedef CSyncHashtableAccessByKey<CTaskLocalStorageObject,
-								  CTaskLocalStorage::Etlsidx>
-	HashTableAccessor;
+using HashTableAccessor = CSyncHashtableAccessByKey<CTaskLocalStorageObject,
+													CTaskLocalStorage::Etlsidx>;
 
 
 // invalid idx

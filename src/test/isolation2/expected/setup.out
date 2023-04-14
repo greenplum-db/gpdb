@@ -89,6 +89,9 @@ CREATE
 create or replace function wait_until_all_segments_synchronized() returns text as $$ begin /* no-op for a mirrorless cluster */ if (select count(*) = 0 from gp_segment_configuration where role = 'm') then return 'OK'; /* in func */ end if; /* in func */ for i in 1..1200 loop if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then return 'OK'; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform gp_request_fts_probe_scan(); /* in func */ end loop; /* in func */ return 'Fail'; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
 
+CREATE OR REPLACE FUNCTION is_query_waiting_for_syncrep(iterations int, check_query text) RETURNS bool AS $$ for i in range(iterations): results = plpy.execute("SELECT gp_execution_segment() AS content, query, wait_event\ FROM gp_dist_random('pg_stat_activity')\ WHERE gp_execution_segment() = 1 AND\ query = '%s' AND\ wait_event = 'SyncRep'" % check_query ) if results: return True return False $$ LANGUAGE plpython3u VOLATILE;
+CREATE
+
 create or replace function wait_for_replication_replay (segid int, retries int) returns bool as $$ declare i int; /* in func */ result bool; /* in func */ begin i := 0; /* in func */ -- Wait until the mirror/standby has replayed up to flush location loop SELECT flush_lsn = replay_lsn INTO result from gp_stat_replication where gp_segment_id = segid; /* in func */ if result then return true; /* in func */ end if; /* in func */ 
 if i >= retries then return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
@@ -112,7 +115,7 @@ if create_slot: cmd += ' --create-slot'
 if slotname is not None: cmd += ' --slot %s' % (slotname) 
 if force_overwrite: cmd += ' --force-overwrite' 
 if xlog_method == 'stream': cmd += ' --wal-method stream' elif xlog_method == 'fetch': cmd += ' --wal-method fetch' else: plpy.error('invalid xlog method') 
-# GPDB_12_MERGE_FIXME: avoid checking checksum for heap tables # till we code logic to skip/verify checksum for # appendoptimized tables. Enabling this results in basebackup # failures with appendoptimized tables. cmd += ' --no-verify-checksums' 
+cmd += ' --no-verify-checksums' 
 try: # Unset PGAPPNAME so that the pg_stat_replication.application_name is not affected if os.getenv('PGAPPNAME') is not None: os.environ.pop('PGAPPNAME') results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace(b'.', b'').decode() except subprocess.CalledProcessError as e: results = str(e) + "\ncommand output: " + e.output 
 return results $$ language plpython3u;
 CREATE
@@ -131,4 +134,8 @@ CREATE
 -- while PANIC is still being processed by master, as master continues
 -- to accept connections for a while despite undergoing PANIC.
 CREATE OR REPLACE FUNCTION wait_till_master_shutsdown() RETURNS void AS $$ DECLARE i int; /* in func */ BEGIN i := 0; /* in func */ while i < 120 loop i := i + 1; /* in func */ PERFORM pg_sleep(.5); /* in func */ end loop; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
+CREATE
+
+-- Helper function that ensures stats collector receives stat from the latest operation.
+create or replace function wait_until_dead_tup_change_to(relid oid, stat_val_expected bigint) returns text as $$ declare stat_val int; /* in func */ i int; /* in func */ begin i := 0; /* in func */ while i < 1200 loop select pg_stat_get_dead_tuples(relid) into stat_val; /* in func */ if stat_val = stat_val_expected then /* in func */ return 'OK'; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ return 'Fail'; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE

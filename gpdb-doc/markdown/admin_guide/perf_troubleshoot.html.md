@@ -6,7 +6,7 @@ This section provides guidelines for identifying and troubleshooting performance
 
 This topic lists steps you can take to help identify the cause of a performance problem. If the problem affects a particular workload or query, you can focus on tuning that particular workload. If the performance problem is system-wide, then hardware problems, system failures, or resource contention may be the cause.
 
-**Parent topic:**[Managing Performance](partV.html)
+**Parent topic:** [Managing Performance](partV.html)
 
 ## <a id="topic2"></a>Checking System State 
 
@@ -67,7 +67,7 @@ You can use system monitoring utilities such as `ps`, `top`, `iostat`, `vmstat`,
 
 You can create and use the Greenplum Database *session\_level\_memory\_consumption* view that provides information about the current memory utilization and idle time for sessions that are running queries on Greenplum Database. For information about the view, see [Viewing Session Memory Usage Information](managing/monitor.html).
 
-The optional VMware Tanzu Greenplum Command Center web-based user interface graphically displays query and system utilization metrics. See the [Greenplum Command Center Documentation](https://gpcc.docs.pivotal.io) web site for procedures to enable Greenplum Command Center.
+The optional VMware Greenplum Command Center web-based user interface graphically displays query and system utilization metrics. See the [Greenplum Command Center Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site for procedures to enable Greenplum Command Center.
 
 ## <a id="topic7"></a>Troubleshooting Problem Queries 
 
@@ -77,7 +77,7 @@ When an out of memory event occurs during query execution, the Greenplum Databas
 
 ## <a id="topic8"></a>Investigating Error Messages 
 
-Greenplum Database log messages are written to files in the `log` directory within the master's or segment's data directory. Because the master log file contains the most information, you should always check it first. Log files roll over daily and use the naming convention: `gpdb-`*`YYYY`*`-`*`MM`*`-`*`DD_hhmmss.csv`*. To locate the log files on the master host:
+Greenplum Database log messages are written to files in the `log` directory within the coordinator's or segment's data directory. Because the coordinator log file contains the most information, you should always check it first. Log files roll over daily and use the naming convention: `gpdb-`*`YYYY`*`-`*`MM`*`-`*`DD_hhmmss.csv`*. To locate the log files on the coordinator host:
 
 ```
 $ cd $COORDINATOR_DATA_DIRECTORY/log
@@ -92,7 +92,7 @@ Log lines have the format of:
 
 ```
 
-You may want to focus your search for `WARNING`, `ERROR`, `FATAL` or `PANIC` log level messages. You can use the Greenplum utility `gplogfilter` to search through Greenplum Database log files. For example, when you run the following command on the master host, it checks for problem log messages in the standard logging locations:
+You may want to focus your search for `WARNING`, `ERROR`, `FATAL` or `PANIC` log level messages. You can use the Greenplum utility `gplogfilter` to search through Greenplum Database log files. For example, when you run the following command on the coordinator host, it checks for problem log messages in the standard logging locations:
 
 ```
 $ gplogfilter -t

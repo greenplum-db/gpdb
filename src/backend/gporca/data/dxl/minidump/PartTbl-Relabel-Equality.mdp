@@ -181,7 +181,7 @@
       <dxl:ColumnStatistics Mdid="1.364347.1.1.3" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.364347.1.1.2" Name="mobile_no" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.364347.1.1" Name="ds_4" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.364347.1.1" Name="ds_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1,2" Keys="9,3" PartitionColumns="0" PartitionTypes="l">
+      <dxl:Relation Mdid="6.364347.1.1" Name="ds_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1,2" Keys="9,3" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="month_id" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -215,7 +215,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.364347.1.1.9" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -238,7 +237,7 @@
           <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACjIwMDgwMA==" LintValue="249955124"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.364347.1.1" TableName="ds_4">
+          <dxl:TableDescriptor Mdid="6.364347.1.1" TableName="ds_4">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="month_id" TypeMdid="0.1043.1.0" ColWidth="6"/>
               <dxl:Column ColId="2" Attno="2" ColName="cust_group_acc" TypeMdid="0.1700.1.0"/>
@@ -288,7 +287,7 @@
               <dxl:Ident ColId="2" ColName="mobile_no" TypeMdid="0.1043.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.364347.1.1" PartitionLevels="1" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.364347.1.1" PartitionLevels="1" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -337,7 +336,7 @@
                 <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACjIwMDgwMA==" LintValue="249955124"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.364347.1.1" TableName="ds_4">
+            <dxl:TableDescriptor Mdid="6.364347.1.1" TableName="ds_4">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="month_id" TypeMdid="0.1043.1.0" ColWidth="6"/>
                 <dxl:Column ColId="1" Attno="2" ColName="cust_group_acc" TypeMdid="0.1700.1.0"/>

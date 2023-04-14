@@ -61,9 +61,10 @@ main(int argc, char *argv[])
 	char	   *username = NULL;
 	SimpleStringList roles = {NULL, NULL};
 	enum trivalue prompt_password = TRI_DEFAULT;
+	ConnParams	cparams;
 	bool		echo = false;
 	bool		interactive = false;
-	char	   *conn_limit = NULL;
+	int			conn_limit = -2;	/* less than minimum valid value */
 	bool		pwprompt = false;
 	char	   *newpassword = NULL;
 	char		newuser_buf[128];
@@ -91,6 +92,8 @@ main(int argc, char *argv[])
 	while ((c = getopt_long(argc, argv, "h:p:U:g:wWedDsSaArRiIlLc:PE",
 							long_options, &optindex)) != -1)
 	{
+		char   *endptr;
+
 		switch (c)
 		{
 			case 'h':
@@ -147,7 +150,13 @@ main(int argc, char *argv[])
 				login = TRI_NO;
 				break;
 			case 'c':
-				conn_limit = pg_strdup(optarg);
+				conn_limit = strtol(optarg, &endptr, 10);
+				if (*endptr != '\0' || conn_limit < -1)	/* minimum valid value */
+				{
+					pg_log_error("invalid value for --connection-limit: %s",
+								 optarg);
+					exit(1);
+				}
 				break;
 			case 'P':
 				pwprompt = true;
@@ -253,8 +262,14 @@ main(int argc, char *argv[])
 	if (login == 0)
 		login = TRI_YES;
 
-	conn = connectDatabase("postgres", host, port, username, prompt_password,
-						   progname, echo, false, false);
+	cparams.dbname = NULL;		/* this program lacks any dbname option... */
+	cparams.pghost = host;
+	cparams.pgport = port;
+	cparams.pguser = username;
+	cparams.prompt_password = prompt_password;
+	cparams.override_dbname = NULL;
+
+	conn = connectMaintenanceDatabase(&cparams, progname, echo);
 
 	initPQExpBuffer(&sql);
 
@@ -302,8 +317,8 @@ main(int argc, char *argv[])
 		appendPQExpBufferStr(&sql, " REPLICATION");
 	if (replication == TRI_NO)
 		appendPQExpBufferStr(&sql, " NOREPLICATION");
-	if (conn_limit != NULL)
-		appendPQExpBuffer(&sql, " CONNECTION LIMIT %s", conn_limit);
+	if (conn_limit >= -1)
+		appendPQExpBuffer(&sql, " CONNECTION LIMIT %d", conn_limit);
 	if (roles.head != NULL)
 	{
 		SimpleStringListCell *cell;

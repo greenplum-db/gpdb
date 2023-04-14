@@ -73,13 +73,17 @@ private:
 		ULONG min_element_ix = ix;
 
 		if (exists(left_child_ix) && cost(left_child_ix) < cost(ix))
+		{
 			// left child is better than parent, it becomes the new candidate
 			min_element_ix = left_child_ix;
+		}
 
 		if (exists(right_child_ix) &&
 			cost(right_child_ix) < cost(min_element_ix))
+		{
 			// right child is better than min(parent, left child)
 			min_element_ix = right_child_ix;
+		}
 
 		if (min_element_ix != ix)
 		{
@@ -96,7 +100,9 @@ private:
 		ULONG parent_ix = parent(ix);
 
 		if (!exists(parent_ix))
+		{
 			return;
+		}
 
 		if (cost(ix) < cost(parent_ix))
 		{
@@ -116,7 +122,9 @@ private:
 
 		// now work our way up to the root, calling HeapifyDown
 		for (ULONG ix = start_ix; exists(ix); ix--)
+		{
 			HeapifyDown(ix);
+		}
 
 		m_is_heapified = true;
 	}
@@ -174,7 +182,9 @@ public:
 		}
 
 		if (!m_is_heapified)
+		{
 			Heapify();
+		}
 
 		// we want to remove and return the root of the tree, which is the best element
 

@@ -142,7 +142,7 @@ typedef unsigned char slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register slock_t _res = 1;
+	slock_t		_res = 1;
 
 	/*
 	 * Use a non-locking test before asserting the bus lock.  Note that the
@@ -223,7 +223,7 @@ typedef unsigned char slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register slock_t _res = 1;
+	slock_t		_res = 1;
 
 	__asm__ __volatile__(
 		"	lock			\n"
@@ -314,6 +314,7 @@ tas(volatile slock_t *lock)
 #endif /* __INTEL_COMPILER */
 #endif	 /* __ia64__ || __ia64 */
 
+
 /*
  * On ARM and ARM64, we use __sync_lock_test_and_set(int *, int) if available.
  *
@@ -338,6 +339,29 @@ tas(volatile slock_t *lock)
 
 #endif	 /* HAVE_GCC__SYNC_INT32_TAS */
 #endif	 /* __arm__ || __arm || __aarch64__ || __aarch64 */
+
+
+/*
+ * RISC-V likewise uses __sync_lock_test_and_set(int *, int) if available.
+ */
+#if defined(__riscv)
+#ifdef HAVE_GCC__SYNC_INT32_TAS
+#define HAS_TEST_AND_SET
+
+#define TAS(lock) tas(lock)
+
+typedef int slock_t;
+
+static __inline__ int
+tas(volatile slock_t *lock)
+{
+	return __sync_lock_test_and_set(lock, 1);
+}
+
+#define S_UNLOCK(lock) __sync_lock_release(lock)
+
+#endif	 /* HAVE_GCC__SYNC_INT32_TAS */
+#endif	 /* __riscv */
 
 
 /* S/390 and S/390x Linux (32- and 64-bit zSeries) */
@@ -380,7 +404,7 @@ typedef unsigned char slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register slock_t _res;
+	slock_t		_res;
 
 	/*
 	 *	See comment in src/backend/port/tas/sunstudio_sparc.s for why this
@@ -452,6 +476,11 @@ typedef unsigned int slock_t;
 #define TAS_SPIN(lock)	(*(lock) ? 1 : TAS(lock))
 
 /*
+ * The second operand of addi can hold a constant zero or a register number,
+ * hence constraint "=&b" to avoid allocating r0.  "b" stands for "address
+ * base register"; most operands having this register-or-zero property are
+ * address bases, e.g. the second operand of lwax.
+ *
  * NOTE: per the Enhanced PowerPC Architecture manual, v1.0 dated 7-May-2002,
  * an isync is a sufficient synchronization barrier after a lwarx/stwcx loop.
  * On newer machines, we can use lwsync instead for better performance.
@@ -488,7 +517,7 @@ tas(volatile slock_t *lock)
 #endif
 "	li      %1,0		\n"
 
-:	"=&r"(_t), "=r"(_res), "+m"(*lock)
+:	"=&b"(_t), "=r"(_res), "+m"(*lock)
 :	"r"(lock)
 :	"memory", "cc");
 	return _res;
@@ -626,9 +655,9 @@ typedef unsigned int slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register volatile slock_t *_l = lock;
-	register int _res;
-	register int _tmp;
+	volatile slock_t *_l = lock;
+	int			_res;
+	int			_tmp;
 
 	__asm__ __volatile__(
 		"       .set push           \n"
@@ -773,7 +802,7 @@ static __inline__ int
 tas(volatile slock_t *lock)
 {
 	volatile int *lockword = TAS_ACTIVE_WORD(lock);
-	register int lockval;
+	int			lockval;
 
 	__asm__ __volatile__(
 		"	ldcwx	0(0,%2),%0	\n"

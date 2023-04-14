@@ -187,6 +187,68 @@ Feature: gpcheckcat tests
          Then the user runs "dropdb policy_db"
           And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    Scenario: gpcheckcat should not report when parent is hash distributed and child is randomly distributed and child is a leaf level partition
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set distkey = '', distclass='' where localoid='sales_1_prt_2_2_prt_asia'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should not print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should report when parent is hash distributed and child is randomly distributed and child is a middle level partition
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set distkey = '', distclass='' where localoid='sales_1_prt_2'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 1
+        And gpcheckcat should print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should report when parent is randomly distributed and child is hash distributed
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set distkey = '', distclass='' where localoid='sales'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 1
+        And gpcheckcat should print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should not report part_integrity errors from readable external partitions
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -c "create table part(a int) partition by list(a); create table p1(a int); create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';""
+        And the user runs "psql policy_db -c "alter table part attach partition p1 for values in (1); alter table part attach partition p2_ext for values in (2);""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "child partition\(s\) have different numsegments value from the root partition" to stdout
+        And gpcheckcat should not print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+        And gpcheckcat should not print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
+    Scenario: gpcheckcat should report when parent and child partitions have different numsegments value
+        Given database "policy_db" is dropped and recreated
+        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_multilevel_partition.sql"
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "child partition\(s\) have different numsegments value from the root partition" to stdout
+        And gpcheckcat should not print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+
+        And the user runs sql "set allow_system_table_mods=true; update gp_distribution_policy set numsegments = '1' where localoid='sales_1_prt_2'::regclass::oid;" in "policy_db" on all the segments
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R part_integrity policy_db"
+        Then gpcheckcat should return a return code of 1
+        And gpcheckcat should print "child partition\(s\) have different numsegments value from the root partition" to stdout
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+        And the user runs "dropdb policy_db"
+
     Scenario: gpcheckcat foreign key check should report missing catalog entries. Also test missing_extraneous for the same case.
         Given database "fkey_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
@@ -372,7 +434,7 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Table pg_type has a dependency issue on oid .* at content 0" to stdout
         And the user runs "dropdb gpcheckcat_dependency"
 
-    Scenario: gpcheckcat should report no inconsistency of pg_extension between Master and Segements
+    Scenario: gpcheckcat should report no inconsistency of pg_extension between Coordinator and Segements
         Given database "pgextension_db" is dropped and recreated
         And the user runs sql "set allow_system_table_mods=true;update pg_extension set extconfig='{2130}', extcondition='{2130}';" in "pgextension_db" on first primary segment
         Then the user runs "gpcheckcat -R inconsistent pgextension_db"
@@ -517,11 +579,20 @@ Feature: gpcheckcat tests
           And there is a "co" table "public.co_vpinfo" in "vpinfo_inconsistent_db" with data
          When the user runs "gpcheckcat vpinfo_inconsistent_db"
          Then gpcheckcat should return a return code of 0
-         When an attribute of table "co_vpinfo" in database "vpinfo_inconsistent_db" is deleted on segment with content id "0"
+         When a table "co_vpinfo" in database "vpinfo_inconsistent_db" has its relnatts inflated on segment with content id "0"
          Then psql should return a return code of 0
          When the user runs "gpcheckcat -R aoseg_table vpinfo_inconsistent_db"
          Then gpcheckcat should print "Failed test\(s\) that are not reported here: aoseg_table" to stdout
           And the user runs "dropdb vpinfo_inconsistent_db"
+
+    Scenario: gpcheckcat should not print error when vpinfo for RESERVED_SEGNO is of different length than relnatts
+        Given database "vpinfo_reserved_segno" is dropped and recreated
+        And the user runs "psql vpinfo_reserved_segno -c "CREATE TABLE co_table(a int, b int) using ao_column; INSERT INTO co_table values (1,1);""
+        And the user runs "psql vpinfo_reserved_segno -c "BEGIN; ALTER TABLE co_table ADD COLUMN newcol int; INSERT INTO co_table VALUES (1,1,1); ABORT;""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat vpinfo_reserved_segno"
+        And gpcheckcat should return a return code of 0
+        Then gpcheckcat should not print "[FAIL] inconsistent vpinfo" to stdout
 
     Scenario: skip one check in gpcheckcat
         Given database "all_good" is dropped and recreated
@@ -552,6 +623,26 @@ Feature: gpcheckcat tests
         Then gpcheckcat should return a return code of 0
         And validate gpcheckcat logs contain skipping ACL and Owner tests
         And the user runs "dropdb all_good"
+
+    Scenario: gpcheckcat should return 3 if catalog issue is found on one database but the next database in the list has no catalog issue
+        Given database "mis_attr_db" is dropped and recreated
+        And the user runs "psql -d mis_attr_db -c "set allow_system_table_mods=true;DELETE FROM pg_class WHERE relname='gp_fastsequence';""
+        Then psql should return a return code of 0
+        Then the user runs "gpcheckcat -A"
+        Then gpcheckcat should return a return code of 3
+        And the user runs "dropdb mis_attr_db"
+
+    Scenario: gpcheckcat should not report dependency error from pg_default_acl
+        Given database "check_dependency_error" is dropped and recreated
+        And the user runs "psql -d check_dependency_error -c "CREATE ROLE foo; ALTER DEFAULT PRIVILEGES FOR ROLE foo REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat check_dependency_error"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "SUMMARY REPORT: FAILED" to stdout
+        And gpcheckcat should not print "has a dependency issue on oid" to stdout
+        And gpcheckcat should print "Found no catalog issue" to stdout
+        And the user runs "dropdb check_dependency_error"
+        And the user runs "psql -c "DROP ROLE foo""
 
 
 ########################### @concourse_cluster tests ###########################

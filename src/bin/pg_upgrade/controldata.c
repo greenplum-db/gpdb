@@ -46,6 +46,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 	bool		got_oid = false;
 	bool		got_multi = false;
 	bool		got_oldestmulti = false;
+	bool		got_oldestxid = false;
 	bool		got_mxoff = false;
 	bool		got_nextxlogfile = false;
 	bool		got_float8_pass_by_value = false;
@@ -182,7 +183,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 	}
 
 	/* pg_resetxlog has been renamed to pg_resetwal in version 10 */
-	if (GET_MAJOR_VERSION(cluster->bin_version) < 1000)
+	if (GET_MAJOR_VERSION(cluster->bin_version) <= 906)
 		resetwal_bin = "pg_resetxlog\" -n";
 	else
 		resetwal_bin = "pg_resetwal\" -n";
@@ -197,23 +198,10 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		pg_fatal("could not get control data using %s: %s\n",
 				 cmd, strerror(errno));
 
-	/* Only in <= 8.3 */
-	if (GET_MAJOR_VERSION(cluster->major_version) <= 803)
+	if (GET_MAJOR_VERSION(cluster->major_version) == 803)
 	{
 		cluster->controldata.float8_pass_by_value = false;
 		got_float8_pass_by_value = true;
-	}
-
-	/*
-	 * In PostgreSQL, checksums were introduced in 9.3 so the test for checksum
-	 * version in upstream applies to <= 9.2. Greenplum backported checksums
-	 * into 5.x which is based on PostgreSQL 8.3 so this test need to go
-	 * against 8.2 instead.
-	 */
-	if (GET_MAJOR_VERSION(cluster->major_version) == 802)
-	{
-		cluster->controldata.data_checksum_version = 0;
-		got_data_checksum_version = true;
 	}
 
 	/* we have the result of cmd in "output". so parse it line by line now */
@@ -228,7 +216,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		 * work 8.2.6 and 8.3.7, so check for non-ASCII output and suggest a
 		 * minor upgrade.
 		 */
-		if (GET_MAJOR_VERSION(cluster->major_version) <= 803)
+		if (GET_MAJOR_VERSION(cluster->major_version) == 803)
 		{
 			for (p = bufin; *p; p++)
 				if (!isascii((unsigned char) *p))
@@ -290,18 +278,6 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 			p++;				/* remove ':' char */
 			segno = str2uint(p);
 			got_log_seg = true;
-		}
-		/* GPDB 4.3 (and PostgreSQL 8.2) wording of the above two. */
-		else if ((p = strstr(bufin, "Current log file ID:")) != NULL)
-		{
-			p = strchr(p, ':');
-
-			if (p == NULL || strlen(p) <= 1)
-				pg_log(PG_FATAL, "%d: controldata retrieval problem\n", __LINE__);
-
-			p++;				/* removing ':' char */
-			logid = str2uint(p);
-			got_log_id = true;
 		}
 		else if ((p = strstr(bufin, "Next log file segment:")) != NULL)
 		{
@@ -388,6 +364,17 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 			p++;				/* remove ':' char */
 			cluster->controldata.chkpnt_nxtmulti = str2uint(p);
 			got_multi = true;
+		}
+		else if ((p = strstr(bufin, "Latest checkpoint's oldestXID:")) != NULL)
+		{
+			p = strchr(p, ':');
+
+			if (p == NULL || strlen(p) <= 1)
+				pg_fatal("%d: controldata retrieval problem\n", __LINE__);
+
+			p++;				/* remove ':' char */
+			cluster->controldata.chkpnt_oldstxid = str2uint(p);
+			got_oldestxid = true;
 		}
 		else if ((p = strstr(bufin, "Latest checkpoint's oldestMultiXid:")) != NULL)
 		{
@@ -617,7 +604,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 
 	/* verify that we got all the mandatory pg_control data */
 	if (!got_xid || !got_gxid || !got_oid ||
-		!got_multi ||
+		!got_multi || !got_oldestxid ||
 		(!got_oldestmulti &&
 		 cluster->controldata.cat_ver >= MULTIXACT_FORMATCHANGE_CAT_VER) ||
 		!got_mxoff || (!live_check && !got_nextxlogfile) ||
@@ -650,6 +637,9 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		if (!got_oldestmulti &&
 			cluster->controldata.cat_ver >= MULTIXACT_FORMATCHANGE_CAT_VER)
 			pg_log(PG_REPORT, "  latest checkpoint oldest MultiXactId\n");
+
+		if (!got_oldestxid)
+			pg_log(PG_REPORT, "  latest checkpoint oldestXID\n");
 
 		if (!got_mxoff)
 			pg_log(PG_REPORT, "  latest checkpoint next MultiXactOffset\n");
@@ -737,19 +727,6 @@ check_control_data(ControlData *oldctrl,
 	if (oldctrl->index == 0 || oldctrl->index != newctrl->index)
 		pg_fatal("old and new pg_controldata maximum indexed columns are invalid or do not match\n");
 
-	/*
-	 * PostgreSQL's pg_upgrade checks for the maximum TOAST chunk size, because
-	 * the tuptoaster code assumes all chunks to have the same size. GPDB's
-	 * tuptoaster code has been modified to work with any chunk size, to
-	 * support upgrading from GPDB 4.3 to 5.0, because the chunk size was
-	 * changed between those releases (that is, between PostgreSQL 8.2 and
-	 * 8.3). Hence, 'got_toast' is not mandatory in GPDB.
-	 * TODO: Should we only consider got_toast not mandatory for upgrades to
-	 * 5.x?
-	 */
-	if (oldctrl->toast == 0 || oldctrl->toast != newctrl->toast)
-		pg_fatal("old and new pg_controldata maximum TOAST chunk sizes are invalid or do not match\n");
-
 	/* large_object added in 9.5, so it might not exist in the old cluster */
 	if (oldctrl->large_object != 0 &&
 		oldctrl->large_object != newctrl->large_object)
@@ -778,27 +755,18 @@ check_control_data(ControlData *oldctrl,
 	 */
 
 	/*
-	 * Check for allowed combinations of data checksums. PostgreSQL only allow
-	 * upgrades where the checksum settings match, in Greenplum we can however
-	 * set or remove checksums during the upgrade.
+	 * We might eventually allow upgrades from checksum to no-checksum
+	 * clusters.
 	 */
 	if (oldctrl->data_checksum_version == 0 &&
-		newctrl->data_checksum_version != 0 &&
-		!is_checksum_mode(CHECKSUM_ADD))
-		pg_fatal("old cluster does not use data checksums but the new one does\n");
+		newctrl->data_checksum_version != 0)
+		pg_fatal("old cluster does not use data checksums but the new one does");
 	else if (oldctrl->data_checksum_version != 0 &&
-			 newctrl->data_checksum_version == 0 &&
-			 !is_checksum_mode(CHECKSUM_REMOVE))
-		pg_fatal("old cluster uses data checksums but the new one does not\n");
-	else if (oldctrl->data_checksum_version == newctrl->data_checksum_version &&
-			 !is_checksum_mode(CHECKSUM_NONE))
-		pg_fatal("old and new cluster data checksum configuration match, cannot %s data checksums\n",
-				 (is_checksum_mode(CHECKSUM_ADD) ? "add" : "remove"));
-	else if (oldctrl->data_checksum_version != 0 && is_checksum_mode(CHECKSUM_ADD))
-		pg_fatal("--add-checksum option not supported for old cluster which uses data checksums\n");
-	else if (oldctrl->data_checksum_version != newctrl->data_checksum_version
-			 && is_checksum_mode(CHECKSUM_NONE))
-		pg_fatal("old and new cluster pg_controldata checksum versions do not match\n");
+			 newctrl->data_checksum_version == 0)
+		pg_fatal("old cluster uses data checksums but the new one does not");
+	else if (oldctrl->data_checksum_version != newctrl->data_checksum_version)
+		pg_fatal("old and new cluster pg_controldata checksum versions do not match");
+
 }
 
 

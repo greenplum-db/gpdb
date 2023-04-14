@@ -74,8 +74,7 @@ SendSharedInvalidMessages(const SharedInvalidationMessage *msgs, int n)
  * sucked out of sinvaladt.c.
  */
 void
-ReceiveSharedInvalidMessages(
-							 void (*invalFunction) (SharedInvalidationMessage *msg),
+ReceiveSharedInvalidMessages(void (*invalFunction) (SharedInvalidationMessage *msg),
 							 void (*resetFunction) (void))
 {
 #define MAXINVALMSGS 32
@@ -223,12 +222,12 @@ ProcessCatchupInterrupt(void)
 			 */
 			DtxContext  saveDistributedTransactionContext;
 			saveDistributedTransactionContext = DistributedTransactionContext;
-			DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
+			setDistributedTransactionContext(DTX_CONTEXT_LOCAL_ONLY);
 
 			StartTransactionCommand();
 			CommitTransactionCommand();
 
-			DistributedTransactionContext = saveDistributedTransactionContext;
+			setDistributedTransactionContext(saveDistributedTransactionContext);
 		}
 
 		in_process_catchup_event = 0;

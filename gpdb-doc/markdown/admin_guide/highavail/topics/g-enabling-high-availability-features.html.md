@@ -4,9 +4,9 @@ title: Enabling High Availability and Data Consistency Features
 
 The fault tolerance and the high-availability features of Greenplum Database can be configured.
 
-**Important:** When data loss is not acceptable for a Greenplum Database cluster, Greenplum master and segment mirroring is recommended. If mirroring is not enabled then Greenplum stores only one copy of the data, so the underlying storage media provides the only guarantee for data availability and correctness in the event of a hardware failure.
+> **Important** When data loss is not acceptable for a Greenplum Database cluster, Greenplum coordinator and segment mirroring is recommended. If mirroring is not enabled then Greenplum stores only one copy of the data, so the underlying storage media provides the only guarantee for data availability and correctness in the event of a hardware failure.
 
-Kubernetes enables quick recovery from both pod and host failures, and Kubernetes storage services provide a high level of availability for the underlying data. Furthermore, virtualized environments make it difficult to ensure the anti-affinity guarantees required for Greenplum mirroring solutions. For these reasons, mirrorless deployments are fully supported with VMware Tanzu Greenplum for Kubernetes. Other deployment environments are generally not supported for production use unless both Greenplum master and segment mirroring are enabled.
+The VMware Greenplum on vSphere virtualized environment ensures the enforcement of anti-affinity rules required for Greenplum mirroring solutions and fully supports mirrorless deployments. Other virtualized or containerized deployment environments are generally not supported for production use unless both Greenplum coordinator and segment mirroring are enabled.
 
 For information about the utilities that are used to enable high availability, see the *Greenplum Database Utility Guide*.
 
@@ -20,8 +20,8 @@ For information about the utilities that are used to enable high availability, s
 
 -   **[Recovering from Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)**  
 
--   **[Recovering a Failed Master](../../highavail/topics/g-recovering-a-failed-master.html)**  
+-   **[Recovering a Failed Coordinator](../../highavail/topics/g-recovering-a-failed-master.html)**  
 
 
-**Parent topic:**[Managing a Greenplum System](../../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../../managing/partII.html)
 

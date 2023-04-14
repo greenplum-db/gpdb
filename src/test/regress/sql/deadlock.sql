@@ -47,3 +47,10 @@ select count(*) from gp_dist_random('l') left outer join gp_dist_random('r') on 
 
 
 drop schema if exists deadlock cascade;
+
+-- Check gp_dist_wait_status not failing within a transaction
+-- Github issue: https://github.com/greenplum-db/gpdb/issues/13795
+
+BEGIN;
+	select * from gp_dist_wait_status();
+COMMIT;

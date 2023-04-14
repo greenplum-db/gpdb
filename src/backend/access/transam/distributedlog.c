@@ -135,10 +135,26 @@ DistributedLog_InitOldestXmin(void)
 		/* Advance to the first XID on the next page */
 		xid = AdvanceTransactionIdToNextPage(oldestXmin);
 
-		/* but don't go past oldestLocalXmin */
+		/*
+		 * But don't go past oldestLocalXmin + 1 which is the most 
+		 * we might've set the oldestXmin before restart (essentially
+		 * it's same as the 'xmax' value in GetSnapshotData()).
+		 *
+		 * Note that, stopping here means that we don't have a page
+		 * for oldestXmin, but we are fine because:
+		 *
+		 * (1) if we later assigned a new xid, that new xid is going
+		 *     to be the same as oldestXmin here. And we are guaranteed 
+		 *     to have created DLOG segment for this new xid.
+		 * (2) before we assigned any new xid, we don't really need to
+		 *     access DLOG for oldestXmin. Even if we call 
+		 *     DistributedLog_AdvanceOldestXmin(), since we don't have
+		 *     any newer xid to advance to, the call would be a no-op.
+		 */
 		if (TransactionIdFollows(xid, latestXid))
 		{
 			oldestXmin = latestXid;
+			TransactionIdAdvance(oldestXmin);
 			break;
 		}
 
@@ -273,7 +289,14 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 				break;
 
 			if (TransactionIdPrecedesOrEquals(oldestXmin, expected))
+			{
+				/*
+				 * If we got here, other processes must have updated the oldestXmin.
+				 * Return the more accurate value.
+				 */
+				oldestXmin = expected;
 				break;
+			}
 		}
 	}
 

@@ -33,12 +33,14 @@
 
 #include "access/session.h"
 #include "access/xact.h"
+#include "common/hashfn.h"
 #include "storage/ipc.h"
 #include "utils/backend_cancel.h"
 #include "utils/dynahash.h"
 #include "utils/elog.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
+#include "utils/typcache.h"
 #include "cdbendpoint_private.h"
 #include "cdb/cdbendpoint.h"
 #include "cdb/cdbsrlz.h"
@@ -131,6 +133,7 @@ static void retrieve_subxact_callback(SubXactEvent event,
 									  SubTransactionId parentSubid,
 									  void *arg);
 static TupleTableSlot *retrieve_next_tuple(void);
+static void retrieve_conn_detach(dsm_segment *segment, Datum datum);
 
 /*
  * AuthEndpoint - Authenticate for retrieve connection.
@@ -355,8 +358,17 @@ start_retrieve(const char *endpointName)
 	if (!found)
 		attach_receiver_mq(handle);
 
+	if (CurrentSession->segment != NULL &&
+		dsm_segment_handle(CurrentSession->segment) != endpoint->sessionDsmHandle)
+	{
+		DetachSession();
+	}
+
 	if (CurrentSession->segment == NULL)
+	{
 		AttachSession(endpoint->sessionDsmHandle);
+		on_dsm_detach(CurrentSession->segment, &retrieve_conn_detach, (Datum) 0);
+	}
 }
 
 /*
@@ -778,10 +790,10 @@ retrieve_xact_callback(XactEvent ev, void *arg pg_attribute_unused())
 			finish_retrieve(true);
 
 		}
-	}
 
-	if (CurrentSession != NULL && CurrentSession->segment != NULL)
-		DetachSession();
+		if (CurrentSession != NULL && CurrentSession->segment != NULL)
+			DetachSession();
+	}
 }
 
 /*
@@ -795,4 +807,13 @@ retrieve_subxact_callback(SubXactEvent event,
 {
 	if (event == SUBXACT_EVENT_ABORT_SUB)
 		retrieve_xact_callback(XACT_EVENT_ABORT, NULL);
+}
+
+/*
+ * Reset record cache when detach session.
+ */
+static void
+retrieve_conn_detach(dsm_segment *segment, Datum datum)
+{
+	reset_record_cache();
 }

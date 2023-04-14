@@ -18,7 +18,7 @@ This chapter contains the following information:
 
 Graphs represent the interconnections between objects \(vertices\) and their relationships \(edges\). Example objects could be people, locations, cities, computers, or components on a circuit board. Example connections could be roads, circuits, cables, or interpersonal relationships. Edges can have directions and weights, for example the distance between towns.
 
-![](graphics/graph_example.png)
+![Graph connection example](graphics/graph_example.png)
 
 Graphs can be small and easily traversed - as with a small group of friends - or extremely large and complex, similar to contacts in a modern-day social network.
 
@@ -46,7 +46,7 @@ Efficient processing of very large graphs can be challenging. Greenplum offers a
 
 **Installing Graph Modules**
 
-To use the MADlib graph modules, install the version of MADlib corresponding to your Greenplum Database version. To download the software, access the VMware Tanzu Network. For Greenplum 6.x, see [Installing MADlib](http://greenplum.docs.pivotal.io/6latest/analytics/madlib.html#topic3).
+To use the MADlib graph modules, install the version of MADlib corresponding to your Greenplum Database version. To download the software, access the VMware Tanzu Network. For Greenplum 6.x, see [Installing MADlib](./madlib.html#topic3).
 
 Graph modules on MADlib support many algorithms.
 
@@ -54,12 +54,12 @@ Graph modules on MADlib support many algorithms.
 
 To represent a graph in Greenplum, create tables that represent the vertices, edges, and their properties.
 
-![](graphics/vertex_edge_table.png)
+![Vertex edge table](graphics/vertex_edge_table.png)
 
 Using SQL, create the relevant tables in the database you want to use. This example uses `testdb`:
 
 ```
-gpadmin@mdw ~]$ psql
+gpadmin@cdw ~]$ psql
 dev=# \c testdb
 ```
 

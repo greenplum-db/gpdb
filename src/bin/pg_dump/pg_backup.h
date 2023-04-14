@@ -26,6 +26,9 @@
 #include "fe_utils/simple_list.h"
 #include "libpq-fe.h"
 
+#define GPDB5_MAJOR_PGVERSION 80300
+#define GPDB6_MAJOR_PGVERSION 90400
+#define GPDB7_MAJOR_PGVERSION 120000
 
 typedef enum trivalue
 {
@@ -57,6 +60,37 @@ typedef enum _teSection
 	SECTION_DATA,				/* TABLE DATA, BLOBS, BLOB COMMENTS */
 	SECTION_POST_DATA			/* stuff to be processed after data */
 } teSection;
+
+/* We need one enum entry per prepared query in pg_dump */
+enum _dumpPreparedQueries
+{
+	PREPQUERY_DUMPAGG,
+	PREPQUERY_DUMPBASETYPE,
+	PREPQUERY_DUMPCOMPOSITETYPE,
+	PREPQUERY_DUMPDOMAIN,
+	PREPQUERY_DUMPENUMTYPE,
+	PREPQUERY_DUMPFUNC,
+	PREPQUERY_DUMPOPR,
+	PREPQUERY_DUMPRANGETYPE,
+	PREPQUERY_DUMPTABLEATTACH,
+	PREPQUERY_GETCOLUMNACLS,
+	PREPQUERY_GETDOMAINCONSTRAINTS,
+	NUM_PREP_QUERIES			/* must be last */
+};
+
+/* Parameters needed by ConnectDatabase; same for dump and restore */
+typedef struct _connParams
+{
+	/* These fields record the actual command line parameters */
+	char	   *dbname;			/* this may be a connstring! */
+	char	   *pgport;
+	char	   *pghost;
+	char	   *username;
+	trivalue	promptPassword;
+	/* If not NULL, this overrides the dbname obtained from command line */
+	/* (but *only* the DB name, not anything else in the connstring) */
+	char	   *override_dbname;
+} ConnParams;
 
 typedef struct _restoreOptions
 {
@@ -108,12 +142,9 @@ typedef struct _restoreOptions
 	SimpleStringList tableNames;
 
 	int			useDB;
-	char	   *dbname;			/* subject to expand_dbname */
-	char	   *pgport;
-	char	   *pghost;
-	char	   *username;
+	ConnParams	cparams;		/* parameters to use if useDB */
+
 	int			noDataForFailedTables;
-	trivalue	promptPassword;
 	int			exit_on_error;
 	int			compression;
 	int			suppressDumpWarnings;	/* Suppress output of WARNING entries
@@ -129,10 +160,7 @@ typedef struct _restoreOptions
 
 typedef struct _dumpOptions
 {
-	const char *dbname;			/* subject to expand_dbname */
-	const char *pghost;
-	const char *pgport;
-	const char *username;
+	ConnParams	cparams;
 
 	int			binary_upgrade;
 
@@ -174,6 +202,10 @@ typedef struct _dumpOptions
 
 	int			sequence_data;	/* dump sequence data even in schema-only mode */
 	int			do_nothing;
+
+	/* GPDB */
+	bool		dumpGpPolicy;
+	bool		isGPbackend;
 } DumpOptions;
 
 /*
@@ -208,6 +240,9 @@ typedef struct Archive
 	bool		exit_on_error;	/* whether to exit on SQL errors... */
 	int			n_errors;		/* number of errors (if no die) */
 
+	/* prepared-query status */
+	bool	   *is_prepared;	/* indexed by enum _dumpPreparedQueries */
+
 	/* The rest is private */
 } Archive;
 
@@ -230,13 +265,20 @@ typedef struct Archive
 
 typedef struct
 {
+	/* Note: this struct must not contain any unused bytes */
 	Oid			tableoid;
 	Oid			oid;
 } CatalogId;
 
 typedef int DumpId;
 
-typedef int (*DataDumperPtr) (Archive *AH, void *userArg);
+#define InvalidDumpId 0
+
+/*
+ * Function pointer prototypes for assorted callback methods.
+ */
+
+typedef int (*DataDumperPtr) (Archive *AH, const void *userArg);
 
 typedef void (*SetupWorkerPtrType) (Archive *AH);
 
@@ -244,12 +286,9 @@ typedef void (*SetupWorkerPtrType) (Archive *AH);
  * Main archiver interface.
  */
 
-extern void ConnectDatabase(Archive *AH,
-							const char *dbname,
-							const char *pghost,
-							const char *pgport,
-							const char *username,
-							trivalue prompt_password,
+extern void ConnectDatabase(Archive *AHX,
+							const ConnParams *cparams,
+							bool isReconnect,
 							bool binary_upgrade);
 extern void DisconnectDatabase(Archive *AHX);
 extern PGconn *GetConnection(Archive *AHX);

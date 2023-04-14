@@ -17,7 +17,7 @@ SELECT * FROM test WHERE a in (1, 47);
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25"/>
       <dxl:TraceFlags Value="103027,102120,103001,103014,103015,103022,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -217,7 +217,7 @@ SELECT * FROM test WHERE a in (1, 47);
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.41665.1.1" Name="test" Rows="1000809.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.41665.1.1" Name="test" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.41665.1.1" Name="test" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -247,7 +247,6 @@ SELECT * FROM test WHERE a in (1, 47);
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.41692.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.41665.1.1.7" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -287,7 +286,7 @@ SELECT * FROM test WHERE a in (1, 47);
           </dxl:Array>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.41665.1.1" TableName="test">
+          <dxl:TableDescriptor Mdid="6.41665.1.1" TableName="test">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -345,7 +344,7 @@ SELECT * FROM test WHERE a in (1, 47);
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.41692.1.0" IndexName="test_index"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.41665.1.1" TableName="test">
+          <dxl:TableDescriptor Mdid="6.41665.1.1" TableName="test">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

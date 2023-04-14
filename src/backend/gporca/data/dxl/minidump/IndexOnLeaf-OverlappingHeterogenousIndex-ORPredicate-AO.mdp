@@ -24,7 +24,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -32,18 +32,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:And>
-            <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-              <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:Comparison>
-            <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-              <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-            </dxl:Comparison>
-          </dxl:And>
-        </dxl:PartConstraint>
       </dxl:Index>
       <dxl:GPDBScalarOp Mdid="0.521.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.23.1.0"/>
@@ -173,7 +161,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.24726.1.0" Name="foo_1_prt_p1" Rows="90000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24726.1.0" Name="foo_1_prt_p1" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24726.1.0" Name="foo_1_prt_p1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -201,7 +189,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
           <dxl:IndexInfo Mdid="0.24799.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.24833.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.24728.1.0"/>
         </dxl:CheckConstraints>
@@ -221,7 +208,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:CheckConstraint Mdid="0.24728.1.0" Name="foo_1_prt_p1_check" RelationMdid="0.24726.1.0">
+      <dxl:CheckConstraint Mdid="0.24728.1.0" Name="foo_1_prt_p1_check" RelationMdid="6.24726.1.0">
         <dxl:And>
           <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -342,30 +329,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
-        <dxl:PartConstraint DefaultPartition="" Unbounded="false">
-          <dxl:Or>
-            <dxl:And>
-              <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-              </dxl:Comparison>
-              <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-              </dxl:Comparison>
-            </dxl:And>
-            <dxl:And>
-              <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="11"/>
-              </dxl:Comparison>
-              <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-                <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
-              </dxl:Comparison>
-            </dxl:And>
-          </dxl:Or>
-        </dxl:PartConstraint>
       </dxl:Index>
     </dxl:Metadata>
     <dxl:Query>
@@ -388,7 +351,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
           </dxl:Comparison>
         </dxl:Or>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.24726.1.0" TableName="foo_1_prt_p1">
+          <dxl:TableDescriptor Mdid="6.24726.1.0" TableName="foo_1_prt_p1">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -474,7 +437,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c > 11 OR d > 20;
               <dxl:IndexDescriptor Mdid="0.24799.1.0" IndexName="idx_root_cd_1_prt_p1"/>
             </dxl:BitmapIndexProbe>
           </dxl:BitmapOr>
-          <dxl:TableDescriptor Mdid="0.24726.1.0" TableName="foo_1_prt_p1">
+          <dxl:TableDescriptor Mdid="6.24726.1.0" TableName="foo_1_prt_p1">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

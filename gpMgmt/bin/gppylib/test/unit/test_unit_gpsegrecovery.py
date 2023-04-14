@@ -17,12 +17,14 @@ class IncrementalRecoveryTestCase(GpTestCase):
         self.maxDiff = None
         self.mock_logger = Mock()
         self.apply_patches([
+            patch('gpsegrecovery.ModifyConfSetting', return_value=Mock()),
             patch('gpsegrecovery.start_segment', return_value=Mock()),
             patch('gppylib.commands.pg.PgRewind.__init__', return_value=None),
             patch('gppylib.commands.pg.PgRewind.run')
         ])
         self.mock_pgrewind_run = self.get_mock_from_apply_patch('run')
         self.mock_pgrewind_init = self.get_mock_from_apply_patch('__init__')
+        self.mock_pgrewind_modifyconfsetting = self.get_mock_from_apply_patch('ModifyConfSetting')
 
         p = Segment.initFromString("1|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         m = Segment.initFromString("2|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
@@ -54,9 +56,11 @@ class IncrementalRecoveryTestCase(GpTestCase):
                                   'sdw1', 40000, '/tmp/test_progress_file')
         self.assertEqual(expected_init_args, self.mock_pgrewind_init.call_args)
         self.assertEqual(1, self.mock_pgrewind_run.call_count)
+        self.assertEqual(1, self.mock_pgrewind_modifyconfsetting.call_count)
         self.assertEqual(call(validateAfter=True), self.mock_pgrewind_run.call_args)
         logger_call_args = [call('Running pg_rewind with progress output temporarily in /tmp/test_progress_file'),
-                            call('Successfully ran pg_rewind for dbid: 2')]
+                            call('Successfully ran pg_rewind for dbid: 2'),
+                            call("Updating /data/mirror0/postgresql.conf")]
         self.assertEqual(logger_call_args, self.mock_logger.info.call_args_list)
         gpsegrecovery.start_segment.assert_called_once_with(self.seg_recovery_info, self.mock_logger, self.era)
 
@@ -92,11 +96,27 @@ class IncrementalRecoveryTestCase(GpTestCase):
         self.assertEqual(1, self.mock_pgrewind_init.call_count)
         self.assertEqual(1, self.mock_pgrewind_run.call_count)
         logger_call_args = [call('Running pg_rewind with progress output temporarily in /tmp/test_progress_file'),
-                            call('Successfully ran pg_rewind for dbid: 2')]
+                            call('Successfully ran pg_rewind for dbid: 2'),
+                            call("Updating /data/mirror0/postgresql.conf")]
         self.assertEqual(logger_call_args, self.mock_logger.info.call_args_list)
         gpsegrecovery.start_segment.assert_called_once_with(self.seg_recovery_info, self.mock_logger, self.era)
         self._assert_cmd_failed('{"error_type": "start", "error_msg": "pg_ctl start failed", "dbid": 2, ' \
                                 '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
+
+    def test_incremental_modify_conf_setting_exception(self):
+        self.mock_pgrewind_modifyconfsetting.side_effect = [Exception('modify conf port failed'), Mock()]
+        self.incremental_recovery_cmd.run()
+
+        self.assertEqual(1, self.mock_pgrewind_init.call_count)
+        self.assertEqual(1, self.mock_pgrewind_run.call_count)
+        self.mock_pgrewind_modifyconfsetting.assert_called_once_with('Updating %s/postgresql.conf' % self.seg_recovery_info.target_datadir,
+                                                                     "{}/{}".format(self.seg_recovery_info.target_datadir, 'postgresql.conf'),
+                                                                     'port', self.seg_recovery_info.target_port, optType='number')
+        self.assertEqual(1, self.mock_pgrewind_modifyconfsetting.call_count)
+        self.assertEqual(0, gpsegrecovery.start_segment.call_count)
+        self._assert_cmd_failed('{"error_type": "update", "error_msg": "modify conf port failed", "dbid": 2, ' \
+                                '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
+
 
 
 class FullRecoveryTestCase(GpTestCase):
@@ -106,12 +126,14 @@ class FullRecoveryTestCase(GpTestCase):
         self.maxDiff = None
         self.mock_logger = Mock(spec=['log', 'info', 'debug', 'error', 'warn', 'exception'])
         self.apply_patches([
+            patch('gpsegrecovery.ModifyConfSetting', return_value=Mock()),
             patch('gpsegrecovery.start_segment', return_value=Mock()),
             patch('gpsegrecovery.PgBaseBackup.__init__', return_value=None),
             patch('gpsegrecovery.PgBaseBackup.run')
         ])
         self.mock_pgbasebackup_run = self.get_mock_from_apply_patch('run')
         self.mock_pgbasebackup_init = self.get_mock_from_apply_patch('__init__')
+        self.mock_pgbasebackup_modifyconfsetting = self.get_mock_from_apply_patch('ModifyConfSetting')
 
         p = Segment.initFromString("1|0|p|p|s|u|sdw1|sdw1|40000|/data/primary0")
         m = Segment.initFromString("2|0|m|m|s|u|sdw2|sdw2|50000|/data/mirror0")
@@ -133,9 +155,11 @@ class FullRecoveryTestCase(GpTestCase):
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
         self.assertEqual(expected_init_args, self.mock_pgbasebackup_init.call_args)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
+        self.assertEqual(1, self.mock_pgbasebackup_modifyconfsetting.call_count)
         self.assertEqual(call(validateAfter=True), self.mock_pgbasebackup_run.call_args)
         expected_logger_info_args = [call('Running pg_basebackup with progress output temporarily in /tmp/test_progress_file'),
-                                     call("Successfully ran pg_basebackup for dbid: 2")]
+                                     call("Successfully ran pg_basebackup for dbid: 2"),
+                                     call("Updating /data/mirror0/postgresql.conf")]
         self.assertEqual(expected_logger_info_args, self.mock_logger.info.call_args_list)
         gpsegrecovery.start_segment.assert_called_once_with(self.seg_recovery_info, self.mock_logger, self.era)
 
@@ -154,11 +178,11 @@ class FullRecoveryTestCase(GpTestCase):
     def test_basebackup_run_passes(self):
         self.full_recovery_cmd.run()
 
-        expected_init_args1 = call("/data/mirror0", "sdw1", '40000', create_slot=False,
+        expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
                                    forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
 
-        self._assert_basebackup_runs(expected_init_args1)
+        self._assert_basebackup_runs(expected_init_args)
         self._assert_cmd_passed()
 
     def test_basebackup_run_no_forceoverwrite_passes(self):
@@ -166,10 +190,10 @@ class FullRecoveryTestCase(GpTestCase):
 
         self.full_recovery_cmd.run()
 
-        expected_init_args1 = call("/data/mirror0", "sdw1", '40000', create_slot=False,
+        expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
                                    forceoverwrite=False, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
-        self._assert_basebackup_runs(expected_init_args1)
+        self._assert_basebackup_runs(expected_init_args)
         self._assert_cmd_passed()
 
     def test_basebackup_run_one_exception(self):
@@ -177,68 +201,41 @@ class FullRecoveryTestCase(GpTestCase):
 
         self.full_recovery_cmd.run()
 
-        expected_init_args1 = call("/data/mirror0", "sdw1", '40000', create_slot=False,
+        expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
                                    forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
-        expected_init_args2 = call("/data/mirror0", "sdw1", '40000', create_slot=True,
-                                   replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
-        self.assertEqual(2, self.mock_pgbasebackup_init.call_count)
-        self.assertEqual([expected_init_args1, expected_init_args2] , self.mock_pgbasebackup_init.call_args_list)
-        self.assertEqual(2, self.mock_pgbasebackup_run.call_count)
-        self.assertEqual([call(validateAfter=True),call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
-        gpsegrecovery.start_segment.assert_called_once_with(self.seg_recovery_info, self.mock_logger, self.era)
-        self._assert_cmd_passed()
-
-    def test_basebackup_run_two_exceptions(self):
-        self.mock_pgbasebackup_run.side_effect=[Exception('backup failed once'),
-                                                Exception('backup failed twice')]
-
-        self.full_recovery_cmd.run()
-
-        expected_init_args1 = call("/data/mirror0", "sdw1", '40000', create_slot=False,
-                                   replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
-        expected_init_args2 = call("/data/mirror0", "sdw1", '40000', create_slot=True,
-                                   replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
-        self.assertEqual(2, self.mock_pgbasebackup_init.call_count)
-        self.assertEqual([expected_init_args1, expected_init_args2], self.mock_pgbasebackup_init.call_args_list)
-        self.assertEqual(2, self.mock_pgbasebackup_run.call_count)
-        self.assertEqual([call(validateAfter=True),call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
+        self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
+        self.assertEqual([expected_init_args], self.mock_pgbasebackup_init.call_args_list)
+        self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
+        self.assertEqual([call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
         self.mock_logger.info.any_call('Running pg_basebackup failed: backup failed once')
-        self.mock_logger.info.assert_called_with("Re-running pg_basebackup, creating the slot this time")
         self.assertEqual(0, gpsegrecovery.start_segment.call_count)
-        self._assert_cmd_failed('{"error_type": "full", "error_msg": "backup failed twice", "dbid": 2, ' \
+        self._assert_cmd_failed('{"error_type": "full", "error_msg": "backup failed once", "dbid": 2, ' \
                                 '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
 
-    def test_basebackup_run_no_forceoverwrite_two_exceptions(self):
-        self.mock_pgbasebackup_run.side_effect = [Exception('backup failed once'),
-                                                  Exception('backup failed twice')]
-        self.full_recovery_cmd.forceoverwrite = False
+    def test_basebackup_run_no_forceoverwrite_one_exceptions(self):
+        self.mock_pgbasebackup_run.side_effect = [Exception('backup failed once'), Mock()]
 
+        self.full_recovery_cmd.forceoverwrite = False
         self.full_recovery_cmd.run()
 
-        expected_init_args1 = call("/data/mirror0", "sdw1", '40000', create_slot=False,
+        expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
                                    forceoverwrite=False, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
-        # regardless of the passed in value, second call to pg_basebackup will always have forceoverwrite=True
-        expected_init_args2 = call("/data/mirror0", "sdw1", '40000', create_slot=True,
-                                   replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
-        self.assertEqual(2, self.mock_pgbasebackup_init.call_count)
-        self.assertEqual([expected_init_args1, expected_init_args2], self.mock_pgbasebackup_init.call_args_list)
-        self.assertEqual(2, self.mock_pgbasebackup_run.call_count)
-        self.assertEqual([call(validateAfter=True),call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
+        self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
+        self.assertEqual([expected_init_args], self.mock_pgbasebackup_init.call_args_list)
+        self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
+        self.assertEqual([call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
+        self.mock_logger.info.any_call('Running pg_basebackup failed: backup failed once')
         self.assertEqual(0, gpsegrecovery.start_segment.call_count)
-        self._assert_cmd_failed('{"error_type": "full", "error_msg": "backup failed twice", "dbid": 2, ' \
+        self._assert_cmd_failed('{"error_type": "full", "error_msg": "backup failed once", "dbid": 2, ' \
                                 '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
 
     def test_basebackup_init_exception(self):
         self.mock_pgbasebackup_init.side_effect = [Exception('backup init failed')]
 
         self.full_recovery_cmd.run()
-        expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=False,
+        expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                   replication_slot_name='internal_wal_replication_slot',
                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
@@ -257,6 +254,20 @@ class FullRecoveryTestCase(GpTestCase):
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
         gpsegrecovery.start_segment.assert_called_once_with(self.seg_recovery_info, self.mock_logger, self.era)
         self._assert_cmd_failed('{"error_type": "start", "error_msg": "pg_ctl start failed", "dbid": 2, ' \
+                                '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
+
+    def test_basebackup_modify_conf_setting_exception(self):
+        self.mock_pgbasebackup_modifyconfsetting.side_effect = [Exception('modify conf port failed'), Mock()]
+        self.full_recovery_cmd.run()
+
+        self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
+        self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
+        self.mock_pgbasebackup_modifyconfsetting.assert_called_once_with('Updating %s/postgresql.conf' % self.seg_recovery_info.target_datadir,
+                                                                          "{}/{}".format(self.seg_recovery_info.target_datadir, 'postgresql.conf'),
+                                                                          'port', self.seg_recovery_info.target_port, optType='number')
+        self.assertEqual(1, self.mock_pgbasebackup_modifyconfsetting.call_count)
+        self.assertEqual(0, gpsegrecovery.start_segment.call_count)
+        self._assert_cmd_failed('{"error_type": "update", "error_msg": "modify conf port failed", "dbid": 2, ' \
                                 '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
 
 
@@ -310,8 +321,7 @@ class SegRecoveryTestCase(GpTestCase):
     def test_complete_workflow_exception(self, mock_pgbasebackup_run, mock_pgbasebackup_init, mock_pgrewind_run,
                                          mock_pgrewind_init):
         mock_pgrewind_run.side_effect = [Exception('pg_rewind failed')]
-        mock_pgbasebackup_run.side_effect = [Exception('pg_basebackup failed once'),
-                                             Exception('pg_basebackup failed twice')]
+        mock_pgbasebackup_run.side_effect = [Exception('pg_basebackup failed once')]
         mix_confinfo = gppylib.recoveryinfo.serialize_list([
             self.full_r1, self.incr_r2])
         sys.argv = ['gpsegrecovery', '-l', '/tmp/logdir', '--era={}'.format(self.era), '-c {}'.format(mix_confinfo)]
@@ -322,14 +332,14 @@ class SegRecoveryTestCase(GpTestCase):
 
         self.assertCountEqual('[{"error_type": "incremental", "error_msg": "pg_rewind failed", "dbid": 4, "datadir": "target_data_dir4", '
                               '"port": 5004, "progress_file": "/tmp/progress_file4"} , '
-                              '{"error_type": "full", "error_msg": "pg_basebackup failed twice", "dbid": 1,'
+                              '{"error_type": "full", "error_msg": "pg_basebackup failed once", "dbid": 1,'
                               '"datadir": "target_data_dir1", "port": 5001, "progress_file": "/tmp/progress_file1"}]',
                               buf.getvalue().strip())
         self.assertEqual(1, ex.exception.code)
         self.assertEqual(1, mock_pgrewind_run.call_count)
         self.assertEqual(1, mock_pgrewind_init.call_count)
-        self.assertEqual(2, mock_pgbasebackup_run.call_count)
-        self.assertEqual(2, mock_pgbasebackup_init.call_count)
+        self.assertEqual(1, mock_pgbasebackup_run.call_count)
+        self.assertEqual(1, mock_pgbasebackup_init.call_count)
         self.assertRegex(gplog.get_logfile(), '/gpsegrecovery.py_\d+\.log')
 
     @patch('recovery_base.gplog.setup_tool_logging')

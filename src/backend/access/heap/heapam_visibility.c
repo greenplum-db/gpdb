@@ -1069,7 +1069,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 													&setDistributedSnapshotIgnore);
 			if (snapshotCheckResult == XID_NOT_IN_SNAPSHOT)
 			{
-				if (snapshotCheckResult == XID_SURELY_COMMITTED || TransactionIdDidCommit(xvac))
+				if (TransactionIdDidCommit(xvac))
 				{
 					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
 								InvalidTransactionId);
@@ -1662,8 +1662,8 @@ HeapTupleHeaderIsOnlyLocked(HeapTupleHeader tuple)
 static bool
 TransactionIdInArray(TransactionId xid, TransactionId *xip, Size num)
 {
-	return bsearch(&xid, xip, num,
-				   sizeof(TransactionId), xidComparator) != NULL;
+	return num > 0 &&
+		bsearch(&xid, xip, num, sizeof(TransactionId), xidComparator) != NULL;
 }
 
 /*

@@ -89,6 +89,15 @@ values (1,1,b'0000','1'), (2,2,b'0001','1'),
        (3,4,b'0010','2'), (4,8,b'0011','2'),
        (5,16,b'0000','2'), (6,32,b'0001','2'),
        (7,64,b'0010','1'), (8,128,b'0011','1');
+create temp table gstest5(id integer, v integer,
+                          unsortable_col1 xid, unsortable_col2 xid);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into gstest5
+values (1,1,'3','1'), (2,2,'3','1'),
+       (3,4,'4','2'), (4,8,'4','2'),
+       (5,16,'4','2'), (6,32,'4','2'),
+       (7,64,'3','1'), (8,128,'3','1');
 create temp table gstest_empty (a integer, b integer, v integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -460,7 +469,7 @@ select g as alias1, g as alias2
   from generate_series(1,3) g
  group by alias1, rollup(alias2);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications
+DETAIL:  Feature not supported: Multiple grouping sets specifications with duplicate aliased columns
                    QUERY PLAN                   
 ------------------------------------------------
  GroupAggregate
@@ -476,7 +485,7 @@ select g as alias1, g as alias2
   from generate_series(1,3) g
  group by alias1, rollup(alias2);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications
+DETAIL:  Feature not supported: Multiple grouping sets specifications with duplicate aliased columns
  alias1 | alias2 
 --------+--------
       1 |      1
@@ -531,6 +540,119 @@ select x, not x as not_x, q2 from
    |       |               456
    |       |  4567890123456789
 (5 rows)
+
+-- check qual push-down rules for a subquery with grouping sets
+explain (verbose, costs off)
+select * from (
+  select 1 as x, q1, sum(q2)
+  from int8_tbl i1
+  group by grouping sets(1, 2)
+) ss
+where x = 1 and q1 = 123;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Result
+   Output: NULL::integer, NULL::bigint, NULL::numeric
+   One-Time Filter: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_hashagg = 'off'
+(5 rows)
+
+select * from (
+  select 1 as x, q1, sum(q2)
+  from int8_tbl i1
+  group by grouping sets(1, 2)
+) ss
+where x = 1 and q1 = 123;
+ x | q1 | sum 
+---+----+-----
+(0 rows)
+
+-- check handling of pulled-up SubPlan in GROUPING() argument (bug #17479)
+explain (verbose, costs off)
+select grouping(ss.x)
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: LATERAL
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: (GROUPING((SubPlan 1))), ((SubPlan 2))
+   ->  GroupAggregate
+         Output: GROUPING((SubPlan 1)), ((SubPlan 2))
+         Group Key: ((SubPlan 2))
+         ->  Sort
+               Output: ((SubPlan 2)), i1.q1
+               Sort Key: ((SubPlan 2))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: ((SubPlan 2)), i1.q1
+                     Hash Key: ((SubPlan 2))
+                     ->  Seq Scan on public.int8_tbl i1
+                           Output: (SubPlan 2), i1.q1
+                           SubPlan 2
+                             ->  Result
+                                   Output: i1.q1
+ Optimizer: Postgres query optimizer
+ Settings: enable_hashagg = 'off'
+(18 rows)
+
+select grouping(ss.x)
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: LATERAL
+ grouping 
+----------
+        0
+        0
+(2 rows)
+
+explain (verbose, costs off)
+select (select grouping(ss.x))
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: LATERAL
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ((SubPlan 2)), ((SubPlan 3))
+   ->  GroupAggregate
+         Output: (SubPlan 2), ((SubPlan 3))
+         Group Key: ((SubPlan 3))
+         ->  Sort
+               Output: ((SubPlan 3)), i1.q1
+               Sort Key: ((SubPlan 3))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: ((SubPlan 3)), i1.q1
+                     Hash Key: ((SubPlan 3))
+                     ->  Seq Scan on public.int8_tbl i1
+                           Output: (SubPlan 3), i1.q1
+                           SubPlan 3
+                             ->  Result
+                                   Output: i1.q1
+         SubPlan 2
+           ->  Result
+                 Output: GROUPING((SubPlan 1))
+ Optimizer: Postgres query optimizer
+ Settings: enable_hashagg = 'off'
+(21 rows)
+
+select (select grouping(ss.x))
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: LATERAL
+ grouping 
+----------
+        0
+        0
+(2 rows)
 
 -- simple rescan tests
 select a, b, sum(v.x)
@@ -610,8 +732,6 @@ DETAIL:  Feature not supported: Grouping function with multiple arguments
 (3 rows)
 
 select(select (select grouping(c) from (values (1)) v2(c) GROUP BY c) from (values (1,2)) v1(a,b) group by (a,b)) from (values(6,7)) v3(e,f) GROUP BY ROLLUP(e,f);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  grouping 
 ----------
         0
@@ -621,8 +741,6 @@ DETAIL:  DXL-to-PlStmt Translation: Assert not supported
 
 -- Combinations of operations
 select a, b, c, d from gstest2 group by rollup(a,b),grouping sets(c,d);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications
  a | b | c | d 
 ---+---+---+---
  1 | 1 | 1 |  
@@ -694,7 +812,7 @@ DETAIL:  Feature not supported: Grouping function with multiple arguments
 
 select(select (select grouping(a,b) from (values (1)) v2(c)) from (values (1,2)) v1(a,b) group by (a,b)) from (values(6,7)) v3(e,f) GROUP BY CUBE((e+1),(f+1)) ORDER BY (e+1),(f+1);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  grouping 
 ----------
         0
@@ -705,8 +823,6 @@ DETAIL:  Feature not supported: Cube
 
 select a, b, sum(c), sum(sum(c)) over (order by a,b) as rsum
   from gstest2 group by cube (a,b) order by rsum, a, b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
  a | b | sum | rsum 
 ---+---+-----+------
  1 | 1 |   8 |    8
@@ -740,7 +856,7 @@ select a, b, sum(v.x)
   from (values (1),(2)) v(x), gstest_data(v.x)
  group by cube (a,b) order by a,b;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
+DETAIL:  Feature not supported: LATERAL
  a | b | sum 
 ---+---+-----
  1 | 1 |   1
@@ -953,8 +1069,6 @@ order by 2,1;
 select ten, grouping(ten) from onek
 group by cube(ten) having grouping(ten) > 0
 order by 2,1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
  ten | grouping 
 -----+----------
      |        1
@@ -1089,8 +1203,6 @@ DETAIL:  Feature not supported: ROW EXPRESSION
 
 -- Grouping on text columns
 select sum(ten) from onek group by two, rollup(four::text) order by 1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications
  sum  
 ------
  1000
@@ -1102,8 +1214,6 @@ DETAIL:  Feature not supported: Multiple grouping sets specifications
 (6 rows)
 
 select sum(ten) from onek group by rollup(four::text), two order by 1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications
  sum  
 ------
  1000
@@ -1162,7 +1272,7 @@ DETAIL:  Feature not supported: Grouping function with multiple arguments
 select a, b, grouping(a,b), sum(v), count(*), max(v)
   from gstest1 group by cube(a,b) order by 3,1,2;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  a | b | grouping | sum | count | max 
 ---+---+----------+-----+-------+-----
  1 | 1 |        0 |  21 |     2 |  11
@@ -1186,7 +1296,7 @@ DETAIL:  Feature not supported: Cube
 explain (costs off) select a, b, grouping(a,b), sum(v), count(*), max(v)
   from gstest1 group by cube(a,b) order by 3,1,2;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
+DETAIL:  Feature not supported: Grouping function with multiple arguments
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Sort
@@ -1205,7 +1315,7 @@ explain (costs off)
   select a, b, grouping(a,b), array_agg(v order by v)
     from gstest1 group by cube(a,b);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
+DETAIL:  Feature not supported: Grouping function with multiple arguments
                         QUERY PLAN                        
 ----------------------------------------------------------
  GroupAggregate
@@ -1324,6 +1434,88 @@ DETAIL:  Feature not supported: Grouping function with multiple arguments
                            ->  Seq Scan on gstest4
  Optimizer: Postgres query optimizer
 (13 rows)
+
+select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2))
+ order by 3,5;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
+ unsortable_col1 | unsortable_col2 | grouping | count | sum 
+-----------------+-----------------+----------+-------+-----
+               4 |                 |        1 |     4 |  60
+               3 |                 |        1 |     4 | 195
+                 |               2 |        2 |     4 |  60
+                 |               1 |        2 |     4 | 195
+(4 rows)
+
+explain (costs off)
+  select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2))
+ order by 3,5;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+   ->  Sort
+         Sort Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+         ->  Finalize HashAggregate
+               Group Key: unsortable_col1, unsortable_col2, (GROUPINGSET_ID())
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (GROUPINGSET_ID())
+                     ->  Partial HashAggregate
+                           Hash Key: unsortable_col1
+                           Hash Key: unsortable_col2
+                           ->  Seq Scan on gstest5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2),())
+ order by 3,5;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
+ unsortable_col1 | unsortable_col2 | grouping | count | sum 
+-----------------+-----------------+----------+-------+-----
+               4 |                 |        1 |     4 |  60
+               3 |                 |        1 |     4 | 195
+                 |               2 |        2 |     4 |  60
+                 |               1 |        2 |     4 | 195
+                 |                 |        3 |     8 | 255
+(5 rows)
+
+explain (costs off)
+  select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2),())
+ order by 3,5;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+   ->  Sort
+         Sort Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+         ->  Finalize HashAggregate
+               Group Key: unsortable_col1, unsortable_col2, (GROUPINGSET_ID())
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (GROUPINGSET_ID())
+                     ->  Partial MixedAggregate
+                           Hash Key: unsortable_col1
+                           Hash Key: unsortable_col2
+                           Group Key: ()
+                           ->  Seq Scan on gstest5
+ Optimizer: Postgres query optimizer
+(14 rows)
 
 -- empty input: first is 0 rows, second 1, third 3 etc.
 select a, b, sum(v), count(*) from gstest_empty group by grouping sets ((a,b),a);
@@ -1544,8 +1736,6 @@ DETAIL:  Feature not supported: Grouping function with multiple arguments
 
 select a, b, sum(c), sum(sum(c)) over (order by a,b) as rsum
   from gstest2 group by cube (a,b) order by rsum, a, b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
  a | b | sum | rsum 
 ---+---+-----+------
  1 | 1 |   8 |    8
@@ -1561,36 +1751,55 @@ DETAIL:  Feature not supported: Cube
 explain (costs off)
   select a, b, sum(c), sum(sum(c)) over (order by a,b) as rsum
     from gstest2 group by cube (a,b) order by rsum, a, b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
  Sort
-   Sort Key: (sum((sum(c))) OVER (?)), a, b
+   Sort Key: (sum((sum(share0_ref2.c))) OVER (?)), share0_ref2.a, share0_ref2.b
    ->  WindowAgg
-         Order By: a, b
+         Order By: share0_ref2.a, share0_ref2.b
          ->  Gather Motion 3:1  (slice1; segments: 3)
-               Merge Key: a, b
+               Merge Key: share0_ref2.a, share0_ref2.b
                ->  Sort
-                     Sort Key: a, b
-                     ->  Finalize HashAggregate
-                           Group Key: a, b, (GROUPINGSET_ID())
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: a, b, (GROUPINGSET_ID())
-                                 ->  Partial MixedAggregate
-                                       Hash Key: a, b
-                                       Hash Key: a
-                                       Hash Key: b
-                                       Group Key: ()
-                                       ->  Seq Scan on gstest2
- Optimizer: Postgres query optimizer
-(19 rows)
+                     Sort Key: share0_ref2.a, share0_ref2.b
+                     ->  Sequence
+                           ->  Shared Scan (share slice:id 1:0)
+                                 ->  Seq Scan on gstest2
+                           ->  Append
+                                 ->  GroupAggregate
+                                       Group Key: share0_ref2.a, share0_ref2.b
+                                       ->  Sort
+                                             Sort Key: share0_ref2.a, share0_ref2.b
+                                             ->  Shared Scan (share slice:id 1:0)
+                                 ->  Finalize GroupAggregate
+                                       Group Key: share0_ref3.b
+                                       ->  Sort
+                                             Sort Key: share0_ref3.b
+                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                                   Hash Key: share0_ref3.b
+                                                   ->  Partial GroupAggregate
+                                                         Group Key: share0_ref3.b
+                                                         ->  Sort
+                                                               Sort Key: share0_ref3.b
+                                                               ->  Shared Scan (share slice:id 2:0)
+                                 ->  GroupAggregate
+                                       Group Key: share0_ref4.a
+                                       ->  Sort
+                                             Sort Key: share0_ref4.a
+                                             ->  Shared Scan (share slice:id 1:0)
+                                 ->  Result
+                                       ->  Redistribute Motion 1:3  (slice3)
+                                             ->  Finalize Aggregate
+                                                   ->  Gather Motion 3:1  (slice4; segments: 3)
+                                                         ->  Partial Aggregate
+                                                               ->  Shared Scan (share slice:id 4:0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(40 rows)
 
 select a, b, sum(v.x)
   from (values (1),(2)) v(x), gstest_data(v.x)
  group by cube (a,b) order by a,b;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
+DETAIL:  Feature not supported: LATERAL
  a | b | sum 
 ---+---+-----
  1 | 1 |   1
@@ -1612,7 +1821,7 @@ explain (costs off)
     from (values (1),(2)) v(x), gstest_data(v.x)
    group by cube (a,b) order by a,b;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
+DETAIL:  Feature not supported: LATERAL
                    QUERY PLAN                   
 ------------------------------------------------
  Sort
@@ -1628,6 +1837,83 @@ DETAIL:  Feature not supported: Cube
  Optimizer: Postgres query optimizer
 (11 rows)
 
+-- Verify that we correctly handle the child node returning a
+-- non-minimal slot, which happens if the input is pre-sorted,
+-- e.g. due to an index scan.
+BEGIN;
+SET LOCAL enable_hashagg = false;
+EXPLAIN (COSTS OFF) SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Sort
+   Sort Key: (NULL::integer), (NULL::integer)
+   ->  Sequence
+         ->  Shared Scan (share slice:id 0:0)
+               ->  Gather Motion 3:1  (slice1; segments: 3)
+                     ->  Seq Scan on gstest3
+         ->  Append
+               ->  Aggregate
+                     ->  Shared Scan (share slice:id 0:0)
+               ->  GroupAggregate
+                     Group Key: share0_ref3.b
+                     ->  Sort
+                           Sort Key: share0_ref3.b
+                           ->  Shared Scan (share slice:id 0:0)
+               ->  GroupAggregate
+                     Group Key: share0_ref4.a
+                     ->  Sort
+                           Sort Key: share0_ref4.a
+                           ->  Shared Scan (share slice:id 0:0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(20 rows)
+
+SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+ a | b | count | max | max 
+---+---+-------+-----+-----
+ 1 |   |     1 |   1 |   1
+ 2 |   |     1 |   2 |   2
+   | 1 |     1 |   1 |   1
+   | 2 |     1 |   2 |   2
+   |   |     2 |   2 |   2
+(5 rows)
+
+SET LOCAL enable_seqscan = false;
+EXPLAIN (COSTS OFF) SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Sort
+   Sort Key: (NULL::integer), (NULL::integer)
+   ->  Sequence
+         ->  Shared Scan (share slice:id 0:0)
+               ->  Gather Motion 3:1  (slice1; segments: 3)
+                     ->  Seq Scan on gstest3
+         ->  Append
+               ->  Aggregate
+                     ->  Shared Scan (share slice:id 0:0)
+               ->  GroupAggregate
+                     Group Key: share0_ref3.b
+                     ->  Sort
+                           Sort Key: share0_ref3.b
+                           ->  Shared Scan (share slice:id 0:0)
+               ->  GroupAggregate
+                     Group Key: share0_ref4.a
+                     ->  Sort
+                           Sort Key: share0_ref4.a
+                           ->  Shared Scan (share slice:id 0:0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(20 rows)
+
+SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+ a | b | count | max | max 
+---+---+-------+-----+-----
+ 1 |   |     1 |   1 |   1
+ 2 |   |     1 |   2 |   2
+   | 1 |     1 |   1 |   1
+   | 2 |     1 |   2 |   2
+   |   |     2 |   2 |   2
+(5 rows)
+
+COMMIT;
 -- More rescan tests
 -- start_ignore
 -- GPDB_95_MERGE_FIXME: the lateral query with grouping sets do not make right plans
@@ -1972,6 +2258,59 @@ DETAIL:  Feature not supported: Multi-argument UNNEST() or TABLE()
           |    1 |     2
 (4 rows)
 
+-- test handling of outer GroupingFunc within subqueries
+explain (costs off)
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by cube(v1);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with outer references
+             QUERY PLAN              
+-------------------------------------
+ MixedAggregate
+   Hash Key: $2
+   Group Key: ()
+   InitPlan 3 (returns $2)
+     ->  Result
+   ->  Result
+   SubPlan 2
+     ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by cube(v1);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with outer references
+ grouping 
+----------
+        1
+        0
+(2 rows)
+
+explain (costs off)
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with outer references
+             QUERY PLAN              
+-------------------------------------
+ GroupAggregate
+   Group Key: $2
+   InitPlan 1 (returns $1)
+     ->  Result
+   InitPlan 3 (returns $2)
+     ->  Result
+   ->  Result
+   SubPlan 2
+     ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with outer references
+ grouping 
+----------
+        0
+(1 row)
+
 --
 -- Compare results between plans using sorting and plans using hash
 -- aggregation. Force spilling in both cases by setting work_mem low
@@ -1988,52 +2327,54 @@ select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
 group by cube (g1000,g100,g10);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-                          QUERY PLAN                           
----------------------------------------------------------------
- GroupAggregate
-   Group Key: ((g.g % 1000)), ((g.g % 100)), ((g.g % 10))
-   Group Key: ((g.g % 1000)), ((g.g % 100))
-   Group Key: ((g.g % 1000))
-   Group Key: ()
-   Sort Key: ((g.g % 100)), ((g.g % 10))
-     Group Key: ((g.g % 100)), ((g.g % 10))
-     Group Key: ((g.g % 100))
-   Sort Key: ((g.g % 10)), ((g.g % 1000))
-     Group Key: ((g.g % 10)), ((g.g % 1000))
-     Group Key: ((g.g % 10))
-   ->  Sort
-         Sort Key: ((g.g % 1000)), ((g.g % 100)), ((g.g % 10))
-         ->  Function Scan on generate_series g
- Optimizer: Postgres query optimizer
-(15 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Sequence
+   ->  Shared Scan (share slice:id 0:0)
+         ->  Function Scan on generate_series
+   ->  Append
+         ->  HashAggregate
+               Group Key: share0_ref2.g1000, share0_ref2.g100, share0_ref2.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref3.g100, share0_ref3.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref4.g1000, share0_ref4.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref5.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref6.g1000, share0_ref6.g100
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref7.g100
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref8.g1000
+               ->  Shared Scan (share slice:id 0:0)
+         ->  Aggregate
+               ->  Shared Scan (share slice:id 0:0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(28 rows)
 
 create table gs_group_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'g1000' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+group by cube (g1000,g100,g10) distributed by (g1000);
 set jit_above_cost to default;
 create table gs_group_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'g1000' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+group by cube (g1000,g100,g10) distributed by (g1000);
 create table gs_group_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+group by grouping sets (g100,g10) distributed by (g100);
 -- Produce results with hash aggregation.
 set enable_hashagg = true;
 set enable_sort = false;
@@ -2045,56 +2386,58 @@ select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
 group by cube (g1000,g100,g10);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-                    QUERY PLAN                     
----------------------------------------------------
- MixedAggregate
-   Hash Key: (g.g % 1000), (g.g % 100), (g.g % 10)
-   Hash Key: (g.g % 1000), (g.g % 100)
-   Hash Key: (g.g % 1000)
-   Hash Key: (g.g % 100), (g.g % 10)
-   Hash Key: (g.g % 100)
-   Hash Key: (g.g % 10), (g.g % 1000)
-   Hash Key: (g.g % 10)
-   Group Key: ()
-   ->  Function Scan on generate_series g
- Optimizer: Postgres query optimizer
-(11 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Sequence
+   ->  Shared Scan (share slice:id 0:0)
+         ->  Function Scan on generate_series
+   ->  Append
+         ->  HashAggregate
+               Group Key: share0_ref2.g1000, share0_ref2.g100, share0_ref2.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref3.g100, share0_ref3.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref4.g1000, share0_ref4.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref5.g10
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref6.g1000, share0_ref6.g100
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref7.g100
+               ->  Shared Scan (share slice:id 0:0)
+         ->  HashAggregate
+               Group Key: share0_ref8.g1000
+               ->  Shared Scan (share slice:id 0:0)
+         ->  Aggregate
+               ->  Shared Scan (share slice:id 0:0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(28 rows)
 
 create table gs_hash_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'g1000' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+group by cube (g1000,g100,g10) distributed by (g1000);
 set jit_above_cost to default;
 create table gs_hash_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'g1000' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+group by cube (g1000,g100,g10) distributed by (g1000);
 create table gs_hash_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+group by grouping sets (g100,g10) distributed by (g100);
 set enable_sort = true;
 set work_mem to default;
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
--- GPDB_12_MERGE_FIXME: the following comparison query has an ORCA plan that
--- relies on "IS NOT DISTINCT FROM" Hash Join, a variant that we likely have
--- lost during the merge with upstream Postgres 12. Disable ORCA for this query
-SET optimizer TO off;
--- Compare results
+-- Compare results of ORCA plan that relies on "IS NOT DISTINCT FROM" HASH Join
 (select * from gs_hash_1 except select * from gs_group_1)
   union all
 (select * from gs_group_1 except select * from gs_hash_1);
@@ -2118,7 +2461,6 @@ SET optimizer TO off;
 ------+-----+--------+---+---
 (0 rows)
 
-RESET optimizer;
 drop table gs_group_1;
 drop table gs_group_2;
 drop table gs_group_3;

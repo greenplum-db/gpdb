@@ -20,6 +20,12 @@ SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_stats_index';
 (1 row)
 
 DELETE FROM uao_stats WHERE a < 16;
+-- New strategy of VACUUM AO/CO was introduced by PR #13255 for performance enhancement.
+-- Index dead tuples will not always be cleaned up completely after VACUUM, leading to
+-- index->reltuples not always equal to table->reltuples, it depends on the GUC
+-- gp_appendonly_compaction_threshold:
+-- a) without changing gp_appendonly_compaction_threshold (default is 10), index->reltuples
+-- might greater than table->reltuples if no compaction was triggered during VACUUM;
 VACUUM uao_stats;
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_stats';
   relname  | reltuples 
@@ -27,6 +33,30 @@ SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_stats';
  uao_stats |        85
 (1 row)
 
+-- expect index->reltuples greater than table->reltuples
+SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_stats_index';
+     relname     | reltuples 
+-----------------+-----------
+ uao_stats_index |        88
+(1 row)
+
+-- re-setup for next case
+TRUNCATE uao_stats;
+INSERT INTO uao_stats SELECT i as a, i as b, 'hello world' as c FROM generate_series(1, 50) AS i;
+INSERT INTO uao_stats SELECT i as a, i as b, 'hello world' as c FROM generate_series(51, 100) AS i;
+ANALYZE uao_stats;
+DELETE FROM uao_stats WHERE a < 16;
+-- b) changing gp_appendonly_compaction_threshold to make sure compaction could be triggered,
+-- index->reltuples should be equal to table->reltuples
+SET gp_appendonly_compaction_threshold = 8;
+VACUUM uao_stats;
+SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_stats';
+  relname  | reltuples 
+-----------+-----------
+ uao_stats |        85
+(1 row)
+
+-- expect index->reltuples equals to table->reltuples
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_stats_index';
      relname     | reltuples 
 -----------------+-----------

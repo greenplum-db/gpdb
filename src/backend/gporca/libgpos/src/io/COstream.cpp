@@ -280,7 +280,7 @@ COstream::operator<<(WOSTREAM &(*func_ptr)(WOSTREAM &) __attribute__((unused)))
 // standard-library implementations that may implement std::endl as a template.
 // It is enabled only for GNU libstdc++, where it is known to work.
 #if defined(GPOS_DEBUG) && defined(__GLIBCXX__)
-	typedef WOSTREAM &(*TManip)(WOSTREAM &);
+	using TManip = WOSTREAM &(*) (WOSTREAM &);
 	TManip tmf = func_ptr;
 	GPOS_ASSERT(tmf == static_cast<TManip>(std::endl) &&
 				"Only std::endl allowed");

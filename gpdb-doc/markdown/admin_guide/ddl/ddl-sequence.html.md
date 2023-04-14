@@ -6,11 +6,11 @@ A Greenplum Database sequence object is a special single row table that function
 
 Greenplum Database provides commands to create, alter, and drop a sequence. Greenplum Database also provides built-in functions to return the next value in the sequence \(`nextval()`\) or to set the sequence to a specific start value \(`setval()`\).
 
-**Note:** The PostgreSQL `currval()` and `lastval()` sequence functions are not supported in Greenplum Database.
+> **Note** The PostgreSQL `currval()` and `lastval()` sequence functions are not supported in Greenplum Database.
 
 Attributes of a sequence object include the name of the sequence, its increment value, and the last, minimum, and maximum values of the sequence counter. Sequences also have a special boolean attribute named `is_called` that governs the auto-increment behavior of a `nextval()` operation on the sequence counter. When a sequence's `is_called` attribute is `true`, `nextval()` increments the sequence counter before returning the value. When the `is_called` attribute value of a sequence is `false`, `nextval()` does not increment the counter before returning the value.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="topic87"></a>Creating a Sequence 
 
@@ -49,7 +49,7 @@ INSERT INTO vendors VALUES (nextval('myserial'), 'acme');
 
 A `nextval()` operation is never rolled back. A fetched value is considered used, even if the transaction that performed the `nextval()` fails. This means that failed transactions can leave unused holes in the sequence of assigned values.
 
-**Note:** You cannot use the `nextval()` function in `UPDATE` or `DELETE` statements if mirroring is enabled in Greenplum Database.
+> **Note** You cannot use the `nextval()` function in `UPDATE` or `DELETE` statements if mirroring is enabled in Greenplum Database.
 
 ### <a id="setseq"></a>Setting the Sequence Counter Value 
 

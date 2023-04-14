@@ -37,6 +37,12 @@
 #define APPENDONLY_VISIMAP_MAX_BITMAP_SIZE 4096
 
 /*
+ * The max value of visiMapEntry->bitmap->nwords
+ */
+#define APPENDONLY_VISIMAP_MAX_BITMAP_WORD_COUNT \
+	(APPENDONLY_VISIMAP_MAX_BITMAP_SIZE / sizeof(bitmapword))
+
+/*
  * Data structure for the ao visibility map processing.
  *
  */
@@ -102,7 +108,6 @@ typedef struct AppendOnlyVisimapDelete
 void AppendOnlyVisimap_Init(
 					   AppendOnlyVisimap *visiMap,
 					   Oid visimapRelid,
-					   Oid visimalIdxid,
 					   LOCKMODE lockmode,
 					   Snapshot appendonlyMetaDataSnapshot);
 
@@ -128,9 +133,24 @@ int64 AppendOnlyVisimap_GetRelationHiddenTupleCount(
 void AppendOnlyVisimapScan_Init(
 						   AppendOnlyVisimapScan *visiMapScan,
 						   Oid visimapRelid,
-						   Oid visimapIdxid,
 						   LOCKMODE lockmode,
 						   Snapshot appendonlyMetadataSnapshot);
+
+extern void AppendOnlyVisimap_Init_forUniqueCheck(
+									   AppendOnlyVisimap *visiMap,
+									   Relation aoRel,
+									   Snapshot snapshot);
+
+extern void AppendOnlyVisimap_Finish_forUniquenessChecks(
+												   AppendOnlyVisimap *visiMap);
+
+extern void AppendOnlyVisimap_Init_forIndexOnlyScan(
+									   AppendOnlyVisimap *visiMap,
+									   Relation aoRel,
+									   Snapshot snapshot);
+
+extern void AppendOnlyVisimap_Finish_forIndexOnlyScan(
+												   AppendOnlyVisimap *visiMap);
 
 bool AppendOnlyVisimapScan_GetNextInvisible(
 									   AppendOnlyVisimapScan *visiMapScan,
@@ -149,4 +169,35 @@ TM_Result AppendOnlyVisimapDelete_Hide(
 
 void AppendOnlyVisimapDelete_Finish(
 							   AppendOnlyVisimapDelete *visiMapDelete);
+
+/*
+ * AppendOnlyVisimap_UniqueCheck
+ *
+ * During a uniqueness check, look up the visimap to see if a tuple was deleted
+ * by a *committed* transaction.
+ *
+ * Note: We need to use the passed in per-tuple snapshot to perform the block
+ * directory lookup. See AppendOnlyVisimap_Init_forUniqueCheck() for details on
+ * why we can't set up the metadata snapshot at init time.
+ * If this is part of an update, we are reusing the visimap from the delete half
+ * of the update, so better restore its snapshot once we are done.
+ */
+static inline bool AppendOnlyVisimap_UniqueCheck(
+											AppendOnlyVisimap *visiMap,
+											AOTupleId *aoTupleId,
+											Snapshot appendOnlyMetaDataSnapshot)
+{
+	Snapshot save_snapshot;
+	bool visible;
+
+	Assert(appendOnlyMetaDataSnapshot->snapshot_type == SNAPSHOT_DIRTY ||
+			appendOnlyMetaDataSnapshot->snapshot_type == SNAPSHOT_SELF);
+
+	save_snapshot = visiMap->visimapStore.snapshot;
+	visiMap->visimapStore.snapshot = appendOnlyMetaDataSnapshot;
+	visible = AppendOnlyVisimap_IsVisible(visiMap, aoTupleId);
+	visiMap->visimapStore.snapshot = save_snapshot;
+	return visible;
+}
+
 #endif

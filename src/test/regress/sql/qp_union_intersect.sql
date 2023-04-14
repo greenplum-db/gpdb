@@ -267,12 +267,9 @@ SELECT COUNT(*) FROM dml_union_r;
 -- @description union_test29: INSERT NON ATOMICS with union/intersect/except
 begin;
 SELECT COUNT(*) FROM dml_union_r;
--- GPDB_12_MERGE_FIXME: ORCA doesn't produce the right intersect plan
-set optimizer=off;
 SELECT COUNT(*) FROM (SELECT dml_union_r.* FROM dml_union_r INTERSECT (SELECT dml_union_r.* FROM dml_union_r UNION ALL SELECT dml_union_s.* FROM dml_union_s) EXCEPT SELECT dml_union_s.* FROM dml_union_s)foo;
 INSERT INTO dml_union_r SELECT dml_union_r.* FROM dml_union_r INTERSECT (SELECT dml_union_r.* FROM dml_union_r UNION ALL SELECT dml_union_s.* FROM dml_union_s) EXCEPT SELECT dml_union_s.* FROM dml_union_s;
 SELECT COUNT(*) FROM dml_union_r;
-reset optimizer;
 rollback;
 
 -- @description union_test30: INSERT NON ATOMICS with union/intersect/except
@@ -645,6 +642,7 @@ UPDATE dml_union_s SET b = (SELECT NULL UNION SELECT NULL)::numeric;
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
 set optimizer_segments=2;
+ANALYZE dml_union_r, dml_union_s;
 SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 UPDATE dml_union_r SET a = ( SELECT a FROM dml_union_r UNION ALL SELECT a FROM dml_union_s);
 reset optimizer_segments;
@@ -783,6 +781,17 @@ explain analyze select a, b, array_dims(array_agg(x)) from mergeappend_test r gr
 union all
 select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
 order by 1,2;
+
+select * from
+  test_util.extract_plan_stats($$
+select a, b, array_dims(array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
+order by 1,2;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
 
 CREATE TABLE t1(c1 int, c2 int, c3 int);
 CREATE TABLE t2(c1 int, c2 int, c3 int);

@@ -20,6 +20,7 @@
 #define GPDB_OID_OID OID(26)
 #define GPDB_OID_OPFAMILY OID(1990)
 #define GPDB_OID_LEGACY_OPFAMILY OID(7109)
+#define GPDB_OID_PART_OPFAMILY OID(1989)
 #define GPDB_OID_LENGTH 4
 #define GPDB_OID_EQ_OP OID(607)
 #define GPDB_OID_NEQ_OP OID(608)
@@ -32,8 +33,8 @@
 #define GPDB_OID_COMP_OP OID(356)
 #define GPDB_OID_HASH_OP OID(0)
 
-#define GPDB_OID_AGG_MIN OID(2118)
-#define GPDB_OID_AGG_MAX OID(2134)
+#define GPDB_OID_AGG_MIN OID(2134)
+#define GPDB_OID_AGG_MAX OID(2118)
 #define GPDB_OID_AGG_AVG OID(0)
 #define GPDB_OID_AGG_SUM OID(0)
 #define GPDB_OID_AGG_COUNT OID(2147)
@@ -74,6 +75,7 @@ private:
 	IMDId *m_mdid;
 	IMDId *m_distr_opfamily;
 	IMDId *m_legacy_distr_opfamily;
+	IMDId *m_part_opfamily;
 
 	// mdids of different comparison operators
 	IMDId *m_mdid_op_eq;
@@ -131,6 +133,8 @@ public:
 	IMDId *MDId() const override;
 
 	IMDId *GetDistrOpfamilyMdid() const override;
+
+	IMDId *GetPartOpfamilyMdid() const override;
 
 	CMDName Mdname() const override;
 

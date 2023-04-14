@@ -1,4 +1,8 @@
-CREATE TABLE brintest_aocs (byteacol bytea,
+-- Most of these test steps are modified such that the tables' tuples are
+-- co-located on one QE.
+-- Test scan correctness
+CREATE TABLE brintest_aocs (id int,
+	byteacol bytea,
 	charcol "char",
 	namecol name,
 	int8col bigint,
@@ -28,6 +32,7 @@ CREATE TABLE brintest_aocs (byteacol bytea,
 	boxcol box
 ) WITH (appendonly = true, orientation=column);
 INSERT INTO brintest_aocs SELECT
+	1,
 	repeat(stringu1, 8)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -57,7 +62,8 @@ INSERT INTO brintest_aocs SELECT
 	box(point(odd, even), point(thousand, twothousand))
 FROM tenk1 ORDER BY unique2 LIMIT 100;
 -- throw in some NULL's and different values
-INSERT INTO brintest_aocs (inetcol, cidrcol, int4rangecol) SELECT
+INSERT INTO brintest_aocs (id, inetcol, cidrcol, int4rangecol) SELECT
+	1,
 	inet 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	cidr 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	'empty'::int4range
@@ -411,6 +417,7 @@ RESET enable_bitmapscan;
 RESET optimizer_enable_tablescan;
 RESET optimizer_enable_bitmapscan;
 INSERT INTO brintest_aocs SELECT
+	1,
 	repeat(stringu1, 42)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -439,36 +446,120 @@ INSERT INTO brintest_aocs SELECT
 	format('%s/%s%s', odd, even, tenthous)::pg_lsn,
 	box(point(odd, even), point(thousand, twothousand))
 FROM tenk1 ORDER BY unique2 LIMIT 5 OFFSET 5;
-VACUUM brintest_aocs;  -- force a summarization cycle in brinaocsidx
-UPDATE brintest_aocs SET int8col = int8col * int4col;
-UPDATE brintest_aocs SET textcol = '' WHERE textcol IS NOT NULL;
--- Vaccum again so that a new segment file is created.
-VACUUM brintest_aocs;
-INSERT INTO brintest_aocs SELECT * FROM brintest_aocs;
--- We should have two segment files per Greenplum segment (QE).
--- start_ignore
-SELECT segment_id, segno, tupcount, state FROM gp_toolkit.__gp_aoseg('brintest_aocs');
- segment_id | segno | tupcount | state 
-------------+-------+----------+-------
-          1 |     1 |       78 |     1
-          1 |     2 |       78 |     1
-          2 |     1 |       80 |     1
-          2 |     2 |       80 |     1
-          0 |     1 |      102 |     1
-          0 |     2 |      102 |     1
-(6 rows)
-
--- end_ignore
--- Tests for brin_summarize_new_values
-SELECT brin_summarize_new_values('brintest_aocs'); -- error, not an index
-ERROR:  "brintest_aocs" is not an index
-CONTEXT:  SQL function "brin_summarize_new_values" statement 1
-SELECT brin_summarize_new_values('tenk1_unique1'); -- error, not a BRIN index
-ERROR:  "tenk1_unique1" is not a BRIN index
-CONTEXT:  SQL function "brin_summarize_new_values" statement 1
-SELECT brin_summarize_new_values('brinaocsidx'); -- ok, no change expected
+-- Test summarization
+-- Note: We use loops to populate logical heap pages in one aoseg. These logical
+-- heap blocks can start at a large number. See AOSegmentGet_startHeapBlock(segno).
+CREATE TABLE brin_aoco_summarize(i int) USING ao_column;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX ON brin_aoco_summarize USING brin(i) WITH (pages_per_range=1);
+-- There is no data, so nothing to summarize.
+SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
  brin_summarize_new_values 
 ---------------------------
                          0
+(1 row)
+
+DROP INDEX brin_aoco_summarize_i_idx;
+-- Create 3 blocks all on 1 QE, in 1 aoseg: 2 blocks full, 1 block with 1 tuple.
+DO $$
+DECLARE curtid tid;
+BEGIN
+  LOOP
+    INSERT INTO brin_aoco_summarize VALUES (1) RETURNING ctid INTO curtid;
+    EXIT WHEN curtid > tid '(33554434, 0)';
+  END LOOP;
+END;
+$$;
+-- Now create the index on the data inserted above.
+CREATE INDEX ON brin_aoco_summarize USING brin(i) WITH (pages_per_range=1);
+-- There is nothing new to summarize - it was all done during the index build.
+SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
+ brin_summarize_new_values 
+---------------------------
+                         0
+(1 row)
+
+-- Insert more so we have 5 blocks on 1 QE, in 1 aoseg: 4 blocks full, 1 block
+-- with 1 tuple. The last and penultimate blocks will be unsummarized.
+DO $$
+DECLARE curtid tid;
+BEGIN
+  LOOP
+    INSERT INTO brin_aoco_summarize VALUES (20) RETURNING ctid INTO curtid;
+    EXIT WHEN curtid > tid '(33554436, 0)';
+  END LOOP;
+END;
+$$;
+-- The last 2 blocks will be summarized.
+SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
+ brin_summarize_new_values 
+---------------------------
+                         2
+(1 row)
+
+-- Insert more so we have 7 blocks on 1 QE, in 1 aoseg: 6 blocks full, 1 page
+-- with 1 tuple. The last and penultimate blocks are unsummarized.
+DO $$
+DECLARE curtid tid;
+BEGIN
+  LOOP
+    INSERT INTO brin_aoco_summarize VALUES (30) RETURNING ctid INTO curtid;
+    EXIT WHEN curtid > tid '(33554438, 0)';
+  END LOOP;
+END;
+$$;
+DELETE FROM brin_aoco_summarize WHERE i = 1;
+VACUUM brin_aoco_summarize;
+-- All the tuples will have been moved to one aoseg and all the tuples should
+-- have fit in one logical heap block.
+SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum
+FROM brin_aoco_summarize;
+  blknum  
+----------
+ 67108864
+(1 row)
+
+-- VACUUM should have already summarized this one logical heap block, so
+-- invoking summarization again will be a no-op.
+SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
+ brin_summarize_new_values 
+---------------------------
+                         0
+(1 row)
+
+-- We don't allow specific range summarization for AO tables at the moment.
+SELECT brin_summarize_range('brin_aoco_summarize_i_idx', 1);
+ERROR:  cannot summarize specific page range for append-optimized tables  (seg0 slice1 192.168.0.148:7002 pid=67650)
+CONTEXT:  SQL function "brin_summarize_range" statement 1
+-- Test summarization of last partial range.
+CREATE TABLE brin_aoco_summarize_partial(i int) USING ao_column;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX ON brin_aoco_summarize_partial USING brin(i) WITH (pages_per_range=3);
+-- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
+-- The 1st range [33554432, 33554434] is full and the last range [33554435, 33554437]
+-- is partially full with just 1 block: 33554435.
+DO $$
+DECLARE curtid tid;
+BEGIN
+  LOOP
+    INSERT INTO brin_aoco_summarize_partial VALUES (1) RETURNING ctid INTO curtid;
+    EXIT WHEN curtid > tid '(33554435, 0)';
+  END LOOP;
+END;
+$$;
+-- We should successfully summarize the last partial range.
+--
+-- Note: For an empty AOCO table, when INSERTing into the 1st range, we don't
+-- summarize. brininsert() -> brinGetTupleForHeapBlock() actually returns NULL
+-- in this case as revmap_get_blkno_ao() returns InvalidBlockNumber.
+-- This is contrary to heap behavior (where we return 1).
+--
+-- Thus, we will have both ranges summarized here.
+SELECT brin_summarize_new_values('brin_aoco_summarize_partial_i_idx');
+ brin_summarize_new_values 
+---------------------------
+                         2
 (1 row)
 

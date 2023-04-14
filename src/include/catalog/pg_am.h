@@ -21,6 +21,10 @@
 #include "catalog/genbki.h"
 #include "catalog/pg_am_d.h"
 
+/* GPDB: convenient macro for checking AO AMs */
+#define IsAccessMethodAO(am_oid) \
+	((am_oid) == AO_ROW_TABLE_AM_OID || (am_oid) == AO_COLUMN_TABLE_AM_OID)
+
 /* ----------------
  *		pg_am definition.  cpp turns this into
  *		typedef struct FormData_pg_am

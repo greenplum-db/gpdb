@@ -64,7 +64,6 @@ typedef struct AOCSInsertDescData
     Oid         segrelid;
     Oid         blkdirrelid;
     Oid         visimaprelid;
-    Oid         visimapidxid;
 	struct DatumStreamWrite **ds;
 
 	AppendOnlyBlockDirectory blockDirectory;
@@ -180,6 +179,12 @@ typedef struct AOCSScanDescData
 	 */
 	AppendOnlyBlockDirectory *blockDirectory;
 	AppendOnlyVisimap visibilityMap;
+
+	/*
+	 * The total number of bytes read, compressed, across all segment files, and
+	 * across all columns projected, so far. It is used for scan progress reporting.
+	 */
+	int64		totalBytesRead;
 } AOCSScanDescData;
 
 typedef AOCSScanDescData *AOCSScanDesc;
@@ -206,13 +211,15 @@ typedef struct AOCSFetchDescData
 	struct AOCSFileSegInfo **segmentFileInfo;
 
 	/*
-	 * The largest row number of this aoseg. Maximum row number is required in
-	 * function "aocs_fetch". If we have no updates and deletes, the
-	 * total_tupcount is equal to the maximum row number. But after some updates
-	 * and deletes, the maximum row number always much bigger than
-	 * total_tupcount. The appendonly_insert function will get fast sequence and
-	 * use it as the row number. So the last sequence will be the correct
-	 * maximum row number.
+	 * Array containing the maximum row number in each aoseg (to be consulted
+	 * during fetch). This is a sparse array as not all segments are involved
+	 * in a scan. Sparse entries are marked with InvalidAORowNum.
+	 *
+	 * Note:
+	 * If we have no updates and deletes, the total_tupcount is equal to the
+	 * maximum row number. But after some updates and deletes, the maximum row
+	 * number is always much bigger than total_tupcount, so this carries the
+	 * last sequence from gp_fastsequence.
 	 */
 	int64			lastSequence[AOTupleId_MultiplierSegmentFileNum];
 
@@ -233,17 +240,56 @@ typedef struct AOCSFetchDescData
 
 typedef AOCSFetchDescData *AOCSFetchDesc;
 
-typedef struct AOCSUpdateDescData *AOCSUpdateDesc;
+/*
+ * AOCSDeleteDescData is used for delete data from AOCS relations.
+ * It serves an equivalent purpose as AppendOnlyScanDescData
+ * (relscan.h) only that the later is used for scanning append-only
+ * relations.
+ */
+typedef struct AOCSDeleteDescData
+{
+	/*
+	 * Relation to delete from
+	 */
+	Relation	aod_rel;
+
+	/*
+	 * visibility map
+	 */
+	AppendOnlyVisimap visibilityMap;
+
+	/*
+	 * Visimap delete support structure. Used to handle out-of-order deletes
+	 */
+	AppendOnlyVisimapDelete visiMapDelete;
+
+}			AOCSDeleteDescData;
 typedef struct AOCSDeleteDescData *AOCSDeleteDesc;
+
+typedef struct AOCSUniqueCheckDescData
+{
+	AppendOnlyBlockDirectory *blockDirectory;
+	AppendOnlyVisimap 		 *visimap;
+} AOCSUniqueCheckDescData;
+
+typedef struct AOCSUniqueCheckDescData *AOCSUniqueCheckDesc;
+
+typedef struct AOCSIndexOnlyDescData
+{
+	AppendOnlyBlockDirectory *blockDirectory;
+	AppendOnlyVisimap 		 *visimap;
+} AOCSIndexOnlyDescData, *AOCSIndexOnlyDesc;
 
 /*
  * Descriptor for fetches from table via an index.
  */
 typedef struct IndexFetchAOCOData
 {
-	IndexFetchTableData xs_base;	/* AM independent part of the descriptor */
+	IndexFetchTableData xs_base;		/* AM independent part of the descriptor */
 
-	AOCSFetchDesc       aocofetch;
+	AOCSFetchDesc       aocofetch;		/* used only for index scans */
+
+	AOCSIndexOnlyDesc	indexonlydesc;	/* used only for index only scans */
 
 	bool                *proj;
 } IndexFetchAOCOData;
@@ -261,6 +307,7 @@ typedef struct IndexFetchAOCOData
 
 typedef struct AOCSHeaderScanDescData
 {
+	Oid   relid;  /* relid of the relation */
 	int32 colno;  /* chosen column number to read headers from */
 
 	AppendOnlyStorageRead ao_read;
@@ -300,7 +347,7 @@ extern void aocs_rescan(AOCSScanDesc scan);
 extern void aocs_endscan(AOCSScanDesc scan);
 
 extern bool aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot);
-extern AOCSInsertDesc aocs_insert_init(Relation rel, int segno);
+extern AOCSInsertDesc aocs_insert_init(Relation rel, int segno, int64 num_rows);
 extern void aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupleId);
 static inline void aocs_insert(AOCSInsertDesc idesc, TupleTableSlot *slot)
 {
@@ -316,12 +363,12 @@ extern bool aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 					   AOTupleId *aoTupleId,
 					   TupleTableSlot *slot);
 extern void aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc);
-
-extern AOCSUpdateDesc aocs_update_init(Relation rel, int segno);
-extern void aocs_update_finish(AOCSUpdateDesc desc);
-extern TM_Result aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
-			AOTupleId *oldTupleId, AOTupleId *newTupleId);
-
+extern AOCSIndexOnlyDesc aocs_index_only_init(Relation relation,
+											  Snapshot snapshot);
+extern bool aocs_index_only_check(AOCSIndexOnlyDesc indexonlydesc,
+								  AOTupleId *aotid,
+								  Snapshot snapshot);
+extern void aocs_index_only_finish(AOCSIndexOnlyDesc indexonlydesc);
 extern AOCSDeleteDesc aocs_delete_init(Relation rel);
 extern TM_Result aocs_delete(AOCSDeleteDesc desc, 
 		AOTupleId *aoTupleId);
@@ -349,7 +396,24 @@ extern void aocs_addcol_emptyvpe(
 extern void aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc,
 		int64 firstRowNum);
 
-extern void aoco_dml_init(Relation relation, CmdType operation);
-extern void aoco_dml_finish(Relation relation, CmdType operation);
+extern void aoco_dml_init(Relation relation);
+extern void aoco_dml_finish(Relation relation);
+
+/*
+ * Update total bytes read for the entire scan. If the block was compressed,
+ * update it with the compressed length. If the block was not compressed, update
+ * it with the uncompressed length.
+ */
+static inline void
+AOCSScanDesc_UpdateTotalBytesRead(AOCSScanDesc scan, AttrNumber attno)
+{
+	Assert(scan->columnScanInfo.ds[attno]);
+	Assert(scan->columnScanInfo.ds[attno]->ao_read.isActive);
+
+	if (scan->columnScanInfo.ds[attno]->ao_read.current.isCompressed)
+		scan->totalBytesRead += scan->columnScanInfo.ds[attno]->ao_read.current.compressedLen;
+	else
+		scan->totalBytesRead += scan->columnScanInfo.ds[attno]->ao_read.current.uncompressedLen;
+}
 
 #endif   /* AOCSAM_H */

@@ -101,6 +101,7 @@ extern void text_to_cstring_buffer(const text *src, char *dst, size_t dst_len);
 
 /* xid.c */
 extern int	xidComparator(const void *arg1, const void *arg2);
+extern int	xidLogicalComparator(const void *arg1, const void *arg2);
 
 /* inet_cidr_ntop.c */
 extern char *inet_cidr_ntop(int af, const void *src, int bits,
@@ -141,5 +142,11 @@ extern Datum gp_instrument_shmem_summary(PG_FUNCTION_ARGS);
 
 /* utils/gp/segadmin.c */
 extern bool gp_activate_standby(void);
+
+/* utils/adt/genfile.c */
+extern Datum pg_file_write(PG_FUNCTION_ARGS);
+extern Datum pg_file_rename(PG_FUNCTION_ARGS);
+extern Datum pg_file_unlink(PG_FUNCTION_ARGS);
+extern Datum pg_logdir_ls(PG_FUNCTION_ARGS);
 
 #endif							/* BUILTINS_H */

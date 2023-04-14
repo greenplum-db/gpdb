@@ -1309,7 +1309,7 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	 * And in the function cdbpathlocus_join there is a rule:
 	 * <any locus type> join <Replicated> => any locus type
 	 * Proof by contradiction, it shows that when code arrives here,
-	 * is is impossible that any of the two input paths' locus
+	 * it is impossible that any of the two input paths' locus
 	 * is Replicated. So we add two asserts here.
 	 */
 	Assert(!CdbPathLocus_IsReplicated(outer.locus));
@@ -1981,7 +1981,7 @@ cdbpath_motion_for_join(PlannerInfo *root,
 			CdbPathLocus_MakeReplicated(&small_rel->move_to,
 										CdbPathLocus_NumSegments(large_rel->locus));
 
-		/* Replicate largeer rel if cheaper than redistributing both rels. */
+		/* Replicate larger rel if cheaper than redistributing both rels. */
 		else if (!large_rel->require_existing_order &&
 				 large_rel->ok_to_replicate &&
 				 (large_rel->bytes * CdbPathLocus_NumSegments(small_rel->locus) <
@@ -2587,6 +2587,12 @@ turn_volatile_seggen_to_singleqe(PlannerInfo *root, Path *path, Node *node)
 		CdbPathLocus_MakeSingleQE(&singleQE,
 								  CdbPathLocus_NumSegments(path->locus));
 		mpath = cdbpath_create_motion_path(root, path, NIL, false, singleQE);
+		/*
+		 * mpath might be NULL, like path contain outer Params
+		 * See Github Issue 13532 for details.
+		 */
+		if (mpath == NULL)
+			return path;
 		ppath =  create_projection_path_with_quals(root, mpath->parent, mpath,
 												   mpath->pathtarget, NIL, false);
 		ppath->force = true;
@@ -2607,10 +2613,23 @@ make_splitupdate_path(PlannerInfo *root, Path *subpath, Index rti)
 	/* Suppose we already hold locks before caller */
 	rte = planner_rt_fetch(rti, root);
 
-	/* GPDB_96_MERGE_FIXME: Why is this not allowed? */
-	/* GPDB_12_MERGE_FIXME: PostgreSQL fires the DELETE+INSERT trigger, if
-	 * you UPDATE a partitioning key column. We could probably do the same with
-	 * update on the distribution key column.
+	/*
+	 * Firstly, Trigger is not supported officially by Greenplum.
+	 *
+	 * Secondly, the update trigger is processed in ExecUpdate.
+	 * however, splitupdate will execute ExecSplitUpdate_Insert
+	 * or ExecDelete instead of ExecUpdate. So the update trigger
+	 * will not be triggered in a split plan.
+	 *
+	 * PostgreSQL fires the row-level DELETE, INSERT, and BEFORE
+	 * UPDATE triggers, but not row-level AFTER UPDATE triggers,
+	 * if you UPDATE a partitioning key column.
+	 * Doing a similar thing doesn't help Greenplum likely, the
+	 * behavior would be uncertain since some triggers happen on
+	 * segments and they may require cross segments data changes.
+	 *
+	 * So an update trigger is not allowed when updating the
+	 * distribution key.
 	 */
 	if (has_update_triggers(rte->relid))
 		ereport(ERROR,

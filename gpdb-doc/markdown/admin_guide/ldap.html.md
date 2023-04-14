@@ -11,7 +11,7 @@ Greenplum Database supports LDAP authentication with the TLS/SSL protocol to enc
 
 If no protocol is specified, Greenplum Database communicates with the LDAP server with a clear text connection.
 
-To use LDAP authentication, the Greenplum Database master host must be configured as an LDAP client. See your LDAP documentation for information about configuring LDAP clients.
+To use LDAP authentication, the Greenplum Database coordinator host must be configured as an LDAP client. See your LDAP documentation for information about configuring LDAP clients.
 
 ## <a id="enldap"></a>Enabling LDAP Authentication with STARTTLS and TLS 
 
@@ -51,9 +51,9 @@ If you have a system-wide OpenLDAP system and logins are configured to use LDAP 
 could not start LDAP TLS session: error code '-11'
 ```
 
-To use an existing OpenLDAP system for authentication, Greenplum Database must be set up to use the LDAP server's CA certificate to validate user certificates. Follow these steps on both the master and standby hosts to configure Greenplum Database:
+To use an existing OpenLDAP system for authentication, Greenplum Database must be set up to use the LDAP server's CA certificate to validate user certificates. Follow these steps on both the coordinator and standby hosts to configure Greenplum Database:
 
-1.  Copy the base64-encoded root CA chain file from the Active Directory or LDAP server to the Greenplum Database master and standby master hosts. This example uses the directory `/etc/pki/tls/certs`.
+1.  Copy the base64-encoded root CA chain file from the Active Directory or LDAP server to the Greenplum Database coordinator and standby coordinator hosts. This example uses the directory `/etc/pki/tls/certs`.
 2.  Change to the directory where you copied the CA certificate file and, as the root user, generate the hash for OpenLDAP:
 
     ```
@@ -74,7 +74,7 @@ To use an existing OpenLDAP system for authentication, Greenplum Database must b
      TLS_CACERT /etc/pki/tls/certs/<ca-certificate-file>
     ```
 
-    **Note:** For certificate validation to succeed, the hostname in the certificate must match a hostname in the URI property. Otherwise, you must also add `TLS_REQCERT allow` to the file.
+    > **Note** For certificate validation to succeed, the hostname in the certificate must match a hostname in the URI property. Otherwise, you must also add `TLS_REQCERT allow` to the file.
 
 4.  As the gpadmin user, edit `/usr/local/greenplum-db/greenplum_path.sh` and add the following line.
 
@@ -116,5 +116,5 @@ This example specifies LDAP authentication with a secure connection and TLS/SSL 
 host all ldapsuser 0.0.0.0/0 ldap ldapserver=ldaps://myldap.com ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"
 ```
 
-**Parent topic:**[Configuring Client Authentication](client_auth.html)
+**Parent topic:** [Configuring Client Authentication](client_auth.html)
 

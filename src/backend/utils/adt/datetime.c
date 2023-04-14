@@ -27,6 +27,7 @@
 #include "nodes/nodeFuncs.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
+#include "utils/guc.h"
 #include "utils/datetime.h"
 #include "utils/memutils.h"
 #include "utils/tzparser.h"
@@ -976,14 +977,9 @@ DecodeDateTime(char **field, int *ftype, int nf,
 				if (dterr)
 					return dterr;
 
-				/*
-				 * Check upper limit on hours; other limits checked in
-				 * DecodeTime()
-				 */
-				/* test for > 24:00:00 */
-				if (tm->tm_hour > HOURS_PER_DAY ||
-					(tm->tm_hour == HOURS_PER_DAY &&
-					 (tm->tm_min > 0 || tm->tm_sec > 0 || *fsec > 0)))
+				/* check for time overflow */
+				if (time_overflows(tm->tm_hour, tm->tm_min, tm->tm_sec,
+								   *fsec))
 					return DTERR_FIELD_OVERFLOW;
 				break;
 
@@ -2261,16 +2257,8 @@ DecodeTimeOnly(char **field, int *ftype, int nf,
 	else if (mer == PM && tm->tm_hour != HOURS_PER_DAY / 2)
 		tm->tm_hour += HOURS_PER_DAY / 2;
 
-	/*
-	 * This should match the checks in make_timestamp_internal
-	 */
-	if (tm->tm_hour < 0 || tm->tm_min < 0 || tm->tm_min > MINS_PER_HOUR - 1 ||
-		tm->tm_sec < 0 || tm->tm_sec > SECS_PER_MINUTE ||
-		tm->tm_hour > HOURS_PER_DAY ||
-	/* test for > 24:00:00 */
-		(tm->tm_hour == HOURS_PER_DAY &&
-		 (tm->tm_min > 0 || tm->tm_sec > 0 || *fsec > 0)) ||
-		*fsec < INT64CONST(0) || *fsec > USECS_PER_SEC)
+	/* check for time overflow */
+	if (time_overflows(tm->tm_hour, tm->tm_min, tm->tm_sec, *fsec))
 		return DTERR_FIELD_OVERFLOW;
 
 	if ((fmask & DTK_TIME_M) != DTK_TIME_M)
@@ -2320,6 +2308,9 @@ DecodeTimeOnly(char **field, int *ftype, int nf,
 			GetCurrentDateTime(tmp);
 		else
 		{
+			/* a date has to be specified */
+			if ((fmask & DTK_DATE_M) != DTK_DATE_M)
+				return DTERR_BAD_FORMAT;
 			tmp->tm_year = tm->tm_year;
 			tmp->tm_mon = tm->tm_mon;
 			tmp->tm_mday = tm->tm_mday;
@@ -2347,6 +2338,9 @@ DecodeTimeOnly(char **field, int *ftype, int nf,
 			GetCurrentDateTime(tmp);
 		else
 		{
+			/* a date has to be specified */
+			if ((fmask & DTK_DATE_M) != DTK_DATE_M)
+				return DTERR_BAD_FORMAT;
 			tmp->tm_year = tm->tm_year;
 			tmp->tm_mon = tm->tm_mon;
 			tmp->tm_mday = tm->tm_mday;
@@ -2868,6 +2862,8 @@ DecodeNumberField(int len, char *str, int fmask,
 			tm->tm_year = atoi(str);
 			if ((len - 4) == 2)
 				*is2digits = true;
+			else if (((len - 4 ) == 3) && !gp_allow_date_field_width_5digits)
+				return DTERR_BAD_FORMAT;
 
 			return DTK_DATE;
 		}
@@ -4876,12 +4872,12 @@ pg_timezone_abbrevs(PG_FUNCTION_ARGS)
 Datum
 pg_timezone_names(PG_FUNCTION_ARGS)
 {
-	MemoryContext oldcontext;
-	FuncCallContext *funcctx;
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	bool		randomAccess;
+	TupleDesc	tupdesc;
+	Tuplestorestate *tupstore;
 	pg_tzenum  *tzenum;
 	pg_tz	   *tz;
-	Datum		result;
-	HeapTuple	tuple;
 	Datum		values[4];
 	bool		nulls[4];
 	int			tzoff;
@@ -4890,59 +4886,41 @@ pg_timezone_names(PG_FUNCTION_ARGS)
 	const char *tzn;
 	Interval   *resInterval;
 	struct pg_tm itm;
+	MemoryContext oldcontext;
 
-	/* stuff done only on the first call of the function */
-	if (SRF_IS_FIRSTCALL())
-	{
-		TupleDesc	tupdesc;
+	/* check to see if caller supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize))
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("materialize mode required, but it is not allowed in this context")));
 
-		/* create a function context for cross-call persistence */
-		funcctx = SRF_FIRSTCALL_INIT();
+	/* The tupdesc and tuplestore must be created in ecxt_per_query_memory */
+	oldcontext = MemoryContextSwitchTo(rsinfo->econtext->ecxt_per_query_memory);
 
-		/*
-		 * switch to memory context appropriate for multiple function calls
-		 */
-		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		elog(ERROR, "return type must be a row type");
 
-		/* initialize timezone scanning code */
-		tzenum = pg_tzenumerate_start();
-		funcctx->user_fctx = (void *) tzenum;
+	randomAccess = (rsinfo->allowedModes & SFRM_Materialize_Random) != 0;
+	tupstore = tuplestore_begin_heap(randomAccess, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
 
-		/*
-		 * build tupdesc for result tuples. This must match this function's
-		 * pg_proc entry!
-		 */
-		tupdesc = CreateTemplateTupleDesc(4);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "name",
-						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "abbrev",
-						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "utc_offset",
-						   INTERVALOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "is_dst",
-						   BOOLOID, -1, 0);
+	MemoryContextSwitchTo(oldcontext);
 
-		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
-		MemoryContextSwitchTo(oldcontext);
-	}
-
-	/* stuff done on every call of the function */
-	funcctx = SRF_PERCALL_SETUP();
-	tzenum = (pg_tzenum *) funcctx->user_fctx;
+	/* initialize timezone scanning code */
+	tzenum = pg_tzenumerate_start();
 
 	/* search for another zone to display */
 	for (;;)
 	{
-		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 		tz = pg_tzenumerate_next(tzenum);
-		MemoryContextSwitchTo(oldcontext);
-
 		if (!tz)
-		{
-			pg_tzenumerate_end(tzenum);
-			funcctx->user_fctx = NULL;
-			SRF_RETURN_DONE(funcctx);
-		}
+			break;
 
 		/* Convert now() to local time in this zone */
 		if (timestamp2tm(GetCurrentTransactionStartTimestamp(),
@@ -4950,37 +4928,33 @@ pg_timezone_names(PG_FUNCTION_ARGS)
 			continue;			/* ignore if conversion fails */
 
 		/*
-		 * Ignore zic's rather silly "Factory" time zone.  The long string
-		 * about "see zic manual page" is used in tzdata versions before
-		 * 2016g; we can drop it someday when we're pretty sure no such data
-		 * exists in the wild on platforms using --with-system-tzdata.  In
-		 * 2016g and later, the time zone abbreviation "-00" is used for
-		 * "Factory" as well as some invalid cases, all of which we can
-		 * reasonably omit from the pg_timezone_names view.
+		 * IANA's rather silly "Factory" time zone used to emit ridiculously
+		 * long "abbreviations" such as "Local time zone must be set--see zic
+		 * manual page" or "Local time zone must be set--use tzsetup".  While
+		 * modern versions of tzdb emit the much saner "-00", it seems some
+		 * benighted packagers are hacking the IANA data so that it continues
+		 * to produce these strings.  To prevent producing a weirdly wide
+		 * abbrev column, reject ridiculously long abbreviations.
 		 */
-		if (tzn && (strcmp(tzn, "-00") == 0 ||
-					strcmp(tzn, "Local time zone must be set--see zic manual page") == 0))
+		if (tzn && strlen(tzn) > 31)
 			continue;
 
-		/* Found a displayable zone */
-		break;
+		MemSet(nulls, 0, sizeof(nulls));
+
+		values[0] = CStringGetTextDatum(pg_get_timezone_name(tz));
+		values[1] = CStringGetTextDatum(tzn ? tzn : "");
+
+		MemSet(&itm, 0, sizeof(struct pg_tm));
+		itm.tm_sec = -tzoff;
+		resInterval = (Interval *) palloc(sizeof(Interval));
+		tm2interval(&itm, 0, resInterval);
+		values[2] = IntervalPGetDatum(resInterval);
+
+		values[3] = BoolGetDatum(tm.tm_isdst > 0);
+
+		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
-	MemSet(nulls, 0, sizeof(nulls));
-
-	values[0] = CStringGetTextDatum(pg_get_timezone_name(tz));
-	values[1] = CStringGetTextDatum(tzn ? tzn : "");
-
-	MemSet(&itm, 0, sizeof(struct pg_tm));
-	itm.tm_sec = -tzoff;
-	resInterval = (Interval *) palloc(sizeof(Interval));
-	tm2interval(&itm, 0, resInterval);
-	values[2] = IntervalPGetDatum(resInterval);
-
-	values[3] = BoolGetDatum(tm.tm_isdst > 0);
-
-	tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
-	result = HeapTupleGetDatum(tuple);
-
-	SRF_RETURN_NEXT(funcctx, result);
+	pg_tzenumerate_end(tzenum);
+	return (Datum) 0;
 }

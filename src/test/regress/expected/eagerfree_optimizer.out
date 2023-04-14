@@ -49,6 +49,7 @@ explain analyze select d, count(*) from smallt group by d;
          ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=1.510..1.513 rows=35 loops=1)
                Sort Key: d
                Sort Method:  quicksort  Memory: 99kB
+               Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 1)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.342..1.481 rows=35 loops=1)
                      Hash Key: d
                      ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.002..0.004 rows=50 loops=1)
@@ -59,7 +60,20 @@ explain analyze select d, count(*) from smallt group by d;
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.061 ms
-(16 rows)
+(17 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 set statement_mem=2560;
 select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
@@ -192,6 +206,7 @@ where t1.d = t2.d;
                ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=0.029..0.032 rows=35 loops=1)
                      Sort Key: smallt.d
                      Sort Method:  quicksort  Memory: 99kB
+                     Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 1)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.004..0.011 rows=35 loops=1)
                            Hash Key: smallt.d
                            ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.003..0.018 rows=50 loops=1)
@@ -212,6 +227,21 @@ where t1.d = t2.d;
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.226 ms
 (29 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select d, count(*) from smallt group by d) as t1, (select d, sum(i) from smallt group by d) as t2
+where t1.d = t2.d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 set enable_nestloop=off;
 set enable_hashjoin=on;
@@ -247,12 +277,12 @@ where t1.i = t2.i;
    ->  Hash Join  (cost=0.00..862.01 rows=4 width=24) (actual time=0.166..0.460 rows=2 loops=2)
          Hash Cond: smallt.i = smallt_1.i
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 4 of 131072 buckets.
- 
          ->  GroupAggregate  (cost=0.00..431.01 rows=4 width=12) (actual time=0.041..0.055 rows=2 loops=2)
                Group Key: smallt.i
                ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.036..0.042 rows=20 loops=2)
                      Sort Key: smallt.i
                      Sort Method:  quicksort  Memory: 99kB
+                     Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
                      ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.004..0.013 rows=20 loops=2)
          ->  Hash  (cost=431.01..431.01 rows=4 width=12) (actual time=0.072..0.072 rows=2 loops=2)
                ->  GroupAggregate  (cost=0.00..431.01 rows=4 width=12) (actual time=0.053..0.069 rows=2 loops=2)
@@ -260,13 +290,29 @@ where t1.i = t2.i;
                      ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.048..0.053 rows=20 loops=2)
                            Sort Key: smallt_1.i
                            Sort Method:  quicksort  Memory: 99kB
+                           Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
                            ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=4) (actual time=0.012..0.022 rows=20 loops=2)
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 1238K bytes avg x 3 workers, 1238K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 2.471 ms
-(23 rows)
+(26 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select i, count(*) from smallt group by i) as t1, (select i, sum(i) from smallt group by i) as t2
+where t1.i = t2.i;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           2
+ workmem_wanted_lines |           0
+(2 rows)
 
 set enable_nestloop=off;
 set enable_hashjoin=on;
@@ -292,6 +338,7 @@ explain analyze select d, count(*) from smallt group by d limit 5;
                      ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=1.449..1.453 rows=26 loops=1)
                            Sort Key: d
                            Sort Method:  quicksort  Memory: 99kB
+                           Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 1)
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.413..1.428 rows=35 loops=1)
                                  Hash Key: d
                                  ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.003..0.006 rows=50 loops=1)
@@ -302,7 +349,20 @@ explain analyze select d, count(*) from smallt group by d limit 5;
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.024 ms
-(18 rows)
+(19 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d limit 5;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 -- HashJoin
 select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
@@ -1933,6 +1993,49 @@ and i = 0 order by 1,2,3; --order 1,2,3
  0 | text 5 | 01-06-2011
 (3 rows)
 
+-- Test Subplan with Agg
+with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+select count(*) from smallt2
+where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+ count 
+-------
+    43
+(1 row)
+
+--start_ignore
+explain with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+        select count(*) from smallt2
+        where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+
+              QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=0.00..1324486.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324486.07 rows=1 width=8)
+         ->  Partial Aggregate  (cost=0.00..1324486.07 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..1324486.07 rows=6 width=1)
+                     Hash Cond: (smallt2.d = smallt.d)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=17 width=4)
+                           Hash Key: smallt2.d
+                           ->  Seq Scan on smallt2  (cost=0.00..431.00 rows=17 width=4)
+                     ->  Hash  (cost=1324055.07..1324055.07 rows=3 width=4)
+                           ->  Result  (cost=0.00..1324055.07 rows=3 width=4)
+                                 Filter: ((CASE WHEN (sum((CASE WHEN (0 >= (sum(smallt.i))) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN ((sum(smallt.i)) IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (0 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (0 >= (sum(smallt.i))) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+                                 ->  HashAggregate  (cost=0.00..1324055.07 rows=7 width=20)
+                                       Group Key: smallt.d
+                                       ->  Nested Loop  (cost=0.00..1324055.03 rows=334 width=12)
+                                             Join Filter: true
+                                             ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12)
+                                                   Group Key: smallt.d
+                                                   ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=34 width=8)
+                                                         Hash Key: smallt.d
+                                                         ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=8)
+                                             ->  Materialize  (cost=0.00..431.00 rows=50 width=1)
+                                                   ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=50 width=1)
+                                                         ->  Seq Scan on smallt2 smallt2_1  (cost=0.00..431.00 rows=17 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(24 rows)
+
+--end_ignore
 -- Nested Subplan
 create table eager_free_r (r1 int, r2 int, r3 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'r1' as the Greenplum Database data distribution key for this table.

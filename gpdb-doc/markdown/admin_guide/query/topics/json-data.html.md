@@ -2,9 +2,9 @@
 title: Working with JSON Data 
 ---
 
-Greenplum Database supports the `json` and `jsonb` data types that store JSON \(JavaScript Object Notation\) data.
+Greenplum Database supports JSON as specified in the [RFC 7159](https://tools.ietf.org/html/rfc7159) document and enforces data validity according to the JSON rules. There are also JSON-specific functions and operators available for the `json` and `jsonb` data types. See [JSON Functions and Operators](../../../ref_guide/function-summary.html#topic_gn4_x3w_mq).
 
-Greenplum Database supports JSON as specified in the [RFC 7159](https://tools.ietf.org/html/rfc7159) document and enforces data validity according to the JSON rules. There are also JSON-specific functions and operators available for the `json` and `jsonb` data types. See [JSON Functions and Operators](#topic_gn4_x3w_mq).
+Greenplum Database offers two types for storing JSON \(JavaScript Object Notation\) data: `json` and `jsonb`. To implement efficient query mechanisms for these data types, Greenplum Database also provides the `jsonpath` data type described in [jsonpath Type](#topic_jsonpath) later in this topic.
 
 This section contains the following topics:
 
@@ -13,35 +13,37 @@ This section contains the following topics:
 -   [Designing JSON documents](#topic_eyt_3tw_mq)
 -   [jsonb Containment and Existence](#topic_isx_2tw_mq)
 -   [jsonb Indexing](#topic_aqt_1tw_mq)
--   [JSON Functions and Operators](#topic_gn4_x3w_mq)
+-   [Transforms](#topic_transforms)
+-   [jsonpath Type](#topic_jsonpath)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic_upc_tcs_fz"></a>About JSON Data 
 
-Greenplum Database supports two JSON data types: `json` and `jsonb`. They accept almost identical sets of values as input. The major difference is one of efficiency.
+The `json` and `jsonb` data types accept *almost* identical sets of values as input. The major difference is one of efficiency.
 
 -   The `json` data type stores an exact copy of the input text. This requires JSON processing functions to reparse `json` data on each execution. The `json` data type does not alter the input text.
-    -   Semantically-insignificant white space between tokens is retained, as well as the order of keys within JSON objects.
+    -   Semantically-insignificant white space between tokens is preserved, as well as the order of keys within JSON objects.
     -   All key/value pairs are kept even if a JSON object contains duplicate keys. For duplicate keys, JSON processing functions consider the last value as the operative one.
 -   The `jsonb` data type stores a decomposed binary format of the input text. The conversion overhead makes data input slightly slower than the `json` data type. However, The JSON processing functions are significantly faster because reparsing `jsonb` data is not required. The `jsonb` data type alters the input text.
 
     -   White space is not preserved.
     -   The order of object keys is not preserved.
     -   Duplicate object keys are not kept. If the input includes duplicate keys, only the last value is kept.
-    The `jsonb` data type supports indexing. See [jsonb Indexing](#topic_aqt_1tw_mq).
-
+-   The `jsonb` data type supports indexing. See [jsonb Indexing](#topic_aqt_1tw_mq).
 
 In general, JSON data should be stored as the `jsonb` data type unless there are specialized needs, such as legacy assumptions about ordering of object keys.
 
+Greenplum Database allows only one character set encoding per database. It is therefore not possible for the JSON types to conform rigidly to the JSON specification unless the database encoding is UTF8. Attempts to directly include characters that cannot be represented in the database encoding will fail; conversely, characters that can be represented in the database encoding but not in UTF8 are allowed.
+
 ### <a id="abuni"></a>About Unicode Characters in JSON Data 
 
-The [RFC 7159](https://tools.ietf.org/html/rfc7159) document permits JSON strings to contain Unicode escape sequences denoted by `\uXXXX`. However, Greenplum Database allows only one character set encoding per database. It is not possible for the `json` data type to conform rigidly to the JSON specification unless the database encoding is UTF8. Attempts to include characters that cannot be represented in the database encoding will fail. Characters that can be represented in the database encoding, but not in UTF8, are allowed.
+The [RFC 7159](https://tools.ietf.org/html/rfc7159) document permits JSON strings to contain Unicode escape sequences denoted by `\uXXXX`.
 
 -   The Greenplum Database input function for the `json` data type allows Unicode escapes regardless of the database encoding and checks Unicode escapes only for syntactic correctness \(a `\u` followed by four hex digits\).
--   The Greenplum Database input function for the `jsonb` data type is more strict. It does not allow Unicode escapes for non-ASCII characters \(those above `U+007F`\) unless the database encoding is UTF8. It also rejects `\u0000`, which cannot be represented in the Greenplum Database `text` type, and it requires that any use of Unicode surrogate pairs to designate characters outside the Unicode Basic Multilingual Plane be correct. Valid Unicode escapes, except for `\u0000`, are converted to the equivalent ASCII or UTF8 character for storage; this includes folding surrogate pairs into a single character.
+-   The Greenplum Database input function for the `jsonb` data type is more strict. It does not allow Unicode escapes for non-ASCII characters \(those above `U+007F`\) unless the database encoding is UTF8. The `jsonb` type also rejects `\u0000`, which cannot be represented in the Greenplum Database `text` type, and it requires that any use of Unicode surrogate pairs to designate characters outside the Unicode Basic Multilingual Plane be correct. Valid Unicode escapes, except for `\u0000`, are converted to the equivalent ASCII or UTF8 character for storage; this includes folding surrogate pairs into a single character.
 
-**Note:** Many of the JSON processing functions described in [JSON Functions and Operators](#topic_gn4_x3w_mq) convert Unicode escapes to regular characters. The functions throw an error for characters that cannot be represented in the database encoding. You should avoid mixing Unicode escapes in JSON with a non-UTF8 database encoding, if possible.
+> **Note** Many of the JSON processing functions described in [JSON Functions and Operators](../../../ref_guide/function-summary.html#topic_gn4_x3w_mq) convert Unicode escapes to regular characters and will therefore throw the same types of errors just described even if their input is of type `json` not `jsonb`. The fact that the `json` input function does not make these checks may be considered a historical artifact, although it does allow for simple storage \(without processing\) of JSON Unicode escapes in a non-UTF8 database encoding. In general, it is best to avoid mixing Unicode escapes in JSON with a non-UTF8 database encoding, if possible.
 
 ### <a id="mapjson"></a>Mapping JSON Data Types to Greenplum Data Types 
 
@@ -52,7 +54,7 @@ When converting JSON text input into `jsonb` data, the primitive data types desc
 |`string`|`text`|`\u0000` is not allowed. Non-ASCII Unicode escapes are allowed only if database encoding is UTF8|
 |`number`|`numeric`|`NaN` and `infinity` values are disallowed|
 |`boolean`|`boolean`|Only lowercase `true` and `false` spellings are accepted|
-|`null`|\(none\)|The JSON `null` primitive type is different than the SQL `NULL`.|
+|`null`|\(none\)|The JSON `null` primitive type is different than the SQL `NULL`|
 
 There are some minor constraints on what constitutes valid `jsonb` data that do not apply to the `json` data type, nor to JSON in the abstract, corresponding to limits on what can be represented by the underlying data type. Notably, when converting data to the `jsonb` data type, numbers that are outside the range of the Greenplum Database `numeric` data type are rejected, while the `json` data type does not reject such numbers.
 
@@ -66,7 +68,7 @@ Also, as noted in the previous table, there are some minor restrictions on the i
 
 The input and output syntax for the `json` data type is as specified in RFC 7159.
 
-The following are all valid `json` expressions:
+The following are all valid `json` \(or `jsonb`\) expressions:
 
 ```
 -- Simple scalar/primitive value
@@ -100,7 +102,7 @@ SELECT '{"bar": "baz", "balance": 7.77, "active":false}'::jsonb;
 (1 row)
 ```
 
-One semantically-insignificant detail worth noting is that with the `jsonb` data type, numbers will be printed according to the behavior of the underlying numeric type. In practice, this means that numbers entered with E notation will be printed without it, for example:
+One semantically-insignificant detail worth noting is that with the `jsonb` data type, numbers will be printed according to the behavior of the underlying `numeric` type. In practice, this means that numbers entered with `E` notation will be printed without it, for example:
 
 ```
 SELECT '{"reading": 1.230e-5}'::json, '{"reading": 1.230e-5}'::jsonb;
@@ -120,7 +122,7 @@ JSON data is subject to the same concurrency-control considerations as any other
 
 ## <a id="topic_isx_2tw_mq"></a>jsonb Containment and Existence 
 
-Testing *containment* is an important capability of `jsonb`. There is no parallel set of facilities for the `json` type. Containment tests whether one `jsonb` document has contained within it another one. These examples return true except as noted:
+Testing *containment* is an important capability of `jsonb`. There is no parallel set of facilities for the `json` type. Containment tests whether one `jsonb` document has contained within it another one. These examples return `true` except as noted:
 
 ```
 -- Simple scalar/primitive values contain only the identical value:
@@ -147,10 +149,10 @@ SELECT '[1, 2, [1, 3]]'::jsonb @> '[1, 3]'::jsonb;  -- yields false
 SELECT '[1, 2, [1, 3]]'::jsonb @> '[[1, 3]]'::jsonb;
 
 -- Similarly, containment is not reported here:
-SELECT '{"foo": {"bar": "baz", "zig": "zag"}}'::jsonb @> '{"bar": "baz"}'::jsonb; -- yields false
+SELECT '{"foo": {"bar": "baz"}}'::jsonb @> '{"bar": "baz"}'::jsonb; -- yields false
 
 -- But with a layer of nesting, it is contained:
-SELECT '{"foo": {"bar": "baz", "zig": "zag"}}'::jsonb @> '{"foo": {"bar": "baz"}}'::jsonb;
+SELECT '{"foo": {"bar": "baz"}}'::jsonb @> '{"foo": {}}'::jsonb;
 ```
 
 The general principle is that the contained object must match the containing object as to structure and data contents, possibly after discarding some non-matching array elements or object key/value pairs from the containing object. For containment, the order of array elements is not significant when doing a containment match, and duplicate array elements are effectively considered only once.
@@ -165,7 +167,7 @@ SELECT '["foo", "bar"]'::jsonb @> '"bar"'::jsonb;
 SELECT '"bar"'::jsonb @> '["bar"]'::jsonb;  -- yields false
 ```
 
-`jsonb` also has an *existence* operator, which is a variation on the theme of containment: it tests whether a string \(given as a text value\) appears as an object key or array element at the top level of the `jsonb` value. These examples return true except as noted:
+`jsonb` also has an *existence* operator, which is a variation on the theme of containment: it tests whether a string \(given as a `text` value\) appears as an object key or array element at the top level of the `jsonb` value. These examples return `true` except as noted:
 
 ```
 -- String exists as array element:
@@ -186,16 +188,14 @@ SELECT '"foo"'::jsonb ? 'foo';
 
 JSON objects are better suited than arrays for testing containment or existence when there are many keys or elements involved, because unlike arrays they are internally optimized for searching, and do not need to be searched linearly.
 
-The various containment and existence operators, along with all other JSON operators and functions are documented in [JSON Functions and Operators](#topic_gn4_x3w_mq).
-
-Because JSON containment is nested, an appropriate query can skip explicit selection of sub-objects. As an example, suppose that we have a doc column containing objects at the top level, with most objects containing tags fields that contain arrays of sub-objects. This query finds entries in which sub-objects containing both `"term":"paris"` and `"term":"food"` appear, while ignoring any such keys outside the tags array:
+Because JSON containment is nested, an appropriate query can skip explicit selection of sub-objects. As an example, suppose that we have a `doc` column containing objects at the top level, with most objects containing `tags` fields that contain arrays of sub-objects. This query finds entries in which sub-objects containing both `"term":"paris"` and `"term":"food"` appear, while ignoring any such keys outside the `tags` array:
 
 ```
 SELECT doc->'site_name' FROM websites
   WHERE doc @> '{"tags":[{"term":"paris"}, {"term":"food"}]}';
 ```
 
-The query with this predicate could accomplish the same thing.
+The query with this predicate could accomplish the same thing:
 
 ```
 SELECT doc->'site_name' FROM websites
@@ -205,6 +205,8 @@ SELECT doc->'site_name' FROM websites
 However, the second approach is less flexible and is often less efficient as well.
 
 On the other hand, the JSON existence operator is not nested: it will only look for the specified key or array element at top level of the JSON value.
+
+The various containment and existence operators, along with all other JSON operators and functions are documented in [JSON Functions and Operators](../../../ref_guide/function-summary.html#topic_gn4_x3w_mq).
 
 ## <a id="topic_aqt_1tw_mq"></a>jsonb Indexing 
 
@@ -217,16 +219,16 @@ The Greenplum Database `jsonb` data type, supports GIN, btree, and hash indexes.
 
 GIN indexes can be used to efficiently search for keys or key/value pairs occurring within a large number of `jsonb` documents \(datums\). Two GIN operator classes are provided, offering different performance and flexibility trade-offs.
 
-The default GIN operator class for jsonb supports queries with the `@>`, `?`, `?&` and `?|` operators. \(For details of the semantics that these operators implement, see the table [Table 3](#table_dcb_y3w_mq).\) An example of creating an index with this operator class is:
+The default GIN operator class for jsonb supports queries with the `@>`, `?`, `?&` and `?|` operators. \(For details of the semantics that these operators implement, see [JSON Operators](../../../ref_guide/function-summary.html#topic_o5y_14w_2z).\) An example of creating an index with this operator class is:
 
 ```
-CREATE INDEX idxgin ON api USING gin (jdoc);
+CREATE INDEX idxgin ON api USING GIN (jdoc);
 ```
 
-The non-default GIN operator class `jsonb_path_ops` supports indexing the `@>` operator only. An example of creating an index with this operator class is:
+The non-default GIN operator class `jsonb_path_ops` does not support the key-exists operators, but it does support `@>`, `@?`, and `@@.` An example of creating an index with this operator class is:
 
 ```
-CREATE INDEX idxginp ON api USING gin (jdoc jsonb_path_ops);
+CREATE INDEX idxginp ON api USING GIN (jdoc jsonb_path_ops);
 ```
 
 Consider the example of a table that stores JSON documents retrieved from a third-party web service, with a documented schema definition. This is a typical document:
@@ -266,7 +268,7 @@ SELECT jdoc->'guid', jdoc->'name' FROM api WHERE jdoc -> 'tags' ? 'qui';
 With appropriate use of expression indexes, the above query can use an index. If querying for particular items within the `tags` key is common, defining an index like this might be worthwhile:
 
 ```
-CREATE INDEX idxgintags ON api USING gin ((jdoc -> 'tags'));
+CREATE INDEX idxgintags ON api USING GIN ((jdoc -> 'tags'));
 ```
 
 Now, the `WHERE` clause `jdoc -> 'tags' ? 'qui'` is recognized as an application of the indexable operator `?` to the indexed expression `jdoc -> 'tags'`. For information about expression indexes, see [Indexes on Expressions](../../ddl/ddl-index.html).
@@ -279,13 +281,25 @@ SELECT jdoc->'guid', jdoc->'name' FROM api WHERE jdoc @> '{"tags": ["qui"]}';
 
 ```
 
-A simple GIN index on the `jdoc` column can support this query. However, the index will store copies of every key and value in the `jdoc` column, whereas the expression index of the previous example stores only data found under the tags key. While the simple-index approach is far more flexible \(since it supports queries about any key\), targeted expression indexes are likely to be smaller and faster to search than a simple index.
+A simple GIN index on the `jdoc` column can support this query. However, the index will store copies of every key and value in the `jdoc` column, whereas the expression index of the previous example stores only data found under the `tags` key. While the simple-index approach is far more flexible \(since it supports queries about any key\), targeted expression indexes are likely to be smaller and faster to search than a simple index.
 
-Although the `jsonb_path_ops` operator class supports only queries with the `@>` operator, it has performance advantages over the default operator class `jsonb_ops`. A `jsonb_path_ops` index is usually much smaller than a `jsonb_ops` index over the same data, and the specificity of searches is better, particularly when queries contain keys that appear frequently in the data. Therefore search operations typically perform better than with the default operator class.
+GIN indexes also support the `@?` and `@@` operators, which perform `jsonpath` matching. Examples are:
+
+```
+SELECT jdoc->'guid', jdoc->'name' FROM api WHERE jdoc @? '$.tags[*] ? (@ == "qui")';
+```
+
+```
+SELECT jdoc->'guid', jdoc->'name' FROM api WHERE jdoc @@ '$.tags[*] == "qui"';
+```
+
+For these operators, a GIN index extracts clauses of the form `accessors_chain = constant` out of the `jsonpath` pattern, and does the index search based on the keys and values mentioned in these clauses. The accessors chain may include `.key`, `[*],` and `[index]` accessors. The `jsonb_ops` operator class also supports `.*` and `.**` accessors, but the `jsonb_path_ops` operator class does not.
+
+Although the `jsonb_path_ops` operator class supports only queries with the `@>`, `@?` and `@@` operators, it has notable performance advantages over the default operator class `jsonb_ops`. A `jsonb_path_ops` index is usually much smaller than a `jsonb_ops` index over the same data, and the specificity of searches is better, particularly when queries contain keys that appear frequently in the data. Therefore search operations typically perform better than with the default operator class.
 
 The technical difference between a `jsonb_ops` and a `jsonb_path_ops` GIN index is that the former creates independent index items for each key and value in the data, while the latter creates index items only for each value in the data.
 
-**Note:** For this discussion, the term *value* includes array elements, though JSON terminology sometimes considers array elements distinct from values within objects.
+> **Note** For this discussion, the term *value* includes array elements, though JSON terminology sometimes considers array elements distinct from values within objects.
 
 Basically, each `jsonb_path_ops` index item is a hash of the value and the key\(s\) leading to it; for example to index `{"foo": {"bar": "baz"}}`, a single index item would be created incorporating all three of `foo`, `bar`, and `baz` into the hash value. Thus a containment query looking for this structure would result in an extremely specific index search; but there is no way at all to find out whether `foo` appears as a key. On the other hand, a `jsonb_ops` index would create three index items representing `foo`, `bar`, and `baz` separately; then to do the containment query, it would look for rows containing all three of these items. While GIN indexes can perform such an `AND` search fairly efficiently, it will still be less specific and slower than the equivalent `jsonb_path_ops` search, especially if there are a very large number of rows containing any single one of the three index items.
 
@@ -295,7 +309,7 @@ A disadvantage of the `jsonb_path_ops` approach is that it produces no index ent
 
 `jsonb` also supports `btree` and `hash` indexes. These are usually useful only when it is important to check the equality of complete JSON documents.
 
-For completeness the `btree` ordering for `jsonb` datums is:
+For completeness, the `btree` ordering for `jsonb` datums is:
 
 ```
 Object > Array > Boolean > Number > String > Null
@@ -325,507 +339,143 @@ element-1, element-2 ...
 
 Primitive JSON values are compared using the same comparison rules as for the underlying Greenplum Database data type. Strings are compared using the default database collation.
 
-## <a id="topic_gn4_x3w_mq"></a>JSON Functions and Operators 
+## <a id="topic_transforms"></a>Transforms
 
-Greenplum Database includes built-in functions and operators that create and manipulate JSON data.
+Additional extensions are available that implement transforms for the `jsonb` type for different procedural languages.
 
--   [JSON Operators](#topic_o5y_14w_2z)
--   [JSON Creation Functions](#topic_u4s_wnw_2z)
--   [JSON Aggregate Functions](#topic_rvp_lk3_sfb)
--   [JSON Processing Functions](#topic_z5d_snw_2z)
+The extensions for PL/Perl are called `jsonb_plperl` and j`sonb_plperlu`. If you use them, `jsonb` values are mapped to Perl arrays, hashes, and scalars, as appropriate.
 
-**Note:** For `json` data type values, all key/value pairs are kept even if a JSON object contains duplicate keys. For duplicate keys, JSON processing functions consider the last value as the operative one. For the `jsonb` data type, duplicate object keys are not kept. If the input includes duplicate keys, only the last value is kept. See [About JSON Data](#topic_upc_tcs_fz).
+The extensions for PL/Python are called `jsonb_plpythonu`, `jsonb_plpython2u`, and `jsonb_plpython3u`. If you use them, `jsonb` values are mapped to Python dictionaries, lists, and scalars, as appropriate.
 
-### <a id="topic_o5y_14w_2z"></a>JSON Operators 
+## <a id="topic_jsonpath"></a>jsonpath Type
 
-This table describes the operators that are available for use with the `json` and `jsonb` data types.
+The `jsonpath` type implements support for the SQL/JSON path language in Greenplum Database to efficiently query JSON data. It provides a binary representation of the parsed SQL/JSON path expression that specifies the items to be retrieved by the path engine from the JSON data for further processing with the SQL/JSON query functions.
 
-|Operator|Right Operand Type|Description|Example|Example Result|
-|--------|------------------|-----------|-------|--------------|
-|`->`|`int`|Get the JSON array element \(indexed from zero\).|`'[{"a":"foo"},{"b":"bar"},{"c":"baz"}]'::json->2`|`{"c":"baz"}`|
-|`->`|`text`|Get the JSON object field by key.|`'{"a": {"b":"foo"}}'::json->'a'`|`{"b":"foo"}`|
-|`->>`|`int`|Get the JSON array element as `text`.|`'[1,2,3]'::json->>2`|`3`|
-|`->>`|`text`|Get the JSON object field as `text`.|`'{"a":1,"b":2}'::json->>'b'`|`2`|
-|`#>`|`text[]`|Get the JSON object at specified path.|`'{"a": {"b":{"c": "foo"}}}'::json#>'{a,b}`'|`{"c": "foo"}`|
-|`#>>`|`text[]`|Get the JSON object at specified path as `text`.|`'{"a":[1,2,3],"b":[4,5,6]}'::json#>>'{a,2}'`|`3`|
+The semantics of SQL/JSON path predicates and operators generally follow SQL. At the same time, to provide a most natural way of working with JSON data, SQL/JSON path syntax uses some of the JavaScript conventions:
 
-**Note:** There are parallel variants of these operators for both the `json` and `jsonb` data types. The field, element, and path extraction operators return the same data type as their left-hand input \(either `json` or `jsonb`\), except for those specified as returning `text`, which coerce the value to `text`. The field, element, and path extraction operators return `NULL`, rather than failing, if the JSON input does not have the right structure to match the request; for example if no such element exists.
+- Dot (`.`) is used for member access.
 
-Operators that require the `jsonb` data type as the left operand are described in the following table. Many of these operators can be indexed by `jsonb` operator classes. For a full description of `jsonb` containment and existence semantics, see [jsonb Containment and Existence](#topic_isx_2tw_mq). For information about how these operators can be used to effectively index `jsonb` data, see [jsonb Indexing](#topic_aqt_1tw_mq).
+- Square brackets (`[]`) are used for array access.
 
-<table class="table" id="topic_o5y_14w_2z__table_dcb_y3w_mq"><caption><span class="table--title-label">Table 3. </span><span class="title">jsonb Operators</span></caption><colgroup><col style="width:9.970089730807578%"><col style="width:19.3419740777667%"><col style="width:45.76271186440678%"><col style="width:24.925224327018945%"></colgroup><thead class="thead">
-              <tr class="row">
-                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">Operator</th>
-                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">Right Operand Type</th>
-                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Description</th>
-                <th class="entry" id="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">Example</th>
-              </tr>
-            </thead><tbody class="tbody">
-              <tr class="row">
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
-                  <code class="ph codeph">@&gt;</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
-                  <code class="ph codeph">jsonb</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Does the left JSON value contain within it the right value?</td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
-                  <code class="ph codeph">'{"a":1, "b":2}'::jsonb @&gt; '{"b":2}'::jsonb</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
-                  <code class="ph codeph">&lt;@</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
-                  <code class="ph codeph">jsonb</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Is the left JSON value contained within the right value?</td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
-                  <code class="ph codeph">'{"b":2}'::jsonb &lt;@ '{"a":1, "b":2}'::jsonb</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
-                  <code class="ph codeph">?</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
-                  <code class="ph codeph">text</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Does the key/element string exist within the JSON value?</td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
-                  <code class="ph codeph">'{"a":1, "b":2}'::jsonb ? 'b'</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
-                  <code class="ph codeph">?|</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
-                  <code class="ph codeph">text[]</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Do any of these key/element strings exist?</td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
-                  <code class="ph codeph">'{"a":1, "b":2, "c":3}'::jsonb ?| array['b', 'c']</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__1">
-                  <code class="ph codeph">?&amp;</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__2">
-                  <code class="ph codeph">text[]</code>
-                </td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__3">Do all of these key/element strings exist?</td>
-                <td class="entry" headers="topic_o5y_14w_2z__table_dcb_y3w_mq__entry__4">
-                  <code class="ph codeph">'["a", "b"]'::jsonb ?&amp; array['a', 'b']</code>
-                </td>
-              </tr>
-            </tbody></table>
+- SQL/JSON arrays are 0-relative, unlike regular SQL arrays that start from 1.
 
-The standard comparison operators in the following table are available only for the `jsonb` data type, not for the `json` data type. They follow the ordering rules for B-tree operations described in [jsonb Indexing](#topic_aqt_1tw_mq).
+An SQL/JSON path expression is typically written in an SQL query as an SQL character string literal, so it must be enclosed in single quotes, and any single quotes desired within the value must be doubled. Some forms of path expressions require string literals within them. These embedded string literals follow JavaScript/ECMAScript conventions: they must be surrounded by double quotes, and backslash escapes may be used within them to represent otherwise-hard-to-type characters. In particular, the way to write a double quote within an embedded string literal is `\"`, and to write a backslash itself, you must write `\\`. Other special backslash sequences include those recognized in JSON strings: `\b`, `\f`, `\n`, `\r`, `\t`, `\v` for various ASCII control characters, and `\uNNNN` for a Unicode character identified by its 4-hex-digit code point. The backslash syntax also includes two cases not allowed by JSON: `\xNN` for a character code written with only two hex digits, and `\u{N...}` for a character code written with 1 to 6 hex digits.
 
-|Operator|Description|
-|--------|-----------|
-|`<`|less than|
-|`>`|greater than|
-|`<=`|less than or equal to|
-|`>=`|greater than or equal to|
-|`=`|equal|
-|`<>` or `!=`|not equal|
+A path expression consists of a sequence of path elements, which can be the following:
 
-**Note:** The `!=` operator is converted to `<>` in the parser stage. It is not possible to implement `!=` and `<>` operators that do different things.
+- Path literals of JSON primitive types: Unicode text, numeric, true, false, or null.
 
-### <a id="topic_u4s_wnw_2z"></a>JSON Creation Functions 
+- Path variables listed in the **jsonpath Variables** table below.
 
-This table describes the functions that create `json` data type values. \(Currently, there are no equivalent functions for `jsonb`, but you can cast the result of one of these functions to `jsonb`.\)
+- Accessor operators listed in the **jsonpath Accessors** table below.
 
-<table class="table" id="topic_u4s_wnw_2z__table_sqb_y3w_mb"><caption><span class="table--title-label">Table 5. </span><span class="title">JSON Creation Functions </span></caption><colgroup><col><col><col><col></colgroup><thead class="thead">
-              <tr class="row">
-                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">Function</th>
-                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Description</th>
-                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">Example</th>
-                <th class="entry" id="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">Example Result</th>
-              </tr>
-            </thead><tbody class="tbody">
-              <tr class="row">
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
-                  <code class="ph codeph">to_json(anyelement)</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Returns the value as a JSON object. Arrays and composites are processed
-                  recursively and are converted to arrays and objects. If the input contains a cast
-                  from the type to <code class="ph codeph">json</code>, the cast function is used to perform the
-                  conversion; otherwise, a JSON scalar value is produced. For any scalar type other
-                  than a number, a Boolean, or a null value, the text representation will be used,
-                  properly quoted and escaped so that it is a valid JSON string.</td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
-                  <code class="ph codeph">to_json('Fred said "Hi."'::text)</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
-                  <code class="ph codeph">"Fred said \"Hi.\""</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
-                  <code class="ph codeph">array_to_json(anyarray [, pretty_bool])</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Returns the array as a JSON array. A multidimensional array becomes a JSON
-                  array of arrays. <p class="p">Line feeds will be added between dimension-1 elements if
-                      <code class="ph codeph">pretty_bool</code> is true.</p></td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
-                  <code class="ph codeph">array_to_json('{{1,5},{99,100}}'::int[])</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
-                  <code class="ph codeph">[[1,5],[99,100]]</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
-                  <code class="ph codeph">row_to_json(record [, pretty_bool])</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Returns the row as a JSON object. <p class="p">Line feeds will be added between level-1
-                    elements if <code class="ph codeph">pretty_bool</code> is true.</p></td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
-                  <code class="ph codeph">row_to_json(row(1,'foo'))</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
-                  <code class="ph codeph">{"f1":1,"f2":"foo"}</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1"><code class="ph codeph">json_build_array(VARIADIC "any"</code>)</td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a possibly-heterogeneously-typed JSON array out of a
-                    <code class="ph codeph">VARIADIC</code> argument list.</td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
-                  <code class="ph codeph">json_build_array(1,2,'3',4,5)</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
-                  <code class="ph codeph">[1, 2, "3", 4, 5]</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
-                  <code class="ph codeph">json_build_object(VARIADIC "any")</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a JSON object out of a <code class="ph codeph">VARIADIC</code> argument list. The
-                  argument list is taken in order and converted to a set of key/value pairs.</td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
-                  <code class="ph codeph">json_build_object('foo',1,'bar',2)</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
-                  <code class="ph codeph">{"foo": 1, "bar": 2}</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
-                  <code class="ph codeph">json_object(text[])</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a JSON object out of a text array. The array must be either a one or a
-                  two dimensional array.<p class="p">The one dimensional array must have an even number of
-                    elements. The elements are taken as key/value pairs. </p><p class="p">For a two
-                    dimensional array, each inner array must have exactly two elements, which are
-                    taken as a key/value pair.</p></td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
-                  <p class="p">
-                    <code class="ph codeph">json_object('{a, 1, b, "def", c, 3.5}')</code>
-                  </p>
-                  <p class="p">
-                    <code class="ph codeph">json_object('{{a, 1},{b, "def"},{c, 3.5}}')</code>
-                  </p>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
-                  <code class="ph codeph">{"a": "1", "b": "def", "c": "3.5"}</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__1">
-                  <code class="ph codeph">json_object(keys text[], values text[])</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__2">Builds a JSON object out of a text array. This form of
-                    <code class="ph codeph">json_object</code> takes keys and values pairwise from two separate
-                  arrays. In all other respects it is identical to the one-argument form.</td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__3">
-                  <code class="ph codeph">json_object('{a, b}', '{1,2}')</code>
-                </td>
-                <td class="entry" headers="topic_u4s_wnw_2z__table_sqb_y3w_mb__entry__4">
-                  <code class="ph codeph">{"a": "1", "b": "2"}</code>
-                </td>
-              </tr>
-            </tbody></table>
+- `jsonpath` operators and methods listed in 
+[SQL/JSON Path Operators and Methods](../../../ref_guide/function-summary.html#topic_jsonpath_opsmeth).
 
-**Note:** `array_to_json` and `row_to_json` have the same behavior as `to_json` except for offering a pretty-printing option. The behavior described for `to_json` likewise applies to each individual value converted by the other JSON creation functions.
+- Parentheses, which can be used to provide filter expressions or define the order of path evaluation.
 
-**Note:** The [hstore module](../../../ref_guide/modules/hstore.html) contains functions that cast from `hstore` to `json`, so that `hstore` values converted via the JSON creation functions will be represented as JSON objects, not as primitive string values.
+For details on using `jsonpath` expressions with SQL/JSON query functions, see [SQL/JSON Filter Expression Elements](../../../ref_guide/function-summary.html#topic_jsonpath_filtexp).
 
-### <a id="topic_rvp_lk3_sfb"></a>JSON Aggregate Functions 
+ <div class="table" id="TYPE-JSONPATH-VARIABLES">
+      <p class="title"><strong><code class="type">jsonpath</code> Variables</strong></p>
+      <div class="table-contents">
+        <table class="table" summary="jsonpath Variables" border="1">
+          <colgroup>
+            <col />
+            <col />
+          </colgroup>
+          <thead>
+            <tr class="row">
+              <th class="entry nocellnorowborder">Variable</th>
+              <th class="entry nocellnorowborder">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row">
+              <td class="entry nocellnorowborder"><code class="literal">$</code></td>
+              <td class="entry nocellnorowborder">A variable representing the JSON text to be queried (the <em class="firstterm">context item</em>).</td>
+            </tr>
+            <tr class="row">
+              <td class="entry nocellnorowborder"><code class="literal">$varname</code></td>
+              <td class="entry nocellnorowborder">A named variable. Its value can be set by the parameter <em class="parameter"><code>vars</code></em> of several JSON processing functions. See <a href="../../../ref_guide/function-summary.html#topic_z5d_snw_2z">JSON Processing Functions</a> and its notes for details.</td>
+            </tr>
+            <tr>
+              <td class="entry nocellnorowborder"><code class="literal">@</code></td>
+              <td class="entry nocellnorowborder">A variable representing the result of path evaluation in filter expressions.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-This table shows the functions aggregate records to an array of JSON objects and pairs of values to a JSON object
-
-|Function|Argument Types|Return Type|Description|
-|--------|--------------|-----------|-----------|
-|`json_agg(record)`|`record`|`json`|Aggregates records as a JSON array of objects.|
-|`json_object_agg(name, value)`|`("any", "any")`|`json`|Aggregates name/value pairs as a JSON object.|
-
-### <a id="topic_z5d_snw_2z"></a>JSON Processing Functions 
-
-This table shows the functions that are available for processing `json` and `jsonb` values.
-
-Many of these processing functions and operators convert Unicode escapes in JSON strings to the appropriate single character. This is a not an issue if the input data type is `jsonb`, because the conversion was already done. However, for `json` data type input, this might result in an error being thrown. See [About JSON Data](#topic_upc_tcs_fz).
-
-<table class="table" id="topic_z5d_snw_2z__table_wfc_y3w_mb"><caption><span class="table--title-label">Table 7. </span><span class="title">JSON Processing Functions</span></caption><colgroup><col style="width:20.224719101123597%"><col style="width:18.726591760299627%"><col style="width:18.913857677902623%"><col style="width:23.220973782771537%"><col style="width:18.913857677902623%"></colgroup><thead class="thead">
-              <tr class="row">
-                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1">Function</th>
-                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2">Return Type</th>
-                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Description</th>
-                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4">Example</th>
-                <th class="entry" id="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">Example Result</th>
-              </tr>
-            </thead><tbody class="tbody">
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1">
-                  <code class="ph codeph">json_array_length(json)</code>
-                  <p class="p">
-                    <code class="ph codeph">jsonb_array_length(jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">int</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the number of elements in the outermost JSON array.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_array_length('[1,2,3,{"f1":1,"f2":[5,6]},4]')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <code class="ph codeph">5</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_each(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_each(jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof key text, value json</code>
-                  <p class="p"><code class="ph codeph">setof key text, value jsonb</code>
-                  </p>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the outermost JSON object into a set of key/value pairs.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_each('{"a":"foo", "b":"bar"}')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre"> key | value
------+-------
- a   | "foo"
- b   | "bar"
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_each_text(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_each_text(jsonb)</code>
-                  </p>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof key text, value text</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the outermost JSON object into a set of key/value pairs. The returned
-                  values will be of type <code class="ph codeph">text</code>.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_each_text('{"a":"foo", "b":"bar"}')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre"> key | value
------+-------
- a   | foo
- b   | bar
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_extract_path(from_json json, VARIADIC path_elems
-                    text[])</code>
-                  <p class="p"><code class="ph codeph">jsonb_extract_path(from_json jsonb, VARIADIC path_elems
-                      text[])</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2">
-                  <p class="p"><code class="ph codeph">json</code>
-                  </p>
-                  <p class="p"><code class="ph codeph">jsonb</code>
-                  </p>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> (equivalent
-                  to <code class="ph codeph">#&gt;</code> operator).</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <code class="ph codeph">{"f5":99,"f6":"foo"}</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_extract_path_text(from_json json, VARIADIC path_elems
-                    text[])</code>
-                  <p class="p"><code class="ph codeph">jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems
-                      text[])</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">text</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> as text.
-                  Equivalent to <code class="ph codeph">#&gt;&gt;</code> operator.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4',
-                    'f6')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <code class="ph codeph">foo</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_object_keys(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_object_keys(jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof text</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns set of keys in the outermost JSON object.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre"> json_object_keys
-------------------
- f1
- f2
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_populate_record(base anyelement, from_json
-                      json)</code><p class="p"><code class="ph codeph">jsonb_populate_record(base anyelement, from_json
-                      jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">anyelement</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the object in <code class="ph codeph">from_json</code> to a row whose columns match
-                  the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_populate_record(null::myrowtype,
-                    '{"a":1,"b":2}')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre"> a | b
----+---
- 1 | 2
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_populate_recordset(base anyelement, from_json json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_populate_recordset(base anyelement, from_json jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof anyelement</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands the outermost array of objects in <code class="ph codeph">from_json</code> to a set
-                  of rows whose columns match the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_populate_recordset(null::myrowtype,
-                    '[{"a":1,"b":2},{"a":3,"b":4}]')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre"> a | b
----+---
- 1 | 2
- 3 | 4
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_array_elements(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_array_elements(jsonb</code>)</p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2">
-                  <p class="p"><code class="ph codeph">setof json</code>
-                  </p>
-                  <p class="p"><code class="ph codeph">setof jsonb</code>
-                  </p>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands a JSON array to a set of JSON values.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_array_elements('[1,true, [2,false]]')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre">   value
------------
- 1
- true
- [2,false]
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_array_elements_text(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_array_elements_text(jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof text</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Expands a JSON array to a set of <code class="ph codeph">text</code> values.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_array_elements_text('["foo", "bar"]')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre">   value
------------
- foo
- bar
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_typeof(json)</code><p class="p"><code class="ph codeph">jsonb_typeof(jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">text</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Returns the type of the outermost JSON value as a text string. Possible types
-                  are <code class="ph codeph">object</code>, <code class="ph codeph">array</code>, <code class="ph codeph">string</code>,
-                    <code class="ph codeph">number</code>, <code class="ph codeph">boolean</code>, and <code class="ph codeph">null</code>.
-                  See <a class="xref" href="#topic_z5d_snw_2z__json_proc_2">Note
-                  2</a>.</td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">json_typeof('-123.4')</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <code class="ph codeph">number</code>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_to_record(json)</code><p class="p"><code class="ph codeph">jsonb_to_record(jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">record</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Builds an arbitrary record from a JSON object. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
-                    functions returning record, the caller must explicitly define the structure of
-                    the record with an <code class="ph codeph">AS</code> clause.</p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a
-                    int, b text, d text)</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre"> a |    b    | d
----+---------+---
- 1 | [1,2,3] |
-</pre>
-                </td>
-              </tr>
-              <tr class="row">
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__1"><code class="ph codeph">json_to_recordset(json)</code>
-                  <p class="p"><code class="ph codeph">jsonb_to_recordset(jsonb)</code>
-                  </p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__2"><code class="ph codeph">setof record</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__3">Builds an arbitrary set of records from a JSON array of objects See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
-                    functions returning record, the caller must explicitly define the structure of
-                    the record with an <code class="ph codeph">AS</code> clause.</p></td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__4"><code class="ph codeph">select * from
-                    json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
-                    text);</code>
-                </td>
-                <td class="entry" headers="topic_z5d_snw_2z__table_wfc_y3w_mb__entry__5">
-                  <pre class="pre"> a |  b
----+-----
- 1 | foo
- 2 |
-</pre>
-                </td>
-              </tr>
-            </tbody></table>
-
-**Note:**
-
-1.  The examples for the functions `json_populate_record()`, `json_populate_recordset()`, `json_to_record()` and `json_to_recordset()` use constants. However, the typical use would be to reference a table in the `FROM` clause and use one of its `json` or `jsonb` columns as an argument to the function. The extracted key values can then be referenced in other parts of the query. For example the value can be referenced in `WHERE` clauses and target lists. Extracting multiple values in this way can improve performance over extracting them separately with per-key operators.
-
-    JSON keys are matched to identical column names in the target row type. JSON type coercion for these functions might not result in desired values for some types. JSON fields that do not appear in the target row type will be omitted from the output, and target columns that do not match any JSON field will be `NULL`.
-
-2.  The `json_typeof` function null return value of `null` should not be confused with a SQL `NULL`. While calling `json_typeof('null'::json)` will return `null`, calling `json_typeof(NULL::json)` will return a SQL `NULL`.
+<div class="table" id="TYPE-JSONPATH-ACCESSORS">
+      <p class="title"><strong><code class="type">jsonpath</code> Accessors</strong></p>
+      <div class="table-contents">
+        <table class="table" summary="jsonpath Accessors" border="1">
+          <colgroup>
+            <col />
+            <col />
+          </colgroup>
+          <thead>
+            <tr class="row">
+              <th class="entry nocellnorowborder">Accessor Operator</th>
+              <th class="entry nocellnorowborder">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row">
+              <td class="entry nocellnorowborder">
+                <p><code class="literal">.<em class="replaceable"><code>key</code></em></code></p>
+                <p><code class="literal">."$<em class="replaceable"><code>varname</code></em>"</code></p>
+              </td>
+              <td class="entry nocellnorowborder">
+                <p>Member accessor that returns an object member with the specified key. If the key name is a named variable starting with <code class="literal">$</code> or does not meet the JavaScript rules of an identifier, it must be enclosed in double quotes as a character string literal.</p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry nocellnorowborder">
+                <p><code class="literal">.*</code></p>
+              </td>
+              <td class="entry nocellnorowborder">
+                <p>Wildcard member accessor that returns the values of all members located at the top level of the current object.</p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry nocellnorowborder">
+                <p><code class="literal">.**</code></p>
+              </td>
+              <td class="entry nocellnorowborder">
+                <p>Recursive wildcard member accessor that processes all levels of the JSON hierarchy of the current object and returns all the member values, regardless of their nesting level. This is a <span class="productname">Greenplum Database</span> extension of the SQL/JSON standard.</p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry nocellnorowborder">
+                <p><code class="literal">.**{<em class="replaceable"><code>level</code></em>}</code></p>
+                <p><code class="literal">.**{<em class="replaceable"><code>start_level</code></em> to <em class="replaceable"><code>end_level</code></em>}</code></p>
+              </td>
+              <td class="entry nocellnorowborder">
+                <p>Same as <code class="literal">.**</code>, but with a filter over nesting levels of JSON hierarchy. Nesting levels are specified as integers. Zero level corresponds to the current object. To access the lowest nesting level, you can use the <code class="literal">last</code> keyword. This is a <span class="productname">Greenplum Database</span> extension of the SQL/JSON standard.</p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry nocellnorowborder">
+                <p><code class="literal">[<em class="replaceable"><code>subscript</code></em>, ...]</code></p>
+              </td>
+              <td class="entry nocellnorowborder">
+                <p>Array element accessor. <code class="literal"><em class="replaceable"><code>subscript</code></em></code> can be given in two forms: <code class="literal"><em class="replaceable"><code>index</code></em></code> or <code class="literal"><em class="replaceable"><code>start_index</code></em> to <em class="replaceable"><code>end_index</code></em></code>. The first form returns a single array element by its index. The second form returns an array slice by the range of indexes, including the elements that correspond to the provided <em class="replaceable"><code>start_index</code></em> and <em class="replaceable"><code>end_index</code></em>.</p>
+                <p>The specified <em class="replaceable"><code>index</code></em> can be an integer, as well as an expression returning a single numeric value, which is automatically cast to integer. Zero index corresponds to the first array element. You can also use the <code class="literal">last</code> keyword to denote the last array element, which is useful for handling arrays of unknown length.</p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry nocellnorowborder">
+                <p><code class="literal">[*]</code></p>
+              </td>
+              <td class="entry nocellnorowborder">
+                <p>Wildcard array element accessor that returns all array elements.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 

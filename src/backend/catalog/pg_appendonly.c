@@ -17,7 +17,10 @@
 
 #include "postgres.h"
 
+#include "access/reloptions.h"
+#include "catalog/pg_am_d.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "catalog/gp_fastsequence.h"
@@ -26,6 +29,7 @@
 #include "access/table.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "utils/builtins.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
@@ -33,28 +37,23 @@
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 
+static void TransferAppendonlyEntries(Oid fromrelid, Oid torelid);
+static void SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2);
+
 /*
  * Adds an entry into the pg_appendonly catalog table. The entry
- * includes the new relfilenode of the appendonly relation that 
+ * includes the new relfilenode of the appendonly relation that
  * was just created and an initial eof and reltuples values of 0
  */
 void
-InsertAppendOnlyEntry(Oid relid, 
-					  int blocksize, 
-					  int safefswritesize, 
-					  int compresslevel,
-					  bool checksum,
-                      bool columnstore,
-					  char* compresstype,
+InsertAppendOnlyEntry(Oid relid,
 					  Oid segrelid,
 					  Oid blkdirrelid,
-					  Oid blkdiridxid,
 					  Oid visimaprelid,
-					  Oid visimapidxid)
+					  int16 version)
 {
 	Relation	pg_appendonly_rel;
 	HeapTuple	pg_appendonly_tuple = NULL;
-	NameData	compresstype_name;
 	bool	   *nulls;
 	Datum	   *values;
 	int			natts = 0;
@@ -68,29 +67,11 @@ InsertAppendOnlyEntry(Oid relid,
 	values = palloc0(sizeof(Datum) * natts);
 	nulls = palloc0(sizeof(bool) * natts);
 
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 *		Consider not storing the parsed values for blocksize, compresstype,
-	 *		compresslevel and checksum as those are also present in StdRdOptions
-	 *		of Relcache.
-	 */
-
-	if (compresstype)
-		namestrcpy(&compresstype_name, compresstype);
-	else
-		namestrcpy(&compresstype_name, "");
 	values[Anum_pg_appendonly_relid - 1] = ObjectIdGetDatum(relid);
-	values[Anum_pg_appendonly_blocksize - 1] = Int32GetDatum(blocksize);
-	values[Anum_pg_appendonly_safefswritesize - 1] = Int32GetDatum(safefswritesize);
-	values[Anum_pg_appendonly_compresslevel - 1] = Int32GetDatum(compresslevel);
-	values[Anum_pg_appendonly_checksum - 1] = BoolGetDatum(checksum);
-	values[Anum_pg_appendonly_compresstype - 1] = NameGetDatum(&compresstype_name);
-	values[Anum_pg_appendonly_columnstore - 1] = BoolGetDatum(columnstore);
 	values[Anum_pg_appendonly_segrelid - 1] = ObjectIdGetDatum(segrelid);
 	values[Anum_pg_appendonly_blkdirrelid - 1] = ObjectIdGetDatum(blkdirrelid);
-	values[Anum_pg_appendonly_blkdiridxid - 1] = ObjectIdGetDatum(blkdiridxid);
 	values[Anum_pg_appendonly_visimaprelid - 1] = ObjectIdGetDatum(visimaprelid);
-	values[Anum_pg_appendonly_visimapidxid - 1] = ObjectIdGetDatum(visimapidxid);
+	values[Anum_pg_appendonly_version - 1] = Int16GetDatum(version);
 
 	/*
 	 * form the tuple and insert it
@@ -115,104 +96,65 @@ InsertAppendOnlyEntry(Oid relid,
 void
 GetAppendOnlyEntryAttributes(Oid relid,
 							 int32 *blocksize,
-							 int32 *safefswritesize,
 							 int16 *compresslevel,
 							 bool *checksum,
 							 NameData *compresstype)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData	key[1];
-	SysScanDesc	scan;
+	Relation	ao_rel;
+	StdRdOptions *relopts;
 	HeapTuple	tuple;
-	Form_pg_appendonly	aoForm;
+	Datum reloptions;
+	bool		isNull;
 
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
+	ao_rel = table_open(relid, AccessShareLock);
 
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  NULL, 1, key);
-	tuple = systable_getnext(scan);
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
+		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
+								 &isNull);
+	if (isNull)
+		reloptions = (Datum) 0;
+
+	relopts = (StdRdOptions *) default_reloptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED);
+
 	if (blocksize != NULL)
-		*blocksize = aoForm->blocksize;
-
-	if (safefswritesize != NULL)
-		*safefswritesize = aoForm->safefswritesize;
-
-	if (compresslevel != NULL)
-		*compresslevel = aoForm->compresslevel;
-
-	if (checksum != NULL)
-		*checksum = aoForm->checksum;
+		*blocksize = relopts->blocksize;
 
 	if (compresstype != NULL)
-		namestrcpy(compresstype, NameStr(aoForm->compresstype));
+		namestrcpy(compresstype, relopts->compresstype);
 
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
+	if (compresslevel != NULL)
+		*compresslevel = relopts->compresslevel;
+
+	if (checksum != NULL)
+		*checksum = relopts->checksum;
+
+	ReleaseSysCache(tuple);
+	table_close(ao_rel, AccessShareLock);
 }
 
 /*
  * Get the OIDs of the auxiliary relations and their indexes for an appendonly
- * relation.
+ * relation. This should only be called on tables with pg_appendonly entries,
+ * which currently are just non-partitioned AO/CO tables.
  *
  * The OIDs will be retrieved only when the corresponding output variable is
  * not NULL.
- *
- * 'appendOnlyMetaDataSnapshot' can be passed as NULL, which means use the
- * latest snapshot, like in systable_beginscan.
  */
 void
-GetAppendOnlyEntryAuxOids(Oid relid,
-						  Snapshot appendOnlyMetaDataSnapshot,
+GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *segrelid,
 						  Oid *blkdirrelid,
-						  Oid *blkdiridxid,
-						  Oid *visimaprelid,
-						  Oid *visimapidxid)
+						  Oid *visimaprelid)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData key[1];
-	SysScanDesc scan;
-	HeapTuple	tuple;
 	Form_pg_appendonly	aoForm;
 
-	/*
-	 * Check the pg_appendonly relation to be certain the ao table
-	 * is there.
-	 */
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
+	/* the relation has to be a non-partitioned AO/CO table */
+	Assert(RelationIsAppendOptimized(rel));
 
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  appendOnlyMetaDataSnapshot, 1, key);
-	tuple = systable_getnext(scan);
-	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
-
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	aoForm = rel->rd_appendonly;
 
 	if (segrelid != NULL)
 		*segrelid = aoForm->segrelid;
@@ -220,57 +162,28 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 	if (blkdirrelid != NULL)
 		*blkdirrelid = aoForm->blkdirrelid;
 
-	if (blkdiridxid != NULL)
-		*blkdiridxid = aoForm->blkdiridxid;
-
 	if (visimaprelid != NULL)
 		*visimaprelid = aoForm->visimaprelid;
-
-	if (visimapidxid != NULL)
-		*visimapidxid = aoForm->visimapidxid;
-
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
 }
 
+/*
+ * Get the pg_appendonly entry for the relation. This should only be called on 
+ * tables with pg_appendonly entries, which currently are just non-partitioned
+ * AO/CO tables. The pg_appendonly data is copied into the Form_pg_appendonly
+ * pointer which should be valid.
+ */
 void
-GetAppendOnlyEntry(Oid relid, Form_pg_appendonly aoEntry)
+GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData key[1];
-	SysScanDesc scan;
-	HeapTuple	tuple;
 	Form_pg_appendonly	aoForm;
 
-	/*
-	 * Check the pg_appendonly relation to be certain the ao table
-	 * is there.
-	 */
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
+	/* the relation has to be a non-partitioned AO/CO table and the aoEntry is valid */
+	Assert(RelationIsAppendOptimized(rel));
+	Assert(aoEntry);
 
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
+	aoForm = rel->rd_appendonly;
 
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  NULL, 1, key);
-	tuple = systable_getnext(scan);
-	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
-
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
 	memcpy(aoEntry, aoForm, APPENDONLY_TUPLE_SIZE);
-
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
 }
 
 /*
@@ -281,9 +194,7 @@ void
 UpdateAppendOnlyEntryAuxOids(Oid relid,
 							 Oid newSegrelid,
 							 Oid newBlkdirrelid,
-							 Oid newBlkdiridxid,
-							 Oid newVisimaprelid,
-							 Oid newVisimapidxid)
+							 Oid newVisimaprelid)
 {
 	Relation	pg_appendonly;
 	ScanKeyData key[1];
@@ -329,23 +240,12 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 		newValues[Anum_pg_appendonly_blkdirrelid - 1] = newBlkdirrelid;
 	}
 	
-	if (OidIsValid(newBlkdiridxid))
-	{
-		replace[Anum_pg_appendonly_blkdiridxid - 1] = true;
-		newValues[Anum_pg_appendonly_blkdiridxid - 1] = newBlkdiridxid;
-	}
-	
 	if (OidIsValid(newVisimaprelid))
 	{
 		replace[Anum_pg_appendonly_visimaprelid - 1] = true;
 		newValues[Anum_pg_appendonly_visimaprelid - 1] = newVisimaprelid;
 	}
 	
-	if (OidIsValid(newVisimapidxid))
-	{
-		replace[Anum_pg_appendonly_visimapidxid - 1] = true;
-		newValues[Anum_pg_appendonly_visimapidxid - 1] = newVisimapidxid;
-	}
 	newTuple = heap_modify_tuple(tuple, RelationGetDescr(pg_appendonly),
 								 newValues, newNulls, replace);
 	CatalogTupleUpdate(pg_appendonly, &newTuple->t_self, newTuple);
@@ -420,6 +320,11 @@ RemoveAppendonlyEntry(Oid relid)
 	table_close(pg_appendonly_rel, NoLock);
 }
 
+/*
+ * Does 2 things:
+ * 	Sever existing dependencies: oid -> *
+ * 	Create a new dependency: oid -> baseOid
+ */
 static void
 TransferDependencyLink(
 	Oid baseOid, 
@@ -476,7 +381,9 @@ GetAppendEntryForMove(
 	if (!HeapTupleIsValid(tuple))
 	{
 		systable_endscan(scan);
-		return tuple;
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+					errmsg("pg_appendonly tuple not found for relation: %u", relId)));
 	}
 
     *aosegrelid = heap_getattr(tuple,
@@ -518,9 +425,172 @@ GetAppendEntryForMove(
 }
 
 /*
- * Swap pg_appendonly entries between tables.
+ * This function acts as a controller of catalog actions that needs to be
+ * performed when we have an AT involving AO/AOCO table, where the original
+ * table could be rewritten.
+ *
+ * Parameters:
+ * relform1: original table that is the target of the AT operation.
+ * relform2: newly created temp table that rows have been CTASed into.
+ *
+ * The actions vary on a case-by-case basis:
+ * 1. If we are not changing the table's AM, we need to swap the pg_appendonly
+ *	entries between the temp table and the original table and rewire aux
+ *	table dependencies.
+ * 2. If we are changing the table's AM, we need to transfer the pg_appendonly
+ *	entry of one table to the other and rewire aux table dependencies. See
+ *	individual case bodies for more details.
  */
 void
+ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
+{
+	switch(relform1->relam)
+	{
+		case HEAP_TABLE_AM_OID:
+			switch(relform2->relam)
+			{
+				case AO_ROW_TABLE_AM_OID:
+					/*
+					 * Since the newly created AO table temp relid will be
+					 * dropped from the catalog (later on in finish_heap_swap()),
+					 * we ensure that the:
+					 * 1. newly created pg_appendonly row carries the original
+					 * 		heap relid.
+					 * 2. newly created AO aux tables depend on the original
+					 * 		heap relid.
+					 */
+					TransferAppendonlyEntries(relform2->oid, relform1->oid);
+					break;
+				case AO_COLUMN_TABLE_AM_OID:
+					TransferAppendonlyEntries(relform2->oid, relform1->oid);
+					break;
+				case HEAP_TABLE_AM_OID:
+				default:
+					Assert(false);
+			}
+			break;
+		case AO_ROW_TABLE_AM_OID:
+			switch(relform2->relam)
+			{
+				case HEAP_TABLE_AM_OID:
+					/*
+					 * Since the newly created heap table temp relid will be
+					 * dropped from the catalog (later on in finish_heap_swap()),
+					 * we ensure that the:
+					 * 1. original AO table's pg_appendonly row carries the heap
+					 * 		temp table's relid.
+					 * 2. original AO table's AO aux tables now depend on the
+					 * 		heap temp table's relid.
+					 * This way when the heap temp table relid is dropped from
+					 * the catalog, the pg_appendonly row and aux tables also
+					 * follow suit.
+					 */
+					TransferAppendonlyEntries(relform1->oid, relform2->oid);
+					break;
+				case AO_ROW_TABLE_AM_OID:
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					break;
+				case AO_COLUMN_TABLE_AM_OID:
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					break;
+				default:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AO to given access method")));
+			}
+			break;
+		case AO_COLUMN_TABLE_AM_OID:
+			switch(relform2->relam)
+			{
+				case HEAP_TABLE_AM_OID:
+					/* For pg_appendonly entries, it's the same as AO->Heap. */
+					TransferAppendonlyEntries(relform1->oid, relform2->oid);
+					/* Remove the pg_attribute_encoding entries, since heap tables shouldn't have these. */
+					RemoveAttributeEncodingsByRelid(relform1->oid);
+					break;
+				case AO_ROW_TABLE_AM_OID:
+					/* For pg_appendonly entries, it's same as AO->AO/CO. */
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					/* For pg_attribute_encoding entries, it's same as AOCO->heap.*/
+					RemoveAttributeEncodingsByRelid(relform1->oid);
+					break;
+				case AO_COLUMN_TABLE_AM_OID:
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					break;
+				default:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AOCO to given access method")));
+			}
+			break;
+	}
+}
+
+/*
+ * Transfer the pg_appendonly_entry of the relation identified by fromrelid to
+ * the relation identified by torelid.
+ *
+ * This is done by simply overwriting the relid field of the pg_appendonly row
+ * for fromrelid with value = torelid.
+ *
+ * For completeness, also rewire the aux table dependencies to point to torelid.
+ */
+static void
+TransferAppendonlyEntries(Oid fromrelid, Oid torelid)
+{
+	Relation	pg_appendonly_rel;
+	TupleDesc	pg_appendonly_dsc;
+	HeapTuple	pg_appendonly_tuple;
+	Datum 		*newValues;
+	bool 		*newNulls;
+	bool 		*replace;
+	Oid			aosegrelid;
+	Oid			aoblkdirrelid;
+	Oid			aovisimaprelid;
+
+	pg_appendonly_rel = table_open(AppendOnlyRelationId, RowExclusiveLock);
+	pg_appendonly_dsc = RelationGetDescr(pg_appendonly_rel);
+
+	pg_appendonly_tuple = GetAppendEntryForMove(
+		pg_appendonly_rel,
+		pg_appendonly_dsc,
+		fromrelid,
+		&aosegrelid,
+		&aoblkdirrelid,
+		&aovisimaprelid);
+
+	newValues = palloc0(pg_appendonly_dsc->natts * sizeof(Datum));
+	newNulls = palloc0(pg_appendonly_dsc->natts * sizeof(bool));
+	replace = palloc0(pg_appendonly_dsc->natts * sizeof(bool));
+
+	replace[Anum_pg_appendonly_relid - 1] = true;
+	newValues[Anum_pg_appendonly_relid - 1] = torelid;
+
+	pg_appendonly_tuple = heap_modify_tuple(pg_appendonly_tuple, pg_appendonly_dsc,
+								   newValues, newNulls, replace);
+
+	CatalogTupleUpdate(pg_appendonly_rel, &pg_appendonly_tuple->t_self, pg_appendonly_tuple);
+
+	heap_freetuple(pg_appendonly_tuple);
+
+	table_close(pg_appendonly_rel, NoLock);
+
+	pfree(newValues);
+	pfree(newNulls);
+	pfree(replace);
+
+	if (OidIsValid(aosegrelid))
+		TransferDependencyLink(torelid, aosegrelid, "aoseg");
+	if (OidIsValid(aoblkdirrelid))
+		TransferDependencyLink(torelid, aoblkdirrelid, "aoblkdir");
+	if (OidIsValid(aovisimaprelid))
+		TransferDependencyLink(torelid, aovisimaprelid, "aovisimap");
+}
+
+/*
+ * Swap pg_appendonly entries between tables and transfer aux table dependencies.
+ */
+static void
 SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 {
 	Relation	pg_appendonly_rel;
@@ -555,14 +625,6 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 							&aosegrelid2,
 							&aoblkdirrelid2,
 							&aovisimaprelid2);
-
-	if (!HeapTupleIsValid(tupleCopy1) || !HeapTupleIsValid(tupleCopy2))
-	{
-		if (HeapTupleIsValid(tupleCopy1) || HeapTupleIsValid(tupleCopy2))
-			elog(ERROR, "swapping pg_appendonly entries is not permitted for non-appendoptimized tables");
-		table_close(pg_appendonly_rel, NoLock);
-		return;
-	}
 
 	/* Since gp_fastsequence entry is referenced by aosegrelid, it rides along  */
 	simple_heap_delete(pg_appendonly_rel, &tupleCopy1->t_self);

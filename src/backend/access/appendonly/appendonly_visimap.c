@@ -111,7 +111,6 @@ void
 AppendOnlyVisimap_Init(
 					   AppendOnlyVisimap *visiMap,
 					   Oid visimapRelid,
-					   Oid visimapIdxid,
 					   LOCKMODE lockmode,
 					   Snapshot appendOnlyMetaDataSnapshot)
 {
@@ -119,7 +118,6 @@ AppendOnlyVisimap_Init(
 
 	Assert(visiMap);
 	Assert(OidIsValid(visimapRelid));
-	Assert(OidIsValid(visimapIdxid));
 
 	visiMap->memoryContext = AllocSetContextCreate(
 												   CurrentMemoryContext,
@@ -136,7 +134,6 @@ AppendOnlyVisimap_Init(
 
 	AppendOnlyVisimapStore_Init(&visiMap->visimapStore,
 								visimapRelid,
-								visimapIdxid,
 								lockmode,
 								appendOnlyMetaDataSnapshot,
 								visiMap->memoryContext);
@@ -287,15 +284,13 @@ void
 AppendOnlyVisimapScan_Init(
 						   AppendOnlyVisimapScan *visiMapScan,
 						   Oid visimapRelid,
-						   Oid visimapIdxid,
 						   LOCKMODE lockmode,
 						   Snapshot appendonlyMetadataSnapshot)
 {
 	Assert(visiMapScan);
 	Assert(OidIsValid(visimapRelid));
-	Assert(OidIsValid(visimapIdxid));
 
-	AppendOnlyVisimap_Init(&visiMapScan->visimap, visimapRelid, visimapIdxid,
+	AppendOnlyVisimap_Init(&visiMapScan->visimap, visimapRelid,
 						   lockmode,
 						   appendonlyMetadataSnapshot);
 	visiMapScan->indexScan = AppendOnlyVisimapStore_BeginScan(
@@ -874,4 +869,120 @@ AppendOnlyVisimapDelete_Finish(
 
 	hash_destroy(visiMapDelete->dirtyEntryCache);
 	BufFileClose(visiMapDelete->workfile);
+}
+
+/*
+ * AppendOnlyVisimap_Init_forUniqueCheck
+ *
+ * Initializes the visimap to determine if tuples were deleted as a part of
+ * uniqueness checks.
+ *
+ * Note: we defer setting up the appendOnlyMetaDataSnapshot for the visibility
+ * map to the index_unique_check() table AM call. This is because
+ * snapshots used for unique index lookups are special and don't follow the
+ * usual allocation or registration mechanism. They may be stack-allocated and a
+ * new snapshot object may be passed to every unique index check (this happens
+ * when SNAPSHOT_DIRTY is passed). While technically, we could set up the
+ * metadata snapshot in advance for SNAPSHOT_SELF, the alternative is fine.
+ */
+void AppendOnlyVisimap_Init_forUniqueCheck(
+	AppendOnlyVisimap *visiMap,
+	Relation aoRel,
+	Snapshot snapshot)
+{
+	Oid visimaprelid;
+
+	Assert(snapshot->snapshot_type == SNAPSHOT_DIRTY ||
+			   snapshot->snapshot_type == SNAPSHOT_SELF);
+
+	GetAppendOnlyEntryAuxOids(aoRel,
+							  NULL, NULL, &visimaprelid);
+	if (!OidIsValid(visimaprelid))
+		elog(ERROR, "Could not find visimap for relation: %u", aoRel->rd_id);
+
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap init for unique checks"),
+				  errdetail("(aoRel = %u, visimaprel = %u)",
+							aoRel->rd_id, visimaprelid)));
+
+	AppendOnlyVisimap_Init(visiMap,
+						   visimaprelid,
+						   AccessShareLock,
+						   InvalidSnapshot /* appendOnlyMetaDataSnapshot */);
+}
+
+void
+AppendOnlyVisimap_Finish_forUniquenessChecks(
+	AppendOnlyVisimap *visiMap)
+{
+	AppendOnlyVisimapStore *visimapStore = &visiMap->visimapStore;
+	/*
+	 * The snapshot was either reset to NULL in between calls or already cleaned
+	 * up (if this was part of an update command)
+	 */
+	Assert(visimapStore->snapshot == InvalidSnapshot);
+
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap finish for unique checks"),
+				  errdetail("(visimaprel = %u, visimapidxrel = %u)",
+							visimapStore->visimapRelation->rd_id,
+							visimapStore->visimapRelation->rd_id)));
+
+	AppendOnlyVisimapStore_Finish(&visiMap->visimapStore, AccessShareLock);
+	AppendOnlyVisimapEntry_Finish(&visiMap->visimapEntry);
+
+	MemoryContextDelete(visiMap->memoryContext);
+	visiMap->memoryContext = NULL;
+}
+
+/*
+ * AppendOnlyVisimap_Init_forIndexOnlyScan
+ *
+ * Initializes the visimap to determine if tuples were deleted as a part of
+ * index-only scan.
+ * 
+ * Note: the input snapshot should be an MVCC snapshot.
+ */
+void AppendOnlyVisimap_Init_forIndexOnlyScan(
+	AppendOnlyVisimap *visiMap,
+	Relation aoRel,
+	Snapshot snapshot)
+{
+	Oid visimaprelid;
+
+	GetAppendOnlyEntryAuxOids(aoRel,
+							  NULL, NULL, &visimaprelid);
+	if (!OidIsValid(visimaprelid))
+		elog(ERROR, "Could not find visimap for relation: %u", aoRel->rd_id);
+
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap init for index-only scan"),
+				  errdetail("(aoRel = %u, visimaprel = %u)",
+							aoRel->rd_id, visimaprelid)));
+
+	Assert(IsMVCCSnapshot(snapshot));
+
+	AppendOnlyVisimap_Init(visiMap,
+						   visimaprelid,
+						   AccessShareLock,
+						   snapshot /* appendOnlyMetaDataSnapshot */);
+}
+
+void
+AppendOnlyVisimap_Finish_forIndexOnlyScan(
+	AppendOnlyVisimap *visiMap)
+{
+	AppendOnlyVisimapStore *visimapStore = &visiMap->visimapStore;
+
+	ereportif(Debug_appendonly_print_visimap, LOG,
+			  (errmsg("Append-only visimap finish for index-only scan"),
+				  errdetail("(visimaprel = %u, visimapidxrel = %u)",
+							visimapStore->visimapRelation->rd_id,
+							visimapStore->visimapRelation->rd_id)));
+
+	AppendOnlyVisimapStore_Finish(&visiMap->visimapStore, AccessShareLock);
+	AppendOnlyVisimapEntry_Finish(&visiMap->visimapEntry);
+
+	MemoryContextDelete(visiMap->memoryContext);
+	visiMap->memoryContext = NULL;
 }

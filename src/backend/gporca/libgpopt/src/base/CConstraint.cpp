@@ -200,7 +200,7 @@ CConstraint *
 CConstraint::PcnstrFromScalarExpr(
 	CMemoryPool *mp, CExpression *pexpr,
 	CColRefSetArray **ppdrgpcrs,  // output equivalence classes
-	BOOL infer_nulls_as)
+	BOOL infer_nulls_as, IMDIndex::EmdindexType access_method)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(pexpr->Pop()->FScalar());
@@ -226,21 +226,28 @@ CConstraint::PcnstrFromScalarExpr(
 		}
 
 		CConstraint *pcnstr = nullptr;
-		*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 
 		// first, try creating a single interval constraint from the expression
 		pcnstr = CConstraintInterval::PciIntervalFromScalarExpr(
-			mp, pexpr, colref, infer_nulls_as);
-		if (nullptr == pcnstr && CUtils::FScalarArrayCmp(pexpr))
+			mp, pexpr, colref, infer_nulls_as, access_method);
+		if (nullptr == pcnstr)
 		{
 			// if the interval creation failed, try creating a disjunction or conjunction
 			// of several interval constraints in the array case
-			pcnstr =
-				PcnstrFromScalarArrayCmp(mp, pexpr, colref, infer_nulls_as);
+			if (CUtils::FScalarArrayCmp(pexpr))
+			{
+				pcnstr =
+					PcnstrFromScalarArrayCmp(mp, pexpr, colref, infer_nulls_as);
+			}
+			else
+			{
+				return PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
+			}
 		}
 
 		if (nullptr != pcnstr)
 		{
+			*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 			AddColumnToEquivClasses(mp, colref, *ppdrgpcrs);
 		}
 		return pcnstr;
@@ -249,7 +256,8 @@ CConstraint::PcnstrFromScalarExpr(
 	switch (pexpr->Pop()->Eopid())
 	{
 		case COperator::EopScalarBoolOp:
-			return PcnstrFromScalarBoolOp(mp, pexpr, ppdrgpcrs, infer_nulls_as);
+			return PcnstrFromScalarBoolOp(mp, pexpr, ppdrgpcrs, infer_nulls_as,
+										  access_method);
 
 		case COperator::EopScalarCmp:
 			return PcnstrFromScalarCmp(mp, pexpr, ppdrgpcrs, infer_nulls_as);
@@ -258,6 +266,10 @@ CConstraint::PcnstrFromScalarExpr(
 			// return the constraints of the inner join predicates
 			return PcnstrFromScalarExpr(mp, (*pexpr)[0], ppdrgpcrs,
 										infer_nulls_as);
+
+		case COperator::EopScalarSubqueryAny:
+		case COperator::EopScalarSubqueryExists:
+			return PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
 
 		default:
 			return nullptr;
@@ -427,47 +439,51 @@ CConstraint::PcnstrFromScalarCmp(
 		const CColRef *pcrLeft = popScIdLeft->Pcr();
 		const CColRef *pcrRight = popScIdRight->Pcr();
 
-		if (!CUtils::FConstrainableType(pcrLeft->RetrieveType()->MDId()) ||
-			!CUtils::FConstrainableType(pcrRight->RetrieveType()->MDId()))
+		IMDId *left_mdid = pcrLeft->RetrieveType()->MDId();
+		IMDId *right_mdid = pcrRight->RetrieveType()->MDId();
+		if (!CUtils::FConstrainableType(left_mdid) ||
+			!CUtils::FConstrainableType(right_mdid))
 		{
 			return nullptr;
 		}
 
 		if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 		{
-			CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
-			CScalarCmp *sc_cmp = CScalarCmp::PopConvert(pexpr->Pop());
-			const IMDScalarOp *op = mda->RetrieveScOp(sc_cmp->MdIdOp());
+			// The left type and right type are both scalar ident types
+			// In case of casting, such as
+			// --CScalarCast
+			//   +--CScalarIdent "a" (0)
+			// We look at the data type before casting, instead of after
+			// This is because equivalent classes are built with columns
+			// based on their input types
 
-			IMDId *left_mdid =
-				CScalar::PopConvert(pexprLeft->Pop())->MdidType();
-			const IMDType *left_type = mda->RetrieveType(left_mdid);
+			// Eg. foo.a -- varchar, bar.b -- char
+			// Joining foo and bar on foo.a = bar.b requires casting
+			// foo.a to bpchar. But since hash of varchar (before cast)
+			// and hash of char don't belong to the same opfamily, we
+			// cannot generate equivalent classes with foo.a and bar.b
 
-			IMDId *right_mdid =
-				CScalar::PopConvert(pexprRight->Pop())->MdidType();
-			const IMDType *right_type = mda->RetrieveType(right_mdid);
+			// To build equivalence class, operator has to belong
+			// to the left column's hash (distribution) opfamily, and the
+			// right column's hash (distribution) opfamily
 
-			// Build constraint (e.g for equivalent classes) only when the hash families
-			// of the operator and operands match.
-			if (!CUtils::Equals(op->HashOpfamilyMdid(),
-								left_type->GetDistrOpfamilyMdid()) ||
-				!CUtils::Equals(op->HashOpfamilyMdid(),
-								right_type->GetDistrOpfamilyMdid()))
+			if (!CPredicateUtils::FOpInOpfamily(left_mdid, pexpr,
+												IMDIndex::EmdindHash) ||
+				!CPredicateUtils::FOpInOpfamily(right_mdid, pexpr,
+												IMDIndex::EmdindHash))
 			{
 				return nullptr;
 			}
 		}
 
 		BOOL pcrLeftIncludesNull =
-			infer_nulls_as && CColRef::EcrtTable == pcrLeft->Ecrt()
-				? CColRefTable::PcrConvert(const_cast<CColRef *>(pcrLeft))
-					  ->IsNullable()
-				: false;
+			infer_nulls_as && CColRef::EcrtTable == pcrLeft->Ecrt() &&
+			CColRefTable::PcrConvert(const_cast<CColRef *>(pcrLeft))
+				->IsNullable();
 		BOOL pcrRightIncludesNull =
-			infer_nulls_as && CColRef::EcrtTable == pcrRight->Ecrt()
-				? CColRefTable::PcrConvert(const_cast<CColRef *>(pcrRight))
-					  ->IsNullable()
-				: false;
+			infer_nulls_as && CColRef::EcrtTable == pcrRight->Ecrt() &&
+			CColRefTable::PcrConvert(const_cast<CColRef *>(pcrRight))
+				->IsNullable();
 
 		*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 		BOOL checkEquality = CPredicateUtils::IsEqualityOp(pexpr) &&
@@ -507,7 +523,7 @@ CConstraint *
 CConstraint::PcnstrFromScalarBoolOp(
 	CMemoryPool *mp, CExpression *pexpr,
 	CColRefSetArray **ppdrgpcrs,  // output equivalence classes
-	BOOL infer_nulls_as)
+	BOOL infer_nulls_as, IMDIndex::EmdindexType access_method)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(CUtils::FScalarBoolOp(pexpr));
@@ -540,7 +556,7 @@ CConstraint::PcnstrFromScalarBoolOp(
 	{
 		CColRefSetArray *pdrgpcrsChild = nullptr;
 		CConstraint *pcnstrChild = PcnstrFromScalarExpr(
-			mp, (*pexpr)[ul], &pdrgpcrsChild, infer_nulls_as);
+			mp, (*pexpr)[ul], &pdrgpcrsChild, infer_nulls_as, access_method);
 		if (nullptr == pcnstrChild || pcnstrChild->IsConstraintUnbounded())
 		{
 			CRefCount::SafeRelease(pcnstrChild);
@@ -596,6 +612,58 @@ CConstraint::PcnstrFromScalarBoolOp(
 	}
 
 	return nullptr;
+}
+
+// create constraint from EXISTS/ANY scalar subquery
+CConstraint *
+CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp, CExpression *pexpr,
+										 CColRefSetArray **ppdrgpcrs)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	if (!CUtils::FCorrelatedExistsAnySubquery(pexpr))
+	{
+		return nullptr;
+	}
+
+	CExpression *pexprRel = (*pexpr)[0];
+	GPOS_ASSERT(pexprRel->Pop()->FLogical());
+
+	CPropConstraint *ppc = pexprRel->DerivePropertyConstraint();
+	if (ppc == nullptr)
+	{
+		return nullptr;
+	}
+
+	*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
+	CConstraintArray *pdrgpcnstr = GPOS_NEW(mp) CConstraintArray(mp);
+	CColRefSet *outRefs = pexprRel->DeriveOuterReferences();
+	CColRefSetIter crsi(*outRefs);
+
+	while (crsi.Advance())
+	{
+		CColRef *colref = crsi.Pcr();
+		CColRefSet *equivOutRefs = ppc->PcrsEquivClass(colref);
+		if (equivOutRefs == nullptr || equivOutRefs->Size() == 0)
+		{
+			CRefCount::SafeRelease(equivOutRefs);
+			continue;
+		}
+		CConstraint *cnstr4Outer = ppc->Pcnstr()->Pcnstr(mp, equivOutRefs);
+		if (cnstr4Outer == nullptr || cnstr4Outer->IsConstraintUnbounded())
+		{
+			CRefCount::SafeRelease(equivOutRefs);
+			CRefCount::SafeRelease(cnstr4Outer);
+			continue;
+		}
+
+		CConstraint *cnstrCol = cnstr4Outer->PcnstrRemapForColumn(mp, colref);
+		pdrgpcnstr->Append(cnstrCol);
+		cnstr4Outer->Release();
+		AddColumnToEquivClasses(mp, colref, *ppdrgpcrs);
+	}
+
+	return CConstraint::PcnstrConjunction(mp, pdrgpcnstr);
 }
 
 //---------------------------------------------------------------------------

@@ -14,7 +14,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="102074,102120,102146,102152,103001,103014,103022,103027,103029,103038,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.CTAS,0.GPDB">
@@ -52,7 +52,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" VarTypeModList="-1,-1" DistributionPolicy="Replicated">
+      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" VarTypeModList="-1,-1" DistributionPolicy="Replicated">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true">
             <dxl:DefaultValue/>
@@ -75,7 +75,7 @@
         <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
       </dxl:OutputColumns>
       <dxl:CTEList/>
-      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" InsertColumns="1,1" VarTypeModList="-1,-1">
+      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Replicated" InsertColumns="1,1" VarTypeModList="-1,-1">
         <dxl:Columns>
           <dxl:Column ColId="2" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="3" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -93,7 +93,7 @@
       </dxl:LogicalCTAS>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" InsertColumns="0,0" VarTypeModList="-1,-1">
+      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Replicated" InsertColumns="0,0" VarTypeModList="-1,-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="31.262000" Rows="1000.000000" Width="4"/>
         </dxl:Properties>

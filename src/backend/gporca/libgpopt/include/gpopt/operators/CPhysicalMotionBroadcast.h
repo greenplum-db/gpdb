@@ -37,7 +37,8 @@ public:
 	CPhysicalMotionBroadcast(const CPhysicalMotionBroadcast &) = delete;
 
 	// ctor
-	explicit CPhysicalMotionBroadcast(CMemoryPool *mp);
+	explicit CPhysicalMotionBroadcast(CMemoryPool *mp,
+									  BOOL ignore_broadcast_threshold);
 
 	// dtor
 	~CPhysicalMotionBroadcast() override;

@@ -163,7 +163,7 @@
     <dxl:Plan Id="0" SpaceSize="60">
       <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000209" Rows="2.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000309" Rows="2.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="4" Alias="sum">
@@ -172,7 +172,7 @@
         </dxl:ProjList>
         <dxl:CTEProducer CTEId="0" Columns="1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000010" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000110" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="nextval">
@@ -181,7 +181,7 @@
           </dxl:ProjList>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000009" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000109" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="nextval">
@@ -249,7 +249,7 @@
                   <dxl:ProjElem ColId="4" Alias="sum">
                     <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                       <dxl:ValuesList ParamType="aggargs">
-                      <dxl:Ident ColId="2" ColName="nextval" TypeMdid="0.20.1.0"/>
+                        <dxl:Ident ColId="2" ColName="nextval" TypeMdid="0.20.1.0"/>
                       </dxl:ValuesList>
                       <dxl:ValuesList ParamType="aggdirectargs"/>
                       <dxl:ValuesList ParamType="aggorder"/>
@@ -337,7 +337,7 @@
                     <dxl:ProjElem ColId="7" Alias="sum">
                       <dxl:AggFunc AggMdid="0.2107.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                         <dxl:ValuesList ParamType="aggargs">
-                        <dxl:Ident ColId="5" ColName="nextval" TypeMdid="0.20.1.0"/>
+                          <dxl:Ident ColId="5" ColName="nextval" TypeMdid="0.20.1.0"/>
                         </dxl:ValuesList>
                         <dxl:ValuesList ParamType="aggdirectargs"/>
                         <dxl:ValuesList ParamType="aggorder"/>

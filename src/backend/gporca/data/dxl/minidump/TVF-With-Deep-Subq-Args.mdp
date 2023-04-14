@@ -171,7 +171,7 @@ SELECT generate_series((
       <dxl:ColumnStatistics Mdid="1.156718.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.156718.1.1.4" Name="xmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.156718.1.1" Name="x" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.156718.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.156718.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -205,7 +205,6 @@ SELECT generate_series((
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -232,7 +231,7 @@ SELECT generate_series((
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalGet>
-              <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+              <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                 <dxl:Columns>
                   <dxl:Column ColId="2" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="3" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -265,7 +264,7 @@ SELECT generate_series((
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+                <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                   <dxl:Columns>
                     <dxl:Column ColId="13" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="14" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -286,7 +285,7 @@ SELECT generate_series((
         </dxl:OpExpr>
       </dxl:LogicalTVF>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="126">
+    <dxl:Plan Id="0" SpaceSize="342">
       <dxl:TableValuedFunction FuncId="0.1068.1.0" Name="generate_series" TypeMdid="0.20.1.0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.008000" Rows="1000.000000" Width="8"/>
@@ -301,7 +300,7 @@ SELECT generate_series((
           <dxl:ParamList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6896.001799" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="6896.001855" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="51" Alias="ColRef_0024">
@@ -312,7 +311,7 @@ SELECT generate_series((
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6896.001799" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="6896.001855" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="51" Alias="ColRef_0024">
@@ -335,7 +334,7 @@ SELECT generate_series((
               <dxl:OneTimeFilter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6896.001783" Rows="4.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="6896.001839" Rows="4.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="76" Alias="ColRef_0076">
@@ -349,7 +348,7 @@ SELECT generate_series((
                 <dxl:OneTimeFilter/>
                 <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="6896.001719" Rows="4.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6896.001775" Rows="4.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="64" Alias="count">
@@ -365,7 +364,7 @@ SELECT generate_series((
                   </dxl:JoinFilter>
                   <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="862.000110" Rows="2.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="862.000117" Rows="2.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="64" Alias="count">
@@ -388,27 +387,31 @@ SELECT generate_series((
                       <dxl:Filter/>
                       <dxl:OneTimeFilter/>
                     </dxl:Result>
-                    <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                    <dxl:Materialize Eager="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
-                      <dxl:GroupingColumns/>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="64" Alias="count">
-                          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
-                            <dxl:ValuesList ParamType="aggargs"/>
-                            <dxl:ValuesList ParamType="aggdirectargs"/>
-                            <dxl:ValuesList ParamType="aggorder"/>
-                            <dxl:ValuesList ParamType="aggdistinct"/>
-                          </dxl:AggFunc>
+                          <dxl:Ident ColId="64" ColName="count" TypeMdid="0.20.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:Materialize Eager="false">
+                      <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000017" Rows="1.000000" Width="8"/>
                         </dxl:Properties>
-                        <dxl:ProjList/>
+                        <dxl:GroupingColumns/>
+                        <dxl:ProjList>
+                          <dxl:ProjElem ColId="64" Alias="count">
+                            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                              <dxl:ValuesList ParamType="aggargs"/>
+                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                              <dxl:ValuesList ParamType="aggorder"/>
+                              <dxl:ValuesList ParamType="aggdistinct"/>
+                            </dxl:AggFunc>
+                          </dxl:ProjElem>
+                        </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                           <dxl:Properties>
@@ -423,7 +426,7 @@ SELECT generate_series((
                             </dxl:Properties>
                             <dxl:ProjList/>
                             <dxl:Filter/>
-                            <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+                            <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                               <dxl:Columns>
                                 <dxl:Column ColId="54" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                                 <dxl:Column ColId="55" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -439,30 +442,34 @@ SELECT generate_series((
                             </dxl:TableDescriptor>
                           </dxl:TableScan>
                         </dxl:GatherMotion>
-                      </dxl:Materialize>
-                    </dxl:Aggregate>
+                      </dxl:Aggregate>
+                    </dxl:Materialize>
                   </dxl:NestedLoopJoin>
-                  <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                  <dxl:Materialize Eager="true">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
-                    <dxl:GroupingColumns/>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="75" Alias="count">
-                        <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
-                          <dxl:ValuesList ParamType="aggargs"/>
-                          <dxl:ValuesList ParamType="aggdirectargs"/>
-                          <dxl:ValuesList ParamType="aggorder"/>
-                          <dxl:ValuesList ParamType="aggdistinct"/>
-                        </dxl:AggFunc>
+                        <dxl:Ident ColId="75" ColName="count" TypeMdid="0.20.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:Materialize Eager="true">
+                    <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000017" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
-                      <dxl:ProjList/>
+                      <dxl:GroupingColumns/>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="75" Alias="count">
+                          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                            <dxl:ValuesList ParamType="aggargs"/>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
+                          </dxl:AggFunc>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
                       <dxl:Filter/>
                       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                         <dxl:Properties>
@@ -477,7 +484,7 @@ SELECT generate_series((
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+                          <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                             <dxl:Columns>
                               <dxl:Column ColId="65" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="66" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -493,8 +500,8 @@ SELECT generate_series((
                           </dxl:TableDescriptor>
                         </dxl:TableScan>
                       </dxl:GatherMotion>
-                    </dxl:Materialize>
-                  </dxl:Aggregate>
+                    </dxl:Aggregate>
+                  </dxl:Materialize>
                 </dxl:NestedLoopJoin>
               </dxl:Result>
             </dxl:Result>
@@ -506,7 +513,7 @@ SELECT generate_series((
           <dxl:ParamList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6896.001799" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="6896.001855" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="52" Alias="ColRef_0025">
@@ -517,7 +524,7 @@ SELECT generate_series((
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6896.001799" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="6896.001855" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="51" Alias="ColRef_0024">
@@ -540,7 +547,7 @@ SELECT generate_series((
               <dxl:OneTimeFilter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6896.001783" Rows="4.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="6896.001839" Rows="4.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="76" Alias="ColRef_0076">
@@ -554,7 +561,7 @@ SELECT generate_series((
                 <dxl:OneTimeFilter/>
                 <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="6896.001719" Rows="4.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6896.001775" Rows="4.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="64" Alias="count">
@@ -570,7 +577,7 @@ SELECT generate_series((
                   </dxl:JoinFilter>
                   <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="862.000110" Rows="2.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="862.000117" Rows="2.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="64" Alias="count">
@@ -593,27 +600,31 @@ SELECT generate_series((
                       <dxl:Filter/>
                       <dxl:OneTimeFilter/>
                     </dxl:Result>
-                    <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                    <dxl:Materialize Eager="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
-                      <dxl:GroupingColumns/>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="64" Alias="count">
-                          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
-                            <dxl:ValuesList ParamType="aggargs"/>
-                            <dxl:ValuesList ParamType="aggdirectargs"/>
-                            <dxl:ValuesList ParamType="aggorder"/>
-                            <dxl:ValuesList ParamType="aggdistinct"/>
-                          </dxl:AggFunc>
+                          <dxl:Ident ColId="64" ColName="count" TypeMdid="0.20.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:Materialize Eager="false">
+                      <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000017" Rows="1.000000" Width="8"/>
                         </dxl:Properties>
-                        <dxl:ProjList/>
+                        <dxl:GroupingColumns/>
+                        <dxl:ProjList>
+                          <dxl:ProjElem ColId="64" Alias="count">
+                            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                              <dxl:ValuesList ParamType="aggargs"/>
+                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                              <dxl:ValuesList ParamType="aggorder"/>
+                              <dxl:ValuesList ParamType="aggdistinct"/>
+                            </dxl:AggFunc>
+                          </dxl:ProjElem>
+                        </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                           <dxl:Properties>
@@ -628,7 +639,7 @@ SELECT generate_series((
                             </dxl:Properties>
                             <dxl:ProjList/>
                             <dxl:Filter/>
-                            <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+                            <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                               <dxl:Columns>
                                 <dxl:Column ColId="54" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                                 <dxl:Column ColId="55" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -644,30 +655,34 @@ SELECT generate_series((
                             </dxl:TableDescriptor>
                           </dxl:TableScan>
                         </dxl:GatherMotion>
-                      </dxl:Materialize>
-                    </dxl:Aggregate>
+                      </dxl:Aggregate>
+                    </dxl:Materialize>
                   </dxl:NestedLoopJoin>
-                  <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                  <dxl:Materialize Eager="true">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
-                    <dxl:GroupingColumns/>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="75" Alias="count">
-                        <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
-                          <dxl:ValuesList ParamType="aggargs"/>
-                          <dxl:ValuesList ParamType="aggdirectargs"/>
-                          <dxl:ValuesList ParamType="aggorder"/>
-                          <dxl:ValuesList ParamType="aggdistinct"/>
-                        </dxl:AggFunc>
+                        <dxl:Ident ColId="75" ColName="count" TypeMdid="0.20.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:Materialize Eager="true">
+                    <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000018" Rows="1.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000017" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
-                      <dxl:ProjList/>
+                      <dxl:GroupingColumns/>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="75" Alias="count">
+                          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
+                            <dxl:ValuesList ParamType="aggargs"/>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
+                          </dxl:AggFunc>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
                       <dxl:Filter/>
                       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                         <dxl:Properties>
@@ -682,7 +697,7 @@ SELECT generate_series((
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.156718.1.1" TableName="x">
+                          <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                             <dxl:Columns>
                               <dxl:Column ColId="65" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="66" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -698,8 +713,8 @@ SELECT generate_series((
                           </dxl:TableDescriptor>
                         </dxl:TableScan>
                       </dxl:GatherMotion>
-                    </dxl:Materialize>
-                  </dxl:Aggregate>
+                    </dxl:Aggregate>
+                  </dxl:Materialize>
                 </dxl:NestedLoopJoin>
               </dxl:Result>
             </dxl:Result>

@@ -93,3 +93,273 @@ server closed the connection unexpectedly
 -------
  0     
 (1 row)
+
+-- Validate CHECKPOINT XLOG record length, verifying issue
+-- https://github.com/greenplum-db/gpdb/issues/12977.
+-- The extended CHECKPOINT WAL record contains global transaction
+-- information, it could exceed the previous expected length in
+-- SizeOfXLogRecordDataHeaderShort, result in crash recovery
+-- failure on coordinator. The solution is adding the expected length
+-- in SizeOfXLogRecordDataHeaderLong also, to fixup the missing condition.
+create table ckpt_xlog_len_tbl(a int, b int);
+CREATE
+
+-- Need to start at least 18 concurrent sessions to create a long header
+-- CHECKPOINT WAL record, which size is not less than 256.
+2q: ... <quitting>
+33q: ... <quitting>
+
+10: select gp_inject_fault_infinite('start_insertedDistributedCommitted', 'suspend', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+10: begin;
+BEGIN
+10: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+10&: commit;  <waiting ...>
+
+11: begin;
+BEGIN
+11: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+11&: commit;  <waiting ...>
+
+12: begin;
+BEGIN
+12: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+12&: commit;  <waiting ...>
+
+13: begin;
+BEGIN
+13: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+13&: commit;  <waiting ...>
+
+14: begin;
+BEGIN
+14: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+14&: commit;  <waiting ...>
+
+15: begin;
+BEGIN
+15: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+15&: commit;  <waiting ...>
+
+16: begin;
+BEGIN
+16: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+16&: commit;  <waiting ...>
+
+17: begin;
+BEGIN
+17: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+17&: commit;  <waiting ...>
+
+18: begin;
+BEGIN
+18: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+18&: commit;  <waiting ...>
+
+19: begin;
+BEGIN
+19: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+19&: commit;  <waiting ...>
+
+20: begin;
+BEGIN
+20: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+20&: commit;  <waiting ...>
+
+21: begin;
+BEGIN
+21: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+21&: commit;  <waiting ...>
+
+22: begin;
+BEGIN
+22: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+22&: commit;  <waiting ...>
+
+23: begin;
+BEGIN
+23: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+23&: commit;  <waiting ...>
+
+24: begin;
+BEGIN
+24: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+24&: commit;  <waiting ...>
+
+25: begin;
+BEGIN
+25: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+25&: commit;  <waiting ...>
+
+26: begin;
+BEGIN
+26: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+26&: commit;  <waiting ...>
+
+27: begin;
+BEGIN
+27: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+27&: commit;  <waiting ...>
+
+28: begin;
+BEGIN
+28: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
+INSERT 10
+28&: commit;  <waiting ...>
+
+-- wait to make sure the commit is taking place and blocked at start_insertedDistributedCommitted
+2: select gp_wait_until_triggered_fault('start_insertedDistributedCommitted', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+2: select gp_inject_fault_infinite('before_wait_VirtualXIDsDelayingChkpt', 'skip', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+33&: checkpoint;  <waiting ...>
+2: select gp_inject_fault_infinite('keep_log_seg', 'panic', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+-- wait to make sure we don't resume commit processing before this
+-- step in checkpoint
+2: select gp_wait_until_triggered_fault('before_wait_VirtualXIDsDelayingChkpt', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- reason for this inifinite wait is just to avoid test flake. Without
+-- this joining step "1<" may see "COMMIT" sometimes or "server closed
+-- the connection unexpectedly" otherwise. With this its always
+-- "server closed the connection unexpectedly".
+2: select gp_inject_fault_infinite('after_xlog_xact_distributed_commit', 'infinite_loop', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+2: select gp_inject_fault_infinite('start_insertedDistributedCommitted', 'resume', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+10<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+33<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+11<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+12<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+13<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+14<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+15<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+16<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+17<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+18<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+19<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+20<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+21<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+22<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+23<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+24<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+25<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+26<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+27<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+28<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+3q: ... <quitting>
+3: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+3: select count(*) from ckpt_xlog_len_tbl;
+ count 
+-------
+ 190   
+(1 row)
+
+3: drop table ckpt_xlog_len_tbl;
+DROP

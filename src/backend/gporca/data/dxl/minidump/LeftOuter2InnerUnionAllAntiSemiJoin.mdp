@@ -139,7 +139,7 @@ and ei.entity_id  = i.ad_id;
       <dxl:ColumnStatistics Mdid="1.17279071.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.17279071.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.17279045.1.1" Name="events_inprocess" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.17279045.1.1" Name="events_inprocess" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.17279045.1.1" Name="events_inprocess" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="user_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -173,7 +173,6 @@ and ei.entity_id  = i.ad_id;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17279045.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -195,7 +194,7 @@ and ei.entity_id  = i.ad_id;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.17279071.1.1" Name="impressions_raw" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.17279071.1.1" Name="impressions_raw" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="user_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -226,7 +225,6 @@ and ei.entity_id  = i.ad_id;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17279071.1.1.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -259,7 +257,7 @@ and ei.entity_id  = i.ad_id;
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Left">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.17279045.1.1" TableName="events_inprocess">
+          <dxl:TableDescriptor Mdid="6.17279045.1.1" TableName="events_inprocess">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="user_id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="entity_id" TypeMdid="0.23.1.0"/>
@@ -275,7 +273,7 @@ and ei.entity_id  = i.ad_id;
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.17279071.1.1" TableName="impressions_raw">
+          <dxl:TableDescriptor Mdid="6.17279071.1.1" TableName="impressions_raw">
             <dxl:Columns>
               <dxl:Column ColId="11" Attno="1" ColName="user_id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="12" Attno="2" ColName="ad_id" TypeMdid="0.23.1.0"/>
@@ -301,7 +299,7 @@ and ei.entity_id  = i.ad_id;
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="3148">
+    <dxl:Plan Id="0" SpaceSize="3034">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2586.003103" Rows="2.000000" Width="24"/>
@@ -407,7 +405,7 @@ and ei.entity_id  = i.ad_id;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.17279045.1.1" TableName="events_inprocess">
+              <dxl:TableDescriptor Mdid="6.17279045.1.1" TableName="events_inprocess">
                 <dxl:Columns>
                   <dxl:Column ColId="19" Attno="1" ColName="user_id" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="20" Attno="2" ColName="entity_id" TypeMdid="0.23.1.0"/>
@@ -647,7 +645,7 @@ and ei.entity_id  = i.ad_id;
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.17279071.1.1" TableName="impressions_raw">
+                  <dxl:TableDescriptor Mdid="6.17279071.1.1" TableName="impressions_raw">
                     <dxl:Columns>
                       <dxl:Column ColId="39" Attno="1" ColName="user_id" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="40" Attno="2" ColName="ad_id" TypeMdid="0.23.1.0"/>

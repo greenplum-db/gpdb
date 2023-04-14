@@ -4,6 +4,7 @@
 
 -- Clean up in case a prior regression run failed
 SET client_min_messages TO 'warning';
+SET optimizer_trace_fallback = on;
 DROP ROLE IF EXISTS regress_file_fdw_superuser, regress_file_fdw_user, regress_no_priv_user;
 RESET client_min_messages;
 

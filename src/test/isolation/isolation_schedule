@@ -40,13 +40,12 @@
 # has additional issue where GPDB does not support creating unique indexes on
 # mutated columns via lower().
 #
-# GPDB_12_MERGE_FIXME: tuplelock-upgrade-no-deadlock, freeze-the-dead
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: tuplelock-upgrade-no-deadlock, freeze-the-dead
 # don't pass in normal mode for GPDB as SELECT..FOR SHARE/UPDATE can
 # block each other in gpdb if GDD does not open.
-# insert-conflict-specconflict, In this case, three sessions using
-# advisory lock to control INSERT...ON CONFLICT in a small critical
-# region so that test txn will successful abort. GPDB lock managed in
-# master node, it is hard to test this feature by the case.
+#
+# GPDB_12_MERGE_FRATURE_NOT_SUPPORTED: disable test predicate-lock-hot-tuple, update-conflict-out
+# because Greenplum does not support serializable transactions.
 #
 #############################################################
 #
@@ -84,9 +83,11 @@ test: deadlock-soft-2
 #test: fk-partitioned-1
 #test: fk-partitioned-2
 #test: eval-plan-qual
+#test: eval-plan-qual-trigger
 #test: lock-update-delete
 #test: lock-update-traversal
 test: inherit-temp
+test: temp-schema-cleanup
 #test: insert-conflict-do-nothing
 #test: insert-conflict-do-nothing-2
 #test: insert-conflict-do-update
@@ -107,6 +108,7 @@ test: update-locked-tuple
 #test: tuplelock-conflict
 #test: tuplelock-update
 #test: tuplelock-upgrade-no-deadlock
+#test: tuplelock-partition
 #test: freeze-the-dead
 #test: nowait
 #test: nowait-2
@@ -137,14 +139,12 @@ test: vacuum-skip-locked
 #test: predicate-gist
 #test: predicate-gin
 
-# GPDB_12_MERGE_FIXME: partition-drop-index-locking test disabled due
-# to missing isolation test framework feature. Enable this test back
-# when https://github.com/postgres/postgres/commit/f228c401b86bd68570c
-# has been merged into GPDB.
-#test: partition-drop-index-locking
+test: partition-concurrent-attach
+test: partition-drop-index-locking
 
-# GPDB_12_MERGE_FIXME: disabled test partition-key-update-1. Need to
-# investigate why failing in utility mode single node.
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: Disabled test partition-key-update-1
+# because it fails when test errors from ExecLockRows. The reason is that
+# GPDB disabled triggers for foreign keys.
 #test: partition-key-update-1
 test: partition-key-update-2
 test: partition-key-update-3
@@ -162,3 +162,4 @@ test: heap-repeatable-read-vacuum
 test: ao-repeatable-read-vacuum
 
 test: ao-insert-eof create_index_hot udf-insert-deadlock heap-repeatable-read ao-repeatable-read
+test: vacuum-ao-concurrent-drop

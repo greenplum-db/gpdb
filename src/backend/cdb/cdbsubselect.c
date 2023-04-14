@@ -156,13 +156,13 @@ IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
  *	returns true if correlated equality condition
  *	*innerExpr - points to the inner expr i.e. bar(innervar) in the condition
  *	*eqOp and *sortOp - equality and < operators, to implement the condition as a mergejoin.
+ *  The *eqOp and *sortOp should be determined according to innervar's type.
  */
 static bool
 IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sortOp, bool *hashable)
 {
 	Oid			opfamily;
-	Oid			ltype;
-	Oid			rtype;
+	Oid			innerExprType;
 	List	   *l;
 
 	Assert(opexp);
@@ -171,11 +171,17 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sort
 	Assert(eqOp);
 	Assert(sortOp);
 
+	if (!IsCorrelatedOpExpr(opexp, innerExpr))
+		return false;
+
+	Assert(*innerExpr);
+	innerExprType = exprType((Node *)*innerExpr);
+
 	/*
 	 * If this is an expression of the form a = b, then we want to know about
 	 * the vars involved.
 	 */
-	if (!op_mergejoinable(opexp->opno, exprType(linitial(opexp->args))))
+	if (!op_mergejoinable(opexp->opno, innerExprType))
 		return false;
 
 	/*
@@ -190,24 +196,19 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sort
 	list_free(l);
 
 	/*
-	 * Look up the correct sort operator from the chosen opfamily.
+	 * Look up the correct equility/sort operators from the chosen opfamily.
 	 */
-	ltype = exprType(linitial(opexp->args));
-	rtype = exprType(lsecond(opexp->args));
-	*eqOp = get_opfamily_member(opfamily, ltype, rtype, BTEqualStrategyNumber);
+	*eqOp = get_opfamily_member(opfamily, innerExprType, innerExprType, BTEqualStrategyNumber);
 	if (!OidIsValid(*eqOp))	/* should not happen */
 		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
-			 BTEqualStrategyNumber, ltype, rtype, opfamily);
+			 BTEqualStrategyNumber, innerExprType, innerExprType, opfamily);
 
-	*sortOp = get_opfamily_member(opfamily, ltype, rtype, BTLessStrategyNumber);
+	*sortOp = get_opfamily_member(opfamily, innerExprType, innerExprType, BTLessStrategyNumber);
 	if (!OidIsValid(*sortOp))	/* should not happen */
 		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
-			 BTLessStrategyNumber, ltype, rtype, opfamily);
+			 BTLessStrategyNumber, innerExprType, innerExprType, opfamily);
 
-	*hashable = op_hashjoinable(*eqOp, ltype);
-
-	if (!IsCorrelatedOpExpr(opexp, innerExpr))
-		return false;
+	*hashable = op_hashjoinable(*eqOp, innerExprType);
 
 	return true;
 }
@@ -463,7 +464,42 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 	return;
 }
 
+/*
+ * cdbsubselect_drop_distinct
+ */
+void
+cdbsubselect_drop_distinct(Query *subselect)
+{
+	if (subselect->limitCount == NULL &&
+		subselect->limitOffset == NULL)
+	{
+		/* Delete DISTINCT. */
+		if (!subselect->hasDistinctOn ||
+			list_length(subselect->distinctClause) == list_length(subselect->targetList))
+			subselect->distinctClause = NIL;
 
+		/* Delete GROUP BY if subquery has no aggregates and no HAVING. */
+		if (!subselect->hasAggs &&
+			subselect->havingQual == NULL)
+			subselect->groupClause = NIL;
+	}
+}	/* cdbsubselect_drop_distinct */
+
+/*
+ * cdbsubselect_drop_orderby
+ */
+void
+cdbsubselect_drop_orderby(Query *subselect)
+{
+	if (subselect->limitCount == NULL &&
+		subselect->limitOffset == NULL)
+	{
+		/* Delete ORDER BY. */
+		if (!subselect->hasDistinctOn ||
+			list_length(subselect->distinctClause) == list_length(subselect->targetList))
+			subselect->sortClause = NIL;
+	}
+}	/* cdbsubselect_drop_orderby */
 
 /**
  * Safe to convert expr sublink to a join
@@ -489,12 +525,6 @@ safe_to_convert_EXPR(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
 	 * If there are no correlations in the WHERE clause, then don't bother.
 	 */
 	if (!IsSubqueryCorrelated(subselect))
-		return false;
-
-	/**
-	 * If deeply correlated, don't bother.
-	 */
-	if (IsSubqueryMultiLevelCorrelated(subselect))
 		return false;
 
 	/**
@@ -1401,7 +1431,18 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars, List *rtable)
 
 	if (IsA(exprs, Var))
 	{
+		Var *tmpvar = (Var *)exprs;
+
+		/* params treat as nullable exprs */
+		if (tmpvar->varlevelsup != 0)
+			return true;
+
 		Var		   *var = cdb_map_to_base_var((Var *) exprs, rtable);
+
+		/* once not found RTE of var, return as nullable expr */
+		if (var == NULL)
+			return true;
+
 		return !list_member(nonnullable_vars, var);
 	}
 	else if (IsA(exprs, List))
@@ -1472,21 +1513,37 @@ convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink,
 
 	if (safe_to_convert_NOTIN(sublink, available_rels))
 	{
+		/* Delete ORDER BY and DISTINCT.
+		 *
+		 * There is no need to do the group-by or order-by inside the
+		 * subquery, if we have decided to pull up the sublink. For the
+		 * group-by case, after the sublink pull-up, there will be a semi-join
+		 * plan node generated in top level, which will weed out duplicate
+		 * tuples naturally. For the order-by case, after the sublink pull-up,
+		 * the subquery will become a jointree, inside which the tuples' order
+		 * doesn't matter. In a summary, it's safe to elimate the group-by or
+		 * order-by causes here.
+		 */
+		cdbsubselect_drop_orderby(subselect);
+		cdbsubselect_drop_distinct(subselect);
+
 		int			subq_indx      = add_notin_subquery_rte(parse, subselect);
 		List       *inner_exprs    = NIL;
 		List       *outer_exprs    = NIL;
-		bool        inner_nullable = true;
-		bool        outer_nullable = true;
-
-		inner_exprs = fetch_targetlist_exprs(subselect->targetList);
-		outer_exprs = fetch_outer_exprs(sublink->testexpr);
-		inner_nullable = is_exprs_nullable((Node *) inner_exprs, subselect);
-		outer_nullable = is_exprs_nullable((Node *) outer_exprs, parse);
-
-		JoinExpr   *join_expr = make_join_expr(NULL, subq_indx, JOIN_LASJ_NOTIN);
+		bool        nullable       = true;
+		JoinExpr   *join_expr      = make_join_expr(NULL, subq_indx, JOIN_LASJ_NOTIN);
 
 		join_expr->quals = make_lasj_quals(root, sublink, subq_indx);
-		if (inner_nullable || outer_nullable)
+
+		inner_exprs = fetch_targetlist_exprs(subselect->targetList);
+		nullable = is_exprs_nullable((Node *) inner_exprs, subselect);
+		if (!nullable)
+		{
+			outer_exprs = fetch_outer_exprs(sublink->testexpr);
+			nullable = is_exprs_nullable((Node *) outer_exprs, parse);
+		}
+
+		if (nullable)
 			join_expr->quals = add_null_match_clause(join_expr->quals);
 
 		return join_expr;
@@ -1541,7 +1598,10 @@ cdb_find_all_vars_walker(Node *node, FindAllVarsContext *context)
 
 	if (IsA(node, Var))
 	{
-		Var     *var;
+		Var *var = (Var *)node;
+
+		if (var->varlevelsup != 0)
+			return false;
 
 		/*
 		 * The vars fetched from targetList/testexpr.. can be from virtual range table (RTE_JOIN),
@@ -1549,7 +1609,10 @@ cdb_find_all_vars_walker(Node *node, FindAllVarsContext *context)
 		 * them to base vars is needed before check nullable.
 		 */
 		var = cdb_map_to_base_var((Var *) node, context->rtable);
-		context->vars = list_append_unique(context->vars, var);
+
+		if (var != NULL)
+			context->vars = list_append_unique(context->vars, var);
+
 		return false;
 	}
 
@@ -1561,11 +1624,27 @@ cdb_map_to_base_var(Var *var, List *rtable)
 {
 	RangeTblEntry *rte    = rt_fetch(var->varno, rtable);
 
-	while(rte->rtekind == RTE_JOIN && rte->joinaliasvars)
+	while (rte != NULL && rte->rtekind == RTE_JOIN && rte->joinaliasvars)
 	{
-		var = (Var *) list_nth(rte->joinaliasvars, var->varattno-1);
-		rte = rt_fetch(var->varno, rtable);
+		Node *node = list_nth(rte->joinaliasvars, var->varattno-1);
+		/*
+		 * Per the comments of the field joinaliasvars of struct RangeTblEntry,
+		 * it might be Var or COALESCE expr or NULL pointer. For cases other than
+		 * a simple Var, return NULL is a safe choice. See Github Issue
+		 * https://github.com/greenplum-db/gpdb/issues/14858 for details.
+		 */
+		if (node != NULL && IsA(node, Var))
+		{
+			var = (Var *) node;
+			rte = rt_fetch(var->varno, rtable);
+		}
+		else
+			return NULL;
 	}
+
+	/* not found RTE in current level rtable */
+	if (rte == NULL)
+		return NULL;
 
 	return var;
 }

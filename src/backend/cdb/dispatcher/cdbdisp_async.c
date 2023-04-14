@@ -4,12 +4,6 @@
  *	  Functions for asynchronous implementation of dispatching
  *	  commands to QExecutors.
  *
- * GPDB_12_MERGE_FIXME: We should switch to using WaitEventSetWait() instead
- * of straight poll() in this file. WaitEventSetWait() would report the status
- * using the new wait event infrastructure, so that it would show up as a
- * separate state in pg_stat_activity. It's also potentially more efficient.
- *
- *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
  *
@@ -29,6 +23,7 @@
 #include <sys/poll.h>
 #endif
 
+#include "pgstat.h"
 #include "storage/ipc.h"		/* For proc_exit_inprogress  */
 #include "tcop/tcopprot.h"
 #include "cdb/cdbdisp.h"
@@ -146,7 +141,7 @@ static void
 			handlePollError(CdbDispatchCmdAsync *pParms);
 
 static void
-			handlePollSuccess(CdbDispatchCmdAsync *pParms, struct pollfd *fds);
+			handlePollSuccess(CdbDispatchCmdAsync *pParms, WaitEvent *revents, int nready);
 
 static bool
 			checkAckMessage(CdbDispatchResult *dispatchResult, const char *message);
@@ -217,28 +212,30 @@ cdbdisp_getWaitSocketFds_async(struct CdbDispatcherState *ds, int *nsocks)
 static void
 cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 {
-	const static int DISPATCH_POLL_TIMEOUT = 500;
-	struct pollfd *fds;
-	int			nfds,
-				i;
 	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
-	int			dispatchCount = pParms->dispatchCount;
+	int				dispatchCount = pParms->dispatchCount;
+	const static int DISPATCH_POLL_TIMEOUT = 500;
+	int			i;
 
-	fds = (struct pollfd *) palloc(dispatchCount * sizeof(struct pollfd));
+	/*
+	 * DispWaitSet's lifecycle is in the whole QD process,
+	 * so alloc it in the TopMemoryContext (rather than DispatcherContext)
+	 */
+	ResetWaitEventSet(&DispWaitSet, TopMemoryContext, dispatchCount);
 
+	WaitEvent 		*revents = palloc(sizeof(WaitEvent) * dispatchCount);
+	int 			*added = palloc0(sizeof(int) * dispatchCount);
 	while (true)
 	{
 		int			pollRet;
-
-		nfds = 0;
-		memset(fds, 0, dispatchCount * sizeof(struct pollfd));
+		bool		allFlushed = true;
 
 		for (i = 0; i < dispatchCount; i++)
 		{
 			CdbDispatchResult *qeResult = pParms->dispatchResultPtrArray[i];
 			SegmentDatabaseDescriptor *segdbDesc = qeResult->segdbDesc;
 			PGconn	   *conn = segdbDesc->conn;
-			int			ret;
+			int			ret = 0;
 
 			/* skip already completed connections */
 			if (conn->outCount == 0)
@@ -254,12 +251,16 @@ cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 				continue;
 			else if (ret > 0)
 			{
-				int			sock = PQsocket(segdbDesc->conn);
+				/* add segment sock to the waitset */
+				if (!added[i])
+				{
+					int 	sock = PQsocket(conn);
+					Assert(sock >= 0);
+					AddWaitEventToSet(DispWaitSet, WL_SOCKET_WRITEABLE, sock, NULL, NULL);
+					added[i] = 1;
+				}
 
-				Assert(sock >= 0);
-				fds[nfds].fd = sock;
-				fds[nfds].events = POLLOUT;
-				nfds++;
+				allFlushed = false;
 			}
 			else if (ret < 0)
 			{
@@ -269,11 +270,11 @@ cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 				qeResult->stillRunning = false;
 				ereport(ERROR,
 						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						 errmsg("Command could not be dispatch to segment %s: %s", qeResult->segdbDesc->whoami, msg ? msg : "unknown error")));
+						errmsg("Command could not be dispatch to segment %s: %s", qeResult->segdbDesc->whoami, msg ? msg : "unknown error")));
 			}
 		}
 
-		if (nfds == 0)
+		if (allFlushed)
 			break;
 
 		/* guarantee poll() is interruptible */
@@ -281,17 +282,15 @@ cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 		{
 			CHECK_FOR_INTERRUPTS();
 
-			pollRet = poll(fds, nfds, DISPATCH_POLL_TIMEOUT);
+			pollRet = WaitEventSetWait(DispWaitSet, DISPATCH_POLL_TIMEOUT, revents, dispatchCount, WAIT_EVENT_DISP_FINISH);
+			Assert(pollRet >= 0);
 			if (pollRet == 0)
 				ELOG_DISPATCHER_DEBUG("cdbdisp_waitDispatchFinish_async(): Dispatch poll timeout after %d ms", DISPATCH_POLL_TIMEOUT);
 		}
-		while (pollRet == 0 || (pollRet < 0 && (SOCK_ERRNO == EINTR || SOCK_ERRNO == EAGAIN)));
-
-		if (pollRet < 0)
-			elog(ERROR, "Poll failed during dispatch");
+		while (pollRet == 0);
 	}
-
-	pfree(fds);
+	pfree(revents);
+	pfree(added);
 }
 
 /*
@@ -442,29 +441,26 @@ cdbdisp_makeDispatchParams_async(int maxSlices, int largestGangSize, char *query
  * timeout_sec: the second that the dispatcher waits for the ack messages at most.
  *              DISPATCH_NO_WAIT(0): return immediate when there's no more data.
  *              DISPATCH_WAIT_UNTIL_FINISH(-1): wait until all dispatch works are completed.
- *
- * Don't throw out error, instead, append the error message to
- * CdbDispatchResult.error_message.
  */
 static void
 checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 {
+	int			i;
+	int			timeout = 0;
+	bool		sentSignal = false;
+	uint8 ftsVersion = 0;
+	struct timeval start_ts, now;
+	int64		diff_us;
+
 	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
 	CdbDispatchResults *meleeResults = ds->primaryResults;
 	SegmentDatabaseDescriptor *segdbDesc;
 	CdbDispatchResult *dispatchResult;
-	int			i;
-	int			db_count = 0;
-	int			timeout = 0;
-	bool		sentSignal = false;
-	struct pollfd *fds;
-	uint8 ftsVersion = 0;
-	struct timeval start_ts, now;
-	int64		diff_us;
-	bool        cancelRequested = false;
 
-	db_count = pParms->dispatchCount;
-	fds = (struct pollfd *) palloc(db_count * sizeof(struct pollfd));
+	int 	db_count = pParms->dispatchCount;
+	ResetWaitEventSet(&DispWaitSet, TopMemoryContext, db_count);
+	int 	*added = palloc0(db_count * sizeof(int));
+	WaitEvent *revents = palloc(sizeof(WaitEvent) * db_count);
 
 	/*
 	 * OK, we are finished submitting the command to the segdbs. Now, we have
@@ -473,7 +469,6 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 	gettimeofday(&start_ts, NULL);
 	for (;;)
 	{
-		int			sock;
 		int			n;
 		int			nfds = 0;
 		int			ack_count = 0;
@@ -488,18 +483,8 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 
 		/*
 		 * Current loop might last for the long time so check on interrupts.
-		 * If error will be thrown then ordinarily cancel all activities on
-		 * segments and re-throw this error at the end of current function.
 		 */
-		PG_TRY();
-		{
-			CHECK_FOR_INTERRUPTS();
-		}
-		PG_CATCH();
-		{
-			cancelRequested = true;
-		}
-		PG_END_TRY();
+		CHECK_FOR_INTERRUPTS();
 
 		/*
 		 * escalate waitMode to cancel if:
@@ -507,7 +492,7 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 		 * - or an error has been reported by any QE,
 		 * - in case the caller wants cancelOnError
 		 */
-		if ((cancelRequested || meleeResults->errcode) && meleeResults->cancelOnError)
+		if ((CancelRequested() || meleeResults->errcode) && meleeResults->cancelOnError)
 			pParms->waitMode = DISPATCH_WAIT_CANCEL;
 
 		/*
@@ -550,13 +535,57 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 						 segdbDesc->whoami, PQerrorMessage(conn));
 			}
 
+#ifdef FAULT_INJECTOR
+			/* inject invalid sock to simulate an pqFlush() error */
+			static int saved_sock = -1;
+			if (FaultInjector_InjectFaultIfSet("inject_invalid_sock_for_checkDispatchResult",
+						DDLNotSpecified,
+						"" /* databaseName */,
+						"" /* tableName */) == FaultInjectorTypeSkip)
+			{
+				if (i == 0 && saved_sock == -1)
+				{
+					saved_sock = conn->sock;
+					conn->sock = -1;
+					strlcpy(conn->errorMessage.data, "inject invalid sock\n", conn->errorMessage.maxlen);
+					conn->errorMessage.len = strlen(conn->errorMessage.data);
+					i--;
+				}
+			}
+#endif
+
 			/*
-			 * Add socket to fd_set if still connected.
+			 * When the connection was broken, the previous pqFlush() set:
+			 * 			sock = -1 and status = CONNECTION_BAD
+			 * it will cause an infinite hang when poll() it later, so need to skip it here
 			 */
-			sock = PQsocket(conn);
-			Assert(sock >= 0);
-			fds[nfds].fd = sock;
-			fds[nfds].events = POLLIN;
+			if (cdbconn_isBadConnection(segdbDesc))
+			{
+				elog(WARNING, "Connection (%s) is broken, PQerrorMessage:%s",
+					segdbDesc->whoami, PQerrorMessage(conn));
+				dispatchResult->stillRunning = false;
+#ifdef FAULT_INJECTOR
+				/* restore the saved sock */
+				if (i == -1)
+				{
+					conn->sock = saved_sock;
+					conn->errorMessage.data[0] = '\0';
+					conn->errorMessage.len = 0;
+					dispatchResult->stillRunning = true;
+				}
+#endif
+				continue;
+			}
+
+			/* add segment sock to the waitset */
+			if (!added[i])
+			{
+				int 	sock = PQsocket(conn);
+				long 	ev_userdata = i; /* the index "i" as the event's userdata */
+				Assert(sock >= 0);
+				AddWaitEventToSet(DispWaitSet, WL_SOCKET_READABLE, sock, NULL, (void *)ev_userdata);
+				added[i] = 1;
+			}
 			nfds++;
 		}
 
@@ -584,7 +613,7 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 		else
 			timeout = DISPATCH_WAIT_CANCEL_TIMEOUT_MSEC;
 
-		n = poll(fds, nfds, timeout);
+		n = WaitEventSetWait(DispWaitSet, timeout, revents, db_count, WAIT_EVENT_DISP_RESULT);
 
 		/*
 		 * poll returns with an error, including one due to an interrupted
@@ -653,13 +682,11 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 		}
 		/* We have data waiting on one or more of the connections. */
 		else
-			handlePollSuccess(pParms, fds);
-	}
+			handlePollSuccess(pParms, revents, n);
+	} /* for (;;) */
 
-	pfree(fds);
-
-	if (cancelRequested)
-		PG_RE_THROW();
+	pfree(revents);
+	pfree(added);
 }
 
 /*
@@ -799,19 +826,19 @@ handlePollError(CdbDispatchCmdAsync *pParms)
  */
 static void
 handlePollSuccess(CdbDispatchCmdAsync *pParms,
-				  struct pollfd *fds)
+				  WaitEvent *revents, int nready)
 {
-	int			currentFdNumber = 0;
 	int			i = 0;
 
 	/*
 	 * We have data waiting on one or more of the connections.
 	 */
-	for (i = 0; i < pParms->dispatchCount; i++)
+	for (i = 0; i < nready; i++)
 	{
+		long pos = (long)(revents[i].user_data); /* original position */
 		bool		finished;
 		int			sock;
-		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
+		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[pos];
 		SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
 
 		/*
@@ -824,21 +851,21 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 				 dispatchResult->receivedAckMsg)
 			continue;
 
-		ELOG_DISPATCHER_DEBUG("looking for results from %d of %d (%s)",
-							  i + 1, pParms->dispatchCount, segdbDesc->whoami);
+		ELOG_DISPATCHER_DEBUG("looking for results from %ld of %d (%s)",
+							  pos + 1, pParms->dispatchCount, segdbDesc->whoami);
 
 		sock = PQsocket(segdbDesc->conn);
 		Assert(sock >= 0);
-		Assert(sock == fds[currentFdNumber].fd);
+		Assert(sock == revents[i].fd);
 
 		/*
 		 * Skip this connection if it has no input available.
-		 */
 		if (!(fds[currentFdNumber++].revents & POLLIN))
 			continue;
+		 */
 
-		ELOG_DISPATCHER_DEBUG("PQsocket says there are results from %d of %d (%s)",
-							  i + 1, pParms->dispatchCount, segdbDesc->whoami);
+		ELOG_DISPATCHER_DEBUG("PQsocket says there are results from %ld of %d (%s)",
+							  pos + 1, pParms->dispatchCount, segdbDesc->whoami);
 
 		/*
 		 * Receive and process results from this QE.
@@ -852,8 +879,8 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 		{
 			dispatchResult->stillRunning = false;
 
-			ELOG_DISPATCHER_DEBUG("processResults says we are finished with %d of %d (%s)",
-								  i + 1, pParms->dispatchCount, segdbDesc->whoami);
+			ELOG_DISPATCHER_DEBUG("processResults says we are finished with %ld of %d (%s)",
+								  pos + 1, pParms->dispatchCount, segdbDesc->whoami);
 
 			if (DEBUG1 >= log_min_messages)
 			{
@@ -863,8 +890,8 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 				{
 					case 1:
 					case 2:
-						elog(LOG, "duration to dispatch result received from %d (seg %d): %s ms",
-							 i + 1, dispatchResult->segdbDesc->segindex, msec_str);
+						elog(LOG, "duration to dispatch result received from %ld (seg %d): %s ms",
+							 pos + 1, dispatchResult->segdbDesc->segindex, msec_str);
 						break;
 				}
 			}
@@ -874,8 +901,8 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 					 dispatchResult->segdbDesc->whoami);
 		}
 		else
-			ELOG_DISPATCHER_DEBUG("processResults says we have more to do with %d of %d (%s)",
-								  i + 1, pParms->dispatchCount, segdbDesc->whoami);
+			ELOG_DISPATCHER_DEBUG("processResults says we have more to do with %ld of %d (%s)",
+								  pos + 1, pParms->dispatchCount, segdbDesc->whoami);
 	}
 }
 

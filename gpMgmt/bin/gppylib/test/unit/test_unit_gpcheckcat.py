@@ -320,7 +320,7 @@ class GpCheckCatTestCase(GpTestCase):
         testargs = ['gpcheckcat', '-port 1', '-s test2']
         with patch.object(sys, 'argv', testargs):
             self.subject.main()
-        mock_run.assert_has_calls(call(['test1', 'test3']))
+        mock_run.assert_has_calls([call(['test1', 'test3'])])
 
     @patch('gpcheckcat.GPCatalog', return_value=Mock())
     @patch('sys.exit')
@@ -336,7 +336,7 @@ class GpCheckCatTestCase(GpTestCase):
         testargs = ['gpcheckcat', '-port 1', '-s', "test1, test2"]
         with patch.object(sys, 'argv', testargs):
             self.subject.main()
-        mock_run.assert_has_calls(call(['test3']))
+        mock_run.assert_has_calls([call(['test3'])])
 
     @patch('gpcheckcat.GPCatalog', return_value=Mock())
     @patch('sys.exit')
@@ -352,7 +352,7 @@ class GpCheckCatTestCase(GpTestCase):
         testargs = ['gpcheckcat', '-port 1', '-s', "test_invalid, test2"]
         with patch.object(sys, 'argv', testargs):
             self.subject.main()
-        mock_run.assert_has_calls(call(['test1', 'test3']))
+        mock_run.assert_has_calls([call(['test1', 'test3'])])
         expected_message = "'test_invalid' is not a valid test"
         log_messages = [args[0][1] for args in self.subject.logger.log.call_args_list]
         self.assertIn(expected_message, log_messages)

@@ -31,8 +31,8 @@ IMDRelation::GetDistrPolicyStr(Ereldistrpolicy rel_distr_policy)
 {
 	switch (rel_distr_policy)
 	{
-		case EreldistrMasterOnly:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrMasterOnly);
+		case EreldistrCoordinatorOnly:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrCoordinatorOnly);
 		case EreldistrHash:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrHash);
 		case EreldistrRandom:
@@ -65,11 +65,13 @@ IMDRelation::GetStorageTypeStr(IMDRelation::Erelstoragetype rel_storage_type)
 		case ErelstorageAppendOnlyRows:
 			return CDXLTokens::GetDXLTokenStr(
 				EdxltokenRelStorageAppendOnlyRows);
-		case ErelstorageExternal:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageExternal);
+		case ErelstorageForeign:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageForeign);
 		case ErelstorageMixedPartitioned:
 			return CDXLTokens::GetDXLTokenStr(
 				EdxltokenRelStorageMixedPartitioned);
+		case ErelstorageCompositeType:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageCompositeType);
 		default:
 			return nullptr;
 	}

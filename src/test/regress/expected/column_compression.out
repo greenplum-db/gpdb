@@ -7,10 +7,10 @@
 create database column_compression;
 \c column_compression
 prepare ccddlcheck as
-select attrelid::regclass as relname,
-attnum, attoptions from pg_class c, pg_attribute_encoding e
-where c.relname like 'ccddl%' and c.oid=e.attrelid
-order by relname, attnum;
+select e.attrelid::regclass as relname,
+a.attname, e.filenum, e.attoptions from pg_class c, pg_attribute_encoding e, pg_attribute a
+where c.relname like 'ccddl%' and c.oid=e.attrelid and e.attrelid=a.attrelid and e.attnum = a.attnum
+order by relname, e.attnum;
 -- default encoding clause
 create table ccddl (
 	i int,
@@ -20,10 +20,10 @@ create table ccddl (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
 -- This is enough to force compression, specially since we'll hash
@@ -144,10 +144,10 @@ create table ccddl (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- ccddl   |      2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -159,10 +159,10 @@ create table ccddl (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
 -- This is enough to force compression, specially since we'll hash
@@ -278,8 +278,8 @@ drop table ccddl;
 -- We exclude the other tables leftover from other tests.
 select * from pg_attribute_encoding where
 	attrelid not in (select oid from pg_class where relname <> 'ccddl');
- attrelid | attnum | attoptions 
-----------+--------+------------
+ attrelid | attnum | filenum | attoptions 
+----------+--------+---------+------------
 (0 rows)
 
 -- mix inline and default
@@ -291,10 +291,10 @@ create table ccddl (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                       attoptions                        
----------+--------+---------------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                       attoptions                        
+---------+---------+---------+---------------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -308,10 +308,10 @@ create table ccddl (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                       attoptions                        
----------+--------+---------------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                       attoptions                        
+---------+---------+---------+---------------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -324,33 +324,33 @@ create table ccddl (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddl   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=1}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl   | j       |       2 | {compresstype=zlib,blocksize=65536,compresslevel=1}
 (2 rows)
 
 -- Should see the encoding information for the new column
 alter table ccddl add column k timestamp default now()
 	encoding (compresstype=zlib);
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddl   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=1}
- ccddl   |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl   | j       |       2 | {compresstype=zlib,blocksize=65536,compresslevel=1}
+ ccddl   | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (3 rows)
 
 -- no encoding information for this one though
 alter table ccddl add column l numeric
 	default 3.141;
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddl   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=1}
- ccddl   |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl   | j       |       2 | {compresstype=zlib,blocksize=65536,compresslevel=1}
+ ccddl   | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
 (4 rows)
 
 drop table ccddl;
@@ -361,10 +361,10 @@ create table ccddl (i int, j int encoding(compresstype=zlib), column i encoding
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -374,10 +374,10 @@ compresstype=zlib);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -387,10 +387,10 @@ create table ccddl (i int, j int encoding (COMPRESSTYPE="ZlIb"))
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddl   |      2 | {compresstype=ZlIb,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl   | j       |       2 | {compresstype=ZlIb,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -402,9 +402,9 @@ create table ccddl_co(LIKE ccddl)
   with (appendonly = true, orientation=column);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 execute ccddlcheck;
- relname  | attnum |                     attoptions                      
-----------+--------+-----------------------------------------------------
- ccddl_co |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ relname  | attname | filenum |                     attoptions                      
+----------+---------+---------+-----------------------------------------------------
+ ccddl_co | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
 (1 row)
 
 drop table ccddl_co;
@@ -412,9 +412,9 @@ create table ccddl_co(LIKE ccddl)
   with (appendonly = true, orientation=column, compresstype=zlib);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 execute ccddlcheck;
- relname  | attnum |                     attoptions                      
-----------+--------+-----------------------------------------------------
- ccddl_co |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname  | attname | filenum |                     attoptions                      
+----------+---------+---------+-----------------------------------------------------
+ ccddl_co | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (1 row)
 
 drop table ccddl_co, ccddl;
@@ -462,9 +462,9 @@ appendonly=true, orientation=column);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                       attoptions                        
----------+--------+---------------------------------------------------------
- ccddl   |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                       attoptions                        
+---------+---------+---------+---------------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (1 row)
 
 drop table ccddl;
@@ -506,13 +506,13 @@ NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  moving and merging column "parentcol" with inherited definition
 DETAIL:  User-specified column moved to the position of the inherited column.
 execute ccddlcheck;
-   relname   | attnum |                     attoptions                      
--------------+--------+-----------------------------------------------------
- ccddlparent |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddlchild  |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddlchild  |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddlchild2 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddlchild2 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+   relname   |  attname  | filenum |                     attoptions                      
+-------------+-----------+---------+-----------------------------------------------------
+ ccddlparent | parentcol |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlchild  | parentcol |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild  | childcol  |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlchild2 | parentcol |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild2 | childcol  |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (5 rows)
 
 drop table ccddlparent cascade;
@@ -538,15 +538,15 @@ NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging multiple inherited definitions of column "parentcol1"
 NOTICE:  merging multiple inherited definitions of column "parentcol2"
 execute ccddlcheck;
-   relname    | attnum |                     attoptions                      
---------------+--------+-----------------------------------------------------
- ccddlparent1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddlparent1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddlparent2 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddlparent2 |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddlchild   |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddlchild   |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddlchild   |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+   relname    |  attname   | filenum |                     attoptions                      
+--------------+------------+---------+-----------------------------------------------------
+ ccddlparent1 | parentcol1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlparent1 | parentcol2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlparent2 | parentcol1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlparent2 | parentcol2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddlchild   | parentcol1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild   | parentcol2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddlchild   | childcol   |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
 (7 rows)
 
 drop table ccddlparent1 cascade;
@@ -568,10 +568,10 @@ select 1, 1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl   |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | a       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl   | b       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -584,10 +584,10 @@ create table ccddl_co (like ccddl, column i encoding(compresstype=RLE_TYPE))
 with (appendonly=true, orientation=column, compresstype=zlib);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 execute ccddlcheck;
- relname  | attnum |                       attoptions                        
-----------+--------+---------------------------------------------------------
- ccddl_co |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_co |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname  | attname | filenum |                       attoptions                        
+----------+---------+---------+---------------------------------------------------------
+ ccddl_co | i       |       1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_co | j       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -608,13 +608,15 @@ partition by range(j)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-    relname     | attnum |                       attoptions                        
-----------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(4 rows)
+    relname     | attname | filenum |                       attoptions                        
+----------------+---------+---------+---------------------------------------------------------
+ ccddl          | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl          | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(6 rows)
 
 insert into ccddl select 1,2 from generate_series(1, 100);
 select * from ccddl;
@@ -741,17 +743,35 @@ partition by range(j)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-         relname          | attnum |                       attoptions                        
---------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(8 rows)
+         relname          | attname | filenum |                       attoptions                        
+--------------------------+---------+---------+---------------------------------------------------------
+ ccddl                    | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | l       |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | l       |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(20 rows)
+
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                                                                                          pg_get_expr                                                                                                           
+-------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(SUBPARTITION sp1 VALUES (1, 2, 3, 4, 5), COLUMN i ENCODING (compresstype=zlib), COLUMN j ENCODING (compresstype=rle_type), COLUMN k ENCODING (compresstype=zlib), COLUMN l ENCODING (compresstype=zlib))
+(1 row)
 
 insert into ccddl select 1, (i % 19) + 1, ((i+3) % 5) + 1, i+3 from generate_series(1, 100) i;
 select * from ccddl;
@@ -1086,31 +1106,63 @@ partition p2 start(10) end(20)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-         relname          | attnum |                       attoptions                        
---------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(8 rows)
+         relname          | attname | filenum |                       attoptions                        
+--------------------------+---------+---------+---------------------------------------------------------
+ ccddl                    | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | l       |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | l       |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(20 rows)
 
 alter table ccddl add partition p3 start(20) end(30);
 execute ccddlcheck;
-         relname          | attnum |                       attoptions                        
---------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(8 rows)
+         relname          | attname | filenum |                       attoptions                        
+--------------------------+---------+---------+---------------------------------------------------------
+ ccddl                    | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | l       |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | l       |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p3           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3_2_prt_sp1 | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3_2_prt_sp1 | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3_2_prt_sp1 | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3_2_prt_sp1 | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+(28 rows)
 
 drop table ccddl;
 -- Make sure the AO/CO case didn't screw up the non CO case
@@ -1127,14 +1179,14 @@ partition p2 start(10) end(20)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum | attoptions 
----------+--------+------------
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
 (0 rows)
 
 alter table ccddl add partition p3 start(20) end(30);
 execute ccddlcheck;
- relname | attnum | attoptions 
----------+--------+------------
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
 (0 rows)
 
 drop table ccddl;
@@ -1146,18 +1198,20 @@ partition by range(i)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-    relname     | attnum |                     attoptions                      
-----------------+--------+-----------------------------------------------------
- ccddl_1_prt_p1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(1 row)
+    relname     | attname | filenum |                     attoptions                      
+----------------+---------+---------+-----------------------------------------------------
+ ccddl          | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(2 rows)
 
 alter table ccddl split partition p1 at (5) into (partition p2, partition p3);
 execute ccddlcheck;
-    relname     | attnum |                     attoptions                      
-----------------+--------+-----------------------------------------------------
- ccddl_1_prt_p2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p3 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(2 rows)
+    relname     | attname | filenum |                     attoptions                      
+----------------+---------+---------+-----------------------------------------------------
+ ccddl          | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p3 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(3 rows)
 
 drop table ccddl;
 -- With subpartitioning
@@ -1171,33 +1225,51 @@ subpartition template (subpartition sp1 start(1) end(20),
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-         relname          | attnum |                       attoptions                        
---------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(2 rows)
+         relname          | attname | filenum |                       attoptions                        
+--------------------------+---------+---------+---------------------------------------------------------
+ ccddl                    | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(6 rows)
+
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                                                          pg_get_expr                                                                           
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(SUBPARTITION sp1 START (1::integer) END (20::integer), COLUMN i ENCODING (compresstype=zlib), COLUMN j ENCODING (compresstype=rle_type))
+(1 row)
 
 alter table ccddl alter partition p1 split partition sp1 at (10) into (partition sp2, partition sp3);
 execute ccddlcheck;
-         relname          | attnum |                       attoptions                        
---------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1_2_prt_sp2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp3 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp3 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(4 rows)
+         relname          | attname | filenum |                       attoptions                        
+--------------------------+---------+---------+---------------------------------------------------------
+ ccddl                    | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1_2_prt_sp2 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp2 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp3 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp3 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(8 rows)
 
 alter table ccddl alter partition p1 split partition sp2 at (5) into (partition sp2, partition sp2_5);
 execute ccddlcheck;
-          relname           | attnum |                       attoptions                        
-----------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1_2_prt_sp3   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp3   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp2   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp2   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp2_5 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp2_5 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(6 rows)
+          relname           | attname | filenum |                       attoptions                        
+----------------------------+---------+---------+---------------------------------------------------------
+ ccddl                      | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                      | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1             | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1             | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1_2_prt_sp3   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp3   | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp2   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp2   | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp2_5 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp2_5 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(10 rows)
 
 drop table ccddl;
 -- MPP-14407
@@ -1222,14 +1294,36 @@ CREATE TABLE ccddl (id int, year int, month int, day int, region text)
 		)
 	( START (2008) END (2010) );
 execute ccddlcheck;
-             relname             | attnum |                       attoptions                        
----------------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_1_2_prt_1_3_prt_usa |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddl_1_prt_1_2_prt_1_3_prt_usa |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddl_1_prt_1_2_prt_1_3_prt_usa |      3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_1_2_prt_1_3_prt_usa |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- ccddl_1_prt_1_2_prt_1_3_prt_usa |      5 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(5 rows)
+             relname             | attname | filenum |                       attoptions                        
+---------------------------------+---------+---------+---------------------------------------------------------
+ ccddl                           | id      |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                           | year    |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                           | month   |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                           | day     |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                           | region  |       5 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1                   | id      |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1                   | year    |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1                   | month   |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1                   | day     |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1                   | region  |       5 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1           | id      |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1           | year    |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1           | month   |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_1_2_prt_1           | day     |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1           | region  |       5 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1_3_prt_usa | id      |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1_3_prt_usa | year    |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1_3_prt_usa | month   |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_1_2_prt_1_3_prt_usa | day     |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_1_3_prt_usa | region  |       5 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(20 rows)
+
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                                 pg_get_expr                                                 
+-------+-------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE( START (1::integer) END (13::integer), COLUMN month ENCODING (compresstype=rle_type))
+     2 | SUBPARTITION TEMPLATE(SUBPARTITION usa VALUES ('usa'), COLUMN region ENCODING (compresstype=rle_type))
+(2 rows)
 
 -- Ensure we can read and write
 insert into ccddl select 1, 2008, 1, 2, 'usa' from generate_series(1, 100);
@@ -1362,21 +1456,25 @@ create table ccddl (
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-    relname     | attnum |                       attoptions                        
-----------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1 |      3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1 |      4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2 |      1 | {blocksize=65536,compresstype=none,compresslevel=0}
- ccddl_1_prt_p2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2 |      3 | {blocksize=8192,compresstype=none,compresslevel=0}
- ccddl_1_prt_p2 |      4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p3 |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p3 |      2 | {blocksize=8192,compresstype=none,compresslevel=0}
- ccddl_1_prt_p3 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p3 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(12 rows)
+    relname     | attname | filenum |                       attoptions                        
+----------------+---------+---------+---------------------------------------------------------
+ ccddl          | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl          | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl          | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl          | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1 | k       |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1 | l       |       4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2 | i       |       1 | {blocksize=65536,compresstype=none,compresslevel=0}
+ ccddl_1_prt_p2 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2 | k       |       3 | {blocksize=8192,compresstype=none,compresslevel=0}
+ ccddl_1_prt_p2 | l       |       4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p3 | i       |       1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p3 | j       |       2 | {blocksize=8192,compresstype=none,compresslevel=0}
+ ccddl_1_prt_p3 | k       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p3 | l       |       4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(16 rows)
 
 drop table ccddl;
 create table ccddl (i int, j int, k int, l int )
@@ -1399,17 +1497,90 @@ partition by range(i) subpartition by range(j)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-         relname          | attnum |                       attoptions                        
---------------------------+--------+---------------------------------------------------------
- ccddl_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p1_2_prt_sp1 |      4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      1 | {blocksize=65536,compresstype=none,compresslevel=0}
- ccddl_1_prt_p2_2_prt_sp1 |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2_2_prt_sp1 |      3 | {blocksize=8192,compresstype=none,compresslevel=0}
- ccddl_1_prt_p2_2_prt_sp1 |      4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(8 rows)
+         relname          | attname | filenum |                       attoptions                        
+--------------------------+---------+---------+---------------------------------------------------------
+ ccddl                    | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                    | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | j       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | k       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p2           | l       |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p1_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | k       |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | l       |       4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | i       |       1 | {blocksize=65536,compresstype=none,compresslevel=0}
+ ccddl_1_prt_p2_2_prt_sp1 | j       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2_2_prt_sp1 | k       |       3 | {blocksize=8192,compresstype=none,compresslevel=0}
+ ccddl_1_prt_p2_2_prt_sp1 | l       |       4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(20 rows)
+
+drop table ccddl;
+-- multi level partitioning with column encoding inheritance
+create table ccddl (a int ENCODING (compresslevel=1),
+                    b int ENCODING (compresslevel=1),
+                    c int ENCODING (compresslevel=1),
+                    d int ENCODING (compresslevel=1),
+                    e int, f int, g int, h int)
+    with (appendonly = true, orientation=column, compresslevel=5)
+    partition by range(a) subpartition by range(b)
+        (partition p1 start(1) end(10)
+            (subpartition sp1 start(1) end(5)
+             column a encoding(compresslevel=3),
+             column d encoding(compresslevel=3),
+             column f encoding(compresslevel=3),
+             column g encoding(compresslevel=3)),
+       column a encoding(compresslevel=2),
+       column b encoding(compresslevel=2),
+       column e encoding(compresslevel=2),
+       column g encoding(compresslevel=2));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+execute ccddlcheck;
+         relname          | attname | filenum |                     attoptions                      
+--------------------------+---------+---------+-----------------------------------------------------
+ ccddl                    | a       |       1 | {compresslevel=1,compresstype=zlib,blocksize=32768}
+ ccddl                    | b       |       2 | {compresslevel=1,compresstype=zlib,blocksize=32768}
+ ccddl                    | c       |       3 | {compresslevel=1,compresstype=zlib,blocksize=32768}
+ ccddl                    | d       |       4 | {compresslevel=1,compresstype=zlib,blocksize=32768}
+ ccddl                    | e       |       5 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ ccddl                    | f       |       6 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ ccddl                    | g       |       7 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ ccddl                    | h       |       8 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | a       |       1 | {compresslevel=2,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | b       |       2 | {compresslevel=2,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | c       |       3 | {compresslevel=1,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | d       |       4 | {compresslevel=1,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | e       |       5 | {compresslevel=2,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | f       |       6 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | g       |       7 | {compresslevel=2,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1           | h       |       8 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | a       |       1 | {compresslevel=3,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | b       |       2 | {compresslevel=2,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | c       |       3 | {compresslevel=1,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | d       |       4 | {compresslevel=3,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | e       |       5 | {compresslevel=2,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | f       |       6 | {compresslevel=3,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | g       |       7 | {compresslevel=3,compresstype=zlib,blocksize=32768}
+ ccddl_1_prt_p1_2_prt_sp1 | h       |       8 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+(24 rows)
+
+insert into ccddl select 2,3 from generate_series(1, 100);
+select * from ccddl limit 5;
+ a | b | c | d | e | f | g | h 
+---+---+---+---+---+---+---+---
+ 2 | 3 |   |   |   |   |   |  
+ 2 | 3 |   |   |   |   |   |  
+ 2 | 3 |   |   |   |   |   |  
+ 2 | 3 |   |   |   |   |   |  
+ 2 | 3 |   |   |   |   |   |  
+(5 rows)
 
 drop table ccddl;
 -- Precedence test: c3 in the partition child must be zlib, not RLE_TYPE
@@ -1426,12 +1597,15 @@ WITH (appendonly=true, orientation=column)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-    relname    | attnum |                       attoptions                        
----------------+--------+---------------------------------------------------------
- ccddl_1_prt_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- ccddl_1_prt_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(3 rows)
+    relname    | attname | filenum |                       attoptions                        
+---------------+---------+---------+---------------------------------------------------------
+ ccddl         | c1      |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl         | c2      |       2 | {compresstype=rle_type,blocksize=65536,compresslevel=1}
+ ccddl         | c3      |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_1 | c1      |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_1 | c2      |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_1 | c3      |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(6 rows)
 
 drop table ccddl;
 -- Should be able to turn have a partition ignore a column encoding clause
@@ -1449,11 +1623,13 @@ create table ccddl
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
-    relname     | attnum |                       attoptions                        
-----------------+--------+---------------------------------------------------------
- ccddl_1_prt_p2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_p2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
-(2 rows)
+    relname     | attname | filenum |                       attoptions                        
+----------------+---------+---------+---------------------------------------------------------
+ ccddl          | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl          | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_p2 | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(4 rows)
 
 drop table ccddl;
 -- MPP-16875: ensure that WITH () is honoured
@@ -1470,13 +1646,15 @@ alter table ccddl add partition "s_xyz" values ('xyz')
 	WITH (appendonly=true, orientation=column,
 		  compresstype=zlib, compresslevel=1);
 execute ccddlcheck;
-      relname      | attnum |                     attoptions                      
--------------------+--------+-----------------------------------------------------
- ccddl_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_s_abc |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_s_xyz |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(4 rows)
+      relname      | attname | filenum |                     attoptions                      
+-------------------+---------+---------+-----------------------------------------------------
+ ccddl             | a       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl             | b       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_s_abc | a       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_s_abc | b       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_s_xyz | a       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_s_xyz | b       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(6 rows)
 
 drop table ccddl;
 -- Ensure that WITH () and subpartition template column encoding rules
@@ -1493,24 +1671,48 @@ alter table ccddl add partition newp
 	start('2010-01-06') end('2010-01-07')
 	with (appendonly=true, orientation=column);
 execute ccddlcheck;
-          relname           | attnum |                     attoptions                      
-----------------------------+--------+-----------------------------------------------------
- ccddl_1_prt_1_2_prt_sp1    |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_1_2_prt_sp1    |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_1_2_prt_sp1    |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_2_2_prt_sp1    |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_2_2_prt_sp1    |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_2_2_prt_sp1    |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_3_2_prt_sp1    |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_3_2_prt_sp1    |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_3_2_prt_sp1    |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_4_2_prt_sp1    |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_4_2_prt_sp1    |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_4_2_prt_sp1    |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_newp_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_newp_2_prt_sp1 |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
- ccddl_1_prt_newp_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(15 rows)
+          relname           | attname | filenum |                     attoptions                      
+----------------------------+---------+---------+-----------------------------------------------------
+ ccddl                      | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                      | d       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl                      | j       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1              | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1              | d       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1              | j       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_2              | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_2              | d       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_2              | j       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_3              | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_3              | d       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_3              | j       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_4              | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_4              | d       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_4              | j       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_1_2_prt_sp1    | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_1_2_prt_sp1    | d       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_1_2_prt_sp1    | j       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_2_2_prt_sp1    | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_2_2_prt_sp1    | d       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_2_2_prt_sp1    | j       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_3_2_prt_sp1    | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_3_2_prt_sp1    | d       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_3_2_prt_sp1    | j       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_4_2_prt_sp1    | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_4_2_prt_sp1    | d       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_4_2_prt_sp1    | j       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_newp           | i       |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_newp           | d       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_newp           | j       |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_newp_2_prt_sp1 | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_newp_2_prt_sp1 | d       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ ccddl_1_prt_newp_2_prt_sp1 | j       |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(33 rows)
+
+SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ccddl'::regclass;
+ level |                                           pg_get_expr                                           
+-------+-------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(SUBPARTITION sp1 VALUES (1), DEFAULT COLUMN ENCODING (compresstype=zlib))
+(1 row)
 
 drop table ccddl;
 -----------------------------------------------------------------------
@@ -1529,8 +1731,9 @@ encoding(compresstype=sdf2sdf));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  unknown compresstype "sdf2sdf"
--- We don't support partition element specific encoding clauses in subpartition
--- templates as we have no place to store them.
+-- Historically we don't support partition element specific encoding clauses in
+-- subpartition templates as we didn't have place to store them. We now have
+-- place to store them if we want to, but for now we keep this door closed
 create table a (i int, j int) with (appendonly=true, orientation=column)
       partition by range(i) subpartition by range(j)
       subpartition template(start(1) end(10) default column encoding (compresstype=zlib),
@@ -1554,8 +1757,8 @@ partition by range(a1)
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 execute ccddlcheck;
- relname | attnum | attoptions 
----------+--------+------------
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
 (0 rows)
 
 drop table ccddl;
@@ -1597,27 +1800,27 @@ select typoptions from pg_type_encoding where typid='public.int42'::regtype;
 create table ccddl (i int42) with(appendonly = true, orientation=column);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=1}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,blocksize=65536,compresslevel=1}
 (1 row)
 
 alter type int42 set default encoding (compresstype=zlib);
 alter table ccddl add column j int42 default '1'::int42;
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=1}
- ccddl   |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,blocksize=65536,compresslevel=1}
+ ccddl   | j       |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
 create table ccddl (i int42) with(appendonly = true, orientation=column);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 execute ccddlcheck;
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
- ccddl   |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                     attoptions                      
+---------+---------+---------+-----------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (1 row)
 
 drop table ccddl;
@@ -1625,16 +1828,16 @@ drop table ccddl;
 create table ccddl (i int42);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 execute ccddlcheck;
- relname | attnum | attoptions 
----------+--------+------------
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
 (0 rows)
 
 drop table ccddl;
 create table ccddl (i int42) with (appendonly = true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 execute ccddlcheck;
- relname | attnum | attoptions 
----------+--------+------------
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
 (0 rows)
 
 drop table ccddl;
@@ -1644,10 +1847,10 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suita
 alter type int42 set default encoding (compresstype=RLE_TYPE);
 alter table ccddl add column j int42 default '1'::int42;
 execute ccddlcheck;
- relname | attnum |                       attoptions                        
----------+--------+---------------------------------------------------------
- ccddl   |      1 | {compresstype=none,compresslevel=0,blocksize=32768}
- ccddl   |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ relname | attname | filenum |                       attoptions                        
+---------+---------+---------+---------------------------------------------------------
+ ccddl   | i       |       1 | {compresstype=none,compresslevel=0,blocksize=32768}
+ ccddl   | j       |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (2 rows)
 
 drop table ccddl;
@@ -1657,8 +1860,8 @@ alter type int42 set default encoding (compresstype=RLE_TYPE);
 alter table ccddl add column j int42 default '1'::int42;
 -- No results are returned from the attribute encoding check, as compression with rle is not supported for row tables
 execute ccddlcheck;
- relname | attnum | attoptions 
----------+--------+------------
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
 (0 rows)
 
 drop table ccddl;
@@ -1668,8 +1871,8 @@ alter type int42 set default encoding (compresstype=RLE_TYPE);
 alter table ccddl add column j int42 default '1'::int42;
 -- No results are returned from the attribute encoding check, as compression with rle is not supported for heap tables
 execute ccddlcheck;
- relname | attnum | attoptions 
----------+--------+------------
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
 (0 rows)
 
 drop table ccddl;
@@ -1733,7 +1936,6 @@ LINE 1: alter type int[2][3] set default encoding(compresstype=RLE_T...
                       ^
 -- permissions checks
 create role typcheck;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 set session authorization typcheck;
 alter type int42 set default encoding (compresstype=zlib, compresslevel=1);
 ERROR:  must be owner of type int42
@@ -1756,10 +1958,14 @@ select * from pg_type_encoding;
  typid |                     typoptions                      
 -------+-----------------------------------------------------
   1043 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+  1015 | {compresstype=zlib,compresslevel=1,blocksize=32768}
   1042 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+  1014 | {compresstype=zlib,compresslevel=1,blocksize=32768}
   1184 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+  1185 | {compresstype=zlib,compresslevel=1,blocksize=32768}
     25 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(4 rows)
+  1009 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(8 rows)
 
 -- cleanup
 deallocate ccddlcheck;

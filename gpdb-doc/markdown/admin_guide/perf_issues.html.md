@@ -4,7 +4,7 @@ title: Common Causes of Performance Issues
 
 This section explains the troubleshooting processes for common performance issues and potential solutions to these issues.
 
-**Parent topic:**[Managing Performance](partV.html)
+**Parent topic:** [Managing Performance](partV.html)
 
 ## <a id="topic2"></a>Identifying Hardware and Segment Failures 
 
@@ -34,7 +34,7 @@ Contention arises when multiple users or workloads try to use the system in a co
 
 Greenplum Database uses a cost-based query optimizer that relies on database statistics. Accurate statistics allow the query optimizer to better estimate the number of rows retrieved by a query to choose the most efficient query plan. Without database statistics, the query optimizer cannot estimate how many records will be returned. The optimizer does not assume it has sufficient memory to perform certain operations such as aggregations, so it takes the most conservative action and does these operations by reading and writing from disk. This is significantly slower than doing them in memory. ANALYZE collects statistics about the database that the query optimizer needs.
 
-**Note:** When running an SQL command with GPORCA, Greenplum Database issues a warning if the command performance could be improved by collecting statistics on a column or set of columns referenced by the command. The warning is issued on the command line and information is added to the Greenplum Database log file. For information about collecting statistics on table columns, see the ANALYZE command in the *Greenplum Database Reference Guide*
+> **Note** When running an SQL command with GPORCA, Greenplum Database issues a warning if the command performance could be improved by collecting statistics on a column or set of columns referenced by the command. The warning is issued on the command line and information is added to the Greenplum Database log file. For information about collecting statistics on table columns, see the ANALYZE command in the *Greenplum Database Reference Guide*
 
 ### <a id="topic6"></a>Identifying Statistics Problems in Query Plans 
 
@@ -98,7 +98,5 @@ To help optimize database design, review the maximum limits that Greenplum Datab
 
 Dimensions listed as unlimited are not intrinsically limited by Greenplum Database. However, they are limited in practice to available disk space and memory/swap space. Performance may degrade when these values are unusually large.
 
-**Note:**
-
-There is a maximum limit on the number of objects \(tables, indexes, and views, but not rows\) that may exist at one time. This limit is 4294967296 \(2^32\).
+> **Note** There is a maximum limit on the number of objects \(tables, indexes, and views, but not rows\) that may exist at one time. This limit is 4294967296 \(2^32\).
 

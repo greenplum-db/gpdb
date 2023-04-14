@@ -19,6 +19,7 @@
 
 #include "gpopt/base/CColRef.h"
 #include "gpopt/base/CColRefSet.h"
+#include "naucrates/md/IMDIndex.h"
 
 namespace gpopt
 {
@@ -101,10 +102,10 @@ private:
 											BOOL infer_nulls_as = false);
 
 	// create constraint from scalar boolean expression
-	static CConstraint *PcnstrFromScalarBoolOp(CMemoryPool *mp,
-											   CExpression *pexpr,
-											   CColRefSetArray **ppdrgpcrs,
-											   BOOL infer_nulls_as = false);
+	static CConstraint *PcnstrFromScalarBoolOp(
+		CMemoryPool *mp, CExpression *pexpr, CColRefSetArray **ppdrgpcrs,
+		BOOL infer_nulls_as = false,
+		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
 
 	// create conjunction/disjunction from array of constraints
 	static CConstraint *PcnstrConjDisj(CMemoryPool *mp,
@@ -207,6 +208,12 @@ public:
 		return false;
 	}
 
+	virtual CConstraint *
+	GetConstraintOnSegmentId() const
+	{
+		return nullptr;
+	}
+
 	// return a copy of the constraint with remapped columns
 	virtual CConstraint *PcnstrCopyWithRemappedColumns(
 		CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist) = 0;
@@ -235,10 +242,14 @@ public:
 
 	// create constraint from scalar expression and pass back any discovered
 	// equivalence classes
-	static CConstraint *PcnstrFromScalarExpr(CMemoryPool *mp,
-											 CExpression *pexpr,
-											 CColRefSetArray **ppdrgpcrs,
-											 BOOL infer_nulls_as = false);
+	static CConstraint *PcnstrFromScalarExpr(
+		CMemoryPool *mp, CExpression *pexpr, CColRefSetArray **ppdrgpcrs,
+		BOOL infer_nulls_as = false,
+		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
+
+	// create constraint from EXISTS/ANY scalar subquery
+	static CConstraint *PcnstrFromExistsAnySubquery(
+		CMemoryPool *mp, CExpression *pexpr, CColRefSetArray **ppdrgpcrs);
 
 	// create conjunction from array of constraints
 	static CConstraint *PcnstrConjunction(CMemoryPool *mp,

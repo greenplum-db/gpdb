@@ -176,7 +176,7 @@ typedef struct DatumStreamFetchDescData
 {
 	DatumStreamRead *datumStream;
 
-	CurrentSegmentFile currentSegmentFile;
+	AOFetchSegmentFile currentSegmentFile;
 
 	int64		scanNextFileOffset;
 	int64		scanNextRowNum;
@@ -184,7 +184,7 @@ typedef struct DatumStreamFetchDescData
 	int64		scanAfterFileOffset;
 	int64		scanLastRowNum;
 
-	CurrentBlock currentBlock;
+	AOFetchBlockMetadata currentBlock;
 
 }	DatumStreamFetchDescData;
 
@@ -256,7 +256,6 @@ extern DatumStreamWrite *create_datumstreamwrite(
 						char *compName,
 						int32 compLevel,
 						bool checksum,
-						int32 safeFSWriteSize,
 						int32 maxsz,
 						Form_pg_attribute attr,
 						char *relname,
@@ -267,7 +266,6 @@ extern DatumStreamRead *create_datumstreamread(
 					   char *compName,
 					   int32 compLevel,
 					   bool checksum,
-					   int32 safeFSWriteSize,
 					   int32 maxsz,
 					   Form_pg_attribute attr,
 					   char *relname,

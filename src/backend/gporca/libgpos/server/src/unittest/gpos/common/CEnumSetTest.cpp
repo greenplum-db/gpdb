@@ -52,8 +52,8 @@ CEnumSetTest::EresUnittest_Basics()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	typedef CEnumSet<eTest, eTestSentinel> CETestSet;
-	typedef CEnumSetIter<eTest, eTestSentinel> CETestIter;
+	using CETestSet = CEnumSet<eTest, eTestSentinel>;
+	using CETestIter = CEnumSetIter<eTest, eTestSentinel>;
 
 	CETestSet *enum_set = GPOS_NEW(mp) CETestSet(mp);
 

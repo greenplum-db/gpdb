@@ -199,22 +199,22 @@ inline static char extended_char(char* token, size_t length)
 /* Read an attribute number array */
 #define READ_ATTRNUMBER_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readAttrNumberCols(len);
+	local_node->fldname = readAttrNumberCols(len)
 
 /* Read an oid array */
 #define READ_OID_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readOidCols(len);
+	local_node->fldname = readOidCols(len)
 
 /* Read an int array */
 #define READ_INT_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readIntCols(len);
+	local_node->fldname = readIntCols(len)
 
 /* Read a bool array */
 #define READ_BOOL_ARRAY(fldname, len) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
-	local_node->fldname = readBoolCols(len);
+	local_node->fldname = readBoolCols(len)
 
 /* Routine exit */
 #define READ_DONE() \
@@ -890,6 +890,17 @@ _readReplicaIdentityStmt(void)
 	READ_DONE();
 }
 
+static AlterDatabaseStmt *
+_readAlterDatabaseStmt(void)
+{
+	READ_LOCALS(AlterDatabaseStmt);
+
+	READ_STRING_FIELD(dbname);
+	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
 static AlterTableStmt *
 _readAlterTableStmt(void)
 {
@@ -954,6 +965,7 @@ _readAlteredTableInfo(void)
 	READ_NODE_FIELD(newvals);
 	READ_BOOL_FIELD(verify_new_notnull);
 	READ_INT_FIELD(rewrite);
+	READ_OID_FIELD(newAccessMethod);
 	READ_BOOL_FIELD(dist_opfamily_changed);
 	READ_OID_FIELD(new_opclass);
 	READ_OID_FIELD(newTableSpace);
@@ -968,6 +980,9 @@ _readAlteredTableInfo(void)
 	READ_NODE_FIELD(changedIndexOids);
 	READ_NODE_FIELD(changedIndexDefs);
 	unwrapStringList(local_node->changedIndexDefs);
+
+	READ_STRING_FIELD(replicaIdentityIndex);
+	READ_STRING_FIELD(clusterOnIndex);
 
 	READ_DONE();
 }
@@ -1247,6 +1262,11 @@ _readAExpr(void)
 	else if (strncmp(token,"DISTINCT",length)==0)
 	{
 		local_node->kind = AEXPR_DISTINCT;
+		READ_NODE_FIELD(name);
+	}
+	else if (strncmp(token,"NOT_DISTINCT",length)==0)
+	{
+		local_node->kind = AEXPR_NOT_DISTINCT;
 		READ_NODE_FIELD(name);
 	}
 	else if (strncmp(token,"NULLIF",length)==0)
@@ -2459,9 +2479,6 @@ _readPlannedStmt(void)
 
 	READ_UINT64_FIELD(query_mem);
 
-	READ_INT_FIELD(total_memory_coordinator);
-	READ_INT_FIELD(nsegments_coordinator);
-
 	READ_NODE_FIELD(intoClause);
 	READ_NODE_FIELD(copyIntoClause);
 	READ_NODE_FIELD(refreshClause);
@@ -2579,6 +2596,7 @@ _readModifyTable(void)
 	READ_UINT_FIELD(exclRelRTI);
 	READ_NODE_FIELD(exclRelTlist);
 	READ_NODE_FIELD(isSplitUpdates);
+	READ_BOOL_FIELD(forceTupleRouting);
 
 	READ_DONE();
 }
@@ -2744,6 +2762,19 @@ _readIndexScan(void)
 	READ_DONE();
 }
 
+static DynamicIndexScan *
+_readDynamicIndexScan(void)
+{
+	READ_LOCALS(DynamicIndexScan);
+
+	/* DynamicIndexScan has some content from IndexScan. */
+	readIndexScanFields(&local_node->indexscan);
+	READ_NODE_FIELD(partOids);
+	READ_NODE_FIELD(part_prune_info);
+	READ_NODE_FIELD(join_prune_paramids);
+	READ_DONE();
+}
+
 static void
 readIndexScanFields(IndexScan *local_node)
 {
@@ -2772,6 +2803,7 @@ _readIndexOnlyScan(void)
 
 	READ_OID_FIELD(indexid);
 	READ_NODE_FIELD(indexqual);
+	READ_NODE_FIELD(recheckqual);
 	READ_NODE_FIELD(indexorderby);
 	READ_NODE_FIELD(indextlist);
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
@@ -2805,6 +2837,17 @@ _readBitmapIndexScan(void)
 	READ_DONE();
 }
 
+static DynamicBitmapIndexScan *
+_readDynamicBitmapIndexScan(void)
+{
+	READ_LOCALS_NO_FIELDS(DynamicBitmapIndexScan);
+
+	/* DynamicBitmapIndexScan has some content from BitmapIndexScan. */
+	readBitmapIndexScanFields(&local_node->biscan);
+
+	READ_DONE();
+}
+
 static void
 readBitmapHeapScanFields(BitmapHeapScan *local_node)
 {
@@ -2824,6 +2867,21 @@ _readBitmapHeapScan(void)
 	READ_LOCALS_NO_FIELDS(BitmapHeapScan);
 
 	readBitmapHeapScanFields(local_node);
+
+	READ_DONE();
+}
+
+static DynamicBitmapHeapScan *
+_readDynamicBitmapHeapScan(void)
+{
+	READ_LOCALS(DynamicBitmapHeapScan);
+
+	/* DynamicBitmapHeapScan has some content from BitmapHeapScan. */
+	readBitmapHeapScanFields(&local_node->bitmapheapscan);
+
+	READ_NODE_FIELD(partOids);
+	READ_NODE_FIELD(part_prune_info);
+	READ_NODE_FIELD(join_prune_paramids);
 
 	READ_DONE();
 }
@@ -2968,13 +3026,39 @@ _readWorkTableScan(void)
 	READ_DONE();
 }
 
+static void readForeignScanFields(ForeignScan *local_node);
+
 /*
  * _readForeignScan
  */
 static ForeignScan *
 _readForeignScan(void)
 {
-	READ_LOCALS(ForeignScan);
+	READ_LOCALS_NO_FIELDS(ForeignScan);
+
+	readForeignScanFields(local_node);
+
+	READ_DONE();
+}
+
+static DynamicForeignScan *
+_readDynamicForeignScan(void)
+{
+	READ_LOCALS(DynamicForeignScan);
+
+	/* DynamicForeignScan has some content from ForeignScan. */
+	readForeignScanFields(&local_node->foreignscan);
+	READ_NODE_FIELD(partOids);
+	READ_NODE_FIELD(part_prune_info);
+	READ_NODE_FIELD(join_prune_paramids);
+	READ_NODE_FIELD(fdw_private_list);
+	READ_DONE();
+}
+
+static void
+readForeignScanFields(ForeignScan *local_node)
+{
+	READ_TEMP_LOCALS();
 
 	ReadCommonScan(&local_node->scan);
 
@@ -2986,8 +3070,6 @@ _readForeignScan(void)
 	READ_NODE_FIELD(fdw_recheck_quals);
 	READ_BITMAPSET_FIELD(fs_relids);
 	READ_BOOL_FIELD(fsSystemCol);
-
-	READ_DONE();
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -3110,6 +3192,9 @@ _readHashJoin(void)
 
 	READ_NODE_FIELD(hashclauses);
 	READ_NODE_FIELD(hashqualclauses);
+	READ_NODE_FIELD(hashoperators);
+	READ_NODE_FIELD(hashcollations);
+	READ_NODE_FIELD(hashkeys);
 
 	READ_DONE();
 }
@@ -3145,9 +3230,6 @@ _readSort(void)
 	READ_OID_ARRAY(sortOperators, local_node->numCols);
 	READ_OID_ARRAY(collations, local_node->numCols);
 	READ_BOOL_ARRAY(nullsFirst, local_node->numCols);
-
-    /* CDB */
-	READ_BOOL_FIELD(noduplicates);
 
 	READ_DONE();
 }
@@ -3308,7 +3390,8 @@ _readHash(void)
 
 	ReadCommonPlan(&local_node->plan);
 
-    READ_BOOL_FIELD(rescannable);           /*CDB*/
+	READ_BOOL_FIELD(rescannable); /*CDB*/
+	READ_NODE_FIELD(hashkeys);
 	READ_OID_FIELD(skewTable);
 	READ_INT_FIELD(skewColumn);
 	READ_BOOL_FIELD(skewInherit);
@@ -4548,12 +4631,18 @@ parseNodeString(void)
 		return_value = _readSampleScan();
 	else if (MATCH("INDEXSCAN", 9))
 		return_value = _readIndexScan();
+	else if (MATCH("DYNAMICINDEXSCAN", 16))
+		return_value = _readDynamicIndexScan();
 	else if (MATCH("INDEXONLYSCAN", 13))
 		return_value = _readIndexOnlyScan();
 	else if (MATCH("BITMAPINDEXSCAN", 15))
 		return_value = _readBitmapIndexScan();
+	else if (MATCH("DYNAMICBITMAPINDEXSCAN", 23))
+		return_value = _readDynamicBitmapIndexScan();
 	else if (MATCH("BITMAPHEAPSCAN", 14))
 		return_value = _readBitmapHeapScan();
+	else if (MATCH("DYNAMICBITMAPHEAPSCAN", 21))
+		return_value = _readDynamicBitmapHeapScan();
 	else if (MATCH("TIDSCAN", 7))
 		return_value = _readTidScan();
 	else if (MATCH("SUBQUERYSCAN", 12))
@@ -4574,6 +4663,8 @@ parseNodeString(void)
 		return_value = _readWorkTableScan();
 	else if (MATCH("FOREIGNSCAN", 11))
 		return_value = _readForeignScan();
+	else if (MATCH("DYNAMICFOREIGNSCAN", 18))
+		return_value = _readDynamicForeignScan();
 	else if (MATCH("CUSTOMSCAN", 10))
 		return_value = _readCustomScan();
 	else if (MATCH("JOIN", 4))
@@ -4678,6 +4769,8 @@ parseNodeString(void)
 		return_value = _readNewConstraint();
 	else if (MATCHX("NEWCOLUMNVALUE"))
 		return_value = _readNewColumnValue();
+	else if (MATCHX("ALTERDATABASESTMT"))
+		return_value = _readAlterDatabaseStmt();
 	else if (MATCHX("ALTERTABLESTMT"))
 		return_value = _readAlterTableStmt();
 	else if (MATCHX("ALTERTYPESTMT"))

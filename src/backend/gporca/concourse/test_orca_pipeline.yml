@@ -13,39 +13,24 @@ resources:
   type: git
   source:
     branch: test-gpdb
-    private_key: ((slack-trigger-git-key))
+    private_key: ((qp/slack-trigger-git-key))
     uri: ((slack-trigger-git-remote))
 
-- name: gpdb7-centos7-build
+- name: gpdb7-rhel8-build
   type: registry-image
   source:
-    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-build
+    repository: gcr.io/data-gpdb-private-images/gpdb7-rhel8-build
+    tag: latest
+    username: _json_key
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 
-- name: gpdb7-centos7-test
+- name: gpdb7-rhel8-test
   type: registry-image
   source:
-    repository: gcr.io/data-gpdb-public-images/gpdb7-centos7-test
-
-- name: libquicklz-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-- name: libquicklz-devel-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
-
-- name: python-centos7
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
+    repository: gcr.io/data-gpdb-private-images/gpdb7-rhel8-test
+    tag: latest
+    username: _json_key
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 
 jobs:
 - name: compile_and_test_gpdb
@@ -55,18 +40,12 @@ jobs:
     - get: gporca-commits-to-test
       trigger: true
       version: every
-    - get: gpdb7-centos7-build
-    - get: gpdb7-centos7-test
-    - get: libquicklz-installer
-      resource: libquicklz-centos7
-    - get: libquicklz-devel-installer
-      resource: libquicklz-devel-centos7
-    - get: python-tarball
-      resource: python-centos7
+    - get: gpdb7-rhel8-build
+    - get: gpdb7-rhel8-test
 
   - do:
     - task: init gpdb_src
-      image: gpdb7-centos7-build
+      image: gpdb7-rhel8-build
       config:
         platform: linux
         run:
@@ -82,21 +61,19 @@ jobs:
             git submodule update --init --recursive
         inputs: [{ name: gporca-commits-to-test }]
         outputs: [{ name: gpdb_src }]
-    - task: compile_gpdb_centos7
+    - task: compile_gpdb_rhel8
       file: gpdb_src/concourse/tasks/compile_gpdb.yml
-      image: gpdb7-centos7-build
+      image: gpdb7-rhel8-build
       params:
         CONFIGURE_FLAGS: ((configure_flags_with_extensions))
-        TARGET_OS: centos
-        TARGET_OS_VERSION: 7
         BLD_TARGETS: "clients loaders"
       timeout: 30m
 
 
     - in_parallel:
-      - task: icw_planner_centos7
+      - task: icw_planner_rhel8
         file: gpdb_src/concourse/tasks/ic_gpdb.yml
-        image: gpdb7-centos7-test
+        image: gpdb7-rhel8-test
         input_mapping:
           bin_gpdb: gpdb_artifacts
         params:
@@ -105,9 +82,9 @@ jobs:
           CONFIGURE_FLAGS: ((configure_flags))
         timeout: 3h
 
-      - task: icw_gporca_centos7
+      - task: icw_gporca_rhel8
         file: gpdb_src/concourse/tasks/ic_gpdb.yml
-        image: gpdb7-centos7-test
+        image: gpdb7-rhel8-test
         input_mapping:
           bin_gpdb: gpdb_artifacts
         params:
@@ -116,9 +93,9 @@ jobs:
           CONFIGURE_FLAGS: ((configure_flags))
         timeout: 5h
 
-      - task: unit_tests_gporca_centos7
+      - task: unit_tests_gporca_rhel8
         file: gpdb_src/concourse/tasks/unit_tests_gporca.yml
-        image: gpdb7-centos7-build
+        image: gpdb7-rhel8-build
         timeout: 1h
 
       - task: check_format

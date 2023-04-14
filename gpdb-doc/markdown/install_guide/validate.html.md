@@ -10,14 +10,14 @@ Greenplum provides a management utility called [gpcheckperf](../utility_guide/re
 -   Disk I/O Performance \(`dd` test\)
 -   Memory Bandwidth \(`stream` test\)
 
-Before using `gpcheckperf`, you must have a trusted host setup between the hosts involved in the performance test. You can use the utility [gpssh-exkeys](../utility_guide/ref/gpssh-exkeys.html) to update the known host files and exchange public keys between hosts if you have not done so already. Note that `gpcheckperf` calls to [gpssh](../utility_guide/ref/gpssh.html) and [gpscp](../utility_guide/ref/gpscp.html), so these Greenplum utilities must be in your `$PATH`.
+Before using `gpcheckperf`, you must have a trusted host setup between the hosts involved in the performance test. You can use the utility [gpssh-exkeys](../utility_guide/ref/gpssh-exkeys.html) to update the known host files and exchange public keys between hosts if you have not done so already. Note that `gpcheckperf` calls to [gpssh](../utility_guide/ref/gpssh.html) and [gpsync](../utility_guide/ref/gpsync.html), so these Greenplum utilities must be in your `$PATH`.
 
 -   **[Validating Network Performance](validate.html)**  
 
 -   **[Validating Disk I/O and Memory Bandwidth](validate.html)**  
 
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic4"></a>Validating Network Performance 
 
@@ -48,7 +48,7 @@ $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N -d /tmp > subnet2.out
 
 If you have an *odd* number of hosts to test, you can run in serial test mode \(`-r n`\).
 
-**Parent topic:**[Validating Your Systems](validate.html)
+**Parent topic:** [Validating Your Systems](validate.html)
 
 ## <a id="topic5"></a>Validating Disk I/O and Memory Bandwidth 
 
@@ -82,5 +82,5 @@ To test disk and memory bandwidth performance, run [gpcheckperf](../utility_guid
 
 5.  The utility may take a while to perform the tests as it is copying very large files between the hosts. When it is finished you will see the summary results for the Disk Write, Disk Read, and Stream tests.
 
-**Parent topic:**[Validating Your Systems](validate.html)
+**Parent topic:** [Validating Your Systems](validate.html)
 

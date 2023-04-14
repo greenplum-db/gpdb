@@ -166,5 +166,5 @@ chmod 400 shadow gshadow
 
 ```
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 

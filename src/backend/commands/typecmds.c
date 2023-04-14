@@ -989,10 +989,12 @@ DefineDomain(CreateDomainStmt *stmt)
 					pstate = make_parsestate(NULL);
 
 					/*
-					 * Cook the constr->raw_expr into an expression. Note:
-					 * name is strictly for error message
+					 * Cook the constr->raw_expr into an expression; copy it
+					 * in case the input is in plan cache.  Note: name is used
+					 * only for error messages.
 					 */
-					defaultExpr = cookDefault(pstate, constr->raw_expr,
+					defaultExpr = cookDefault(pstate,
+											  copyObject(constr->raw_expr),
 											  basetypeoid,
 											  basetypeMod,
 											  domainName,
@@ -1805,7 +1807,11 @@ static Oid
 findTypeInputFunction(List *procname, Oid typeOid)
 {
 	Oid			argList[3];
+	int			nmatches = 0;
 	Oid			procOid;
+	Oid			procOid2;
+	Oid			procOid3;
+	Oid			procOid4;
 
 	/*
 	 * Input functions can take a single argument of type CSTRING, or three
@@ -1813,32 +1819,45 @@ findTypeInputFunction(List *procname, Oid typeOid)
 	 *
 	 * For backwards compatibility we allow OPAQUE in place of CSTRING; if we
 	 * see this, we issue a warning and fix up the pg_proc entry.
+	 *
+	 * Whine about ambiguity if multiple forms exist.
 	 */
 	argList[0] = CSTRINGOID;
-
-	procOid = LookupFuncName(procname, 1, argList, true);
-	if (OidIsValid(procOid))
-		return procOid;
-
 	argList[1] = OIDOID;
 	argList[2] = INT4OID;
 
-	procOid = LookupFuncName(procname, 3, argList, true);
+	procOid = LookupFuncName(procname, 1, argList, true);
 	if (OidIsValid(procOid))
-		return procOid;
+		nmatches++;
+	procOid2 = LookupFuncName(procname, 3, argList, true);
+	if (OidIsValid(procOid2))
+		nmatches++;
 
-	/* No luck, try it with OPAQUE */
 	argList[0] = OPAQUEOID;
 
-	procOid = LookupFuncName(procname, 1, argList, true);
+	procOid3 = LookupFuncName(procname, 1, argList, true);
+	if (OidIsValid(procOid3))
+		nmatches++;
+	procOid4 = LookupFuncName(procname, 3, argList, true);
+	if (OidIsValid(procOid4))
+		nmatches++;
 
-	if (!OidIsValid(procOid))
-	{
-		argList[1] = OIDOID;
-		argList[2] = INT4OID;
+	if (nmatches > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_AMBIGUOUS_FUNCTION),
+				 errmsg("type input function %s has multiple matches",
+						NameListToString(procname))));
 
-		procOid = LookupFuncName(procname, 3, argList, true);
-	}
+	if (OidIsValid(procOid))
+		return procOid;
+	if (OidIsValid(procOid2))
+		return procOid2;
+
+	/* Cases with OPAQUE need adjustment */
+	if (OidIsValid(procOid3))
+		procOid = procOid3;
+	else
+		procOid = procOid4;
 
 	if (OidIsValid(procOid))
 	{
@@ -1924,24 +1943,32 @@ findTypeReceiveFunction(List *procname, Oid typeOid)
 {
 	Oid			argList[3];
 	Oid			procOid;
+	Oid			procOid2;
 
 	/*
 	 * Receive functions can take a single argument of type INTERNAL, or three
-	 * arguments (internal, typioparam OID, typmod).
+	 * arguments (internal, typioparam OID, typmod).  Whine about ambiguity if
+	 * both forms exist.
 	 */
 	argList[0] = INTERNALOID;
-
-	procOid = LookupFuncName(procname, 1, argList, true);
-	if (OidIsValid(procOid))
-		return procOid;
-
 	argList[1] = OIDOID;
 	argList[2] = INT4OID;
 
-	procOid = LookupFuncName(procname, 3, argList, true);
+	procOid = LookupFuncName(procname, 1, argList, true);
+	procOid2 = LookupFuncName(procname, 3, argList, true);
 	if (OidIsValid(procOid))
+	{
+		if (OidIsValid(procOid2))
+			ereport(ERROR,
+					(errcode(ERRCODE_AMBIGUOUS_FUNCTION),
+					 errmsg("type receive function %s has multiple matches",
+							NameListToString(procname))));
 		return procOid;
+	}
+	else if (OidIsValid(procOid2))
+		return procOid2;
 
+	/* If not found, reference the 1-argument signature in error msg */
 	ereport(ERROR,
 			(errcode(ERRCODE_UNDEFINED_FUNCTION),
 			 errmsg("function %s does not exist",
@@ -2193,7 +2220,6 @@ findRangeSubtypeDiffFunction(List *procname, Oid subtype)
 Oid
 AssignTypeArrayOid(char *arrayTypeName, Oid typeNamespace)
 {
-	/* GPDB_12_MERGE_FIXME: do we need some special code for IsBinaryUpgrade here? */
 	Oid			type_array_oid;
 	Relation	pg_type;
 
@@ -2244,6 +2270,7 @@ DefineCompositeType(RangeVar *typevar, List *coldeflist)
 	createStmt->oncommit = ONCOMMIT_NOOP;
 	createStmt->tablespacename = NULL;
 	createStmt->if_not_exists = false;
+	createStmt->gp_style_alter_part = false;
 
 	/*
 	 * Check for collision with an existing type name. If there is one and
@@ -2330,10 +2357,10 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 		pstate = make_parsestate(NULL);
 
 		/*
-		 * Cook the colDef->raw_expr into an expression. Note: Name is
-		 * strictly for error message
+		 * Cook the raw default into an expression; copy it in case the input
+		 * is in plan cache.  Note: name is used only for error messages.
 		 */
-		defaultExpr = cookDefault(pstate, defaultRaw,
+		defaultExpr = cookDefault(pstate, copyObject(defaultRaw),
 								  typTup->typbasetype,
 								  typTup->typtypmod,
 								  NameStr(typTup->typname),
@@ -3225,11 +3252,11 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid,
 	pstate->p_ref_hook_state = (void *) domVal;
 
 	/*
-	 * GPDB: transformExpr scribbles on the input, but we need to keep it intact
-	 * because we dispatch it afterwards.
+	 * Transform the expression; first we must copy the input, in case it's in
+	 * plan cache.
 	 */
-	constr = (Constraint *) copyObject(constr);
-	expr = transformExpr(pstate, constr->raw_expr, EXPR_KIND_DOMAIN_CHECK);
+	expr = transformExpr(pstate, copyObject(constr->raw_expr),
+						 EXPR_KIND_DOMAIN_CHECK);
 
 	/*
 	 * Make sure it yields a boolean result.
@@ -3834,12 +3861,14 @@ AlterType(AlterTypeStmt *stmt)
 {
 	TypeName   *typname;
 	Oid			typid;
+	Oid			arrtypid;
 	Datum		typoptions;
 	List	   *encoding;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
 	typname = makeTypeNameFromNameList(stmt->typeName);
 	typid = typenameTypeId(NULL, typname);
+	arrtypid = get_array_type(typid);
 
 	if (type_is_rowtype(typid))
 		ereport(ERROR,
@@ -3860,7 +3889,15 @@ AlterType(AlterTypeStmt *stmt)
 									 encoding, NULL, NULL,
 									 false,
 									 false);
+
+	if (arrtypid == InvalidOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("failed to get the array type of type \"%s\"",
+						TypeNameToString(typname))));
+
 	update_type_encoding(typid, typoptions);
+	update_type_encoding(arrtypid, typoptions);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		CdbDispatchUtilityStatement((Node *) stmt,

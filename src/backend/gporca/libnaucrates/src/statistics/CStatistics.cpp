@@ -71,7 +71,9 @@ CStatistics::CStatistics(CMemoryPool *mp,
 	  m_num_rebinds(
 		  1.0),	 // by default, a stats object is rebound to parameters only once
 	  m_num_predicates(num_predicates),
-	  m_src_upper_bound_NDVs(nullptr)
+	  m_src_upper_bound_NDVs(nullptr),
+	  m_ext_stats(nullptr),
+	  m_colid_to_attno_mapping(GPOS_NEW(mp) UlongToIntMap(mp))
 {
 	GPOS_ASSERT(nullptr != m_colid_histogram_mapping);
 	GPOS_ASSERT(nullptr != m_colid_width_mapping);
@@ -87,7 +89,10 @@ CStatistics::CStatistics(CMemoryPool *mp,
 CStatistics::CStatistics(CMemoryPool *mp,
 						 UlongToHistogramMap *col_histogram_mapping,
 						 UlongToDoubleMap *colid_width_mapping, CDouble rows,
-						 BOOL is_empty, ULONG relpages, ULONG relallvisible)
+						 BOOL is_empty, ULONG relpages, ULONG relallvisible,
+						 CDouble rebinds, ULONG num_predicates,
+						 const IMDExtStatsInfo *extstats,
+						 UlongToIntMap *colid_to_attno_mapping)
 	: m_colid_histogram_mapping(col_histogram_mapping),
 	  m_colid_width_mapping(colid_width_mapping),
 	  m_rows(rows),
@@ -95,10 +100,11 @@ CStatistics::CStatistics(CMemoryPool *mp,
 	  m_empty(is_empty),
 	  m_relpages(relpages),
 	  m_relallvisible(relallvisible),
-	  m_num_rebinds(
-		  1.0),	 // by default, a stats object is rebound to parameters only once
-	  m_num_predicates(0),
-	  m_src_upper_bound_NDVs(nullptr)
+	  m_num_rebinds(rebinds),
+	  m_num_predicates(num_predicates),
+	  m_src_upper_bound_NDVs(nullptr),
+	  m_ext_stats(extstats),
+	  m_colid_to_attno_mapping(colid_to_attno_mapping)
 {
 	GPOS_ASSERT(nullptr != m_colid_histogram_mapping);
 	GPOS_ASSERT(nullptr != m_colid_width_mapping);
@@ -117,6 +123,7 @@ CStatistics::~CStatistics()
 	m_colid_histogram_mapping->Release();
 	m_colid_width_mapping->Release();
 	m_src_upper_bound_NDVs->Release();
+	m_colid_to_attno_mapping->Release();
 }
 
 // look up the width of a particular column
@@ -569,10 +576,13 @@ CStatistics::ScaleStats(CMemoryPool *mp, CDouble factor) const
 
 	CDouble scaled_num_rows = m_rows * factor;
 
+	m_colid_to_attno_mapping->AddRef();
+
 	// create a scaled stats object
-	CStatistics *scaled_stats =
-		GPOS_NEW(mp) CStatistics(mp, histograms_new, widths_new,
-								 scaled_num_rows, IsEmpty(), m_num_predicates);
+	CStatistics *scaled_stats = GPOS_NEW(mp)
+		CStatistics(mp, histograms_new, widths_new, scaled_num_rows, IsEmpty(),
+					RelPages(), RelAllVisible(), NumRebinds(), m_num_predicates,
+					m_ext_stats, m_colid_to_attno_mapping);
 
 	// In the output statistics object, the upper bound source cardinality of the scaled column
 	// cannot be greater than the the upper bound source cardinality information maintained in the input
@@ -603,9 +613,13 @@ CStatistics::CopyStatsWithRemap(CMemoryPool *mp,
 	AddWidthInfoWithRemap(mp, m_colid_width_mapping, widths_new, colref_mapping,
 						  must_exist);
 
+	m_colid_to_attno_mapping->AddRef();
+
 	// create a copy of the stats object
-	CStatistics *stats_copy = GPOS_NEW(mp) CStatistics(
-		mp, histograms_new, widths_new, m_rows, IsEmpty(), m_num_predicates);
+	CStatistics *stats_copy = GPOS_NEW(mp)
+		CStatistics(mp, histograms_new, widths_new, m_rows, IsEmpty(),
+					RelPages(), RelAllVisible(), NumRebinds(), m_num_predicates,
+					m_ext_stats, m_colid_to_attno_mapping);
 
 	// In the output statistics object, the upper bound source cardinality of the join column
 	// cannot be greater than the the upper bound source cardinality information maintained in the input

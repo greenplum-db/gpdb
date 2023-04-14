@@ -30,7 +30,7 @@
 
 #include "access/distributedlog.h"
 #include "cdb/cdbvars.h"
-
+#include "tcop/tcopprot.h"
 
 /* Number of OIDs to prefetch (preallocate) per XLOG write */
 #define VAR_OID_PREFETCH		8192
@@ -279,7 +279,11 @@ GetNewTransactionId(bool isSubXact)
 			MyPgXact->nxids = nxids + 1;
 		}
 		else
+		{
 			MyPgXact->overflowed = true;
+			ereportif (gp_log_suboverflow_statement, LOG,
+						(errmsg("Statement caused suboverflow: %s", debug_query_string)));
+		}
 	}
 
 	LWLockRelease(XidGenLock);
@@ -351,22 +355,22 @@ AdvanceNextFullTransactionIdPastXid(TransactionId xid)
 /*
  * Advance the cluster-wide value for the oldest valid clog entry.
  *
- * We must acquire CLogTruncationLock to advance the oldestClogXid. It's not
+ * We must acquire XactTruncationLock to advance the oldestClogXid. It's not
  * necessary to hold the lock during the actual clog truncation, only when we
  * advance the limit, as code looking up arbitrary xids is required to hold
- * CLogTruncationLock from when it tests oldestClogXid through to when it
+ * XactTruncationLock from when it tests oldestClogXid through to when it
  * completes the clog lookup.
  */
 void
 AdvanceOldestClogXid(TransactionId oldest_datfrozenxid)
 {
-	LWLockAcquire(CLogTruncationLock, LW_EXCLUSIVE);
+	LWLockAcquire(XactTruncationLock, LW_EXCLUSIVE);
 	if (TransactionIdPrecedes(ShmemVariableCache->oldestClogXid,
 							  oldest_datfrozenxid))
 	{
 		ShmemVariableCache->oldestClogXid = oldest_datfrozenxid;
 	}
-	LWLockRelease(CLogTruncationLock);
+	LWLockRelease(XactTruncationLock);
 }
 
 /*

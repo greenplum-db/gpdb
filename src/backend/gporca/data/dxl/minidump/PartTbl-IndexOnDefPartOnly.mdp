@@ -102,7 +102,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.8685596.1.0" Name="pt_lt_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
+      <dxl:Relation Mdid="6.8685596.1.0" Name="pt_lt_tab" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -141,18 +141,17 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.8685596001.1.0"/>
-          <dxl:Partition Mdid="0.8685596002.1.0"/>
-          <dxl:Partition Mdid="0.8685596003.1.0"/>
-          <dxl:Partition Mdid="0.8685596004.1.0"/>
-          <dxl:Partition Mdid="0.8685596005.1.0"/>
-          <dxl:Partition Mdid="0.8685596006.1.0"/>
+          <dxl:Partition Mdid="6.8685596001.1.0"/>
+          <dxl:Partition Mdid="6.8685596002.1.0"/>
+          <dxl:Partition Mdid="6.8685596003.1.0"/>
+          <dxl:Partition Mdid="6.8685596004.1.0"/>
+          <dxl:Partition Mdid="6.8685596005.1.0"/>
+          <dxl:Partition Mdid="6.8685596006.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596001.1.0" Name="pt_lt_tab_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596001.1.0" Name="pt_lt_tab_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -191,7 +190,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -216,7 +214,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596002.1.0" Name="pt_lt_tab_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596002.1.0" Name="pt_lt_tab_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -255,7 +253,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -280,7 +277,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596003.1.0" Name="pt_lt_tab_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596003.1.0" Name="pt_lt_tab_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -319,7 +316,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -344,7 +340,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596004.1.0" Name="pt_lt_tab_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596004.1.0" Name="pt_lt_tab_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -383,7 +379,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -408,7 +403,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596005.1.0" Name="pt_lt_tab_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596005.1.0" Name="pt_lt_tab_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -447,7 +442,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -472,7 +466,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596006.1.0" Name="pt_lt_tab_prt_def" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596006.1.0" Name="pt_lt_tab_prt_def" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -511,7 +505,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870006.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:Not>
@@ -592,7 +585,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           <dxl:Opfamily Mdid="0.3040.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.8685596.1.1" Name="pt_lt_tab" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
+      <dxl:Relation Mdid="6.8685596.1.1" Name="pt_lt_tab" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -631,18 +624,17 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870.1.0" IsPartial="true"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.8685596001.1.1"/>
-          <dxl:Partition Mdid="0.8685596002.1.1"/>
-          <dxl:Partition Mdid="0.8685596003.1.1"/>
-          <dxl:Partition Mdid="0.8685596004.1.1"/>
-          <dxl:Partition Mdid="0.8685596005.1.1"/>
-          <dxl:Partition Mdid="0.8685596006.1.1"/>
+          <dxl:Partition Mdid="6.8685596001.1.1"/>
+          <dxl:Partition Mdid="6.8685596002.1.1"/>
+          <dxl:Partition Mdid="6.8685596003.1.1"/>
+          <dxl:Partition Mdid="6.8685596004.1.1"/>
+          <dxl:Partition Mdid="6.8685596005.1.1"/>
+          <dxl:Partition Mdid="6.8685596006.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596001.1.1" Name="pt_lt_tab_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596001.1.1" Name="pt_lt_tab_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -681,7 +673,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -706,7 +697,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596002.1.1" Name="pt_lt_tab_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596002.1.1" Name="pt_lt_tab_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -745,7 +736,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -770,7 +760,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596003.1.1" Name="pt_lt_tab_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596003.1.1" Name="pt_lt_tab_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -809,7 +799,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -834,7 +823,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596004.1.1" Name="pt_lt_tab_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596004.1.1" Name="pt_lt_tab_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -873,7 +862,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -898,7 +886,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596005.1.1" Name="pt_lt_tab_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596005.1.1" Name="pt_lt_tab_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -937,7 +925,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -962,7 +949,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.8685596006.1.1" Name="pt_lt_tab_prt_def" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.8685596006.1.1" Name="pt_lt_tab_prt_def" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="col1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1001,7 +988,6 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.8685870006.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:Not>
@@ -1148,20 +1134,20 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           <dxl:Opfamily Mdid="0.1988.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.8685870001.1.0"/>
-          <dxl:Partition Mdid="0.8685870002.1.0"/>
-          <dxl:Partition Mdid="0.8685870003.1.0"/>
-          <dxl:Partition Mdid="0.8685870004.1.0"/>
-          <dxl:Partition Mdid="0.8685870005.1.0"/>
-          <dxl:Partition Mdid="0.8685870006.1.0"/>
+          <dxl:Partition Mdid="6.8685870001.1.0"/>
+          <dxl:Partition Mdid="6.8685870002.1.0"/>
+          <dxl:Partition Mdid="6.8685870003.1.0"/>
+          <dxl:Partition Mdid="6.8685870004.1.0"/>
+          <dxl:Partition Mdid="6.8685870005.1.0"/>
+          <dxl:Partition Mdid="6.8685870006.1.0"/>
         </dxl:Partitions>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.8685870001.1.0"/>
-          <dxl:Partition Mdid="0.8685870002.1.0"/>
-          <dxl:Partition Mdid="0.8685870003.1.0"/>
-          <dxl:Partition Mdid="0.8685870004.1.0"/>
-          <dxl:Partition Mdid="0.8685870005.1.0"/>
-          <dxl:Partition Mdid="0.8685870006.1.0"/>
+          <dxl:Partition Mdid="6.8685870001.1.0"/>
+          <dxl:Partition Mdid="6.8685870002.1.0"/>
+          <dxl:Partition Mdid="6.8685870003.1.0"/>
+          <dxl:Partition Mdid="6.8685870004.1.0"/>
+          <dxl:Partition Mdid="6.8685870005.1.0"/>
+          <dxl:Partition Mdid="6.8685870006.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.8685596.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -1458,7 +1444,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
             <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
           </dxl:Comparison>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.8685596.1.1" TableName="pt_lt_tab">
+            <dxl:TableDescriptor Mdid="6.8685596.1.1" TableName="pt_lt_tab">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="col1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="col2" TypeMdid="0.1700.1.0"/>
@@ -1544,7 +1530,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
             </dxl:SortingColumnList>
             <dxl:LimitCount/>
             <dxl:LimitOffset/>
-            <dxl:Append IsTarget="false" IsZapped="false">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="6.000169" Rows="1.000000" Width="17"/>
               </dxl:Properties>
@@ -1563,217 +1549,36 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:IndexScan IndexScanDirection="Forward">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.000169" Rows="1.000000" Width="17"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="11" Alias="col1">
-                    <dxl:Ident ColId="11" ColName="col1" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="12" Alias="col2">
-                    <dxl:Ident ColId="12" ColName="col2" TypeMdid="0.1700.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="13" Alias="col3">
-                    <dxl:Ident ColId="13" ColName="col3" TypeMdid="0.25.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="14" Alias="col4">
-                    <dxl:Ident ColId="14" ColName="col4" TypeMdid="0.16.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
-                    <dxl:Ident ColId="12" ColName="col2" TypeMdid="0.1700.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.95935409.1.0" IndexName="idx1"/>
-                <dxl:TableDescriptor Mdid="0.95661409.1.1" TableName="pt_lt_tab_prt_1">
-                  <dxl:Columns>
-                    <dxl:Column ColId="11" Attno="1" ColName="col1" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="12" Attno="2" ColName="col2" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                    <dxl:Column ColId="13" Attno="3" ColName="col3" TypeMdid="0.25.1.0" ColWidth="5"/>
-                    <dxl:Column ColId="14" Attno="4" ColName="col4" TypeMdid="0.16.1.0" ColWidth="1"/>
-                    <dxl:Column ColId="15" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="16" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="17" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="18" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="19" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="20" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="21" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:IndexScan>
-              <dxl:IndexScan IndexScanDirection="Forward">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.000169" Rows="1.000000" Width="17"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="22" Alias="col1">
-                    <dxl:Ident ColId="22" ColName="col1" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="23" Alias="col2">
-                    <dxl:Ident ColId="23" ColName="col2" TypeMdid="0.1700.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="24" Alias="col3">
-                    <dxl:Ident ColId="24" ColName="col3" TypeMdid="0.25.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="25" Alias="col4">
-                    <dxl:Ident ColId="25" ColName="col4" TypeMdid="0.16.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
-                    <dxl:Ident ColId="23" ColName="col2" TypeMdid="0.1700.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.95935410.1.0" IndexName="idx1"/>
-                <dxl:TableDescriptor Mdid="0.95661410.1.1" TableName="pt_lt_tab_prt_2">
-                  <dxl:Columns>
-                    <dxl:Column ColId="22" Attno="1" ColName="col1" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="23" Attno="2" ColName="col2" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                    <dxl:Column ColId="24" Attno="3" ColName="col3" TypeMdid="0.25.1.0" ColWidth="5"/>
-                    <dxl:Column ColId="25" Attno="4" ColName="col4" TypeMdid="0.16.1.0" ColWidth="1"/>
-                    <dxl:Column ColId="26" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="27" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="28" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="29" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="30" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="31" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="32" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:IndexScan>
-              <dxl:IndexScan IndexScanDirection="Forward">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.000169" Rows="1.000000" Width="17"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="33" Alias="col1">
-                    <dxl:Ident ColId="33" ColName="col1" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="34" Alias="col2">
-                    <dxl:Ident ColId="34" ColName="col2" TypeMdid="0.1700.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="35" Alias="col3">
-                    <dxl:Ident ColId="35" ColName="col3" TypeMdid="0.25.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="36" Alias="col4">
-                    <dxl:Ident ColId="36" ColName="col4" TypeMdid="0.16.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
-                    <dxl:Ident ColId="34" ColName="col2" TypeMdid="0.1700.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.95935411.1.0" IndexName="idx1"/>
-                <dxl:TableDescriptor Mdid="0.95661411.1.1" TableName="pt_lt_tab_prt_3">
-                  <dxl:Columns>
-                    <dxl:Column ColId="33" Attno="1" ColName="col1" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="34" Attno="2" ColName="col2" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                    <dxl:Column ColId="35" Attno="3" ColName="col3" TypeMdid="0.25.1.0" ColWidth="5"/>
-                    <dxl:Column ColId="36" Attno="4" ColName="col4" TypeMdid="0.16.1.0" ColWidth="1"/>
-                    <dxl:Column ColId="37" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="38" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="39" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="40" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="41" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="42" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="43" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:IndexScan>
-              <dxl:IndexScan IndexScanDirection="Forward">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.000169" Rows="1.000000" Width="17"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="44" Alias="col1">
-                    <dxl:Ident ColId="44" ColName="col1" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="45" Alias="col2">
-                    <dxl:Ident ColId="45" ColName="col2" TypeMdid="0.1700.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="46" Alias="col3">
-                    <dxl:Ident ColId="46" ColName="col3" TypeMdid="0.25.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="47" Alias="col4">
-                    <dxl:Ident ColId="47" ColName="col4" TypeMdid="0.16.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
-                    <dxl:Ident ColId="45" ColName="col2" TypeMdid="0.1700.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.95935412.1.0" IndexName="idx1"/>
-                <dxl:TableDescriptor Mdid="0.95661412.1.1" TableName="pt_lt_tab_prt_4">
-                  <dxl:Columns>
-                    <dxl:Column ColId="44" Attno="1" ColName="col1" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="45" Attno="2" ColName="col2" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                    <dxl:Column ColId="46" Attno="3" ColName="col3" TypeMdid="0.25.1.0" ColWidth="5"/>
-                    <dxl:Column ColId="47" Attno="4" ColName="col4" TypeMdid="0.16.1.0" ColWidth="1"/>
-                    <dxl:Column ColId="48" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="49" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="50" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="51" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="52" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="53" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="54" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:IndexScan>
-              <dxl:IndexScan IndexScanDirection="Forward">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.000169" Rows="1.000000" Width="17"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="55" Alias="col1">
-                    <dxl:Ident ColId="55" ColName="col1" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="56" Alias="col2">
-                    <dxl:Ident ColId="56" ColName="col2" TypeMdid="0.1700.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="57" Alias="col3">
-                    <dxl:Ident ColId="57" ColName="col3" TypeMdid="0.25.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="58" Alias="col4">
-                    <dxl:Ident ColId="58" ColName="col4" TypeMdid="0.16.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
-                    <dxl:Ident ColId="56" ColName="col2" TypeMdid="0.1700.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.95935413.1.0" IndexName="idx1"/>
-                <dxl:TableDescriptor Mdid="0.95661413.1.1" TableName="pt_lt_tab_prt_5">
-                  <dxl:Columns>
-                    <dxl:Column ColId="55" Attno="1" ColName="col1" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="56" Attno="2" ColName="col2" TypeMdid="0.1700.1.0" ColWidth="7"/>
-                    <dxl:Column ColId="57" Attno="3" ColName="col3" TypeMdid="0.25.1.0" ColWidth="5"/>
-                    <dxl:Column ColId="58" Attno="4" ColName="col4" TypeMdid="0.16.1.0" ColWidth="1"/>
-                    <dxl:Column ColId="59" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="60" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="61" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="62" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="63" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="64" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="65" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:IndexScan>
-            </dxl:Append>
+              <dxl:IndexCondList>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1752.1.0">
+                  <dxl:Ident ColId="1" ColName="col2" TypeMdid="0.1700.1.0"/>
+                  <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
+                </dxl:Comparison>
+              </dxl:IndexCondList>
+              <dxl:Partitions>
+                <dxl:Partition Mdid="6.95661409.1.1"/>
+                <dxl:Partition Mdid="6.95661410.1.1"/>
+                <dxl:Partition Mdid="6.95661411.1.1"/>
+                <dxl:Partition Mdid="6.95661412.1.1"/>
+                <dxl:Partition Mdid="6.95661413.1.1"/>
+              </dxl:Partitions>
+              <dxl:IndexDescriptor Mdid="0.8685870.1.0" IndexName="idx1"/>
+              <dxl:TableDescriptor Mdid="6.8685596.1.1" TableName="pt_lt_tab">
+                <dxl:Columns>
+                  <dxl:Column ColId="0" Attno="1" ColName="col1" TypeMdid="0.23.1.0"/>
+                  <dxl:Column ColId="1" Attno="2" ColName="col2" TypeMdid="0.1700.1.0"/>
+                  <dxl:Column ColId="2" Attno="3" ColName="col3" TypeMdid="0.25.1.0"/>
+                  <dxl:Column ColId="3" Attno="4" ColName="col4" TypeMdid="0.16.1.0"/>
+                  <dxl:Column ColId="4" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                  <dxl:Column ColId="5" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                  <dxl:Column ColId="6" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                  <dxl:Column ColId="7" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                  <dxl:Column ColId="8" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                  <dxl:Column ColId="9" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                  <dxl:Column ColId="10" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:DynamicIndexScan>
           </dxl:Sort>
         </dxl:GatherMotion>
         <dxl:LimitCount>

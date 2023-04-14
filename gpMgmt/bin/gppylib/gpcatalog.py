@@ -25,15 +25,12 @@ class GPCatalogException(Exception):
 COORDINATOR_ONLY_TABLES = [
     'gp_configuration_history',
     'gp_segment_configuration',
-    'pg_auth_time_constraint',
-    'pg_description',
-    'pg_shdescription',
     'pg_stat_last_operation',
     'pg_stat_last_shoperation',
     'pg_statistic',
     'pg_statistic_ext',
     'pg_statistic_ext_data',
-    'gp_partition_template', # GPDB_12_MERGE_FIXME: is gp_partition_template intentionally missing from segments?
+    'gp_partition_template',
     ]
 
 # Hard coded tables that have different values on every segment
@@ -52,6 +49,7 @@ DEPENDENCY_EXCLUSION = [
     'pg_compression',
     'pg_conversion',
     'pg_database',
+    'pg_default_acl',
     'pg_enum',
     'pg_namespace',
     'pg_resgroup',

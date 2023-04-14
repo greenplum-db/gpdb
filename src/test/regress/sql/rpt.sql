@@ -4,6 +4,38 @@
 create schema rpt;
 set search_path to rpt;
 
+-- If the producer is replicated, request a non-singleton spec
+-- that is not allowed to be enforced, to avoid potential CTE hang issue
+drop table if exists with_test1 cascade;
+create table with_test1 (i character varying(10)) DISTRIBUTED REPLICATED;
+
+explain
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+     cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+
+-- This is expected to fall back to planner.
+drop table if exists with_test2 cascade;
+drop table if exists with_test3 cascade;
+create table with_test2 (id bigserial NOT NULL, isc varchar(15) NOT NULL,iscd varchar(15) NULL) DISTRIBUTED REPLICATED;
+create table with_test3 (id numeric NULL, rc varchar(255) NULL,ri numeric NULL) DISTRIBUTED REPLICATED;
+insert into with_test2 (isc,iscd) values ('CMN_BIN_YES', 'CMN_BIN_YES');
+insert into with_test3 (id,rc,ri) values (113551,'CMN_BIN_YES',101991), (113552,'CMN_BIN_NO',101991), (113553,'CMN_BIN_ERR',101991), (113554,'CMN_BIN_NULL',101991);
+explain
+WITH
+    t1 AS (SELECT * FROM with_test2),
+    t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+
+WITH
+    t1 AS (SELECT * FROM with_test2),
+    t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+
 ---------
 -- INSERT
 ---------
@@ -432,6 +464,87 @@ explain (costs off) update t_replicate_volatile set a = random();
 -- limit
 explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit random();
 explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit random()) x;
+
+-- ORCA
+-- verify that JOIN derives the inner child distribution if the outer is tainted replicated (in this
+-- case, the inner child is the hash distributed table, but the distribution is random because the
+-- hash distribution key is not the JOIN key. we want to return the inner distribution because the
+-- JOIN key determines the distribution of the JOIN output).
+create table dist_tab (a integer, b integer) distributed by (a);
+create table rep_tab (c integer) distributed replicated;
+create index idx on dist_tab (b);
+insert into dist_tab values (1, 2), (2, 2), (2, 1), (1, 1);
+insert into rep_tab values (1), (2);
+analyze dist_tab;
+analyze rep_tab;
+set optimizer_enable_hashjoin=off;
+set enable_hashjoin=off;
+set enable_nestloop=on;
+explain select b from dist_tab where b in (select distinct c from rep_tab);
+select b from dist_tab where b in (select distinct c from rep_tab);
+reset optimizer_enable_hashjoin;
+reset enable_hashjoin;
+reset enable_nestloop;
+
+create table rand_tab (d integer) distributed randomly;
+insert into rand_tab values (1), (2);
+analyze rand_tab;
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rep_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct c from rep_tab);
+select c from rep_tab where c in (select distinct c from rep_tab);
+
+-- Table	Side		Derives
+-- dist_tab	pdsOuter	EdtHashed
+-- rep_tab	pdsInner	EdtTaintedReplicated 
+--
+-- join derives EdtHashed
+explain select a from dist_tab where a in (select distinct c from rep_tab);
+select a from dist_tab where a in (select distinct c from rep_tab);
+
+-- Table	Side		Derives
+-- rand_tab	pdsOuter	EdtRandom
+-- rep_tab	pdsInner	EdtTaintedReplicated
+--
+-- join derives EdtRandom
+explain select d from rand_tab where d in (select distinct c from rep_tab);
+select d from rand_tab where d in (select distinct c from rep_tab);
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- dist_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct a from dist_tab);
+select c from rep_tab where c in (select distinct a from dist_tab);
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rand_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct d from rand_tab);
+select c from rep_tab where c in (select distinct d from rand_tab);
+
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+
+-- test for optimizer_enable_replicated_table
+explain (costs off) select * from rep_tab;
+set optimizer_enable_replicated_table=off;
+set optimizer_trace_fallback=on;
+explain (costs off) select * from rep_tab;
+reset optimizer_trace_fallback;
+reset optimizer_enable_replicated_table;
 
 -- start_ignore
 drop schema rpt cascade;

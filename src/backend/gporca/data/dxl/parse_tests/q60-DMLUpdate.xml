@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Plan Id="0" SpaceSize="0">
-    <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" OidCol="12" CtidCol="3" SegmentIdCol="9" InputSorted="false" PreserveOids="false">
+    <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" CtidCol="3" SegmentIdCol="9" IsSplitUpdate="false">
       <dxl:Properties>
         <dxl:Cost StartupCost="0" TotalCost="100.000000" Rows="0" Width="1"/>
       </dxl:Properties>
@@ -17,7 +17,7 @@
           <dxl:Ident ColId="2" ColName="t3" TypeMdid="0.23.1.0"/>
         </dxl:ProjElem>
       </dxl:ProjList>
-      <dxl:TableDescriptor Mdid="0.899686.1.1" TableName="t">
+      <dxl:TableDescriptor Mdid="6.899686.1.1" TableName="t">
         <dxl:Columns>
           <dxl:Column ColId="13" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
           <dxl:Column ColId="14" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>
@@ -60,7 +60,7 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:OneTimeFilter/>
-        <dxl:Split DeleteColumns="0,1,2" InsertColumns="0,10,2" ActionCol="11" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
+        <dxl:Split DeleteColumns="0,1,2" InsertColumns="0,10,2" ActionCol="11" CtidCol="3" SegmentIdCol="9">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="100.000000" Rows="0" Width="48"/>
           </dxl:Properties>
@@ -132,7 +132,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.899686.1.1" TableName="t">
+              <dxl:TableDescriptor Mdid="6.899686.1.1" TableName="t">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>

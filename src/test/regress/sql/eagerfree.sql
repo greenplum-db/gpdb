@@ -23,6 +23,14 @@ set gp_motion_cost_per_row = 0.1;
 select d, count(*) from smallt group by d;
 explain analyze select d, count(*) from smallt group by d;
 
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 set statement_mem=2560;
 select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
 explain analyze select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
@@ -54,6 +62,17 @@ where t1.d = t2.d;
 explain analyze select t1.*, t2.* from
 (select d, count(*) from smallt group by d) as t1, (select d, sum(i) from smallt group by d) as t2
 where t1.d = t2.d;
+
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select d, count(*) from smallt group by d) as t1, (select d, sum(i) from smallt group by d) as t2
+where t1.d = t2.d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 
@@ -69,12 +88,31 @@ where t1.i = t2.i;
 explain analyze select t1.*, t2.* from
 (select i, count(*) from smallt group by i) as t1, (select i, sum(i) from smallt group by i) as t2
 where t1.i = t2.i;
+
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select i, count(*) from smallt group by i) as t1, (select i, sum(i) from smallt group by i) as t2
+where t1.i = t2.i;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 
 -- Limit on Agg
 select d, count(*) from smallt group by d limit 5; --ignore
 explain analyze select d, count(*) from smallt group by d limit 5;
+
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d limit 5;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
 
 -- HashJoin
 select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
@@ -158,6 +196,16 @@ select smallt2.* from smallt2
 where i < all (select total from (select d, sum(i) as total from smallt group by d) as my_group_sum, smallt, smallt2 as tmp
     where my_group_sum.d = smallt.d and smallt.d = tmp.d and my_group_sum.d = smallt2.d)
 and i = 0 order by 1,2,3; --order 1,2,3
+
+-- Test Subplan with Agg
+with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+select count(*) from smallt2
+where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+--start_ignore
+explain with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+        select count(*) from smallt2
+        where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+--end_ignore
 
 -- Nested Subplan
 create table eager_free_r (r1 int, r2 int, r3 int);

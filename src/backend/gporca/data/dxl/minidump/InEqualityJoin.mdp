@@ -5433,7 +5433,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="2452642"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Relation Mdid="0.25732.1.0" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
+      <dxl:Relation Mdid="6.25732.1.0" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -5562,7 +5562,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.26529.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.25732.1.1.39" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -9750,7 +9749,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.25732.1.1" Name="web_sales" Rows="184296000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.25732.1.1" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
+      <dxl:Relation Mdid="6.25732.1.1" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -9879,7 +9878,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.26529.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -9892,7 +9890,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.25732.1.1" TableName="web_sales">
+          <dxl:TableDescriptor Mdid="6.25732.1.1" TableName="web_sales">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -9939,7 +9937,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.25732.1.1" TableName="web_sales">
+          <dxl:TableDescriptor Mdid="6.25732.1.1" TableName="web_sales">
             <dxl:Columns>
               <dxl:Column ColId="42" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="43" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -10044,7 +10042,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.25732.1.1" TableName="web_sales">
+            <dxl:TableDescriptor Mdid="6.25732.1.1" TableName="web_sales">
               <dxl:Columns>
                 <dxl:Column ColId="3" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="15" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
@@ -10090,7 +10088,7 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.25732.1.1" TableName="web_sales">
+                <dxl:TableDescriptor Mdid="6.25732.1.1" TableName="web_sales">
                   <dxl:Columns>
                     <dxl:Column ColId="44" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="56" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>

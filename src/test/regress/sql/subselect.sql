@@ -455,14 +455,65 @@ insert into outer_text values ('b', null);
 
 create temp table inner_text (c1 text, c2 text);
 insert into inner_text values ('a', null);
+insert into inner_text values ('123', '456');
 
 select * from outer_text where (f1, f2) not in (select * from inner_text);
+
+--
+-- Another test case for cross-type hashed subplans: comparison of
+-- inner-side values must be done with appropriate operator
+--
+
+explain (verbose, costs off)
+select 'foo'::text in (select 'bar'::name union all select 'bar'::name);
+
+select 'foo'::text in (select 'bar'::name union all select 'bar'::name);
 
 --
 -- Test case for premature memory release during hashing of subplan output
 --
 
 select '1'::text in (select '1'::name union all select '1'::name);
+
+--
+-- Test that we don't try to use a hashed subplan if the simplified
+-- testexpr isn't of the right shape
+--
+
+-- this fails by default, of course
+select * from int8_tbl where q1 in (select c1 from inner_text);
+
+begin;
+
+-- make an operator to allow it to succeed
+create function bogus_int8_text_eq(int8, text) returns boolean
+language sql as 'select $1::text = $2';
+
+create operator = (procedure=bogus_int8_text_eq, leftarg=int8, rightarg=text);
+
+explain (costs off)
+select * from int8_tbl where q1 in (select c1 from inner_text);
+select * from int8_tbl where q1 in (select c1 from inner_text);
+
+-- inlining of this function results in unusual number of hash clauses,
+-- which we can still cope with
+create or replace function bogus_int8_text_eq(int8, text) returns boolean
+language sql as 'select $1::text = $2 and $1::text = $2';
+
+explain (costs off)
+select * from int8_tbl where q1 in (select c1 from inner_text);
+select * from int8_tbl where q1 in (select c1 from inner_text);
+
+-- inlining of this function causes LHS and RHS to be switched,
+-- which we can't cope with, so hashing should be abandoned
+create or replace function bogus_int8_text_eq(int8, text) returns boolean
+language sql as 'select $2 = $1::text';
+
+explain (costs off)
+select * from int8_tbl where q1 in (select c1 from inner_text);
+select * from int8_tbl where q1 in (select c1 from inner_text);
+
+rollback;  -- to get rid of the bogus operator
 
 --
 -- Test case for planner bug with nested EXISTS handling
@@ -495,6 +546,71 @@ explain (verbose, costs off)
     (select (select random() where y=y) as x from (values(1),(2)) v(y)) ss;
 
 --
+-- Test rescan of a hashed subplan (the use of random() is to prevent the
+-- sub-select from being pulled up, which would result in not hashing)
+--
+explain (verbose, costs off)
+select sum(ss.tst::int) from
+  onek o cross join lateral (
+  select i.ten in (select f1 from int4_tbl where f1 <= o.hundred) as tst,
+         random() as r
+  from onek i where i.unique1 = o.unique1 ) ss
+where o.ten = 0;
+
+select sum(ss.tst::int) from
+  onek o cross join lateral (
+  select i.ten in (select f1 from int4_tbl where f1 <= o.hundred) as tst,
+         random() as r
+  from onek i where i.unique1 = o.unique1 ) ss
+where o.ten = 0;
+
+--
+-- Test rescan of a SetOp node
+--
+explain (costs off)
+select count(*) from
+  onek o cross join lateral (
+    select * from onek i1 where i1.unique1 = o.unique1
+    except
+    select * from onek i2 where i2.unique1 = o.unique2
+  ) ss
+where o.ten = 1;
+
+select count(*) from
+  onek o cross join lateral (
+    select * from onek i1 where i1.unique1 = o.unique1
+    except
+    select * from onek i2 where i2.unique1 = o.unique2
+  ) ss
+where o.ten = 1;
+
+--
+-- Test rescan of a RecursiveUnion node
+--
+explain (costs off)
+select sum(o.four), sum(ss.a) from
+  onek o cross join lateral (
+    with recursive x(a) as
+      (select o.four as a
+       union
+       select a + 1 from x
+       where a < 10)
+    select * from x
+  ) ss
+where o.ten = 1;
+
+select sum(o.four), sum(ss.a) from
+  onek o cross join lateral (
+    with recursive x(a) as
+      (select o.four as a
+       union
+       select a + 1 from x
+       where a < 10)
+    select * from x
+  ) ss
+where o.ten = 1;
+
+--
 -- Check we don't misoptimize a NOT IN where the subquery returns no rows.
 --
 create temp table notinouter (a int);
@@ -518,6 +634,20 @@ select val.x
     values ((select s.i + 1)), (s.i + 101)
   ) as val(x)
 where s.i < 10 and (select val.x) < 110;
+
+-- another variant of that (bug #16213)
+explain (verbose, costs off)
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
+
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
 
 --
 -- Check sane behavior with nested IN SubLinks
@@ -549,6 +679,32 @@ select (select q from
           select 4,5,6.0 where f1 <= 0
          ) q )
 from int4_tbl;
+
+--
+-- Check for sane handling of a lateral reference in a subquery's quals
+-- (most of the complication here is to prevent the test case from being
+-- flattened too much)
+--
+explain (verbose, costs off)
+select * from
+    int4_tbl i4,
+    lateral (
+        select i4.f1 > 1 as b, 1 as id
+        from (select random() order by 1) as t1
+      union all
+        select true as b, 2 as id
+    ) as t2
+where b and f1 >= 0;
+
+select * from
+    int4_tbl i4,
+    lateral (
+        select i4.f1 > 1 as b, 1 as id
+        from (select random() order by 1) as t1
+      union all
+        select true as b, 2 as id
+    ) as t2
+where b and f1 >= 0;
 
 --
 -- Check that volatile quals aren't pushed down past a DISTINCT:
@@ -612,16 +768,10 @@ set optimizer to off;
 -- Test that LIMIT can be pushed to SORT through a subquery that just projects
 -- columns.  We check for that having happened by looking to see if EXPLAIN
 -- ANALYZE shows that a top-N sort was used.  We must suppress or filter away
--- all the non-invariant parts of the EXPLAIN ANALYZE output.
+-- all the non-invariant parts of the EXPLAIN ANALYZE output. Use a replicated
+-- table to genarate a plan like: Limit -> Subquery -> Sort
 --
--- GPDB_12_MERGE_FIXME: we need to revisit the following test because it is not
--- testing what it advertized in the above comment. Specificly, we don't
--- execute top-N sort for the planner plan. Orca on the other hand never honors
--- ORDER BY in a subquery, as permitted by the SQL spec.  Consider rewriting
--- the test using a replicated table so that we get the plan stucture like
--- this: Limit -> Subquery -> Sort
---
-create table sq_limit (pk int primary key, c1 int, c2 int);
+create table sq_limit (pk int primary key, c1 int, c2 int) distributed replicated;
 insert into sq_limit values
     (1, 1, 1),
     (2, 2, 2),
@@ -640,9 +790,10 @@ begin
         explain (analyze, summary off, timing off, costs off)
         select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3
     loop
-        ln := regexp_replace(ln, 'Memory: \S*',  'Memory: xxx');
+        ln := regexp_replace(ln, 'Memory: \S*',  'Memory: xxx', 'g');
         -- this case might occur if force_parallel_mode is on:
         ln := regexp_replace(ln, 'Worker 0:  Sort Method',  'Sort Method');
+        ln := regexp_replace(ln, 'Segments: \S*  Max: \S*kB \(segment \S*\)',  'Segments: x  Max: xxkB (segment x)');
         return next ln;
     end loop;
 end;
@@ -650,7 +801,13 @@ $$;
 
 select * from explain_sq_limit();
 
+-- a subpath is sorted under a subqueryscan. however, the subqueryscan is not.
+-- whether the order of subpath can applied to the subqueryscan is up-to-implement.
+-- now we do not guarantee the order of subpath can apply to the subqueryscan.
+-- so the results of bellow is not stable, so we ignore the results
+--start_ignore
 select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3;
+--end_ignore
 reset optimizer;
 
 drop function explain_sq_limit();
@@ -696,19 +853,27 @@ explain (verbose, costs off)
 with x as (select * from (select f1, current_database() from subselect_tbl) ss)
 select * from x where f1 = 1;
 
+
 -- Volatile functions prevent inlining
--- GPDB_12_MERGE_FIXME: inlining happens on GPDB: But the plan seems OK
--- nevertheless. Is the GPDB planner smart, and notices that this is
--- ok to inline, or is it doing something that would be unsafe in more
--- complicated queries? Investigte
+-- Prevent inlining happens on GPDB, inlining may cause wrong results.
+-- For example, nextval() function.
 explain (verbose, costs off)
 with x as (select * from (select f1, random() from subselect_tbl) ss)
 select * from x where f1 = 1;
 
+create temporary sequence ts;
+create table vol_test(a int, b int);
+explain (verbose, costs off)
+with x as (select * from (select a, nextval('ts') from vol_test) ss)
+select * from x where a = 1;
+drop sequence ts;
+drop table vol_test;
+
 -- SELECT FOR UPDATE cannot be inlined
--- GPDB_12_MERGE_FIXME: Without GDD, we don't do row locking, so it can be
--- inlined. However at the moment, we seem to inline this even when GDD is
--- enabled, losing the LockRows node altogether. That ought to be fixed.
+-- GPDB: select statement with locking clause is not easy to fully supported
+-- in greenplum. The following case even with GDD enabled greenplum will still
+-- lock the table in Exclusive Lock and not generate LockRows plan node.
+-- For detail, please refer to checkCanOptSelectLockingClause.
 explain (verbose, costs off)
 with x as (select * from (select f1 from subselect_tbl for update) ss)
 select * from x where f1 = 1;
@@ -723,11 +888,6 @@ with x as not materialized (select * from (select f1, current_database() as n fr
 select * from x, x x2 where x.n = x2.n;
 
 -- Multiply-referenced CTEs can't be inlined if they contain outer self-refs
--- start_ignore
--- GPDB_12_MERGE_FIXME: This currenty produces incorrect results on GPDB.
--- It's not a new issue, but it was exposed by this new upstream test case
--- with the PostgreSQL v12 merge.
--- See https://github.com/greenplum-db/gpdb/issues/10014
 explain (verbose, costs off)
 with recursive x(a) as
   ((values ('a'), ('b'))
@@ -744,7 +904,6 @@ with recursive x(a) as
     select z.a || z1.a as a from z cross join z as z1
     where length(z.a || z1.a) < 5))
 select * from x;
--- end_ignore
 
 explain (verbose, costs off)
 with recursive x(a) as

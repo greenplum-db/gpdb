@@ -15,11 +15,23 @@ FROM
 		)
 ORDER BY
 	statime;  
+CREATE VIEW
+	pg_stat_last_operation_testview_schema AS
+SELECT lo.staactionname,
+       lo.stasubtype,
+       ns.nspname
+FROM   pg_stat_last_operation lo
+       join pg_class c
+         ON lo.classid = c.oid
+       join pg_namespace ns
+         ON c.relname = 'pg_namespace'
+            AND lo.objid = ns.oid;
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
-             objname             | actionname | subtype 
----------------------------------+------------+---------
- pg_stat_last_operation_testview | CREATE     | VIEW
-(1 row)
+                objname                 | actionname | subtype 
+----------------------------------------+------------+---------
+ pg_stat_last_operation_testview        | CREATE     | VIEW
+ pg_stat_last_operation_testview_schema | CREATE     | VIEW
+(2 rows)
 
  
 -- CREATE TABLE
@@ -85,15 +97,16 @@ SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
  pg_stat_last_operation_test               | CREATE     | TABLE
  mdt_test_part1                            | CREATE     | TABLE
  mdt_test_part1_1_prt_1                    | CREATE     | TABLE
- mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
  mdt_test_part1_1_prt_2                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
  mdt_test_part1_1_prt_2_2_prt_1            | CREATE     | TABLE
  mdt_test_part1_1_prt_default_part         | CREATE     | TABLE
  mdt_test_part1_1_prt_default_part_2_prt_1 | CREATE     | TABLE
  mdt_all_types_col021_seq                  | CREATE     | SEQUENCE
  mdt_all_types_col023_seq                  | CREATE     | SEQUENCE
  mdt_all_types                             | CREATE     | TABLE
-(12 rows)
+ pg_stat_last_operation_testview_schema    | CREATE     | VIEW
+(13 rows)
 
 -- CREATE TABLE .. PARTITION OF
 CREATE TABLE mdt_test_newpart PARTITION OF mdt_test_part1 FOR VALUES IN ('X');
@@ -110,6 +123,8 @@ ALTER TABLE mdt_test_part1 ATTACH PARTITION mdt_test_newpart2 FOR VALUES IN ('Y'
 CREATE TABLE mdt_test_detach PARTITION OF mdt_test_part1 FOR VALUES IN ('Z');
 NOTICE:  table has parent, setting distribution columns to match parent table
 ALTER TABLE mdt_test_part1 DETACH PARTITION mdt_test_detach;
+-- DROP PARTITION
+ALTER TABLE mdt_test_part1 DROP PARTITION FOR ('Y');
 -- GRANT
 GRANT ALL ON mdt_all_types TO public;
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'PRIVILEGE';
@@ -154,6 +169,22 @@ SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'TRUNCATE';
  pg_stat_last_operation_test | TRUNCATE   | 
 (1 row)
 
+-- CREATE INDEX
+CREATE INDEX idx_mt ON mdt_all_types (a);
+REINDEX INDEX idx_mt;
+SELECT * FROM pg_stat_last_operation_testview WHERE objname = 'idx_mt';
+ objname | actionname | subtype 
+---------+------------+---------
+ idx_mt  | CREATE     | INDEX
+ idx_mt  | VACUUM     | REINDEX
+(2 rows)
+
+-- QEs shouldn't do meta tracking stuff
+SELECT gp_execution_dbid(), * FROM gp_dist_random('pg_stat_last_operation_testview') WHERE objname = 'idx_mt';
+ gp_execution_dbid | objname | actionname | subtype 
+-------------------+---------+------------+---------
+(0 rows)
+
 -- DROP TABLE
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'DROP';
  objname | actionname | subtype 
@@ -183,14 +214,13 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
  mdt_all_types_col023_seq                  | ALTER      | OWNED BY
  mdt_test_newpart                          | CREATE     | TABLE
  mdt_test_newpart                          | PARTITION  | ATTACH
- mdt_test_newpart2                         | CREATE     | TABLE
- mdt_test_newpart2                         | PARTITION  | ATTACH
  mdt_test_detach                           | CREATE     | TABLE
  mdt_test_detach                           | PARTITION  | DETACH
+ mdt_test_part1                            | PARTITION  | DROP
  mdt_all_types                             | PRIVILEGE  | GRANT
  mdt_all_types                             | VACUUM     | 
  mdt_all_types                             | ANALYZE    | 
-(27 rows)
+(26 rows)
 
 DROP TABLE mdt_all_types;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
@@ -211,11 +241,10 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
  mdt_test_part1_1_prt_default_part_2_prt_1 | PARTITION  | ATTACH
  mdt_test_newpart                          | CREATE     | TABLE
  mdt_test_newpart                          | PARTITION  | ATTACH
- mdt_test_newpart2                         | CREATE     | TABLE
- mdt_test_newpart2                         | PARTITION  | ATTACH
  mdt_test_detach                           | CREATE     | TABLE
  mdt_test_detach                           | PARTITION  | DETACH
-(19 rows)
+ mdt_test_part1                            | PARTITION  | DROP
+(18 rows)
 
 DROP TABLE mdt_test_part1;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
@@ -224,4 +253,20 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
  mdt_test_detach | CREATE     | TABLE
  mdt_test_detach | PARTITION  | DETACH
 (2 rows)
+
+-- SCHEMA
+CREATE SCHEMA mdt_schema;
+SELECT * FROM pg_stat_last_operation_testview_schema WHERE nspname LIKE 'mdt_%';
+ staactionname | stasubtype |  nspname   
+---------------+------------+------------
+ CREATE        | SCHEMA     | mdt_schema
+ CREATE        | SCHEMA     | mdt_test
+(2 rows)
+
+DROP SCHEMA mdt_schema;
+SELECT * FROM pg_stat_last_operation_testview_schema WHERE nspname LIKE 'mdt_%';
+ staactionname | stasubtype | nspname  
+---------------+------------+----------
+ CREATE        | SCHEMA     | mdt_test
+(1 row)
 

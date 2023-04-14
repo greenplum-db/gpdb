@@ -1,5 +1,5 @@
 EXTENSION  = gp_internal_tools
-MODULES    = gp_ao_co_diagnostics gp_workfile_mgr gp_session_state_memory_stats gp_instrument_shmem gp_resource_group
+MODULES    = gp_ao_co_diagnostics gp_workfile_mgr gp_session_state_memory_stats gp_instrument_shmem
 DATA       = gp_internal_tools--1.0.0.sql
 
 PG_CPPFLAGS = -I$(libpq_srcdir)

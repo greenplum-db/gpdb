@@ -86,6 +86,7 @@ class RecoveryErrorType(object):
     REWIND_ERROR = 'incremental'
     BASEBACKUP_ERROR = 'full'
     START_ERROR = 'start'
+    UPDATE_ERROR = 'update'
     DEFAULT_ERROR = 'default'
 
 
@@ -115,6 +116,7 @@ class RecoveryResult(object):
         self._rewind_errors = defaultdict(list)
         self._dbids_that_failed_bb_rewind = set()
         self._start_errors = defaultdict(list)
+        self._update_errors = defaultdict(list)
         self._parse_results(results)
 
     def _parse_results(self, results):
@@ -139,6 +141,9 @@ class RecoveryResult(object):
                     self._start_errors[host_result.remoteHost].append(error)
                 elif error.error_type == RecoveryErrorType.VALIDATION_ERROR:
                     self._setup_recovery_errors[host_result.remoteHost].append(error)
+                elif error.error_type == RecoveryErrorType.UPDATE_ERROR:
+                    self._update_errors[host_result.remoteHost].append(error)
+
                 #FIXME what should we do for default errors ?
 
     def _print_invalid_errors(self):
@@ -154,7 +159,7 @@ class RecoveryResult(object):
 
     def recovery_successful(self):
         return len(self._setup_recovery_errors) == 0 and len(self._bb_errors) == 0 and len(self._rewind_errors) == 0 and \
-               len(self._start_errors) == 0 and len(self._invalid_recovery_errors) == 0
+               len(self._start_errors) == 0 and len(self._invalid_recovery_errors) == 0 and len(self._update_errors) == 0
 
     def was_bb_rewind_successful(self, dbid):
         return dbid not in self._dbids_that_failed_bb_rewind
@@ -169,7 +174,7 @@ class RecoveryResult(object):
                     self._logger.error(setup_recovery_error_pattern.format(hostname, error.port, error.error_msg))
         self._print_invalid_errors()
 
-    def print_bb_rewind_and_start_errors(self):
+    def print_bb_rewind_update_and_start_errors(self):
         bb_rewind_error_pattern = " hostname: {}; port: {}; logfile: {}; recoverytype: {}"
         if len(self._bb_errors) > 0 or len(self._rewind_errors) > 0:
             self._logger.info("----------------------------------------------------------")
@@ -187,13 +192,24 @@ class RecoveryResult(object):
                     self._logger.info(bb_rewind_error_pattern.format(hostname, error.port, error.progress_file,
                                                                  error.error_type))
 
-        start_error_pattern = " hostname: {}; port: {}; datadir: {}"
         if len(self._start_errors) > 0:
+            start_error_pattern = " hostname: {}; port: {}; datadir: {}"
             self._logger.info("----------------------------------------------------------")
             self._logger.info("Failed to start the following segments. "
                               "Please check the latest logs located in segment's data directory")
+
             for hostname, errors in self._start_errors.items():
                 for error in errors:
                     self._logger.info(start_error_pattern.format(hostname, error.port, error.datadir))
+
+        if len(self._update_errors) > 0:
+            update_error_pattern = " hostname: {}; port: {}; datadir: {}"
+            self._logger.info("----------------------------------------------------------")
+            self._logger.info("Did not start the following segments due to failure while updating the port."
+                              "Please update the port in postgresql.conf located in the segment's data directory")
+
+            for hostname, errors in self._update_errors.items():
+                for error in errors:
+                    self._logger.info(update_error_pattern.format(hostname, error.port, error.datadir))
 
         self._print_invalid_errors()

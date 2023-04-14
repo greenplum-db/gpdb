@@ -323,7 +323,7 @@ INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 select * from bytea where bytea1='d' and cidr1='0.0.0.1';
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  bytea1 |   cidr1    
 --------+------------
  \x64   | 0.0.0.1/32
@@ -496,32 +496,15 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 explain select count(*) from mpp7638 where a =1;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.00 rows=1 width=8)
    ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=1)
-         ->  Result  (cost=0.00..431.00 rows=1 width=1)
-               ->  Append  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Seq Scan on mpp7638_1_prt_1  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_2  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_3  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_4  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_5  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_6  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_7  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_8  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_9  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
+         ->  Dynamic Seq Scan on mpp7638  (cost=0.00..431.00 rows=1 width=4)
+               Number of partitions to scan: 9 
+               Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(6 rows)
 
 alter table mpp7638 set distributed by (a, b, c);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2

@@ -290,6 +290,8 @@ static split_rollup_data *make_new_rollups_for_hash_grouping_set(PlannerInfo *ro
 																 Path *path,
 																 grouping_sets_data *gd);
 
+static void compute_jit_flags(PlannedStmt* pstmt);
+
 /*****************************************************************************
  *
  *	   Query optimizer entry point
@@ -369,6 +371,12 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 			INSTR_TIME_SET_CURRENT(starttime);
 
 		result = optimize_query(parse, cursorOptions, boundParams);
+
+		/* decide jit state */
+		if (result)
+		{
+			compute_jit_flags(result);
+		}
 
 		if (gp_log_optimization_time)
 		{
@@ -737,30 +745,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->stmt_location = parse->stmt_location;
 	result->stmt_len = parse->stmt_len;
 
-	result->jitFlags = PGJIT_NONE;
-	if (jit_enabled && jit_above_cost >= 0 &&
-		top_plan->total_cost > jit_above_cost)
-	{
-		result->jitFlags |= PGJIT_PERFORM;
-
-		/*
-		 * Decide how much effort should be put into generating better code.
-		 */
-		if (jit_optimize_above_cost >= 0 &&
-			top_plan->total_cost > jit_optimize_above_cost)
-			result->jitFlags |= PGJIT_OPT3;
-		if (jit_inline_above_cost >= 0 &&
-			top_plan->total_cost > jit_inline_above_cost)
-			result->jitFlags |= PGJIT_INLINE;
-
-		/*
-		 * Decide which operations should be JITed.
-		 */
-		if (jit_expressions)
-			result->jitFlags |= PGJIT_EXPR;
-		if (jit_tuple_deforming)
-			result->jitFlags |= PGJIT_DEFORM;
-	}
+	/* GPDB: JIT flags are set in wrapper function */
+	compute_jit_flags(result);
 
 	if (glob->partition_directory != NULL)
 		DestroyPartitionDirectory(glob->partition_directory);
@@ -2855,35 +2841,28 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 			{
 
 				/*
-				 * There is a corner case we can not generate gpdb private
-				 * two phase limit path.
-				 * if a subpath is sorted under a subqueryscan path, but the
-				 * subqueryscan is not.
-				 *
+				 * if a subpath is sorted under a subqueryscan path, but the subqueryscan
+				 * is not. the order of subqueryscan is implementation-dependent.
+				 * which is specified by SQL standard.
 				 * e.g.
 				 * create table foo (a int, b int, c int);
-				 *
 				 * select *
 				 * from (select b, c from foo order by 1,2) as x
 				 * limit 3;
 				 *
-				 * If a gather motion is directly upon a subquery scan,
-				 * the motion node will push down under the subqueryscan to promise
-				 * data ordered.
+				 * when we generate one phase limit path for it.
+				 * the results are sorted but may have a poor performance.
 				 *
-				 * GPDB_12_MERGE_FIXME:
-				 * A better approach is that our motion have LIMIT node ability.
-				 * All two phases limit is translated to `limit->gather motion->subpath...`
-				 * In executor, upper slice's gather motion sort tuples, under
-				 * slice's gather motion directly limit the number of tuples send out.
+				 * when we generate two phase limit path for it.
+				 * the results are not sorted but that also is up to SQL standard.
+				 *
+				 * we just generate gpdb private two phase limit path to
+				 * be consistent with gpdb6.
 				 */
-				if (!(IsA(path, SubqueryScanPath)
-					&& !path->pathkeys
-					&& ((SubqueryScanPath *)path)->subpath->pathkeys))
-					path = (Path *) create_preliminary_limit_path(root, final_rel, path,
-					                                              parse->limitOffset,
-					                                              parse->limitCount,
-					                                              offset_est, count_est);
+				path = (Path *) create_preliminary_limit_path(root, final_rel, path,
+															  parse->limitOffset,
+															  parse->limitCount,
+															  offset_est, count_est);
 			}
 
 			/*
@@ -3761,6 +3740,14 @@ remove_useless_groupby_columns(PlannerInfo *root)
 
 		/* Only plain relations could have primary-key constraints */
 		if (rte->rtekind != RTE_RELATION)
+			continue;
+
+		/*
+		 * We must skip inheritance parent tables as some of the child rels
+		 * may cause duplicate rows.  This cannot happen with partitioned
+		 * tables, however.
+		 */
+		if (rte->inh && rte->relkind != RELKIND_PARTITIONED_TABLE)
 			continue;
 
 		/* Nothing to do unless this rel has multiple Vars in GROUP BY */
@@ -4910,19 +4897,6 @@ consider_groupingsets_paths(PlannerInfo *root,
 											   parse->groupClause,
 											   srd->new_rollups);
 
-		// GPDB_12_MERGE_FIXME: fix computation of dNumGroups
-#if 0
-		/*
-		 * dNumGroupsTotal is the total number of groups across all segments. If the
-		 * Aggregate is distributed, then the number of groups in one segment
-		 * is only a fraction of the total.
-		 */
-		if (CdbPathLocus_IsPartitioned(path->locus))
-			dNumGroups = clamp_row_est(dNumGroupsTotal /
-										   CdbPathLocus_NumSegments(path->locus));
-		else
-			dNumGroups = dNumGroupsTotal;
-#endif
 
 		add_path(grouped_rel, (Path *)
 				 create_groupingsets_path(root,
@@ -4932,8 +4906,7 @@ consider_groupingsets_paths(PlannerInfo *root,
 										  (List *) parse->havingQual,
 										  srd->strat,
 										  srd->new_rollups,
-										  agg_costs,
-										  dNumGroups));
+										  agg_costs));
 		return;
 	}
 
@@ -5113,8 +5086,7 @@ consider_groupingsets_paths(PlannerInfo *root,
 											  (List *) parse->havingQual,
 											  AGG_MIXED,
 											  rollups,
-											  agg_costs,
-											  dNumGroups));
+											  agg_costs));
 		}
 	}
 
@@ -5130,8 +5102,7 @@ consider_groupingsets_paths(PlannerInfo *root,
 										  (List *) parse->havingQual,
 										  AGG_SORTED,
 										  gd->rollups,
-										  agg_costs,
-										  dNumGroups));
+										  agg_costs));
 }
 
 /*
@@ -6003,8 +5974,6 @@ mark_partial_aggref(Aggref *agg, AggSplit aggsplit)
 {
 	/* aggtranstype should be computed by this point */
 	Assert(OidIsValid(agg->aggtranstype));
-	/* ... but aggsplit should still be as the parser left it */
-	Assert(agg->aggsplit == AGGSPLIT_SIMPLE);
 
 	/* Mark the Aggref with the intended partial-aggregation mode */
 	agg->aggsplit = aggsplit;
@@ -6995,9 +6964,25 @@ create_preliminary_limit_path(PlannerInfo *root, RelOptInfo *rel,
 	 */	
 	if (precount && limitOffset)
 	{
-	    /* GPDB_12_MERGE_FIXME: pstate can not be NULL anymore supposedly. */
-		precount = (Node *) make_op(NULL,
-									list_make1(makeString(pstrdup("+"))),
+		/*
+		 * make_op is a function of parse stage. we need paserstate as a param.
+		 * however, in the planner stage, we do not have param parasestate,
+		 * in create_preliminary_limit_path we do not return a set, so will
+		 * not hit the null pointer exception.
+		 *
+		 * we can reference executor path:
+		 * DefineRelation-->check_new_partition_bound-->parser_errposition
+		 *
+		 * define a ParseState as the param of make_op instead of NULL.
+		 */
+
+		ParseState *pstate = make_parsestate(NULL);
+		/*
+		 * we should explicitly specify the schema of operator "+",
+		 * to avoid misuse user defined operator "+".
+		 */
+		precount = (Node *) make_op(pstate,
+									list_make2(makeString("pg_catalog"), makeString(pstrdup("+"))),
 									copyObject(limitOffset),
 									precount,
 									NULL,
@@ -7089,8 +7074,11 @@ plan_create_index_workers(Oid tableOid, Oid indexOid)
 	double		reltuples;
 	double		allvisfrac;
 
-	/* Return immediately when parallelism disabled */
-	if (max_parallel_maintenance_workers == 0)
+	/*
+	 * We don't allow performing parallel operation in standalone backend or
+	 * when parallelism is disabled.
+	 */
+	if (!IsUnderPostmaster || max_parallel_maintenance_workers == 0)
 		return 0;
 
 	/* Set up largely-dummy planner state */
@@ -7263,9 +7251,14 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 				/* Now decide what to stick atop it */
 				if (parse->groupingSets)
 				{
+					/*
+					 * the last param of consider_groupingsets_paths should be
+					 * dNumGroupsTotal. In consider_groupingsets_paths it will
+					 * calculate dNumGroups in one segment.
+					 */
 					consider_groupingsets_paths(root, grouped_rel,
 												path, true, can_hash,
-												gd, agg_costs, dNumGroups);
+												gd, agg_costs, dNumGroupsTotal);
 				}
 				else if (parse->hasAggs || parse->groupClause)
 				{
@@ -7321,14 +7314,17 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			{
 				Path	   *path = (Path *) lfirst(lc);
 				double		dNumGroups;
-				bool		is_sorted = false;
+				bool		is_sorted;
 
-				if (pathkeys_contained_in(root->group_pathkeys, path->pathkeys))
-				{
-					if (path != partially_grouped_rel->cheapest_total_path)
-						continue;
-					is_sorted = true;
-				}
+				is_sorted = pathkeys_contained_in(root->group_pathkeys, path->pathkeys);
+
+				/*
+				 * Insert a Sort node, if required. But there's no point in
+				 * sorting anything but the cheapest path.
+				 */
+				if (!is_sorted && path != partially_grouped_rel->cheapest_total_path)
+					continue;
+
 				path = cdb_prepare_path_for_sorted_agg(root,
 													   is_sorted,
 													   grouped_rel,
@@ -7365,7 +7361,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 											 agg_final_costs,
 											 dNumGroups));
 				}
-						/* Group nodes are not used in GPDB */
+				/* Group nodes are not used in GPDB */
 #if 0
 				else
 					add_path(grouped_rel, (Path *)
@@ -7543,6 +7539,14 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 	{
 		PathTarget *partially_grouped_target;
 
+		/*
+		 * fetch_multi_dqas_info() will push the MultiDQA's filter to TupleSplit, 
+		 * then get rid of final and partial DQA aggref filter. If we use the
+		 * same path target as single-stage aggregation, single-stage aggregation
+		 * will lose the filter of MultiDQA.
+		 */
+		PathTarget *final_target = (PathTarget *)copyObject(grouped_rel->reltarget);
+
 		if (gp_eager_two_phase_agg)
 		{
 			ListCell *lc;
@@ -7568,6 +7572,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			if (parse->hasAggs)
 			{
 				List	   *partial_target_exprs;
+				List	   *final_target_exprs;
 
 				/* partial phase */
 				partial_target_exprs = partially_grouped_target->exprs;
@@ -7576,7 +7581,8 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 									 &extra->agg_partial_costs);
 
 				/* final phase */
-				get_agg_clause_costs(root, (Node *) grouped_rel->reltarget->exprs,
+				final_target_exprs = final_target->exprs;
+				get_agg_clause_costs(root, (Node *) final_target_exprs,
 									 AGGSPLIT_FINAL_DESERIAL,
 									 agg_final_costs);
 				get_agg_clause_costs(root, extra->havingQual,
@@ -7606,7 +7612,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 		cdb_create_multistage_grouping_paths(root,
 										   input_rel,
 										   grouped_rel,
-										   grouped_rel->reltarget,
+										   final_target,
 										   partially_grouped_target,
 										   havingQual,
 										   dNumGroupsTotal,
@@ -8510,20 +8516,28 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
 		RollupData *rollup = lfirst_node(RollupData, lc);
 
 		/*
+		 * If there are any empty grouping sets and all non-empty grouping
+		 * sets are unsortable, there will be a rollup containing only
+		 * empty groups. We handle those specially below.
+		 * Note: This case only holds when path is equal to null.
+		 */
+		if (rollup->groupClause == NIL)
+		{
+			unhashed_rollup = rollup;
+			break;
+		}
+
+		/*
 		 * If we find an unhashable rollup that's not been skipped by the
 		 * "actually sorted" check above, we can't cope; we'd need sorted
 		 * input (with a different sort order) but we can't get that here.
 		 * So bail out; we'll get a valid path from the is_sorted case
 		 * instead.
-		 *
-		 * The mere presence of empty grouping sets doesn't make a rollup
-		 * unhashable (see preprocess_grouping_sets), we handle those
-		 * specially below.
 		 */
 		if (!rollup->hashable)
 			return NULL;
-		else
-			sets_data = list_concat(sets_data, list_copy(rollup->gsets_data));
+
+		sets_data = list_concat(sets_data, list_copy(rollup->gsets_data));
 	}
 	foreach(lc, sets_data)
 	{
@@ -8591,4 +8605,41 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
 	srd->unhashed_rollup = unhashed_rollup;
 
 	return srd;
+}
+
+/*
+ * GPDB: This is moved from standard_planner(), so that it can be used by both
+ * planner and ORCA. Please move any future code added to standard_planner() too.
+ *
+ * Decide JIT settings for the given plan and record them in PlannedStmt.jitFlags.
+ */
+static void compute_jit_flags(PlannedStmt* pstmt)
+{
+	Plan* top_plan = pstmt->planTree;
+
+	pstmt->jitFlags = PGJIT_NONE;
+
+	if (jit_enabled && jit_above_cost >= 0 &&
+		top_plan->total_cost > jit_above_cost)
+	{
+		pstmt->jitFlags |= PGJIT_PERFORM;
+
+		/*
+		 * Decide how much effort should be put into generating better code.
+		 */
+		if (jit_optimize_above_cost >= 0 &&
+			top_plan->total_cost > jit_optimize_above_cost)
+			pstmt->jitFlags |= PGJIT_OPT3;
+		if (jit_inline_above_cost >= 0 &&
+			top_plan->total_cost > jit_inline_above_cost)
+			pstmt->jitFlags |= PGJIT_INLINE;
+
+		/*
+		 * Decide which operations should be JITed.
+		 */
+		if (jit_expressions)
+			pstmt->jitFlags |= PGJIT_EXPR;
+		if (jit_tuple_deforming)
+			pstmt->jitFlags |= PGJIT_DEFORM;
+	}
 }

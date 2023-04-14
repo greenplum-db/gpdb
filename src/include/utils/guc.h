@@ -247,7 +247,7 @@ typedef enum
 #define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between master and primary */
 #define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between master and primary */
 
-/* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
+/* GUC lists for gp_guc_list_init().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
 extern List    *gp_guc_list_for_no_plan;
 
@@ -313,7 +313,7 @@ extern bool Debug_resource_group;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern int  dtx_phase2_retry_second;
-
+extern bool gp_log_suboverflow_statement;
 /* WAL replication debug gucs */
 extern bool debug_walrepl_snd;
 extern bool debug_walrepl_syncrep;
@@ -325,7 +325,6 @@ extern int rep_lag_avoidance_threshold;
 extern bool gp_maintenance_mode;
 extern bool gp_maintenance_conn;
 extern bool allow_segment_DML;
-extern bool gp_allow_rename_relation_without_lock;
 
 extern bool gp_ignore_error_table;
 
@@ -347,7 +346,6 @@ extern PGDLLIMPORT int log_min_messages;
 extern PGDLLIMPORT int client_min_messages;
 extern int	log_min_duration_statement;
 extern int	log_temp_files;
-extern double log_statement_sample_rate;
 extern double log_xact_sample_rate;
 
 extern int	temp_file_limit;
@@ -471,7 +469,7 @@ extern char *optimizer_search_strategy_path;
 /* GUCs to tell Optimizer to enable a physical operator */
 extern bool optimizer_enable_nljoin;
 extern bool optimizer_enable_indexjoin;
-extern bool optimizer_enable_motions_masteronly_queries;
+extern bool optimizer_enable_motions_coordinatoronly_queries;
 extern bool optimizer_enable_motions;
 extern bool optimizer_enable_motion_broadcast;
 extern bool optimizer_enable_motion_gather;
@@ -484,6 +482,7 @@ extern bool optimizer_enable_outerjoin_rewrite;
 extern bool optimizer_enable_multiple_distinct_aggs;
 extern bool optimizer_enable_hashjoin_redistribute_broadcast_children;
 extern bool optimizer_enable_broadcast_nestloop_outer_child;
+extern bool optimizer_discard_redistribute_hashjoin;
 extern bool optimizer_enable_streaming_material;
 extern bool optimizer_enable_gather_on_segment_for_dml;
 extern bool optimizer_enable_assert_maxonerow;
@@ -491,11 +490,10 @@ extern bool optimizer_enable_constant_expression_evaluation;
 extern bool optimizer_enable_bitmapscan;
 extern bool optimizer_enable_outerjoin_to_unionall_rewrite;
 extern bool optimizer_enable_ctas;
-extern bool optimizer_enable_partial_index;
 extern bool optimizer_enable_dml;
 extern bool	optimizer_enable_dml_constraints;
 extern bool optimizer_enable_direct_dispatch;
-extern bool optimizer_enable_master_only_queries;
+extern bool optimizer_enable_coordinator_only_queries;
 extern bool optimizer_enable_hashjoin;
 extern bool optimizer_enable_dynamictablescan;
 extern bool optimizer_enable_indexscan;
@@ -509,6 +507,8 @@ extern bool optimizer_enable_mergejoin;
 extern bool optimizer_prune_unused_columns;
 extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
 extern bool optimizer_force_comprehensive_join_implementation;
+extern bool optimizer_enable_replicated_table;
+extern bool optimizer_enable_foreign_table;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;
@@ -541,6 +541,7 @@ extern int optimizer_join_arity_for_associativity_commutativity;
 extern int optimizer_cte_inlining_bound;
 extern int optimizer_push_group_by_below_setop_threshold;
 extern int optimizer_xform_bind_threshold;
+extern int optimizer_skew_factor;
 extern bool optimizer_force_multistage_agg;
 extern bool optimizer_force_three_stage_scalar_dqa;
 extern bool optimizer_force_expanded_distinct_aggs;
@@ -601,6 +602,8 @@ extern bool gp_enable_global_deadlock_detector;
 
 extern bool gp_log_endpoints;
 
+extern bool gp_allow_date_field_width_5digits;
+
 typedef enum
 {
 	INDEX_CHECK_NONE,
@@ -611,12 +614,12 @@ typedef enum
 extern IndexCheckType gp_indexcheck_insert;
 
 /* Storage option names */
-#define SOPT_APPENDONLY    "appendonly"
 #define SOPT_FILLFACTOR    "fillfactor"
 #define SOPT_BLOCKSIZE     "blocksize"
 #define SOPT_COMPTYPE      "compresstype"
 #define SOPT_COMPLEVEL     "compresslevel"
 #define SOPT_CHECKSUM      "checksum"
+#define SOPT_ANALYZEHLL    "analyze_hll_non_part_table"
 
 /*
  * Functions exported by guc.c
@@ -624,8 +627,7 @@ extern IndexCheckType gp_indexcheck_insert;
 extern void SetConfigOption(const char *name, const char *value,
 							GucContext context, GucSource source);
 
-extern void DefineCustomBoolVariable(
-									 const char *name,
+extern void DefineCustomBoolVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 bool *valueAddr,
@@ -636,8 +638,7 @@ extern void DefineCustomBoolVariable(
 									 GucBoolAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomIntVariable(
-									const char *name,
+extern void DefineCustomIntVariable(const char *name,
 									const char *short_desc,
 									const char *long_desc,
 									int *valueAddr,
@@ -650,8 +651,7 @@ extern void DefineCustomIntVariable(
 									GucIntAssignHook assign_hook,
 									GucShowHook show_hook);
 
-extern void DefineCustomRealVariable(
-									 const char *name,
+extern void DefineCustomRealVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 double *valueAddr,
@@ -664,8 +664,7 @@ extern void DefineCustomRealVariable(
 									 GucRealAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomStringVariable(
-									   const char *name,
+extern void DefineCustomStringVariable(const char *name,
 									   const char *short_desc,
 									   const char *long_desc,
 									   char **valueAddr,
@@ -676,8 +675,7 @@ extern void DefineCustomStringVariable(
 									   GucStringAssignHook assign_hook,
 									   GucShowHook show_hook);
 
-extern void DefineCustomEnumVariable(
-									 const char *name,
+extern void DefineCustomEnumVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 int *valueAddr,
@@ -733,8 +731,6 @@ extern ArrayType *GUCArrayDelete(ArrayType *array, const char *name);
 extern ArrayType *GUCArrayReset(ArrayType *array);
 
 extern void pg_timezone_abbrev_initialize(void);
-
-extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 
 extern struct config_generic *find_option(const char *name,
 				bool create_placeholders, int elevel);

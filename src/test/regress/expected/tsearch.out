@@ -117,6 +117,66 @@ SELECT count(*) FROM test_tsvector WHERE a @@ '!no_such_lexeme';
    508
 (1 row)
 
+SELECT count(*) FROM test_tsvector WHERE a @@ 'pl <-> yh';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'yh <-> pl';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'qe <2> qt';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> yh';
+ count 
+-------
+     3
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> !yh';
+ count 
+-------
+   432
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!yh <-> pl';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!qe <2> qt';
+ count 
+-------
+     6
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(pl <-> yh)';
+ count 
+-------
+   507
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(yh <-> pl)';
+ count 
+-------
+   508
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(qe <2> qt)';
+ count 
+-------
+   507
+(1 row)
+
 create index wowidx on test_tsvector using gist (a);
 SET enable_seqscan=OFF;
 SET enable_indexscan=ON;
@@ -192,6 +252,66 @@ SELECT count(*) FROM test_tsvector WHERE a @@ '!no_such_lexeme';
    508
 (1 row)
 
+SELECT count(*) FROM test_tsvector WHERE a @@ 'pl <-> yh';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'yh <-> pl';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'qe <2> qt';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> yh';
+ count 
+-------
+     3
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> !yh';
+ count 
+-------
+   432
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!yh <-> pl';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!qe <2> qt';
+ count 
+-------
+     6
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(pl <-> yh)';
+ count 
+-------
+   507
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(yh <-> pl)';
+ count 
+-------
+   508
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(qe <2> qt)';
+ count 
+-------
+   507
+(1 row)
+
 SET enable_indexscan=OFF;
 SET enable_bitmapscan=ON;
 explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
@@ -265,6 +385,66 @@ SELECT count(*) FROM test_tsvector WHERE a @@ '!no_such_lexeme';
  count 
 -------
    508
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'pl <-> yh';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'yh <-> pl';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'qe <2> qt';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> yh';
+ count 
+-------
+     3
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> !yh';
+ count 
+-------
+   432
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!yh <-> pl';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!qe <2> qt';
+ count 
+-------
+     6
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(pl <-> yh)';
+ count 
+-------
+   507
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(yh <-> pl)';
+ count 
+-------
+   508
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(qe <2> qt)';
+ count 
+-------
+   507
 (1 row)
 
 RESET enable_seqscan;
@@ -347,6 +527,66 @@ SELECT count(*) FROM test_tsvector WHERE a @@ '!no_such_lexeme';
    508
 (1 row)
 
+SELECT count(*) FROM test_tsvector WHERE a @@ 'pl <-> yh';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'yh <-> pl';
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ 'qe <2> qt';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> yh';
+ count 
+-------
+     3
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!pl <-> !yh';
+ count 
+-------
+   432
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!yh <-> pl';
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!qe <2> qt';
+ count 
+-------
+     6
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(pl <-> yh)';
+ count 
+-------
+   507
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(yh <-> pl)';
+ count 
+-------
+   508
+(1 row)
+
+SELECT count(*) FROM test_tsvector WHERE a @@ '!(qe <2> qt)';
+ count 
+-------
+   507
+(1 row)
+
 RESET enable_seqscan;
 INSERT INTO test_tsvector VALUES ('???', 'DFG:1A,2B,6C,10 FGH');
 SELECT * FROM ts_stat('SELECT a FROM test_tsvector') ORDER BY ndoc DESC, nentry DESC, word LIMIT 10;
@@ -354,14 +594,14 @@ SELECT * FROM ts_stat('SELECT a FROM test_tsvector') ORDER BY ndoc DESC, nentry 
 ------+------+--------
  qq   |  108 |    108
  qt   |  102 |    102
- qe   |  100 |    100
- qh   |   98 |     98
+ qe   |  100 |    101
+ qh   |   98 |     99
  qw   |   98 |     98
  qa   |   97 |     97
  ql   |   94 |     94
  qs   |   94 |     94
+ qr   |   92 |     93
  qi   |   92 |     92
- qr   |   92 |     92
 (10 rows)
 
 SELECT * FROM ts_stat('SELECT a FROM test_tsvector', 'AB') ORDER BY ndoc DESC, nentry DESC, word;
@@ -1100,12 +1340,12 @@ Water, water, every where,
   Nor any drop to drink.
 S. T. Coleridge (1772-1834)
 ', phraseto_tsquery('english', 'painted Ocean'));
-           ts_headline            
-----------------------------------
- <b>painted</b> <b>Ocean</b>.    +
- Water, water, every where       +
-   And all the boards did shrink;+
- Water, water, every
+              ts_headline              
+---------------------------------------
+ <b>painted</b> Ship                  +
+   Upon a <b>painted</b> <b>Ocean</b>.+
+ Water, water, every where            +
+   And all the boards did shrink
 (1 row)
 
 SELECT ts_headline('english', '
@@ -1125,6 +1365,15 @@ S. T. Coleridge (1772-1834)
    Upon a <b>painted</b> Ocean.             +
  Water, water, every where                  +
    And all the boards
+(1 row)
+
+SELECT ts_headline('english',
+'Lorem ipsum urna.  Nullam nullam ullamcorper urna.',
+to_tsquery('english','Lorem') && phraseto_tsquery('english','ullamcorper urna'),
+'MaxWords=100, MinWords=1');
+                                  ts_headline                                  
+-------------------------------------------------------------------------------
+ <b>Lorem</b> ipsum <b>urna</b>.  Nullam nullam <b>ullamcorper</b> <b>urna</b>
 (1 row)
 
 SELECT ts_headline('english', '
@@ -1163,15 +1412,15 @@ SELECT ts_headline('simple', '1 2 3 1 3'::text, '1 <-> 3', 'MaxWords=2, MinWords
 (1 row)
 
 SELECT ts_headline('simple', '1 2 3 1 3'::text, '1 & 3', 'MaxWords=4, MinWords=1');
-         ts_headline          
-------------------------------
- <b>1</b> 2 <b>3</b> <b>1</b>
+     ts_headline     
+---------------------
+ <b>1</b> 2 <b>3</b>
 (1 row)
 
 SELECT ts_headline('simple', '1 2 3 1 3'::text, '1 <-> 3', 'MaxWords=4, MinWords=1');
-    ts_headline    
--------------------
- <b>1</b> <b>3</b>
+        ts_headline         
+----------------------------
+ <b>3</b> <b>1</b> <b>3</b>
 (1 row)
 
 --Check if headline fragments work
@@ -1264,6 +1513,16 @@ S. T. Coleridge (1772-1834)
    And all the boards did shrink;          +
  Water, water, every where***drop to drink.+
  S. T. <b>Coleridge</b>
+(1 row)
+
+--Fragments with phrase search
+SELECT ts_headline('english',
+'Lorem ipsum urna.  Nullam nullam ullamcorper urna.',
+to_tsquery('english','Lorem') && phraseto_tsquery('english','ullamcorper urna'),
+'MaxFragments=100, MaxWords=100, MinWords=1');
+                                  ts_headline                                  
+-------------------------------------------------------------------------------
+ <b>Lorem</b> ipsum <b>urna</b>.  Nullam nullam <b>ullamcorper</b> <b>urna</b>
 (1 row)
 
 --Rewrite sub system

@@ -119,7 +119,7 @@ explain select * from xfoo where j = 1 and k = 2;
       <dxl:ColumnStatistics Mdid="1.51565256.1.1.5" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.51565256.1.1.4" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.51565256.1.1" Name="xfoo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.51565256.1.0" Name="xfoo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.51565256.1.0" Name="xfoo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -158,10 +158,9 @@ explain select * from xfoo where j = 1 and k = 2;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.51565282.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.51565256.1.1" Name="xfoo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.51565256.1.1" Name="xfoo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -200,7 +199,6 @@ explain select * from xfoo where j = 1 and k = 2;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.51565282.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.51565256.1.1.10" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -250,7 +248,7 @@ explain select * from xfoo where j = 1 and k = 2;
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.51565256.1.1" TableName="xfoo">
+          <dxl:TableDescriptor Mdid="6.51565256.1.1" TableName="xfoo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -333,7 +331,7 @@ explain select * from xfoo where j = 1 and k = 2;
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.51565282.1.0" IndexName="idx_jk"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.51565256.1.1" TableName="xfoo">
+          <dxl:TableDescriptor Mdid="6.51565256.1.1" TableName="xfoo">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

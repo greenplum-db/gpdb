@@ -23,7 +23,7 @@ Rows out:  0 rows with 0.002 ms to end.
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="101013,102074,102113,102120,102146,102147,103001,103014,103015,103022,103027,103029,104003,104004,104005,104006"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -86,7 +86,7 @@ Rows out:  0 rows with 0.002 ms to end.
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:CheckConstraint Mdid="0.16407.1.0" Name="td_d_check" RelationMdid="0.16404.1.0">
+      <dxl:CheckConstraint Mdid="0.16407.1.0" Name="td_d_check" RelationMdid="6.16404.1.0">
         <dxl:Or>
           <dxl:And>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
@@ -125,7 +125,7 @@ Rows out:  0 rows with 0.002 ms to end.
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16404.1.0" Name="td" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16404.1.0" Name="td" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -153,7 +153,6 @@ Rows out:  0 rows with 0.002 ms to end.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.16407.1.0"/>
         </dxl:CheckConstraints>
@@ -229,7 +228,7 @@ Rows out:  0 rows with 0.002 ms to end.
           <dxl:Ident ColId="1" ColName="d" TypeMdid="0.23.1.0"/>
         </dxl:IsNull>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16404.1.0" TableName="td">
+          <dxl:TableDescriptor Mdid="6.16404.1.0" TableName="td">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="d" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

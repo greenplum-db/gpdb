@@ -49,17 +49,11 @@ private:
 	// action column
 	CColRef *m_pcrAction;
 
-	// table oid column
-	CColRef *m_pcrTableOid;
-
 	// ctid column
 	CColRef *m_pcrCtid;
 
 	// segmentid column
 	CColRef *m_pcrSegmentId;
-
-	// tuple oid column
-	CColRef *m_pcrTupleOid;
 
 	// target table distribution spec
 	CDistributionSpec *m_pds;
@@ -70,11 +64,8 @@ private:
 	// required columns by local members
 	CColRefSet *m_pcrsRequiredLocal;
 
-	// needs the data to be sorted or not
-	BOOL m_input_sort_req;
-
-	// do we need to sort on insert
-	BOOL FInsertSortOnRows(COptimizerConfig *optimizer_config);
+	// Split Update
+	BOOL m_fSplit;
 
 	// compute required order spec
 	COrderSpec *PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc);
@@ -88,8 +79,8 @@ public:
 	// ctor
 	CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 				 CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrSource,
-				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrTableOid,
-				 CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid);
+				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrCtid,
+				 CColRef *pcrSegmentId, BOOL fSplit);
 
 	// dtor
 	~CPhysicalDML() override;
@@ -129,13 +120,6 @@ public:
 		return m_pcrAction;
 	}
 
-	// table oid column
-	CColRef *
-	PcrTableOid() const
-	{
-		return m_pcrTableOid;
-	}
-
 	// ctid column
 	CColRef *
 	PcrCtid() const
@@ -150,18 +134,18 @@ public:
 		return m_pcrSegmentId;
 	}
 
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
-	}
-
 	// source columns
 	virtual CColRefArray *
 	PdrgpcrSource() const
 	{
 		return m_pdrgpcrSource;
+	}
+
+	// Is update using split
+	BOOL
+	FSplit() const
+	{
+		return m_fSplit;
 	}
 
 	// match function
@@ -175,13 +159,6 @@ public:
 	FInputOrderSensitive() const override
 	{
 		return false;
-	}
-
-	// needs the data to be sorted or not
-	virtual BOOL
-	IsInputSortReq() const
-	{
-		return m_input_sort_req;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -251,7 +228,7 @@ public:
 	{
 		if (CDistributionSpec::EdtSingleton == m_pds->Edt())
 		{
-			// if target table is master only, request simple satisfiability, as it will not introduce duplicates
+			// if target table is coordinator only, request simple satisfiability, as it will not introduce duplicates
 			return CEnfdDistribution::EdmSatisfy;
 		}
 

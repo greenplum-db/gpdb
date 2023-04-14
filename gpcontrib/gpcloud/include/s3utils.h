@@ -81,4 +81,6 @@ string GetOptS3(const string& options, const string& key);
 
 string TruncateOptions(const string& url_with_options);
 
+string ReplaceNewlineWithSpace(const string &urlWithOptions);
+
 #endif  // __S3_UTILS_H__

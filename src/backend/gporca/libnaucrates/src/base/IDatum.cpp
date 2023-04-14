@@ -213,7 +213,9 @@ IDatum::StatsAreComparable(const IDatum *datum) const
 			CMDTypeGenericGPDB::IsTimeRelatedType(this->MDId()) &&
 			CMDTypeGenericGPDB::IsTimeRelatedType(datum->MDId());
 		if (is_time_comparison)
+		{
 			return false;
+		}
 	}
 	// datums can be compared based on either LINT or Doubles or BYTEA values
 	BOOL is_double_comparison =

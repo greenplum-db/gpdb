@@ -40,12 +40,9 @@ CParseHandlerPhysicalDML::CParseHandlerPhysicalDML(
 	  m_dxl_dml_type(Edxldmlinsert),
 	  m_src_colids_array(nullptr),
 	  m_action_colid(0),
-	  m_oid_colid(0),
 	  m_ctid_colid(0),
 	  m_segid_colid(0),
-	  m_preserve_oids(false),
-	  m_tuple_oid_col_oid(0),
-	  m_input_sort_req(false)
+	  m_fSplit(true)
 {
 }
 
@@ -104,9 +101,6 @@ CParseHandlerPhysicalDML::StartElement(const XMLCh *const,	// element_uri,
 	m_action_colid = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenActionColId,
 		token_type);
-	m_oid_colid = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenOidColId,
-		token_type);
 	m_ctid_colid = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenCtidColId,
 		token_type);
@@ -114,30 +108,13 @@ CParseHandlerPhysicalDML::StartElement(const XMLCh *const,	// element_uri,
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 		EdxltokenGpSegmentIdColId, token_type);
 
-	const XMLCh *preserve_oids_xml =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenUpdatePreservesOids));
-	if (nullptr != preserve_oids_xml)
+	const XMLCh *fSplit =
+		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenSplitUpdate));
+	if (nullptr != fSplit)
 	{
-		m_preserve_oids = CDXLOperatorFactory::ConvertAttrValueToBool(
-			m_parse_handler_mgr->GetDXLMemoryManager(), preserve_oids_xml,
-			EdxltokenUpdatePreservesOids, EdxltokenPhysicalDMLUpdate);
-	}
-
-	if (m_preserve_oids)
-	{
-		m_tuple_oid_col_oid =
-			CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenTupleOidColId, EdxltokenPhysicalDMLUpdate);
-	}
-
-	const XMLCh *input_sort_req_xml =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenInputSorted));
-	if (nullptr != input_sort_req_xml)
-	{
-		m_input_sort_req = CDXLOperatorFactory::ConvertAttrValueToBool(
-			m_parse_handler_mgr->GetDXLMemoryManager(), input_sort_req_xml,
-			EdxltokenInputSorted, EdxltokenPhysicalDMLInsert);
+		m_fSplit = CDXLOperatorFactory::ConvertAttrValueToBool(
+			m_parse_handler_mgr->GetDXLMemoryManager(), fSplit,
+			EdxltokenSplitUpdate, EdxltokenPhysicalDMLUpdate);
 	}
 
 	// parse handler for physical operator
@@ -239,8 +216,7 @@ CParseHandlerPhysicalDML::EndElement(const XMLCh *const,  // element_uri,
 	dxl_direct_dispatch_info->AddRef();
 	CDXLPhysicalDML *dxl_op = GPOS_NEW(m_mp) CDXLPhysicalDML(
 		m_mp, m_dxl_dml_type, table_descr, m_src_colids_array, m_action_colid,
-		m_oid_colid, m_ctid_colid, m_segid_colid, m_preserve_oids,
-		m_tuple_oid_col_oid, dxl_direct_dispatch_info, m_input_sort_req);
+		m_ctid_colid, m_segid_colid, dxl_direct_dispatch_info, m_fSplit);
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
 	// set statistics and physical properties

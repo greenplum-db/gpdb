@@ -19,7 +19,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -29,7 +29,7 @@
       <dxl:ColumnStatistics Mdid="1.57383.1.1.1" Name="j" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.57383.1.1.0" Name="i" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.57356.1.1" Name="table1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.57356.1.1" Name="table1" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.57356.1.1" Name="table1" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -60,7 +60,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -156,7 +155,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.57383.1.1" Name="table2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.57383.1.1" Name="table2" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.57383.1.1" Name="table2" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -187,7 +186,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.57410.1.1.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -198,7 +196,7 @@
       <dxl:ColumnStatistics Mdid="1.57356.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.57356.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.57410.1.1" Name="table3" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.57410.1.1" Name="table3" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.57410.1.1" Name="table3" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -229,7 +227,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.57410.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -269,7 +266,7 @@
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.57356.1.1" TableName="table1">
+            <dxl:TableDescriptor Mdid="6.57356.1.1" TableName="table1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -284,7 +281,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.57383.1.1" TableName="table2">
+            <dxl:TableDescriptor Mdid="6.57383.1.1" TableName="table2">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -310,7 +307,7 @@
           </dxl:And>
         </dxl:LogicalJoin>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.57410.1.1" TableName="table3">
+          <dxl:TableDescriptor Mdid="6.57410.1.1" TableName="table3">
             <dxl:Columns>
               <dxl:Column ColId="19" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="20" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -412,7 +409,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.57356.1.1" TableName="table1">
+              <dxl:TableDescriptor Mdid="6.57356.1.1" TableName="table1">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -439,7 +436,7 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.57410.1.1" TableName="table3">
+              <dxl:TableDescriptor Mdid="6.57410.1.1" TableName="table3">
                 <dxl:Columns>
                   <dxl:Column ColId="18" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="19" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
@@ -467,7 +464,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.57383.1.1" TableName="table2">
+            <dxl:TableDescriptor Mdid="6.57383.1.1" TableName="table2">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="10" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>

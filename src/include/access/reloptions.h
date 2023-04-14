@@ -31,18 +31,21 @@
 #define AO_DEFAULT_BLOCKSIZE      DEFAULT_APPENDONLY_BLOCK_SIZE
 /* Compression is turned off by default. */
 #define AO_DEFAULT_COMPRESSLEVEL  0
+#define AO_DEFAULT_USABLE_COMPRESSLEVEL  1 /* used when there's a meaningful compresstype */
 #define AO_MIN_COMPRESSLEVEL  0
 #define AO_MAX_COMPRESSLEVEL  19
 /*
  * If compression is turned on without specifying compresstype, this
  * is the default.
  */
-#ifdef HAVE_LIBZ
-#define AO_DEFAULT_COMPRESSTYPE   "zlib"
-#else
 #define AO_DEFAULT_COMPRESSTYPE   "none"
+#ifdef HAVE_LIBZ
+#define AO_DEFAULT_USABLE_COMPRESSTYPE   "zlib" /* used when there's a meaningful compresslevel */
+#else
+#define AO_DEFAULT_USABLE_COMPRESSTYPE   "none"
 #endif
 #define AO_DEFAULT_CHECKSUM       true
+#define ANALYZE_DEFAULT_HLL       false
 
 /* types supported by reloptions */
 typedef enum relopt_type
@@ -270,15 +273,16 @@ typedef struct
 
 extern relopt_kind add_reloption_kind(void);
 extern void add_bool_reloption(bits32 kinds, const char *name, const char *desc,
-							   bool default_val);
+							   bool default_val, LOCKMODE lockmode);
 extern void add_int_reloption(bits32 kinds, const char *name, const char *desc,
-							  int default_val, int min_val, int max_val);
+							  int default_val, int min_val, int max_val,
+							  LOCKMODE lockmode);
 extern void add_real_reloption(bits32 kinds, const char *name, const char *desc,
-							   double default_val, double min_val, double max_val);
+							   double default_val, double min_val, double max_val,
+							   LOCKMODE lockmode);
 extern void add_string_reloption(bits32 kinds, const char *name, const char *desc,
-								 const char *default_val, validate_string_relopt validator);
-
-extern void set_reloption_lockmode(const char *name, LOCKMODE lockmode);
+								 const char *default_val, validate_string_relopt validator,
+								 LOCKMODE lockmode);
 
 extern Datum transformRelOptions(Datum oldOptions, List *defList,
 								 const char *namspace, char *validnsps[],
@@ -307,13 +311,11 @@ extern LOCKMODE AlterTableGetRelOptionsLockLevel(List *defList);
 
 
 /* in reloptions_gp.c */
-extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts);
+extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage);
 
-extern void validateAppendOnlyRelOptions(int blocksize, int writesize,
-										 int complevel, char* comptype,
-										 bool checksum, bool co);
-extern void parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
-									  bool validate, relopt_kind relkind);
+extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
+
+extern void validateOrientationRelOptions(char* comptype, bool co);
 
 extern void setDefaultAOStorageOpts(StdRdOptions *copy);
 extern const StdRdOptions *currentAOStorageOptions(void);
@@ -322,8 +324,6 @@ extern void resetDefaultAOStorageOpts(void);
 extern void resetAOStorageOpts(StdRdOptions *ao_opts);
 
 extern void initialize_reloptions_gp(void);
-extern void validate_and_refill_options(StdRdOptions *result, relopt_value *options,
-							int numoptions, relopt_kind kind, bool validate);
 extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
 										int num_options, relopt_kind kind, bool validate);
 
@@ -332,10 +332,13 @@ extern List *build_ao_rel_storage_opts(List *opts, Relation rel);
 
 /* attribute enconding specific functions */
 extern List *transformColumnEncoding(Relation rel, List *colDefs,
-										List *stenc, List *withOptions,
-										bool rootpartition, bool allowEncodingClause);
+										List *stenc, List *withOptions, List *parentenc,
+										bool explicitOnly, bool allowEncodingClause);
 extern List *transformStorageEncodingClause(List *options, bool validate);
+extern bool updateEncodingList(List *current_encodings,
+								  ColumnReferenceStorageDirective *new_crsd);
 extern List *form_default_storage_directive(List *enc);
 extern bool is_storage_encoding_directive(char *name);
+extern void free_options_deep(relopt_value *options, int num_options);
 
 #endif							/* RELOPTIONS_H */

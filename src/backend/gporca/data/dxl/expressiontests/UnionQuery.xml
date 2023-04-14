@@ -10,7 +10,7 @@
         <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
       </dxl:Columns>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.17026.1.1" TableName="foo">
+        <dxl:TableDescriptor Mdid="6.17026.1.1" TableName="foo">
           <dxl:Columns>
             <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -26,7 +26,7 @@
         </dxl:TableDescriptor>
       </dxl:LogicalGet>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.17539.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.17539.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

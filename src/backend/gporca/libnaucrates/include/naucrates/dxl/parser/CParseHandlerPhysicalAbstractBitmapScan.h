@@ -41,7 +41,8 @@ protected:
 
 	// common EndElement functionality for child classes
 	void EndElementHelper(const XMLCh *const element_local_name,
-						  Edxltoken token_type);
+						  Edxltoken token_type,
+						  ULongPtrArray *selector_ids = nullptr);
 
 public:
 	CParseHandlerPhysicalAbstractBitmapScan(

@@ -7,10 +7,6 @@ There are changes to Greenplum Database behavior with the GPORCA optimizer enabl
 -   UPDATE operations on distribution keys are allowed.
 -   UPDATE operations on partitioned keys are allowed.
 -   Queries against uniform partitioned tables are supported.
--   Queries against partitioned tables that are altered to use an external table as a leaf child partition fall back to the Postgres Planner.
--   Except for `INSERT`, DML operations directly on partition \(child table\) of a partitioned table are not supported.
-
-    For the `INSERT` command, you can specify a leaf child table of the partitioned table to insert data into a partitioned table. An error is returned if the data is not valid for the specified leaf child table. Specifying a child table that is not a leaf child table is not supported.
 
 -   The command CREATE TABLE AS distributes table data randomly if the DISTRIBUTED BY clause is not specified and no primary or unique keys are specified.
 -   Non-deterministic updates not allowed. The following UPDATE command returns an error.
@@ -28,5 +24,5 @@ There are changes to Greenplum Database behavior with the GPORCA optimizer enabl
 -   Greenplum Database adds the log file message `Planner produced plan` when GPORCA is enabled and Greenplum Database falls back to the Postgres Planner to generate the query plan.
 -   Greenplum Database issues a warning when statistics are missing from one or more table columns. When running an SQL command with GPORCA, Greenplum Database issues a warning if the command performance could be improved by collecting statistics on a column or set of columns referenced by the command. The warning is issued on the command line and information is added to the Greenplum Database log file. For information about collecting statistics on table columns, see the ANALYZE command in the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 

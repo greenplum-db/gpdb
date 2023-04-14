@@ -11,3 +11,4 @@ special_query.sql
 status_check.sql
 status_wait.sql
 syntax.sql
+concurrency.sql

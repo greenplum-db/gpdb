@@ -33,12 +33,12 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="102001,102002,102003,102043,102074,102120,102144,103001,103014,103022,103026,103027,103029,103033,103038,104002,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32768.1.0" Name="replicated_table" Rows="100.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.32768.1.0" Name="replicated_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32768.1.0" Name="replicated_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="val1" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="19">
             <dxl:DefaultValue/>
@@ -69,10 +69,9 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32776.1.0" Name="distributed_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.32776.1.0" Name="distributed_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="_etl_id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue>
@@ -110,7 +109,6 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
@@ -279,7 +277,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="10,1,2">
-        <dxl:TableDescriptor Mdid="0.32776.1.0" TableName="distributed_table" LockMode="3">
+        <dxl:TableDescriptor Mdid="6.32776.1.0" TableName="distributed_table" LockMode="3">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="_etl_id" TypeMdid="0.20.1.0" ColWidth="8"/>
             <dxl:Column ColId="12" Attno="2" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
@@ -302,7 +300,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.32768.1.0" TableName="replicated_table" LockMode="1">
+            <dxl:TableDescriptor Mdid="6.32768.1.0" TableName="replicated_table" LockMode="1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
                 <dxl:Column ColId="2" Attno="2" ColName="val2" TypeMdid="0.1043.1.0" ColWidth="19"/>
@@ -320,9 +318,9 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="3">
-      <dxl:DMLInsert Columns="9,0,1" ActionCol="10" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
+      <dxl:DMLInsert Columns="9,0,1" ActionCol="10" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="434.666207" Rows="100.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="434.676207" Rows="100.000000" Width="24"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -336,7 +334,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
             <dxl:Ident ColId="1" ColName="val2" TypeMdid="0.1043.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.32776.1.0" TableName="distributed_table" LockMode="3">
+        <dxl:TableDescriptor Mdid="6.32776.1.0" TableName="distributed_table" LockMode="3">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="_etl_id" TypeMdid="0.20.1.0" ColWidth="8"/>
             <dxl:Column ColId="12" Attno="2" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
@@ -352,7 +350,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.020373" Rows="100.000000" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.030373" Rows="100.000000" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="_etl_id">
@@ -372,7 +370,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
           <dxl:OneTimeFilter/>
           <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.019440" Rows="100.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.029440" Rows="100.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="val1">
@@ -394,7 +392,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
             </dxl:HashExprList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.013208" Rows="300.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.023208" Rows="300.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="val1">
@@ -411,7 +409,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
               <dxl:OneTimeFilter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.013208" Rows="300.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.023208" Rows="300.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="_etl_id">
@@ -441,7 +439,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="0.32768.1.0" TableName="replicated_table" LockMode="1">
+                  <dxl:TableDescriptor Mdid="6.32768.1.0" TableName="replicated_table" LockMode="1">
                     <dxl:Columns>
                       <dxl:Column ColId="0" Attno="1" ColName="val1" TypeMdid="0.1043.1.0" ColWidth="19"/>
                       <dxl:Column ColId="1" Attno="2" ColName="val2" TypeMdid="0.1043.1.0" ColWidth="19"/>

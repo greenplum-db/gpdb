@@ -6,9 +6,9 @@ A sample Ansible playbook to install a Greenplum Database software release onto 
 
 This Ansible playbook shows how tasks described in [Installing the Greenplum Database Software](install_gpdb.html) might be automated using [Ansible](https://docs.ansible.com).
 
-**Important:** This playbook is provided as an *example only* to illustrate how Greenplum Database cluster configuration and software installation tasks can be automated using provisioning tools such as Ansible, Chef, or Puppet. VMware does not provide support for Ansible or for the playbook presented in this example.
+> **Important** This playbook is provided as an *example only* to illustrate how Greenplum Database cluster configuration and software installation tasks can be automated using provisioning tools such as Ansible, Chef, or Puppet. VMware does not provide support for Ansible or for the playbook presented in this example.
 
-The example playbook is designed for use with CentOS 7. It creates the `gpadmin` user, installs the Greenplum Database software release, sets the owner and group of the installed software to `gpadmin`, and sets the Pam security limits for the `gpadmin` user.
+The example playbook is designed for use with RedHat. It creates the `gpadmin` user, installs the Greenplum Database software release, sets the owner and group of the installed software to `gpadmin`, and sets the Pam security limits for the `gpadmin` user.
 
 You can revise the script to work with your operating system platform and to perform additional host configuration tasks.
 
@@ -19,7 +19,7 @@ Following are steps to use this Ansible playbook.
 3.  Create an Ansible inventory by creating a file called `hosts` with a list of the hosts that will comprise your Greenplum Database cluster. For example:
 
     ```
-    mdw
+    cdw
     sdw1
     sdw2
     ...
@@ -32,11 +32,11 @@ Following are steps to use this Ansible playbook.
 6.  Run the playbook, passing the package to be installed to the `package_path` parameter.
 
     ```
-    ansible-playbook ansible-playbook.yml -i hosts -e package_path=./greenplum-db-6.0.0-rhel7-x86_64.rpm
+    ansible-playbook ansible-playbook.yml -i hosts -e package_path=./greenplum-db-7.0.0-rhel8-x86_64.rpm
     ```
 
 
-## <a id="fixme"></a>Ansible Playbook - Greenplum Database Installation for CentOS 7 
+## <a id="fixme"></a>Ansible Playbook - Greenplum Database Installation for RedHat 
 
 ```
 
@@ -44,10 +44,10 @@ Following are steps to use this Ansible playbook.
 
 - hosts: all
   vars:
-    - version: "6.0.0"
+    - version: "7.0.0"
     - greenplum_admin_user: "gpadmin"
     - greenplum_admin_password: "changeme"
-    # - package_path: passed via the command line with: -e package_path=./greenplum-db-6.0.0-rhel7-x86_64.rpm
+    # - package_path: passed via the command line with: -e package_path=./greenplum-db-7.0.0-rhel8-x86_64.rpm
   remote_user: root
   become: yes
   become_method: sudo
@@ -104,5 +104,5 @@ Following are steps to use this Ansible playbook.
 
 When the playbook has run successfully, you can proceed with [Creating the Data Storage Areas](create_data_dirs.html) and [Initializing a Greenplum Database System](init_gpdb.html).
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 

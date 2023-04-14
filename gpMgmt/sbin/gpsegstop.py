@@ -67,8 +67,14 @@ class SegStop(base.Command):
         return self.result
 
     def run(self):
+
         try:
             self.datadir, self.port = self.get_datadir_and_port()
+
+            # Get a list of postgres processes running before stopping the server
+            # Use localhost since gpsegstop is run locally on segment hosts
+            postgres_pids = gp.get_postgres_segment_processes(self.datadir, 'localhost')
+            logger.debug("Postgres processes running for segment %s: %s", self.datadir, postgres_pids)
 
             cmd = gp.SegmentStop('segment shutdown', self.datadir, mode=self.mode, timeout=self.timeout)
             cmd.run()
@@ -115,7 +121,9 @@ class SegStop(base.Command):
                                        results.rc, results.stdout, results.stderr))
 
             try:
-                unix.kill_9_segment_processes(self.datadir, self.port, mypid)
+                # Use the process list and make sure that all the processes are killed at the end
+                # Use localhost since gpsegstop is run locally on segment hosts
+                unix.kill_9_segment_processes(self.datadir, postgres_pids, 'localhost')
 
                 if unix.check_pid(mypid) and mypid != -1:
                     status = SegStopStatus(self.datadir, False,

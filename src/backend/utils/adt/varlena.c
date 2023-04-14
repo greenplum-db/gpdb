@@ -20,6 +20,7 @@
 #include "access/tuptoaster.h"
 #include "catalog/pg_collation.h"
 #include "catalog/pg_type.h"
+#include "common/hashfn.h"
 #include "common/int.h"
 #include "lib/hyperloglog.h"
 #include "libpq/pqformat.h"
@@ -29,7 +30,6 @@
 #include "regex/regex.h"
 #include "utils/builtins.h"
 #include "utils/bytea.h"
-#include "utils/hashutils.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/pg_locale.h"
@@ -839,29 +839,38 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
 	int32		S = start;		/* start position */
 	int32		S1;				/* adjusted start position */
 	int32		L1;				/* adjusted substring length */
+	int32		E;				/* end position */
+
+	/*
+	 * SQL99 says S can be zero or negative, but we still must fetch from the
+	 * start of the string.
+	 */
+	S1 = Max(S, 1);
 
 	/* life is easy if the encoding max length is 1 */
 	if (eml == 1)
 	{
-		S1 = Max(S, 1);
-
 		if (length_not_specified)	/* special case - get length to end of
 									 * string */
 			L1 = -1;
+		else if (length < 0)
+		{
+			/* SQL99 says to throw an error for E < S, i.e., negative length */
+			ereport(ERROR,
+					(errcode(ERRCODE_SUBSTRING_ERROR),
+					 errmsg("negative substring length not allowed")));
+			L1 = -1;			/* silence stupider compilers */
+		}
+		else if (pg_add_s32_overflow(S, length, &E))
+		{
+			/*
+			 * L could be large enough for S + L to overflow, in which case
+			 * the substring must run to end of string.
+			 */
+			L1 = -1;
+		}
 		else
 		{
-			/* end position */
-			int			E = S + length;
-
-			/*
-			 * A negative value for L is the only way for the end position to
-			 * be before the start. SQL99 says to throw an error.
-			 */
-			if (E < S)
-				ereport(ERROR,
-						(errcode(ERRCODE_SUBSTRING_ERROR),
-						 errmsg("negative substring length not allowed")));
-
 			/*
 			 * A zero or negative value for the end position can happen if the
 			 * start was negative or one. SQL99 says to return a zero-length
@@ -875,8 +884,8 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
 
 		/*
 		 * If the start position is past the end of the string, SQL99 says to
-		 * return a zero-length string -- PG_GETARG_TEXT_P_SLICE() will do
-		 * that for us. Convert to zero-based starting position
+		 * return a zero-length string -- DatumGetTextPSlice() will do that
+		 * for us.  We need only convert S1 to zero-based starting position.
 		 */
 		return DatumGetTextPSlice(str, S1 - 1, L1);
 	}
@@ -898,12 +907,6 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
 		text	   *ret;
 
 		/*
-		 * if S is past the end of the string, the tuple toaster will return a
-		 * zero-length string to us
-		 */
-		S1 = Max(S, 1);
-
-		/*
 		 * We need to start at position zero because there is no way to know
 		 * in advance which byte offset corresponds to the supplied start
 		 * position.
@@ -913,19 +916,24 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
 		if (length_not_specified)	/* special case - get length to end of
 									 * string */
 			slice_size = L1 = -1;
+		else if (length < 0)
+		{
+			/* SQL99 says to throw an error for E < S, i.e., negative length */
+			ereport(ERROR,
+					(errcode(ERRCODE_SUBSTRING_ERROR),
+					 errmsg("negative substring length not allowed")));
+			slice_size = L1 = -1;	/* silence stupider compilers */
+		}
+		else if (pg_add_s32_overflow(S, length, &E))
+		{
+			/*
+			 * L could be large enough for S + L to overflow, in which case
+			 * the substring must run to end of string.
+			 */
+			slice_size = L1 = -1;
+		}
 		else
 		{
-			int			E = S + length;
-
-			/*
-			 * A negative value for L is the only way for the end position to
-			 * be before the start. SQL99 says to throw an error.
-			 */
-			if (E < S)
-				ereport(ERROR,
-						(errcode(ERRCODE_SUBSTRING_ERROR),
-						 errmsg("negative substring length not allowed")));
-
 			/*
 			 * A zero or negative value for the end position can happen if the
 			 * start was negative or one. SQL99 says to return a zero-length
@@ -943,8 +951,10 @@ text_substring(Datum str, int32 start, int32 length, bool length_not_specified)
 			/*
 			 * Total slice size in bytes can't be any longer than the start
 			 * position plus substring length times the encoding max length.
+			 * If that overflows, we can just use -1.
 			 */
-			slice_size = (S1 + L1) * eml;
+			if (pg_mul_s32_overflow(E, eml, &slice_size))
+				slice_size = -1;
 		}
 
 		/*
@@ -1118,7 +1128,12 @@ text_position(text *t1, text *t2, Oid collid)
 	TextPositionState state;
 	int			result;
 
-	if (VARSIZE_ANY_EXHDR(t1) < 1 || VARSIZE_ANY_EXHDR(t2) < 1)
+	/* Empty needle always matches at position 1 */
+	if (VARSIZE_ANY_EXHDR(t2) < 1)
+		return 1;
+
+	/* Otherwise, can't match if haystack is shorter than needle */
+	if (VARSIZE_ANY_EXHDR(t1) < VARSIZE_ANY_EXHDR(t2))
 		return 0;
 
 	text_position_setup(t1, t2, collid, &state);
@@ -1272,6 +1287,9 @@ text_position_setup(text *t1, text *t2, Oid collid, TextPositionState *state)
  * Advance to the next match, starting from the end of the previous match
  * (or the beginning of the string, on first call).  Returns true if a match
  * is found.
+ *
+ * Note that this refuses to match an empty-string needle.  Most callers
+ * will have handled that case specially and we'll never see it here.
  */
 static bool
 text_position_next(TextPositionState *state)
@@ -1463,6 +1481,12 @@ check_collation_set(Oid collid)
  *	to allow null-termination for inputs to strcoll().
  * Returns an integer less than, equal to, or greater than zero, indicating
  * whether arg1 is less than, equal to, or greater than arg2.
+ *
+ * Note: many functions that depend on this are marked leakproof; therefore,
+ * avoid reporting the actual contents of the input when throwing errors.
+ * All errors herein should be things that can't happen except on corrupt
+ * data, anyway; otherwise we will have trouble with indexing strings that
+ * would cause them.
  */
 int
 varstr_cmp(const char *arg1, int len1, const char *arg2, int len2, Oid collid)
@@ -2996,33 +3020,11 @@ textgename(PG_FUNCTION_ARGS)
  */
 
 static int
-internal_text_pattern_compare(text *arg1, text *arg2, Oid collid)
+internal_text_pattern_compare(text *arg1, text *arg2)
 {
 	int			result;
 	int			len1,
 				len2;
-
-	check_collation_set(collid);
-
-	/*
-	 * XXX We cannot use a text_pattern_ops index for nondeterministic
-	 * collations, because these operators intentionally ignore the collation.
-	 * However, the planner has no way to know that, so it might choose such
-	 * an index for an "=" clause, which would lead to wrong results.  This
-	 * check here doesn't prevent choosing the index, but it will at least
-	 * error out if the index is chosen.  A text_pattern_ops index on a column
-	 * with nondeterministic collation is pretty useless anyway, since LIKE
-	 * etc. won't work there either.  A future possibility would be to
-	 * annotate the operator class or its members in the catalog to avoid the
-	 * index.  Another alternative is to stay away from the *_pattern_ops
-	 * operator classes and prefer creating LIKE-supporting indexes with
-	 * COLLATE "C".
-	 */
-	if (!get_collation_isdeterministic(collid))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("nondeterministic collations are not supported for operator class \"%s\"",
-						"text_pattern_ops")));
 
 	len1 = VARSIZE_ANY_EXHDR(arg1);
 	len2 = VARSIZE_ANY_EXHDR(arg2);
@@ -3046,7 +3048,7 @@ text_pattern_lt(PG_FUNCTION_ARGS)
 	text	   *arg2 = PG_GETARG_TEXT_PP(1);
 	int			result;
 
-	result = internal_text_pattern_compare(arg1, arg2, PG_GET_COLLATION());
+	result = internal_text_pattern_compare(arg1, arg2);
 
 	PG_FREE_IF_COPY(arg1, 0);
 	PG_FREE_IF_COPY(arg2, 1);
@@ -3062,7 +3064,7 @@ text_pattern_le(PG_FUNCTION_ARGS)
 	text	   *arg2 = PG_GETARG_TEXT_PP(1);
 	int			result;
 
-	result = internal_text_pattern_compare(arg1, arg2, PG_GET_COLLATION());
+	result = internal_text_pattern_compare(arg1, arg2);
 
 	PG_FREE_IF_COPY(arg1, 0);
 	PG_FREE_IF_COPY(arg2, 1);
@@ -3078,7 +3080,7 @@ text_pattern_ge(PG_FUNCTION_ARGS)
 	text	   *arg2 = PG_GETARG_TEXT_PP(1);
 	int			result;
 
-	result = internal_text_pattern_compare(arg1, arg2, PG_GET_COLLATION());
+	result = internal_text_pattern_compare(arg1, arg2);
 
 	PG_FREE_IF_COPY(arg1, 0);
 	PG_FREE_IF_COPY(arg2, 1);
@@ -3094,7 +3096,7 @@ text_pattern_gt(PG_FUNCTION_ARGS)
 	text	   *arg2 = PG_GETARG_TEXT_PP(1);
 	int			result;
 
-	result = internal_text_pattern_compare(arg1, arg2, PG_GET_COLLATION());
+	result = internal_text_pattern_compare(arg1, arg2);
 
 	PG_FREE_IF_COPY(arg1, 0);
 	PG_FREE_IF_COPY(arg2, 1);
@@ -3110,7 +3112,7 @@ bttext_pattern_cmp(PG_FUNCTION_ARGS)
 	text	   *arg2 = PG_GETARG_TEXT_PP(1);
 	int			result;
 
-	result = internal_text_pattern_compare(arg1, arg2, PG_GET_COLLATION());
+	result = internal_text_pattern_compare(arg1, arg2);
 
 	PG_FREE_IF_COPY(arg1, 0);
 	PG_FREE_IF_COPY(arg2, 1);
@@ -3123,16 +3125,7 @@ Datum
 bttext_pattern_sortsupport(PG_FUNCTION_ARGS)
 {
 	SortSupport ssup = (SortSupport) PG_GETARG_POINTER(0);
-	Oid			collid = ssup->ssup_collation;
 	MemoryContext oldcontext;
-
-	check_collation_set(collid);
-
-	if (!get_collation_isdeterministic(collid))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("nondeterministic collations are not supported for operator class \"%s\"",
-						"text_pattern_ops")));
 
 	oldcontext = MemoryContextSwitchTo(ssup->ssup_cxt);
 
@@ -3263,9 +3256,13 @@ bytea_substring(Datum str,
 				int L,
 				bool length_not_specified)
 {
-	int			S1;				/* adjusted start position */
-	int			L1;				/* adjusted substring length */
+	int32		S1;				/* adjusted start position */
+	int32		L1;				/* adjusted substring length */
+	int32		E;				/* end position */
 
+	/*
+	 * The logic here should generally match text_substring().
+	 */
 	S1 = Max(S, 1);
 
 	if (length_not_specified)
@@ -3276,20 +3273,24 @@ bytea_substring(Datum str,
 		 */
 		L1 = -1;
 	}
+	else if (L < 0)
+	{
+		/* SQL99 says to throw an error for E < S, i.e., negative length */
+		ereport(ERROR,
+				(errcode(ERRCODE_SUBSTRING_ERROR),
+				 errmsg("negative substring length not allowed")));
+		L1 = -1;				/* silence stupider compilers */
+	}
+	else if (pg_add_s32_overflow(S, L, &E))
+	{
+		/*
+		 * L could be large enough for S + L to overflow, in which case the
+		 * substring must run to end of string.
+		 */
+		L1 = -1;
+	}
 	else
 	{
-		/* end position */
-		int			E = S + L;
-
-		/*
-		 * A negative value for L is the only way for the end position to be
-		 * before the start. SQL99 says to throw an error.
-		 */
-		if (E < S)
-			ereport(ERROR,
-					(errcode(ERRCODE_SUBSTRING_ERROR),
-					 errmsg("negative substring length not allowed")));
-
 		/*
 		 * A zero or negative value for the end position can happen if the
 		 * start was negative or one. SQL99 says to return a zero-length
@@ -3304,7 +3305,7 @@ bytea_substring(Datum str,
 	/*
 	 * If the start position is past the end of the string, SQL99 says to
 	 * return a zero-length string -- DatumGetByteaPSlice() will do that for
-	 * us. Convert to zero-based starting position
+	 * us.  We need only convert S1 to zero-based starting position.
 	 */
 	return DatumGetByteaPSlice(str, S1 - 1, L1);
 }
@@ -3460,11 +3461,12 @@ byteaGetBit(PG_FUNCTION_ARGS)
 
 	len = VARSIZE_ANY_EXHDR(v);
 
-	if (n < 0 || n >= len * 8)
+	/* Do comparison arithmetic in int64 in case len exceeds INT_MAX/8 */
+	if (n < 0 || n >= (int64) len * 8)
 		ereport(ERROR,
 				(errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
 				 errmsg("index %d out of valid range, 0..%d",
-						n, len * 8 - 1)));
+						n, (int) Min((int64) len * 8 - 1, INT_MAX))));
 
 	byteNo = n / 8;
 	bitNo = n % 8;
@@ -3531,11 +3533,12 @@ byteaSetBit(PG_FUNCTION_ARGS)
 
 	len = VARSIZE(res) - VARHDRSZ;
 
-	if (n < 0 || n >= len * 8)
+	/* Do comparison arithmetic in int64 in case len exceeds INT_MAX/8 */
+	if (n < 0 || n >= (int64) len * 8)
 		ereport(ERROR,
 				(errcode(ERRCODE_ARRAY_SUBSCRIPT_ERROR),
 				 errmsg("index %d out of valid range, 0..%d",
-						n, len * 8 - 1)));
+						n, (int) Min((int64) len * 8 - 1, INT_MAX))));
 
 	byteNo = n / 8;
 	bitNo = n % 8;

@@ -1,0 +1,31 @@
+---
+########## AWS #############
+aws-region: us-west-2
+aws-bucket: gpdb5-assert-concourse-builds
+tf-machine-region: us-west-2
+tf-bucket-name: gpdb5-pipeline-dynamic-terraform
+########## GOOGLE #############
+google-project-id: data-gpdb-ci
+google-zone: us-central1-a
+gp-concourse-cluster-provisioner-git-branch: main
+gp-concourse-cluster-provisioner-git-remote: git@github.com:pivotal/gp-concourse-cluster-provisioner.git
+gcs-bucket: pivotal-gpdb-concourse-resources-prod
+gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-prod
+gcs-bucket-for-oss: greenplum-database-concourse-resources-prod
+gcs-bucket-coverage: pivotal-gpdb-cli-coverage-prod
+gpdb-git-branch: main
+gpdb-git-remote: https://github.com/greenplum-db/gpdb.git
+rc-build-type: debug
+rc-build-type-gcs: ".debug"
+reduced-frequency-trigger-start-rhel8: 1:00 AM
+reduced-frequency-trigger-stop-rhel8: 2:00 AM
+reduced-frequency-trigger-start-oel8: 3:00 AM
+reduced-frequency-trigger-stop-oel8: 4:00 AM
+configure_flags: "--enable-cassert --enable-tap-tests"
+configure_flags_with_extensions: "--enable-cassert --enable-tap-tests --enable-debug-extensions"
+use_ccache: true
+########## Compile gpdb clients on windows #############
+remote_win_host_build: 10.0.42.5
+remote_win_user_build: buildbot
+remote_win_port_build: 22
+test-binary-swap: false

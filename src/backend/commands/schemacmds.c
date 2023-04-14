@@ -144,15 +144,38 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString,
 	 * the permissions checks, but since CREATE TABLE IF NOT EXISTS makes its
 	 * creation-permission check first, we do likewise.
 	 */
-	if (stmt->if_not_exists &&
-		SearchSysCacheExists1(NAMESPACENAME, PointerGetDatum(schemaName)))
+	if (stmt->if_not_exists)
 	{
-		ereport(NOTICE,
-				(errcode(ERRCODE_DUPLICATE_SCHEMA),
-				 errmsg("schema \"%s\" already exists, skipping",
-						schemaName)));
-		return InvalidOid;
+		namespaceId = get_namespace_oid(schemaName, true);
+		if (OidIsValid(namespaceId))
+		{
+			/*
+			 * If we are in an extension script, insist that the pre-existing
+			 * object be a member of the extension, to avoid security risks.
+			 */
+			ObjectAddressSet(address, NamespaceRelationId, namespaceId);
+			checkMembershipInCurrentExtension(&address);
+
+			/* OK to skip */
+			ereport(NOTICE,
+					(errcode(ERRCODE_DUPLICATE_SCHEMA),
+					 errmsg("schema \"%s\" already exists, skipping",
+							schemaName)));
+			return InvalidOid;
+		}
 	}
+
+	/*
+	 * If the requested authorization is different from the current user,
+	 * temporarily set the current user so that the object(s) will be created
+	 * with the correct ownership.
+	 *
+	 * (The setting will be restored at the end of this routine, or in case of
+	 * error, transaction abort will clean things up.)
+	 */
+	if (saved_uid != owner_uid)
+		SetUserIdAndSecContext(owner_uid,
+							   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
 	/* Create the schema's namespace */
 	if (shouldDispatch || Gp_role != GP_ROLE_EXECUTE)
@@ -188,18 +211,6 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString,
 	{
 		namespaceId = NamespaceCreate(schemaName, owner_uid, false);
 	}
-
-	/*
-	 * If the requested authorization is different from the current user,
-	 * temporarily set the current user so that the object(s) will be created
-	 * with the correct ownership.
-	 *
-	 * (The setting will be restored at the end of this routine, or in case of
-	 * error, transaction abort will clean things up.)
-	 */
-	if (saved_uid != owner_uid)
-		SetUserIdAndSecContext(owner_uid,
-							   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
 	/* Advance cmd counter to make the namespace visible */
 	CommandCounterIncrement();
@@ -300,6 +311,10 @@ RemoveSchemaById(Oid schemaOid)
 	 * Remove all persistent error logs belonging to the the schema.
 	 */
 	PersistentErrorLogDelete(MyDatabaseId, schemaOid, NULL);
+
+	/* MPP-6929: metadata tracking */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		MetaTrackDropObject(NamespaceRelationId, schemaOid);
 }
 
 

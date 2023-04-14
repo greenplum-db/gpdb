@@ -205,3 +205,103 @@ select wait_until_standby_in_state('streaming');
 -----------------------------
  streaming                   
 (1 row)
+
+
+-- Scenario3: verify repl_catchup_within_range is enabled on segment.
+-- It is similar as Scenario2, just running the test against primary/mirror
+-- instead of master/standby.
+
+select gp_inject_fault_infinite('wal_sender_loop', 'infinite_loop', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+select gp_inject_fault_infinite('walrecv_skip_flush', 'skip', dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+0U: select pg_terminate_backend(pid) from pg_stat_replication;
+ pg_terminate_backend 
+----------------------
+ t                    
+(1 row)
+
+0U: show repl_catchup_within_range;
+ repl_catchup_within_range 
+---------------------------
+ 1                         
+(1 row)
+
+0U: begin;
+BEGIN
+0U: select wait_until_standby_in_state('catchup');
+ wait_until_standby_in_state 
+-----------------------------
+ catchup                     
+(1 row)
+
+select gp_wait_until_triggered_fault('wal_sender_loop', 1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+0U: select application_name, state from pg_stat_replication;
+ application_name | state   
+------------------+---------
+ gp_walreceiver   | catchup 
+(1 row)
+0U: commit;
+COMMIT
+
+select gp_inject_fault('wal_sender_after_caughtup_within_range', 'suspend', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+select gp_inject_fault('wal_sender_loop', 'reset', dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+select gp_wait_until_triggered_fault( 'wal_sender_after_caughtup_within_range', 1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+1&: create table commit_blocking_on_mirror_tbl (a int, b int) distributed by (a);  <waiting ...>
+
+0U: select wait_for_pg_stat_activity(60);
+ wait_for_pg_stat_activity 
+---------------------------
+                           
+(1 row)
+0U: select datname, wait_event, query from pg_stat_activity where wait_event = 'SyncRep';
+ datname        | wait_event | query                                                                         
+----------------+------------+-------------------------------------------------------------------------------
+ isolation2test | SyncRep    | create table commit_blocking_on_mirror_tbl (a int, b int) distributed by (a); 
+(1 row)
+
+select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration where content=0;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+(2 rows)
+
+1<:  <... completed>
+CREATE
+
+insert into commit_blocking_on_mirror_tbl values (2, 1);
+INSERT 1
+0U: select wait_until_standby_in_state('streaming');
+ wait_until_standby_in_state 
+-----------------------------
+ streaming                   
+(1 row)

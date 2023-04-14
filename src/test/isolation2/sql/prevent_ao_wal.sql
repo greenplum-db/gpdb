@@ -19,17 +19,6 @@
 -- m/.*Table doesn't have 'DISTRIBUTED BY' clause*/
 -- end_matchignore
 
--- start_matchsubs
--- m/tx:\s+\d+/
--- s/tx:\s+\d+/tx: ##/
-
--- m/lsn: \d\/[0-9a-fA-F]+, prev \d\/[0-9a-fA-F]+/
--- s/lsn: \d\/[0-9a-fA-F]+, prev \d\/[0-9a-fA-F]+/lsn: #\/########, prev #\/########/
-
--- m/rel \d+\/\d+\/\d+/
--- s/rel \d+\/\d+\/\d+/rel ####\/######\/######/
--- end_matchsubs
-
 -- Create tables (AO, AOCO)
 -1U: CREATE TABLE ao_foo (n int) WITH (appendonly=true);
 -1U: CREATE TABLE aoco_foo (n int, m int) WITH (appendonly=true, orientation=column);
@@ -42,10 +31,10 @@
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM ao_foo;
 -- Delete data and run vacuum (AOCO)
 -1U: DELETE FROM aoco_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM aoco_foo;
 -1Uq:
 
 -- Validate wal records (mirrorless setting has alternative answer file for this since wal_level is already minimal)
@@ -66,10 +55,10 @@
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM ao_foo;
 -- Delete data and run vacuum (AOCO)
 -1U: DELETE FROM aoco_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM aoco_foo;
 
 -- Validate wal records
 ! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;

@@ -230,4 +230,26 @@ CConstraintConjunction::PexprScalar(CMemoryPool *mp)
 	return m_pexprScalar;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CConstraintConjunction::GetConstraintOnSegmentId
+//
+//	@doc:
+//		Returns the constraint for system column gp_segment_id
+//
+//---------------------------------------------------------------------------
+CConstraint *
+CConstraintConjunction::GetConstraintOnSegmentId() const
+{
+	for (ULONG ul = 0; ul < m_pdrgpcnstr->Size(); ul++)
+	{
+		CConstraint *pcnstr = (*m_pdrgpcnstr)[ul];
+		if (pcnstr->FConstraintOnSegmentId())
+		{
+			return pcnstr;
+		}
+	}
+	return nullptr;
+}
+
 // EOF

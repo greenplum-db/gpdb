@@ -14,7 +14,7 @@ For information about upgrading PostGIS on Greenplum Database 6 systems, see [Up
 
 ## <a id="topic2"></a>About PostGIS 
 
-PostGIS is a spatial database extension for PostgreSQL that allows GIS \(Geographic Information Systems\) objects to be stored in the database. The Greenplum PostGIS extension includes support for GiST-based R-Tree spatial indexes and functions for analysis and processing of GIS objects.
+PostGIS is a spatial database extension for PostgreSQL that allows GIS (Geographic Information Systems) objects to be stored in the database. The Greenplum PostGIS extension includes support for GiST-based R-Tree spatial indexes, and functions for analysis and processing of GIS objects.
 
 The Greenplum PostGIS extension supports some PostGIS optional extensions and includes support for the PostGIS `raster` data type. With the PostGIS Raster objects, PostGIS `geometry` data type offers a single set of overlay SQL functions \(such as `ST_Intersects`\) operating seamlessly on vector and raster geospatial data. PostGIS Raster uses the GDAL \(Geospatial Data Abstraction Library\) translator library for raster geospatial data formats that presents a [single raster abstract data model](https://gdal.org/user/raster_data_model.html) to a calling application.
 
@@ -26,103 +26,79 @@ For information about GDAL, see [https://gdal.org/](https://gdal.org/).
 
 ## <a id="topic3"></a>Greenplum PostGIS Extension 
 
-The Greenplum PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics PostGIS** software. You can install the package using the Greenplum Package Manager \(`gppkg`\). For details, see `gppkg` in the *Greenplum Database Utility Guide*.
+The Greenplum PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the download. You can install the package using the Greenplum Package Manager (`gppkg`). For details, see [`gppkg`](../utility_guide/ref/gppkg.html) in the _Greenplum Database Utility Guide_.
 
-Greenplum Database supports the PostGIS extension with these component versions.
+Greenplum Database supports the following PostGIS extension versions and components:
 
--   PostGIS 2.5.4
--   Proj 4.8.0
--   Geos 3.4.2
--   GDAL 1.11.1
--   Json 0.12
--   Expat 2.1.0
+- PostGIS 2.5.4, and components Proj 4.8.0, Geos 3.10.2, GDAL 1.11.1, Json 0.12, Expat 2.4.4
+- PostGIS 2.1.5, and components Proj 4.8.0, Geos 3.4.2, GDAL 1.11.1, Json 0.12, Expat 2.1.0
 
-For the information about supported Greenplum extension packages and software versions, see [../install\_guide/platform-requirements.html](../install_guide/platform-requirements.html).
+For information about the supported Greenplum extension packages and software versions, see [Extensions](../install_guide/platform-requirements-overview.html#topic_eyc_l2h_zz).
 
-There have been significant changes in PostGIS 2.5.4 compared with the previously supported version of 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS documentation [PostGIS Functions new or enhanced in 2.5](https://postgis.net/docs/manual-2.5/PostGIS_Special_Functions_Index.html#NewFunctions_2_5).
+There are significant changes in PostGIS 2.5.4 compared with 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS documentation [PostGIS Functions new or enhanced in 2.5](https://postgis.net/docs/manual-2.5/PostGIS_Special_Functions_Index.html#NewFunctions_2_5) and [Release 2.5.4](https://postgis.net/docs/manual-2.5/release_notes.html).
 
-For a comprehensive list of PostGIS changes in PostGIS 2.5.4 and earlier, see PostGIS 2.5 Appendix A [Release 2.5.4](https://postgis.net/docs/manual-2.5/release_notes.html).
-
-**Note:** If you installed Greenplum PostGIS 2.1.5, you cannot upgrade from PostGIS 2.1.5 to 2.5.4. You must uninstall PostGIS 2.1.5 and install PostGIS 2.5.4.
+<p class="note"><strong>Note:</strong> To upgrade PostGIS refer to  <a href="./postgis-upgrade.html">Upgrading PostGIS 2.1.5 or 2.5.4</a>.</p>
 
 This table lists the PostGIS extensions support by Greenplum PostGIS.
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic3__table_owt_4ml_xlb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>Greenplum PostGIS Extensions</span></caption><colgroup><col style="width:32.786885245901644%" /><col style="width:67.21311475409836%" /></colgroup><thead class="thead" style="text-align:left;">
-            <tr class="row">
-              <th class="entry cellrowborder" style="vertical-align:top;" id="d47208e208">PostGIS Extension</th>
-
-              <th class="entry cellrowborder" style="vertical-align:top;" id="d47208e211">Greenplum PostGIS Notes</th>
-
-            </tr>
-
-          </thead>
+<tr class="row">
+<th class="entry cellrowborder" style="vertical-align:top;" id="d47208e208">PostGIS Extension</th>
+<th class="entry cellrowborder" style="vertical-align:top;" id="d47208e211">Greenplum PostGIS Notes</th>
+</tr>
+</thead>
 <tbody class="tbody">
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis</code><p dir="ltr" class="p">PostGIS and PostGIS Raster
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis</code><p dir="ltr" class="p">PostGIS and PostGIS Raster
                 support</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Both PostGIS and PostGIS Raster are enabled when the Greenplum
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Both PostGIS and PostGIS Raster are enabled when the Greenplum
                   <code class="ph codeph">postgis</code> extension is enabled.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis_tiger_geocoder</code><p class="p">The US TIGER geocoder</p>
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis_tiger_geocoder</code><p class="p">The US TIGER geocoder</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed with Greenplum PostGIS. <p class="p">Requires the
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed with Greenplum PostGIS. <p class="p">Requires the
                     <code class="ph codeph">postgis</code> and <code class="ph codeph">fuzzystrmatch</code>
                   extensions.</p>
 <p class="p">The US TIGER geocoder converts addresses (like a street address)
                   to geographic coordinates.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer</code><p class="p">Rule-based address
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer</code><p class="p">Rule-based address
                 standardizer</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS. <p class="p">Can be used
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS. <p class="p">Can be used
                   with TIGER geocoder.</p>
 <p class="p">A single line address parser that takes an input
                   address and normalizes it based on a set of rules stored in a table and helper
                     <code class="ph codeph">lex</code> and <code class="ph codeph">gaz</code> tables.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer_data_us</code><p class="p">Sample rules tables for US
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer_data_us</code><p class="p">Sample rules tables for US
                   address data</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS.<p class="p">Can be used with
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS.<p class="p">Can be used with
                   the address standardizer.</p>
 <p class="p">The extension contains <code class="ph codeph">gaz</code>,
                     <code class="ph codeph">lex</code>, and <code class="ph codeph">rules</code> tables for US address data. If
                   you are using other types of tables, see <a class="xref" href="#topic_wy2_rkb_3p">PostGIS Extension Limitations</a>.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">fuzzystrmatch</code><p class="p">Fuzzy string matching</p>
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">fuzzystrmatch</code><p class="p">Fuzzy string matching</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. This extension is bundled but not enabled with Greenplum
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. This extension is bundled but not enabled with Greenplum
                   Database.<p class="p">Required for the PostGIS TIGER geocoder.</p>
 </td>
-
-            </tr>
-
-          </tbody>
+</tr>
+</tbody>
 </table>
 </div>
 
-**Note:** The PostGIS topology extension `postgis_topology` and the PostGIS 3D and geoprocessing extension `postgis_sfcgal` are not supported by Greenplum PostGIS and are not included in the Greenplum PostGIS extension package.
+> **Note** The PostGIS topology extension `postgis_topology` and the PostGIS 3D and geoprocessing extension `postgis_sfcgal` are not supported by Greenplum PostGIS and are not included in the Greenplum PostGIS extension package.
 
 For information about the PostGIS extensions, see the [PostGIS 2.5 documentation](https://postgis.net/documentation/).
 
@@ -148,7 +124,7 @@ To enable PostGIS support, install the Greenplum PostGIS extension package into 
 Install Greenplum PostGIS extension package with the `gppkg` utility. For example, this command installs the package for RHEL 7.
 
 ```
-gppkg -i postgis-2.5.4+pivotal.2.build.1-gp6-rhel7-x86_64.gppkg
+gppkg -i postgis-2.5.4+pivotal.2.build.1-gp7-rhel8-x86_64.gppkg
 ```
 
 After installing the package, source the `greenplum_path.sh` file and restart Greenplum Database. This command restarts Greenplum Database.
@@ -205,7 +181,7 @@ These steps enable the PostGIS extension and the extensions that are used with P
 
 ### <a id="topic_ydr_q5l_ybb"></a>Enabling GDAL Raster Drivers 
 
-PostGIS uses GDAL raster drivers when processing raster data with commands such as `ST_AsJPEG()`. As the default, PostGIS disables all raster drivers. You enable raster drivers by setting the value of the `POSTGIS_GDAL_ENABLED_DRIVERS` environment variable in the `greenplum_path.sh` file on all Greenplum Database hosts.
+PostGIS uses GDAL raster drivers when processing raster data with commands such as `ST_AsJPEG()`. As the default, PostGIS deactivates all raster drivers. You enable raster drivers by setting the value of the `POSTGIS_GDAL_ENABLED_DRIVERS` environment variable in the `greenplum_path.sh` file on all Greenplum Database hosts.
 
 Alternatively, you can do it at the session level by setting `postgis.gdal_enabled_drivers`. For a Greenplum Database session, this example `SET` command enables three GDAL raster drivers.
 
@@ -219,7 +195,7 @@ This `SET` command sets the enabled drivers to the default for a session.
 SET postgis.gdal_enabled_drivers = default;
 ```
 
-To see the list of supported GDAL raster drivers for a Greenplum Database system, run the `raster2pgsql` utility with the `-G` option on the Greenplum Database master.
+To see the list of supported GDAL raster drivers for a Greenplum Database system, run the `raster2pgsql` utility with the `-G` option on the Greenplum Database coordinator.
 
 ```
 raster2pgsql -G 
@@ -241,15 +217,15 @@ SELECT short_name, long_name FROM ST_GDALDrivers();
 
 ### <a id="topic_fx2_fpx_llb"></a>Enabling Out-of-Database Rasters 
 
-After installing PostGIS, the default setting `POSTGIS_ENABLE_OUTDB_RASTERS=0` in the `greenplum_path.sh` file disables support for out-of-database rasters. To enable this feature, you can set the value to true \(a non-zero value\) on all hosts and restart the Greenplum Database system.
+After installing PostGIS, the default setting `POSTGIS_ENABLE_OUTDB_RASTERS=0` in the `greenplum_path.sh` file deactivates support for out-of-database rasters. To enable this feature, you can set the value to true \(a non-zero value\) on all hosts and restart the Greenplum Database system.
 
-You can also enable or disable this feature for a Greenplum Database session. For example, this `SET` command enables the feature for the current session.
+You can also activate or deactivate this feature for a Greenplum Database session. For example, this `SET` command enables the feature for the current session.
 
 ```
 SET postgis.enable_outdb_rasters = true;				
 ```
 
-**Note:** When the feature is enabled, the server configuration parameter `postgis.gdal_enabled_drivers` determines the accessible raster formats.
+> **Note** When the feature is enabled, the server configuration parameter `postgis.gdal_enabled_drivers` determines the accessible raster formats.
 
 ### <a id="topic_bgz_vcl_r1b"></a>Removing PostGIS Support 
 
@@ -257,7 +233,7 @@ You use the `DROP EXTENSION` command to remove support for the PostGIS extension
 
 Removing PostGIS support from a database does not remove these PostGIS Raster environment variables from the `greenplum_path.sh` file: `GDAL_DATA`, `POSTGIS_ENABLE_OUTDB_RASTERS`, `POSTGIS_GDAL_ENABLED_DRIVERS`. The environment variables are removed when you uninstall the PostGIS extension package.
 
-**Warning:** Removing PostGIS support from a database drops PostGIS database objects from the database without warning. Users accessing PostGIS objects might interfere with the dropping of PostGIS objects. See [Notes](#postgis_note).
+> **Caution** Removing PostGIS support from a database drops PostGIS database objects from the database without warning. Users accessing PostGIS objects might interfere with the dropping of PostGIS objects. See [Notes](#postgis_note).
 
 #### <a id="drop_postgis_cmd"></a>Using the DROP EXTENSION Command 
 
@@ -470,11 +446,6 @@ This section lists the Greenplum PostGIS extension limitations for user-defined 
 
 -   The `_postgis_index_extent` function is not supported on Greenplum Database 6 due to its dependence on spatial index operations.
 -   The `<->` operator \(`geometry <-> geometry`\) returns the centroid/centroid distance for Greenplum Database 6.
--   The following PostGIS functions are not currently supported because Greenplum PostGIS is compiled with Geos 3.4.2:
-    -   ST\_Subdivide
-    -   ​ST\_ClipByBox2D
-    -   ST\_VoronoiLines
-    -   ST\_VoronoiPolygons
 -   The TIGER geocoder extension is supported. However, upgrading the TIGER geocoder extension is not supported.
 -   The `standardize_address()` function uses `lex`, `gaz` or `rules` tables as parameters. If you are using tables apart from `us_lex`, `us_gaz` or `us_rules`, you should create them with the distribution policy `DISTRIBUTED REPLICATED` to work for Greenplum.
 

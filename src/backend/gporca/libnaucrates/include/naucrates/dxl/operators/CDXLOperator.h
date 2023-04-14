@@ -30,7 +30,7 @@ class CXMLSerializer;
 enum Edxlopid
 {
 	EdxlopLogicalGet,
-	EdxlopLogicalExternalGet,
+	EdxlopLogicalForeignGet,
 	EdxlopLogicalProject,
 	EdxlopLogicalSelect,
 	EdxlopLogicalJoin,
@@ -116,13 +116,6 @@ enum Edxlopid
 
 	EdxlopScalarDMLAction,
 	EdxlopScalarOpList,
-	EdxlopScalarPartOid,
-	EdxlopScalarPartDefault,
-	EdxlopScalarPartBound,
-	EdxlopScalarPartBoundInclusion,
-	EdxlopScalarPartBoundOpen,
-	EdxlopScalarPartListValues,
-	EdxlopScalarPartListNullTest,
 	EdxlopScalarValuesList,
 	EdxlopScalarSortGroupClause,
 
@@ -131,7 +124,8 @@ enum Edxlopid
 	EdxlopPhysicalProjection,
 	EdxlopPhysicalTableScan,
 	EdxlopPhysicalBitmapTableScan,
-	EdxlopPhysicalExternalScan,
+	EdxlopPhysicalDynamicBitmapTableScan,
+	EdxlopPhysicalForeignScan,
 	EdxlopPhysicalIndexScan,
 	EdxlopPhysicalIndexOnlyScan,
 	EdxlopScalarBitmapIndexProbe,
@@ -150,7 +144,10 @@ enum Edxlopid
 	EdxlopPhysicalSort,
 	EdxlopPhysicalAppend,
 	EdxlopPhysicalMaterialize,
+	EdxlopPhysicalDynamicForeignScan,
 	EdxlopPhysicalSequence,
+	EdxlopPhysicalDynamicTableScan,
+	EdxlopPhysicalDynamicIndexScan,
 	EdxlopPhysicalPartitionSelector,
 	EdxlopPhysicalTVF,
 	EdxlopPhysicalWindow,
@@ -160,7 +157,6 @@ enum Edxlopid
 
 	EdxlopPhysicalDML,
 	EdxlopPhysicalSplit,
-	EdxlopPhysicalRowTrigger,
 
 	EdxlopPhysicalAssert,
 

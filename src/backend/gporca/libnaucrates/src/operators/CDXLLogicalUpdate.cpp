@@ -33,16 +33,13 @@ CDXLLogicalUpdate::CDXLLogicalUpdate(CMemoryPool *mp,
 									 CDXLTableDescr *table_descr,
 									 ULONG ctid_colid, ULONG segid_colid,
 									 ULongPtrArray *delete_colid_array,
-									 ULongPtrArray *insert_colid_array,
-									 BOOL preserve_oids, ULONG tuple_oid)
+									 ULongPtrArray *insert_colid_array)
 	: CDXLLogical(mp),
 	  m_dxl_table_descr(table_descr),
 	  m_ctid_colid(ctid_colid),
 	  m_segid_colid(segid_colid),
 	  m_deletion_colid_array(delete_colid_array),
-	  m_insert_colid_array(insert_colid_array),
-	  m_preserve_oids(preserve_oids),
-	  m_tuple_oid(tuple_oid)
+	  m_insert_colid_array(insert_colid_array)
 {
 	GPOS_ASSERT(nullptr != table_descr);
 	GPOS_ASSERT(nullptr != delete_colid_array);
@@ -124,15 +121,6 @@ CDXLLogicalUpdate::SerializeToDXL(CXMLSerializer *xml_serializer,
 								 m_ctid_colid);
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColId), m_segid_colid);
-	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenUpdatePreservesOids),
-		m_preserve_oids);
-
-	if (m_preserve_oids)
-	{
-		xml_serializer->AddAttribute(
-			CDXLTokens::GetDXLTokenStr(EdxltokenTupleOidColId), m_tuple_oid);
-	}
 
 	m_dxl_table_descr->SerializeToDXL(xml_serializer);
 	node->SerializeChildrenToDXL(xml_serializer);

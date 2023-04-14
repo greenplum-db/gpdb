@@ -62,6 +62,7 @@
 #include <unistd.h>
 
 #include "catalog/pg_authid.h"
+#include "common/hashfn.h"
 #include "executor/instrument.h"
 #include "funcapi.h"
 #include "mb/pg_wchar.h"
@@ -77,7 +78,6 @@
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
-#include "utils/hashutils.h"
 #include "utils/memutils.h"
 
 PG_MODULE_MAGIC;
@@ -368,7 +368,7 @@ _PG_init(void)
 							&pgss_max,
 							5000,
 							100,
-							INT_MAX,
+							INT_MAX / 2,
 							PGC_POSTMASTER,
 							0,
 							NULL,
@@ -1869,6 +1869,18 @@ qtext_store(const char *query, int query_len,
 
 	*query_offset = off;
 
+	/*
+	 * Don't allow the file to grow larger than what qtext_load_file can
+	 * (theoretically) handle.  This has been seen to be reachable on 32-bit
+	 * platforms.
+	 */
+	if (unlikely(query_len >= MaxAllocHugeSize - off))
+	{
+		errno = EFBIG;			/* not quite right, but it'll do */
+		fd = -1;
+		goto error;
+	}
+
 	/* Now write the data into the successfully-reserved part of the file */
 	fd = OpenTransientFile(PGSS_TEXT_FILE, O_RDWR | O_CREAT | PG_BINARY);
 	if (fd < 0)
@@ -1933,6 +1945,7 @@ qtext_load_file(Size *buffer_size)
 	char	   *buf;
 	int			fd;
 	struct stat stat;
+	Size		nread;
 
 	fd = OpenTransientFile(PGSS_TEXT_FILE, O_RDONLY | PG_BINARY);
 	if (fd < 0)
@@ -1973,23 +1986,35 @@ qtext_load_file(Size *buffer_size)
 	}
 
 	/*
-	 * OK, slurp in the file.  If we get a short read and errno doesn't get
-	 * set, the reason is probably that garbage collection truncated the file
-	 * since we did the fstat(), so we don't log a complaint --- but we don't
-	 * return the data, either, since it's most likely corrupt due to
-	 * concurrent writes from garbage collection.
+	 * OK, slurp in the file.  Windows fails if we try to read more than
+	 * INT_MAX bytes at once, and other platforms might not like that either,
+	 * so read a very large file in 1GB segments.
 	 */
-	errno = 0;
-	if (read(fd, buf, stat.st_size) != stat.st_size)
+	nread = 0;
+	while (nread < stat.st_size)
 	{
-		if (errno)
-			ereport(LOG,
-					(errcode_for_file_access(),
-					 errmsg("could not read file \"%s\": %m",
-							PGSS_TEXT_FILE)));
-		free(buf);
-		CloseTransientFile(fd);
-		return NULL;
+		int			toread = Min(1024 * 1024 * 1024, stat.st_size - nread);
+
+		/*
+		 * If we get a short read and errno doesn't get set, the reason is
+		 * probably that garbage collection truncated the file since we did
+		 * the fstat(), so we don't log a complaint --- but we don't return
+		 * the data, either, since it's most likely corrupt due to concurrent
+		 * writes from garbage collection.
+		 */
+		errno = 0;
+		if (read(fd, buf + nread, toread) != toread)
+		{
+			if (errno)
+				ereport(LOG,
+						(errcode_for_file_access(),
+						 errmsg("could not read file \"%s\": %m",
+								PGSS_TEXT_FILE)));
+			free(buf);
+			CloseTransientFile(fd);
+			return NULL;
+		}
+		nread += toread;
 	}
 
 	if (CloseTransientFile(fd))
@@ -1997,7 +2022,7 @@ qtext_load_file(Size *buffer_size)
 				(errcode_for_file_access(),
 				 errmsg("could not close file \"%s\": %m", PGSS_TEXT_FILE)));
 
-	*buffer_size = stat.st_size;
+	*buffer_size = nread;
 	return buf;
 }
 
@@ -2044,8 +2069,14 @@ need_gc_qtexts(void)
 		SpinLockRelease(&s->mutex);
 	}
 
-	/* Don't proceed if file does not exceed 512 bytes per possible entry */
-	if (extent < 512 * pgss_max)
+	/*
+	 * Don't proceed if file does not exceed 512 bytes per possible entry.
+	 *
+	 * Here and in the next test, 32-bit machines have overflow hazards if
+	 * pgss_max and/or mean_query_len are large.  Force the multiplications
+	 * and comparisons to be done in uint64 arithmetic to forestall trouble.
+	 */
+	if ((uint64) extent < (uint64) 512 * pgss_max)
 		return false;
 
 	/*
@@ -2055,7 +2086,7 @@ need_gc_qtexts(void)
 	 * query length in order to prevent garbage collection from thrashing
 	 * uselessly.
 	 */
-	if (extent < pgss->mean_query_len * pgss_max * 2)
+	if ((uint64) extent < (uint64) pgss->mean_query_len * pgss_max * 2)
 		return false;
 
 	return true;

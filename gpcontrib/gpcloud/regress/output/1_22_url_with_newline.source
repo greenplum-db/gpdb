@@ -1,0 +1,11 @@
+-- s3 url with '\n', '\t' and '\r'
+CREATE READABLE EXTERNAL TABLE s3regress_url_with_newline (date text, time text, open float, high float,
+low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/oneline/
+	config=@config_file@') format 'csv';
+SELECT count(*) FROM s3regress_url_with_newline;
+ count 
+-------
+     1
+(1 row)
+
+DROP EXTERNAL TABLE s3regress_url_with_newline;

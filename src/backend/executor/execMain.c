@@ -75,7 +75,7 @@
 #include "utils/workfile_mgr.h"
 #include "utils/faultinjector.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
+#include "utils/cgroup.h"
 
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_class.h"
@@ -122,6 +122,42 @@ ExecutorEnd_hook_type ExecutorEnd_hook = NULL;
 /* Hook for plugin to get control in ExecCheckRTPerms() */
 ExecutorCheckPerms_hook_type ExecutorCheckPerms_hook = NULL;
 
+
+/*
+ * Greenplum specific code:
+ *   Greenplum introduces auto_stats for a long time, please refer to
+ *   https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/bAyw2KBP6yE/m/hmoWikrPAgAJ
+ *   for details and decision of auto_stats.
+ *
+ *  auto_stats() now is invoked at the following 7 places:
+ *    1. ProcessQuery()
+ *    2. _SPI_pquery()
+ *    3. postquel_end()
+ *    4. ATExecExpandTableCTAS()
+ *    5. ATExecSetDistributedBy()
+ *    6. DoCopy()
+ *    7. ExecCreateTableAs()
+ *
+ *  Previously, Place 2, 3 is hard-coded as inside function,
+ *  Place 1, 4~7 is hard-coded as not-inside function.
+ *  Place 4~7 does not cover the case that COPY or CTAS
+ *  is called inside procedure language.
+ *
+ *  Since in future auto_stats will be removed, for now let's
+ *  just to do some simple fix instead of big refactor.
+ *
+ *  To correctly pass the inFunction parameter for auto_stats()
+ *  at Place 4~7 we introduce executor_run_nesting_level to mark
+ *  if the program is already under ExecutorRun(). Place 4~7 is
+ *  directly taken as Utility and will not call ExecutorRun() if
+ *  they are not inside procedure language. This skill is like
+ *  the extension `auto_explain`.
+ *
+ *  For Place 1~3, the context is clear we do not need to check
+ *  executor_run_nesting_level.
+ */
+static int executor_run_nesting_level = 0;
+
 /* decls for local routines only used within this module */
 static void InitPlan(QueryDesc *queryDesc, int eflags);
 static void CheckValidRowMarkRel(Relation rel, RowMarkType markType);
@@ -145,24 +181,8 @@ static char *ExecBuildSlotValueDescription(Oid reloid,
 										   TupleDesc tupdesc,
 										   Bitmapset *modifiedCols,
 										   int maxfieldlen);
-static void EvalPlanQualStart(EPQState *epqstate, EState *parentestate,
-							  Plan *planTree);
-
+static void EvalPlanQualStart(EPQState *epqstate, Plan *planTree);
 static void AdjustReplicatedTableCounts(EState *estate);
-
-/*
- * Note that GetAllUpdatedColumns() also exists in commands/trigger.c.  There does
- * not appear to be any good header to put it into, given the structures that
- * it uses, so we let them be duplicated.  Be sure to update both if one needs
- * to be changed, however.
- */
-#define GetInsertedColumns(relinfo, estate) \
-	(exec_rt_fetch((relinfo)->ri_RangeTableIndex, estate)->insertedCols)
-#define GetUpdatedColumns(relinfo, estate) \
-	(exec_rt_fetch((relinfo)->ri_RangeTableIndex, estate)->updatedCols)
-#define GetAllUpdatedColumns(relinfo, estate) \
-	(bms_union(exec_rt_fetch((relinfo)->ri_RangeTableIndex, estate)->updatedCols, \
-			   exec_rt_fetch((relinfo)->ri_RangeTableIndex, estate)->extraUpdatedCols))
 
 /* end of local decls */
 
@@ -234,90 +254,35 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			elog(GP_RESMANAGER_MEMORY_LOG_LEVEL, "query requested %.0fKB of memory",
 				 (double) queryDesc->plannedstmt->query_mem / 1024.0);
 		}
-	}
 
-	/**
-	 * Distribute memory to operators.
-	 *
-	 * There are some statements that do not go through the resource queue, so we cannot
-	 * put in a strong assert here. Someday, we should fix resource queues.
-	 */
-	if (queryDesc->plannedstmt->query_mem > 0)
-	{
-		/*
-		 * Whether we should skip operator memory assignment
-		 * - We should never skip operator memory assignment on QD.
-		 * - On QE, not skip in case of resource group enabled, and customer allow QE re-calculate query_mem,
-		 * as the GUC `gp_resource_group_enable_recalculate_query_mem` set to on.
-		 */
-		bool	should_skip_operator_memory_assign = true;
-
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (queryDesc->plannedstmt->query_mem > 0)
 		{
-			/*
-			 * If resource group is enabled, we should re-calculate query_mem on QE, because the memory
-			 * of the coordinator and segment nodes or the number of instance could be different.
-			 *
-			 * On QE, we only try to recalculate query_mem if resource group enabled. Otherwise, we will skip this
-			 * and the next operator memory assignment if resource queue enabled
-			 */
-			if (IsResGroupEnabled())
+			PG_TRY();
 			{
-				int 	total_memory_coordinator = queryDesc->plannedstmt->total_memory_coordinator;
-				int    	nsegments_coordinator = queryDesc->plannedstmt->nsegments_coordinator;
-
-				/*
-				 * memSpill is not in fallback mode, and we enable resource group re-calculate the query_mem on QE,
-				 * then re-calculate the query_mem and re-compute operatorMemKB using this new value
-				 */
-				if (total_memory_coordinator != 0 && nsegments_coordinator != 0)
+				switch (*gp_resmanager_memory_policy)
 				{
-					should_skip_operator_memory_assign = false;
-
-					/* Get total system memory on the QE in MB */
-					int 	total_memory_segment = ResGroupOps_GetTotalMemory();
-					int 	nsegments_segment = ResGroupGetSegmentNum();
-					uint64	coordinator_query_mem = queryDesc->plannedstmt->query_mem;
-
-					/*
-					 * In the resource group environment, when we calculate query_mem, we can roughly use the following
-					 * formula:
-					 *
-					 * 	query_mem = (total_memory * gp_resource_group_memory_limit * memory_limit / nsegments) * memory_spill_ratio / concurrency
-					 *
-					 * Only total_memory and nsegments could differ between QD and QE, so query_mem is proportional to
-					 * the system's available virtual memory and inversely proportional to the number of instances.
-					 */
-					queryDesc->plannedstmt->query_mem *= (total_memory_segment * 1.0 / nsegments_segment) /
-														 (total_memory_coordinator * 1.0 / nsegments_coordinator);
-
-					elog(DEBUG1, "re-calculate query_mem, original QD's query_mem: %.0fKB, after recalculation QE's query_mem: %.0fKB",
-						 (double) coordinator_query_mem / 1024.0  , (double) queryDesc->plannedstmt->query_mem / 1024.0);
+					case RESMANAGER_MEMORY_POLICY_AUTO:
+						PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
+														 queryDesc->plannedstmt->query_mem);
+						break;
+					case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
+						PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
+															  queryDesc->plannedstmt->query_mem);
+						break;
+					default:
+						Assert(IsResManagerMemoryPolicyNone());
+						break;
 				}
 			}
-		}
-		else
-		{
-			/* On QD, we always traverse the plan tree and compute operatorMemKB */
-			should_skip_operator_memory_assign = false;
-		}
-
-		if (!should_skip_operator_memory_assign)
-		{
-			switch(*gp_resmanager_memory_policy)
+			PG_CATCH();
 			{
-				case RESMANAGER_MEMORY_POLICY_AUTO:
-					PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
-													 queryDesc->plannedstmt->query_mem);
-					break;
-				case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
-					PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
-														  queryDesc->plannedstmt->query_mem);
-					break;
-				default:
-					Assert(IsResManagerMemoryPolicyNone());
-					break;
+				/* GPDB hook for collecting query info */
+				if (query_info_collect_hook)
+					(*query_info_collect_hook)(QueryCancelCleanup ? METRICS_QUERY_CANCELED : METRICS_QUERY_ERROR, queryDesc);
+
+				PG_RE_THROW();
 			}
+			PG_END_TRY();
 		}
 	}
 
@@ -548,7 +513,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 *
 	 * TODO: eliminate aliens even on master, if not EXPLAIN ANALYZE
 	 */
-	estate->eliminateAliens = execute_pruned_plan && estate->es_sliceTable && estate->es_sliceTable->hasMotions && !IS_QUERY_DISPATCHER();
+	estate->eliminateAliens = execute_pruned_plan && estate->es_sliceTable && estate->es_sliceTable->hasMotions && (Gp_role == GP_ROLE_EXECUTE);
 
 	/*
 	 * Set up an AFTER-trigger statement context, unless told not to, or
@@ -813,10 +778,27 @@ ExecutorRun(QueryDesc *queryDesc,
 			ScanDirection direction, uint64 count,
 			bool execute_once)
 {
-	if (ExecutorRun_hook)
-		(*ExecutorRun_hook) (queryDesc, direction, count, execute_once);
-	else
-		standard_ExecutorRun(queryDesc, direction, count, execute_once);
+	/*
+	 * Greenplum specific code:
+	 * auto_stats() needs to know if it is inside procedure call so
+	 * we maintain executor_run_nesting_level here. See detailed comments
+	 * at the definition of the static variable executor_run_nesting_level.
+	 */
+	executor_run_nesting_level++;
+	PG_TRY();
+	{
+		if (ExecutorRun_hook)
+			(*ExecutorRun_hook) (queryDesc, direction, count, execute_once);
+		else
+			standard_ExecutorRun(queryDesc, direction, count, execute_once);
+		executor_run_nesting_level--;
+	}
+	PG_CATCH();
+	{
+		executor_run_nesting_level--;
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 }
 
 void
@@ -1191,10 +1173,10 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
      * If EXPLAIN ANALYZE, qExec returns stats to qDisp now.
      */
     if (estate->es_sliceTable &&
-        estate->es_sliceTable->instrument_options &&
-        (estate->es_sliceTable->instrument_options & INSTRUMENT_CDB) &&
-        Gp_role == GP_ROLE_EXECUTE)
-        cdbexplain_sendExecStats(queryDesc);
+		estate->es_sliceTable->instrument_options &&
+		(estate->es_sliceTable->instrument_options & INSTRUMENT_CDB) &&
+			Gp_role == GP_ROLE_EXECUTE)
+		cdbexplain_sendExecStats(queryDesc);
 
 	/*
 	 * if needed, collect mpp dispatch results and tear down
@@ -1870,9 +1852,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	estate->es_tupleTable = NIL;
 
-	/* mark EvalPlanQual not active */
-	estate->es_epqTupleSlot = NULL;
-	estate->es_epqScanDone = NULL;
+	/* signal that this EState is not used for EPQ */
+	estate->es_epq_active = NULL;
 
 	/*
 	 * Initialize private state information for each SubPlan.  We must do this
@@ -2041,6 +2022,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 						break;
 				}
 			}
+
+	SIMPLE_FAULT_INJECTOR("func_init_plan_end");
 }
 
 /*
@@ -2081,10 +2064,10 @@ CheckValidResultRel(ResultRelInfo *resultRelInfo, CmdType operation)
 
 			/*
 			 * Okay only if there's a suitable INSTEAD OF trigger.  Messages
-			 * here should match rewriteHandler.c's rewriteTargetView, except
-			 * that we omit errdetail because we haven't got the information
-			 * handy (and given that we really shouldn't get here anyway, it's
-			 * not worth great exertion to get).
+			 * here should match rewriteHandler.c's rewriteTargetView and
+			 * RewriteQuery, except that we omit errdetail because we haven't
+			 * got the information handy (and given that we really shouldn't
+			 * get here anyway, it's not worth great exertion to get).
 			 */
 			/*
 			 * GPDB_91_MERGE_FIXME: In Greenplum, views are treated as non
@@ -2300,7 +2283,7 @@ void
 InitResultRelInfo(ResultRelInfo *resultRelInfo,
 				  Relation resultRelationDesc,
 				  Index resultRelationIndex,
-				  Relation partition_root,
+				  ResultRelInfo *partition_root_rri,
 				  int instrument_options)
 {
 	List	   *partition_check = NIL;
@@ -2367,7 +2350,7 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo,
 	partition_check = RelationGetPartitionQual(resultRelationDesc);
 
 	resultRelInfo->ri_PartitionCheck = partition_check;
-	resultRelInfo->ri_PartitionRoot = partition_root;
+	resultRelInfo->ri_RootResultRelInfo = partition_root_rri;
 	resultRelInfo->ri_PartitionInfo = NULL; /* may be set later */
 	resultRelInfo->ri_CopyMultiInsertBuffer = NULL;
 }
@@ -2701,8 +2684,6 @@ ExecutePlan(EState *estate,
 			 * received in order to do the right cleanup.
 			 */
 			estate->es_got_eos = true;
-			/* Allow nodes to release or shut down resources. */
-			(void) ExecShutdownNode(planstate);
 			break;
 		}
 
@@ -2775,22 +2756,14 @@ ExecutePlan(EState *estate,
 		 */
 		current_tuple_count++;
 		if (numberTuples && numberTuples == current_tuple_count)
-		{
-			/*
-			 * If we know we won't need to back up, we can release resources
-			 * at this point.
-			 */
-			if (!(estate->es_top_eflags & EXEC_FLAG_BACKWARD))
-				(void) ExecShutdownNode(planstate);
 			break;
-		}
 	}
 
 	/*
 	 * If we know we won't need to back up, we can release resources at this
 	 * point.
 	 */
-	if (!(estate->es_top_eflags & EXEC_FLAG_BACKWARD))
+	if (!(estate->es_top_eflags & EXEC_FLAG_BACKWARD) || estate->es_got_eos)
 		(void) ExecShutdownNode(planstate);
 
 	if (use_parallel_mode)
@@ -2930,13 +2903,14 @@ ExecPartitionCheckEmitError(ResultRelInfo *resultRelInfo,
 	 * back to the root table's rowtype so that val_desc in the error message
 	 * matches the input tuple.
 	 */
-	if (resultRelInfo->ri_PartitionRoot)
+	if (resultRelInfo->ri_RootResultRelInfo)
 	{
+		ResultRelInfo *rootrel = resultRelInfo->ri_RootResultRelInfo;
 		TupleDesc	old_tupdesc;
 		AttrNumber *map;
 
-		root_relid = RelationGetRelid(resultRelInfo->ri_PartitionRoot);
-		tupdesc = RelationGetDescr(resultRelInfo->ri_PartitionRoot);
+		root_relid = RelationGetRelid(rootrel->ri_RelationDesc);
+		tupdesc = RelationGetDescr(rootrel->ri_RelationDesc);
 
 		old_tupdesc = RelationGetDescr(resultRelInfo->ri_RelationDesc);
 		/* a reverse map */
@@ -2950,15 +2924,16 @@ ExecPartitionCheckEmitError(ResultRelInfo *resultRelInfo,
 		if (map != NULL)
 			slot = execute_attr_map_slot(map, slot,
 										 MakeTupleTableSlot(tupdesc, &TTSOpsVirtual));
+		modifiedCols = bms_union(ExecGetInsertedCols(rootrel, estate),
+								 ExecGetUpdatedCols(rootrel, estate));
 	}
 	else
 	{
 		root_relid = RelationGetRelid(resultRelInfo->ri_RelationDesc);
 		tupdesc = RelationGetDescr(resultRelInfo->ri_RelationDesc);
+		modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
+								 ExecGetUpdatedCols(resultRelInfo, estate));
 	}
-
-	modifiedCols = bms_union(GetInsertedColumns(resultRelInfo, estate),
-							 GetUpdatedColumns(resultRelInfo, estate));
 
 	val_desc = ExecBuildSlotValueDescription(root_relid,
 											 slot,
@@ -2991,8 +2966,6 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 	TupleDesc	tupdesc = RelationGetDescr(rel);
 	TupleConstr *constr = tupdesc->constr;
 	Bitmapset  *modifiedCols;
-	Bitmapset  *insertedCols;
-	Bitmapset  *updatedCols;
 
 	Assert(constr || resultRelInfo->ri_PartitionCheck);
 
@@ -3018,12 +2991,12 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 				 * rowtype so that val_desc shown error message matches the
 				 * input tuple.
 				 */
-				if (resultRelInfo->ri_PartitionRoot)
+				if (resultRelInfo->ri_RootResultRelInfo)
 				{
+					ResultRelInfo *rootrel = resultRelInfo->ri_RootResultRelInfo;
 					AttrNumber *map;
 
-					rel = resultRelInfo->ri_PartitionRoot;
-					tupdesc = RelationGetDescr(rel);
+					tupdesc = RelationGetDescr(rootrel->ri_RelationDesc);
 					/* a reverse map */
 					map = convert_tuples_by_name_map_if_req(orig_tupdesc,
 															tupdesc,
@@ -3036,11 +3009,13 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 					if (map != NULL)
 						slot = execute_attr_map_slot(map, slot,
 													 MakeTupleTableSlot(tupdesc, &TTSOpsVirtual));
+					modifiedCols = bms_union(ExecGetInsertedCols(rootrel, estate),
+											 ExecGetUpdatedCols(rootrel, estate));
+					rel = rootrel->ri_RelationDesc;
 				}
-
-				insertedCols = GetInsertedColumns(resultRelInfo, estate);
-				updatedCols = GetUpdatedColumns(resultRelInfo, estate);
-				modifiedCols = bms_union(insertedCols, updatedCols);
+				else
+					modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
+											 ExecGetUpdatedCols(resultRelInfo, estate));
 				val_desc = ExecBuildSlotValueDescription(RelationGetRelid(rel),
 														 slot,
 														 tupdesc,
@@ -3067,13 +3042,13 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 			Relation	orig_rel = rel;
 
 			/* See the comment above. */
-			if (resultRelInfo->ri_PartitionRoot)
+			if (resultRelInfo->ri_RootResultRelInfo)
 			{
+				ResultRelInfo *rootrel = resultRelInfo->ri_RootResultRelInfo;
 				TupleDesc	old_tupdesc = RelationGetDescr(rel);
 				AttrNumber *map;
 
-				rel = resultRelInfo->ri_PartitionRoot;
-				tupdesc = RelationGetDescr(rel);
+				tupdesc = RelationGetDescr(rootrel->ri_RelationDesc);
 				/* a reverse map */
 				map = convert_tuples_by_name_map_if_req(old_tupdesc,
 														tupdesc,
@@ -3086,11 +3061,13 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 				if (map != NULL)
 					slot = execute_attr_map_slot(map, slot,
 												 MakeTupleTableSlot(tupdesc, &TTSOpsVirtual));
+				modifiedCols = bms_union(ExecGetInsertedCols(rootrel, estate),
+										 ExecGetUpdatedCols(rootrel, estate));
+				rel = rootrel->ri_RelationDesc;
 			}
-
-			insertedCols = GetInsertedColumns(resultRelInfo, estate);
-			updatedCols = GetUpdatedColumns(resultRelInfo, estate);
-			modifiedCols = bms_union(insertedCols, updatedCols);
+			else
+				modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
+										 ExecGetUpdatedCols(resultRelInfo, estate));
 			val_desc = ExecBuildSlotValueDescription(RelationGetRelid(rel),
 													 slot,
 													 tupdesc,
@@ -3159,8 +3136,6 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 		{
 			char	   *val_desc;
 			Bitmapset  *modifiedCols;
-			Bitmapset  *insertedCols;
-			Bitmapset  *updatedCols;
 
 			switch (wco->kind)
 			{
@@ -3175,13 +3150,13 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 					 */
 				case WCO_VIEW_CHECK:
 					/* See the comment in ExecConstraints(). */
-					if (resultRelInfo->ri_PartitionRoot)
+					if (resultRelInfo->ri_RootResultRelInfo)
 					{
+						ResultRelInfo *rootrel = resultRelInfo->ri_RootResultRelInfo;
 						TupleDesc	old_tupdesc = RelationGetDescr(rel);
 						AttrNumber *map;
 
-						rel = resultRelInfo->ri_PartitionRoot;
-						tupdesc = RelationGetDescr(rel);
+						tupdesc = RelationGetDescr(rootrel->ri_RelationDesc);
 						/* a reverse map */
 						map = convert_tuples_by_name_map_if_req(old_tupdesc,
 																tupdesc,
@@ -3194,11 +3169,14 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 						if (map != NULL)
 							slot = execute_attr_map_slot(map, slot,
 														 MakeTupleTableSlot(tupdesc, &TTSOpsVirtual));
-					}
 
-					insertedCols = GetInsertedColumns(resultRelInfo, estate);
-					updatedCols = GetUpdatedColumns(resultRelInfo, estate);
-					modifiedCols = bms_union(insertedCols, updatedCols);
+						modifiedCols = bms_union(ExecGetInsertedCols(rootrel, estate),
+												 ExecGetUpdatedCols(rootrel, estate));
+						rel = rootrel->ri_RelationDesc;
+					}
+					else
+						modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
+												 ExecGetUpdatedCols(resultRelInfo, estate));
 					val_desc = ExecBuildSlotValueDescription(RelationGetRelid(rel),
 															 slot,
 															 tupdesc,
@@ -3412,7 +3390,7 @@ ExecUpdateLockMode(EState *estate, ResultRelInfo *relinfo)
 	 * been modified, then we can use a weaker lock, allowing for better
 	 * concurrency.
 	 */
-	updatedCols = GetAllUpdatedColumns(relinfo, estate);
+	updatedCols = ExecGetAllUpdatedCols(relinfo, estate);
 	keyCols = RelationGetIndexAttrBitmap(relinfo->ri_RelationDesc,
 										 INDEX_ATTR_BITMAP_KEY);
 
@@ -3504,7 +3482,6 @@ ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist)
  * Check the updated version of a tuple to see if we want to process it under
  * READ COMMITTED rules.
  *
- *	estate - outer executor state data
  *	epqstate - state for EvalPlanQual rechecking
  *	relation - table containing tuple
  *	rti - rangetable index of table containing tuple
@@ -3522,8 +3499,8 @@ ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist)
  * NULL if we determine we shouldn't process the row.
  */
 TupleTableSlot *
-EvalPlanQual(EState *estate, EPQState *epqstate,
-			 Relation relation, Index rti, TupleTableSlot *inputslot)
+EvalPlanQual(EPQState *epqstate, Relation relation,
+			 Index rti, TupleTableSlot *inputslot)
 {
 	TupleTableSlot *slot;
 	TupleTableSlot *testslot;
@@ -3533,7 +3510,7 @@ EvalPlanQual(EState *estate, EPQState *epqstate,
 	/*
 	 * Need to run a recheck subquery.  Initialize or reinitialize EPQ state.
 	 */
-	EvalPlanQualBegin(epqstate, estate);
+	EvalPlanQualBegin(epqstate);
 
 	/*
 	 * Callers will often use the EvalPlanQualSlot to store the tuple to avoid
@@ -3542,11 +3519,6 @@ EvalPlanQual(EState *estate, EPQState *epqstate,
 	testslot = EvalPlanQualSlot(epqstate, relation, rti);
 	if (testslot != inputslot)
 		ExecCopySlot(testslot, inputslot);
-
-	/*
-	 * Fetch any non-locked source rows
-	 */
-	EvalPlanQualFetchRowMarks(epqstate);
 
 	/*
 	 * Run the EPQ query.  We assume it will return at most one tuple.
@@ -3581,17 +3553,36 @@ EvalPlanQual(EState *estate, EPQState *epqstate,
  * with EvalPlanQualSetPlan.
  */
 void
-EvalPlanQualInit(EPQState *epqstate, EState *estate,
+EvalPlanQualInit(EPQState *epqstate, EState *parentestate,
 				 Plan *subplan, List *auxrowmarks, int epqParam)
 {
-	/* Mark the EPQ state inactive */
-	epqstate->estate = NULL;
-	epqstate->planstate = NULL;
-	epqstate->origslot = NULL;
+	Index		rtsize = parentestate->es_range_table_size;
+
+	/* initialize data not changing over EPQState's lifetime */
+	epqstate->parentestate = parentestate;
+	epqstate->epqParam = epqParam;
+
+	/*
+	 * Allocate space to reference a slot for each potential rti - do so now
+	 * rather than in EvalPlanQualBegin(), as done for other dynamically
+	 * allocated resources, so EvalPlanQualSlot() can be used to hold tuples
+	 * that *may* need EPQ later, without forcing the overhead of
+	 * EvalPlanQualBegin().
+	 */
+	epqstate->tuple_table = NIL;
+	epqstate->relsubs_slot = (TupleTableSlot **)
+		palloc0(rtsize * sizeof(TupleTableSlot *));
+
 	/* ... and remember data that EvalPlanQualBegin will need */
 	epqstate->plan = subplan;
 	epqstate->arowMarks = auxrowmarks;
-	epqstate->epqParam = epqParam;
+
+	/* ... and mark the EPQ state inactive */
+	epqstate->origslot = NULL;
+	epqstate->recheckestate = NULL;
+	epqstate->recheckplanstate = NULL;
+	epqstate->relsubs_rowmark = NULL;
+	epqstate->relsubs_done = NULL;
 }
 
 /*
@@ -3612,6 +3603,9 @@ EvalPlanQualSetPlan(EPQState *epqstate, Plan *subplan, List *auxrowmarks)
 
 /*
  * Return, and create if necessary, a slot for an EPQ test tuple.
+ *
+ * Note this only requires EvalPlanQualInit() to have been called,
+ * EvalPlanQualBegin() is not necessary.
  */
 TupleTableSlot *
 EvalPlanQualSlot(EPQState *epqstate,
@@ -3619,23 +3613,16 @@ EvalPlanQualSlot(EPQState *epqstate,
 {
 	TupleTableSlot **slot;
 
-	Assert(rti > 0 && rti <= epqstate->estate->es_range_table_size);
-	slot = &epqstate->estate->es_epqTupleSlot[rti - 1];
+	Assert(relation);
+	Assert(rti > 0 && rti <= epqstate->parentestate->es_range_table_size);
+	slot = &epqstate->relsubs_slot[rti - 1];
 
 	if (*slot == NULL)
 	{
 		MemoryContext oldcontext;
 
-		oldcontext = MemoryContextSwitchTo(epqstate->estate->es_query_cxt);
-
-		if (relation)
-			*slot = table_slot_create(relation,
-									  &epqstate->estate->es_tupleTable);
-		else
-			*slot = ExecAllocTableSlot(&epqstate->estate->es_tupleTable,
-									   epqstate->origslot->tts_tupleDescriptor,
-									   &TTSOpsVirtual);
-
+		oldcontext = MemoryContextSwitchTo(epqstate->parentestate->es_query_cxt);
+		*slot = table_slot_create(relation, &epqstate->tuple_table);
 		MemoryContextSwitchTo(oldcontext);
 	}
 
@@ -3643,116 +3630,112 @@ EvalPlanQualSlot(EPQState *epqstate,
 }
 
 /*
- * Fetch the current row values for any non-locked relations that need
- * to be scanned by an EvalPlanQual operation.  origslot must have been set
- * to contain the current result row (top-level row) that we need to recheck.
+ * Fetch the current row value for a non-locked relation, identified by rti,
+ * that needs to be scanned by an EvalPlanQual operation.  origslot must have
+ * been set to contain the current result row (top-level row) that we need to
+ * recheck.  Returns true if a substitution tuple was found, false if not.
  */
-void
-EvalPlanQualFetchRowMarks(EPQState *epqstate)
+bool
+EvalPlanQualFetchRowMark(EPQState *epqstate, Index rti, TupleTableSlot *slot)
 {
-	ListCell   *l;
+	ExecAuxRowMark *earm = epqstate->relsubs_rowmark[rti - 1];
+	ExecRowMark *erm = earm->rowmark;
+	Datum		datum;
+	bool		isNull;
 
+	Assert(earm != NULL);
 	Assert(epqstate->origslot != NULL);
 
-	foreach(l, epqstate->arowMarks)
+	if (RowMarkRequiresRowShareLock(erm->markType))
+		elog(ERROR, "EvalPlanQual doesn't support locking rowmarks");
+
+	/* if child rel, must check whether it produced this row */
+	if (erm->rti != erm->prti)
 	{
-		ExecAuxRowMark *aerm = (ExecAuxRowMark *) lfirst(l);
-		ExecRowMark *erm = aerm->rowmark;
-		Datum		datum;
-		bool		isNull;
-		TupleTableSlot *slot;
+		Oid			tableoid;
 
-		if (RowMarkRequiresRowShareLock(erm->markType))
-			elog(ERROR, "EvalPlanQual doesn't support locking rowmarks");
+		datum = ExecGetJunkAttribute(epqstate->origslot,
+									 earm->toidAttNo,
+									 &isNull);
+		/* non-locked rels could be on the inside of outer joins */
+		if (isNull)
+			return false;
 
-		/* clear any leftover test tuple for this rel */
-		slot = EvalPlanQualSlot(epqstate, erm->relation, erm->rti);
-		ExecClearTuple(slot);
+		tableoid = DatumGetObjectId(datum);
 
-		/* if child rel, must check whether it produced this row */
-		if (erm->rti != erm->prti)
+		Assert(OidIsValid(erm->relid));
+		if (tableoid != erm->relid)
 		{
-			Oid			tableoid;
-
-			datum = ExecGetJunkAttribute(epqstate->origslot,
-										 aerm->toidAttNo,
-										 &isNull);
-			/* non-locked rels could be on the inside of outer joins */
-			if (isNull)
-				continue;
-			tableoid = DatumGetObjectId(datum);
-
-			Assert(OidIsValid(erm->relid));
-			if (tableoid != erm->relid)
-			{
-				/* this child is inactive right now */
-				continue;
-			}
+			/* this child is inactive right now */
+			return false;
 		}
+	}
 
-		if (erm->markType == ROW_MARK_REFERENCE)
+	if (erm->markType == ROW_MARK_REFERENCE)
+	{
+		Assert(erm->relation != NULL);
+
+		/* fetch the tuple's ctid */
+		datum = ExecGetJunkAttribute(epqstate->origslot,
+									 earm->ctidAttNo,
+									 &isNull);
+		/* non-locked rels could be on the inside of outer joins */
+		if (isNull)
+			return false;
+
+		/* fetch requests on foreign tables must be passed to their FDW */
+		if (erm->relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 		{
-			Assert(erm->relation != NULL);
+			FdwRoutine *fdwroutine;
+			bool		updated = false;
 
-			/* fetch the tuple's ctid */
-			datum = ExecGetJunkAttribute(epqstate->origslot,
-										 aerm->ctidAttNo,
-										 &isNull);
-			/* non-locked rels could be on the inside of outer joins */
-			if (isNull)
-				continue;
+			fdwroutine = GetFdwRoutineForRelation(erm->relation, false);
+			/* this should have been checked already, but let's be safe */
+			if (fdwroutine->RefetchForeignRow == NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot lock rows in foreign table \"%s\"",
+								RelationGetRelationName(erm->relation))));
 
-			/* fetch requests on foreign tables must be passed to their FDW */
-			if (erm->relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
-			{
-				FdwRoutine *fdwroutine;
-				bool		updated = false;
+			fdwroutine->RefetchForeignRow(epqstate->recheckestate,
+										  erm,
+										  datum,
+										  slot,
+										  &updated);
+			if (TupIsNull(slot))
+				elog(ERROR, "failed to fetch tuple for EvalPlanQual recheck");
 
-				fdwroutine = GetFdwRoutineForRelation(erm->relation, false);
-				/* this should have been checked already, but let's be safe */
-				if (fdwroutine->RefetchForeignRow == NULL)
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("cannot lock rows in foreign table \"%s\"",
-									RelationGetRelationName(erm->relation))));
-
-				fdwroutine->RefetchForeignRow(epqstate->estate,
-											  erm,
-											  datum,
-											  slot,
-											  &updated);
-				if (TupIsNull(slot))
-					elog(ERROR, "failed to fetch tuple for EvalPlanQual recheck");
-
-				/*
-				 * Ideally we'd insist on updated == false here, but that
-				 * assumes that FDWs can track that exactly, which they might
-				 * not be able to.  So just ignore the flag.
-				 */
-			}
-			else
-			{
-				/* ordinary table, fetch the tuple */
-				if (!table_tuple_fetch_row_version(erm->relation,
-												   (ItemPointer) DatumGetPointer(datum),
-												   SnapshotAny, slot))
-					elog(ERROR, "failed to fetch tuple for EvalPlanQual recheck");
-			}
+			/*
+			 * Ideally we'd insist on updated == false here, but that assumes
+			 * that FDWs can track that exactly, which they might not be able
+			 * to.  So just ignore the flag.
+			 */
+			return true;
 		}
 		else
 		{
-			Assert(erm->markType == ROW_MARK_COPY);
-
-			/* fetch the whole-row Var for the relation */
-			datum = ExecGetJunkAttribute(epqstate->origslot,
-										 aerm->wholeAttNo,
-										 &isNull);
-			/* non-locked rels could be on the inside of outer joins */
-			if (isNull)
-				continue;
-
-			ExecStoreHeapTupleDatum(datum, slot);
+			/* ordinary table, fetch the tuple */
+			if (!table_tuple_fetch_row_version(erm->relation,
+											   (ItemPointer) DatumGetPointer(datum),
+											   SnapshotAny, slot))
+				elog(ERROR, "failed to fetch tuple for EvalPlanQual recheck");
+			return true;
 		}
+	}
+	else
+	{
+		Assert(erm->markType == ROW_MARK_COPY);
+
+		/* fetch the whole-row Var for the relation */
+		datum = ExecGetJunkAttribute(epqstate->origslot,
+									 earm->wholeAttNo,
+									 &isNull);
+		/* non-locked rels could be on the inside of outer joins */
+		if (isNull)
+			return false;
+
+		ExecStoreHeapTupleDatum(datum, slot);
+		return true;
 	}
 }
 
@@ -3767,8 +3750,8 @@ EvalPlanQualNext(EPQState *epqstate)
 	MemoryContext oldcontext;
 	TupleTableSlot *slot;
 
-	oldcontext = MemoryContextSwitchTo(epqstate->estate->es_query_cxt);
-	slot = ExecProcNode(epqstate->planstate);
+	oldcontext = MemoryContextSwitchTo(epqstate->recheckestate->es_query_cxt);
+	slot = ExecProcNode(epqstate->recheckplanstate);
 	MemoryContextSwitchTo(oldcontext);
 
 	return slot;
@@ -3778,14 +3761,15 @@ EvalPlanQualNext(EPQState *epqstate)
  * Initialize or reset an EvalPlanQual state tree
  */
 void
-EvalPlanQualBegin(EPQState *epqstate, EState *parentestate)
+EvalPlanQualBegin(EPQState *epqstate)
 {
-	EState	   *estate = epqstate->estate;
+	EState	   *parentestate = epqstate->parentestate;
+	EState	   *recheckestate = epqstate->recheckestate;
 
-	if (estate == NULL)
+	if (recheckestate == NULL)
 	{
 		/* First time through, so create a child EState */
-		EvalPlanQualStart(epqstate, parentestate, epqstate->plan);
+		EvalPlanQualStart(epqstate, epqstate->plan);
 	}
 	else
 	{
@@ -3793,9 +3777,9 @@ EvalPlanQualBegin(EPQState *epqstate, EState *parentestate)
 		 * We already have a suitable child EPQ tree, so just reset it.
 		 */
 		Index		rtsize = parentestate->es_range_table_size;
-		PlanState  *planstate = epqstate->planstate;
+		PlanState  *rcplanstate = epqstate->recheckplanstate;
 
-		MemSet(estate->es_epqScanDone, 0, rtsize * sizeof(bool));
+		MemSet(epqstate->relsubs_done, 0, rtsize * sizeof(bool));
 
 		/* Recopy current values of parent parameters */
 		if (parentestate->es_plannedstmt->paramExecTypes != NIL)
@@ -3807,7 +3791,7 @@ EvalPlanQualBegin(EPQState *epqstate, EState *parentestate)
 			 * by the subplan, just in case they got reset since
 			 * EvalPlanQualStart (see comments therein).
 			 */
-			ExecSetParamPlanMulti(planstate->plan->extParam,
+			ExecSetParamPlanMulti(rcplanstate->plan->extParam,
 								  GetPerTupleExprContext(parentestate), NULL);
 
 			i = list_length(parentestate->es_plannedstmt->paramExecTypes);
@@ -3815,9 +3799,9 @@ EvalPlanQualBegin(EPQState *epqstate, EState *parentestate)
 			while (--i >= 0)
 			{
 				/* copy value if any, but not execPlan link */
-				estate->es_param_exec_vals[i].value =
+				recheckestate->es_param_exec_vals[i].value =
 					parentestate->es_param_exec_vals[i].value;
-				estate->es_param_exec_vals[i].isnull =
+				recheckestate->es_param_exec_vals[i].isnull =
 					parentestate->es_param_exec_vals[i].isnull;
 			}
 		}
@@ -3826,8 +3810,8 @@ EvalPlanQualBegin(EPQState *epqstate, EState *parentestate)
 		 * Mark child plan tree as needing rescan at all scan nodes.  The
 		 * first ExecProcNode will take care of actually doing the rescan.
 		 */
-		planstate->chgParam = bms_add_member(planstate->chgParam,
-											 epqstate->epqParam);
+		rcplanstate->chgParam = bms_add_member(rcplanstate->chgParam,
+											   epqstate->epqParam);
 	}
 }
 
@@ -3838,18 +3822,20 @@ EvalPlanQualBegin(EPQState *epqstate, EState *parentestate)
  * the top-level estate rather than initializing it fresh.
  */
 static void
-EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
+EvalPlanQualStart(EPQState *epqstate, Plan *planTree)
 {
-	EState	   *estate;
-	Index		rtsize;
+	EState	   *parentestate = epqstate->parentestate;
+	Index		rtsize = parentestate->es_range_table_size;
+	EState	   *rcestate;
 	MemoryContext oldcontext;
 	ListCell   *l;
 
-	rtsize = parentestate->es_range_table_size;
+	epqstate->recheckestate = rcestate = CreateExecutorState();
 
-	epqstate->estate = estate = CreateExecutorState();
+	oldcontext = MemoryContextSwitchTo(rcestate->es_query_cxt);
 
-	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
+	/* signal that this is an EState for executing EPQ */
+	rcestate->es_epq_active = epqstate;
 
 	/*
 	 * Child EPQ EStates share the parent's copy of unchanging state such as
@@ -3865,17 +3851,18 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 	 * state must *not* propagate back to the parent.  (For one thing, the
 	 * pointed-to data is in a memory context that won't last long enough.)
 	 */
-	estate->es_direction = ForwardScanDirection;
-	estate->es_snapshot = parentestate->es_snapshot;
-	estate->es_crosscheck_snapshot = parentestate->es_crosscheck_snapshot;
-	estate->es_range_table = parentestate->es_range_table;
-	estate->es_range_table_array = parentestate->es_range_table_array;
-	estate->es_range_table_size = parentestate->es_range_table_size;
-	estate->es_relations = parentestate->es_relations;
-	estate->es_rowmarks = parentestate->es_rowmarks;
-	estate->es_plannedstmt = parentestate->es_plannedstmt;
-	estate->es_junkFilter = parentestate->es_junkFilter;
-	estate->es_output_cid = parentestate->es_output_cid;
+	rcestate->es_direction = ForwardScanDirection;
+	rcestate->es_snapshot = parentestate->es_snapshot;
+	rcestate->es_crosscheck_snapshot = parentestate->es_crosscheck_snapshot;
+	rcestate->es_range_table = parentestate->es_range_table;
+	rcestate->es_range_table_array = parentestate->es_range_table_array;
+	rcestate->es_range_table_size = parentestate->es_range_table_size;
+	rcestate->es_relations = parentestate->es_relations;
+	rcestate->es_queryEnv = parentestate->es_queryEnv;
+	rcestate->es_rowmarks = parentestate->es_rowmarks;
+	rcestate->es_plannedstmt = parentestate->es_plannedstmt;
+	rcestate->es_junkFilter = parentestate->es_junkFilter;
+	rcestate->es_output_cid = parentestate->es_output_cid;
 	if (parentestate->es_num_result_relations > 0)
 	{
 		int			numResultRelations = parentestate->es_num_result_relations;
@@ -3886,8 +3873,8 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 			palloc(numResultRelations * sizeof(ResultRelInfo));
 		memcpy(resultRelInfos, parentestate->es_result_relations,
 			   numResultRelations * sizeof(ResultRelInfo));
-		estate->es_result_relations = resultRelInfos;
-		estate->es_num_result_relations = numResultRelations;
+		rcestate->es_result_relations = resultRelInfos;
+		rcestate->es_num_result_relations = numResultRelations;
 
 		/* Also transfer partitioned root result relations. */
 		if (numRootResultRels > 0)
@@ -3896,14 +3883,14 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 				palloc(numRootResultRels * sizeof(ResultRelInfo));
 			memcpy(resultRelInfos, parentestate->es_root_result_relations,
 				   numRootResultRels * sizeof(ResultRelInfo));
-			estate->es_root_result_relations = resultRelInfos;
-			estate->es_num_root_result_relations = numRootResultRels;
+			rcestate->es_root_result_relations = resultRelInfos;
+			rcestate->es_num_root_result_relations = numRootResultRels;
 		}
 	}
 	/* es_result_relation_info must NOT be copied */
 	/* es_trig_target_relations must NOT be copied */
-	estate->es_top_eflags = parentestate->es_top_eflags;
-	estate->es_instrument = parentestate->es_instrument;
+	rcestate->es_top_eflags = parentestate->es_top_eflags;
+	rcestate->es_instrument = parentestate->es_instrument;
 	/* es_auxmodifytables must NOT be copied */
 
 	/*
@@ -3912,7 +3899,7 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 	 * from the parent, so as to have access to any param values that were
 	 * already set from other parts of the parent's plan tree.
 	 */
-	estate->es_param_list_info = parentestate->es_param_list_info;
+	rcestate->es_param_list_info = parentestate->es_param_list_info;
 	if (parentestate->es_plannedstmt->paramExecTypes != NIL)
 	{
 		int			i;
@@ -3940,40 +3927,18 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 
 		/* now make the internal param workspace ... */
 		i = list_length(parentestate->es_plannedstmt->paramExecTypes);
-		estate->es_param_exec_vals = (ParamExecData *)
+		rcestate->es_param_exec_vals = (ParamExecData *)
 			palloc0(i * sizeof(ParamExecData));
 		/* ... and copy down all values, whether really needed or not */
 		while (--i >= 0)
 		{
 			/* copy value if any, but not execPlan link */
-			estate->es_param_exec_vals[i].value =
+			rcestate->es_param_exec_vals[i].value =
 				parentestate->es_param_exec_vals[i].value;
-			estate->es_param_exec_vals[i].isnull =
+			rcestate->es_param_exec_vals[i].isnull =
 				parentestate->es_param_exec_vals[i].isnull;
 		}
 	}
-
-	/*
-	 * Each EState must have its own es_epqScanDone state, but if we have
-	 * nested EPQ checks they should share es_epqTupleSlot arrays.  This
-	 * allows sub-rechecks to inherit the values being examined by an outer
-	 * recheck.
-	 */
-	estate->es_epqScanDone = (bool *) palloc0(rtsize * sizeof(bool));
-	if (parentestate->es_epqTupleSlot != NULL)
-	{
-		estate->es_epqTupleSlot = parentestate->es_epqTupleSlot;
-	}
-	else
-	{
-		estate->es_epqTupleSlot = (TupleTableSlot **)
-			palloc0(rtsize * sizeof(TupleTableSlot *));
-	}
-
-	/*
-	 * Each estate also has its own tuple table.
-	 */
-	estate->es_tupleTable = NIL;
 
 	/*
 	 * Initialize private state information for each SubPlan.  We must do this
@@ -3983,23 +3948,43 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 	 * run, but since it's not easy to tell which, we just initialize them
 	 * all.
 	 */
-	Assert(estate->es_subplanstates == NIL);
+	Assert(rcestate->es_subplanstates == NIL);
 	foreach(l, parentestate->es_plannedstmt->subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(l);
 		PlanState  *subplanstate;
 
-		subplanstate = ExecInitNode(subplan, estate, 0);
-		estate->es_subplanstates = lappend(estate->es_subplanstates,
-										   subplanstate);
+		subplanstate = ExecInitNode(subplan, rcestate, 0);
+		rcestate->es_subplanstates = lappend(rcestate->es_subplanstates,
+											 subplanstate);
 	}
+
+	/*
+	 * Build an RTI indexed array of rowmarks, so that
+	 * EvalPlanQualFetchRowMark() can efficiently access the to be fetched
+	 * rowmark.
+	 */
+	epqstate->relsubs_rowmark = (ExecAuxRowMark **)
+		palloc0(rtsize * sizeof(ExecAuxRowMark *));
+	foreach(l, epqstate->arowMarks)
+	{
+		ExecAuxRowMark *earm = (ExecAuxRowMark *) lfirst(l);
+
+		epqstate->relsubs_rowmark[earm->rowmark->rti - 1] = earm;
+	}
+
+	/*
+	 * Initialize per-relation EPQ tuple states to not-fetched.
+	 */
+	epqstate->relsubs_done = (bool *)
+		palloc0(rtsize * sizeof(bool));
 
 	/*
 	 * Initialize the private state information for all the nodes in the part
 	 * of the plan tree we need to run.  This opens files, allocates storage
 	 * and leaves us ready to start processing tuples.
 	 */
-	epqstate->planstate = ExecInitNode(planTree, estate, 0);
+	epqstate->recheckplanstate = ExecInitNode(planTree, rcestate, 0);
 
 	MemoryContextSwitchTo(oldcontext);
 }
@@ -4017,16 +4002,32 @@ EvalPlanQualStart(EPQState *epqstate, EState *parentestate, Plan *planTree)
 void
 EvalPlanQualEnd(EPQState *epqstate)
 {
-	EState	   *estate = epqstate->estate;
+	EState	   *estate = epqstate->recheckestate;
+	Index		rtsize;
 	MemoryContext oldcontext;
 	ListCell   *l;
 
+	rtsize = epqstate->parentestate->es_range_table_size;
+
+	/*
+	 * We may have a tuple table, even if EPQ wasn't started, because we allow
+	 * use of EvalPlanQualSlot() without calling EvalPlanQualBegin().
+	 */
+	if (epqstate->tuple_table != NIL)
+	{
+		memset(epqstate->relsubs_slot, 0,
+			   rtsize * sizeof(TupleTableSlot *));
+		ExecResetTupleTable(epqstate->tuple_table, true);
+		epqstate->tuple_table = NIL;
+	}
+
+	/* EPQ wasn't started, nothing further to do */
 	if (estate == NULL)
-		return;					/* idle, so nothing to do */
+		return;
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
 
-	ExecEndNode(epqstate->planstate);
+	ExecEndNode(epqstate->recheckplanstate);
 
 	foreach(l, estate->es_subplanstates)
 	{
@@ -4035,7 +4036,7 @@ EvalPlanQualEnd(EPQState *epqstate)
 		ExecEndNode(subplanstate);
 	}
 
-	/* throw away the per-estate tuple table */
+	/* throw away the per-estate tuple table, some node may have used it */
 	ExecResetTupleTable(estate->es_tupleTable, false);
 
 	/* close any trigger target relations attached to this EState */
@@ -4046,9 +4047,11 @@ EvalPlanQualEnd(EPQState *epqstate)
 	FreeExecutorState(estate);
 
 	/* Mark EPQState idle */
-	epqstate->estate = NULL;
-	epqstate->planstate = NULL;
 	epqstate->origslot = NULL;
+	epqstate->recheckestate = NULL;
+	epqstate->recheckplanstate = NULL;
+	epqstate->relsubs_rowmark = NULL;
+	epqstate->relsubs_done = NULL;
 }
 
 /* Use the given attribute map to convert an attribute number in the
@@ -4153,4 +4156,14 @@ AdjustReplicatedTableCounts(EState *estate)
 
 	if (containReplicatedTable)
 		estate->es_processed = estate->es_processed / numsegments;
+}
+
+/*
+ * Greenplum specific code:
+ * For details, see comments at the definition of static var executor_run_nesting_level
+ */
+bool
+already_under_executor_run(void)
+{
+	return executor_run_nesting_level > 0;
 }

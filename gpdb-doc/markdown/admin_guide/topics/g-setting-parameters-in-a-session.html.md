@@ -16,5 +16,5 @@ The parameter setting is valid for the rest of that session or until you issue a
 
 Settings at the session level override those at the role level.
 
-**Parent topic:**[Setting a Master Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
+**Parent topic:** [Setting a Coordinator Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
 

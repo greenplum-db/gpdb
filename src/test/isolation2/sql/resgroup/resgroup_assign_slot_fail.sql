@@ -5,7 +5,7 @@ DROP ROLE IF EXISTS role_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=10);
+CREATE RESOURCE GROUP rg_test WITH (concurrency=2, cpu_hard_quota_limit=10);
 CREATE ROLE role_test RESOURCE GROUP rg_test;
 
 1: SET ROLE role_test;

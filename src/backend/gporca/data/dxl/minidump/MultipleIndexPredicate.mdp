@@ -75,7 +75,7 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="103027,102074,102146,102120,103001,103014,103015,103022,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -933,7 +933,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.74486.1.0" Name="foo" Rows="83527200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.74486.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="1,0" Keys="54,52" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.74486.1.0" Name="foo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="1,0" Keys="54,52">
         <dxl:Columns>
           <dxl:Column Name="pl" Attno="1" Mdid="0.1043.1.0" TypeModifier="10" Nullable="false" ColWidth="7">
             <dxl:DefaultValue/>
@@ -1108,7 +1108,6 @@
           <dxl:IndexInfo Mdid="0.74775.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.74789.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.74747.1.0" Name="idx_foo_ad" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="9,4" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54">
@@ -1205,7 +1204,7 @@
           </dxl:ArrayComp>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.74486.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.74486.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="pl" TypeMdid="0.1043.1.0" TypeModifier="10" ColWidth="7"/>
               <dxl:Column ColId="2" Attno="2" ColName="pcd" TypeMdid="0.1114.1.0" ColWidth="8"/>
@@ -1645,7 +1644,7 @@
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.74747.1.0" IndexName="idx_foo_ad"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.74486.1.0" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.74486.1.0" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="pl" TypeMdid="0.1043.1.0" TypeModifier="10" ColWidth="7"/>
               <dxl:Column ColId="1" Attno="2" ColName="pcd" TypeMdid="0.1114.1.0" ColWidth="8"/>

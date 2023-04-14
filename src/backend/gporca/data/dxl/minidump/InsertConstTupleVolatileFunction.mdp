@@ -143,7 +143,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.319018.1.1" Name="delete_test" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;8,2">
+      <dxl:Relation Mdid="6.319018.1.1" Name="delete_test" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;8,2">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue>
@@ -182,7 +182,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.319042.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -193,7 +192,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="2,3">
-        <dxl:TableDescriptor Mdid="0.319018.1.1" TableName="delete_test">
+        <dxl:TableDescriptor Mdid="6.319018.1.1" TableName="delete_test">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="a" TypeMdid="0.23.1.0"/>
@@ -231,9 +230,9 @@
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLInsert Columns="1,2" ActionCol="3" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
+      <dxl:DMLInsert Columns="1,2" ActionCol="3" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.023495" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.023595" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -244,7 +243,7 @@
             <dxl:Ident ColId="2" ColName="a" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.319018.1.1" TableName="delete_test">
+        <dxl:TableDescriptor Mdid="6.319018.1.1" TableName="delete_test">
           <dxl:Columns>
             <dxl:Column ColId="4" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="5" Attno="2" ColName="a" TypeMdid="0.23.1.0"/>
@@ -259,7 +258,7 @@
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="-1" OutputSegments="0,1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000058" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000158" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="id">
@@ -281,7 +280,7 @@
           </dxl:HashExprList>
           <dxl:Assert ErrorCode="23502">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000025" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000125" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="id">
@@ -305,7 +304,7 @@
             </dxl:AssertConstraintList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000013" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000113" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="3" Alias="ColRef_0003">

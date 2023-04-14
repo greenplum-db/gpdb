@@ -28,11 +28,11 @@
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="0.16385.1.0" Name="src" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16385.1.0" Name="src" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="18">
             <dxl:DefaultValue/>
@@ -60,7 +60,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -197,7 +196,7 @@
       </dxl:OutputColumns>
       <dxl:CTEList/>
       <dxl:LogicalInsert InsertColumns="4">
-        <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="src">
+        <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="src">
           <dxl:Columns>
             <dxl:Column ColId="5" Attno="1" ColName="f1" TypeMdid="0.25.1.0" ColWidth="18"/>
             <dxl:Column ColId="6" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -251,7 +250,7 @@
       </dxl:LogicalInsert>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="3">
-      <dxl:DMLInsert Columns="3" ActionCol="5" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
+      <dxl:DMLInsert Columns="3" ActionCol="5" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.015659" Rows="1.000000" Width="8"/>
         </dxl:Properties>
@@ -261,7 +260,7 @@
             <dxl:Ident ColId="3" ColName="f1" TypeMdid="0.25.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="src">
+        <dxl:TableDescriptor Mdid="6.16385.1.0" TableName="src">
           <dxl:Columns>
             <dxl:Column ColId="6" Attno="1" ColName="f1" TypeMdid="0.25.1.0" ColWidth="18"/>
             <dxl:Column ColId="7" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

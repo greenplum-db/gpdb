@@ -31,12 +31,12 @@
 #include "postgres.h"
 
 #include "access/tupmacs.h"
+#include "common/hashfn.h"
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
-#include "utils/hashutils.h"
 #include "utils/int8.h"
 #include "utils/lsyscache.h"
 #include "utils/rangetypes.h"
@@ -1431,13 +1431,15 @@ daterange_canonical(PG_FUNCTION_ARGS)
 	if (empty)
 		PG_RETURN_RANGE_P(r);
 
-	if (!lower.infinite && !lower.inclusive)
+	if (!lower.infinite && !DATE_NOT_FINITE(DatumGetDateADT(lower.val)) &&
+		!lower.inclusive)
 	{
 		lower.val = DirectFunctionCall2(date_pli, lower.val, Int32GetDatum(1));
 		lower.inclusive = true;
 	}
 
-	if (!upper.infinite && upper.inclusive)
+	if (!upper.infinite && !DATE_NOT_FINITE(DatumGetDateADT(upper.val)) &&
+		upper.inclusive)
 	{
 		upper.val = DirectFunctionCall2(date_pli, upper.val, Int32GetDatum(1));
 		upper.inclusive = false;

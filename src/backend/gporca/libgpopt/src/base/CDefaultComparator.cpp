@@ -124,7 +124,11 @@ CDefaultComparator::FUseInternalEvaluator(const IDatum *datum1,
 		return true;
 	}
 
-	// GPDB_12_MERGE_FIXME: Throw an exception when result = false and can_use_external_evaluator = false
+	if (!*can_use_external_evaluator)
+	{
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
+				   GPOS_WSZ_LIT("Unsupported comparator evaluator for types"));
+	}
 
 	return false;
 }

@@ -2755,7 +2755,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.641613.1.0" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
+      <dxl:Relation Mdid="6.641613.1.0" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2884,10 +2884,9 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.642410.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.641665.1.0" Name="web_site" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
+      <dxl:Relation Mdid="6.641665.1.0" Name="web_site" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
         <dxl:Columns>
           <dxl:Column Name="web_site_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2992,7 +2991,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.642441.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Index Mdid="0.642441.1.0" Name="web_site_pkey" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32">
@@ -8647,7 +8645,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.641665.1.1" Name="web_site" Rows="44.000000" EmptyRelation="false"/>
       <dxl:RelationStatistics Mdid="2.641613.1.1" Name="web_sales" Rows="184296000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.641665.1.1" Name="web_site" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
+      <dxl:Relation Mdid="6.641665.1.1" Name="web_site" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
         <dxl:Columns>
           <dxl:Column Name="web_site_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -8752,10 +8750,9 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.642441.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.641613.1.1" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
+      <dxl:Relation Mdid="6.641613.1.1" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -8884,7 +8881,6 @@
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.642410.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.641665.1.1.27" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -11602,7 +11598,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.641613.1.1" TableName="web_sales">
+          <dxl:TableDescriptor Mdid="6.641613.1.1" TableName="web_sales">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -11649,7 +11645,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.641665.1.1" TableName="web_site">
+          <dxl:TableDescriptor Mdid="6.641665.1.1" TableName="web_site">
             <dxl:Columns>
               <dxl:Column ColId="42" Attno="1" ColName="web_site_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="43" Attno="2" ColName="web_site_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -12191,7 +12187,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.641613.1.1" TableName="web_sales">
+            <dxl:TableDescriptor Mdid="6.641613.1.1" TableName="web_sales">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -12413,7 +12409,7 @@
                   <dxl:ConstValue TypeMdid="0.1042.1.0" Value="AAAAB3ByaQ==" LintValue="650191652"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.641665.1.1" TableName="web_site">
+              <dxl:TableDescriptor Mdid="6.641665.1.1" TableName="web_site">
                 <dxl:Columns>
                   <dxl:Column ColId="41" Attno="1" ColName="web_site_sk" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="42" Attno="2" ColName="web_site_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

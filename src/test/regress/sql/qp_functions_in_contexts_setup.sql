@@ -332,3 +332,9 @@ UPDATE bar SET d = d+1 WHERE c = $1;
 RETURN $1 + 1;
 END
 $$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+
+CREATE FUNCTION func_nosql_record_imm(x int) RETURNS record as $$
+BEGIN
+    return (x, x + 1);
+END
+$$ LANGUAGE plpgsql NO SQL IMMUTABLE;

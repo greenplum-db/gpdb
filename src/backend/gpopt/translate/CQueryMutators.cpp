@@ -575,7 +575,8 @@ CQueryMutators::GetTargetEntryForAggExpr(CMemoryPool *mp,
 	{
 		Aggref *aggref = (Aggref *) node;
 
-		CMDIdGPDB *agg_mdid = GPOS_NEW(mp) CMDIdGPDB(aggref->aggfnoid);
+		CMDIdGPDB *agg_mdid =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, aggref->aggfnoid);
 		const IMDAggregate *md_agg = md_accessor->RetrieveAgg(agg_mdid);
 		agg_mdid->Release();
 
@@ -836,11 +837,15 @@ CQueryMutators::MakeVarInDerivedTable(Node *node,
 	const ULONG attno = gpdb::ListLength(context->m_lower_table_tlist) + 1;
 	TargetEntry *tle = nullptr;
 	if (IsA(node, Aggref) || IsA(node, GroupingFunc))
+	{
 		tle = GetTargetEntryForAggExpr(context->m_mp, context->m_mda, node,
 									   attno);
+	}
 	else if (IsA(node, Var))
+	{
 		tle = gpdb::MakeTargetEntry((Expr *) node, (AttrNumber) attno, nullptr,
 									false);
+	}
 
 	context->m_lower_table_tlist =
 		gpdb::LAppend(context->m_lower_table_tlist, tle);
@@ -1558,8 +1563,8 @@ CQueryMutators::RunWindowProjListMutator(Node *node,
 		GPOS_ASSERT(IsA(window_func, WindowFunc));
 
 		// get the function name and create a new target entry for window_func
-		CMDIdGPDB *mdid_func =
-			GPOS_NEW(context->m_mp) CMDIdGPDB(window_func->winfnoid);
+		CMDIdGPDB *mdid_func = GPOS_NEW(context->m_mp)
+			CMDIdGPDB(IMDId::EmdidGeneral, window_func->winfnoid);
 		const CWStringConst *str =
 			CMDAccessorUtils::PstrWindowFuncName(context->m_mda, mdid_func);
 		mdid_func->Release();

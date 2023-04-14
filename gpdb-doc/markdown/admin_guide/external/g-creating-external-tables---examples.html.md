@@ -4,7 +4,7 @@ title: Examples for Creating External Tables
 
 These examples show how to define external data with different protocols. Each `CREATE EXTERNAL TABLE` command can contain only one protocol.
 
-**Note:** When using IPv6, always enclose the numeric IP addresses in square brackets.
+> **Note** When using IPv6, always enclose the numeric IP addresses in square brackets.
 
 Start gpfdist before you create external tables with the gpfdist protocol. The following code starts the gpfdist file server program in the background on port *8081* serving files from directory /var/data/staging. The logs are saved in /home/gpadmin/log.
 
@@ -34,5 +34,5 @@ gpfdist -p 8081 -d /var/data/staging -l /home/gpadmin/log &
 -   **[Example 10—Readable and Writable External Tables with XML Transformations](../external/g-example-10-readable-and-writable-external-tables-with-xml-transformations.html)**  
 
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

@@ -6,7 +6,7 @@ A Greenplum Database system is a single instance of Greenplum Database. There ca
 
 There can be multiple databases in a Greenplum Database system. This is different from some database management systems \(such as Oracle\) where the database instance *is* the database. Although you can create many databases in a Greenplum system, client programs can connect to and access only one database at a time — you cannot cross-query between databases.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="topic3"></a>About Template and Default Databases 
 
@@ -31,14 +31,14 @@ To create a database, you must have privileges to create a database or be a Gree
 You can also use the client program `createdb` to create a database. For example, running the following command in a command line terminal connects to Greenplum Database using the provided host name and port and creates a database named *mydatabase*:
 
 ```
-$ createdb -h masterhost -p 5432 mydatabase
+$ createdb -h coordinator_host -p 5432 mydatabase
 ```
 
 The host name and port must match the host name and port of the installed Greenplum Database system.
 
 Some objects, such as roles, are shared by all the databases in a Greenplum Database system. Other objects, such as tables that you create, are known only in the database in which you create them.
 
-**Warning:** The `CREATE DATABASE` command is not transactional.
+> **Caution** The `CREATE DATABASE` command is not transactional.
 
 ### <a id="topic5"></a>Cloning a Database 
 
@@ -86,10 +86,10 @@ The `DROP DATABASE` command drops \(or deletes\) a database. It removes the syst
 You can also use the client program `dropdb` to drop a database. For example, the following command connects to Greenplum Database using the provided host name and port and drops the database *mydatabase*:
 
 ```
-$ dropdb -h masterhost -p 5432 mydatabase
+$ dropdb -h coordinator_host -p 5432 mydatabase
 ```
 
-**Warning:** Dropping a database cannot be undone.
+> **Caution** Dropping a database cannot be undone.
 
 The `DROP DATABASE` command is not transactional.
 

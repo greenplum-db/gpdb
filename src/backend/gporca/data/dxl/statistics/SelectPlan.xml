@@ -33,7 +33,7 @@
             <dxl:ConstValue TypeMdid="0.16.1.0" ConstNull="false" ConstByValue="true" Value="AQ=="/>
           </dxl:Comparison>
         </dxl:Filter>
-        <dxl:TableDescriptor Mdid="0.1234.1.1" TableName="T">
+        <dxl:TableDescriptor Mdid="6.1234.1.1" TableName="T">
           <dxl:Columns>
             <dxl:Column ColId="0" Attno="1" ColName="A" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="1" Attno="2" ColName="B" TypeMdid="0.16.1.0"/>

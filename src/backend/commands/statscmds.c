@@ -132,6 +132,13 @@ CreateStatistics(CreateStatsStmt *stmt)
 		if (!pg_class_ownercheck(RelationGetRelid(rel), stxowner))
 			aclcheck_error(ACLCHECK_NOT_OWNER, get_relkind_objtype(rel->rd_rel->relkind),
 						   RelationGetRelationName(rel));
+
+		/* Creating statistics on system catalogs is not allowed */
+		if (!allowSystemTableMods && IsSystemRelation(rel))
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("permission denied: \"%s\" is a system catalog",
+							RelationGetRelationName(rel))));
 	}
 
 	Assert(rel);
@@ -166,6 +173,10 @@ CreateStatistics(CreateStatsStmt *stmt)
 	{
 		if (stmt->if_not_exists)
 		{
+			/*
+			 * Since stats objects aren't members of extensions (see comments
+			 * below), no need for checkMembershipInCurrentExtension here.
+			 */
 			ereport(NOTICE,
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
 					 errmsg("statistics object \"%s\" already exists, skipping",
@@ -485,6 +496,10 @@ RemoveStatisticsById(Oid statsOid)
  *
  * For MCV lists that's not the case, as those statistics store the datums
  * internally. In this case we simply reset the statistics value to NULL.
+ *
+ * Note that "type change" includes collation change, which means we can rely
+ * on the MCV list being consistent with the collation info in pg_attribute
+ * during estimation.
  */
 void
 UpdateStatisticsForTypeChange(Oid statsOid, Oid relationOid, int attnum,

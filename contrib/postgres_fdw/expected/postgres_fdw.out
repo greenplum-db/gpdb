@@ -132,8 +132,8 @@ CREATE FOREIGN TABLE ft6 (
 -- ===================================================================
 -- tests for validator
 -- ===================================================================
--- requiressl, krbsrvname and gsslib are omitted because they depend on
--- configure options
+-- requiressl and some other parameters are omitted because
+-- valid values for them depend on configure options
 ALTER SERVER testserver1 OPTIONS (
 	use_remote_estimate 'false',
 	updatable 'true',
@@ -158,10 +158,10 @@ ALTER SERVER testserver1 OPTIONS (
 	sslcert 'value',
 	sslkey 'value',
 	sslrootcert 'value',
-	sslcrl 'value'
+	sslcrl 'value',
 	--requirepeer 'value',
-	-- krbsrvname 'value',
-	-- gsslib 'value',
+	krbsrvname 'value',
+	gsslib 'value'
 	--replication 'value'
 );
 -- Error, invalid list syntax
@@ -1032,6 +1032,26 @@ SELECT * FROM ft1 t1 WHERE t1.c1 === t1.c2 order by t1.c2 limit 1;
  c1 | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
 ----+----+-------+------------------------------+--------------------------+----+------------+-----
   1 |  1 | 00001 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
+(1 row)
+
+-- check schema-qualification of regconfig constant
+CREATE TEXT SEARCH CONFIGURATION public.custom_search
+  (COPY = pg_catalog.english);
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, to_tsvector('custom_search'::regconfig, c3) FROM ft1
+WHERE c1 = 642 AND length(to_tsvector('custom_search'::regconfig, c3)) > 0;
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.ft1
+   Output: c1, to_tsvector('custom_search'::regconfig, c3)
+   Remote SQL: SELECT "C 1", c3 FROM "S 1"."T 1" WHERE (("C 1" = 642)) AND ((length(to_tsvector('public.custom_search'::regconfig, c3)) > 0))
+(3 rows)
+
+SELECT c1, to_tsvector('custom_search'::regconfig, c3) FROM ft1
+WHERE c1 = 642 AND length(to_tsvector('custom_search'::regconfig, c3)) > 0;
+ c1  | to_tsvector 
+-----+-------------
+ 642 | '00642':1
 (1 row)
 
 -- ===================================================================
@@ -3130,6 +3150,19 @@ select array_agg(c1 order by c1 using operator(public.<^)) from ft2 where c2 = 6
          Remote SQL: SELECT "C 1", c2 FROM "S 1"."T 1" WHERE (("C 1" < 100)) AND ((c2 = 6))
 (6 rows)
 
+-- This should not be pushed either.
+explain (verbose, costs off)
+select * from ft2 order by c1 using operator(public.<^);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Sort
+   Output: c1, c2, c3, c4, c5, c6, c7, c8
+   Sort Key: ft2.c1 USING <^
+   ->  Foreign Scan on public.ft2
+         Output: c1, c2, c3, c4, c5, c6, c7, c8
+         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
+(6 rows)
+
 -- Update local stats on ft2
 ANALYZE ft2;
 -- Add into extension
@@ -3156,6 +3189,16 @@ select array_agg(c1 order by c1 using operator(public.<^)) from ft2 where c2 = 6
 --------------------------------
  {6,16,26,36,46,56,66,76,86,96}
 (1 row)
+
+-- This should be pushed too.
+explain (verbose, costs off)
+select * from ft2 order by c1 using operator(public.<^);
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.ft2
+   Output: c1, c2, c3, c4, c5, c6, c7, c8
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" ORDER BY "C 1" USING OPERATOR(public.<^) NULLS LAST
+(3 rows)
 
 -- Remove from extension
 alter extension postgres_fdw drop operator class my_op_class using btree;
@@ -4056,18 +4099,23 @@ DROP TABLE reind_fdw_parent;
 -- conversion error
 -- ===================================================================
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE int;
-SELECT * FROM ft1 WHERE c1 = 1;  -- ERROR
+SELECT * FROM ft1 ftx(x1,x2,x3,x4,x5,x6,x7,x8) WHERE x1 = 1;  -- ERROR
 ERROR:  invalid input syntax for type integer: "foo"
-CONTEXT:  column "c8" of foreign table "ft1"
-SELECT  ft1.c1,  ft2.c2, ft1.c8 FROM ft1, ft2 WHERE ft1.c1 = ft2.c1 AND ft1.c1 = 1; -- ERROR
+CONTEXT:  column "x8" of foreign table "ftx"
+SELECT ftx.x1, ft2.c2, ftx.x8 FROM ft1 ftx(x1,x2,x3,x4,x5,x6,x7,x8), ft2
+  WHERE ftx.x1 = ft2.c1 AND ftx.x1 = 1; -- ERROR
 ERROR:  invalid input syntax for type integer: "foo"
-CONTEXT:  column "c8" of foreign table "ft1"
-SELECT  ft1.c1,  ft2.c2, ft1 FROM ft1, ft2 WHERE ft1.c1 = ft2.c1 AND ft1.c1 = 1; -- ERROR
+CONTEXT:  column "x8" of foreign table "ftx"
+SELECT ftx.x1, ft2.c2, ftx FROM ft1 ftx(x1,x2,x3,x4,x5,x6,x7,x8), ft2
+  WHERE ftx.x1 = ft2.c1 AND ftx.x1 = 1; -- ERROR
 ERROR:  invalid input syntax for type integer: "foo"
-CONTEXT:  whole-row reference to foreign table "ft1"
+CONTEXT:  whole-row reference to foreign table "ftx"
 SELECT sum(c2), array_agg(c8) FROM ft1 GROUP BY c8; -- ERROR
 ERROR:  invalid input syntax for type integer: "foo"
 CONTEXT:  processing expression at position 2 in select list
+ANALYZE ft1; -- ERROR
+ERROR:  invalid input syntax for type integer: "foo"
+CONTEXT:  column "c8" of foreign table "ft1"
 ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE user_enum;
 -- ===================================================================
 -- subtransaction
@@ -5458,6 +5506,37 @@ DELETE FROM ft2
 (10 rows)
 
 DELETE FROM ft2 WHERE ft2.c1 > 1200;
+-- Test UPDATE with a MULTIEXPR sub-select
+-- (maybe someday this'll be remotely executable, but not today)
+EXPLAIN (verbose, costs off)
+UPDATE ft2 AS target SET (c2, c7) = (
+    SELECT c2 * 10, c7
+        FROM ft2 AS src
+        WHERE target.c1 = src.c1
+) WHERE c1 > 1100;
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Update on public.ft2 target
+   Remote SQL: UPDATE "S 1"."T 1" SET c2 = $2, c7 = $3 WHERE ctid = $1
+   ->  Foreign Scan on public.ft2 target
+         Output: target.c1, $1, NULL::integer, target.c3, target.c4, target.c5, target.c6, $2, target.c8, (SubPlan 1 (returns $1,$2)), target.ctid
+         Remote SQL: SELECT "C 1", c3, c4, c5, c6, c8, ctid FROM "S 1"."T 1" WHERE (("C 1" > 1100)) FOR UPDATE
+         SubPlan 1 (returns $1,$2)
+           ->  Foreign Scan on public.ft2 src
+                 Output: (src.c2 * 10), src.c7
+                 Remote SQL: SELECT c2, c7 FROM "S 1"."T 1" WHERE (($1::integer = "C 1"))
+(9 rows)
+
+UPDATE ft2 AS target SET (c2, c7) = (
+    SELECT c2 * 10, c7
+        FROM ft2 AS src
+        WHERE target.c1 = src.c1
+) WHERE c1 > 1100;
+UPDATE ft2 AS target SET (c2) = (
+    SELECT c2 / 10
+        FROM ft2 AS src
+        WHERE target.c1 = src.c1
+) WHERE c1 > 1100;
 -- Test UPDATE/DELETE with WHERE or JOIN/ON conditions containing
 -- user-defined operators/functions
 ALTER SERVER loopback OPTIONS (DROP extensions);
@@ -6353,13 +6432,36 @@ select * from rem1;
 -- ===================================================================
 -- test generated columns
 -- ===================================================================
-create table gloc1 (a int, b int);
+create table gloc1 (
+  a int,
+  b int generated always as (a * 2) stored);
 alter table gloc1 set (autovacuum_enabled = 'false');
 create foreign table grem1 (
   a int,
   b int generated always as (a * 2) stored)
   server loopback options(table_name 'gloc1');
+explain (verbose, costs off)
 insert into grem1 (a) values (1), (2);
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Insert on public.grem1
+   Remote SQL: INSERT INTO public.gloc1(a, b) VALUES ($1, DEFAULT)
+   ->  Values Scan on "*VALUES*"
+         Output: "*VALUES*".column1, NULL::integer
+(4 rows)
+
+insert into grem1 (a) values (1), (2);
+explain (verbose, costs off)
+update grem1 set a = 22 where a = 2;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Update on public.grem1
+   Remote SQL: UPDATE public.gloc1 SET a = $2, b = DEFAULT WHERE ctid = $1
+   ->  Foreign Scan on public.grem1
+         Output: 22, b, ctid
+         Remote SQL: SELECT b, ctid FROM public.gloc1 WHERE ((a = 2)) FOR UPDATE
+(5 rows)
+
 update grem1 set a = 22 where a = 2;
 select * from gloc1;
  a  | b  
@@ -6375,6 +6477,24 @@ select * from grem1;
  22 | 44
 (2 rows)
 
+delete from grem1;
+-- test copy from
+copy grem1 from stdin;
+select * from gloc1;
+ a | b 
+---+---
+ 1 | 2
+ 2 | 4
+(2 rows)
+
+select * from grem1;
+ a | b 
+---+---
+ 1 | 2
+ 2 | 4
+(2 rows)
+
+delete from grem1;
 -- ===================================================================
 -- test local triggers
 -- ===================================================================
@@ -6480,6 +6600,36 @@ DROP TRIGGER trig_row_after ON rem1;
 DROP TRIGGER trig_stmt_before ON rem1;
 DROP TRIGGER trig_stmt_after ON rem1;
 DELETE from rem1;
+-- Test multiple AFTER ROW triggers on a foreign table
+CREATE TRIGGER trig_row_after1
+AFTER INSERT OR UPDATE OR DELETE ON rem1
+FOR EACH ROW EXECUTE PROCEDURE trigger_data(23,'skidoo');
+CREATE TRIGGER trig_row_after2
+AFTER INSERT OR UPDATE OR DELETE ON rem1
+FOR EACH ROW EXECUTE PROCEDURE trigger_data(23,'skidoo');
+insert into rem1 values(1,'insert');
+NOTICE:  trig_row_after1(23, skidoo) AFTER ROW INSERT ON rem1
+NOTICE:  NEW: (1,insert)
+NOTICE:  trig_row_after2(23, skidoo) AFTER ROW INSERT ON rem1
+NOTICE:  NEW: (1,insert)
+update rem1 set f2  = 'update' where f1 = 1;
+NOTICE:  trig_row_after1(23, skidoo) AFTER ROW UPDATE ON rem1
+NOTICE:  OLD: (1,insert),NEW: (1,update)
+NOTICE:  trig_row_after2(23, skidoo) AFTER ROW UPDATE ON rem1
+NOTICE:  OLD: (1,insert),NEW: (1,update)
+update rem1 set f2 = f2 || f2;
+NOTICE:  trig_row_after1(23, skidoo) AFTER ROW UPDATE ON rem1
+NOTICE:  OLD: (1,update),NEW: (1,updateupdate)
+NOTICE:  trig_row_after2(23, skidoo) AFTER ROW UPDATE ON rem1
+NOTICE:  OLD: (1,update),NEW: (1,updateupdate)
+delete from rem1;
+NOTICE:  trig_row_after1(23, skidoo) AFTER ROW DELETE ON rem1
+NOTICE:  OLD: (1,updateupdate)
+NOTICE:  trig_row_after2(23, skidoo) AFTER ROW DELETE ON rem1
+NOTICE:  OLD: (1,updateupdate)
+-- cleanup
+DROP TRIGGER trig_row_after1 ON rem1;
+DROP TRIGGER trig_row_after2 ON rem1;
 -- Test WHEN conditions
 CREATE TRIGGER trig_row_before_insupd
 BEFORE INSERT OR UPDATE ON rem1
@@ -6710,7 +6860,7 @@ NOTICE:  trig_row_after(23, skidoo) AFTER ROW INSERT ON rem1
 NOTICE:  NEW: (13,"test triggered !")
   ctid  
 --------
- (0,29)
+ (0,32)
 (1 row)
 
 -- cleanup
@@ -7150,6 +7300,92 @@ select * from bar where f1 in (select f1 from foo) for share;
   4 | 44
 (4 rows)
 
+-- Now check SELECT FOR UPDATE/SHARE with an inherited source table,
+-- where the parent is itself a foreign table
+create table loct4 (f1 int, f2 int, f3 int);
+create foreign table foo2child (f3 int) inherits (foo2)
+  server loopback options (table_name 'loct4');
+NOTICE:  moving and merging column "f3" with inherited definition
+DETAIL:  User-specified column moved to the position of the inherited column.
+explain (verbose, costs off)
+select * from bar where f1 in (select f1 from foo2) for share;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ LockRows
+   Output: bar.f1, bar.f2, bar.ctid, foo2.*, bar.*, bar.tableoid, foo2.tableoid
+   ->  Hash Join
+         Output: bar.f1, bar.f2, bar.ctid, foo2.*, bar.*, bar.tableoid, foo2.tableoid
+         Inner Unique: true
+         Hash Cond: (bar.f1 = foo2.f1)
+         ->  Append
+               ->  Seq Scan on public.bar
+                     Output: bar.f1, bar.f2, bar.ctid, bar.*, bar.tableoid
+               ->  Foreign Scan on public.bar2
+                     Output: bar2.f1, bar2.f2, bar2.ctid, bar2.*, bar2.tableoid
+                     Remote SQL: SELECT f1, f2, f3, ctid FROM public.loct2 FOR SHARE
+         ->  Hash
+               Output: foo2.*, foo2.f1, foo2.tableoid
+               ->  HashAggregate
+                     Output: foo2.*, foo2.f1, foo2.tableoid
+                     Group Key: foo2.f1
+                     ->  Append
+                           ->  Foreign Scan on public.foo2
+                                 Output: foo2.*, foo2.f1, foo2.tableoid
+                                 Remote SQL: SELECT f1, f2, f3 FROM public.loct1
+                           ->  Foreign Scan on public.foo2child
+                                 Output: foo2child.*, foo2child.f1, foo2child.tableoid
+                                 Remote SQL: SELECT f1, f2, f3 FROM public.loct4
+(24 rows)
+
+select * from bar where f1 in (select f1 from foo2) for share;
+ f1 | f2 
+----+----
+  2 | 22
+  4 | 44
+(2 rows)
+
+drop foreign table foo2child;
+-- And with a local child relation of the foreign table parent
+create table foo2child (f3 int) inherits (foo2);
+NOTICE:  moving and merging column "f3" with inherited definition
+DETAIL:  User-specified column moved to the position of the inherited column.
+explain (verbose, costs off)
+select * from bar where f1 in (select f1 from foo2) for share;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ LockRows
+   Output: bar.f1, bar.f2, bar.ctid, foo2.*, bar.*, bar.tableoid, foo2.ctid, foo2.tableoid
+   ->  Hash Join
+         Output: bar.f1, bar.f2, bar.ctid, foo2.*, bar.*, bar.tableoid, foo2.ctid, foo2.tableoid
+         Inner Unique: true
+         Hash Cond: (bar.f1 = foo2.f1)
+         ->  Append
+               ->  Seq Scan on public.bar
+                     Output: bar.f1, bar.f2, bar.ctid, bar.*, bar.tableoid
+               ->  Foreign Scan on public.bar2
+                     Output: bar2.f1, bar2.f2, bar2.ctid, bar2.*, bar2.tableoid
+                     Remote SQL: SELECT f1, f2, f3, ctid FROM public.loct2 FOR SHARE
+         ->  Hash
+               Output: foo2.*, foo2.f1, foo2.ctid, foo2.tableoid
+               ->  HashAggregate
+                     Output: foo2.*, foo2.f1, foo2.ctid, foo2.tableoid
+                     Group Key: foo2.f1
+                     ->  Append
+                           ->  Foreign Scan on public.foo2
+                                 Output: foo2.*, foo2.f1, foo2.ctid, foo2.tableoid
+                                 Remote SQL: SELECT f1, f2, f3, ctid FROM public.loct1
+                           ->  Seq Scan on public.foo2child
+                                 Output: foo2child.*, foo2child.f1, foo2child.ctid, foo2child.tableoid
+(23 rows)
+
+select * from bar where f1 in (select f1 from foo2) for share;
+ f1 | f2 
+----+----
+  2 | 22
+  4 | 44
+(2 rows)
+
+drop table foo2child;
 -- Check UPDATE with inherited target and an inherited source table
 explain (verbose, costs off)
 update bar set f2 = f2 + 100 where f1 in (select f1 from foo);
@@ -8158,6 +8394,7 @@ CREATE TABLE import_source.t3 (c1 timestamptz default now(), c2 typ1);
 CREATE TABLE import_source."x 4" (c1 float8, "C 2" text, c3 varchar(42));
 CREATE TABLE import_source."x 5" (c1 float8);
 ALTER TABLE import_source."x 5" DROP COLUMN c1;
+CREATE TABLE import_source."x 6" (c1 int, c2 int generated always as (c1 * 2) stored);
 CREATE TABLE import_source.t4 (c1 int) PARTITION BY RANGE (c1);
 CREATE TABLE import_source.t4_part PARTITION OF import_source.t4
   FOR VALUES FROM (1) TO (100);
@@ -8173,7 +8410,8 @@ IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest1;
  import_dest1 | t4    | loopback | (schema_name 'import_source', table_name 't4')  | 
  import_dest1 | x 4   | loopback | (schema_name 'import_source', table_name 'x 4') | 
  import_dest1 | x 5   | loopback | (schema_name 'import_source', table_name 'x 5') | 
-(6 rows)
+ import_dest1 | x 6   | loopback | (schema_name 'import_source', table_name 'x 6') | 
+(7 rows)
 
 \d import_dest1.*
                          Foreign table "import_dest1.t1"
@@ -8223,6 +8461,14 @@ FDW options: (schema_name 'import_source', table_name 'x 4')
 Server: loopback
 FDW options: (schema_name 'import_source', table_name 'x 5')
 
+                                  Foreign table "import_dest1.x 6"
+ Column |  Type   | Collation | Nullable |               Default               |    FDW options     
+--------+---------+-----------+----------+-------------------------------------+--------------------
+ c1     | integer |           |          |                                     | (column_name 'c1')
+ c2     | integer |           |          | generated always as (c1 * 2) stored | (column_name 'c2')
+Server: loopback
+FDW options: (schema_name 'import_source', table_name 'x 6')
+
 -- Options
 CREATE SCHEMA import_dest2;
 IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest2
@@ -8237,7 +8483,8 @@ IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest2
  import_dest2 | t4    | loopback | (schema_name 'import_source', table_name 't4')  | 
  import_dest2 | x 4   | loopback | (schema_name 'import_source', table_name 'x 4') | 
  import_dest2 | x 5   | loopback | (schema_name 'import_source', table_name 'x 5') | 
-(6 rows)
+ import_dest2 | x 6   | loopback | (schema_name 'import_source', table_name 'x 6') | 
+(7 rows)
 
 \d import_dest2.*
                          Foreign table "import_dest2.t1"
@@ -8287,9 +8534,17 @@ FDW options: (schema_name 'import_source', table_name 'x 4')
 Server: loopback
 FDW options: (schema_name 'import_source', table_name 'x 5')
 
+                                  Foreign table "import_dest2.x 6"
+ Column |  Type   | Collation | Nullable |               Default               |    FDW options     
+--------+---------+-----------+----------+-------------------------------------+--------------------
+ c1     | integer |           |          |                                     | (column_name 'c1')
+ c2     | integer |           |          | generated always as (c1 * 2) stored | (column_name 'c2')
+Server: loopback
+FDW options: (schema_name 'import_source', table_name 'x 6')
+
 CREATE SCHEMA import_dest3;
 IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest3
-  OPTIONS (import_collate 'false', import_not_null 'false');
+  OPTIONS (import_collate 'false', import_generated 'false', import_not_null 'false');
 \det+ import_dest3.*
                                      List of foreign tables
     Schema    | Table |  Server  |                   FDW options                   | Description 
@@ -8300,7 +8555,8 @@ IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest3
  import_dest3 | t4    | loopback | (schema_name 'import_source', table_name 't4')  | 
  import_dest3 | x 4   | loopback | (schema_name 'import_source', table_name 'x 4') | 
  import_dest3 | x 5   | loopback | (schema_name 'import_source', table_name 'x 5') | 
-(6 rows)
+ import_dest3 | x 6   | loopback | (schema_name 'import_source', table_name 'x 6') | 
+(7 rows)
 
 \d import_dest3.*
                          Foreign table "import_dest3.t1"
@@ -8350,6 +8606,14 @@ FDW options: (schema_name 'import_source', table_name 'x 4')
 Server: loopback
 FDW options: (schema_name 'import_source', table_name 'x 5')
 
+                    Foreign table "import_dest3.x 6"
+ Column |  Type   | Collation | Nullable | Default |    FDW options     
+--------+---------+-----------+----------+---------+--------------------
+ c1     | integer |           |          |         | (column_name 'c1')
+ c2     | integer |           |          |         | (column_name 'c2')
+Server: loopback
+FDW options: (schema_name 'import_source', table_name 'x 6')
+
 -- Check LIMIT TO and EXCEPT
 CREATE SCHEMA import_dest4;
 IMPORT FOREIGN SCHEMA import_source LIMIT TO (t1, nonesuch)
@@ -8372,7 +8636,8 @@ IMPORT FOREIGN SCHEMA import_source EXCEPT (t1, "x 4", nonesuch)
  import_dest4 | t3    | loopback | (schema_name 'import_source', table_name 't3')  | 
  import_dest4 | t4    | loopback | (schema_name 'import_source', table_name 't4')  | 
  import_dest4 | x 5   | loopback | (schema_name 'import_source', table_name 'x 5') | 
-(5 rows)
+ import_dest4 | x 6   | loopback | (schema_name 'import_source', table_name 'x 6') | 
+(6 rows)
 
 -- Assorted error cases
 IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest4;
@@ -8802,3 +9067,21 @@ SELECT b, avg(a), max(a), count(*) FROM pagg_tab GROUP BY b HAVING sum(a) < 700 
 
 -- Clean-up
 RESET enable_partitionwise_aggregate;
+-- ===================================================================
+-- test connection invalidation cases
+-- ===================================================================
+-- This test case is for closing the connection in pgfdw_xact_callback
+BEGIN;
+-- Connection xact depth becomes 1 i.e. the connection is in midst of the xact.
+SELECT 1 FROM ft1 LIMIT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+-- Connection is not closed at the end of the alter statement in
+-- pgfdw_inval_callback. That's because the connection is in midst of this
+-- xact, it is just marked as invalid.
+ALTER SERVER loopback OPTIONS (ADD use_remote_estimate 'off');
+-- The invalid connection gets closed in pgfdw_xact_callback during commit.
+COMMIT;

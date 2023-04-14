@@ -5,7 +5,7 @@ title: Connecting with psql
 Depending on the default values used or the environment variables you have set, the following examples show how to access a database via `psql`:
 
 ```
-$ psql -d gpdatabase -h master_host -p 5432 -U `gpadmin`
+$ psql -d gpdatabase -h coordinator_host -p 5432 -U `gpadmin`
          
 ```
 
@@ -37,5 +37,5 @@ At the prompt, you may type in SQL commands. A SQL command must end with a `;` \
 
 See the *Greenplum Reference Guide* for information about using the `psql` client application and SQL commands and syntax.
 
-**Parent topic:**[Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
+**Parent topic:** [Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 

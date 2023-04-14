@@ -54,7 +54,7 @@ WHERE func1(t1.a,t1.b) <> func2(func3(t2.a,t2.b)::int,t1.a);
       <dxl:TraceFlags Value="102120,103001,103014,103015,103022,103023,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="0.44875465.1.1" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.44875465.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -85,7 +85,6 @@ WHERE func1(t1.a,t1.b) <> func2(func3(t2.a,t2.b)::int,t1.a);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -208,7 +207,7 @@ WHERE func1(t1.a,t1.b) <> func2(func3(t2.a,t2.b)::int,t1.a);
       <dxl:GPDBFunc Mdid="0.46079654.1.0" Name="func3" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Relation Mdid="0.2868145.1.1" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.2868145.1.1" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -239,7 +238,6 @@ WHERE func1(t1.a,t1.b) <> func2(func3(t2.a,t2.b)::int,t1.a);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBFunc Mdid="0.2558.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
@@ -271,7 +269,7 @@ WHERE func1(t1.a,t1.b) <> func2(func3(t2.a,t2.b)::int,t1.a);
         </dxl:Comparison>
         <dxl:LogicalJoin JoinType="Left">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.44875465.1.1" TableName="t1">
+            <dxl:TableDescriptor Mdid="6.44875465.1.1" TableName="t1">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -286,7 +284,7 @@ WHERE func1(t1.a,t1.b) <> func2(func3(t2.a,t2.b)::int,t1.a);
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.2868145.1.1" TableName="t2">
+            <dxl:TableDescriptor Mdid="6.2868145.1.1" TableName="t2">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

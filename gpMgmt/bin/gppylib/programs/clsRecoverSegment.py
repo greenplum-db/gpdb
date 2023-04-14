@@ -123,7 +123,7 @@ class GpRecoverSegmentProgram:
         if self.__options.rebalanceSegments:
             return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         else:
-            instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts)
+            instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts, self.__options.parallelDegree)
             segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization) for t in instance.getTriplets()]
             return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
                                        self.__options.parallelDegree,
@@ -362,12 +362,13 @@ class GpRecoverSegmentProgram:
 
     def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
         live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]
+        failed_segments = [target.getFailedSegment() for target in mirrorBuilder.getMirrorsToBuild()]
         if len(live_segments) == 0:
             self.logger.info("No checksum validation necessary when there are no segments to recover.")
             return
 
         heap_checksum = HeapChecksum(gpArray, num_workers=min(self.__options.parallelDegree, len(live_segments)), logger=self.logger)
-        successes, failures = heap_checksum.get_segments_checksum_settings(live_segments)
+        successes, failures = heap_checksum.get_segments_checksum_settings(live_segments + failed_segments)
         # go forward if we have at least one segment that has replied
         if len(successes) == 0:
             raise Exception("No segments responded to ssh query for heap checksum validation.")

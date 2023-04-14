@@ -669,7 +669,7 @@ explain select * from t where (c1 = 10 and c5 < 20) or (c2 = '4' and c5> 100);
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.1632545.1.1" Name="t" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1632545.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.1632545.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -718,10 +718,9 @@ explain select * from t where (c1 = 10 and c5 < 20) or (c2 = '4' and c5> 100);
           <dxl:IndexInfo Mdid="0.1632594.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.1632615.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1632545.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.1632545.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -770,7 +769,6 @@ explain select * from t where (c1 = 10 and c5 < 20) or (c2 = '4' and c5> 100);
           <dxl:IndexInfo Mdid="0.1632594.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.1632615.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.1632545.1.1.7" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -912,7 +910,7 @@ explain select * from t where (c1 = 10 and c5 < 20) or (c2 = '4' and c5> 100);
           </dxl:And>
         </dxl:Or>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1632545.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.1632545.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -1046,7 +1044,7 @@ explain select * from t where (c1 = 10 and c5 < 20) or (c2 = '4' and c5> 100);
               <dxl:IndexDescriptor Mdid="0.1632615.1.0" IndexName="t_c2"/>
             </dxl:BitmapIndexProbe>
           </dxl:BitmapOr>
-          <dxl:TableDescriptor Mdid="0.1632545.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.1632545.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>

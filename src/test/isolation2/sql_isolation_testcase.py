@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Copyright (c) 2004-Present VMware, Inc. or its affiliates.
 
@@ -78,11 +79,11 @@ class ConnectionInfo(object):
         for content, host, port, role in conn_map:
             if real_content_id == content and role == role_name:
                 return (host, port)
-        raise Exception("Cannont find a connection with content_id=%d, role=%c" % (content_id, role_name))
+        raise Exception("Cannot find a connection with content_id=%d, role=%c" % (content_id, role_name))
 
 
 class GlobalShellExecutor(object):
-    BASH_PS1 = 'test_sh$>'
+    BASH_PS1 = 'GlobalShellExecutor>'
 
     class ExecutionError(Exception):
         ""
@@ -98,6 +99,7 @@ class GlobalShellExecutor(object):
                                         stdin=self.slave_fd,
                                         stdout=self.slave_fd,
                                         stderr=self.slave_fd,
+                                        start_new_session=True,
                                         universal_newlines=True)
         self.bash_log_file = open("%s.log" % self.initfile_prefix, "w+")
         self.__run_command("export PS1='%s'" % GlobalShellExecutor.BASH_PS1)
@@ -110,7 +112,7 @@ class GlobalShellExecutor(object):
         # If write the matchsubs section directly to the output, the generated token id will be compared by gpdiff.pl
         # so here just write all matchsubs section into an auto generated init file when this test case file finished.
         if not with_error and self.initfile_prefix != None and len(self.initfile_prefix) > 1:
-            output_init_file = "%s.ini" % self.initfile_prefix
+            output_init_file = "%s.initfile" % self.initfile_prefix
             cmd = ''' [ ! -z "${MATCHSUBS}" ] && echo "-- start_matchsubs ${NL} ${MATCHSUBS} ${NL}-- end_matchsubs" > %s ''' % output_init_file
             self.exec_global_shell(cmd, False)
 
@@ -119,48 +121,48 @@ class GlobalShellExecutor(object):
         try:
             self.sh_proc.terminate()
         except OSError as e:
-            # Ignore the exception if the process doesn't exist.
+            # Log then ignore the exception if the process doesn't exist.
+            print("Failed to terminate bash process: %s" % e)
             pass
         self.sh_proc = None
 
     def __run_command(self, sh_cmd):
-        # Strip the newlines at the end. It will be added later.
+        # Strip extra new lines
         sh_cmd = sh_cmd.rstrip()
-        bytes_written = os.write(self.master_fd, sh_cmd.encode())
-        bytes_written += os.write(self.master_fd, b'\n')
+        os.write(self.master_fd, sh_cmd.encode()+b'\n')
 
         output = ""
         while self.sh_proc.poll() is None:
-            # If not returns in 10 seconds, consider it as an fatal error.
-            r, w, e = select.select([self.master_fd], [], [self.master_fd], 30)
+            # If times out, consider it as an fatal error.
+            r, _, e = select.select([self.master_fd], [], [self.master_fd], 30)
             if e:
                 # Terminate the shell when we get any output from stderr
                 o = os.read(self.master_fd, 10240)
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 self.terminate(True)
-                raise GlobalShellExecutor.ExecutionError("Error happened to the bash daemon, see %s for details." % self.bash_log_file.name)
+                raise GlobalShellExecutor.ExecutionError("Error happened to the bash process, see %s for details." % self.bash_log_file.name)
 
             if r:
                 o = os.read(self.master_fd, 10240).decode()
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 output += o
-                if o.endswith(GlobalShellExecutor.BASH_PS1):
+                if output.endswith(GlobalShellExecutor.BASH_PS1):
                     lines = output.splitlines()
                     return lines[len(sh_cmd.splitlines()):len(lines) - 1]
 
             if not r and not e:
                 self.terminate(True)
-                raise GlobalShellExecutor.ExecutionError("Timeout happened to the bash daemon, see %s for details." % self.bash_log_file.name)
+                raise GlobalShellExecutor.ExecutionError("Timeout happened to the bash process, see %s for details." % self.bash_log_file.name)
 
         self.terminate(True)
-        raise GlobalShellExecutor.ExecutionError("Bash daemon has been stopped, see %s for details." % self.bash_log_file.name)
+        raise GlobalShellExecutor.ExecutionError("Bash process has been stopped, see %s for details." % self.bash_log_file.name)
 
-    # execute global shell cmd in bash deamon, and fetch result without blocking
+    # execute global shell cmd in bash process, and fetch result without blocking
     def exec_global_shell(self, sh_cmd, is_trip_output_end_blanklines):
         if self.sh_proc == None:
-            raise GlobalShellExecutor.ExecutionError("The bash daemon has been terminated abnormally, see %s for details." % self.bash_log_file.name)
+            raise GlobalShellExecutor.ExecutionError("The bash process has been terminated abnormally, see %s for details." % self.bash_log_file.name)
 
         # get the output of shell command
         output = self.__run_command(sh_cmd)
@@ -173,7 +175,7 @@ class GlobalShellExecutor(object):
 
         return output
 
-    # execute gobal shell:
+    # execute global shell:
     # 1) set input stream -> $RAW_STR
     # 2) execute shell command from input
     # if error, write error message to err_log_file
@@ -203,7 +205,7 @@ class GlobalShellExecutor(object):
         for i in range(start, len(input_str)):
             if end == 0 and input_str[i] == '\'':
                 if not is_start:
-                    # find shell begin postion
+                    # find shell begin position
                     is_start = True
                     start = i+1
                     continue
@@ -215,7 +217,7 @@ class GlobalShellExecutor(object):
                         break
                 if cnt % 2 == 1:
                     continue
-                # find shell end postion
+                # find shell end position
                 res_cmd = input_str[start: i]
                 end = i
                 continue
@@ -658,7 +660,7 @@ class SQLIsolationExecutor(object):
                 con_mode = "mirror"
             sql = m.groups()[2]
             sql = sql.lstrip()
-            # If db_name is specifed , it should be of the following syntax:
+            # If db_name is specified , it should be of the following syntax:
             # 1:@db_name <db_name>: <sql>
             if sql.startswith('@db_name'):
                 sql_parts = sql.split(':', 2)
@@ -785,6 +787,10 @@ class SQLIsolationExecutor(object):
                     pass
         elif flag == "M":
             self.get_process(output_file, process_name, con_mode, dbname=dbname).query(sql.strip(), post_run_cmd, global_sh_executor)
+        elif flag == "Mq":
+            if len(sql) > 0:
+                raise Exception("No query should be given on quit Mq")
+            self.quit_process(output_file, process_name, con_mode, dbname=dbname)
         else:
             raise Exception("Invalid isolation flag")
 
@@ -803,7 +809,7 @@ class SQLIsolationExecutor(object):
                 print((" " if command and not newline else "") + line.strip(), end="", file=output_file)
                 newline = False
                 if line[0] == "!":
-                    command_part = line # shell commands can use -- for multichar options like --include
+                    command_part = line # shell commands can use -- for long options like --include
                 elif re.match(r";.*--", line) or re.match(r"^--", line):
                     command_part = line.partition("--")[0] # remove comment from line
                 else:
@@ -811,12 +817,12 @@ class SQLIsolationExecutor(object):
                 if command_part == "" or command_part == "\n":
                     print(file=output_file)
                     newline = True
-                elif re.match(r".*;\s*$", command_part) or re.match(r"^\d+[q\\<]:\s*$", line) or re.match(r"^\*Rq:$", line) or re.match(r"^-?\d+[SUR][q\\<]:\s*$", line):
+                elif re.match(r".*;\s*$", command_part) or re.match(r"^\d+[q\\<]:\s*$", line) or re.match(r"^\*Rq:$", line) or re.match(r"^-?\d+[SUMR][q\\<]:\s*$", line):
                     command += command_part
                     try:
                         self.process_command(command, output_file, shell_executor)
                     except GlobalShellExecutor.ExecutionError as e:
-                        # error in the daemon shell cannot be recovered
+                        # error of the GlobalShellExecutor cannot be recovered
                         raise
                     except Exception as e:
                         print("FAILED: ", e, file=output_file)
@@ -864,7 +870,7 @@ class SQLIsolationTestCase:
             U&: expect blocking behavior in utility mode (does not currently support an asterisk target)
             U<: join an existing utility mode session (does not currently support an asterisk target)
 
-            R|R&|R<: similar to 'U' meaning execept that the connect is in retrieve mode, here don't
+            R|R&|R<: similar to 'U' meaning except that the connect is in retrieve mode, here don't
                thinking about retrieve mode authentication, just using the normal authentication directly.
 
         An example is:
@@ -878,7 +884,7 @@ class SQLIsolationTestCase:
 
         The isolation tests are specified identical to sql-scripts in normal
         SQLTestCases. However, it is possible to prefix a SQL line with
-        an tranaction identifier followed by a colon (":").
+        an transaction identifier followed by a colon (":").
         The above example would be defined by
         1: BEGIN;
         2: BEGIN;
@@ -956,9 +962,9 @@ class SQLIsolationTestCase:
         Shell Execution for SQL or Output:
 
         @pre_run can be used for executing shell command to change input (i.e. each SQL statement) or get input info;
-        @post_run can be used for executing shell command to change ouput (i.e. the result set printed for each SQL execution)
+        @post_run can be used for executing shell command to change output (i.e. the result set printed for each SQL execution)
         or get output info. Just use the env variable ${RAW_STR} to refer to the input/out stream before shell execution,
-        and the output of the shell command will be used as the SQL exeucted or output printed into results file.
+        and the output of the shell command will be used as the SQL executed or output printed into results file.
 
         1: @post_run ' TOKEN1=` echo "${RAW_STR}" | awk \'NR==3\' | awk \'{print $1}\'` && export MATCHSUBS="${MATCHSUBS}${NL}m/${TOKEN1}/${NL}s/${TOKEN1}/token_id1/${NL}" && echo "${RAW_STR}" ': SELECT token,hostname,status FROM GP_ENDPOINTS WHERE cursorname='c1';
         2R: @pre_run ' echo "${RAW_STR}" | sed "s#@TOKEN1#${TOKEN1}#" ': RETRIEVE ALL FROM "@TOKEN1";
@@ -967,7 +973,7 @@ class SQLIsolationTestCase:
         - Sample 1: set env variable ${TOKEN1} to the cell (row 3, col 1) of the result set, and print the raw result.
           The env var ${MATCHSUBS} is used to store the matchsubs section so that we can store it into initfile when
           this test case file is finished executing.
-        - Sample 2: replaceing "@TOKEN1" by generated token which is fetch in sample1
+        - Sample 2: replace "@TOKEN1" by generated token which is fetched in sample1
 
         There are some helper functions which will be sourced automatically to make above
         cases easier. See global_sh_executor.sh for more information.

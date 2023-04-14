@@ -30,5 +30,5 @@ To create the readable ext\_expenses table from CSV-formatted text files:
 
 
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

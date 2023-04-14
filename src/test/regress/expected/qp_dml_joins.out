@@ -3971,6 +3971,7 @@ SELECT SUM(a) FROM dml_heap_r;
  5106
 (1 row)
 
+ANALYZE dml_heap_s, dml_heap_r;
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
 ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(a) FROM dml_heap_r;
@@ -4012,8 +4013,8 @@ SELECT SUM(b) FROM dml_heap_r;
 (1 row)
 
 --Negative test - Update WHERE join returns more than one tuple with different values.
-CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i;
-CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i;
+CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i distributed by (a);
+CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i distributed by (a);
 SELECT SUM(a) FROM dml_heap_v;
  sum 
 -----

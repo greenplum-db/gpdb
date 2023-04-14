@@ -171,7 +171,7 @@ select sum(a) from (select a, b*c, c||d from woo) as too;
       <dxl:ColumnStatistics Mdid="1.1300728.1.1.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.1300728.1.1.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.1300728.1.1" Name="woo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.1300728.1.1" Name="woo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.1300728.1.1" Name="woo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -208,7 +208,6 @@ select sum(a) from (select a, b*c, c||d from woo) as too;
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -249,7 +248,7 @@ select sum(a) from (select a, b*c, c||d from woo) as too;
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.1300728.1.1" TableName="woo">
+            <dxl:TableDescriptor Mdid="6.1300728.1.1" TableName="woo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -326,7 +325,7 @@ select sum(a) from (select a, b*c, c||d from woo) as too;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1300728.1.1" TableName="woo">
+              <dxl:TableDescriptor Mdid="6.1300728.1.1" TableName="woo">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

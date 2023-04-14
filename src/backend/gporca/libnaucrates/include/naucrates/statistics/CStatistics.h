@@ -15,6 +15,7 @@
 #include "gpos/common/CBitSet.h"
 #include "gpos/string/CWStringDynamic.h"
 
+#include "naucrates/md/IMDExtStatsInfo.h"
 #include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CStatsPredArrayCmp.h"
 #include "naucrates/statistics/CStatsPredConj.h"
@@ -36,6 +37,10 @@ using namespace gpos;
 using namespace gpdxl;
 using namespace gpmd;
 using namespace gpopt;
+
+using UlongToIntMap =
+	CHashMap<ULONG, INT, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupDelete<INT>>;
 
 // hash maps ULONG -> array of ULONGs
 using UlongToUlongPtrArrayMap =
@@ -113,6 +118,12 @@ private:
 	// source can be one of the following operators: like Get, Group By, and Project
 	CUpperBoundNDVPtrArray *m_src_upper_bound_NDVs;
 
+	// extended statistics metadata
+	const IMDExtStatsInfo *m_ext_stats;
+
+	// map colid to attno (required because extended stats are stored as attno)
+	UlongToIntMap *m_colid_to_attno_mapping;
+
 	// the default value for operators that have no cardinality estimation risk
 	static const ULONG no_card_est_risk_default_val;
 
@@ -143,7 +154,10 @@ public:
 
 	CStatistics(CMemoryPool *mp, UlongToHistogramMap *col_histogram_mapping,
 				UlongToDoubleMap *colid_width_mapping, CDouble rows,
-				BOOL is_empty, ULONG relpages, ULONG relallvisible);
+				BOOL is_empty, ULONG relpages, ULONG relallvisible,
+				CDouble rebinds, ULONG num_predicates,
+				const IMDExtStatsInfo *extstats,
+				UlongToIntMap *colid_to_attno_mapping);
 
 
 	// dtor
@@ -313,6 +327,19 @@ public:
 	{
 		return m_src_upper_bound_NDVs;
 	}
+
+	const IMDExtStatsInfo *
+	GetExtStatsInfo() const
+	{
+		return m_ext_stats;
+	}
+
+	UlongToIntMap *
+	GetColidToAttnoMapping() const
+	{
+		return m_colid_to_attno_mapping;
+	}
+
 	// create an empty statistics object
 	static CStatistics *
 	MakeEmptyStats(CMemoryPool *mp)

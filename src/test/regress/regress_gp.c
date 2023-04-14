@@ -53,6 +53,7 @@
 #include "utils/geo_decls.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/vmem_tracker.h"
 #include "utils/resource_manager.h"
 #include "utils/timestamp.h"
 
@@ -78,7 +79,6 @@ extern Datum userdata_project(PG_FUNCTION_ARGS);
 /* Resource queue/group support */
 extern Datum checkResourceQueueMemoryLimits(PG_FUNCTION_ARGS);
 extern Datum repeatPalloc(PG_FUNCTION_ARGS);
-extern Datum resGroupPalloc(PG_FUNCTION_ARGS);
 
 /* Gang management test support */
 extern Datum gangRaiseInfo(PG_FUNCTION_ARGS);
@@ -628,31 +628,6 @@ repeatPalloc(PG_FUNCTION_ARGS)
 
 	for (i = 0; i < count; i++)
 		MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
-
-	PG_RETURN_INT32(0);
-}
-
-PG_FUNCTION_INFO_V1(resGroupPalloc);
-Datum
-resGroupPalloc(PG_FUNCTION_ARGS)
-{
-	float ratio = PG_GETARG_FLOAT8(0);
-	int memLimit, slotQuota, sharedQuota;
-	int size;
-	int count;
-	int i;
-
-	if (!IsResGroupEnabled())
-		PG_RETURN_INT32(0);
-
-	ResGroupGetMemInfo(&memLimit, &slotQuota, &sharedQuota);
-	size = ceilf(memLimit * ratio);
-	count = size / 512;
-	for (i = 0; i < count; i++)
-		MemoryContextAlloc(TopMemoryContext, 512 * 1024 * 1024);
-
-	size %= 512;
-	MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
 
 	PG_RETURN_INT32(0);
 }
@@ -1966,7 +1941,8 @@ test_consume_xids(PG_FUNCTION_ARGS)
 
 	xid = ReadNewTransactionId();
 
-	targetxid = xid + nxids;
+	/* xid is the "next xid" now, so minus one here */
+	targetxid = xid + nxids - 1;
 	while (targetxid < FirstNormalTransactionId)
 		targetxid++;
 
@@ -2103,13 +2079,6 @@ broken_int4out(PG_FUNCTION_ARGS)
 				 errdetail("The trigger value was 1234")));
 
 	return DirectFunctionCall1(int4out, Int32GetDatum(arg));
-}
-
-PG_FUNCTION_INFO_V1(get_tablespace_version_directory_name);
-Datum
-get_tablespace_version_directory_name(PG_FUNCTION_ARGS)
-{
-	PG_RETURN_TEXT_P(CStringGetTextDatum(GP_TABLESPACE_VERSION_DIRECTORY));
 }
 
 #if defined(TCP_KEEPIDLE)

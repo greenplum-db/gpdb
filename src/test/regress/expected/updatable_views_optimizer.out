@@ -334,6 +334,27 @@ UPDATE ro_view20 SET b=upper(b);
 ERROR:  cannot update view "ro_view20"
 DETAIL:  Views that return set-returning functions are not automatically updatable.
 HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
+-- A view with a conditional INSTEAD rule but no unconditional INSTEAD rules
+-- or INSTEAD OF triggers should be non-updatable and generate useful error
+-- messages with appropriate detail
+CREATE RULE rw_view16_ins_rule AS ON INSERT TO rw_view16
+  WHERE NEW.a > 0 DO INSTEAD INSERT INTO base_tbl VALUES (NEW.a, NEW.b);
+CREATE RULE rw_view16_upd_rule AS ON UPDATE TO rw_view16
+  WHERE OLD.a > 0 DO INSTEAD UPDATE base_tbl SET b=NEW.b WHERE a=OLD.a;
+CREATE RULE rw_view16_del_rule AS ON DELETE TO rw_view16
+  WHERE OLD.a > 0 DO INSTEAD DELETE FROM base_tbl WHERE a=OLD.a;
+INSERT INTO rw_view16 (a, b) VALUES (3, 'Row 3'); -- should fail
+ERROR:  cannot insert into view "rw_view16"
+DETAIL:  Views with conditional DO INSTEAD rules are not automatically updatable.
+HINT:  To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.
+UPDATE rw_view16 SET b='ROW 2' WHERE a=2; -- should fail
+ERROR:  cannot update view "rw_view16"
+DETAIL:  Views with conditional DO INSTEAD rules are not automatically updatable.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
+DELETE FROM rw_view16 WHERE a=2; -- should fail
+ERROR:  cannot delete from view "rw_view16"
+DETAIL:  Views with conditional DO INSTEAD rules are not automatically updatable.
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 DROP TABLE base_tbl CASCADE;
 NOTICE:  drop cascades to 16 other objects
 DETAIL:  drop cascades to view ro_view1
@@ -409,9 +430,9 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: base_tbl_1.a
+                     Hash Key: a
                      ->  Split
-                           ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                           ->  Index Scan using base_tbl_pkey on base_tbl
                                  Index Cond: ((a = 5) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (10 rows)
@@ -420,7 +441,7 @@ EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
                          QUERY PLAN                          
 -------------------------------------------------------------
  Delete on base_tbl
-   ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+   ->  Index Scan using base_tbl_pkey on base_tbl
          Index Cond: ((a = 5) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (4 rows)
@@ -488,9 +509,9 @@ EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: base_tbl_1.a
+                     Hash Key: a
                      ->  Split
-                           ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                           ->  Index Scan using base_tbl_pkey on base_tbl
                                  Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (10 rows)
@@ -499,7 +520,7 @@ EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
                          QUERY PLAN                          
 -------------------------------------------------------------
  Delete on base_tbl
-   ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+   ->  Index Scan using base_tbl_pkey on base_tbl
          Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (4 rows)
@@ -682,35 +703,33 @@ SELECT * FROM rw_view2;
 (2 rows)
 
 EXPLAIN (costs off) UPDATE rw_view2 SET a=3 WHERE a=2;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
  Update on base_tbl
-   ->  Result
-         ->  Split
-               ->  Hash Join
-                     Hash Cond: (base_tbl_1.a = base_tbl_2.a)
+   ->  Hash Join
+         Hash Cond: (base_tbl.a = base_tbl_1.a)
+         ->  Index Scan using base_tbl_pkey on base_tbl
+               Index Cond: (a = 2)
+         ->  Hash
+               ->  Result
+                     Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
                      ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
-                           Index Cond: (a = 2)
-                     ->  Hash
-                           ->  Result
-                                 Filter: ((base_tbl_2.a = 2) AND (base_tbl_2.a < 10))
-                                 ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
-                                       Index Cond: (a > 0)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(13 rows)
+                           Index Cond: (a > 0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
  Delete on base_tbl
    ->  Hash Join
-         Hash Cond: (base_tbl_1.a = base_tbl_2.a)
-         ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+         Hash Cond: (base_tbl.a = base_tbl_1.a)
+         ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: (a = 2)
          ->  Hash
                ->  Result
-                     Filter: ((base_tbl_2.a = 2) AND (base_tbl_2.a < 10))
-                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
+                     Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
+                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                            Index Cond: (a > 0)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (11 rows)
@@ -1464,6 +1483,43 @@ NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to view rw_view1
 drop cascades to view rw_view2
 drop cascades to view rw_view3
+-- view on table with GENERATED columns
+CREATE TABLE base_tbl (id int, idplus1 int GENERATED ALWAYS AS (id + 1) STORED);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl;
+INSERT INTO base_tbl (id) VALUES (1);
+INSERT INTO rw_view1 (id) VALUES (2);
+INSERT INTO base_tbl (id, idplus1) VALUES (3, DEFAULT);
+INSERT INTO rw_view1 (id, idplus1) VALUES (4, DEFAULT);
+INSERT INTO base_tbl (id, idplus1) VALUES (5, 6);  -- error
+ERROR:  cannot insert into column "idplus1"
+DETAIL:  Column "idplus1" is a generated column.
+INSERT INTO rw_view1 (id, idplus1) VALUES (6, 7);  -- error
+ERROR:  cannot insert into column "idplus1"
+DETAIL:  Column "idplus1" is a generated column.
+SELECT * FROM base_tbl;
+ id | idplus1 
+----+---------
+  2 |       3
+  3 |       4
+  4 |       5
+  1 |       2
+(4 rows)
+
+UPDATE base_tbl SET id = 2000 WHERE id = 2;
+UPDATE rw_view1 SET id = 3000 WHERE id = 3;
+SELECT * FROM base_tbl;
+  id  | idplus1 
+------+---------
+    4 |       5
+ 2000 |    2001
+    1 |       2
+ 3000 |    3001
+(4 rows)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to view rw_view1
 -- inheritance tests
 CREATE TABLE base_tbl_parent (a int);
 CREATE TABLE base_tbl_child (CHECK (a > 0)) INHERITS (base_tbl_parent);
@@ -2289,21 +2345,19 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
  
  Update on base_tbl
-   ->  Result
-         ->  Split
-               ->  Nested Loop Semi Join
-                     Join Filter: true
-                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
-                           Index Cond: (id = 2)
-                     ->  Materialize
-                           ->  Broadcast Motion 1:3  (slice1; segments: 1)
-                                 ->  Result
-                                       ->  Limit
-                                             ->  Gather Motion 3:1  (slice2; segments: 3)
-                                                   ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
-                                                         Index Cond: (id = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(34 rows)
+   ->  Nested Loop Semi Join
+         Join Filter: true
+         ->  Index Scan using base_tbl_pkey on base_tbl
+               Index Cond: (id = 2)
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Result
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice2; segments: 3)
+                                       ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                                             Index Cond: (id = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(32 rows)
 
 INSERT INTO rw_view1 VALUES (2, 'New row 2');
 SELECT * FROM base_tbl;

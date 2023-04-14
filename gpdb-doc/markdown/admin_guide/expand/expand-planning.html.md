@@ -11,7 +11,7 @@ The topics in this section help to ensure that you are prepared to perform a sys
 -   [Planning New Segment Initialization](#topic6) provides information about planning to initialize new segment hosts with `gpexpand`.
 -   [Planning Table Redistribution](#topic10) provides information about planning the data redistribution after the new segment hosts have been initialized.
 
-**Important:** When expanding a Greenplum Database system, you must disable Greenplum interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies. For example, these commands disable Greenplum interconnect proxies by setting the interconnect to the default \(`UDPIFC`\) and reloading the `postgresql.conf` file to update the Greenplum system configuration.
+> **Important** When expanding a Greenplum Database system, you must deactivate Greenplum interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies. For example, these commands deactivate Greenplum interconnect proxies by setting the interconnect to the default \(`UDPIFC`\) and reloading the `postgresql.conf` file to update the Greenplum system configuration.
 
 ```
 gpconfig -r gp_interconnect_type
@@ -20,7 +20,7 @@ gpstop -u
 
 For information about Greenplum interconnect proxies, see [Configuring Proxies for the Greenplum Interconnect](../managing/proxy-ic.html).
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## <a id="topic4"></a>System Expansion Checklist 
 
@@ -34,14 +34,14 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_gr2_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_gr2_s1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Plan for ordering, building, and networking new hardware
                   platforms, or provisioning cloud resources. </td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_ryl_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_ryl_s1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Devise a database expansion plan. Map the number of segments per host,
                   schedule the downtime period for testing performance and creating the expansion
@@ -49,34 +49,34 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_e2s_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_e2s_s1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Perform a complete schema dump.</td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_yq5_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_yq5_s1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Install Greenplum Database binaries on new hosts. </td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Copy SSH keys to the new hosts (<code class="ph codeph">gpssh-exkeys</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Validate disk I/O and memory bandwidth of the new hardware or cloud resources
                     (<code class="ph codeph">gpcheckperf</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
-                <td class="entry">Validate that the master data directory has no extremely large files in the
+                <td class="entry">Validate that the coordinator data directory has no extremely large files in the
                     <code class="ph codeph">log</code> directory.</td>
               </tr>
               <tr class="row">
@@ -86,14 +86,14 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Validate that there are no catalog issues
                   (<code class="ph codeph">gpcheckcat</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Validate disk I/O and memory bandwidth of the combined existing and new
                   hardware or cloud resources (<code class="ph codeph">gpcheckperf</code>). </td>
@@ -105,13 +105,13 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Prepare an expansion input file (<code class="ph codeph">gpexpand</code>). </td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Initialize new segments into the system and create an expansion schema
                     (<code class="ph codeph">gpexpand -i <var class="keyword varname">input_file</var></code>).</td>
@@ -124,27 +124,27 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_jzy_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_jzy_t1m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Before you start table redistribution, stop any automated snapshot processes
                   or other processes that consume disk space.</td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Redistribute tables through the expanded system
                   (<code class="ph codeph">gpexpand</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry">Remove expansion schema (<code class="ph codeph">gpexpand -c</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry">
-                  <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28">
                 </td>
                 <td class="entry"><strong class="ph b">Important:</strong> Run <code class="ph codeph">analyze</code> to update distribution
                     statistics.<p class="p">During the expansion, use <code class="ph codeph">gpexpand -a</code>, and
@@ -155,7 +155,7 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
                     and available</span></td>
               </tr>
               <tr class="row">
-                <td class="entry"><img class="image" id="topic4__image_ogk_mj4_lhb" src="../graphics/green-checkbox.jpg" width="29" height="28"></td>
+                <td class="entry"><img class="image" id="topic4__image_ogk_mj4_lhb" src="../graphics/green-checkbox.jpg" alt="Checkbox" width="29" height="28"></td>
                 <td class="entry">Back up databases using the <code class="ph codeph">gpbackup</code> utility. Backups you
                   created before you began the system expansion cannot be restored to the newly
                   expanded system because the <code class="ph codeph">gprestore</code> utility can only restore
@@ -193,7 +193,7 @@ These utilities cannot be run while `gpexpand` is performing segment initializat
 -   `gppkg`
 -   `gprestore`
 
-**Important:** After you begin initializing new segments, you can no longer restore the system using backup files created for the pre-expansion system. When initialization successfully completes, the expansion is committed and cannot be rolled back.
+> **Important** After you begin initializing new segments, you can no longer restore the system using backup files created for the pre-expansion system. When initialization successfully completes, the expansion is committed and cannot be rolled back.
 
 ### <a id="topic7"></a>Planning Mirror Segments 
 
@@ -229,22 +229,25 @@ Control expansion process aspects by modifying *gpexpand.status\_detail*. For ex
 
 Table redistribution is performed while the system is online. For many Greenplum systems, table redistribution completes in a single `gpexpand` session scheduled during a low-use period. Larger systems may require multiple sessions and setting the order of table redistribution to minimize performance impact. Complete the table redistribution in one session if possible.
 
-**Important:** To perform table redistribution, your segment hosts must have enough disk space to temporarily hold a copy of your largest table. All tables are unavailable for read and write operations during redistribution.
+> **Important** To perform table redistribution, your segment hosts must have enough disk space to temporarily hold a copy of your largest table. All tables are unavailable for read and write operations during redistribution.
 
 The performance impact of table redistribution depends on the size, storage type, and partitioning design of a table. For any given table, redistributing it with `gpexpand` takes as much time as a `CREATE TABLE AS SELECT` operation would. When redistributing a terabyte-scale fact table, the expansion utility can use much of the available system resources, which could affect query performance or other database workloads.
 
+### <a id="tabred"></a>Table Redistribution Method
+
+Greenplum Database uses a *rebuild* table distribution method to redistribute data during an expansion. Greenplum:
+
+1. Creates a new table.
+1. Copies all of the data from the old table to the new table.
+1. Replaces the old table.
+
+The rebuild method is similar to creating a new table with a `CREATE TABLE AS SELECT` command. During data redistribution, Greenplum Database acquires an `ACCESS EXCLUSIVE` lock on the table.
+
 ### <a id="topic11"></a>Managing Redistribution in Large-Scale Greenplum Systems 
 
-When planning the redistribution phase, consider the impact of the `ACCESS EXCLUSIVE` lock taken on each table, and the table data redistribution method. User activity on a table can delay its redistribution, but also tables are unavailable for user activity during redistribution.
+When planning the redistribution phase, consider the impact of the `ACCESS EXCLUSIVE` lock taken on each table. User activity on a table can delay its redistribution, but also tables are unavailable for user activity during redistribution.
 
 You can manage the order in which tables are redistributed by adjusting their ranking. See [Ranking Tables for Redistribution](expand-redistribute.html). Manipulating the redistribution order can help adjust for limited disk space and restore optimal query performance for high-priority queries sooner.
-
-#### <a id="tabred"></a>Table Redistribution Methods 
-
-There are two methods of redistributing data when performing a Greenplum Database expansion.
-
--   `rebuild` - Create a new table, copy all the data from the old to the new table, and replace the old table. This is the default. The rebuild method is similar to creating a new table with a `CREATE TABLE AS SELECT` command. During data redistribution, an `ACCESS EXCLUSIVE` lock is acquired on the table.
--   `move` - Scan all the data and perform an `UPDATE` operation to move rows as needed to different segment instances. During data redistribution, an `ACCESS EXCLUSIVE` lock is acquired on the table. In general, this method requires less disk space, however, it creates obsolete table rows and might require a `VACUUM` operation on the table after the data redistribution. Also, this method updates indexes one row at a time, which can be much slower than rebuilding the index with the `CREATE INDEX` command.
 
 #### <a id="systs"></a>Systems with Abundant Free Disk Space 
 
@@ -267,7 +270,7 @@ Also consider the following:
 -   Append-optimized tables that are defined to use data compression expand at a significantly slower rate than uncompressed append-optimized tables, potentially up to 80% slower.
 -   Systems with data compression such as ZFS/LZJB take longer to redistribute.
 
-**Important:** If your system hosts use data compression, use identical compression settings on the new hosts to avoid disk space shortage.
+> **Important** If your system hosts use data compression, use identical compression settings on the new hosts to avoid disk space shortage.
 
 ### <a id="topic16"></a>Redistributing Partitioned Tables 
 

@@ -152,8 +152,8 @@ typedef struct VariableCacheData
 	 */
 	TransactionId latestCompletedXid;	/* newest XID that has committed or
 										 * aborted */
-	TransactionId latestCompletedGxid;	/* newest distributed XID that has
-										   committed or aborted */
+	DistributedTransactionId latestCompletedGxid;	/* newest distributed XID that has
+													   committed or aborted */
 
 	/*
 	 * The two variables are protected by shmGxidGenLock.  Note nextGxid won't
@@ -165,7 +165,7 @@ typedef struct VariableCacheData
 	uint32		GxidCount;		/* Gxids available before must do XLOG work */
 
 	/*
-	 * These fields are protected by CLogTruncationLock
+	 * These fields are protected by XactTruncationLock
 	 */
 	TransactionId oldestClogXid;	/* oldest it's safe to look up in clog */
 

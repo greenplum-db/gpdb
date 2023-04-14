@@ -1285,7 +1285,6 @@ CExpression::FValidPlan(const CReqdPropPlan *prpp,
 
 	CDrvdPropRelational *pdprel = GetDrvdPropRelational();
 
-	// GPDB_12_MERGE_FIXME: Also check FValidPartEnforcers()
 	return prpp->FCompatible(exprhdl, CPhysical::PopConvert(m_pop), pdprel,
 							 pdpplan) &&
 		   FValidChildrenDistribution(pdpctxtplan);
@@ -1314,7 +1313,7 @@ CExpression::FValidChildrenDistribution(CDrvdPropCtxtPlan *pdpctxtplan)
 		return false;
 	}
 
-	// we cannot enforce a motion gather if the input is already on the master
+	// we cannot enforce a motion gather if the input is already on the coordinator
 	if (COperator::EopPhysicalMotionGather == Pop()->Eopid())
 	{
 		CExpression *pexprChild = (*this)[0];
@@ -1329,43 +1328,6 @@ CExpression::FValidChildrenDistribution(CDrvdPropCtxtPlan *pdpctxtplan)
 
 	return true;
 }
-
-#if 0
-//---------------------------------------------------------------------------
-//	@function:
-//		CExpression::FValidPartEnforcers
-//
-//	@doc:
-//		Check if the expression is valid with respect to the partition enforcers.
-//
-//---------------------------------------------------------------------------
-BOOL
-CExpression::FValidPartEnforcers(CDrvdPropCtxtPlan *pdpctxtplan)
-{
-	GPOS_ASSERT(Pop()->FPhysical());
-
-	CPartInfo *ppartinfo = DerivePartitionInfo();
-	GPOS_ASSERT(NULL != ppartinfo);
-
-	if (0 == ppartinfo->UlConsumers())
-	{
-		// no part consumers found
-		return true;
-	}
-
-	// retrieve plan properties
-	CDrvdPropPlan *pdpplan = CDrvdPropPlan::Pdpplan(PdpDerive(pdpctxtplan));
-
-	if (CUtils::FPhysicalMotion(Pop()) &&
-		pdpplan->Ppim()->FContainsUnresolved())
-	{
-		// prohibit Motion on top of unresolved partition consumers
-		return false;
-	}
-
-	return true;
-}
-#endif
 
 CColRefSet *
 CExpression::DeriveOuterReferences()
@@ -1533,5 +1495,26 @@ CExpression::DeriveHasScalarArrayCmp()
 	CExpressionHandle exprhdl(m_mp);
 	exprhdl.Attach(this);
 	return m_pdpscalar->DeriveHasScalarArrayCmp(exprhdl);
+}
+BOOL
+CExpression::DeriveHasScalarFuncProject()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveHasScalarFuncProject(exprhdl);
+}
+ULONG
+CExpression::DeriveTotalOrderedAggs()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveTotalOrderedAggs(exprhdl);
+}
+BOOL
+CExpression::DeriveContainsOnlyReplicationSafeAggFuncs()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveContainsOnlyReplicationSafeAggFuncs(exprhdl);
 }
 // EOF

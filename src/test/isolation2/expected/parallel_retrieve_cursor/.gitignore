@@ -11,3 +11,4 @@ special_query.out
 status_check.out
 status_wait.out
 syntax.out
+concurrency.out

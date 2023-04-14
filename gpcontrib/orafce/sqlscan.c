@@ -1,6 +1,6 @@
-#line 2 "sqlscan.c"
+#line 1 "sqlscan.c"
 
-#line 4 "sqlscan.c"
+#line 3 "sqlscan.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -1004,7 +1004,7 @@ static unsigned char unescape_single_char(unsigned char c);
 #define _pg_mbstrlen_with_len(buf,loc) 	pg_mbstrlen_with_len(buf,loc)
 #endif
 
-#line 1008 "sqlscan.c"
+#line 1007 "sqlscan.c"
 #define YY_NO_INPUT 1
 /*
  * OK, here is a short description of lex/flex rules behavior.
@@ -1132,7 +1132,7 @@ static unsigned char unescape_single_char(unsigned char c);
  * Note that xcstart must appear before operator, as explained above!
  *  Also whitespace (comment) must appear before operator.
  */
-#line 1136 "sqlscan.c"
+#line 1135 "sqlscan.c"
 
 #define INITIAL 0
 #define xb 1
@@ -1357,7 +1357,7 @@ YY_DECL
 #line 308 "sqlscan.l"
 
 
-#line 1361 "sqlscan.c"
+#line 1360 "sqlscan.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -2176,7 +2176,7 @@ YY_RULE_SETUP
 #line 862 "sqlscan.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 2180 "sqlscan.c"
+#line 2179 "sqlscan.c"
 
 	case YY_END_OF_BUFFER:
 		{

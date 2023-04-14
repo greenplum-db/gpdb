@@ -22,67 +22,130 @@
 #include "catalog/pg_class_d.h"
 
 /*
-* Sort priority for database object types.
+ * Sort priority for database object types.
  * Objects are sorted by type, and within a type by name.
  *
- * Because materialized views can potentially reference system views,
- * DO_REFRESH_MATVIEW should always be the last thing on the list.
+ * Triggers, event triggers, and materialized views are intentionally sorted
+ * late.  Triggers must be restored after all data modifications, so that
+ * they don't interfere with loading data.  Event triggers are restored
+ * next-to-last so that they don't interfere with object creations of any
+ * kind.  Matview refreshes are last because they should execute in the
+ * database's normal state (e.g., they must come after all ACLs are restored;
+ * also, if they choose to look at system catalogs, they should see the final
+ * restore state).  If you think to change this, see also the RestorePass
+ * mechanism in pg_backup_archiver.c.
+ *
+ * On the other hand, casts are intentionally sorted earlier than you might
+ * expect; logically they should come after functions, since they usually
+ * depend on those.  This works around the backend's habit of recording
+ * views that use casts as dependent on the cast's underlying function.
+ * We initially sort casts first, and then any functions used by casts
+ * will be hoisted above the casts, and in turn views that those functions
+ * depend on will be hoisted above the functions.  But views not used that
+ * way won't be hoisted.
  *
  * NOTE: object-type priorities must match the section assignments made in
  * pg_dump.c; that is, PRE_DATA objects must sort before DO_PRE_DATA_BOUNDARY,
  * POST_DATA objects must sort after DO_POST_DATA_BOUNDARY, and DATA objects
  * must sort between them.
  */
+
+/* This enum lists the priority levels in order */
+enum dbObjectTypePriorities
+{
+	PRIO_NAMESPACE = 1,
+	PRIO_PROCLANG,
+	PRIO_COLLATION,
+	PRIO_TRANSFORM,
+	PRIO_EXTENSION,
+	PRIO_TYPE,					/* used for DO_TYPE and DO_SHELL_TYPE */
+	PRIO_FUNC,
+	PRIO_AGG,
+	PRIO_ACCESS_METHOD,
+	PRIO_OPERATOR,
+	PRIO_OPFAMILY,				/* used for DO_OPFAMILY and DO_OPCLASS */
+	PRIO_CAST,
+	PRIO_CONVERSION,
+	PRIO_TSPARSER,
+	PRIO_TSTEMPLATE,
+	PRIO_TSDICT,
+	PRIO_TSCONFIG,
+	PRIO_FDW,
+	PRIO_FOREIGN_SERVER,
+	PRIO_TABLE,
+	PRIO_TABLE_ATTACH,
+	PRIO_DUMMY_TYPE,
+	PRIO_ATTRDEF,
+	PRIO_BLOB,
+	PRIO_PRE_DATA_BOUNDARY,		/* boundary! */
+	PRIO_TABLE_DATA,
+	PRIO_SEQUENCE_SET,
+	PRIO_BLOB_DATA,
+	PRIO_POST_DATA_BOUNDARY,	/* boundary! */
+	PRIO_CONSTRAINT,
+	PRIO_INDEX,
+	PRIO_INDEX_ATTACH,
+	PRIO_STATSEXT,
+	PRIO_RULE,
+	PRIO_TRIGGER,
+	PRIO_FK_CONSTRAINT,
+	PRIO_POLICY,
+	PRIO_PUBLICATION,
+	PRIO_PUBLICATION_REL,
+	PRIO_SUBSCRIPTION,
+	PRIO_DEFAULT_ACL,			/* done in ACL pass */
+	PRIO_EVENT_TRIGGER,			/* must be next to last! */
+	PRIO_REFRESH_MATVIEW		/* must be last! */
+};
+
+/* This table is indexed by enum DumpableObjectType */
 static const int dbObjectTypePriority[] =
 {
-	1,							/* DO_NAMESPACE */
-	4,							/* DO_EXTENSION */
-	5,							/* DO_TYPE */
-	5,							/* DO_SHELL_TYPE */
-	6,							/* DO_FUNC */
-	7,							/* DO_AGG */
-	8,							/* DO_OPERATOR */
-	8,							/* DO_ACCESS_METHOD */
-	9,							/* DO_OPCLASS */
-	9,							/* DO_OPFAMILY */
-	3,							/* DO_COLLATION */
-	11,							/* DO_CONVERSION */
-	18,							/* DO_TABLE */
-	19,							/* DO_TABLE_ATTACH */
-	20,							/* DO_ATTRDEF */
-	28,							/* DO_INDEX */
-	29,							/* DO_INDEX_ATTACH */
-	30,							/* DO_STATSEXT */
-	31,							/* DO_RULE */
-	32,							/* DO_TRIGGER */
-	27,							/* DO_CONSTRAINT */
-	33,							/* DO_FK_CONSTRAINT */
-	2,							/* DO_PROCLANG */
-	10,							/* DO_CAST */
-	23,							/* DO_TABLE_DATA */
-	24,							/* DO_SEQUENCE_SET */
-	19,							/* DO_DUMMY_TYPE */
-	12,							/* DO_TSPARSER */
-	14,							/* DO_TSDICT */
-	13,							/* DO_TSTEMPLATE */
-	15,							/* DO_TSCONFIG */
-	16,							/* DO_FDW */
-	17,							/* DO_FOREIGN_SERVER */
-	33,							/* DO_DEFAULT_ACL */
-	3,							/* DO_TRANSFORM */
-	21,							/* DO_BLOB */
-	25,							/* DO_BLOB_DATA */
-	8,							/* DO_EXTPROTOCOL */
-	21,							/* DO_TYPE_STORAGE_OPTIONS */
-	1,							/* DO_BINARY_UPGRADE */
-	22,							/* DO_PRE_DATA_BOUNDARY */
-	26,							/* DO_POST_DATA_BOUNDARY */
-	34,							/* DO_EVENT_TRIGGER */
-	39,							/* DO_REFRESH_MATVIEW */
-	35,							/* DO_POLICY */
-	36,							/* DO_PUBLICATION */
-	37,							/* DO_PUBLICATION_REL */
-	38							/* DO_SUBSCRIPTION */
+	PRIO_NAMESPACE,				/* DO_NAMESPACE */
+	PRIO_EXTENSION,				/* DO_EXTENSION */
+	PRIO_TYPE,					/* DO_TYPE */
+	PRIO_TYPE,					/* DO_SHELL_TYPE */
+	PRIO_FUNC,					/* DO_FUNC */
+	PRIO_AGG,					/* DO_AGG */
+	PRIO_OPERATOR,				/* DO_OPERATOR */
+	PRIO_ACCESS_METHOD,			/* DO_ACCESS_METHOD */
+	PRIO_OPFAMILY,				/* DO_OPCLASS */
+	PRIO_OPFAMILY,				/* DO_OPFAMILY */
+	PRIO_COLLATION,				/* DO_COLLATION */
+	PRIO_CONVERSION,			/* DO_CONVERSION */
+	PRIO_TABLE,					/* DO_TABLE */
+	PRIO_TABLE_ATTACH,			/* DO_TABLE_ATTACH */
+	PRIO_ATTRDEF,				/* DO_ATTRDEF */
+	PRIO_INDEX,					/* DO_INDEX */
+	PRIO_INDEX_ATTACH,			/* DO_INDEX_ATTACH */
+	PRIO_STATSEXT,				/* DO_STATSEXT */
+	PRIO_RULE,					/* DO_RULE */
+	PRIO_TRIGGER,				/* DO_TRIGGER */
+	PRIO_CONSTRAINT,			/* DO_CONSTRAINT */
+	PRIO_FK_CONSTRAINT,			/* DO_FK_CONSTRAINT */
+	PRIO_PROCLANG,				/* DO_PROCLANG */
+	PRIO_CAST,					/* DO_CAST */
+	PRIO_TABLE_DATA,			/* DO_TABLE_DATA */
+	PRIO_SEQUENCE_SET,			/* DO_SEQUENCE_SET */
+	PRIO_DUMMY_TYPE,			/* DO_DUMMY_TYPE */
+	PRIO_TSPARSER,				/* DO_TSPARSER */
+	PRIO_TSDICT,				/* DO_TSDICT */
+	PRIO_TSTEMPLATE,			/* DO_TSTEMPLATE */
+	PRIO_TSCONFIG,				/* DO_TSCONFIG */
+	PRIO_FDW,					/* DO_FDW */
+	PRIO_FOREIGN_SERVER,		/* DO_FOREIGN_SERVER */
+	PRIO_DEFAULT_ACL,			/* DO_DEFAULT_ACL */
+	PRIO_TRANSFORM,				/* DO_TRANSFORM */
+	PRIO_BLOB,					/* DO_BLOB */
+	PRIO_BLOB_DATA,				/* DO_BLOB_DATA */
+	PRIO_PRE_DATA_BOUNDARY,		/* DO_PRE_DATA_BOUNDARY */
+	PRIO_POST_DATA_BOUNDARY,	/* DO_POST_DATA_BOUNDARY */
+	PRIO_EVENT_TRIGGER,			/* DO_EVENT_TRIGGER */
+	PRIO_REFRESH_MATVIEW,		/* DO_REFRESH_MATVIEW */
+	PRIO_POLICY,				/* DO_POLICY */
+	PRIO_PUBLICATION,			/* DO_PUBLICATION */
+	PRIO_PUBLICATION_REL,		/* DO_PUBLICATION_REL */
+	PRIO_SUBSCRIPTION			/* DO_SUBSCRIPTION */
 };
 
 static DumpId preDataBoundId;
@@ -169,6 +232,7 @@ DOTypeNameCompare(const void *p1, const void *p2)
 		FuncInfo   *fobj2 = *(FuncInfo *const *) p2;
 		int			i;
 
+		/* Sort by number of arguments, then argument type names */
 		cmpval = fobj1->nargs - fobj2->nargs;
 		if (cmpval != 0)
 			return cmpval;
@@ -207,7 +271,30 @@ DOTypeNameCompare(const void *p1, const void *p2)
 		AttrDefInfo *adobj1 = *(AttrDefInfo *const *) p1;
 		AttrDefInfo *adobj2 = *(AttrDefInfo *const *) p2;
 
+		/* Sort by attribute number */
 		cmpval = (adobj1->adnum - adobj2->adnum);
+		if (cmpval != 0)
+			return cmpval;
+	}
+	else if (obj1->objType == DO_POLICY)
+	{
+		PolicyInfo *pobj1 = *(PolicyInfo *const *) p1;
+		PolicyInfo *pobj2 = *(PolicyInfo *const *) p2;
+
+		/* Sort by table name (table namespace was considered already) */
+		cmpval = strcmp(pobj1->poltable->dobj.name,
+						pobj2->poltable->dobj.name);
+		if (cmpval != 0)
+			return cmpval;
+	}
+	else if (obj1->objType == DO_TRIGGER)
+	{
+		TriggerInfo *tobj1 = *(TriggerInfo *const *) p1;
+		TriggerInfo *tobj2 = *(TriggerInfo *const *) p2;
+
+		/* Sort by table name (table namespace was considered already) */
+		cmpval = strcmp(tobj1->tgtable->dobj.name,
+						tobj2->tgtable->dobj.name);
 		if (cmpval != 0)
 			return cmpval;
 	}
@@ -215,6 +302,7 @@ DOTypeNameCompare(const void *p1, const void *p2)
 	/* Usually shouldn't get here, but if we do, sort by OID */
 	return oidcmp(obj1->catId.oid, obj2->catId.oid);
 }
+
 
 /*
  * Sort the given objects into a safe dump order using dependency
@@ -1107,7 +1195,15 @@ repairDependencyLoop(DumpableObject **loop,
 		}
 	}
 
-	/* Loop of table with itself, happens with generated columns */
+	/*
+	 * Loop of table with itself --- just ignore it.
+	 *
+	 * (Actually, what this arises from is a dependency of a table column on
+	 * another column, which happens with generated columns; or a dependency
+	 * of a table column on the whole table, which happens with partitioning.
+	 * But we didn't pay attention to sub-object IDs while collecting the
+	 * dependency data, so we can't see that here.)
+	 */
 	if (nLoop == 1)
 	{
 		if (loop[0]->objType == DO_TABLE)
@@ -1186,11 +1282,6 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 			snprintf(buf, bufsize,
 					 "TYPE %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
-			return;
-		case DO_TYPE_STORAGE_OPTIONS:
-			snprintf(buf, bufsize,
-					 "TYPE STORAGE OPTIONS FOR TYPE %s.%s  (ID %d OID %u) OPTIONS %s",
-					 ((TypeStorageOptions *)obj)->typnamespace, obj->name, obj->dumpId, obj->catId.oid, ((TypeStorageOptions *)obj)->typoptions);
 			return;
 		case DO_SHELL_TYPE:
 			snprintf(buf, bufsize,

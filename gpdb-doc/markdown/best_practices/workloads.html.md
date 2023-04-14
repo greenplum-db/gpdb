@@ -4,7 +4,7 @@ title: Memory and Resource Management with Resource Queues
 
 Avoid memory errors and manage Greenplum Database resources.
 
-**Note:** Resource groups are a newer resource management scheme that enforces memory, CPU, and concurrent transaction limits in Greenplum Database. The [Managing Resources](../admin_guide/wlmgmt.html) topic provides a comparison of the resource queue and the resource group management schemes. Refer to [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html) for configuration and usage information for this resource management scheme.
+> **Note** Resource groups are a newer resource management scheme that enforces memory, CPU, and concurrent transaction limits in Greenplum Database. The [Managing Resources](../admin_guide/wlmgmt.html) topic provides a comparison of the resource queue and the resource group management schemes. Refer to [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html) for configuration and usage information for this resource management scheme.
 
 Memory management has a significant impact on performance in a Greenplum Database cluster. The default settings are suitable for most environments. Do not change the default settings until you understand the memory characteristics and usage on your system.
 
@@ -61,11 +61,11 @@ It is important to include memory requirements for mirror segments that become p
 The following are recommended operating system and Greenplum Database memory settings:
 
 -   Do not configure the OS to use huge pages.
--   **vm.overcommit\_memory**
+-   **vm.overcommit_memory**
 
     This is a Linux kernel parameter, set in `/etc/sysctl.conf` and it should always be set to 2. It determines the method the OS uses for determining how much memory can be allocated to processes and 2 is the only safe setting for Greenplum Database. Please review the sysctl parameters in the [Greenplum Database Installation Guide](../install_guide/prep_os.html#topic3__sysctl_file).
 
--   **vm.overcommit\_ratio**
+-   **vm.overcommit_ratio**
 
     This is a Linux kernel parameter, set in [`/etc/sysctl.conf`](../install_guide/prep_os.html#topic3__sysctl_file). It is the percentage of RAM that is used for application processes. The remainder is reserved for the operating system. The default on Red Hat is 50.
 
@@ -73,17 +73,17 @@ The following are recommended operating system and Greenplum Database memory set
 
     See [Greenplum Database Memory Overview](../admin_guide/wlmgmt_intro.html) for instructions to calculate a value for `vm.overcommit_ratio`.
 
--   **gp\_vmem\_protect\_limit**
+-   **gp_vmem_protect_limit**
 
     Use `gp_vmem_protect_limit` to set the maximum memory that the instance can allocate for *all* work being done in each segment database. Never set this value larger than the physical RAM on the system. If `gp_vmem_protect_limit` is too high, it is possible for memory to become exhausted on the system and normal operations may fail, causing segment failures. If `gp_vmem_protect_limit` is set to a safe lower value, true memory exhaustion on the system is prevented; queries may fail for hitting the limit, but system disruption and segment failures are avoided, which is the desired behavior.
 
     See [Resource Queue Segment Memory Configuration](sysconfig.html#segment_mem_config) for instructions to calculate a safe value for `gp_vmem_protect_limit`.
 
--   **runaway\_detector\_activation\_percent**
+-   **runaway_detector_activation_percent**
 
     Runaway Query Termination, introduced in Greenplum Database 4.3.4, prevents out of memory conditions. The `runaway_detector_activation_percent` system parameter controls the percentage of `gp_vmem_protect_limit` memory utilized that triggers termination of queries. It is set on by default at 90%. If the percentage of `gp_vmem_protect_limit` memory that is utilized for a segment exceeds the specified value, Greenplum Database terminates queries based on memory usage, beginning with the query consuming the largest amount of memory. Queries are terminated until the utilized percentage of `gp_vmem_protect_limit` is below the specified percentage.
 
--   **statement\_mem**
+-   **statement_mem**
 
     Use `statement_mem` to allocate memory used for a query per segment database. If additional memory is required it will spill to disk. Set the optimal value for `statement_mem` as follows:
 
@@ -93,11 +93,11 @@ The following are recommended operating system and Greenplum Database memory set
 
     The default value of `statement_mem` is 125MB. For example, on a system that is configured with 8 segments per host, a query uses 1GB of memory on each segment server \(8 segments ⨉ 125MB\) with the default `statement_mem` setting. Set `statement_mem` at the session level for specific queries that require additional memory to complete. This setting works well to manage query memory on clusters with low concurrency. For clusters with high concurrency also use resource queues to provide additional control on what and how much is running on the system.
 
--   **gp\_workfile\_limit\_files\_per\_query**
+-   **gp_workfile_limit_files_per_query**
 
     Set `gp_workfile_limit_files_per_query` to limit the maximum number of temporary spill files \(workfiles\) allowed per query. Spill files are created when a query requires more memory than it is allocated. When the limit is exceeded the query is terminated. The default is zero, which allows an unlimited number of spill files and may fill up the file system.
 
--   **gp\_workfile\_compression**
+-   **gp_workfile_compression**
 
     If there are numerous spill files then set `gp_workfile_compression` to compress the spill files. Compressing spill files may help to avoid overloading the disk subsystem with IO operations.
 
@@ -129,5 +129,5 @@ Greenplum Database resource queues provide a powerful mechanism for managing the
 -   Use gptoolkit to view resource queue usage and to understand how the queues are working.
 
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 

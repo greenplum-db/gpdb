@@ -73,9 +73,8 @@ private:
 	};
 
 	// hash maps mapping CHAR *->SCTEProducerInfo
-	typedef CHashMap<CHAR, SCTEProducerInfo, HashStr, StrEqual, CleanupNULL,
-					 CleanupDelete>
-		HMSzCTEInfo;
+	using HMSzCTEInfo = CHashMap<CHAR, SCTEProducerInfo, HashStr, StrEqual,
+								 CleanupNULL, CleanupDelete>;
 
 	// query level where the CTEs are defined
 	ULONG m_query_level;
@@ -117,14 +116,14 @@ public:
 };
 
 // hash maps mapping ULONG -> CCTEListEntry
-typedef CHashMap<ULONG, CCTEListEntry, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupRelease>
-	HMUlCTEListEntry;
+using HMUlCTEListEntry =
+	CHashMap<ULONG, CCTEListEntry, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupRelease>;
 
 // iterator
-typedef CHashMapIter<ULONG, CCTEListEntry, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupRelease>
-	HMIterUlCTEListEntry;
+using HMIterUlCTEListEntry =
+	CHashMapIter<ULONG, CCTEListEntry, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupRelease>;
 
 }  // namespace gpdxl
 #endif	// !GPDXL_CCTEListEntry_H

@@ -2,4 +2,4 @@
 comment = 'simulate various faults for testing purposes'
 default_version = '1.0'
 module_pathname = '$libdir/gp_inject_fault'
-relocatable = true
+relocatable = false

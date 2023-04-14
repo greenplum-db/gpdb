@@ -180,15 +180,13 @@ begin;
 insert into addcol6 select i,i from generate_series(1,10)i;
 -- abort the first insert, still should advance gp_fastsequence for this
 -- relation.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
 abort;
 
 -- check gp_fastsequence remains advanced.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
 
@@ -197,8 +195,7 @@ alter table addcol6 add column c float default 1.2;
 select a,c from addcol6 where b > 5 order by a;
 
 -- Lets validate after alter gp_fastsequence reflects correctly.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
 
@@ -308,9 +305,6 @@ select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::r
 alter table addcol1 set distributed randomly;
 alter table addcol1 set distributed by (a);
 
--- test some constraints (unique indexes do not work for unique and pkey)
-alter table addcol1 add constraint tunique unique(a);
-alter table addcol1 add constraint tpkey primary key(a);
 alter table addcol1 add constraint tcheck check (a is not null);
 
 -- test changing the storage type of a column
@@ -323,10 +317,6 @@ alter table addcol1 alter column f_renamed set storage external;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
 alter table addcol1 alter column f_renamed set storage extended;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
-
--- cannot set reloption appendonly
-alter table addcol1 set (appendonly=true, compresslevel=5, fillfactor=50);
-alter table addcol1 reset (appendonly, compresslevel, fillfactor);
 
 -- test some aocs partition table altering
 create table alter_aocs_part_table (a int, b int) with (appendonly=true, orientation=column) distributed by (a)
@@ -373,7 +363,7 @@ alter table aocs_multi_level_part_table add partition part3 start(date '2010-01-
   with (appendonly=true, orientation=column)
   (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
 
--- Add default partition (defaults to heap storage unless set with AO)
+-- Add default partition (defaults to parent table's AM)
 alter table aocs_multi_level_part_table add default partition yearYYYY (default subpartition def);
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid)
 WHERE c.relname = 'aocs_multi_level_part_table_1_prt_yearyyyy_2_prt_def';
@@ -450,14 +440,14 @@ alter table aocs_with_compress alter column c type integer;
 
 -- test case: alter AOCS table add column, the preference of the storage setting is: the encoding clause > table setting > gp_default_storage_options
 CREATE TABLE aocs_alter_add_col(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
-SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 -- use statement encoding 
 ALTER TABLE aocs_alter_add_col ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
 -- use table setting
 ALTER TABLE aocs_alter_add_col ADD COLUMN c int;
-RESET gp_default_storage_options;
--- use table setting
+-- table setting > gp_default_storage_options
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
 ALTER TABLE aocs_alter_add_col ADD COLUMN d int;
+RESET gp_default_storage_options;
 \d+ aocs_alter_add_col
 DROP TABLE aocs_alter_add_col;
 
@@ -465,10 +455,39 @@ CREATE TABLE aocs_alter_add_col_no_compress(a int) WITH (appendonly=true, orient
 SET gp_default_storage_options ='compresstype=zlib, compresslevel=2, blocksize=8192';
 -- use statement encoding
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN b int ENCODING(compresstype=rle_type, compresslevel=3, blocksize=16384);
--- use gp_default_storage_options
+-- use table setting
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN c int;
 RESET gp_default_storage_options;
 -- use default value 
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN d int;
 \d+ aocs_alter_add_col_no_compress 
 DROP TABLE aocs_alter_add_col_no_compress;
+
+-- test case: ensure reorganize keep default compresstype, compresslevel and blocksize table options
+CREATE TABLE aocs_alter_add_col_reorganize(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
+ALTER TABLE aocs_alter_add_col_reorganize SET WITH (reorganize=true);
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
+-- use statement encoding
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
+-- use table setting
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN c int;
+RESET gp_default_storage_options;
+-- use table setting
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN d int;
+\d+ aocs_alter_add_col_reorganize
+DROP TABLE aocs_alter_add_col_reorganize;
+
+-- test case: Ensure that reads don't fail after aborting an add column + insert operation and we don't project the aborted column
+CREATE TABLE aocs_addcol_abort(a int, b int) USING ao_column;
+INSERT INTO aocs_addcol_abort SELECT i,i FROM generate_series(1,10)i;
+BEGIN;
+ALTER TABLE aocs_addcol_abort ADD COLUMN c int;
+INSERT INTO aocs_addcol_abort SELECT i,i,i FROM generate_series(1,10)i;
+-- check state of aocsseg for entries of add column + insert
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM aocs_addcol_abort;
+ABORT;
+-- check state of aocsseg if entries for new column are rolled back correctly
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM aocs_addcol_abort;
+DROP TABLE aocs_addcol_abort;

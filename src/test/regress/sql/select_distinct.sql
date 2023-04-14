@@ -137,3 +137,74 @@ SELECT 1 IS NOT DISTINCT FROM 2 as "no";
 SELECT 2 IS NOT DISTINCT FROM 2 as "yes";
 SELECT 2 IS NOT DISTINCT FROM null as "no";
 SELECT null IS NOT DISTINCT FROM null as "yes";
+
+-- join cases
+-- test IS DISTINCT FROM and IS NOT DISTINCT FROM join qual.The postgres planner doesn't support hash join on
+-- IS NOT DISTINCT FROM for now, ORCA supports Hash Join on "IS NOT DISTINCT FROM".
+
+CREATE TABLE distinct_1(a int);
+CREATE TABLE distinct_2(a int);
+INSERT INTO distinct_1 VALUES(1),(2),(NULL);
+INSERT INTO distinct_2 VALUES(1),(NULL);
+
+EXPLAIN SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS DISTINCT FROM distinct_2.a;
+EXPLAIN SELECT * FROM distinct_1 left join distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
+EXPLAIN SELECT * FROM distinct_1 right join distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
+
+EXPLAIN SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+EXPLAIN SELECT * FROM distinct_1 left join distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+EXPLAIN SELECT * FROM distinct_1 right join  distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+
+SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS DISTINCT FROM distinct_2.a;
+SELECT * FROM distinct_1 left join  distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
+SELECT * FROM distinct_1 right join  distinct_2 on distinct_1.a IS DISTINCT FROM distinct_2.a;
+
+SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+SELECT * FROM distinct_1 left join distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+SELECT * FROM distinct_1 right join distinct_2 on distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+
+DROP TABLE distinct_1;
+DROP TABLE distinct_2;
+
+
+-- gpdb start: test inherit/partition table distinct when gp_statistics_pullup_from_child_partition is on
+set gp_statistics_pullup_from_child_partition to on;
+CREATE TABLE sales (id int, date date, amt decimal(10,2))
+DISTRIBUTED BY (id);
+insert into sales values (1,'20210202',20), (2,'20210602',9) ,(3,'20211002',100);
+select distinct * from sales order by 1;
+select distinct sales from sales order by 1;
+CREATE TABLE sales_partition (id int, date date, amt decimal(10,2))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( START (date '2021-01-01') INCLUSIVE
+  END (date '2022-01-01') EXCLUSIVE
+  EVERY (INTERVAL '1 month') );
+insert into sales_partition values (1,'20210202',20), (2,'20210602',9) ,(3,'20211002',100);
+select distinct * from sales_partition order by 1;
+select distinct sales_partition from sales_partition order by 1;
+DROP TABLE sales;
+DROP TABLE sales_partition;
+
+CREATE TABLE cities (
+    name            text,
+    population      float,
+    altitude        int
+); 
+CREATE TABLE capitals (
+    state           char(2)
+) INHERITS (cities);
+select distinct * from cities;
+select distinct cities from cities;
+DROP TABLE capitals;
+DROP TABLE cities;
+set gp_statistics_pullup_from_child_partition to off;
+-- gpdb end: test inherit/partition table distinct when gp_statistics_pullup_from_child_partition is on
+
+-- please refer to https://github.com/greenplum-db/gpdb/issues/15033
+CREATE TABLE t1_issue_15033(c DECIMAL CHECK (0.4 IS DISTINCT FROM 0.3));
+CREATE TABLE t2_issue_15033(c DECIMAL CHECK (0.4 IS NOT DISTINCT FROM 0.3));
+INSERT INTO t1_issue_15033 VALUES(10);
+SELECT * FROM t1_issue_15033;
+INSERT INTO t2_issue_15033 VALUES(10);
+SELECT * FROM t2_issue_15033;

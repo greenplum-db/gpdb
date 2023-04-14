@@ -124,7 +124,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.1976539.1.1" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" PartitionColumns="0">
+      <dxl:Relation Mdid="6.1976539.1.1" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" PartitionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -251,17 +251,16 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.1976539001.1.1"/>
-          <dxl:Partition Mdid="0.1976539002.1.1"/>
-          <dxl:Partition Mdid="0.1976539003.1.1"/>
-          <dxl:Partition Mdid="0.1976539004.1.1"/>
-          <dxl:Partition Mdid="0.1976539005.1.1"/>
+          <dxl:Partition Mdid="6.1976539001.1.1"/>
+          <dxl:Partition Mdid="6.1976539002.1.1"/>
+          <dxl:Partition Mdid="6.1976539003.1.1"/>
+          <dxl:Partition Mdid="6.1976539004.1.1"/>
+          <dxl:Partition Mdid="6.1976539005.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1976539001.1.1" Name="web_sales_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539001.1.1" Name="web_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -388,7 +387,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -406,7 +404,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1976539002.1.1" Name="web_sales_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539002.1.1" Name="web_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -533,7 +531,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -551,7 +548,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1976539003.1.1" Name="web_sales_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539003.1.1" Name="web_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -678,7 +675,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -696,7 +692,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1976539004.1.1" Name="web_sales_prt_4" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539004.1.1" Name="web_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -823,7 +819,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -841,7 +836,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1976539005.1.1" Name="web_sales_prt_5" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.1976539005.1.1" Name="web_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17,0;39,40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -968,7 +963,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -13551,7 +13545,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1974718.1.1" Name="customer" Rows="100138.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1974718.1.0" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
+      <dxl:Relation Mdid="6.1974718.1.0" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -13630,10 +13624,9 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1974718.1.1" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
+      <dxl:Relation Mdid="6.1974718.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;24,18">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -13712,7 +13705,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -13774,7 +13766,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1976539.1.1" TableName="web_sales">
+          <dxl:TableDescriptor Mdid="6.1976539.1.1" TableName="web_sales">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -13821,7 +13813,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.1974718.1.1" TableName="customer">
+          <dxl:TableDescriptor Mdid="6.1974718.1.1" TableName="customer">
             <dxl:Columns>
               <dxl:Column ColId="42" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="43" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -14144,55 +14136,10 @@
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:SortingColumnList/>
-          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
+          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="475.508350" Rows="716144.000000" Width="196"/>
             </dxl:Properties>
-            <dxl:TableDescriptor Mdid="0.1976539.1.1" TableName="web_sales">
-              <dxl:Columns>
-                <dxl:Column ColId="0" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="1" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="2" Attno="3" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="3" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="4" Attno="5" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="5" Attno="6" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="6" Attno="7" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="7" Attno="8" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="8" Attno="9" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="9" Attno="10" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="10" Attno="11" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="11" Attno="12" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="12" Attno="13" ColName="ws_web_page_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="13" Attno="14" ColName="ws_web_site_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="14" Attno="15" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="15" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="16" Attno="17" ColName="ws_promo_sk" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="17" Attno="18" ColName="ws_order_number" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="18" Attno="19" ColName="ws_quantity" TypeMdid="0.23.1.0"/>
-                <dxl:Column ColId="19" Attno="20" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="20" Attno="21" ColName="ws_list_price" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="21" Attno="22" ColName="ws_sales_price" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="22" Attno="23" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="23" Attno="24" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="24" Attno="25" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="25" Attno="26" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="26" Attno="27" ColName="ws_ext_tax" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="27" Attno="28" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="28" Attno="29" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="29" Attno="30" ColName="ws_net_paid" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="30" Attno="31" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="31" Attno="32" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="32" Attno="33" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="33" Attno="34" ColName="ws_net_profit" TypeMdid="0.1700.1.0"/>
-                <dxl:Column ColId="34" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                <dxl:Column ColId="35" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                <dxl:Column ColId="36" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                <dxl:Column ColId="37" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                <dxl:Column ColId="38" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                <dxl:Column ColId="39" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                <dxl:Column ColId="40" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-              </dxl:Columns>
-            </dxl:TableDescriptor>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="ws_sold_date_sk">
                 <dxl:Ident ColId="0" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
@@ -14298,782 +14245,59 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="475.508350" Rows="716144.000000" Width="196"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="66" Alias="ws_sold_date_sk">
-                  <dxl:Ident ColId="66" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="67" Alias="ws_sold_time_sk">
-                  <dxl:Ident ColId="67" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="68" Alias="ws_ship_date_sk">
-                  <dxl:Ident ColId="68" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="69" Alias="ws_item_sk">
-                  <dxl:Ident ColId="69" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="70" Alias="ws_bill_customer_sk">
-                  <dxl:Ident ColId="70" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="71" Alias="ws_bill_cdemo_sk">
-                  <dxl:Ident ColId="71" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="72" Alias="ws_bill_hdemo_sk">
-                  <dxl:Ident ColId="72" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="73" Alias="ws_bill_addr_sk">
-                  <dxl:Ident ColId="73" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="74" Alias="ws_ship_customer_sk">
-                  <dxl:Ident ColId="74" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="75" Alias="ws_ship_cdemo_sk">
-                  <dxl:Ident ColId="75" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="76" Alias="ws_ship_hdemo_sk">
-                  <dxl:Ident ColId="76" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="77" Alias="ws_ship_addr_sk">
-                  <dxl:Ident ColId="77" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="78" Alias="ws_web_page_sk">
-                  <dxl:Ident ColId="78" ColName="ws_web_page_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="79" Alias="ws_web_site_sk">
-                  <dxl:Ident ColId="79" ColName="ws_web_site_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="80" Alias="ws_ship_mode_sk">
-                  <dxl:Ident ColId="80" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="81" Alias="ws_warehouse_sk">
-                  <dxl:Ident ColId="81" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="82" Alias="ws_promo_sk">
-                  <dxl:Ident ColId="82" ColName="ws_promo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="83" Alias="ws_order_number">
-                  <dxl:Ident ColId="83" ColName="ws_order_number" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="84" Alias="ws_quantity">
-                  <dxl:Ident ColId="84" ColName="ws_quantity" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="85" Alias="ws_wholesale_cost">
-                  <dxl:Ident ColId="85" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="86" Alias="ws_list_price">
-                  <dxl:Ident ColId="86" ColName="ws_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="87" Alias="ws_sales_price">
-                  <dxl:Ident ColId="87" ColName="ws_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="88" Alias="ws_ext_discount_amt">
-                  <dxl:Ident ColId="88" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="89" Alias="ws_ext_sales_price">
-                  <dxl:Ident ColId="89" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="90" Alias="ws_ext_wholesale_cost">
-                  <dxl:Ident ColId="90" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="91" Alias="ws_ext_list_price">
-                  <dxl:Ident ColId="91" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="92" Alias="ws_ext_tax">
-                  <dxl:Ident ColId="92" ColName="ws_ext_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="93" Alias="ws_coupon_amt">
-                  <dxl:Ident ColId="93" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="94" Alias="ws_ext_ship_cost">
-                  <dxl:Ident ColId="94" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="95" Alias="ws_net_paid">
-                  <dxl:Ident ColId="95" ColName="ws_net_paid" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="96" Alias="ws_net_paid_inc_tax">
-                  <dxl:Ident ColId="96" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="97" Alias="ws_net_paid_inc_ship">
-                  <dxl:Ident ColId="97" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="98" Alias="ws_net_paid_inc_ship_tax">
-                  <dxl:Ident ColId="98" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="99" Alias="ws_net_profit">
-                  <dxl:Ident ColId="99" ColName="ws_net_profit" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1976539001.1.1" TableName="web_sales_prt_1">
-                <dxl:Columns>
-                  <dxl:Column ColId="66" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="67" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="68" Attno="3" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="69" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="70" Attno="5" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="71" Attno="6" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="72" Attno="7" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="73" Attno="8" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="74" Attno="9" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="75" Attno="10" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="76" Attno="11" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="77" Attno="12" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="78" Attno="13" ColName="ws_web_page_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="79" Attno="14" ColName="ws_web_site_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="80" Attno="15" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="81" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="82" Attno="17" ColName="ws_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="83" Attno="18" ColName="ws_order_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="84" Attno="19" ColName="ws_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="85" Attno="20" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="86" Attno="21" ColName="ws_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="87" Attno="22" ColName="ws_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="88" Attno="23" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="89" Attno="24" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="90" Attno="25" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="91" Attno="26" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="92" Attno="27" ColName="ws_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="93" Attno="28" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                  <dxl:Column ColId="94" Attno="29" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="95" Attno="30" ColName="ws_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="96" Attno="31" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="97" Attno="32" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="98" Attno="33" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="99" Attno="34" ColName="ws_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="100" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="101" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="102" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="103" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="104" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="105" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="106" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:TableScan>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="475.508350" Rows="716144.000000" Width="196"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="107" Alias="ws_sold_date_sk">
-                  <dxl:Ident ColId="107" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="108" Alias="ws_sold_time_sk">
-                  <dxl:Ident ColId="108" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="109" Alias="ws_ship_date_sk">
-                  <dxl:Ident ColId="109" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="110" Alias="ws_item_sk">
-                  <dxl:Ident ColId="110" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="111" Alias="ws_bill_customer_sk">
-                  <dxl:Ident ColId="111" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="112" Alias="ws_bill_cdemo_sk">
-                  <dxl:Ident ColId="112" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="113" Alias="ws_bill_hdemo_sk">
-                  <dxl:Ident ColId="113" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="114" Alias="ws_bill_addr_sk">
-                  <dxl:Ident ColId="114" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="115" Alias="ws_ship_customer_sk">
-                  <dxl:Ident ColId="115" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="116" Alias="ws_ship_cdemo_sk">
-                  <dxl:Ident ColId="116" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="117" Alias="ws_ship_hdemo_sk">
-                  <dxl:Ident ColId="117" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="118" Alias="ws_ship_addr_sk">
-                  <dxl:Ident ColId="118" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="119" Alias="ws_web_page_sk">
-                  <dxl:Ident ColId="119" ColName="ws_web_page_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="120" Alias="ws_web_site_sk">
-                  <dxl:Ident ColId="120" ColName="ws_web_site_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="121" Alias="ws_ship_mode_sk">
-                  <dxl:Ident ColId="121" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="122" Alias="ws_warehouse_sk">
-                  <dxl:Ident ColId="122" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="123" Alias="ws_promo_sk">
-                  <dxl:Ident ColId="123" ColName="ws_promo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="124" Alias="ws_order_number">
-                  <dxl:Ident ColId="124" ColName="ws_order_number" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="125" Alias="ws_quantity">
-                  <dxl:Ident ColId="125" ColName="ws_quantity" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="126" Alias="ws_wholesale_cost">
-                  <dxl:Ident ColId="126" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="127" Alias="ws_list_price">
-                  <dxl:Ident ColId="127" ColName="ws_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="128" Alias="ws_sales_price">
-                  <dxl:Ident ColId="128" ColName="ws_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="129" Alias="ws_ext_discount_amt">
-                  <dxl:Ident ColId="129" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="130" Alias="ws_ext_sales_price">
-                  <dxl:Ident ColId="130" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="131" Alias="ws_ext_wholesale_cost">
-                  <dxl:Ident ColId="131" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="132" Alias="ws_ext_list_price">
-                  <dxl:Ident ColId="132" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="133" Alias="ws_ext_tax">
-                  <dxl:Ident ColId="133" ColName="ws_ext_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="134" Alias="ws_coupon_amt">
-                  <dxl:Ident ColId="134" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="135" Alias="ws_ext_ship_cost">
-                  <dxl:Ident ColId="135" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="136" Alias="ws_net_paid">
-                  <dxl:Ident ColId="136" ColName="ws_net_paid" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="137" Alias="ws_net_paid_inc_tax">
-                  <dxl:Ident ColId="137" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="138" Alias="ws_net_paid_inc_ship">
-                  <dxl:Ident ColId="138" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="139" Alias="ws_net_paid_inc_ship_tax">
-                  <dxl:Ident ColId="139" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="140" Alias="ws_net_profit">
-                  <dxl:Ident ColId="140" ColName="ws_net_profit" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1976539002.1.1" TableName="web_sales_prt_2">
-                <dxl:Columns>
-                  <dxl:Column ColId="107" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="108" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="109" Attno="3" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="110" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="111" Attno="5" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="112" Attno="6" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="113" Attno="7" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="114" Attno="8" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="115" Attno="9" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="116" Attno="10" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="117" Attno="11" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="118" Attno="12" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="119" Attno="13" ColName="ws_web_page_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="120" Attno="14" ColName="ws_web_site_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="121" Attno="15" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="122" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="123" Attno="17" ColName="ws_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="124" Attno="18" ColName="ws_order_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="125" Attno="19" ColName="ws_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="126" Attno="20" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="127" Attno="21" ColName="ws_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="128" Attno="22" ColName="ws_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="129" Attno="23" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="130" Attno="24" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="131" Attno="25" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="132" Attno="26" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="133" Attno="27" ColName="ws_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="134" Attno="28" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                  <dxl:Column ColId="135" Attno="29" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="136" Attno="30" ColName="ws_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="137" Attno="31" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="138" Attno="32" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="139" Attno="33" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="140" Attno="34" ColName="ws_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="141" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="142" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="143" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="144" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="145" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="146" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="147" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:TableScan>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="475.508350" Rows="716144.000000" Width="196"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="148" Alias="ws_sold_date_sk">
-                  <dxl:Ident ColId="148" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="149" Alias="ws_sold_time_sk">
-                  <dxl:Ident ColId="149" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="150" Alias="ws_ship_date_sk">
-                  <dxl:Ident ColId="150" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="151" Alias="ws_item_sk">
-                  <dxl:Ident ColId="151" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="152" Alias="ws_bill_customer_sk">
-                  <dxl:Ident ColId="152" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="153" Alias="ws_bill_cdemo_sk">
-                  <dxl:Ident ColId="153" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="154" Alias="ws_bill_hdemo_sk">
-                  <dxl:Ident ColId="154" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="155" Alias="ws_bill_addr_sk">
-                  <dxl:Ident ColId="155" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="156" Alias="ws_ship_customer_sk">
-                  <dxl:Ident ColId="156" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="157" Alias="ws_ship_cdemo_sk">
-                  <dxl:Ident ColId="157" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="158" Alias="ws_ship_hdemo_sk">
-                  <dxl:Ident ColId="158" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="159" Alias="ws_ship_addr_sk">
-                  <dxl:Ident ColId="159" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="160" Alias="ws_web_page_sk">
-                  <dxl:Ident ColId="160" ColName="ws_web_page_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="161" Alias="ws_web_site_sk">
-                  <dxl:Ident ColId="161" ColName="ws_web_site_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="162" Alias="ws_ship_mode_sk">
-                  <dxl:Ident ColId="162" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="163" Alias="ws_warehouse_sk">
-                  <dxl:Ident ColId="163" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="164" Alias="ws_promo_sk">
-                  <dxl:Ident ColId="164" ColName="ws_promo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="165" Alias="ws_order_number">
-                  <dxl:Ident ColId="165" ColName="ws_order_number" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="166" Alias="ws_quantity">
-                  <dxl:Ident ColId="166" ColName="ws_quantity" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="167" Alias="ws_wholesale_cost">
-                  <dxl:Ident ColId="167" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="168" Alias="ws_list_price">
-                  <dxl:Ident ColId="168" ColName="ws_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="169" Alias="ws_sales_price">
-                  <dxl:Ident ColId="169" ColName="ws_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="170" Alias="ws_ext_discount_amt">
-                  <dxl:Ident ColId="170" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="171" Alias="ws_ext_sales_price">
-                  <dxl:Ident ColId="171" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="172" Alias="ws_ext_wholesale_cost">
-                  <dxl:Ident ColId="172" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="173" Alias="ws_ext_list_price">
-                  <dxl:Ident ColId="173" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="174" Alias="ws_ext_tax">
-                  <dxl:Ident ColId="174" ColName="ws_ext_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="175" Alias="ws_coupon_amt">
-                  <dxl:Ident ColId="175" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="176" Alias="ws_ext_ship_cost">
-                  <dxl:Ident ColId="176" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="177" Alias="ws_net_paid">
-                  <dxl:Ident ColId="177" ColName="ws_net_paid" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="178" Alias="ws_net_paid_inc_tax">
-                  <dxl:Ident ColId="178" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="179" Alias="ws_net_paid_inc_ship">
-                  <dxl:Ident ColId="179" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="180" Alias="ws_net_paid_inc_ship_tax">
-                  <dxl:Ident ColId="180" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="181" Alias="ws_net_profit">
-                  <dxl:Ident ColId="181" ColName="ws_net_profit" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1976539003.1.1" TableName="web_sales_prt_3">
-                <dxl:Columns>
-                  <dxl:Column ColId="148" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="149" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="150" Attno="3" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="151" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="152" Attno="5" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="153" Attno="6" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="154" Attno="7" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="155" Attno="8" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="156" Attno="9" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="157" Attno="10" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="158" Attno="11" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="159" Attno="12" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="160" Attno="13" ColName="ws_web_page_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="161" Attno="14" ColName="ws_web_site_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="162" Attno="15" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="163" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="164" Attno="17" ColName="ws_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="165" Attno="18" ColName="ws_order_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="166" Attno="19" ColName="ws_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="167" Attno="20" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="168" Attno="21" ColName="ws_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="169" Attno="22" ColName="ws_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="170" Attno="23" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="171" Attno="24" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="172" Attno="25" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="173" Attno="26" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="174" Attno="27" ColName="ws_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="175" Attno="28" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                  <dxl:Column ColId="176" Attno="29" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="177" Attno="30" ColName="ws_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="178" Attno="31" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="179" Attno="32" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="180" Attno="33" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="181" Attno="34" ColName="ws_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="182" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="183" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="184" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="185" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="186" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="187" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="188" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:TableScan>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="475.508350" Rows="716144.000000" Width="196"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="189" Alias="ws_sold_date_sk">
-                  <dxl:Ident ColId="189" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="190" Alias="ws_sold_time_sk">
-                  <dxl:Ident ColId="190" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="191" Alias="ws_ship_date_sk">
-                  <dxl:Ident ColId="191" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="192" Alias="ws_item_sk">
-                  <dxl:Ident ColId="192" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="193" Alias="ws_bill_customer_sk">
-                  <dxl:Ident ColId="193" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="194" Alias="ws_bill_cdemo_sk">
-                  <dxl:Ident ColId="194" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="195" Alias="ws_bill_hdemo_sk">
-                  <dxl:Ident ColId="195" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="196" Alias="ws_bill_addr_sk">
-                  <dxl:Ident ColId="196" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="197" Alias="ws_ship_customer_sk">
-                  <dxl:Ident ColId="197" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="198" Alias="ws_ship_cdemo_sk">
-                  <dxl:Ident ColId="198" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="199" Alias="ws_ship_hdemo_sk">
-                  <dxl:Ident ColId="199" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="200" Alias="ws_ship_addr_sk">
-                  <dxl:Ident ColId="200" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="201" Alias="ws_web_page_sk">
-                  <dxl:Ident ColId="201" ColName="ws_web_page_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="202" Alias="ws_web_site_sk">
-                  <dxl:Ident ColId="202" ColName="ws_web_site_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="203" Alias="ws_ship_mode_sk">
-                  <dxl:Ident ColId="203" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="204" Alias="ws_warehouse_sk">
-                  <dxl:Ident ColId="204" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="205" Alias="ws_promo_sk">
-                  <dxl:Ident ColId="205" ColName="ws_promo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="206" Alias="ws_order_number">
-                  <dxl:Ident ColId="206" ColName="ws_order_number" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="207" Alias="ws_quantity">
-                  <dxl:Ident ColId="207" ColName="ws_quantity" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="208" Alias="ws_wholesale_cost">
-                  <dxl:Ident ColId="208" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="209" Alias="ws_list_price">
-                  <dxl:Ident ColId="209" ColName="ws_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="210" Alias="ws_sales_price">
-                  <dxl:Ident ColId="210" ColName="ws_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="211" Alias="ws_ext_discount_amt">
-                  <dxl:Ident ColId="211" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="212" Alias="ws_ext_sales_price">
-                  <dxl:Ident ColId="212" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="213" Alias="ws_ext_wholesale_cost">
-                  <dxl:Ident ColId="213" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="214" Alias="ws_ext_list_price">
-                  <dxl:Ident ColId="214" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="215" Alias="ws_ext_tax">
-                  <dxl:Ident ColId="215" ColName="ws_ext_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="216" Alias="ws_coupon_amt">
-                  <dxl:Ident ColId="216" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="217" Alias="ws_ext_ship_cost">
-                  <dxl:Ident ColId="217" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="218" Alias="ws_net_paid">
-                  <dxl:Ident ColId="218" ColName="ws_net_paid" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="219" Alias="ws_net_paid_inc_tax">
-                  <dxl:Ident ColId="219" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="220" Alias="ws_net_paid_inc_ship">
-                  <dxl:Ident ColId="220" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="221" Alias="ws_net_paid_inc_ship_tax">
-                  <dxl:Ident ColId="221" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="222" Alias="ws_net_profit">
-                  <dxl:Ident ColId="222" ColName="ws_net_profit" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1976539004.1.1" TableName="web_sales_prt_4">
-                <dxl:Columns>
-                  <dxl:Column ColId="189" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="190" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="191" Attno="3" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="192" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="193" Attno="5" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="194" Attno="6" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="195" Attno="7" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="196" Attno="8" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="197" Attno="9" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="198" Attno="10" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="199" Attno="11" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="200" Attno="12" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="201" Attno="13" ColName="ws_web_page_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="202" Attno="14" ColName="ws_web_site_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="203" Attno="15" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="204" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="205" Attno="17" ColName="ws_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="206" Attno="18" ColName="ws_order_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="207" Attno="19" ColName="ws_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="208" Attno="20" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="209" Attno="21" ColName="ws_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="210" Attno="22" ColName="ws_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="211" Attno="23" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="212" Attno="24" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="213" Attno="25" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="214" Attno="26" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="215" Attno="27" ColName="ws_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="216" Attno="28" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                  <dxl:Column ColId="217" Attno="29" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="218" Attno="30" ColName="ws_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="219" Attno="31" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="220" Attno="32" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="221" Attno="33" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="222" Attno="34" ColName="ws_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="223" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="224" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="225" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="226" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="227" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="228" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="229" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:TableScan>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="475.508350" Rows="716144.000000" Width="196"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="230" Alias="ws_sold_date_sk">
-                  <dxl:Ident ColId="230" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="231" Alias="ws_sold_time_sk">
-                  <dxl:Ident ColId="231" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="232" Alias="ws_ship_date_sk">
-                  <dxl:Ident ColId="232" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="233" Alias="ws_item_sk">
-                  <dxl:Ident ColId="233" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="234" Alias="ws_bill_customer_sk">
-                  <dxl:Ident ColId="234" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="235" Alias="ws_bill_cdemo_sk">
-                  <dxl:Ident ColId="235" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="236" Alias="ws_bill_hdemo_sk">
-                  <dxl:Ident ColId="236" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="237" Alias="ws_bill_addr_sk">
-                  <dxl:Ident ColId="237" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="238" Alias="ws_ship_customer_sk">
-                  <dxl:Ident ColId="238" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="239" Alias="ws_ship_cdemo_sk">
-                  <dxl:Ident ColId="239" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="240" Alias="ws_ship_hdemo_sk">
-                  <dxl:Ident ColId="240" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="241" Alias="ws_ship_addr_sk">
-                  <dxl:Ident ColId="241" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="242" Alias="ws_web_page_sk">
-                  <dxl:Ident ColId="242" ColName="ws_web_page_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="243" Alias="ws_web_site_sk">
-                  <dxl:Ident ColId="243" ColName="ws_web_site_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="244" Alias="ws_ship_mode_sk">
-                  <dxl:Ident ColId="244" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="245" Alias="ws_warehouse_sk">
-                  <dxl:Ident ColId="245" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="246" Alias="ws_promo_sk">
-                  <dxl:Ident ColId="246" ColName="ws_promo_sk" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="247" Alias="ws_order_number">
-                  <dxl:Ident ColId="247" ColName="ws_order_number" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="248" Alias="ws_quantity">
-                  <dxl:Ident ColId="248" ColName="ws_quantity" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="249" Alias="ws_wholesale_cost">
-                  <dxl:Ident ColId="249" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="250" Alias="ws_list_price">
-                  <dxl:Ident ColId="250" ColName="ws_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="251" Alias="ws_sales_price">
-                  <dxl:Ident ColId="251" ColName="ws_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="252" Alias="ws_ext_discount_amt">
-                  <dxl:Ident ColId="252" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="253" Alias="ws_ext_sales_price">
-                  <dxl:Ident ColId="253" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="254" Alias="ws_ext_wholesale_cost">
-                  <dxl:Ident ColId="254" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="255" Alias="ws_ext_list_price">
-                  <dxl:Ident ColId="255" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="256" Alias="ws_ext_tax">
-                  <dxl:Ident ColId="256" ColName="ws_ext_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="257" Alias="ws_coupon_amt">
-                  <dxl:Ident ColId="257" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="258" Alias="ws_ext_ship_cost">
-                  <dxl:Ident ColId="258" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="259" Alias="ws_net_paid">
-                  <dxl:Ident ColId="259" ColName="ws_net_paid" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="260" Alias="ws_net_paid_inc_tax">
-                  <dxl:Ident ColId="260" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="261" Alias="ws_net_paid_inc_ship">
-                  <dxl:Ident ColId="261" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="262" Alias="ws_net_paid_inc_ship_tax">
-                  <dxl:Ident ColId="262" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="263" Alias="ws_net_profit">
-                  <dxl:Ident ColId="263" ColName="ws_net_profit" TypeMdid="0.1700.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.1976539005.1.1" TableName="web_sales_prt_5">
-                <dxl:Columns>
-                  <dxl:Column ColId="230" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="231" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="232" Attno="3" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="233" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="234" Attno="5" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="235" Attno="6" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="236" Attno="7" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="237" Attno="8" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="238" Attno="9" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="239" Attno="10" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="240" Attno="11" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="241" Attno="12" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="242" Attno="13" ColName="ws_web_page_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="243" Attno="14" ColName="ws_web_site_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="244" Attno="15" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="245" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="246" Attno="17" ColName="ws_promo_sk" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="247" Attno="18" ColName="ws_order_number" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="248" Attno="19" ColName="ws_quantity" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="249" Attno="20" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="250" Attno="21" ColName="ws_list_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="251" Attno="22" ColName="ws_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="252" Attno="23" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="253" Attno="24" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="254" Attno="25" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="255" Attno="26" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="256" Attno="27" ColName="ws_ext_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="257" Attno="28" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0" ColWidth="5"/>
-                  <dxl:Column ColId="258" Attno="29" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="259" Attno="30" ColName="ws_net_paid" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="260" Attno="31" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="261" Attno="32" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="262" Attno="33" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0" ColWidth="9"/>
-                  <dxl:Column ColId="263" Attno="34" ColName="ws_net_profit" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                  <dxl:Column ColId="264" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="265" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="266" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="267" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="268" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="269" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="270" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:TableScan>
-          </dxl:Append>
+            <dxl:Partitions>
+              <dxl:Partition Mdid="6.1976539001.1.1"/>
+              <dxl:Partition Mdid="6.1976539002.1.1"/>
+              <dxl:Partition Mdid="6.1976539003.1.1"/>
+              <dxl:Partition Mdid="6.1976539004.1.1"/>
+              <dxl:Partition Mdid="6.1976539005.1.1"/>
+            </dxl:Partitions>
+            <dxl:TableDescriptor Mdid="6.1976539.1.1" TableName="web_sales">
+              <dxl:Columns>
+                <dxl:Column ColId="0" Attno="1" ColName="ws_sold_date_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="1" Attno="2" ColName="ws_sold_time_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="2" Attno="3" ColName="ws_ship_date_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="3" Attno="4" ColName="ws_item_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="4" Attno="5" ColName="ws_bill_customer_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="5" Attno="6" ColName="ws_bill_cdemo_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="6" Attno="7" ColName="ws_bill_hdemo_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="7" Attno="8" ColName="ws_bill_addr_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="8" Attno="9" ColName="ws_ship_customer_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="9" Attno="10" ColName="ws_ship_cdemo_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="10" Attno="11" ColName="ws_ship_hdemo_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="11" Attno="12" ColName="ws_ship_addr_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="12" Attno="13" ColName="ws_web_page_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="13" Attno="14" ColName="ws_web_site_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="14" Attno="15" ColName="ws_ship_mode_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="15" Attno="16" ColName="ws_warehouse_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="16" Attno="17" ColName="ws_promo_sk" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="17" Attno="18" ColName="ws_order_number" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="18" Attno="19" ColName="ws_quantity" TypeMdid="0.23.1.0"/>
+                <dxl:Column ColId="19" Attno="20" ColName="ws_wholesale_cost" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="20" Attno="21" ColName="ws_list_price" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="21" Attno="22" ColName="ws_sales_price" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="22" Attno="23" ColName="ws_ext_discount_amt" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="23" Attno="24" ColName="ws_ext_sales_price" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="24" Attno="25" ColName="ws_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="25" Attno="26" ColName="ws_ext_list_price" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="26" Attno="27" ColName="ws_ext_tax" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="27" Attno="28" ColName="ws_coupon_amt" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="28" Attno="29" ColName="ws_ext_ship_cost" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="29" Attno="30" ColName="ws_net_paid" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="30" Attno="31" ColName="ws_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="31" Attno="32" ColName="ws_net_paid_inc_ship" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="32" Attno="33" ColName="ws_net_paid_inc_ship_tax" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="33" Attno="34" ColName="ws_net_profit" TypeMdid="0.1700.1.0"/>
+                <dxl:Column ColId="34" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                <dxl:Column ColId="35" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                <dxl:Column ColId="36" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                <dxl:Column ColId="37" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                <dxl:Column ColId="38" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                <dxl:Column ColId="39" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                <dxl:Column ColId="40" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+              </dxl:Columns>
+            </dxl:TableDescriptor>
+          </dxl:DynamicTableScan>
         </dxl:GatherMotion>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
@@ -15203,7 +14427,7 @@
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1950"/>
               </dxl:Comparison>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.1974718.1.1" TableName="customer">
+            <dxl:TableDescriptor Mdid="6.1974718.1.1" TableName="customer">
               <dxl:Columns>
                 <dxl:Column ColId="41" Attno="1" ColName="c_customer_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="42" Attno="2" ColName="c_customer_id" TypeMdid="0.1042.1.0" ColWidth="16"/>

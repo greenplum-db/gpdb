@@ -28,6 +28,7 @@
  *		index_fetch_heap		- get the scan's next heap tuple
  *		index_getnext_slot	- get the next tuple from a scan
  *		index_getbitmap - get all tuples from a scan
+ *      index_initbitmap - get an empty bitmap
  *		index_bulk_delete	- bulk deletion of index tuples
  *		index_vacuum_cleanup	- post-deletion cleanup of an index
  *		index_can_return	- does index support index-only scans?
@@ -49,6 +50,7 @@
 #include "access/tableam.h"
 #include "access/transam.h"
 #include "access/xlog.h"
+#include "access/bitmap_private.h"
 #include "catalog/index.h"
 #include "catalog/pg_type.h"
 #include "pgstat.h"
@@ -56,7 +58,7 @@
 #include "storage/lmgr.h"
 #include "storage/predicate.h"
 #include "utils/snapmgr.h"
-
+#include "utils/fmgroids.h"
 
 /* ----------------------------------------------------------------
  *					macros used in index_ routines
@@ -635,6 +637,31 @@ index_getnext_slot(IndexScanDesc scan, ScanDirection direction, TupleTableSlot *
 	return false;
 }
 
+/*
+ * index_initbitmap -- get an empty bitmap
+ * */
+void
+index_initbitmap(IndexScanDesc scan, Node **bitmapP)
+{
+    Relation relation = scan->indexRelation;
+
+    if (relation->rd_amhandler == F_BMHANDLER)
+    {
+        bminitbitmap(bitmapP);
+    }
+    else if (relation->rd_amhandler == F_BTHANDLER)
+    {
+        *bitmapP = (Node *)tbm_create(work_mem * 1024L, NULL);
+    }
+    else
+    {
+        elog(ERROR, "Not support rd_amhandler %u to initbitmap under bitmapscan",
+            relation->rd_amhandler);
+    }
+
+    return;
+}
+
 /* ----------------
  *		index_getbitmap - get all tuples at once from an index scan
  *
@@ -848,33 +875,17 @@ index_getprocinfo(Relation irel,
  */
 void
 index_store_float8_orderby_distances(IndexScanDesc scan, Oid *orderByTypes,
-									 double *distanceValues,
-									 bool *distanceNulls, bool recheckOrderBy)
+									 IndexOrderByDistance *distances,
+									 bool recheckOrderBy)
 {
 	int			i;
 
+	Assert(distances || !recheckOrderBy);
+
 	scan->xs_recheckorderby = recheckOrderBy;
-
-	if (!distanceValues)
-	{
-		Assert(!scan->xs_recheckorderby);
-
-		for (i = 0; i < scan->numberOfOrderBys; i++)
-		{
-			scan->xs_orderbyvals[i] = (Datum) 0;
-			scan->xs_orderbynulls[i] = true;
-		}
-
-		return;
-	}
 
 	for (i = 0; i < scan->numberOfOrderBys; i++)
 	{
-		if (distanceNulls && distanceNulls[i])
-		{
-			scan->xs_orderbyvals[i] = (Datum) 0;
-			scan->xs_orderbynulls[i] = true;
-		}
 		if (orderByTypes[i] == FLOAT8OID)
 		{
 #ifndef USE_FLOAT8_BYVAL
@@ -882,8 +893,16 @@ index_store_float8_orderby_distances(IndexScanDesc scan, Oid *orderByTypes,
 			if (!scan->xs_orderbynulls[i])
 				pfree(DatumGetPointer(scan->xs_orderbyvals[i]));
 #endif
-			scan->xs_orderbyvals[i] = Float8GetDatum(distanceValues[i]);
-			scan->xs_orderbynulls[i] = false;
+			if (distances && !distances[i].isnull)
+			{
+				scan->xs_orderbyvals[i] = Float8GetDatum(distances[i].value);
+				scan->xs_orderbynulls[i] = false;
+			}
+			else
+			{
+				scan->xs_orderbyvals[i] = (Datum) 0;
+				scan->xs_orderbynulls[i] = true;
+			}
 		}
 		else if (orderByTypes[i] == FLOAT4OID)
 		{
@@ -893,8 +912,16 @@ index_store_float8_orderby_distances(IndexScanDesc scan, Oid *orderByTypes,
 			if (!scan->xs_orderbynulls[i])
 				pfree(DatumGetPointer(scan->xs_orderbyvals[i]));
 #endif
-			scan->xs_orderbyvals[i] = Float4GetDatum((float4) distanceValues[i]);
-			scan->xs_orderbynulls[i] = false;
+			if (distances && !distances[i].isnull)
+			{
+				scan->xs_orderbyvals[i] = Float4GetDatum((float4) distances[i].value);
+				scan->xs_orderbynulls[i] = false;
+			}
+			else
+			{
+				scan->xs_orderbyvals[i] = (Datum) 0;
+				scan->xs_orderbynulls[i] = true;
+			}
 		}
 		else
 		{

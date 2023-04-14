@@ -244,7 +244,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
       <dxl:ColumnStatistics Mdid="1.651256.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.651256.1.1" Name="testpartitionfiltercasting" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.651256.1.1" Name="testpartitionfiltercasting" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1,2,3" PartitionTypes="l,l,l" NumberLeafPartitions="1">
+      <dxl:Relation Mdid="6.651256.1.1" Name="testpartitionfiltercasting" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1,2,3" PartitionTypes="l,l,l" NumberLeafPartitions="1">
         <dxl:Columns>
           <dxl:Column Name="d1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -401,7 +401,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.651256.1.1" TableName="testpartitionfiltercasting">
+          <dxl:TableDescriptor Mdid="6.651256.1.1" TableName="testpartitionfiltercasting">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="d1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="p1" TypeMdid="0.1043.1.0" ColWidth="2"/>
@@ -458,7 +458,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
               <dxl:Ident ColId="3" ColName="p3" TypeMdid="0.1700.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.651256.1.1" PartitionLevels="3" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.651256.1.1" PartitionLevels="3" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -526,7 +526,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
                 </dxl:Comparison>
               </dxl:And>
             </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.651256.1.1" TableName="testpartitionfiltercasting">
+            <dxl:TableDescriptor Mdid="6.651256.1.1" TableName="testpartitionfiltercasting">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="d1" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="p1" TypeMdid="0.1043.1.0" ColWidth="2"/>

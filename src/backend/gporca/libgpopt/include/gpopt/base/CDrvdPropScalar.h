@@ -51,8 +51,11 @@ class CDrvdPropScalar : public CDrvdProp
 		EdptPfp,
 		EdptFHasNonScalarFunction,
 		EdptUlDistinctAggs,
+		EdptUlOrderedAggs,
 		EdptFHasMultipleDistinctAggs,
 		EdptFHasScalarArrayCmp,
+		EdptFHasScalarFuncProject,
+		EdptFContainsOnlyReplicationSafeAggFuncs,
 		EdptSentinel
 	};
 
@@ -86,12 +89,19 @@ private:
 	// only applicable to project lists
 	ULONG m_ulDistinctAggs;
 
+	// only applicable to project lists
+	BOOL m_fHasScalarFunc;
+
 	// does operator define Distinct Aggs on different arguments (e.g., count(distinct a), sum(distinct b)),
 	// only applicable to project lists
 	BOOL m_fHasMultipleDistinctAggs;
+	ULONG m_ulOrderedAggs;
 
 	// does expression contain ScalarArrayCmp generated for "scalar op ANY/ALL (array)" construct
 	BOOL m_fHasScalarArrayCmp;
+
+	// does expression contain only replication safe agg funcs
+	BOOL m_fContainsOnlyReplicationSafeAggFuncs;
 
 	// Have all the properties been derived?
 	//
@@ -123,9 +133,14 @@ protected:
 
 	ULONG DeriveTotalDistinctAggs(CExpressionHandle &);
 
+	BOOL DeriveHasScalarFuncProject(CExpressionHandle &);
+
 	BOOL DeriveHasMultipleDistinctAggs(CExpressionHandle &);
 
+	BOOL DeriveContainsOnlyReplicationSafeAggFuncs(CExpressionHandle &);
+
 	BOOL DeriveHasScalarArrayCmp(CExpressionHandle &);
+	ULONG DeriveTotalOrderedAggs(CExpressionHandle &);
 
 public:
 	CDrvdPropScalar(const CDrvdPropScalar &) = delete;
@@ -180,10 +195,14 @@ public:
 	// return total number of Distinct Aggs, only applicable to project list
 	ULONG GetTotalDistinctAggs() const;
 
+	BOOL HasScalarFuncProject() const;
+
 	// does operator define Distinct Aggs on different arguments, only applicable to project lists
 	BOOL HasMultipleDistinctAggs() const;
 
 	BOOL HasScalarArrayCmp() const;
+
+	BOOL ContainsOnlyReplicationSafeAggFuncs() const;
 
 	// short hand for conversion
 	static CDrvdPropScalar *GetDrvdScalarProps(CDrvdProp *pdp);

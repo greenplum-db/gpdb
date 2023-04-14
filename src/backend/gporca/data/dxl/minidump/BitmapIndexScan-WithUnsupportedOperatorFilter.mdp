@@ -398,7 +398,7 @@ inferred from the second operator (c4 = 'f')
         <dxl:InverseOp Mdid="0.91.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.22226519.1.1" Name="t" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.22226519.1.0" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.22226519.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -446,10 +446,9 @@ inferred from the second operator (c4 = 'f')
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.22226547.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.22226519.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.22226519.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -497,7 +496,6 @@ inferred from the second operator (c4 = 'f')
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.22226547.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.22226519.1.1.7" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -850,7 +848,7 @@ inferred from the second operator (c4 = 'f')
           </dxl:Not>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.22226519.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.22226519.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -949,7 +947,7 @@ inferred from the second operator (c4 = 'f')
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.22226547.1.0" IndexName="idx_t_1"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.22226519.1.1" TableName="t">
+          <dxl:TableDescriptor Mdid="6.22226519.1.1" TableName="t">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>

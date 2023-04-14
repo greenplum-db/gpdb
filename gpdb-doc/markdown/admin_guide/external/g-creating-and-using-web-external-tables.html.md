@@ -6,11 +6,11 @@ External web tables allow Greenplum Database to treat dynamic data sources like 
 
 `CREATE EXTERNAL WEB TABLE` creates a web table definition. You can define command-based or URL-based external web tables. The definition forms are distinct: you cannot mix command-based and URL-based definitions.
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 
 ## <a id="topic32"></a>Command-based External Web Tables 
 
-The output of a shell command or script defines command-based web table data. Specify the command in the `EXECUTE` clause of `CREATE EXTERNAL WEB TABLE`. The data is current as of the time the command runs. The `EXECUTE` clause runs the shell command or script on the specified master, and/or segment host or hosts. The command or script must reside on the hosts corresponding to the host\(s\) defined in the `EXECUTE` clause.
+The output of a shell command or script defines command-based web table data. Specify the command in the `EXECUTE` clause of `CREATE EXTERNAL WEB TABLE`. The data is current as of the time the command runs. The `EXECUTE` clause runs the shell command or script on the specified coordinator, and/or segment host or hosts. The command or script must reside on the hosts corresponding to the host\(s\) defined in the `EXECUTE` clause.
 
 By default, the command is run on segment hosts when active segments have output rows to process. For example, if each segment host runs four primary segment instances that have output rows to process, the command runs four times per segment host. You can optionally limit the number of segment instances that run the web table command. All segments included in the web table definition in the `ON` clause run the command in parallel.
 
@@ -23,7 +23,7 @@ The command that you specify in the external table definition is run from the da
 
 ```
 
-Scripts must be executable by the `gpadmin` user and reside in the same location on the master or segment hosts.
+Scripts must be executable by the `gpadmin` user and reside in the same location on the coordinator or segment hosts.
 
 The following command defines a web table that runs a script. The script runs on each segment host where a segment has output rows to process.
 

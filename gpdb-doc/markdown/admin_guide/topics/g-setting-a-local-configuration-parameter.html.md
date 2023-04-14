@@ -14,5 +14,5 @@ Restart Greenplum Database to make the configuration changes effective:
 $ gpstop -r
 ```
 
-**Parent topic:**[Setting Configuration Parameters](../topics/g-setting-configuration-parameters.html)
+**Parent topic:** [Setting Configuration Parameters](../topics/g-setting-configuration-parameters.html)
 

@@ -37,9 +37,7 @@ CParseHandlerLogicalUpdate::CParseHandlerLogicalUpdate(
 	  m_ctid_colid(0),
 	  m_segid_colid(0),
 	  m_deletion_colid_array(nullptr),
-	  m_insert_colid_array(nullptr),
-	  m_preserve_oids(false),
-	  m_tuple_oid_col_oid(0)
+	  m_insert_colid_array(nullptr)
 {
 }
 
@@ -85,23 +83,6 @@ CParseHandlerLogicalUpdate::StartElement(const XMLCh *const,  // element_uri,
 	m_insert_colid_array = CDXLOperatorFactory::ExtractIntsToUlongArray(
 		m_parse_handler_mgr->GetDXLMemoryManager(), insert_colids_xml,
 		EdxltokenInsertCols, EdxltokenLogicalUpdate);
-
-	const XMLCh *preserve_oids_xml =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenUpdatePreservesOids));
-	if (nullptr != preserve_oids_xml)
-	{
-		m_preserve_oids = CDXLOperatorFactory::ConvertAttrValueToBool(
-			m_parse_handler_mgr->GetDXLMemoryManager(), preserve_oids_xml,
-			EdxltokenUpdatePreservesOids, EdxltokenLogicalUpdate);
-	}
-
-	if (m_preserve_oids)
-	{
-		m_tuple_oid_col_oid =
-			CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenTupleOidColId, EdxltokenLogicalUpdate);
-	}
 
 	// parse handler for logical operator
 	CParseHandlerBase *child_parse_handler =
@@ -162,8 +143,7 @@ CParseHandlerLogicalUpdate::EndElement(const XMLCh *const,	// element_uri,
 	m_dxl_node = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalUpdate(
 						   m_mp, table_descr, m_ctid_colid, m_segid_colid,
-						   m_deletion_colid_array, m_insert_colid_array,
-						   m_preserve_oids, m_tuple_oid_col_oid));
+						   m_deletion_colid_array, m_insert_colid_array));
 
 	AddChildFromParseHandler(child_parse_handler);
 

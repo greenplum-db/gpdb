@@ -14,5 +14,5 @@ Creates a readable external table, *ext\_expenses,* using the `file` protocol. T
 
 ```
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

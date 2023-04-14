@@ -115,10 +115,14 @@ private:
 	// Motion Hazard
 	EMotionHazardType m_motion_hazard;
 
+	// Is NL Join
+	BOOL m_origin_nl_join;
+
 public:
 	// ctor
 	explicit CRewindabilitySpec(ERewindabilityType rewindability_type,
-								EMotionHazardType motion_hazard);
+								EMotionHazardType motion_hazard,
+								BOOL origin_nl_join = false);
 
 	// dtor
 	~CRewindabilitySpec() override;
@@ -165,6 +169,12 @@ public:
 	Emht() const
 	{
 		return m_motion_hazard;
+	}
+
+	BOOL
+	IsOriginNLJoin() const
+	{
+		return m_origin_nl_join;
 	}
 
 	BOOL

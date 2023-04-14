@@ -168,7 +168,7 @@
         <dxl:InverseOp Mdid="0.2376.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.49258.1.1" Name="d1" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.49258.1.1" Name="d1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.49258.1.1" Name="d1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -199,7 +199,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49281.1.1.5" Name="xmax" Width="4.000000"/>
@@ -207,7 +206,7 @@
       <dxl:ColumnStatistics Mdid="1.49258.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.49258.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.49281.1.1" Name="d2" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.49281.1.1" Name="d2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.49281.1.1" Name="d2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -238,7 +237,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49281.1.1.7" Name="tableoid" Width="4.000000"/>
@@ -256,7 +254,7 @@
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.49258.1.1" TableName="d1">
+          <dxl:TableDescriptor Mdid="6.49258.1.1" TableName="d1">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="d" TypeMdid="0.1082.1.0"/>
@@ -271,7 +269,7 @@
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.49281.1.1" TableName="d2">
+          <dxl:TableDescriptor Mdid="6.49281.1.1" TableName="d2">
             <dxl:Columns>
               <dxl:Column ColId="10" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="11" Attno="2" ColName="d" TypeMdid="0.1114.1.0"/>
@@ -291,7 +289,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="20">
+    <dxl:Plan Id="0" SpaceSize="12">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000955" Rows="1.000000" Width="32"/>
@@ -347,7 +345,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.49258.1.1" TableName="d1">
+            <dxl:TableDescriptor Mdid="6.49258.1.1" TableName="d1">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="d" TypeMdid="0.1082.1.0"/>
@@ -389,7 +387,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:TableDescriptor Mdid="0.49281.1.1" TableName="d2">
+            <dxl:TableDescriptor Mdid="6.49281.1.1" TableName="d2">
               <dxl:Columns>
                 <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="10" Attno="2" ColName="d" TypeMdid="0.1114.1.0"/>

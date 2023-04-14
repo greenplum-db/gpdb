@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/xforms/CXform.h"
 
 // fwd declarations
@@ -75,7 +76,7 @@ private:
 public:
 	enum EExecLocalityType
 	{
-		EeltMaster,
+		EeltCoordinator,
 		EeltSegments,
 		EeltSingleton
 	};
@@ -242,7 +243,7 @@ public:
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
 		IMDId *
 			pmdidResolvedReturnType,  // return type to be used if original return type is ambiguous
-		EAggfuncKind aggkind, ULongPtrArray *argtypes);
+		EAggfuncKind aggkind, ULongPtrArray *argtypes, BOOL fRepSafe);
 
 	// generate an aggregate function
 	static CExpression *PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
@@ -357,6 +358,11 @@ public:
 
 	// check if the aggregate is local or global
 	static BOOL FHasGlobalAggFunc(const CExpression *pexprProjList);
+
+	// check if given project list has only aggregate functions
+	// that can be safely executed on replicated slices
+	static BOOL FContainsOnlyReplicationSafeAggFuncs(
+		const CExpression *pexprProjList);
 
 	// generate a bool expression
 	static CExpression *PexprScalarConstBool(CMemoryPool *mp, BOOL value,
@@ -687,11 +693,27 @@ public:
 	// returns if the scalar array has all constant elements or children
 	static BOOL FScalarConstArray(CExpression *pexpr);
 
+	// returns if the scalar constant is an array
+	static BOOL FIsConstArray(CExpression *pexpr);
+
+	// returns MDId for gp_percentile based on return type
+	static CMDIdGPDB *GetPercentileAggMDId(CMemoryPool *mp,
+										   CExpression *pexprAggFn);
+
 	// returns if the scalar constant array has already been collapased
 	static BOOL FScalarArrayCollapsed(CExpression *pexprArray);
 
 	// returns true if the subquery is a ScalarSubqueryAny
 	static BOOL FAnySubquery(COperator *pop);
+
+	// returns true if the subquery is a ScalarSubqueryExists
+	static BOOL FExistsSubquery(COperator *pop);
+
+	// returns true if the expression is a correlated EXISTS/ANY subquery
+	static BOOL FCorrelatedExistsAnySubquery(CExpression *pexpr);
+
+	static CScalarProjectElement *PNthProjectElement(CExpression *pexpr,
+													 ULONG ul);
 
 	// returns the expression under the Nth project element of a CLogicalProject
 	static CExpression *PNthProjectElementExpr(CExpression *pexpr, ULONG ul);
@@ -930,11 +952,11 @@ public:
 	static CExpression *PexprLimit(CMemoryPool *mp, CExpression *pexpr,
 								   ULONG ulOffSet, ULONG count);
 
-	// generate part oid
-	static BOOL FGeneratePartOid(IMDId *mdid);
-
 	// return true if given expression contains window aggregate function
 	static BOOL FHasAggWindowFunc(CExpression *pexpr);
+
+	// return true if given expression contains ordered aggregate function
+	static BOOL FHasOrderedAggToSplit(CExpression *pexpr);
 
 	// return true if the given expression is a cross join
 	static BOOL FCrossJoin(CExpression *pexpr);
@@ -976,6 +998,8 @@ public:
 						 CExpressionArrays *input_exprs);
 
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
+
+	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
 };	// class CUtils
 
 // hash set from expressions
@@ -1290,10 +1314,6 @@ CUtils::FMatchDynamicScan(T *pop1, COperator *pop2)
 	T *popScan2 = T::PopConvert(pop2);
 
 	// match if the table descriptors are identical
-	// Possible improvement:
-	// For partial scans, we use pointer comparison of part constraints to avoid
-	// memory allocation because matching function was used while holding spin locks.
-	// Using a match function would mean improved matches for partial scans.
 	return pop1->ScanId() == popScan2->ScanId() &&
 		   pop1->Ptabdesc()->MDId()->Equals(popScan2->Ptabdesc()->MDId()) &&
 		   pop1->PdrgpcrOutput()->Equals(popScan2->PdrgpcrOutput());

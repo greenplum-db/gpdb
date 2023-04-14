@@ -488,7 +488,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.672855.1.1" Name="item" Rows="17940.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.672855.1.0" Name="item" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
+      <dxl:Relation Mdid="6.672855.1.0" Name="item" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -581,10 +581,9 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.672881.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.672855.1.1" Name="item" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
+      <dxl:Relation Mdid="6.672855.1.1" Name="item" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -677,7 +676,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.672881.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -6032,7 +6030,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.673545.1.1" Name="store_sales" Rows="2881479.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.673545.1.0" Name="store_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
+      <dxl:Relation Mdid="6.673545.1.0" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6128,10 +6126,9 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.673571.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.673545.1.1" Name="store_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
+      <dxl:Relation Mdid="6.673545.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -6227,7 +6224,6 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.673571.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
@@ -10926,7 +10922,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:ProjList/>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.672855.1.1" TableName="item">
+            <dxl:TableDescriptor Mdid="6.672855.1.1" TableName="item">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="i_item_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -10961,7 +10957,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.673545.1.1" TableName="store_sales">
+            <dxl:TableDescriptor Mdid="6.673545.1.1" TableName="store_sales">
               <dxl:Columns>
                 <dxl:Column ColId="30" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="31" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
@@ -11214,7 +11210,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                           </dxl:ArrayComp>
                         </dxl:And>
                       </dxl:Filter>
-                      <dxl:TableDescriptor Mdid="0.672855.1.1" TableName="item">
+                      <dxl:TableDescriptor Mdid="6.672855.1.1" TableName="item">
                         <dxl:Columns>
                           <dxl:Column ColId="0" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="1" Attno="2" ColName="i_item_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
@@ -11245,8 +11241,9 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                       <dxl:Ident ColId="0" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
+	<dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.673571.1.0" IndexName="store_sales_pkey"/>
-                  <dxl:TableDescriptor Mdid="0.673545.1.1" TableName="store_sales">
+                  <dxl:TableDescriptor Mdid="6.673545.1.1" TableName="store_sales">
                     <dxl:Columns>
                       <dxl:Column ColId="31" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="38" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0"/>

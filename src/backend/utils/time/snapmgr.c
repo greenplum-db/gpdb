@@ -68,6 +68,8 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "utils/guc.h"
@@ -373,11 +375,7 @@ GetTransactionSnapshot(void)
 			 getDistributedTransactionId(),
 			 DtxContextToString(DistributedTransactionContext));
 
-		// GPDB_91_MERGE_FIXME: the name of UpdateSerializableCommandId is a bit
-		// wrong, now that SERIALIZABLE and REPEATABLE READ are not the same.
-		// From comparison, the if-check above was changed from checking
-		// IsXactIsoLevelSerializable to IsolationUsesXactSnapshot()
-		UpdateSerializableCommandId(CurrentSnapshot->curcid);
+		UpdateCommandIdInSnapshot(CurrentSnapshot->curcid);
 
 		return CurrentSnapshot;
 	}
@@ -632,8 +630,17 @@ SetTransactionSnapshot(Snapshot sourcesnap, VirtualTransactionId *sourcevxid,
 	 * two variables in exported snapshot files, but it seems better to have
 	 * snapshot importers compute reasonably up-to-date values for them.)
 	 */
-	CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 
+	 /*
+	 * GPDB: If the source snapshot already has a distributed snapshot, pass in
+	 * DTX_CONTEXT_LOCAL_ONLY to GetSnapshotData(). This prevents a new
+	 * distributed snapshot from being created in GetSnapshotData() and ensures
+	 * that we can use the distributed snapshot from the source snapshot below.
+	 */
+	if (sourcesnap->haveDistribSnapshot)
+		CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DTX_CONTEXT_LOCAL_ONLY);
+	else
+		CurrentSnapshot = GetSnapshotData(&CurrentSnapshotData, DistributedTransactionContext);
 	/*
 	 * Now copy appropriate fields from the source snapshot.
 	 */
@@ -641,14 +648,26 @@ SetTransactionSnapshot(Snapshot sourcesnap, VirtualTransactionId *sourcevxid,
 	CurrentSnapshot->xmax = sourcesnap->xmax;
 	CurrentSnapshot->xcnt = sourcesnap->xcnt;
 	Assert(sourcesnap->xcnt <= GetMaxSnapshotXidCount());
-	memcpy(CurrentSnapshot->xip, sourcesnap->xip,
-		   sourcesnap->xcnt * sizeof(TransactionId));
+	if (sourcesnap->xcnt > 0)
+		memcpy(CurrentSnapshot->xip, sourcesnap->xip,
+			   sourcesnap->xcnt * sizeof(TransactionId));
 	CurrentSnapshot->subxcnt = sourcesnap->subxcnt;
 	Assert(sourcesnap->subxcnt <= GetMaxSnapshotSubxidCount());
-	memcpy(CurrentSnapshot->subxip, sourcesnap->subxip,
-		   sourcesnap->subxcnt * sizeof(TransactionId));
+	if (sourcesnap->subxcnt > 0)
+		memcpy(CurrentSnapshot->subxip, sourcesnap->subxip,
+			   sourcesnap->subxcnt * sizeof(TransactionId));
 	CurrentSnapshot->suboverflowed = sourcesnap->suboverflowed;
 	CurrentSnapshot->takenDuringRecovery = sourcesnap->takenDuringRecovery;
+
+	/*
+	 * GPDB: Copy over distributed snapshot if present.
+	 */
+	if (sourcesnap->haveDistribSnapshot)
+	{
+		CurrentSnapshot->haveDistribSnapshot = true;
+		DistributedSnapshot_Copy(&CurrentSnapshot->distribSnapshotWithLocalMapping.ds,
+								 &sourcesnap->distribSnapshotWithLocalMapping.ds);
+	}
 	/* NB: curcid should NOT be copied, it's a local matter */
 
 	/*
@@ -827,9 +846,24 @@ FreeSnapshot(Snapshot snapshot)
 void
 PushActiveSnapshot(Snapshot snap)
 {
+	PushActiveSnapshotWithLevel(snap, GetCurrentTransactionNestLevel());
+}
+
+/*
+ * PushActiveSnapshotWithLevel
+ *		Set the given snapshot as the current active snapshot
+ *
+ * Same as PushActiveSnapshot except that caller can specify the
+ * transaction nesting level that "owns" the snapshot.  This level
+ * must not be deeper than the current top of the snapshot stack.
+ */
+void
+PushActiveSnapshotWithLevel(Snapshot snap, int snap_level)
+{
 	ActiveSnapshotElt *newactive;
 
 	Assert(snap != InvalidSnapshot);
+	Assert(ActiveSnapshot == NULL || snap_level >= ActiveSnapshot->as_level);
 
 	newactive = MemoryContextAlloc(TopTransactionContext, sizeof(ActiveSnapshotElt));
 
@@ -843,7 +877,7 @@ PushActiveSnapshot(Snapshot snap)
 		newactive->as_snap = snap;
 
 	newactive->as_next = ActiveSnapshot;
-	newactive->as_level = GetCurrentTransactionNestLevel();
+	newactive->as_level = snap_level;
 
 	newactive->as_snap->active_count++;
 
@@ -1047,6 +1081,36 @@ xmin_cmp(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 		return -1;
 	else
 		return 0;
+}
+
+/*
+ * Get current RecentGlobalXmin value, as a FullTransactionId.
+ */
+FullTransactionId
+GetFullRecentGlobalXmin(void)
+{
+	FullTransactionId nextxid_full;
+	uint32		nextxid_epoch;
+	TransactionId nextxid_xid;
+	uint32		epoch;
+
+	Assert(TransactionIdIsNormal(RecentGlobalXmin));
+
+	/*
+	 * Compute the epoch from the next XID's epoch. This relies on the fact
+	 * that RecentGlobalXmin must be within the 2 billion XID horizon from the
+	 * next XID.
+	 */
+	nextxid_full = ReadNextFullTransactionId();
+	nextxid_epoch = EpochFromFullTransactionId(nextxid_full);
+	nextxid_xid = XidFromFullTransactionId(nextxid_full);
+
+	if (RecentGlobalXmin > nextxid_xid)
+		epoch = nextxid_epoch - 1;
+	else
+		epoch = nextxid_epoch;
+
+	return FullTransactionIdFromEpochAndXid(epoch, RecentGlobalXmin);
 }
 
 /*
@@ -1265,6 +1329,7 @@ ExportSnapshot(Snapshot snapshot)
 	char		path[MAXPGPATH];
 	char		pathtmp[MAXPGPATH];
 
+	DistributedSnapshot *distributed_snapshot;
 	/*
 	 * It's tempting to call RequireTransactionBlock here, since it's not very
 	 * useful to export a snapshot that will disappear immediately afterwards.
@@ -1380,6 +1445,21 @@ ExportSnapshot(Snapshot snapshot)
 	appendStringInfo(&buf, "rec:%u\n", snapshot->takenDuringRecovery);
 
 	/*
+	 * GPDB: Serialize distributed snapshot if present.
+	 */
+	if (snapshot->haveDistribSnapshot)
+	{
+		distributed_snapshot = &snapshot->distribSnapshotWithLocalMapping.ds;
+		appendStringInfo(&buf, "dsxminall:%lu\n", distributed_snapshot->xminAllDistributedSnapshots);
+		appendStringInfo(&buf, "dsid:%d\n", distributed_snapshot->distribSnapshotId);
+		appendStringInfo(&buf, "dsxmin:%lu\n", distributed_snapshot->xmin);
+		appendStringInfo(&buf, "dsxmax:%lu\n", distributed_snapshot->xmax);
+		appendStringInfo(&buf, "dsxcnt:%d\n", distributed_snapshot->count);
+		for (i = 0; i < distributed_snapshot->count; i++)
+			appendStringInfo(&buf, "dsxip:%lu\n", distributed_snapshot->inProgressXidArray[i]);
+	}
+
+	/*
 	 * Now write the text representation into a file.  We first write to a
 	 * ".tmp" filename, and rename to final filename if no error.  This
 	 * ensures that no other backend can read an incomplete file
@@ -1491,6 +1571,31 @@ parseXidFromText(const char *prefix, char **s, const char *filename)
 	return val;
 }
 
+static DistributedTransactionId
+parseDistributedXidFromText(const char *prefix, char **s, const char *filename)
+{
+	char	   *ptr = *s;
+	int			prefixlen = strlen(prefix);
+	DistributedTransactionId val;
+
+	if (strncmp(ptr, prefix, prefixlen) != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("invalid snapshot data in file \"%s\"", filename)));
+	ptr += prefixlen;
+	if (sscanf(ptr, "%lu", &val) != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("invalid snapshot data in file \"%s\"", filename)));
+	ptr = strchr(ptr, '\n');
+	if (!ptr)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("invalid snapshot data in file \"%s\"", filename)));
+	*s = ptr + 1;
+	return val;
+}
+
 static void
 parseVxidFromText(const char *prefix, char **s, const char *filename,
 				  VirtualTransactionId *vxid)
@@ -1529,6 +1634,7 @@ ImportSnapshot(const char *idstr)
 	struct stat stat_buf;
 	char	   *filebuf;
 	int			xcnt;
+	int			dxcnt;
 	int			i;
 	VirtualTransactionId src_vxid;
 	int			src_pid;
@@ -1536,6 +1642,7 @@ ImportSnapshot(const char *idstr)
 	int			src_isolevel;
 	bool		src_readonly;
 	SnapshotData snapshot;
+	DistributedSnapshot *distributed_snapshot;
 
 	/*
 	 * Must be at top level of a fresh transaction.  Note in particular that
@@ -1642,6 +1749,43 @@ ImportSnapshot(const char *idstr)
 	}
 
 	snapshot.takenDuringRecovery = parseIntFromText("rec:", &filebuf, path);
+
+	/*
+	 * GPDB: Extract distributed snapshot
+	 * Importing a distributed snapshot in utility mode is not allowed because
+	 * functionality to dispatch pg_export_snapshot to all segments and create
+	 * a snapshot with ds fields in each segments datadir is not implemented.
+	 * Since there is no reliable way to export a utility mode distributed snapshot,
+	 * we have no way to judge its provenance.
+	 */
+	if(*filebuf != '\0')
+	{
+		if (Gp_role == GP_ROLE_UTILITY) {
+			ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				errmsg("cannot import distributed snapshot in utility mode"),
+				errhint("export the snapshot in utility mode")));
+		}
+		distributed_snapshot = &snapshot.distribSnapshotWithLocalMapping.ds;
+		distributed_snapshot->xminAllDistributedSnapshots = parseDistributedXidFromText("dsxminall:", &filebuf, path);
+		distributed_snapshot->distribSnapshotId = parseIntFromText("dsid:", &filebuf, path);
+		distributed_snapshot->xmin = parseDistributedXidFromText("dsxmin:", &filebuf, path);
+		distributed_snapshot->xmax = parseDistributedXidFromText("dsxmax:", &filebuf, path);
+		distributed_snapshot->count = dxcnt = parseIntFromText("dsxcnt:", &filebuf, path);
+		
+		/* sanity-check dsxmin and the xid count before palloc */
+		if (distributed_snapshot->xmin < distributed_snapshot->xminAllDistributedSnapshots ||
+			(dxcnt < 0 || dxcnt > GetMaxSnapshotDistributedXidCount())
+			)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					errmsg("invalid snapshot data in file \"%s\"", path)));
+
+		distributed_snapshot->inProgressXidArray = (DistributedTransactionId *) palloc(dxcnt * sizeof(DistributedTransactionId));
+		for (i = 0; i < dxcnt; i++)
+			distributed_snapshot->inProgressXidArray[i] = parseDistributedXidFromText("dsxip:", &filebuf, path);
+		snapshot.haveDistribSnapshot = true;
+	}
 
 	/*
 	 * Do some additional sanity checking, just to protect ourselves.  We
@@ -2497,17 +2641,4 @@ XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot)
 	}
 
 	return false;
-}
-
-DistributedSnapshotWithLocalMapping *
-GetCurrentDistributedSnapshotWithLocalMapping()
-{
-	if (!FirstSnapshotSet)
-		return NULL;
-
-	Assert(CurrentSnapshot);
-	if (CurrentSnapshot->haveDistribSnapshot)
-		return &CurrentSnapshot->distribSnapshotWithLocalMapping;
-
-	return NULL;
 }

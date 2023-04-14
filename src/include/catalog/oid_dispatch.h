@@ -116,6 +116,7 @@ extern void RememberPreassignedIndexNameForChildIndex(Oid parentIdxOid, Oid chil
 /* Functions used in master and QE nodes */
 extern void PreserveOidAssignmentsOnCommit(void);
 extern void ClearOidAssignmentsOnCommit(void);
+extern List * SaveOidAssignments(void);
 extern void RestoreOidAssignments(List *oid_assignments);
 
 /* Functions used in binary upgrade */

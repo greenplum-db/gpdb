@@ -51,7 +51,7 @@ typedef struct AppendOnlyStorageWrite
 	/*
 	 * Version number indicating the AO table format version to write in.
 	 */
-	AORelationVersion formatVersion;
+	AOSegfileFormatVersion formatVersion;
 
 	/*
 	 * Name of the relation to use in system logging and error messages.
@@ -211,10 +211,6 @@ extern uint8 *AppendOnlyStorageWrite_GetBuffer(AppendOnlyStorageWrite *storageWr
 extern bool AppendOnlyStorageWrite_IsBufferAllocated(
 									   AppendOnlyStorageWrite *storageWrite);
 extern int64 AppendOnlyStorageWrite_LogicalBlockStartOffset(
-									   AppendOnlyStorageWrite *storageWrite);
-extern int64 AppendOnlyStorageWrite_CurrentPosition(
-									   AppendOnlyStorageWrite *storageWrite);
-extern uint8 *AppendOnlyStorageWrite_GetCurrentInternalBuffer(
 									   AppendOnlyStorageWrite *storageWrite);
 
 extern void AppendOnlyStorageWrite_FinishBuffer(

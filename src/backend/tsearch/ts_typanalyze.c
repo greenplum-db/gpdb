@@ -16,9 +16,9 @@
 #include "catalog/pg_collation.h"
 #include "catalog/pg_operator.h"
 #include "commands/vacuum.h"
+#include "common/hashfn.h"
 #include "tsearch/ts_type.h"
 #include "utils/builtins.h"
-#include "utils/hashutils.h"
 
 
 /* A hash key for lexemes */
@@ -303,7 +303,7 @@ compute_tsvector_stats(VacAttrStats *stats,
 		stats->stats_valid = true;
 		/* Do the simple null-frac and average width stats */
 		stats->stanullfrac = (double) null_cnt / (double) samplerows;
-		stats->stawidth = total_width / (double) nonnull_cnt;
+		stats->stawidth = (total_width + stats->totalwidelength) / (double) (nonnull_cnt + stats->widerow_num);
 
 		/* Assume it's a unique column (see notes above) */
 		stats->stadistinct = -1.0 * (1.0 - stats->stanullfrac);

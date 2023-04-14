@@ -18,7 +18,7 @@ DROP RESOURCE GROUP rg1_cpuset_test;
 -- Create a resource group with all the cpu cores.
 -- The isolation2 test framework does not support \set so we have to plan with
 -- some tricks.
-! psql -d isolation2resgrouptest -Ac "CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit=10, cpuset='0-$(($(nproc)-1))')";
+! psql -d isolation2resgrouptest -Ac "CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0-$(($(nproc)-1))')";
 CREATE RESOURCE GROUP
 
 

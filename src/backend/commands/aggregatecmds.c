@@ -104,6 +104,7 @@ DefineAggregate(ParseState *pstate,
 	char		proparallel = PROPARALLEL_UNSAFE;
 	ListCell   *pl;
 	List	   *orig_args = args;
+	bool		repsafe = false;
 
 	/* Convert list of names to a name and namespace */
 	aggNamespace = QualifiedNameGetCreationNamespace(name, &aggName);
@@ -198,6 +199,8 @@ DefineAggregate(ParseState *pstate,
 			minitval = defGetString(defel);
 		else if (strcmp(defel->defname, "parallel") == 0)
 			parallel = defGetString(defel);
+		else if (strcmp(defel->defname, "repsafe") == 0)
+			repsafe = defGetBoolean(defel);
 		else
 			ereport(WARNING,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -487,6 +490,7 @@ DefineAggregate(ParseState *pstate,
 						   mtransSpace, /* transition space */
 						   initval, /* initial condition */
 						   minitval,	/* initial condition */
+						   repsafe, /* is replicate slice execution safe */
 						   proparallel);	/* parallel safe? */
 
 	if (Gp_role == GP_ROLE_DISPATCH)

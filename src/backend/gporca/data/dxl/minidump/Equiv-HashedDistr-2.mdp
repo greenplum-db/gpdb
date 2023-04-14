@@ -1177,7 +1177,7 @@
       </dxl:Type>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.24657.1.1" Name="partsupp" Rows="801020.000000"/>
-      <dxl:Relation Mdid="0.24657.1.1" Name="partsupp" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.24657.1.1" Name="partsupp" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="ps_partkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1217,7 +1217,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.24657.1.1.5" Name="ctid" Width="6.000000"/>
@@ -1557,7 +1556,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.24726.1.1" Name="lineitem" Rows="6001814.000000"/>
-      <dxl:Relation Mdid="0.24726.1.1" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
+      <dxl:Relation Mdid="6.24726.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1630,7 +1629,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.24657.1.1.7" Name="cmin" Width="4.000000"/>
@@ -1871,7 +1869,7 @@
             <dxl:ProjList/>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.24726.1.1" TableName="lineitem">
+                <dxl:TableDescriptor Mdid="6.24726.1.1" TableName="lineitem">
                   <dxl:Columns>
                     <dxl:Column ColId="1" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="2" ColName="l_partkey" TypeMdid="0.23.1.0"/>
@@ -1900,7 +1898,7 @@
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.24657.1.1" TableName="partsupp">
+                <dxl:TableDescriptor Mdid="6.24657.1.1" TableName="partsupp">
                   <dxl:Columns>
                     <dxl:Column ColId="24" Attno="1" ColName="ps_partkey" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="25" Attno="2" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>
@@ -2028,7 +2026,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.24726.1.1" TableName="lineitem">
+                    <dxl:TableDescriptor Mdid="6.24726.1.1" TableName="lineitem">
                       <dxl:Columns>
                         <dxl:Column ColId="0" Attno="1" ColName="l_orderkey" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="2" Attno="3" ColName="l_suppkey" TypeMdid="0.23.1.0"/>
@@ -2069,7 +2067,7 @@
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.24657.1.1" TableName="partsupp">
+                    <dxl:TableDescriptor Mdid="6.24657.1.1" TableName="partsupp">
                       <dxl:Columns>
                         <dxl:Column ColId="23" Attno="1" ColName="ps_partkey" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="24" Attno="2" ColName="ps_suppkey" TypeMdid="0.23.1.0"/>

@@ -292,6 +292,7 @@ SELECT onek2.unique1, onek2.stringu1 FROM onek2
 RESET enable_seqscan;
 RESET enable_bitmapscan;
 RESET enable_sort;
+RESET optimizer_enable_tablescan;
 SELECT two, stringu1, ten, string4
    INTO TABLE tmp
    FROM onek;
@@ -518,6 +519,14 @@ TABLE int8_tbl;
  4567890123456789 | -4567890123456789
 (9 rows)
 
+-- corner case: VALUES with no columns
+CREATE TEMP TABLE nocols();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+INSERT INTO nocols DEFAULT VALUES;
+SELECT * FROM nocols n, LATERAL (VALUES(n.*)) v;
+--
+(1 row)
+
 --
 -- Test ORDER BY options
 --
@@ -739,10 +748,11 @@ SELECT * FROM foo ORDER BY f1 DESC NULLS LAST;
 --
 -- partial index is usable
 SET enable_seqscan TO off;
+SET optimizer_enable_tablescan TO off;
 explain (costs off)
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
-                  QUERY PLAN                   
------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using onek2_u2_prtl on onek2
          Index Cond: (unique2 = 11)
@@ -759,8 +769,8 @@ select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
 -- actually run the query with an analyze to use the partial index
 explain (costs off, analyze on, timing off, summary off)
 select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
    ->  Index Scan using onek2_u2_prtl on onek2 (actual rows=1 loops=1)
          Index Cond: (unique2 = 11)
@@ -770,8 +780,8 @@ select * from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
 
 explain (costs off)
 select unique2 from onek2 where unique2 = 11 and stringu1 = 'ATAAAA';
-                  QUERY PLAN                   
------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using onek2_u2_prtl on onek2
          Index Cond: (unique2 = 11)

@@ -59,6 +59,53 @@
  *
  *-------------------------------------------------------------------------
  */
+
+/*-------------------------------------------------------------------------
+ * GPDB:
+ *
+ * Distributed auto vacuum means to trigger auto vacuum on QD, and QD
+ * manages to dispatch the vacuum request to QEs as distributed transaction.
+ *
+ * In GPDB there is no distributed auto vacuum yet. For now, all auto vaccums
+ * happen on segments locally and do not interact with other auto vaccums.
+ *
+ * GPDB team had a detailed discussion about distributed auto vacuum. We have
+ * no plan for GPDB7, and will determine the approach in future based on
+ * feedback from customer.
+ *
+ * More tech details about distributed auto vacuum for future reference:
+ *
+ * What's the benefits of the distributed auto vacuum? It might be better global
+ * consistency because local auto vacuum happens in different times and different
+ * transactions. We can also expect relieving performance jitter theoretically if
+ * we can control cluster-size auto vacuum. In addition, we may be able to clean
+ * some code because the code of local auto vacuum and distributed user-invoked
+ * vacuum are inter-laying for now.
+ *
+ * Furthermore, we are still not certain about benefit of the consistency produced
+ * by distributed auto vacuum. Theoretically, we can get more precise statis info
+ * accordingly, but we need more feedback to evaluate the benefit for customer.
+ *
+ * What's the disadvantages? There might be possible troubles to align to upstream
+ * vacuum codes since PG vacuum always happens locally. Importing more complexity
+ * is another concern.
+ *
+ * In MPP setting it's kind of expected all nodes will have a similar activity or
+ * bloat on the table (especially catalog tables should have the same effect on all
+ * segments), though that's not really true for OLTP user tables. Hence making the
+ * global decision to vacuum a table or not, instead of local can become
+ * disadvantageous. For example, only one segment has heavy bloat on a table and
+ * the rest of the segments are not. Global/distributed vacuum unnecessarily will
+ * trigger on all segments even if not required.
+ *
+ * A possible solution is a kind of unbalanced strategy: when a distributed auto
+ * vacuum is triggered, we don't need to perform actual vacuum on all segments. A
+ * segment can determine not to perform actual vacuum if it has heavy bloat. Since
+ * auto vacuum is repeated, the vacuum is supposed to be finished at sometime with
+ * light workload in future. There might also be space for more complex scheduling
+ * strategy of distributed auto vacuum based on performance monitoring.
+ */
+
 #include "postgres.h"
 
 #include <signal.h>
@@ -129,6 +176,7 @@ double		autovacuum_vac_cost_delay;
 int			autovacuum_vac_cost_limit;
 
 int			Log_autovacuum_min_duration = 0;
+int			gp_autovacuum_scope;
 
 /* how long to keep pgstat data in the launcher, in milliseconds */
 #define STATS_READ_DELAY 1000
@@ -1589,6 +1637,9 @@ AutoVacWorkerMain(int argc, char *argv[])
 	 */
 	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
 	{
+		/* since not using PG_TRY, must reset error stack by hand */
+		error_context_stack = NULL;
+
 		/* Prevents interrupts while cleaning up */
 		HOLD_INTERRUPTS();
 
@@ -1714,7 +1765,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 		InitPostgres(NULL, dbid, NULL, InvalidOid, dbname, false);
 		SetProcessingMode(NormalProcessing);
 		set_ps_display(dbname, false);
-		ereport(LOG,
+		ereport(DEBUG1,
 				(errmsg("autovacuum: processing database \"%s\"", dbname)));
 
 #ifdef FAULT_INJECTOR
@@ -2122,9 +2173,10 @@ do_autovacuum(void)
 
 			/*
 			 * We just ignore it if the owning backend is still active and
-			 * using the temporary schema.
+			 * using the temporary schema.  Also, for safety, ignore it if the
+			 * namespace doesn't exist or isn't a temp namespace after all.
 			 */
-			if (!isTempNamespaceInUse(classForm->relnamespace))
+			if (checkTempNamespaceStatus(classForm->relnamespace) == TEMP_NAMESPACE_IDLE)
 			{
 				/*
 				 * The table seems to be orphaned -- although it might be that
@@ -2294,7 +2346,7 @@ do_autovacuum(void)
 			continue;
 		}
 
-		if (isTempNamespaceInUse(classForm->relnamespace))
+		if (checkTempNamespaceStatus(classForm->relnamespace) != TEMP_NAMESPACE_IDLE)
 		{
 			UnlockRelationOid(relid, AccessExclusiveLock);
 			continue;
@@ -2708,7 +2760,7 @@ perform_work_item(AutoVacuumWorkItem *workitem)
 		switch (workitem->avw_type)
 		{
 			case AVW_BRINSummarizeRange:
-				DirectFunctionCall2(brin_summarize_range,
+				DirectFunctionCall2(brin_summarize_range_internal,
 									ObjectIdGetDatum(workitem->avw_relation),
 									Int64GetDatum((int64) workitem->avw_blockNumber));
 				break;
@@ -3172,12 +3224,18 @@ relation_needs_vacanalyze(Oid relid,
 			*doanalyze = false;
 	}
 
-	/*
-	 * GPDB: Autovacuum VACUUM is only enabled for catalog tables. (But ignore
-	 * if at risk of wrap around and proceed to vacuum)
-	 */
-	if (!IsSystemClass(relid, classForm) && !force_vacuum)
-		*dovacuum = false;
+	if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG)
+	{
+		/* GPDB: autovacuum on pg_catalog relations */
+		if (!IsCatalogRelationOid(relid))
+			*dovacuum = false;
+	}
+	else if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG_AO_AUX)
+	{
+		/* GPDB: autovacuum only pg_catalog, pg_toast, and pg_aoseg relations */
+		if (!IsSystemClass(relid, classForm))
+			*dovacuum = false;
+	}
 }
 
 /*

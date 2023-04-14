@@ -11,7 +11,7 @@
         <dxl:SubqueryAny OperatorName="=" OperatorMdid="0.96.1.0" ColId="4">
           <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17140.1.1" TableName="r">
+            <dxl:TableDescriptor Mdid="6.17140.1.1" TableName="r">
               <dxl:Columns>
                 <dxl:Column ColId="3" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="4" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -22,7 +22,7 @@
         <dxl:SubqueryAll OperatorName="=" OperatorMdid="0.96.1.0" ColId="5">
           <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17140.1.1" TableName="r">
+            <dxl:TableDescriptor Mdid="6.17140.1.1" TableName="r">
               <dxl:Columns>
                 <dxl:Column ColId="5" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="6" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -32,7 +32,7 @@
         </dxl:SubqueryAll>
       </dxl:And>
       <dxl:LogicalGet>
-        <dxl:TableDescriptor Mdid="0.17140.1.1" TableName="r">
+        <dxl:TableDescriptor Mdid="6.17140.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

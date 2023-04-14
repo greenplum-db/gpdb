@@ -10,8 +10,8 @@ See the *Greenplum Database Reference Guide* for information about setting serve
 
 -   **[Setting a Local Configuration Parameter](../topics/g-setting-a-local-configuration-parameter.html)**  
 
--   **[Setting a Master Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)**  
+-   **[Setting a Coordinator Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)**  
 
 
-**Parent topic:**[Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
+**Parent topic:** [Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
 

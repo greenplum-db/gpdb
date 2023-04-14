@@ -12,5 +12,5 @@ You must explicitly initialize and start PXF before you can use the `pxf` protoc
 
 For detailed information about configuring and using PXF and the `pxf` protocol, refer to [Accessing External Data with PXF](pxf-overview.html).
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

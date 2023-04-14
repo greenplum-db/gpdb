@@ -114,7 +114,9 @@
  */
 #include "postgres.h"
 
+#include "access/table.h"
 #include "access/aocs_compaction.h"
+#include "access/aomd.h"
 #include "access/appendonlywriter.h"
 #include "access/appendonly_compaction.h"
 #include "access/genam.h"
@@ -125,6 +127,7 @@
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
@@ -141,36 +144,39 @@
 #include "utils/pg_rusage.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 
-/*
- * State information used during the vacuum of indexes on append-only tables
- */
-typedef struct AppendOnlyIndexVacuumState
-{
-	AppendOnlyVisimap visiMap;
-	AppendOnlyBlockDirectory blockDirectory;
-	AppendOnlyBlockDirectoryEntry blockDirectoryEntry;
-} AppendOnlyIndexVacuumState;
 
 static void vacuum_appendonly_index(Relation indexRelation,
-									AppendOnlyIndexVacuumState *vacuumIndexState,
-									double rel_tuple_count,
+									Relation aoRelation,
+									Bitmapset *dead_segs,
 									int elevel,
-									BufferAccessStrategy bstrategy);
+									BufferAccessStrategy bstrategy,
+									AOVacuumRelStats *vacrelstats);
 
 static bool appendonly_tid_reaped(ItemPointer itemptr, void *state);
 
 static void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 										 BlockNumber *rel_pages, double *rel_tuples,
-										 bool *relhasindex);
-static int vacuum_appendonly_indexes(Relation aoRelation, int options,
-									 BufferAccessStrategy bstrategy);
+										 double *dead_tuples, bool *relhasindex);
+static int vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset *dead_segs,
+									 BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats);
+static void ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params,
+												BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats);
+static AOVacuumRelStats *init_vacrelstats(void);
+static void cleanup_vacrelstats(AOVacuumRelStats **vacrelstatsp);
 
-void
-ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
-						  BufferAccessStrategy bstrategy)
+static void
+ao_vacuum_rel_pre_cleanup(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	char	   *relname;
 	int			elevel;
+	int			options = params->options;
+	FileSegTotals *fstotal;
+	const int	initprog_index[] = {
+		PROGRESS_VACUUM_PHASE,
+		PROGRESS_VACUUM_TOTAL_HEAP_BLKS,
+		PROGRESS_VACUUM_MAX_DEAD_TUPLES
+	};
+	int64		initprog_val[3];
 
 	if (options & VACOPT_VERBOSE)
 		elevel = INFO;
@@ -180,11 +186,33 @@ ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
 	if (Gp_role == GP_ROLE_DISPATCH)
 		elevel = DEBUG2; /* vacuum and analyze messages aren't interesting from the QD */
 
+	relname = RelationGetRelationName(onerel);
+	ereport(elevel,
+			(errmsg("vacuuming \"%s.%s\"",
+					get_namespace_name(RelationGetNamespace(onerel)),
+					relname)));
+
+	/* Get statistics from the pg_aoseg table for progress reporting */
+	if (RelationIsAoRows(onerel))
+		fstotal = GetSegFilesTotals(onerel, GetActiveSnapshot());
+	else
+	{
+		Assert(RelationIsAoCols(onerel));
+		fstotal = GetAOCSSSegFilesTotals(onerel, GetActiveSnapshot());
+	}
+
 	/*
-	 * Truncate AWAITING_DROP segments that are no longer visible to anyone
-	 * to 0 bytes. We cannot actually remove them yet, because there might
-	 * still be index entries pointing to them. We cannot recycle the segments
-	 * until the indexes have been vacuumed.
+	 * Report that we are now in pre-cleanup phase, advertising total # of
+	 * heap-equivalent blocks
+	 */
+	initprog_val[0] = PROGRESS_VACUUM_PHASE_AO_PRE_CLEANUP;
+	initprog_val[1] = RelationGuessNumberOfBlocksFromSize(
+		ao_rel_get_physical_size(onerel));
+	initprog_val[2] = fstotal->totaltuples;
+	pgstat_progress_update_multi_param(3, initprog_index, initprog_val);
+
+	/* 
+	 * Recycle AWAITING_DROP segments that are no longer visible to anyone.
 	 *
 	 * This is optional. We'll drop old AWAITING_DROP segments in the
 	 * post-cleanup phase, too, but doing this first helps to reclaim some
@@ -192,31 +220,25 @@ ao_vacuum_rel_pre_cleanup(Relation onerel, int options, VacuumParams *params,
 	 *
 	 * This could run in a local transaction.
 	 */
-
-	relname = RelationGetRelationName(onerel);
-	ereport(elevel,
-			(errmsg("vacuuming \"%s.%s\"",
-					get_namespace_name(RelationGetNamespace(onerel)),
-					relname)));
-
-	AppendOptimizedRecycleDeadSegments(onerel);
+	ao_vacuum_rel_recycle_dead_segments(onerel, params, bstrategy, vacrelstats);
 
 	/*
 	 * Also truncate all live segments to the EOF values stored in pg_aoseg.
 	 * This releases space left behind by aborted inserts.
 	 */
-	AppendOptimizedTruncateToEOF(onerel);
+	AppendOptimizedTruncateToEOF(onerel, vacrelstats);
 }
 
 
-void
-ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
-						  BufferAccessStrategy bstrategy)
+static void
+ao_vacuum_rel_post_cleanup(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	BlockNumber	relpages;
 	double		reltuples;
+	double		deadtuples;
 	bool		relhasindex;
 	int			elevel;
+	int			options = params->options;
 	TransactionId OldestXmin;
 	TransactionId FreezeLimit;
 	MultiXactId MultiXactCutoff;
@@ -231,26 +253,32 @@ ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
 	if (Gp_role == GP_ROLE_DISPATCH)
 		elevel = DEBUG2; /* vacuum and analyze messages aren't interesting from the QD */
 
-	/*-----
+	/*
 	 * This could run in a *local* transaction:
 	 *
 	 * 1. Recycled any dead AWAITING_DROP segments, like in the
 	 *    pre-cleanup phase.
 	 *
 	 * 2. Vacuum indexes.
-	 *----
+	 * 
+	 * 3. Drop/Truncate dead segments.
+	 * 
+	 * 4. Update statistics.
 	 */
 	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(vacrelstats != NULL);
 
-	AppendOptimizedRecycleDeadSegments(onerel);
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 PROGRESS_VACUUM_PHASE_AO_POST_CLEANUP);
 
-	vacuum_appendonly_indexes(onerel, options, bstrategy);
+	ao_vacuum_rel_recycle_dead_segments(onerel, params, bstrategy, vacrelstats);
 
 	/* Update statistics in pg_class */
 	vacuum_appendonly_fill_stats(onerel, GetActiveSnapshot(),
 								 elevel,
 								 &relpages,
 								 &reltuples,
+								 &deadtuples,
 								 &relhasindex);
 
 	vacuum_set_xid_limits(onerel,
@@ -271,19 +299,26 @@ ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
 						MultiXactCutoff,
 						false,
 						true /* isvacuum */);
+
+	/* report results to the stats collector, too */
+	pgstat_report_vacuum(RelationGetRelid(onerel),
+						 onerel->rd_rel->relisshared,
+						 reltuples,
+						 deadtuples);
+
+	SIMPLE_FAULT_INJECTOR("vacuum_ao_post_cleanup_end");
 }
 
-void
-ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
-					  BufferAccessStrategy bstrategy)
+static void
+ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
 	int			compaction_segno;
 	int			insert_segno;
 	List	   *compacted_segments = NIL;
 	List	   *compacted_and_inserted_segments = NIL;
-	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 	char	   *relname;
 	int			elevel;
+	int			options = params->options;
 
 	/*
 	 * This should run in a distributed transaction. But also allow utility
@@ -295,6 +330,7 @@ ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER);
 	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(vacrelstats != NULL);
 
 	if (options & VACOPT_VERBOSE)
 		elevel = INFO;
@@ -310,6 +346,8 @@ ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 					get_namespace_name(RelationGetNamespace(onerel)),
 					relname)));
 
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 PROGRESS_VACUUM_PHASE_AO_COMPACT);
 	/*
 	 * Compact all the segfiles. Repeat as many times as required.
 	 *
@@ -339,7 +377,8 @@ ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 							  compaction_segno,
 							  &insert_segno,
 							  (options & VACOPT_FULL) != 0,
-							  compacted_segments);
+							  compacted_segments,
+							  vacrelstats);
 		else
 		{
 			Assert(RelationIsAoCols(onerel));
@@ -347,7 +386,8 @@ ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 						compaction_segno,
 						&insert_segno,
 						(options & VACOPT_FULL) != 0,
-						compacted_segments);
+						compacted_segments,
+						vacrelstats);
 		}
 
 		if (insert_segno != -1)
@@ -361,7 +401,7 @@ ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 		CommandCounterIncrement();
 	}
 
-	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
+	SIMPLE_FAULT_INJECTOR("vacuum_ao_after_compact");
 }
 
 /*
@@ -372,71 +412,96 @@ ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *params,
 void
 ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy)
 {
+	static AOVacuumRelStats *vacrelstats = NULL;
 	Assert(RelationIsAppendOptimized(rel));
 	Assert(params != NULL);
 
 	int ao_vacuum_phase = (params->options & VACUUM_AO_PHASE_MASK);
 
+	if (!vacrelstats)
+	{
+		Assert(ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE || Gp_role != GP_ROLE_EXECUTE);
+
+		pgstat_progress_start_command(PROGRESS_COMMAND_VACUUM, RelationGetRelid(rel));
+		vacrelstats = init_vacrelstats();
+	}
+
 	/*
 	 * Do the actual work --- either FULL or "lazy" vacuum
 	 */
 	if (ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE)
-		ao_vacuum_rel_pre_cleanup(rel, params->options, params, bstrategy);
+		ao_vacuum_rel_pre_cleanup(rel, params, bstrategy, vacrelstats);
 	else if (ao_vacuum_phase == VACOPT_AO_COMPACT_PHASE)
-		ao_vacuum_rel_compact(rel, params->options, params, bstrategy);
+		ao_vacuum_rel_compact(rel, params, bstrategy, vacrelstats);
 	else if (ao_vacuum_phase == VACOPT_AO_POST_CLEANUP_PHASE)
-		ao_vacuum_rel_post_cleanup(rel, params->options, params, bstrategy);
+	{
+		ao_vacuum_rel_post_cleanup(rel, params, bstrategy, vacrelstats);
+		pgstat_progress_end_command();
+		cleanup_vacrelstats(&vacrelstats);
+	}
 	else
 		/* Do nothing here, we will launch the stages later */
 		Assert(ao_vacuum_phase == 0);
 }
 
-
-static bool
-vacuum_appendonly_index_should_vacuum(Relation aoRelation,
-									  int options,
-									  Snapshot snapshot,
-									  AppendOnlyIndexVacuumState *vacuumIndexState,
-									  double *rel_tuple_count)
+/*
+ * Recycling AWAITING_DROP segments.
+ */
+static void
+ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumParams *params,
+									BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
-	int64		hidden_tupcount;
-	FileSegTotals *totals;
+	Bitmapset	*dead_segs;
+	int			options = params->options;
+	bool		need_drop;
 
-	Assert(RelationIsAppendOptimized(aoRelation));
-
-	if (Gp_role == GP_ROLE_DISPATCH)
+	dead_segs = AppendOptimizedCollectDeadSegments(onerel);
+	need_drop = !bms_is_empty(dead_segs);
+	if (need_drop)
 	{
-		if (rel_tuple_count)
-		{
-			*rel_tuple_count = 0.0;
-		}
-		return false;
-	}
-
-	if (RelationIsAoRows(aoRelation))
-	{
-		totals = GetSegFilesTotals(aoRelation, snapshot);
+		/*
+		 * Vacuum indexes only when we do find AWAITING_DROP segments.
+		 *
+		 * Do index vacuuming before dropping dead segments for data
+		 * consistency and crash safety. If dropping dead segments before
+		 * cleaning up index tuples, the following issues may occur:
+		 * 
+		 * a) The dead segment file becomes available as soon as dropping
+		 * complete. Concurrent inserts may fill it with new tuples hence
+		 * might be deleted soon in the following index vacuuming;
+		 * 
+		 * b) Crash happens in-between ao_vacuum_rel_recycle_dead_segments()
+		 * and vacuum_appendonly_indexes() result in losing the opportunity
+		 * to clean index entries fully as a state for which index tuples
+		 * to delete will be lost in this case.
+		 * 
+		 * So make sure to vacuum indexs to be based on persistent information
+		 * (AWAITING_DROP state in pg_aoseg) to cleanup dead index tuples
+		 * effectively.
+		 */
+		vacuum_appendonly_indexes(onerel, options, dead_segs, bstrategy, vacrelstats);
+		/*
+		 * Truncate above collected AWAITING_DROP segments to 0 byte.
+		 * AppendOptimizedCollectDeadSegments() should guarantee that
+		 * no transaction is able to access the dead segments for being
+		 * marked as AWAITING_DROP as well as cutoff xid screening.
+		 * ExclusiveLock will be held in case of concurrent VACUUM being
+		 * on the same file.
+		 */
+		AppendOptimizedDropDeadSegments(onerel, dead_segs, vacrelstats);
 	}
 	else
 	{
-		Assert(RelationIsAoCols(aoRelation));
-		totals = GetAOCSSSegFilesTotals(aoRelation, snapshot);
-	}
-	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&vacuumIndexState->visiMap);
-
-	if (rel_tuple_count)
-	{
-		*rel_tuple_count = (double)(totals->totaltuples - hidden_tupcount);
-		Assert((*rel_tuple_count) > -1.0);
+		/*
+		 * If no AWAITING_DROP segments were found, we called
+		 * vacuum_appendonly_indexes() in post_cleanup phase
+		 * for updating statistics.
+		 */
+		if ((options & VACUUM_AO_PHASE_MASK) == VACOPT_AO_POST_CLEANUP_PHASE)
+			vacuum_appendonly_indexes(onerel, options, dead_segs, bstrategy, vacrelstats);
 	}
 
-	pfree(totals);
-
-	if (hidden_tupcount > 0 || (options & VACOPT_FULL) != 0)
-	{
-		return true;
-	}
-	return false;
+	bms_free(dead_segs);
 }
 
 /*
@@ -444,33 +509,23 @@ vacuum_appendonly_index_should_vacuum(Relation aoRelation,
  *
  * Perform a vacuum on all indexes of an append-only relation.
  *
- * The page and tuplecount information in vacrelstats are used, the
- * nindex value is set by this function.
- *
  * It returns the number of indexes on the relation.
  */
 static int
-vacuum_appendonly_indexes(Relation aoRelation, int options,
-						  BufferAccessStrategy bstrategy)
+vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset *dead_segs,
+						  BufferAccessStrategy bstrategy, AOVacuumRelStats *vacrelstats)
 {
-	int			reindex_count = 1;
 	int			i;
 	Relation   *Irel;
 	int			nindexes;
-	AppendOnlyIndexVacuumState vacuumIndexState;
-	FileSegInfo **segmentFileInfo = NULL; /* Might be a casted AOCSFileSegInfo */
-	int			totalSegfiles;
-	Snapshot	appendOnlyMetaDataSnapshot;
-	Oid			visimaprelid;
-	Oid			visimapidxid;
 
 	Assert(RelationIsAppendOptimized(aoRelation));
-
-	memset(&vacuumIndexState, 0, sizeof(vacuumIndexState));
 
 	if (Debug_appendonly_print_compaction)
 		elog(LOG, "Vacuum indexes for append-only relation %s",
 			 RelationGetRelationName(aoRelation));
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 PROGRESS_VACUUM_PHASE_VACUUM_INDEX);
 
 	/* Now open all indexes of the relation */
 	if ((options & VACOPT_FULL))
@@ -478,95 +533,45 @@ vacuum_appendonly_indexes(Relation aoRelation, int options,
 	else
 		vac_open_indexes(aoRelation, RowExclusiveLock, &nindexes, &Irel);
 
-	appendOnlyMetaDataSnapshot = GetActiveSnapshot();
-
-	if (RelationIsAoRows(aoRelation))
-	{
-		segmentFileInfo = GetAllFileSegInfo(aoRelation,
-											appendOnlyMetaDataSnapshot,
-											&totalSegfiles);
-	}
-	else
-	{
-		Assert(RelationIsAoCols(aoRelation));
-		segmentFileInfo = (FileSegInfo **) GetAllAOCSFileSegInfo(aoRelation,
-																appendOnlyMetaDataSnapshot,
-																&totalSegfiles);
-	}
-
-	GetAppendOnlyEntryAuxOids(aoRelation->rd_id,
-							  appendOnlyMetaDataSnapshot, 
-							  NULL, NULL, NULL,
-							  &visimaprelid, &visimapidxid);
-
-	AppendOnlyVisimap_Init(
-			&vacuumIndexState.visiMap,
-			visimaprelid,
-			visimapidxid,
-			AccessShareLock,
-			appendOnlyMetaDataSnapshot);
-
-	AppendOnlyBlockDirectory_Init_forSearch(&vacuumIndexState.blockDirectory,
-			appendOnlyMetaDataSnapshot,
-			segmentFileInfo,
-			totalSegfiles,
-			aoRelation,
-			1,
-			RelationIsAoCols(aoRelation),
-			NULL);
-
 	/* Clean/scan index relation(s) */
 	if (Irel != NULL)
 	{
-		double rel_tuple_count = 0.0;
-		int			elevel;
+		int elevel;
 
-		/* just scan indexes to update statistic */
 		if (options & VACOPT_VERBOSE)
 			elevel = INFO;
 		else
 			elevel = DEBUG2;
 
-		if (vacuum_appendonly_index_should_vacuum(aoRelation, options,
-												  appendOnlyMetaDataSnapshot,
-												  &vacuumIndexState,
-												  &rel_tuple_count))
+		/* just scan indexes to update statistic */
+		if (Gp_role == GP_ROLE_DISPATCH || bms_is_empty(dead_segs))
 		{
-			Assert(rel_tuple_count > -1.0);
-
 			for (i = 0; i < nindexes; i++)
 			{
-				vacuum_appendonly_index(Irel[i], &vacuumIndexState,
-										rel_tuple_count,
-										elevel,
-										bstrategy);
+				scan_index(Irel[i],
+						   aoRelation,
+						   elevel,
+						   bstrategy);
 			}
-			reindex_count++;
 		}
 		else
 		{
 			for (i = 0; i < nindexes; i++)
-				scan_index(Irel[i], rel_tuple_count, elevel, bstrategy);
+			{
+				vacuum_appendonly_index(Irel[i],
+										aoRelation,
+										dead_segs,
+										elevel,
+										bstrategy,
+										vacrelstats);
+			}
 		}
-	}
-
-	AppendOnlyVisimap_Finish(&vacuumIndexState.visiMap, AccessShareLock);
-	AppendOnlyBlockDirectory_End_forSearch(&vacuumIndexState.blockDirectory);
-
-	if (segmentFileInfo)
-	{
-		if (RelationIsAoRows(aoRelation))
-		{
-			FreeAllSegFileInfo(segmentFileInfo, totalSegfiles);
-		}
-		else
-		{
-			FreeAllAOCSSegFileInfo((AOCSFileSegInfo **)segmentFileInfo, totalSegfiles);
-		}
-		pfree(segmentFileInfo);
 	}
 
 	vac_close_indexes(nindexes, Irel, NoLock);
+	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
+								 ((options & VACUUM_AO_PHASE_MASK) == VACOPT_AO_POST_CLEANUP_PHASE) ?
+								 PROGRESS_VACUUM_PHASE_AO_POST_CLEANUP : PROGRESS_VACUUM_PHASE_AO_PRE_CLEANUP);
 	return nindexes;
 }
 
@@ -575,32 +580,42 @@ vacuum_appendonly_indexes(Relation aoRelation, int options,
  *
  * This is called after an append-only segment file compaction to move
  * all tuples from the compacted segment files.
- * The segmentFileList is an
  */
 static void
 vacuum_appendonly_index(Relation indexRelation,
-						AppendOnlyIndexVacuumState *vacuumIndexState,
-						double rel_tuple_count,
+						Relation aoRelation,
+						Bitmapset *dead_segs,
 						int elevel,
-						BufferAccessStrategy bstrategy)
+						BufferAccessStrategy bstrategy,
+						AOVacuumRelStats *vacrelstats)
 {
-	Assert(RelationIsValid(indexRelation));
-	Assert(vacuumIndexState);
-
 	IndexBulkDeleteResult *stats;
-	IndexVacuumInfo ivinfo;
+	IndexVacuumInfo ivinfo = {0};
 	PGRUsage	ru0;
+
+	Assert(RelationIsValid(indexRelation));
 
 	pg_rusage_init(&ru0);
 
 	ivinfo.index = indexRelation;
+	ivinfo.analyze_only = false;
 	ivinfo.message_level = elevel;
-	ivinfo.num_heap_tuples = rel_tuple_count;
+	/* 
+	 * We can only provide the AO rel's reltuples as an estimate
+	 * (similar to heapam. See: lazy_vacuum_index()).
+	 */
+	ivinfo.num_heap_tuples = aoRelation->rd_rel->reltuples;
+	ivinfo.estimated_count = true;
 	ivinfo.strategy = bstrategy;
 
 	/* Do bulk deletion */
 	stats = index_bulk_delete(&ivinfo, NULL, appendonly_tid_reaped,
-			(void *) vacuumIndexState);
+							  (void *) dead_segs);
+	vacrelstats->num_index_vacuumed++;
+	pgstat_progress_update_param(PROGRESS_VACUUM_NUM_INDEX_VACUUMS,
+								 vacrelstats->num_index_vacuumed);
+
+	SIMPLE_FAULT_INJECTOR("vacuum_ao_after_index_delete");
 
 	/* Do post-VACUUM cleanup */
 	stats = index_vacuum_cleanup(&ivinfo, stats);
@@ -637,69 +652,25 @@ vacuum_appendonly_index(Relation indexRelation,
 	pfree(stats);
 }
 
-static bool
-appendonly_tid_reaped_check_block_directory(AppendOnlyIndexVacuumState *vacuumState,
-											AOTupleId *aoTupleId)
-{
-	if (vacuumState->blockDirectory.currentSegmentFileNum ==
-			AOTupleIdGet_segmentFileNum(aoTupleId) &&
-			AppendOnlyBlockDirectoryEntry_RangeHasRow(&vacuumState->blockDirectoryEntry,
-				AOTupleIdGet_rowNum(aoTupleId)))
-	{
-		return true;
-	}
-
-	if (!AppendOnlyBlockDirectory_GetEntry(&vacuumState->blockDirectory,
-		aoTupleId,
-		0,
-		&vacuumState->blockDirectoryEntry))
-	{
-		return false;
-	}
-	return (vacuumState->blockDirectory.currentSegmentFileNum ==
-			AOTupleIdGet_segmentFileNum(aoTupleId) &&
-			AppendOnlyBlockDirectoryEntry_RangeHasRow(&vacuumState->blockDirectoryEntry,
-				AOTupleIdGet_rowNum(aoTupleId)));
-}
-
 /*
  * appendonly_tid_reaped()
  *
- * Is a particular tid for an appendonly reaped?
- * state should contain an integer list of all compacted
- * segment files.
+ * Is a particular tid for an appendonly reaped? the inputed state
+ * is a bitmap of dropped segno. The index entry is reaped only
+ * because of the segment no is a member of dead_segs. In this
+ * way, no need to scan visibility map so the performance would be
+ * good.
  *
  * This has the right signature to be an IndexBulkDeleteCallback.
  */
 static bool
 appendonly_tid_reaped(ItemPointer itemptr, void *state)
 {
-	AOTupleId  *aoTupleId;
-	AppendOnlyIndexVacuumState *vacuumState;
-	bool		reaped;
+	Bitmapset *dead_segs = (Bitmapset *) state;
+	int segno = AOTupleIdGet_segmentFileNum((AOTupleId *)itemptr);
 
-	Assert(itemptr);
-	Assert(state);
-
-	aoTupleId = (AOTupleId *)itemptr;
-	vacuumState = (AppendOnlyIndexVacuumState *)state;
-
-	reaped = !appendonly_tid_reaped_check_block_directory(vacuumState,
-														  aoTupleId);
-	if (!reaped)
-	{
-		/* Also check visi map */
-		reaped = !AppendOnlyVisimap_IsVisible(&vacuumState->visiMap,
-		aoTupleId);
-	}
-
-	if (Debug_appendonly_print_compaction)
-		ereport(DEBUG3,
-				(errmsg("Index vacuum %s %d",
-						AOTupleIdToString(aoTupleId), reaped)));
-	return reaped;
+	return bms_is_member(segno, dead_segs);
 }
-
 
 /*
  * Fills in the relation statistics for an append-only relation.
@@ -712,7 +683,7 @@ appendonly_tid_reaped(ItemPointer itemptr, void *state)
 static void
 vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 							 BlockNumber *rel_pages, double *rel_tuples,
-							 bool *relhasindex)
+							 double *dead_tuples, bool *relhasindex)
 {
 	FileSegTotals *fstotal;
 	BlockNumber nblocks;
@@ -721,7 +692,6 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	int64       hidden_tupcount;
 	AppendOnlyVisimap visimap;
 	Oid			visimaprelid;
-	Oid			visimapidxid;
 
 	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
 
@@ -742,14 +712,12 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	num_tuples = (double)fstotal->totaltuples;
 	nblocks = (uint32)RelationGetNumberOfBlocks(aorel);
 
-	GetAppendOnlyEntryAuxOids(aorel->rd_id,
-							  snapshot, 
-							  NULL, NULL, NULL,
-							  &visimaprelid, &visimapidxid);
+	GetAppendOnlyEntryAuxOids(aorel,
+							  NULL, NULL,
+							  &visimaprelid);
 
 	AppendOnlyVisimap_Init(&visimap,
 						   visimaprelid,
-						   visimapidxid,
 						   AccessShareLock,
 						   snapshot);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
@@ -766,6 +734,7 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 
 	*rel_pages = nblocks;
 	*rel_tuples = num_tuples;
+	*dead_tuples = hidden_tupcount;
 	*relhasindex = aorel->rd_rel->relhasindex;
 
 	ereport(elevel,
@@ -774,26 +743,49 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	pfree(fstotal);
 }
 
+static AOVacuumRelStats *
+init_vacrelstats()
+{
+	AOVacuumRelStats *vacrelstats;
+	MemoryContext old_context;
+
+	old_context = MemoryContextSwitchTo(TopMemoryContext);
+	vacrelstats = (AOVacuumRelStats *) palloc0(sizeof(AOVacuumRelStats));
+	MemoryContextSwitchTo(old_context);
+
+	return vacrelstats;
+}
+
+static void
+cleanup_vacrelstats(AOVacuumRelStats **vacrelstats)
+{
+	pfree(*vacrelstats);
+	*vacrelstats = NULL;
+}
+
 /*
  *	scan_index() -- scan one index relation to update pg_class statistics.
  *
  * We use this when we have no deletions to do.
  */
 void
-scan_index(Relation indrel, double num_tuples,
-		   int elevel, BufferAccessStrategy vac_strategy)
+scan_index(Relation indrel, Relation aorel, int elevel, BufferAccessStrategy vac_strategy)
 {
 	IndexBulkDeleteResult *stats;
-	IndexVacuumInfo ivinfo;
+	IndexVacuumInfo ivinfo = {0};
 	PGRUsage	ru0;
 
 	pg_rusage_init(&ru0);
 
 	ivinfo.index = indrel;
 	ivinfo.analyze_only = false;
-	ivinfo.estimated_count = false;
 	ivinfo.message_level = elevel;
-	ivinfo.num_heap_tuples = num_tuples;
+	/* 
+	 * We can only provide the AO rel's reltuples as an estimate
+	 * (similar to heapam. See: lazy_vacuum_index()).
+	 */
+	ivinfo.num_heap_tuples = aorel->rd_rel->reltuples;
+	ivinfo.estimated_count = true;
 	ivinfo.strategy = vac_strategy;
 
 	stats = index_vacuum_cleanup(&ivinfo, NULL);

@@ -31,6 +31,9 @@ $node->safe_psql(
 	INSERT INTO co select i, i FROM generate_series(1,10)i;
 	COMMIT;");
 
+my $lsn =
+  $node->safe_psql('postgres', "SELECT pg_current_wal_lsn();");
+
 # Stop the PostgreSQL server
 $node->stop;
 
@@ -43,7 +46,12 @@ $restored_node->init_from_backup($node, 'testbackup', has_restoring => 1, standb
 # Start the PostgreSQL server
 $restored_node->start;
 
-# Make sure that the server is up and running
+# Wait until restored node has replayed the data.
+my $caughtup_query =
+	"SELECT '$lsn'::pg_lsn <= pg_last_wal_replay_lsn()";
+$restored_node->poll_query_until('postgres', $caughtup_query)
+	or die "Timed out while waiting for restored node to catch up";
+
 is($restored_node->safe_psql('postgres', 'SELECT count(*) from ao'), '10', 'AO table read check');
 is($restored_node->safe_psql('postgres', 'SELECT count(*) from co'), '10', 'AOCS table read check');
 is($restored_node->safe_psql('postgres', 'SELECT count(*) from heap'), '10', 'Heap table read check');

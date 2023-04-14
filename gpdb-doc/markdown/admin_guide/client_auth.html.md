@@ -15,13 +15,13 @@ You can configure Linux client applications to connect to a Greenplum Database s
 -   **[Configuring Kerberos For Windows Clients](kerberos-win-client.html)**  
 You can configure Microsoft Windows client applications to connect to a Greenplum Database system that is configured to authenticate with Kerberos.
 
-**Parent topic:**[Managing Greenplum Database Access](partIII.html)
+**Parent topic:** [Managing Greenplum Database Access](partIII.html)
 
 ## <a id="topic2"></a>Allowing Connections to Greenplum Database 
 
-Client access and authentication is controlled by the standard PostgreSQL host-based authentication file, pg\_hba.conf. For detailed information about this file, see [The pg\_hba.conf File](https://www.postgresql.org/docs/9.4/auth-pg-hba-conf.html) in the PostgreSQL documentation.
+Client access and authentication is controlled by the standard PostgreSQL host-based authentication file, pg\_hba.conf. For detailed information about this file, see [The pg\_hba.conf File](https://www.postgresql.org/docs/12/auth-pg-hba-conf.html) in the PostgreSQL documentation.
 
-In Greenplum Database, the pg\_hba.conf file of the master instance controls client access and authentication to your Greenplum Database system. The Greenplum Database segments also have pg\_hba.conf files, but these are already correctly configured to allow only client connections from the master host. The segments never accept outside client connections, so there is no need to alter the `pg_hba.conf` file on segments.
+In Greenplum Database, the pg\_hba.conf file of the coordinator instance controls client access and authentication to your Greenplum Database system. The Greenplum Database segments also have pg\_hba.conf files, but these are already correctly configured to allow only client connections from the coordinator host. The segments never accept outside client connections, so there is no need to alter the `pg_hba.conf` file on segments.
 
 The general format of the pg\_hba.conf file is a set of records, one per line. Greenplum Database ignores blank lines and any text after the `#` comment character. A record consists of a number of fields that are separated by spaces or tabs. Fields can contain white space if the field value is quoted. Records cannot be continued across lines. Each remote client access record has the following format:
 
@@ -135,7 +135,7 @@ The following table describes meaning of each field.
             <tr class="row">
               <td class="entry" headers="topic2__ip141709__entry__1">authentication-method</td>
               <td class="entry" headers="topic2__ip141709__entry__2">Specifies the authentication method to use when connecting.
-                Greenplum supports the <a class="xref" href="https://www.postgresql.org/docs/9.4/auth-methods.html" target="_blank" rel="external noopener">authentication methods</a> supported by PostgreSQL 9.4.</td>
+                Greenplum supports the <a class="xref" href="https://www.postgresql.org/docs/12/auth-methods.html" target="_blank" rel="external noopener">authentication methods</a> supported by PostgreSQL 9.4.</td>
             </tr>
           </tbody></table>
 
@@ -143,9 +143,9 @@ The following table describes meaning of each field.
 
 ### <a id="topic3"></a>Editing the pg\_hba.conf File 
 
-Initially, the `pg_hba.conf` file is set up with generous permissions for the gpadmin user and no database access for other Greenplum Database roles. You will need to edit the `pg_hba.conf` file to enable users' access to databases and to secure the gpadmin user. Consider removing entries that have trust authentication, since they allow anyone with access to the server to connect with any role they choose. For local \(UNIX socket\) connections, use ident authentication, which requires the operating system user to match the role specified. For local and remote TCP connections, ident authentication requires the client's host to run an indent service. You can install an ident service on the master host and then use ident authentication for local TCP connections, for example `127.0.0.1/28`. Using ident authentication for remote TCP connections is less secure because it requires you to trust the integrity of the ident service on the client's host.
+Initially, the `pg_hba.conf` file is set up with generous permissions for the gpadmin user and no database access for other Greenplum Database roles. You will need to edit the `pg_hba.conf` file to enable users' access to databases and to secure the gpadmin user. Consider removing entries that have trust authentication, since they allow anyone with access to the server to connect with any role they choose. For local \(UNIX socket\) connections, use ident authentication, which requires the operating system user to match the role specified. For local and remote TCP connections, ident authentication requires the client's host to run an indent service. You can install an ident service on the coordinator host and then use ident authentication for local TCP connections, for example `127.0.0.1/28`. Using ident authentication for remote TCP connections is less secure because it requires you to trust the integrity of the ident service on the client's host.
 
-This example shows how to edit the pg\_hba.conf file of the master to allow remote client access to all databases from all roles using encrypted password authentication.
+This example shows how to edit the pg\_hba.conf file of the coordinator to allow remote client access to all databases from all roles using encrypted password authentication.
 
 #### <a id="ip144328"></a>Editing pg\_hba.conf 
 
@@ -178,19 +178,19 @@ This example shows how to edit the pg\_hba.conf file of the master to allow remo
     ```
 
 
-**Note:** Note that you can also control database access by setting object privileges as described in [Managing Object Privileges](roles_privs.html). The pg\_hba.conf file just controls who can initiate a database session and how those connections are authenticated.
+> **Note** Note that you can also control database access by setting object privileges as described in [Managing Object Privileges](roles_privs.html). The pg\_hba.conf file just controls who can initiate a database session and how those connections are authenticated.
 
 ## <a id="topic4"></a>Limiting Concurrent Connections 
 
 Greenplum Database allocates some resources on a per-connection basis, so setting the maximum number of connections allowed is recommended.
 
-To limit the number of active concurrent sessions to your Greenplum Database system, you can configure the `max_connections` server configuration parameter. This is a *local* parameter, meaning that you must set it in the `postgresql.conf` file of the master, the standby master, and each segment instance \(primary and mirror\). The recommended value of `max_connections` on segments is 5-10 times the value on the master.
+To limit the number of active concurrent sessions to your Greenplum Database system, you can configure the `max_connections` server configuration parameter. This is a *local* parameter, meaning that you must set it in the `postgresql.conf` file of the coordinator, the standby coordinator, and each segment instance \(primary and mirror\). The recommended value of `max_connections` on segments is 5-10 times the value on the coordinator.
 
-When you set `max_connections`, you must also set the dependent parameter `max_prepared_transactions`. This value must be at least as large as the value of `max_connections` on the master, and segment instances should be set to the same value as the master.
+When you set `max_connections`, you must also set the dependent parameter `max_prepared_transactions`. This value must be at least as large as the value of `max_connections` on the coordinator, and segment instances should be set to the same value as the coordinator.
 
 For example:
 
--   In `$COORDINATOR_DATA_DIRECTORY/postgresql.conf` \(including standby master\):
+-   In `$COORDINATOR_DATA_DIRECTORY/postgresql.conf` \(including standby coordinator\):
 
     ```
     max_connections=100
@@ -213,24 +213,24 @@ For information about `gpconfig`, see the *Greenplum Database Utility Guide*.
 
 ### <a id="ip142411"></a>To change the number of allowed connections 
 
-1.  Log into the Greenplum Database master host as the Greenplum Database administrator and source the file `$GPHOME/greenplum_path.sh`.
-2.  Set the value of the `max_connections` parameter. This `gpconfig` command sets the value on the segments to 1000 and the value on the master to 200.
+1.  Log into the Greenplum Database coordinator host as the Greenplum Database administrator and source the file `$GPHOME/greenplum_path.sh`.
+2.  Set the value of the `max_connections` parameter. This `gpconfig` command sets the value on the segments to 1000 and the value on the coordinator to 200.
 
     ```
     $ gpconfig -c max_connections -v 1000 -m 200
     
     ```
 
-    The value on the segments must be greater than the value on the master. The recommended value of `max_connections` on segments is 5-10 times the value on the master.
+    The value on the segments must be greater than the value on the coordinator. The recommended value of `max_connections` on segments is 5-10 times the value on the coordinator.
 
-3.  Set the value of the `max_prepared_transactions` parameter. This `gpconfig` command sets the value to 200 on the master and all segments.
+3.  Set the value of the `max_prepared_transactions` parameter. This `gpconfig` command sets the value to 200 on the coordinator and all segments.
 
     ```
     $ gpconfig -c max_prepared_transactions -v 200
     
     ```
 
-    The value of `max_prepared_transactions` must be greater than or equal to `max_connections` on the master.
+    The value of `max_prepared_transactions` must be greater than or equal to `max_connections` on the coordinator.
 
 4.  Stop and restart your Greenplum Database system.
 
@@ -239,7 +239,7 @@ For information about `gpconfig`, see the *Greenplum Database Utility Guide*.
     
     ```
 
-5.  You can check the value of parameters on the master and segments with the `gpconfig` `-s` option. This `gpconfig` command displays the values of the `max_connections` parameter.
+5.  You can check the value of parameters on the coordinator and segments with the `gpconfig` `-s` option. This `gpconfig` command displays the values of the `max_connections` parameter.
 
     ```
     $ gpconfig -s max_connections
@@ -247,31 +247,31 @@ For information about `gpconfig`, see the *Greenplum Database Utility Guide*.
     ```
 
 
-**Note:** Raising the values of these parameters may cause Greenplum Database to request more shared memory. To mitigate this effect, consider decreasing other memory-related parameters such as `gp_cached_segworkers_threshold`.
+> **Note** Raising the values of these parameters may cause Greenplum Database to request more shared memory. To mitigate this effect, consider decreasing other memory-related parameters such as `gp_cached_segworkers_threshold`.
 
 ## <a id="topic5"></a>Encrypting Client/Server Connections 
 
 Enable SSL for client connections to Greenplum Database to encrypt the data passed over the network between the client and the database.
 
-Greenplum Database has native support for SSL connections between the client and the master server. SSL connections prevent third parties from snooping on the packets, and also prevent man-in-the-middle attacks. SSL should be used whenever the client connection goes through an insecure link, and must be used whenever client certificate authentication is used.
+Greenplum Database has native support for SSL connections between the client and the coordinator server. SSL connections prevent third parties from snooping on the packets, and also prevent man-in-the-middle attacks. SSL should be used whenever the client connection goes through an insecure link, and must be used whenever client certificate authentication is used.
 
 Enabling Greenplum Database in SSL mode requires the following items.
 
--   OpenSSL installed on both the client and the master server hosts \(master and standby master\).
--   The SSL files server.key \(server private key\) and server.crt \(server certificate\) should be correctly generated for the master host and standby master host.
+-   OpenSSL installed on both the client and the coordinator server hosts \(coordinator and standby coordinator\).
+-   The SSL files server.key \(server private key\) and server.crt \(server certificate\) should be correctly generated for the coordinator host and standby coordinator host.
 
     -   The private key should not be protected with a passphrase. The server does not prompt for a passphrase for the private key, and Greenplum Database start up fails with an error if one is required.
-    -   On a production system, there should be a key and certificate pair for the master host and a pair for the standby master host with a subject CN \(Common Name\) for the master host and standby master host.
+    -   On a production system, there should be a key and certificate pair for the coordinator host and a pair for the standby coordinator host with a subject CN \(Common Name\) for the coordinator host and standby coordinator host.
     A self-signed certificate can be used for testing, but a certificate signed by a certificate authority \(CA\) should be used in production, so the client can verify the identity of the server. Either a global or local CA can be used. If all the clients are local to the organization, a local CA is recommended.
 
--   Ensure that Greenplum Database can access server.key and server.crt, and any additional authentication files such as `root.crt` \(for trusted certificate authorities\). When starting in SSL mode, the Greenplum Database master looks for server.key and server.crt. As the default, Greenplum Database does not start if the files are not in the master data directory \(`$COORDINATOR_DATA_DIRECTORY`\). Also, if you use other SSL authentication files such as `root.crt` \(trusted certificate authorities\), the files must be on the master host.
+-   Ensure that Greenplum Database can access server.key and server.crt, and any additional authentication files such as `root.crt` \(for trusted certificate authorities\). When starting in SSL mode, the Greenplum Database coordinator looks for server.key and server.crt. As the default, Greenplum Database does not start if the files are not in the coordinator data directory \(`$COORDINATOR_DATA_DIRECTORY`\). Also, if you use other SSL authentication files such as `root.crt` \(trusted certificate authorities\), the files must be on the coordinator host.
 
-    If Greenplum Database master mirroring is enabled with SSL client authentication, SSL authentication files must be on both the master host and standby master host and *should not be placed* in the default directory `$COORDINATOR_DATA_DIRECTORY`. When master mirroring is enabled, an `initstandby` operation copies the contents of the `$COORDINATOR_DATA_DIRECTORY` from the master to the standby master and the incorrect SSL key, and cert files \(the master files, and not the standby master files\) will prevent standby master start up.
+    If Greenplum Database coordinator mirroring is enabled with SSL client authentication, SSL authentication files must be on both the coordinator host and standby coordinator host and *should not be placed* in the default directory `$COORDINATOR_DATA_DIRECTORY`. When coordinator mirroring is enabled, an `initstandby` operation copies the contents of the `$COORDINATOR_DATA_DIRECTORY` from the coordinator to the standby coordinator and the incorrect SSL key, and cert files \(the coordinator files, and not the standby coordinator files\) will prevent standby coordinator start up.
 
     You can specify a different directory for the location of the SSL server files with the `postgresql.conf` parameters `sslcert`, `sslkey`, `sslrootcert`, and `sslcrl`. For more information about the parameters, see [SSL Client Authentication](../security-guide/topics/Authenticate.html) in the *Security Configuration Guide*.
 
 
-Greenplum Database can be started with SSL enabled by setting the server configuration parameter `ssl=on` in the `postgresql.conf` file on the master and standby master hosts. This `gpconfig` command sets the parameter:
+Greenplum Database can be started with SSL enabled by setting the server configuration parameter `ssl=on` in the `postgresql.conf` file on the coordinator and standby coordinator hosts. This `gpconfig` command sets the parameter:
 
 ```
 gpconfig -c ssl -m on -v off

@@ -5,6 +5,9 @@
 # this limits the number of connections needed to run the tests.
 # ----------
 
+# required setup steps
+test: test_setup
+
 # run tablespace by itself, and first, because it forces a checkpoint;
 # we'd prefer not to have checkpoints later in the tests because that
 # interferes with crash-recovery testing.
@@ -56,7 +59,7 @@ test: gp_gin_index
 # ----------
 # Another group of parallel tests
 # ----------
-test: create_aggregate create_function_3 create_cast constraints triggers select inherit typed_table vacuum drop_if_exists updatable_views roleattributes create_am hash_func errors
+test: create_aggregate create_function_3 create_cast constraints triggers select inherit typed_table vacuum drop_if_exists updatable_views roleattributes create_am hash_func errors infinite_recurse
 
 # ----------
 # Because vacuum will detect concurrently running transactions, it is necessary to
@@ -102,7 +105,7 @@ test: brin gin gist spgist privileges init_privs security_label collate matview 
 # ----------
 # Another group of parallel tests
 # ----------
-test: create_table_like alter_generic alter_operator misc async dbsize misc_functions sysviews tsrf tidscan
+test: create_table_like alter_generic alter_operator misc async dbsize misc_functions sysviews tsrf tid tidscan
 
 # rules cannot run concurrently with any test that creates
 # a view or rule in the public schema

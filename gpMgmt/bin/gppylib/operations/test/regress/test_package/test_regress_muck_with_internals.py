@@ -5,9 +5,9 @@ import tarfile
 import shutil
 
 from contextlib import closing
-from gppylib.commands.unix import Scp
+from gppylib.commands.unix import Rsync
 from gppylib.commands.base import ExecutionError
-from gppylib.operations.package import GpScp
+from gppylib.operations.package import GpRsync
 from gppylib.operations.unix import RemoveRemoteFile
 from gppylib.operations.test.regress.test_package import GppkgTestCase, unittest, get_host_list, ARCHIVE_PATH, RPM_DATABASE, run_command, skipIfSingleNode
 
@@ -132,7 +132,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
         try:
             self.install(gppkg_file)
         except ExecutionError as e:
-            Scp(name = "copy gppkg to segment",
+            Rsync(name = "copy gppkg to segment",
                 srcFile = gppkg_file, 
                 dstFile = archive_file, 
                 srcHost = None,
@@ -159,7 +159,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
         try:
             self.remove(gppkg_file)
         except ExecutionError as e:
-            GpScp(source_path = gppkg_file,
+            GpRsync(source_path = gppkg_file,
                   target_path = archive_file,
                   host_list = segment_host_list).run()
             self.fail("ExecutionError %s" % str(e))
@@ -187,7 +187,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
             #Install the rpm 
             with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
                 tf.extract(self.A_spec.get_filename())
-            Scp(name = "copy rpm to segment", 
+            Rsync(name = "copy rpm to segment",
                 srcFile = self.A_spec.get_filename(), 
                 dstFile = self.A_spec.get_filename(), 
                 srcHost = None,
@@ -229,7 +229,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
         #Install the rpm 
         with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
             tf.extract(self.A_spec.get_filename())
-        Scp(name = "copy rpm to segment", 
+        Rsync(name = "copy rpm to segment",
             srcFile = self.A_spec.get_filename(), 
             dstFile = self.A_spec.get_filename(), 
             srcHost = None, 
@@ -255,7 +255,7 @@ class MuckWithInternalsTestCase(GppkgTestCase):
         #Install the rpm
         with closing(tarfile.open(self.alpha_spec.get_filename())) as tf:
             tf.extract(self.A_spec.get_filename())
-        Scp(name = "copy rpm to segment",
+        Rsync(name = "copy rpm to segment",
               srcFile = self.A_spec.get_filename(),
               dstFile = self.A_spec.get_filename(), 
               srcHost = None,

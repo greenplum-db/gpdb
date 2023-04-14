@@ -14,9 +14,9 @@ To migrate your `gphdfs` external tables to use the `pxf` external table protoco
 6. [Revoke](#revoke_privs) privileges to the `gphdfs` protocol.
 7. Migrate data to Greenplum 6.
 
-<div class="note">If you are migrating <code>gphdfs</code> from a Greenplum Database 5 installation, you perform the migration in the order above in your Greenplum 5 cluster before you migrate data to Greenplum 6.</div>
+<div class="note"><b>Note:</b> If you are migrating <code>gphdfs</code> from a Greenplum Database 5 installation, you perform the migration in the order above in your Greenplum 5 cluster before you migrate data to Greenplum 6.</div>
 
-<div class="note">If you are migrating <code>gphdfs</code> from a Greenplum Database 4 installation, you perform the migration in a similar order. However, since PXF is not available in Greenplum Database 4, you must perform certain actions in the Greenplum 6 installation before you migrate the data:
+<div class="note"><b>Note:</b> If you are migrating <code>gphdfs</code> from a Greenplum Database 4 installation, you perform the migration in a similar order. However, since PXF is not available in Greenplum Database 4, you must perform certain actions in the Greenplum 6 installation before you migrate the data:
 <ol>
 <li>Greenplum 4: <a href="#prepare">Prepare</a> for the migration.</li>
 <li>Greenplum 6:<ol>
@@ -73,18 +73,18 @@ As you prepare for migrating from `gphdfs` to PXF:
 
 PXF does not use the following `gphdfs` configuration options:
 
-| gphdfs Configuration Option | Description |  pxf Consideration |
-|----------+---------------+------------|
-| HADOOP_HOME | Environment variable that identifies the Hadoop installation directory | Not applicable; PXF is bundled with the required dependent Hadoop libraries and JARs | 
+| gphdfs Configuration Option | Description | pxf Consideration |
+| --------------------------- | ----------- | ------------------ |
+| HADOOP_HOME | Environment variable that identifies the Hadoop installation directory | Not applicable; PXF is bundled with the required dependent Hadoop libraries and JARs |
 | CLASSPATH | Environment variable that identifies the locations of Hadoop JAR and configuration files | Not applicable, PXF automatically includes the Hadoop libraries, JARs, and configuration files that it bundles in the `CLASSPATH`. PXF also automatically includes in the `CLASSPATH` user-registered dependencies found in the `$PXF_CONF/lib` (PXF 5.x) or `$PXF_BASE/lib` (PXF 6.x) directory. |
-| gp_hadoop_target_version | Server configuration parameter that identifies the Hadoop distribution | Not applicable, PXF works out-of-the-box with the different Hadoop distributions | 
-| gp_hadoop_home | Server configuration parameter that identifies the Hadoop installation directory | Not applicable, PXF works out-of-the-box with the different Hadoop distributions | 
+| gp_hadoop_target_version | Server configuration parameter that identifies the Hadoop distribution | Not applicable, PXF works out-of-the-box with the different Hadoop distributions |
+| gp_hadoop_home | Server configuration parameter that identifies the Hadoop installation directory | Not applicable, PXF works out-of-the-box with the different Hadoop distributions |
 
 
 Configuration properties required by PXF, and the `gphdfs` equivalent, if applicable, include:
 
 | Configuration Item | Description | gphdfs Config | pxf Config |
-|----------+-------------+---------------+------------|
+| ------------------ | ----------- | ------------- | ---------- |
 | JAVA_HOME | Environment variable that identifies the Java installation directory | Set `JAVA_HOME` on each segment host | Set `JAVA_HOME` in the `$PXF_CONF/conf/pxf-env.sh`<br>(PXF 5.x) or `$PXF_BASE/conf/pxf-env.sh`<br>(PXF 6.x) configuration file. |
 | JVM option settings | Options with which to start the JVM | Set options in the `GP_JAVA_OPT` environment variable in `hadoop_env.sh` | Set options in the `PXF_JVM_OPTS` environment variable in `$PXF_CONF/conf/pxf-env.sh`<br>(PXF 5.x) or `$PXF_BASE/conf/pxf-env.sh`<br>(PXF 6.x). |
 | PXF Server | PXF server configuration for Hadoop | Not applicable | Configure a PXF server for Hadoop | 
@@ -92,17 +92,17 @@ Configuration properties required by PXF, and the `gphdfs` equivalent, if applic
 
 After you determine the equivalent PXF configuration properties, you will:
 
-1. Update the Java version installed on each Greenplum Database host, if necessary. PXF supports Java version 8 and 11. If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 or 11 as described in [Installing Java for PXF](../../pxf/latest/install_java.html). Note the `$JAVA_HOME` setting.
+1. Update the Java version installed on each Greenplum Database host, if necessary. PXF supports Java version 8 and 11. If your Greenplum Database cluster hosts are running Java 7, upgrade to Java version 8 or 11 as described in [Installing Java for PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-install_java.html). Note the `$JAVA_HOME` setting.
 
 1. If you are migrating from Greenplum Database 4, *or* you have not previously used PXF in your Greenplum 5 installation:
 
-    1. [Install](../../pxf/latest/installing_pxf.html) the newest version of the independent PXF distribution on your Greenplum Database hosts.
+    1. [Install](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-installing_pxf.html) the newest version of the independent PXF distribution on your Greenplum Database hosts.
 
-    1. Inform PXF of the $JAVA_HOME setting by specifying its value in the `pxf-env.sh` [configuration file](../../pxf/latest/config_files.html).
-        - Edit the `pxf-env.sh` file on the Greenplum master node.
+    1. Inform PXF of the $JAVA_HOME setting by specifying its value in the `pxf-env.sh` [configuration file](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-config_files.html).
+        - Edit the `pxf-env.sh` file on the Greenplum coordinator node.
 
             ``` shell
-            gpadmin@gpmaster$ vi /usr/local/pxf-gp6/conf/pxf-env.sh
+            gpadmin@gpcoordinator$ vi /usr/local/pxf-gp7/conf/pxf-env.sh
             ```
         - Locate the `JAVA_HOME` setting in the `pxf-env.sh` file, uncomment if necessary, and set it to your `$JAVA_HOME` value. For example:
 
@@ -110,20 +110,20 @@ After you determine the equivalent PXF configuration properties, you will:
             export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk/jre/
             ```
 
-    1. Register the PXF extension with Greenplum Datatabase:
+    1. Register the PXF extension with Greenplum Database:
 
         ```shell
-        gpadmin@gpmaster$ pxf cluster register
+        gpadmin@gpcoordinator$ pxf cluster register
         ```
 
-    1. [Enable the PXF extension](../../pxf/latest/using_pxf.html#enable-pxf-ext) and [grant users access to PXF](../../pxf/latest/using_pxf.html#access_pxf).
+    1. [Enable the PXF extension](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-using_pxf.html#enable-pxf-ext) and [grant users access to PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-using_pxf.html#access_pxf).
 
-3. [Configure the PXF Hadoop Connectors](../../pxf/latest/client_instcfg.html). This procedure creates a PXF server configuration that provides PXF the information that it requires to access Hadoop. This procedure also synchronizes the configuration changes to all hosts in your Greenplum cluster.
+3. [Configure the PXF Hadoop Connectors](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-client_instcfg.html). This procedure creates a PXF server configuration that provides PXF the information that it requires to access Hadoop. This procedure also synchronizes the configuration changes to all hosts in your Greenplum cluster.
 
 4. Start or restart PXF in your Greenplum Database cluster:
 
     ``` shell
-    gpadmin@gpmaster$ pxf cluster start
+    gpadmin@gpcoordinator$ pxf cluster start
     ```
 
 
@@ -150,24 +150,24 @@ LOCATION('pxf://<path-to-data>?PROFILE=<profile_name>[&SERVER=<server_name>][&<c
 
 You are not required to specify the HDFS host and port number when you create a PXF external table. PXF obtains this information from the `default` server configuration, or from the server configuration name that you specify in `<server_name>`.
 
-Refer to [Creating an External Table](../../pxf/latest/intro_pxf.html#create_external_table) in the PXF documentation for more information about the PXF `CREATE EXTERNAL TABLE` syntax and keywords.
+Refer to [Creating an External Table](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-intro_pxf.html#create_external_table) in the PXF documentation for more information about the PXF `CREATE EXTERNAL TABLE` syntax and keywords.
 
 When you create an external table specifying the `gphdfs` protocol, you identify the format of the external data in the `FORMAT` clause (discussed in the next section). PXF uses a `PROFILE` option in the `LOCATION` clause to identify the source and type of the external data.
 
 | Data Format | pxf PROFILE |
-|----------+----------------|
+| ----------- | ----------- |
 | Avro | hdfs:avro | 
 | Parquet | hdfs:parquet | 
 | Text  |  hdfs:text | 
 
-Refer to [Connectors, Data Formats, and Profiles](../../pxf/latest/access_hdfs.html#hadoop_connectors) in the PXF documentation for more information about the PXF profiles supported for Hadoop.
+Refer to [Connectors, Data Formats, and Profiles](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-access_hdfs.html#hadoop_connectors) in the PXF documentation for more information about the PXF profiles supported for Hadoop.
 
 Both `gphdfs` and `pxf` utilize custom options in the `LOCATION` clause to identify data-format-, operation-, or profile-specific options supported by the protocol. For example, both `gphdfs` and `pxf` support parquet and compression options on `INSERT` operations.
 
 Should you need to migrate a `gphdfs` writable external table that references an HDFS file to PXF, map `gphdfs` to PXF writable external table compression options as follows:
 
 | Description | gphdfs LOCATION Option | pxf LOCATION Option |
-|----------+-------------+-----------------|
+| ----------- | ---------------------- | ------------------- |
 | Use of Compression | compress | Not applicable; depends on the profile - may be uncompressed by default or specified via COMPRESSION_CODEC | 
 | Type of compression | compression_type | COMPRESSION_TYPE | 
 | Compression codec | codec | COMPRESSION_CODEC | 
@@ -178,7 +178,7 @@ Should you need to migrate a `gphdfs` writable external table that references an
 If the HDFS file is a Parquet-format file, map these additional parquet options as follows:
 
 | Description | gphdfs LOCATION Option | pxf LOCATION Option |
-|----------+-------------+-----------------|
+| ----------- | ---------------------- | ------------------- |
 | Parquet schema  | schema | SCHEMA | 
 | Page size | pagesize | PAGE_SIZE | 
 | Row group size | rowgroupsize | ROWGROUP_SIZE | 
@@ -192,7 +192,7 @@ If the HDFS file is a Parquet-format file, map these additional parquet options 
 The `gphdfs` protocol uses the `FORMAT` clause to determine the format of the external data. For Avro- and Parquet-format data, the PXF `FORMAT` clause must identify the name of a custom formatter.
 
 | Data Format | gphdfs FORMAT Option | pxf FORMAT Option |
-|----------+-------------+-----------------|
+| ----------- | -------------------- | ----------------- |
 | Avro | FORMAT 'AVRO' | FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import') (read)<br>FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export') (write) | 
 | Parquet | FORMAT 'PARQUET' | FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import') (read)<br>FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export') (write) | 
 | Text  | FORMAT 'TEXT' (DELIMITER ',') | FORMAT 'TEXT' (DELIMITER ',') | 

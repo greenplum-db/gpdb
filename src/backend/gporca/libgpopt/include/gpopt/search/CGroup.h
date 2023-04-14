@@ -504,9 +504,9 @@ public:
 		return m_pgroupDuplicate;
 	}
 
-	// resolve master duplicate group;
+	// resolve coordinator duplicate group;
 	// this is the group that will host all expressions in current group after merging
-	void ResolveDuplicateMaster();
+	void ResolveDuplicateCoordinator();
 
 	// add duplicate group
 	void AddDuplicateGrp(CGroup *pgroup);

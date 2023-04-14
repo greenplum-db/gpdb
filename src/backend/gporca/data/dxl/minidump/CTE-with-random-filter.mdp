@@ -15,7 +15,7 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647"/>
+      <dxl:Hint/>
       <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -262,7 +262,7 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
       <dxl:ColumnStatistics Mdid="1.729127.1.1.7" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.729127.1.1.6" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.729127.1.1" Name="foo" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.729127.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.729127.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -290,7 +290,6 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:GPDBAgg Mdid="0.2803.1.0" Name="count" IsSplittable="true" HashAggCapable="true">
@@ -307,7 +306,7 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
       <dxl:CTEList>
         <dxl:LogicalCTEProducer CTEId="1" Columns="1">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.729127.1.1" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.729127.1.1" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -402,7 +401,7 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
                   <dxl:ConstValue TypeMdid="0.701.1.0" Value="mpmZmZmZuT8=" DoubleValue="0.100000"/>
                 </dxl:Comparison>
               </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.729127.1.1" TableName="foo">
+              <dxl:TableDescriptor Mdid="6.729127.1.1" TableName="foo">
                 <dxl:Columns>
                   <dxl:Column ColId="8" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                   <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

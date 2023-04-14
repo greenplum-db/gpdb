@@ -26,11 +26,13 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CRewindabilitySpec::CRewindabilitySpec(ERewindabilityType rewindability_type,
-									   EMotionHazardType motion_hazard)
-	: m_rewindability(rewindability_type), m_motion_hazard(motion_hazard)
+									   EMotionHazardType motion_hazard,
+									   BOOL origin_nl_join)
+	: m_rewindability(rewindability_type),
+	  m_motion_hazard(motion_hazard),
+	  m_origin_nl_join(origin_nl_join)
 {
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:

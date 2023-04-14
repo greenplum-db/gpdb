@@ -13,7 +13,7 @@ use warnings;
 use Config;
 use Cwd;
 use Exporter 'import';
-use Fcntl qw(:mode);
+use Fcntl qw(:mode :seek);
 use File::Basename;
 use File::Find;
 use File::Spec;
@@ -37,6 +37,7 @@ our @EXPORT = qw(
   system_log
   run_log
   run_command
+  pump_until
 
   command_ok
   command_fails
@@ -52,7 +53,7 @@ our @EXPORT = qw(
   $windows_os
 );
 
-our ($windows_os, $tmp_check, $log_path, $test_logfile);
+our ($windows_os, $timeout_default, $tmp_check, $log_path, $test_logfile);
 
 BEGIN
 {
@@ -63,22 +64,48 @@ BEGIN
 	delete $ENV{LC_ALL};
 	$ENV{LC_MESSAGES} = 'C';
 
-	delete $ENV{PGCONNECT_TIMEOUT};
-	delete $ENV{PGDATA};
-	delete $ENV{PGDATABASE};
-	delete $ENV{PGHOSTADDR};
-	delete $ENV{PGREQUIRESSL};
-	delete $ENV{PGSERVICE};
-	delete $ENV{PGSSLMODE};
-	delete $ENV{PGUSER};
-	delete $ENV{PGPORT};
-	delete $ENV{PGHOST};
-	delete $ENV{PG_COLOR};
+	# This list should be kept in sync with pg_regress.c.
+	my @envkeys = qw (
+	  PGCLIENTENCODING
+	  PGCONNECT_TIMEOUT
+	  PGDATA
+	  PGDATABASE
+	  PGGSSENCMODE
+	  PGGSSLIB
+	  PGHOSTADDR
+	  PGKRBSRVNAME
+	  PGPASSFILE
+	  PGPASSWORD
+	  PGREQUIREPEER
+	  PGREQUIRESSL
+	  PGSERVICE
+	  PGSERVICEFILE
+	  PGSSLCERT
+	  PGSSLCRL
+	  PGSSLKEY
+	  PGSSLMODE
+	  PGSSLROOTCERT
+	  PGTARGETSESSIONATTRS
+	  PGUSER
+	  PGPORT
+	  PGHOST
+	  PG_COLOR
+	);
+	delete @ENV{@envkeys};
 
 	$ENV{PGAPPNAME} = basename($0);
 
 	# Must be set early
 	$windows_os = $Config{osname} eq 'MSWin32' || $Config{osname} eq 'msys';
+	if ($windows_os)
+	{
+		require Win32API::File;
+		Win32API::File->import(qw(createFile OsFHandleOpen CloseHandle));
+	}
+
+	$timeout_default = $ENV{PG_TEST_TIMEOUT_DEFAULT};
+	$timeout_default = 180
+	  if not defined $timeout_default or $timeout_default eq '';
 }
 
 INIT
@@ -131,8 +158,13 @@ INIT
 END
 {
 
-	# Preserve temporary directory for this test on failure
-	$File::Temp::KEEP_ALL = 1 unless all_tests_passing();
+	# Test files have several ways of causing prove_check to fail:
+	# 1. Exit with a non-zero status.
+	# 2. Call ok(0) or similar, indicating that a constituent test failed.
+	# 3. Deviate from the planned number of tests.
+	#
+	# Preserve temporary directories after (1) and after (2).
+	$File::Temp::KEEP_ALL = 1 unless $? == 0 && all_tests_passing();
 }
 
 sub all_tests_passing
@@ -166,31 +198,27 @@ sub tempdir_short
 	return File::Temp::tempdir(CLEANUP => 1);
 }
 
-# Translate a Perl file name to a host file name.  Currently, this is a no-op
-# except for the case of Perl=msys and host=mingw32.  The subject need not
-# exist, but its parent directory must exist.
-sub perl2host
-{
-	my ($subject) = @_;
-	return $subject unless $Config{osname} eq 'msys';
-	my $here = cwd;
-	my $leaf;
-	if (chdir $subject)
-	{
-		$leaf = '';
-	}
-	else
-	{
-		$leaf = '/' . basename $subject;
-		my $parent = dirname $subject;
-		chdir $parent or die "could not chdir \"$parent\": $!";
-	}
+=pod
 
-	# this odd way of calling 'pwd -W' is the only way that seems to work.
-	my $dir = qx{sh -c "pwd -W"};
-	chomp $dir;
-	chdir $here;
-	return $dir . $leaf;
+=item has_wal_read_bug()
+
+Returns true if $tmp_check is subject to a sparc64+ext4 bug that causes WAL
+readers to see zeros if another process simultaneously wrote the same offsets.
+Consult this in tests that fail frequently on affected configurations.  The
+bug has made streaming standbys fail to advance, reporting corrupt WAL.  It
+has made COMMIT PREPARED fail with "could not read two-phase state from WAL".
+Non-WAL PostgreSQL reads haven't been affected, likely because those readers
+and writers have buffering systems in common.  See
+https://postgr.es/m/20220116210241.GC756210@rfd.leadboat.com for details.
+
+=cut
+
+sub has_wal_read_bug
+{
+	return
+	     $Config{osname} eq 'linux'
+	  && $Config{archname} =~ /^sparc/
+	  && !run_log([ qw(df -x ext4), $tmp_check ], '>', '/dev/null', '2>&1');
 }
 
 sub system_log
@@ -224,6 +252,36 @@ sub run_command
 	return ($stdout, $stderr);
 }
 
+=pod
+
+=item pump_until(proc, timeout, stream, until)
+
+Pump until string is matched on the specified stream, or timeout occurs.
+
+=cut
+
+sub pump_until
+{
+	my ($proc, $timeout, $stream, $until) = @_;
+	$proc->pump_nb();
+	while (1)
+	{
+		last if $$stream =~ /$until/;
+		if ($timeout->is_expired)
+		{
+			diag("pump_until: timeout expired when searching for \"$until\" with stream: \"$$stream\"");
+			return 0;
+		}
+		if (not $proc->pumpable())
+		{
+			diag("pump_until: process terminated unexpectedly when searching for \"$until\" with stream: \"$$stream\"");
+			return 0;
+		}
+		$proc->pump();
+	}
+	return 1;
+}
+
 # Generate a string made of the given range of ASCII characters
 sub generate_ascii_string
 {
@@ -249,13 +307,36 @@ sub slurp_dir
 
 sub slurp_file
 {
-	my ($filename) = @_;
+	my ($filename, $offset) = @_;
 	local $/;
-	open(my $in, '<', $filename)
-	  or die "could not read \"$filename\": $!";
-	my $contents = <$in>;
-	close $in;
-	$contents =~ s/\r//g if $Config{osname} eq 'msys';
+	my $contents;
+	my $fh;
+
+	# On windows open file using win32 APIs, to allow us to set the
+	# FILE_SHARE_DELETE flag ("d" below), otherwise other accesses to the file
+	# may fail.
+	if ($Config{osname} ne 'MSWin32')
+	{
+		open($fh, '<', $filename)
+		  or die "could not read \"$filename\": $!";
+	}
+	else
+	{
+		my $fHandle = createFile($filename, "r", "rwd")
+		  or die "could not open \"$filename\": $^E";
+		OsFHandleOpen($fh = IO::Handle->new(), $fHandle, 'r')
+		  or die "could not read \"$filename\": $^E\n";
+	}
+
+	if (defined($offset))
+	{
+		seek($fh, $offset, SEEK_SET)
+		  or die "could not seek \"$filename\": $!";
+	}
+
+	$contents = <$fh>;
+	close $fh;
+
 	return $contents;
 }
 
@@ -388,6 +469,7 @@ sub check_pg_config
 	  \$stdout, '2>', \$stderr
 	  or die "could not execute pg_config";
 	chomp($stdout);
+	$stdout =~ s/\r$//;
 
 	open my $pg_config_h, '<', "$stdout/pg_config.h" or die "$!";
 	my $match = (grep { /^$regexp/ } <$pg_config_h>);

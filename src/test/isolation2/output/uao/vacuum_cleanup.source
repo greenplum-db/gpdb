@@ -46,14 +46,13 @@ VACUUM
 1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
  age | regexp_replace     
 -----+--------------------
- 2   | pg_<seg>_<oid>     
- 2   | pg_aovisimap_<oid> 
+ 1   | pg_<seg>_<oid>     
+ 1   | pg_aovisimap_<oid> 
 (2 rows)
 2: end;
 END
 
--- Check that drop phase is skipped, but still the cleanup phase is performed
--- when there are concurrent serializable transactions
+-- Check that drop phase is not skipped, when there are concurrent serializable transactions.
 1: create table ao_@amname@_vacuum_cleanup3(a int, b int) using @amname@;
 CREATE
 1: insert into ao_@amname@_vacuum_cleanup3 select i, i from generate_series(1, 100) i;
@@ -78,9 +77,9 @@ DELETE 100
 
 -- Wait till compaction phase is completed and only then start the serializable
 -- transaction to ensure that only drop phase runs after the serializable
--- transaction started. Because the transaction is holding a lock on the table,
--- the drop phase cannot upgrade to AccessExclusiveLock and so recycling the
--- segfiles is skipped.
+-- transaction started. For the new VACUUM strategy, because no need to upgrade
+-- to AccessExclusiveLock for drop phase, and the transaction would not access
+-- AWAITING_DROP segfiles, dropping the dead segfiles could proceed accordingly.
 2: select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -107,20 +106,357 @@ VACUUM
  2   | pg_aovisimap_<oid> 
 (2 rows)
 
--- Validate that the drop phase was skipped. segfile 1 should be in state 2
--- (AWAITING_DROP)
+-- Validate that the drop phase wasn't skipped in the new VACUUM strategy,
+-- segfile 1 should be in state 1 (AWAITING_DEFAULT). This is because
+-- no need to acquire AccessExclusiveLock at dead segments recycling hence
+-- the cleanup routine could be performed as is.
 -- This result is related to data distribution.
 -- Current hash algorithm is jump-consistent-hash.
 1: SELECT * FROM gp_ao_or_aocs_seg('ao_@amname@_vacuum_cleanup3');
  segment_id | segno | tupcount | modcount | formatversion | state 
 ------------+-------+----------+----------+---------------+-------
- 2          | 1     | 25       | 2        | 3             | 2     
- 2          | 2     | 0        | 0        | 3             | 1     
- 1          | 1     | 37       | 2        | 3             | 2     
- 1          | 2     | 0        | 0        | 3             | 1     
- 0          | 1     | 38       | 2        | 3             | 2     
+ 0          | 1     | 0        | 2        | 3             | 1     
  0          | 2     | 0        | 0        | 3             | 1     
+ 2          | 1     | 0        | 2        | 3             | 1     
+ 2          | 2     | 0        | 0        | 3             | 1     
+ 1          | 1     | 0        | 2        | 3             | 1     
+ 1          | 2     | 0        | 0        | 3             | 1     
 (6 rows)
 
 2: commit;
 COMMIT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- Test VACUUM with concurrent readers:
+-- a) if reader transaction started before VACUUM, VACUUM should not drop the AWAITING_DROP segment
+--    which was accessing by the reader;
+-- b) if reader transaction started after VACUUM, VACUUM should drop the AWAITING_DROP segments.
+
+create or replace function show_aoseg(tabname text) returns table (segno int, tupcount bigint, modcount bigint, formatversion smallint, state smallint) as $$ declare tabrelid oid; /* in func */ tabsegrelid oid; /* in func */ tabsegrelname text; /* in func */ begin select tabname::regclass::oid into tabrelid; /* in func */ select segrelid from pg_appendonly where relid = tabrelid into tabsegrelid; /* in func */ select relname from pg_class where oid = tabsegrelid into tabsegrelname; /* in func */ 
+return query execute 'select segno,tupcount,modcount,formatversion,state from pg_aoseg.' || tabsegrelname; /* in func */ end; /* in func */ $$ language plpgsql;
+CREATE
+
+create table vacuum_concurrent_test_@amname@ (a int, b int, c int) using @amname@;
+CREATE
+insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(1, 11) b;
+INSERT 11
+create index i_b_vacuum_concurrent_reader_@amname@ on vacuum_concurrent_test_@amname@(b);
+CREATE
+update vacuum_concurrent_test_@amname@ set b = b + 1;
+UPDATE 11
+
+-- expect segment state is DEFAULT (state == 1)
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+ segno | tupcount | modcount | formatversion | state 
+-------+----------+----------+---------------+-------
+ 1     | 22       | 2        | 3             | 1     
+(1 row)
+
+-- start a reader before VACUUM
+1: begin;
+BEGIN
+1: select * from vacuum_concurrent_test_@amname@ where b = 10;
+ a | b  | c 
+---+----+---
+ 2 | 10 | 9 
+(1 row)
+
+vacuum vacuum_concurrent_test_@amname@;
+VACUUM
+
+-- expect to see AWAITING_DROP(state == 2) tuple
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+ segno | tupcount | modcount | formatversion | state 
+-------+----------+----------+---------------+-------
+ 1     | 22       | 2        | 3             | 2     
+ 2     | 11       | 0        | 3             | 1     
+(2 rows)
+
+1: select * from vacuum_concurrent_test_@amname@ where b = 5;
+ a | b | c 
+---+---+---
+ 2 | 5 | 4 
+(1 row)
+1: select * from vacuum_concurrent_test_@amname@ order by c;
+ a | b  | c  
+---+----+----
+ 2 | 2  | 1  
+ 2 | 3  | 2  
+ 2 | 4  | 3  
+ 2 | 5  | 4  
+ 2 | 6  | 5  
+ 2 | 7  | 6  
+ 2 | 8  | 7  
+ 2 | 9  | 8  
+ 2 | 10 | 9  
+ 2 | 11 | 10 
+ 2 | 12 | 11 
+(11 rows)
+1: end;
+END
+
+-- start another reader after VACUUM
+2: begin;
+BEGIN
+2: select * from vacuum_concurrent_test_@amname@ where c = 2;
+ a | b | c 
+---+---+---
+ 2 | 3 | 2 
+(1 row)
+
+-- expect to see AWAITING_DROP(state == 2) tuple for unable to drop the dead segment by the first VACUUM
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+ segno | tupcount | modcount | formatversion | state 
+-------+----------+----------+---------------+-------
+ 1     | 22       | 2        | 3             | 2     
+ 2     | 11       | 0        | 3             | 1     
+(2 rows)
+
+vacuum vacuum_concurrent_test_@amname@;
+VACUUM
+
+-- expect no AWAITING_DROP(state == 2) tuple because it was dropped by the last VACUUM
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+ segno | tupcount | modcount | formatversion | state 
+-------+----------+----------+---------------+-------
+ 1     | 0        | 2        | 3             | 1     
+ 2     | 11       | 0        | 3             | 1     
+(2 rows)
+
+2: select * from vacuum_concurrent_test_@amname@ where b = 7;
+ a | b | c 
+---+---+---
+ 2 | 7 | 6 
+(1 row)
+2: select * from vacuum_concurrent_test_@amname@ order by c;
+ a | b  | c  
+---+----+----
+ 2 | 2  | 1  
+ 2 | 3  | 2  
+ 2 | 4  | 3  
+ 2 | 5  | 4  
+ 2 | 6  | 5  
+ 2 | 7  | 6  
+ 2 | 8  | 7  
+ 2 | 9  | 8  
+ 2 | 10 | 9  
+ 2 | 11 | 10 
+ 2 | 12 | 11 
+(11 rows)
+2: end;
+END
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- Test VACUUM with concurrent writer.
+-- There was a concurrent insert transaction started prior to VACUUM, VACUUM should not mark
+-- the target segment which was also writting by the concurrent writer to AWAITING_DROP, and
+-- the corresponding index entries should not be deleted.
+
+truncate table vacuum_concurrent_test_@amname@;
+TRUNCATE
+insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(1, 5) b;
+INSERT 5
+delete from vacuum_concurrent_test_@amname@;
+DELETE 5
+
+1: begin;
+BEGIN
+1: insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(6, 10) b;
+INSERT 5
+
+2: vacuum vacuum_concurrent_test_@amname@;
+VACUUM
+
+1: commit;
+COMMIT
+
+set enable_seqscan = on;
+SET
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ order by b;
+ QUERY PLAN                                            
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)              
+   Merge Key: b                                        
+   ->  Sort                                            
+         Sort Key: b                                   
+         ->  Seq Scan on vacuum_concurrent_test_@amname@ 
+ Optimizer: Postgres query optimizer                   
+(6 rows)
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ order by b;
+ a | b  | c  
+---+----+----
+ 2 | 6  | 6  
+ 2 | 7  | 7  
+ 2 | 8  | 8  
+ 2 | 9  | 9  
+ 2 | 10 | 10 
+(5 rows)
+
+-- expect all bitmapindexscan results are consistent with above seqscan
+set enable_seqscan = off;
+SET
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+ QUERY PLAN                                                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                   
+   Merge Key: b                                                             
+   ->  Sort                                                                 
+         Sort Key: b                                                        
+         ->  Bitmap Heap Scan on vacuum_concurrent_test_@amname@              
+               Recheck Cond: (b IS NOT NULL)                                
+               ->  Bitmap Index Scan on i_b_vacuum_concurrent_reader_@amname@ 
+                     Index Cond: (b IS NOT NULL)                            
+ Optimizer: Postgres query optimizer                                        
+(9 rows)
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+ a | b  | c  
+---+----+----
+ 2 | 6  | 6  
+ 2 | 7  | 7  
+ 2 | 8  | 8  
+ 2 | 9  | 9  
+ 2 | 10 | 10 
+(5 rows)
+
+-- expose dead tuples
+set gp_select_invisible = true;
+SET
+
+set enable_seqscan = on;
+SET
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ order by b;
+ QUERY PLAN                                            
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)              
+   Merge Key: b                                        
+   ->  Sort                                            
+         Sort Key: b                                   
+         ->  Seq Scan on vacuum_concurrent_test_@amname@ 
+ Optimizer: Postgres query optimizer                   
+(6 rows)
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ order by b;
+ a | b  | c  
+---+----+----
+ 2 | 1  | 1  
+ 2 | 2  | 2  
+ 2 | 3  | 3  
+ 2 | 4  | 4  
+ 2 | 5  | 5  
+ 2 | 6  | 6  
+ 2 | 7  | 7  
+ 2 | 8  | 8  
+ 2 | 9  | 9  
+ 2 | 10 | 10 
+(10 rows)
+
+-- expect all bitmapindexscan results are same as above seqscan
+set enable_seqscan = off;
+SET
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+ QUERY PLAN                                                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                   
+   Merge Key: b                                                             
+   ->  Sort                                                                 
+         Sort Key: b                                                        
+         ->  Bitmap Heap Scan on vacuum_concurrent_test_@amname@              
+               Recheck Cond: (b IS NOT NULL)                                
+               ->  Bitmap Index Scan on i_b_vacuum_concurrent_reader_@amname@ 
+                     Index Cond: (b IS NOT NULL)                            
+ Optimizer: Postgres query optimizer                                        
+(9 rows)
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+ a | b  | c  
+---+----+----
+ 2 | 1  | 1  
+ 2 | 2  | 2  
+ 2 | 3  | 3  
+ 2 | 4  | 4  
+ 2 | 5  | 5  
+ 2 | 6  | 6  
+ 2 | 7  | 7  
+ 2 | 8  | 8  
+ 2 | 9  | 9  
+ 2 | 10 | 10 
+(10 rows)
+
+-- vacuum again without concurrent reader/writer, expect above dead tuples could be removed
+2: vacuum vacuum_concurrent_test_@amname@;
+VACUUM
+
+set enable_seqscan = on;
+SET
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ order by b;
+ QUERY PLAN                                            
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)              
+   Merge Key: b                                        
+   ->  Sort                                            
+         Sort Key: b                                   
+         ->  Seq Scan on vacuum_concurrent_test_@amname@ 
+ Optimizer: Postgres query optimizer                   
+(6 rows)
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ order by b;
+ a | b  | c  
+---+----+----
+ 2 | 6  | 6  
+ 2 | 7  | 7  
+ 2 | 8  | 8  
+ 2 | 9  | 9  
+ 2 | 10 | 10 
+(5 rows)
+
+-- expect all bitmapindexscan results are same as seqscan
+set enable_seqscan = off;
+SET
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+ QUERY PLAN                                                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                   
+   Merge Key: b                                                             
+   ->  Sort                                                                 
+         Sort Key: b                                                        
+         ->  Bitmap Heap Scan on vacuum_concurrent_test_@amname@              
+               Recheck Cond: (b IS NOT NULL)                                
+               ->  Bitmap Index Scan on i_b_vacuum_concurrent_reader_@amname@ 
+                     Index Cond: (b IS NOT NULL)                            
+ Optimizer: Postgres query optimizer                                        
+(9 rows)
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+ a | b  | c  
+---+----+----
+ 2 | 6  | 6  
+ 2 | 7  | 7  
+ 2 | 8  | 8  
+ 2 | 9  | 9  
+ 2 | 10 | 10 
+(5 rows)
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+reset enable_seqscan;
+RESET
+reset gp_select_invisible;
+RESET
+
+drop table vacuum_concurrent_test_@amname@;
+DROP
+drop function show_aoseg;
+DROP

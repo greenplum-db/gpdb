@@ -6,7 +6,7 @@ Best practices for implementing encryption and managing keys.
 
 Encryption can be used to protect data in a Greenplum Database system in the following ways:
 
--   Connections between clients and the master database can be encrypted with SSL. This is enabled by setting the `ssl` server configuration parameter to `on` and editing the `pg_hba.conf` file. See "Encrypting Client/Server Connections" in the *Greenplum Database Administrator Guide* for information about enabling SSL in Greenplum Database.
+-   Connections between clients and the coordinator database can be encrypted with SSL. This is enabled by setting the `ssl` server configuration parameter to `on` and editing the `pg_hba.conf` file. See "Encrypting Client/Server Connections" in the *Greenplum Database Administrator Guide* for information about enabling SSL in Greenplum Database.
 -   Greenplum Database 4.2.1 and above allow SSL encryption of data in transit between the Greenplum parallel file distribution server, `gpfdist`, and segment hosts. See [Encrypting gpfdist Connections](#section_kjt_3kr_bs) for more information. 
 -   Network communications between hosts in the Greenplum Database cluster can be encrypted using IPsec. An authenticated, encrypted VPN is established between every pair of hosts in the cluster. Check your operating system documentation for IPsec support, or consider a third-party solution such as that provided by [Zettaset](https://www.zettaset.com).
 -   The `pgcrypto` module of encryption/decryption functions protects data at rest in the database. Encryption at the column level protects sensitive information, such as passwords, Social Security numbers, or credit card numbers. See [Encrypting Data in Tables using PGP](#section_emf_3kr_bs) for an example.
@@ -24,7 +24,7 @@ Encryption can be used to protect data in a Greenplum Database system in the fol
 
 ## <a id="keyman"></a>Key Management 
 
-Whether you are using symmetric \(single private key\) or asymmetric \(public and private key\) cryptography, it is important to store the master or private key securely. There are many options for storing encryption keys, for example, on a file system, key vault, encrypted USB, trusted platform module \(TPM\), or hardware security module \(HSM\).
+Whether you are using symmetric \(single private key\) or asymmetric \(public and private key\) cryptography, it is important to store the coordinator or private key securely. There are many options for storing encryption keys, for example, on a file system, key vault, encrypted USB, trusted platform module \(TPM\), or hardware security module \(HSM\).
 
 Consider the following questions when planning for key management:
 
@@ -48,8 +48,8 @@ Using pgcrypto always comes at the cost of performance and maintainability. It i
 
 Before you implement in-database encryption, consider the following PGP limitations.
 
--   No support for signing. That also means that it is not checked whether the encryption sub-key belongs to the master key.
--   No support for encryption key as master key. This practice is generally discouraged, so this limitation should not be a problem.
+-   No support for signing. That also means that it is not checked whether the encryption sub-key belongs to the coordinator key.
+-   No support for encryption key as coordinator key. This practice is generally discouraged, so this limitation should not be a problem.
 -   No support for several subkeys. This may seem like a problem, as this is common practice. On the other hand, you should not use your regular GPG/PGP keys with pgcrypto, but create new ones, as the usage scenario is rather different.
 
 Greenplum Database is compiled with zlib by default; this allows PGP encryption functions to compress data before encrypting. When compiled with OpenSSL, more algorithms will be available.
@@ -180,7 +180,7 @@ This section assumes you are installing Greenplum Database on a Linux machine wi
     ```
 
 
-See the [pgcrypto](https://www.postgresql.org/docs/9.4/pgcrypto.html) documentation for more information about PGP encryption functions.
+See the [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) documentation for more information about PGP encryption functions.
 
 ## <a id="section_emf_3kr_bs"></a>Encrypting Data in Tables using PGP 
 
@@ -315,7 +315,7 @@ This section shows how to encrypt data inserted into a column using the PGP keys
     
     ```
 
-    **Note:** Different keys may have the same ID. This is rare, but is a normal event. The client application should try to decrypt with each one to see which fits — like handling `ANYKEY`. See [pgp\_key\_id\(\)](https://www.postgresql.org/docs/9.4/pgcrypto.html) in the pgcrypto documentation.
+    > **Note** Different keys may have the same ID. This is rare, but is a normal event. The client application should try to decrypt with each one to see which fits — like handling `ANYKEY`. See [pgp\_key\_id\(\)](https://www.postgresql.org/docs/12/pgcrypto.html) in the pgcrypto documentation.
 
 6.  Decrypt the data using the private key.
 
@@ -377,7 +377,7 @@ When using gpfdists, the following client certificates must be located in the `$
 -   The client private key file, `client.key`
 -   The trusted certificate authorities, `root.crt`
 
-**Important:** Do not protect the private key with a passphrase. The server does not prompt for a passphrase for the private key, and loading data fails with an error if one is required.
+> **Important** Do not protect the private key with a passphrase. The server does not prompt for a passphrase for the private key, and loading data fails with an error if one is required.
 
 When using `gpload` with SSL you specify the location of the server certificates in the YAML control file. When using `gpfdist` with SSL, you specify the location of the server certificates with the --ssl option.
 
@@ -396,7 +396,7 @@ The following example shows how to securely load data into an external table. Th
     ```
 
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 [1](#fnsrc_1) SHA2 algorithms were added to OpenSSL in version 0.9.8. For older versions, pgcrypto will use built-in code[2](#fnsrc_2) Any digest algorithm OpenSSL supports is automatically picked up. This is not possible with ciphers, which need to be supported explicitly.[3](#fnsrc_3) AES is included in OpenSSL since version 0.9.7. For older versions, pgcrypto will use built-in code.
 

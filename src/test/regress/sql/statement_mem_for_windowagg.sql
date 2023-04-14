@@ -13,6 +13,14 @@ SELECT gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
 
 EXPLAIN ANALYZE SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
 
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
@@ -24,6 +32,14 @@ SELECT gp_inject_fault('winagg_after_spool_tuples', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
 EXPLAIN ANALYZE SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, true)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
@@ -37,6 +53,14 @@ SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
 
 EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
 
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, true)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
@@ -48,6 +72,14 @@ SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;
 
 EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
+  $$, true)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)
   FROM gp_segment_configuration WHERE role='p' AND content>=0;

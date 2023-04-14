@@ -481,7 +481,6 @@ vacuum mytab_@amname@;
 SELECT reltuples FROM pg_class WHERE relname = 'mytab_@amname@';
 SELECT reltuples FROM pg_class WHERE relname = 'mytab_int_idx1_@amname@';
 
-
 -- @Description Checks that deleting works with many AO blocks.
 -- 
 DROP TABLE IF EXISTS foo;
@@ -997,3 +996,14 @@ SELECT COUNT(*) FROM foo WHERE b = 1;
 ROLLBACK To my_savepoint;
 SELECT COUNT(*) FROM foo WHERE b = 1;
 COMMIT;
+
+-- @Description Tests that speculative inserts are not supported (for
+-- conflicting inserts and otherwise).
+--
+CREATE TABLE spec_insert(i int unique, j int) distributed by (i);
+INSERT INTO spec_insert VALUES(1, 2);
+INSERT INTO spec_insert VALUES(1, 3) ON CONFLICT(i) DO NOTHING;
+INSERT INTO spec_insert VALUES(1, 3) ON CONFLICT(i) DO UPDATE SET j = 3;
+
+INSERT INTO spec_insert VALUES(2, 3) ON CONFLICT(i) DO NOTHING;
+INSERT INTO spec_insert VALUES(2, 3) ON CONFLICT(i) DO UPDATE SET j = 4;

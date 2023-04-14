@@ -31,6 +31,7 @@
 #include "common/relpath.h"
 #include "commands/dbcommands.h"
 #include "storage/freespace.h"
+#include "storage/proc.h"
 #include "storage/smgr.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
@@ -107,7 +108,7 @@ RelationCreateStorage(RelFileNode rnode, char relpersistence, SMgrImpl smgr_whic
 	smgrcreate(srel, MAIN_FORKNUM, false);
 
 	if (needs_wal)
-		log_smgrcreate(&srel->smgr_rnode.node, MAIN_FORKNUM);
+		log_smgrcreate(&srel->smgr_rnode.node, MAIN_FORKNUM, smgr_which);
 
 	/* Add the relation to the list of stuff to delete at abort */
 	pending = (PendingRelDelete *)
@@ -127,7 +128,7 @@ RelationCreateStorage(RelFileNode rnode, char relpersistence, SMgrImpl smgr_whic
  * Perform XLogInsert of an XLOG_SMGR_CREATE record to WAL.
  */
 void
-log_smgrcreate(const RelFileNode *rnode, ForkNumber forkNum)
+log_smgrcreate(const RelFileNode *rnode, ForkNumber forkNum, SMgrImpl impl)
 {
 	xl_smgr_create xlrec;
 
@@ -136,6 +137,7 @@ log_smgrcreate(const RelFileNode *rnode, ForkNumber forkNum)
 	 */
 	xlrec.rnode = *rnode;
 	xlrec.forkNum = forkNum;
+	xlrec.impl = impl;
 
 	XLogBeginInsert();
 	XLogRegisterData((char *) &xlrec, sizeof(xlrec));
@@ -257,6 +259,22 @@ RelationTruncate(Relation rel, BlockNumber nblocks)
 		visibilitymap_truncate(rel, nblocks);
 
 	/*
+	 * Make sure that a concurrent checkpoint can't complete while truncation
+	 * is in progress.
+	 *
+	 * The truncation operation might drop buffers that the checkpoint
+	 * otherwise would have flushed. If it does, then it's essential that
+	 * the files actually get truncated on disk before the checkpoint record
+	 * is written. Otherwise, if reply begins from that checkpoint, the
+	 * to-be-truncated blocks might still exist on disk but have older
+	 * contents than expected, which can cause replay to fail. It's OK for
+	 * the blocks to not exist on disk at all, but not for them to have the
+	 * wrong contents.
+	 */
+	Assert(!MyProc->delayChkptEnd);
+	MyProc->delayChkptEnd = true;
+
+	/*
 	 * We WAL-log the truncation before actually truncating, which means
 	 * trouble if the truncation fails. If we then crash, the WAL replay
 	 * likely isn't going to succeed in the truncation either, and cause a
@@ -294,8 +312,15 @@ RelationTruncate(Relation rel, BlockNumber nblocks)
 			XLogFlush(lsn);
 	}
 
-	/* Do the real work */
+	/*
+	 * This will first remove any buffers from the buffer pool that should no
+	 * longer exist after truncation is complete, and then truncate the
+	 * corresponding files on disk.
+	 */
 	smgrtruncate(rel->rd_smgr, MAIN_FORKNUM, nblocks);
+
+	/* We've done all the critical work, so checkpoints are OK now. */
+	MyProc->delayChkptEnd = false;
 }
 
 /*
@@ -342,7 +367,8 @@ RelationCopyStorage(SMgrRelation src, SMgrRelation dst,
 
 		smgrread(src, forkNum, blkno, buf.data);
 
-		if (!PageIsVerified(page, blkno))
+		if (!PageIsVerifiedExtended(page, blkno,
+									PIV_LOG_WARNING | PIV_REPORT_STAT))
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_CORRUPTED),
 					 errmsg("invalid page in block %u of relation %s",
@@ -603,14 +629,7 @@ smgr_redo(XLogReaderState *record)
 		xl_smgr_create *xlrec = (xl_smgr_create *) XLogRecGetData(record);
 		SMgrRelation reln;
 
-		/*
-		 * Creating initial file on disk for AO is same as that for heap
-		 * tables.  Therefore, using AO-specific SMGR implementation is not
-		 * required.  If AO-specific SMGR implementation must be used, the
-		 * SMGR WAL record type needs to be changed to remember the
-		 * implemetation identifier.
-		 */
-		reln = smgropen(xlrec->rnode, InvalidBackendId, SMGR_MD);
+		reln = smgropen(xlrec->rnode, InvalidBackendId, xlrec->impl);
 		smgrcreate(reln, xlrec->forkNum, true);
 	}
 	else if (info == XLOG_SMGR_TRUNCATE)

@@ -128,6 +128,51 @@ DROP TABLE t_concurrent_update;
 0: drop table tab_update_epq1;
 0: drop table tab_update_epq2;
 0q:
+1q:
+2q:
+
+-- check that orca concurrent delete transaction won't delete tuple, updated in other transaction (which doesn't match predicate anymore)
+create table test as select 0 as i distributed randomly;
+1: begin;
+1: update test set i = i + 1;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;
+1: end;
+2<:
+drop table test;
+1q:
+2q:
+
+-- check that orca concurrent delete transaction will delete tuple, updated in other transaction (which still matches predicate)
+create table test as select 0 as i distributed randomly;
+1: begin;
+1: update test set i = i;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;
+1: end;
+2<:
+drop table test;
+1q:
+2q:
+
+-- test ORCA partition table
+create table test(a int, b int, c int) partition by range(b) (start (1) end (7) every (3));
+insert into test values (1, 1, 1);
+1: begin;
+1: delete from test where b = 1;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: update test set b = 1;
+1: end;
+2<:
+
+0: select * from test;
+0: drop table test;
+0q:
+1q:
+2q:
 
 -- split update is to implement updating on hash keys,
 -- it deletes the tuple and insert a new tuple in a

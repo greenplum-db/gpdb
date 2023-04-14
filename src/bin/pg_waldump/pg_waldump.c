@@ -180,7 +180,7 @@ search_directory(const char *directory, const char *fname)
 			if (IsXLogFileName(xlde->d_name))
 			{
 				fd = open_file_in_directory(directory, xlde->d_name);
-				fname = xlde->d_name;
+				fname = pg_strdup(xlde->d_name);
 				break;
 			}
 		}
@@ -207,15 +207,12 @@ search_directory(const char *directory, const char *fname)
 									 WalSegSz),
 							fname, WalSegSz);
 		}
+		else if (r < 0)
+			fatal_error("could not read file \"%s\": %s",
+						fname, strerror(errno));
 		else
-		{
-			if (errno != 0)
-				fatal_error("could not read file \"%s\": %s",
-							fname, strerror(errno));
-			else
-				fatal_error("could not read file \"%s\": read %d of %zu",
-							fname, r, (Size) XLOG_BLCKSZ);
-		}
+			fatal_error("could not read file \"%s\": read %d of %zu",
+						fname, r, (Size) XLOG_BLCKSZ);
 		close(fd);
 		return true;
 	}
@@ -509,6 +506,15 @@ XLogDumpCountRecord(XLogDumpConfig *config, XLogDumpStats *stats,
 
 	recid = XLogRecGetInfo(record) >> 4;
 
+	/*
+	 * XACT records need to be handled differently. Those records use the
+	 * first bit of those four bits for an optional flag variable and the
+	 * following three bits for the opcode. We filter opcode out of xl_info
+	 * and use it as the identifier of the record.
+	 */
+	if (rmid == RM_XACT_ID)
+		recid &= 0x07;
+
 	stats->record_stats[rmid][recid].count++;
 	stats->record_stats[rmid][recid].rec_len += rec_len;
 	stats->record_stats[rmid][recid].fpi_len += fpi_len;
@@ -534,17 +540,18 @@ XLogDumpDisplayRecord(XLogDumpConfig *config, XLogReaderState *record)
 
 	XLogDumpRecordLen(record, &rec_len, &fpi_len);
 
-	id = desc->rm_identify(info);
-	if (id == NULL)
-		id = psprintf("UNKNOWN (%x)", info & ~XLR_INFO_MASK);
-
 	printf("rmgr: %-11s len (rec/tot): %6u/%6u, tx: %10u, lsn: %X/%08X, prev %X/%08X, ",
 		   desc->rm_name,
 		   rec_len, XLogRecGetTotalLen(record),
 		   XLogRecGetXid(record),
 		   (uint32) (record->ReadRecPtr >> 32), (uint32) record->ReadRecPtr,
 		   (uint32) (xl_prev >> 32), (uint32) xl_prev);
-	printf("desc: %s ", id);
+
+	id = desc->rm_identify(info);
+	if (id == NULL)
+		printf("desc: UNKNOWN (%x) ", info & ~XLR_INFO_MASK);
+	else
+		printf("desc: %s ", id);
 
 	initStringInfo(&s);
 	desc->rm_desc(&s, record);
@@ -602,7 +609,7 @@ XLogDumpDisplayRecord(XLogDumpConfig *config, XLogReaderState *record)
 					BKPIMAGE_IS_COMPRESSED)
 				{
 					printf(" (FPW%s); hole: offset: %u, length: %u, "
-						   "compression saved: %u\n",
+						   "compression saved: %u",
 						   XLogRecBlockImageApply(record, block_id) ?
 						   "" : " for WAL verification",
 						   record->blocks[block_id].hole_offset,
@@ -613,7 +620,7 @@ XLogDumpDisplayRecord(XLogDumpConfig *config, XLogReaderState *record)
 				}
 				else
 				{
-					printf(" (FPW%s); hole: offset: %u, length: %u\n",
+					printf(" (FPW%s); hole: offset: %u, length: %u",
 						   XLogRecBlockImageApply(record, block_id) ?
 						   "" : " for WAL verification",
 						   record->blocks[block_id].hole_offset,

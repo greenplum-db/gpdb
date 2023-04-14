@@ -245,9 +245,7 @@ explain (costs off, format json) insert into insertconflicttest values (0, 'Bilb
          }                                                                 +
        ]                                                                   +
      },                                                                    +
-     "Settings": {                                                         +
-       "Optimizer": "Postgres query optimizer"                             +
-     }                                                                     +
+     "Optimizer": "Postgres query optimizer"                               +
    }                                                                       +
  ]
 (1 row)

@@ -16,5 +16,5 @@ INSERT INTO writable_ext_table SELECT * FROM regular_table;
 
 ```
 
-**Parent topic:**[Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
+**Parent topic:** [Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
 

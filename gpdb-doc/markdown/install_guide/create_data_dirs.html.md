@@ -4,7 +4,7 @@ title: Creating the Data Storage Areas
 
 Describes how to create the directory locations where Greenplum Database data is stored for each coordinator, standby, and segment instance.
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic_wqb_1lc_wp"></a>Creating Data Storage Areas on the Coordinator and Standby Coordinator Hosts 
 
@@ -30,8 +30,8 @@ The data directory location on the coordinator is different than those on the se
 
     ```
     # source /usr/local/greenplum-db/greenplum_path.sh 
-    # gpssh -h smdw -e 'mkdir -p /data/coordinator'
-    # gpssh -h smdw -e 'chown gpadmin:gpadmin /data/coordinator'
+    # gpssh -h scdw -e 'mkdir -p /data/coordinator'
+    # gpssh -h scdw -e 'chown gpadmin:gpadmin /data/coordinator'
     ```
 
 

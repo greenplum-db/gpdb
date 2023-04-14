@@ -103,7 +103,7 @@ sub mkvcbuild
 	  dirent.c dlopen.c getopt.c getopt_long.c
 	  pread.c pwrite.c pg_bitutils.c
 	  pg_strong_random.c pgcheckdir.c pgmkdirp.c pgsleep.c pgstrcasecmp.c
-	  pqsignal.c mkdtemp.c qsort.c qsort_arg.c quotes.c system.c
+	  pqsignal.c mkdtemp.c qsort.c qsort_arg.c quotes.c setenv.c system.c
 	  sprompt.c strerror.c tar.c thread.c
 	  win32env.c win32error.c win32security.c win32setlocale.c);
 
@@ -123,8 +123,8 @@ sub mkvcbuild
 	}
 
 	our @pgcommonallfiles = qw(
-	  base64.c config_info.c controldata_utils.c d2s.c exec.c f2s.c file_perm.c ip.c
-	  keywords.c kwlookup.c link-canary.c md5.c
+	  base64.c config_info.c controldata_utils.c d2s.c exec.c f2s.c file_perm.c
+	  hashfn.c ip.c keywords.c kwlookup.c link-canary.c md5.c
 	  pg_lzcompress.c pgfnames.c psprintf.c relpath.c rmtree.c
 	  saslprep.c scram-common.c string.c stringinfo.c unicode_norm.c username.c
 	  wait_error.c);
@@ -516,7 +516,7 @@ sub mkvcbuild
 		my $pythonprog = "import sys;print(sys.prefix);"
 		  . "print(str(sys.version_info[0])+str(sys.version_info[1]))";
 		my $prefixcmd =
-		  $solution->{options}->{python} . "\\python -c \"$pythonprog\"";
+		  qq("$solution->{options}->{python}\\python" -c "$pythonprog");
 		my $pyout = `$prefixcmd`;
 		die "Could not query for python version!\n" if $?;
 		my ($pyprefix, $pyver) = split(/\r?\n/, $pyout);

@@ -1682,9 +1682,11 @@ CSubqueryHandler::FRemoveAllSubquery(CExpression *pexprOuter,
 			const IMDFunction *pmdFunc =
 				md_accessor->RetrieveFunc(pmdOp->FuncMdId());
 			if (IMDFunction::EfsVolatile == pmdFunc->GetFuncStability())
+			{
 				// the non-correlated plan would evaluate the comparison operation twice
 				// per outer row, that is not a good idea when the operation is volatile
 				fUseCorrelated = true;
+			}
 		}
 
 		CExpression *pexprInnerSelect = PexprInnerSelect(

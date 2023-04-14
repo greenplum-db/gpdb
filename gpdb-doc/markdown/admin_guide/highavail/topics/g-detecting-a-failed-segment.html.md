@@ -12,7 +12,7 @@ ERROR: All segment databases are unavailable
 
 ## <a id="howseg"></a>How a Segment Failure is Detected and Managed 
 
-On the Greenplum Database master host, the Postgres `postmaster` process forks a fault probe process, `ftsprobe`. This is also known as the FTS \(Fault Tolerance Server\) process. The `postmaster` process restarts the FTS if it fails.
+On the Greenplum Database coordinator host, the Postgres `postmaster` process forks a fault probe process, `ftsprobe`. This is also known as the FTS \(Fault Tolerance Server\) process. The `postmaster` process restarts the FTS if it fails.
 
 The FTS runs in a loop with a sleep interval between each cycle. On each loop, the FTS probes each primary segment instance by making a TCP socket connection to the segment instance using the hostname and port registered in the `gp_segment_configuration` table. If the connection succeeds, the segment performs a few simple checks and reports back to the FTS. The checks include running a `stat` system call on critical segment directories and checking for internal faults in the segment instance. If no issues are detected, a positive reply is sent to the FTS and no action is taken for that segment instance.
 
@@ -28,7 +28,7 @@ gp\_fts\_probe\_interval
 :   How often, in seconds, to begin a new FTS loop. For example if the setting is 60 and the probe loop takes 10 seconds, the FTS process sleeps 50 seconds. If the setting is 60 and probe loop takes 75 seconds, the process sleeps 0 seconds. The default is 60, and the maximum is 3600.
 
 gp\_fts\_probe\_timeout
-:   Probe timeout between master and segment, in seconds. The default is 20, and the maximum is 3600.
+:   Probe timeout between coordinator and segment, in seconds. The default is 20, and the maximum is 3600.
 
 gp\_fts\_probe\_retries
 :   The number of attempts to probe a segment. For example if the setting is 5 there will be 4 retries after the first attempt fails. Default: 5
@@ -44,5 +44,5 @@ In addition to the fault checking performed by the FTS, a primary segment that i
 -   **[Checking for Failed Segments](../../highavail/topics/g-checking-for-failed-segments.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

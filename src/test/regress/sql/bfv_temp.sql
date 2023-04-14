@@ -84,3 +84,17 @@ drop table tn_b_b;
 drop table tn_b_temp;
 drop table tn_b_new;
 drop function fun(sql text, a oid);
+
+-- Chek if error out inside UDF, myTempNamespace will roll back
+\c
+create or replace function errored_udf() returns int[] as 'BEGIN RAISE EXCEPTION ''AAA''; END' language plpgsql;
+
+create table n as select from generate_series(1, 10);
+select count(*) from n n1, n n2; -- boot reader gang
+
+create temp table nn as select errored_udf() from n;
+create temp table nnn as select * from generate_series(1, 10); -- check if reader do the rollback. should OK
+select count(*) from nnn n1, nnn n2; -- check if reader can read temp table. should OK
+
+drop table n;
+drop function errored_udf();

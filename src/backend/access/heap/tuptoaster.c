@@ -35,6 +35,7 @@
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "common/int.h"
 #include "common/pg_lzcompress.h"
 #include "miscadmin.h"
 #include "utils/expandeddatum.h"
@@ -68,7 +69,6 @@ typedef struct toast_compress_header
 #define TOAST_COMPRESS_SET_RAWSIZE(ptr, len) \
 	(((toast_compress_header *) (ptr))->rawsize = (len))
 
-static void toast_delete_datum(Relation rel, Datum value, bool is_speculative);
 static Datum toast_save_datum(Relation rel, Datum value,
 							  struct varlena *oldexternal, bool isFrozen, int options);
 static bool toastrel_valueid_exists(Relation toastrel, Oid valueid);
@@ -362,6 +362,9 @@ heap_tuple_untoast_attr(struct varlena *attr)
  *
  *		Public entry point to get back part of a toasted value
  *		from compression or external storage.
+ *
+ * sliceoffset is where to start (zero or more)
+ * If slicelength < 0, return everything beyond sliceoffset
  * ----------
  */
 struct varlena *
@@ -371,7 +374,20 @@ heap_tuple_untoast_attr_slice(struct varlena *attr,
 	struct varlena *preslice;
 	struct varlena *result;
 	char	   *attrdata;
+	int32		slicelimit;
 	int32		attrsize;
+
+	if (sliceoffset < 0)
+		elog(ERROR, "invalid sliceoffset: %d", sliceoffset);
+
+	/*
+	 * Compute slicelimit = offset + length, or -1 if we must fetch all of the
+	 * value.  In case of integer overflow, we must fetch all.
+	 */
+	if (slicelength < 0)
+		slicelimit = -1;
+	else if (pg_add_s32_overflow(sliceoffset, slicelength, &slicelimit))
+		slicelength = slicelimit = -1;
 
 	if (VARATT_IS_EXTERNAL_ONDISK(attr))
 	{
@@ -413,8 +429,8 @@ heap_tuple_untoast_attr_slice(struct varlena *attr,
 		struct varlena *tmp = preslice;
 
 		/* Decompress enough to encompass the slice and the offset */
-		if (slicelength > 0 && sliceoffset >= 0)
-			preslice = toast_decompress_datum_slice(tmp, slicelength + sliceoffset);
+		if (slicelimit >= 0)
+			preslice = toast_decompress_datum_slice(tmp, slicelimit);
 		else
 			preslice = toast_decompress_datum(tmp);
 
@@ -440,8 +456,7 @@ heap_tuple_untoast_attr_slice(struct varlena *attr,
 		sliceoffset = 0;
 		slicelength = 0;
 	}
-
-	if (((sliceoffset + slicelength) > attrsize) || slicelength < 0)
+	else if (slicelength < 0 || slicelimit > attrsize)
 		slicelength = attrsize - sliceoffset;
 
 	result = (struct varlena *) palloc(slicelength + VARHDRSZ);
@@ -879,10 +894,8 @@ toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
 	}
 	else
 	{
-		/* Since reloptions for AO table is not permitted, so using TOAST_TUPLE_TARGET */
-		hoff = sizeof(MemTupleData);
-		hoff = MAXALIGN(hoff);
-		maxDataLen = TOAST_TUPLE_TARGET - hoff;
+		maxDataLen = toast_tuple_target;
+		hoff = -1; /* keep compiler quiet about using 'hoff' uninitialized */
 	}
 
 	/*
@@ -1095,7 +1108,15 @@ toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
 	 * increase the target tuple size, so that 'm' attributes aren't stored
 	 * externally unless really necessary.
 	 */
-	maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
+	/*
+	 * FIXME: Should we do something like this with memtuples on
+	 * AO tables too? Currently we do not increase the target tuple size for AO
+	 * table, so there are occasions when columns of type 'm' will be stored
+	 * out-of-line but they could otherwise be accommodated in-block
+	 * c.f. upstream Postgres commit ca7c8168de76459380577eda56a3ed09b4f6195c
+	 */
+	if (!ismemtuple)
+		maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
 
 	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
 							   toast_values, toast_isnull) > maxDataLen &&
@@ -1633,8 +1654,8 @@ toast_get_valid_index(Oid toastoid, LOCKMODE lock)
 	validIndexOid = RelationGetRelid(toastidxs[validIndex]);
 
 	/* Close the toast relation and all its indexes */
-	toast_close_indexes(toastidxs, num_indexes, lock);
-	table_close(toastrel, lock);
+	toast_close_indexes(toastidxs, num_indexes, NoLock);
+	table_close(toastrel, NoLock);
 
 	return validIndexOid;
 }
@@ -1938,10 +1959,12 @@ toast_save_datum(Relation rel, Datum value,
 	}
 
 	/*
-	 * Done - close toast relation and its indexes
+	 * Done - close toast relation and its indexes but keep the lock until
+	 * commit, so as a concurrent reindex done directly on the toast relation
+	 * would be able to wait for this transaction.
 	 */
-	toast_close_indexes(toastidxs, num_indexes, RowExclusiveLock);
-	table_close(toastrel, RowExclusiveLock);
+	toast_close_indexes(toastidxs, num_indexes, NoLock);
+	table_close(toastrel, NoLock);
 
 	/*
 	 * Create the TOAST pointer value that we'll return
@@ -1960,7 +1983,7 @@ toast_save_datum(Relation rel, Datum value,
  *	Delete a single external stored value.
  * ----------
  */
-static void
+void
 toast_delete_datum(Relation rel, Datum value, bool is_speculative)
 {
 	struct varlena *attr = (struct varlena *) DatumGetPointer(value);
@@ -2019,11 +2042,13 @@ toast_delete_datum(Relation rel, Datum value, bool is_speculative)
 	}
 
 	/*
-	 * End scan and close relations
+	 * End scan and close relations but keep the lock until commit, so as a
+	 * concurrent reindex done directly on the toast relation would be able to
+	 * wait for this transaction.
 	 */
 	systable_endscan_ordered(toastscan);
-	toast_close_indexes(toastidxs, num_indexes, RowExclusiveLock);
-	table_close(toastrel, RowExclusiveLock);
+	toast_close_indexes(toastidxs, num_indexes, NoLock);
+	table_close(toastrel, NoLock);
 }
 
 
@@ -2365,7 +2390,12 @@ toast_fetch_datum_slice(struct varlena *attr, int32 sliceoffset, int32 length)
 		length = 0;
 	}
 
-	if (((sliceoffset + length) > attrsize) || length < 0)
+	/*
+	 * Adjust length request if needed.  (Note: our sole caller,
+	 * heap_tuple_untoast_attr_slice, protects us against sliceoffset + length
+	 * overflowing.)
+	 */
+	else if (((sliceoffset + length) > attrsize) || length < 0)
 		length = attrsize - sliceoffset;
 
 	result = (struct varlena *) palloc(length + VARHDRSZ);
@@ -2745,8 +2775,21 @@ init_toast_snapshot(Snapshot toast_snapshot)
 {
 	Snapshot	snapshot = GetOldestSnapshot();
 
+	/*
+	 * GetOldestSnapshot returns NULL if the session has no active snapshots.
+	 * We can get that if, for example, a procedure fetches a toasted value
+	 * into a local variable, commits, and then tries to detoast the value.
+	 * Such coding is unsafe, because once we commit there is nothing to
+	 * prevent the toast data from being deleted.  Detoasting *must* happen in
+	 * the same transaction that originally fetched the toast pointer.  Hence,
+	 * rather than trying to band-aid over the problem, throw an error.  (This
+	 * is not very much protection, because in many scenarios the procedure
+	 * would have already created a new transaction snapshot, preventing us
+	 * from detecting the problem.  But it's better than nothing, and for sure
+	 * we shouldn't expend code on masking the problem more.)
+	 */
 	if (snapshot == NULL)
-		elog(ERROR, "no known snapshots");
+		elog(ERROR, "cannot fetch toast data without an active snapshot");
 
 	InitToastSnapshot(*toast_snapshot, snapshot->lsn, snapshot->whenTaken);
 }

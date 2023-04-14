@@ -68,29 +68,6 @@ CHK_CALL () {
 	fi
 }
 
-SET_VAR () {
-    # 
-    # MPP-13617: If segment contains a ~, we assume ~ is the field delimiter.
-    # Otherwise we assume : is the delimiter.  This allows us to easily 
-    # handle IPv6 addresses which may contain a : by using a ~ as a delimiter. 
-    # 
-    I=$1
-    case $I in
-        *~*)
-	    S="~"
-            ;;
-        *)
-	    S=":"
-            ;;
-    esac
-    GP_HOSTNAME=`$ECHO $I|$CUT -d$S -f1`
-    GP_HOSTADDRESS=`$ECHO $I|$CUT -d$S -f2`
-    GP_PORT=`$ECHO $I|$CUT -d$S -f3`
-    GP_DIR=`$ECHO $I|$CUT -d$S -f4`
-    GP_DBID=`$ECHO $I|$CUT -d$S -f5`
-    GP_CONTENT=`$ECHO $I|$CUT -d$S -f6`
-}
-
 PARA_EXIT () {
 	if [ $1 -ne 0 ];then
 		$ECHO "FAILED:$SEGMENT_TO_CREATE" >> $PARALLEL_STATUS_FILE
@@ -244,6 +221,8 @@ CREATE_QES_MIRROR () {
     START_QE "-w"
     RETVAL=$?
     PARA_EXIT $RETVAL "pg_basebackup of segment data directory from ${PRIMARY_HOSTADDRESS} to ${GP_HOSTADDRESS}"
+    SED_PG_CONF ${GP_DIR}/$PG_CONF "port" port=$GP_PORT 0 $GP_HOSTADDRESS
+    PARA_EXIT $RETVAL "Update port number to $GP_PORT"
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
 }
 

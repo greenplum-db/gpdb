@@ -17,7 +17,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -176,7 +176,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.50586.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.50586.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -209,14 +209,13 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.57404.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.50586001.1.0"/>
-          <dxl:Partition Mdid="0.50586002.1.0"/>
+          <dxl:Partition Mdid="6.50586001.1.0"/>
+          <dxl:Partition Mdid="6.50586002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.50586001.1.0" Name="foo_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.50586001.1.0" Name="foo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -249,7 +248,6 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.57404001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -267,7 +265,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.50586002.1.0" Name="foo_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.50586002.1.0" Name="foo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -300,7 +298,6 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.57404002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -319,7 +316,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.57376.1.0" Name="bar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.57376.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.57376.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -350,7 +347,6 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.57376.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -360,8 +356,8 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.57404001.1.0"/>
-          <dxl:Partition Mdid="0.57404002.1.0"/>
+          <dxl:Partition Mdid="6.57404001.1.0"/>
+          <dxl:Partition Mdid="6.57404002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:GPDBAgg Mdid="0.2108.1.0" Name="sum" IsSplittable="true" HashAggCapable="true">
@@ -413,7 +409,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.57376.1.0" TableName="bar">
+          <dxl:TableDescriptor Mdid="6.57376.1.0" TableName="bar">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -432,7 +428,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
             <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:LogicalJoin JoinType="Inner">
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.57376.1.0" TableName="bar">
+                <dxl:TableDescriptor Mdid="6.57376.1.0" TableName="bar">
                   <dxl:Columns>
                     <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -447,7 +443,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
                 </dxl:TableDescriptor>
               </dxl:LogicalGet>
               <dxl:LogicalGet>
-                <dxl:TableDescriptor Mdid="0.57376.1.0" TableName="bar">
+                <dxl:TableDescriptor Mdid="6.57376.1.0" TableName="bar">
                   <dxl:Columns>
                     <dxl:Column ColId="28" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="29" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -468,7 +464,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
             </dxl:LogicalJoin>
           </dxl:SubqueryAny>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.50586.1.0" TableName="foo">
+            <dxl:TableDescriptor Mdid="6.50586.1.0" TableName="foo">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -492,7 +488,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
     <dxl:Plan Id="0" SpaceSize="9648">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324469.354209" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324469.354235" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -512,7 +508,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="In">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324469.354150" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324469.354160" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -538,7 +534,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
           </dxl:HashCondList>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.000444" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000449" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -571,7 +567,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.57376.1.0" TableName="bar">
+              <dxl:TableDescriptor Mdid="6.57376.1.0" TableName="bar">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -585,7 +581,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:TableScan>
-            <dxl:Append IsTarget="false" IsZapped="false">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="6.000304" Rows="1.000000" Width="8"/>
               </dxl:Properties>
@@ -598,75 +594,31 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:IndexScan IndexScanDirection="Forward">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.000304" Rows="1.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="40" Alias="a">
-                    <dxl:Ident ColId="40" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="41" Alias="b">
-                    <dxl:Ident ColId="41" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                    <dxl:Ident ColId="40" ColName="a" TypeMdid="0.23.1.0"/>
-                    <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.57404001.1.0" IndexName="idx_1_prt_1"/>
-                <dxl:TableDescriptor Mdid="0.50586001.1.0" TableName="foo_prt_1">
-                  <dxl:Columns>
-                    <dxl:Column ColId="40" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="41" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="42" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="43" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="44" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="45" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="46" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="47" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="48" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:IndexScan>
-              <dxl:IndexScan IndexScanDirection="Forward">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6.000304" Rows="1.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="49" Alias="a">
-                    <dxl:Ident ColId="49" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="50" Alias="b">
-                    <dxl:Ident ColId="50" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:IndexCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                    <dxl:Ident ColId="49" ColName="a" TypeMdid="0.23.1.0"/>
-                    <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                  </dxl:Comparison>
-                </dxl:IndexCondList>
-                <dxl:IndexDescriptor Mdid="0.57404002.1.0" IndexName="idx_1_prt_1"/>
-                <dxl:TableDescriptor Mdid="0.50586002.1.0" TableName="foo_prt_2">
-                  <dxl:Columns>
-                    <dxl:Column ColId="49" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="50" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="51" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="52" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="53" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="54" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="55" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="56" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="57" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:IndexScan>
-            </dxl:Append>
+              <dxl:IndexCondList>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+                </dxl:Comparison>
+              </dxl:IndexCondList>
+              <dxl:Partitions>
+                <dxl:Partition Mdid="6.50586001.1.0"/>
+                <dxl:Partition Mdid="6.50586002.1.0"/>
+              </dxl:Partitions>
+              <dxl:IndexDescriptor Mdid="0.57404.1.0" IndexName="idx_1_prt_1"/>
+              <dxl:TableDescriptor Mdid="6.50586.1.0" TableName="foo">
+                <dxl:Columns>
+                  <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="12" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="13" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="14" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="15" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="16" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="17" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:DynamicIndexScan>
           </dxl:NestedLoopJoin>
           <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
@@ -710,7 +662,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.57376.1.0" TableName="bar">
+                <dxl:TableDescriptor Mdid="6.57376.1.0" TableName="bar">
                   <dxl:Columns>
                     <dxl:Column ColId="27" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                     <dxl:Column ColId="28" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -755,7 +707,7 @@ select * from bar, (select * from foo where foo.a in (select h.a from bar h, bar
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.57376.1.0" TableName="bar">
+                    <dxl:TableDescriptor Mdid="6.57376.1.0" TableName="bar">
                       <dxl:Columns>
                         <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="20" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

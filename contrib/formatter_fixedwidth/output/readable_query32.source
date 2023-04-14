@@ -1,0 +1,62 @@
+set datestyle = 'ISO, DMY';
+-- Generate a single field large dataset for testing
+DROP EXTERNAL WEB TABLE IF EXISTS tbl_dataset_gen;
+NOTICE:  foreign table "tbl_dataset_gen" does not exist, skipping
+CREATE EXTERNAL WEB TABLE tbl_dataset_gen (
+  s1 char(10))
+EXECUTE '$(SHELL) @abs_srcdir@/scripts/single_field_generator.sh | tee @abs_srcdir@/data/fixedwidth_large_single_field.tbl' ON HOST
+FORMAT 'TEXT';
+\d tbl_dataset_gen;
+                Foreign table "public.tbl_dataset_gen"
+ Column |     Type      | Collation | Nullable | Default | FDW options 
+--------+---------------+-----------+----------+---------+-------------
+ s1     | character(10) |           |          |         | 
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', command '$(SHELL) @abs_srcdir@/scripts/single_field_generator.sh | tee @abs_srcdir@/data/fixedwidth_large_single_field.tbl', execute_on 'PER_HOST', log_errors 'f', encoding '6', is_writable 'false')
+
+select * from tbl_dataset_gen ORDER BY s1 desc limit 10;
+     s1     
+------------
+ 0000050000
+ 0000049999
+ 0000049998
+ 0000049997
+ 0000049996
+ 0000049995
+ 0000049994
+ 0000049993
+ 0000049992
+ 0000049991
+(10 rows)
+
+-- Loading a single field large dataset for testing
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
+CREATE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10))
+LOCATION
+(
+  'file://@hostname@@abs_srcdir@/data/fixedwidth_large_single_field.tbl'
+)
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10');
+\d tbl_ext_fixedwidth;
+               Foreign table "public.tbl_ext_fixedwidth"
+ Column |     Type      | Collation | Nullable | Default | FDW options 
+--------+---------------+-----------+----------+---------+-------------
+ s1     | character(10) |           |          |         | 
+FDW options: (formatter 'fixedwidth_in', s1 '10', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_large_single_field.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1 desc limit 10;
+     s1     
+------------
+ 0000050000
+ 0000049999
+ 0000049998
+ 0000049997
+ 0000049996
+ 0000049995
+ 0000049994
+ 0000049993
+ 0000049992
+ 0000049991
+(10 rows)
+

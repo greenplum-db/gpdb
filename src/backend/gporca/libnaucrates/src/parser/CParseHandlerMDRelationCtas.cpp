@@ -86,16 +86,6 @@ CParseHandlerMDRelationCtas::StartElement(const XMLCh *const,
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 		EdxltokenRelTemporary, EdxltokenRelation);
 
-	// parse whether relation has oids
-	const XMLCh *xml_str_has_oids =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelHasOids));
-	if (nullptr != xml_str_has_oids)
-	{
-		m_has_oids = CDXLOperatorFactory::ConvertAttrValueToBool(
-			m_parse_handler_mgr->GetDXLMemoryManager(), xml_str_has_oids,
-			EdxltokenRelHasOids, EdxltokenRelation);
-	}
-
 	// parse storage type
 	const XMLCh *xml_str_storage_type = CDXLOperatorFactory::ExtractAttrValue(
 		attrs, EdxltokenRelStorageType, EdxltokenRelation);
@@ -202,7 +192,7 @@ CParseHandlerMDRelationCtas::EndElement(const XMLCh *const,	 // element_uri,
 
 
 	m_imd_obj = GPOS_NEW(m_mp) CMDRelationCtasGPDB(
-		m_mp, m_mdid, m_mdname_schema, m_mdname, m_is_temp_table, m_has_oids,
+		m_mp, m_mdid, m_mdname_schema, m_mdname, m_is_temp_table,
 		m_rel_storage_type, m_rel_distr_policy, md_col_array, m_distr_col_array,
 		distr_opfamilies, distr_opclasses, m_key_sets_arrays,
 		dxl_ctas_storage_options, m_vartypemod_array);

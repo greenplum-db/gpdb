@@ -82,9 +82,8 @@ checkDemoConfig(){
         return 1
     fi
 
-    for (( i=0; i<`expr 4 \* $NUM_PRIMARY_MIRROR_PAIRS`; i++ )); do
-	PORT_NUM=`expr $DEMO_PORT_BASE + $i`
-
+    # Check if all Segment Ports are free
+    for PORT_NUM in ${DEMO_SEG_PORTS_LIST}; do
         echo "  Segment port check .. : ${PORT_NUM}"
         PORT_FILE="/tmp/.s.PGSQL.${PORT_NUM}"
         if [ -f ${PORT_FILE} -o -S ${PORT_FILE} ] ; then 
@@ -132,19 +131,23 @@ cleanDemo(){
     ##
 
     if [ "${GPDEMO_DESTRUCTIVE_CLEAN}" != "false" ]; then
-        if [ -f hostfile ];  then
+        if [ -f hostfile ]; then
             echo "Deleting hostfile"
             rm -f hostfile
         fi
-        if [ -f clusterConfigFile ];  then
+        if [ -f clusterConfigFile ]; then
             echo "Deleting clusterConfigFile"
             rm -f clusterConfigFile
         fi
-        if [ -d ${DATADIRS} ];  then
+        if [ -f clusterConfigPostgresAddonsFile ]; then
+            echo "Deleting clusterConfigPostgresAddonsFile"
+            rm -f clusterConfigPostgresAddonsFile
+        fi
+        if [ -d ${DATADIRS} ]; then
             echo "Deleting ${DATADIRS}"
             rm -rf ${DATADIRS}
         fi
-        if [ -d logs ];  then
+        if [ -d logs ]; then
             rm -rf logs
         fi
         rm -f optimizer-state.log gpdemo-env.sh
@@ -260,9 +263,11 @@ do
   mkdir -p $PRIMARY_DIR
   PRIMARY_DIRS_LIST="$PRIMARY_DIRS_LIST $PRIMARY_DIR"
 
-  MIRROR_DIR=$DATADIRS/dbfast_mirror$i
-  mkdir -p $MIRROR_DIR
-  MIRROR_DIRS_LIST="$MIRROR_DIRS_LIST $MIRROR_DIR"
+  if [ "${WITH_MIRRORS}" == "true" ]; then
+    MIRROR_DIR=$DATADIRS/dbfast_mirror$i
+    mkdir -p $MIRROR_DIR
+    MIRROR_DIRS_LIST="$MIRROR_DIRS_LIST $MIRROR_DIR"
+  fi
 done
 PRIMARY_DIRS_LIST=${PRIMARY_DIRS_LIST#* }
 MIRROR_DIRS_LIST=${MIRROR_DIRS_LIST#* }

@@ -83,6 +83,13 @@ values (1,1,b'0000','1'), (2,2,b'0001','1'),
        (3,4,b'0010','2'), (4,8,b'0011','2'),
        (5,16,b'0000','2'), (6,32,b'0001','2'),
        (7,64,b'0010','1'), (8,128,b'0011','1');
+create temp table gstest5(id integer, v integer,
+                          unsortable_col1 xid, unsortable_col2 xid);
+insert into gstest5
+values (1,1,'3','1'), (2,2,'3','1'),
+       (3,4,'4','2'), (4,8,'4','2'),
+       (5,16,'4','2'), (6,32,'4','2'),
+       (7,64,'3','1'), (8,128,'3','1');
 create temp table gstest_empty (a integer, b integer, v integer);
 create function gstest_data(v integer, out a integer, out b integer)
   returns setof record
@@ -496,6 +503,130 @@ select x, not x as not_x, q2 from
    |       |               456
    |       |  4567890123456789
 (5 rows)
+
+-- check qual push-down rules for a subquery with grouping sets
+explain (verbose, costs off)
+select * from (
+  select 1 as x, q1, sum(q2)
+  from int8_tbl i1
+  group by grouping sets(1, 2)
+) ss
+where x = 1 and q1 = 123;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Subquery Scan on ss
+   Output: ss.x, ss.q1, ss.sum
+   Filter: ((ss.x = 1) AND (ss.q1 = 123))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: 1, i1.q1, (sum(i1.q2))
+         Merge Key: i1.q1
+         ->  Finalize GroupAggregate
+               Output: (1), i1.q1, sum(i1.q2)
+               Group Key: 1, i1.q1, (GROUPINGSET_ID())
+               ->  Sort
+                     Output: 1, i1.q1, (PARTIAL sum(i1.q2)), (GROUPINGSET_ID())
+                     Sort Key: i1.q1, (GROUPINGSET_ID())
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: 1, i1.q1, (PARTIAL sum(i1.q2)), (GROUPINGSET_ID())
+                           Hash Key: 1, i1.q1, (GROUPINGSET_ID())
+                           ->  Partial GroupAggregate
+                                 Output: (1), i1.q1, PARTIAL sum(i1.q2), GROUPINGSET_ID()
+                                 Group Key: 1
+                                 Sort Key: i1.q1
+                                   Group Key: i1.q1
+                                 ->  Seq Scan on public.int8_tbl i1
+                                       Output: 1, i1.q1, i1.q2
+ Optimizer: Postgres query optimizer
+ Settings: enable_hashagg = 'off', optimizer = 'off'
+(24 rows)
+
+select * from (
+  select 1 as x, q1, sum(q2)
+  from int8_tbl i1
+  group by grouping sets(1, 2)
+) ss
+where x = 1 and q1 = 123;
+ x | q1 | sum 
+---+----+-----
+(0 rows)
+
+-- check handling of pulled-up SubPlan in GROUPING() argument (bug #17479)
+explain (verbose, costs off)
+select grouping(ss.x)
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: (GROUPING((SubPlan 1))), ((SubPlan 2))
+   ->  GroupAggregate
+         Output: GROUPING((SubPlan 1)), ((SubPlan 2))
+         Group Key: ((SubPlan 2))
+         ->  Sort
+               Output: ((SubPlan 2)), i1.q1
+               Sort Key: ((SubPlan 2))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: ((SubPlan 2)), i1.q1
+                     Hash Key: ((SubPlan 2))
+                     ->  Seq Scan on public.int8_tbl i1
+                           Output: (SubPlan 2), i1.q1
+                           SubPlan 2
+                             ->  Result
+                                   Output: i1.q1
+ Optimizer: Postgres query optimizer
+ Settings: enable_hashagg = 'off', optimizer = 'off'
+(18 rows)
+
+select grouping(ss.x)
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+ grouping 
+----------
+        0
+        0
+(2 rows)
+
+explain (verbose, costs off)
+select (select grouping(ss.x))
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ((SubPlan 2)), ((SubPlan 3))
+   ->  GroupAggregate
+         Output: (SubPlan 2), ((SubPlan 3))
+         Group Key: ((SubPlan 3))
+         ->  Sort
+               Output: ((SubPlan 3)), i1.q1
+               Sort Key: ((SubPlan 3))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: ((SubPlan 3)), i1.q1
+                     Hash Key: ((SubPlan 3))
+                     ->  Seq Scan on public.int8_tbl i1
+                           Output: (SubPlan 3), i1.q1
+                           SubPlan 3
+                             ->  Result
+                                   Output: i1.q1
+         SubPlan 2
+           ->  Result
+                 Output: GROUPING((SubPlan 1))
+ Optimizer: Postgres query optimizer
+ Settings: enable_hashagg = 'off', optimizer = 'off'
+(21 rows)
+
+select (select grouping(ss.x))
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+ grouping 
+----------
+        0
+        0
+(2 rows)
 
 -- simple rescan tests
 select a, b, sum(v.x)
@@ -1201,6 +1332,80 @@ explain (costs off)
  Optimizer: Postgres query optimizer
 (13 rows)
 
+select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2))
+ order by 3,5;
+ unsortable_col1 | unsortable_col2 | grouping | count | sum 
+-----------------+-----------------+----------+-------+-----
+               4 |                 |        1 |     4 |  60
+               3 |                 |        1 |     4 | 195
+                 |               2 |        2 |     4 |  60
+                 |               1 |        2 |     4 | 195
+(4 rows)
+
+explain (costs off)
+  select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2))
+ order by 3,5;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+   ->  Sort
+         Sort Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+         ->  Finalize HashAggregate
+               Group Key: unsortable_col1, unsortable_col2, (GROUPINGSET_ID())
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (GROUPINGSET_ID())
+                     ->  Partial HashAggregate
+                           Hash Key: unsortable_col1
+                           Hash Key: unsortable_col2
+                           ->  Seq Scan on gstest5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2),())
+ order by 3,5;
+ unsortable_col1 | unsortable_col2 | grouping | count | sum 
+-----------------+-----------------+----------+-------+-----
+               4 |                 |        1 |     4 |  60
+               3 |                 |        1 |     4 | 195
+                 |               2 |        2 |     4 |  60
+                 |               1 |        2 |     4 | 195
+                 |                 |        3 |     8 | 255
+(5 rows)
+
+explain (costs off)
+  select unsortable_col1, unsortable_col2,
+       grouping(unsortable_col1, unsortable_col2),
+       count(*), sum(v)
+  from gstest5 group by grouping sets ((unsortable_col1),(unsortable_col2),())
+ order by 3,5;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+   ->  Sort
+         Sort Key: (GROUPING(unsortable_col1, unsortable_col2)), (sum(v))
+         ->  Finalize HashAggregate
+               Group Key: unsortable_col1, unsortable_col2, (GROUPINGSET_ID())
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (GROUPINGSET_ID())
+                     ->  Partial MixedAggregate
+                           Hash Key: unsortable_col1
+                           Hash Key: unsortable_col2
+                           Group Key: ()
+                           ->  Seq Scan on gstest5
+ Optimizer: Postgres query optimizer
+(14 rows)
+
 -- empty input: first is 0 rows, second 1, third 3 etc.
 select a, b, sum(v), count(*) from gstest_empty group by grouping sets ((a,b),a);
  a | b | sum | count 
@@ -1466,6 +1671,69 @@ explain (costs off)
                ->  Function Scan on gstest_data
 (10 rows)
 
+-- Verify that we correctly handle the child node returning a
+-- non-minimal slot, which happens if the input is pre-sorted,
+-- e.g. due to an index scan.
+BEGIN;
+SET LOCAL enable_hashagg = false;
+EXPLAIN (COSTS OFF) SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Finalize GroupAggregate
+   Group Key: a, b, (GROUPINGSET_ID())
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a, b, (GROUPINGSET_ID())
+         ->  Sort
+               Sort Key: a, b, (GROUPINGSET_ID())
+               ->  Partial GroupAggregate
+                     Group Key: a
+                     Group Key: ()
+                     Sort Key: b
+                       Group Key: b
+                     ->  Index Scan using gstest3_pkey on gstest3
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+ a | b | count | max | max 
+---+---+-------+-----+-----
+ 1 |   |     1 |   1 |   1
+ 2 |   |     1 |   2 |   2
+   | 1 |     1 |   1 |   1
+   | 2 |     1 |   2 |   2
+   |   |     2 |   2 |   2
+(5 rows)
+
+SET LOCAL enable_seqscan = false;
+EXPLAIN (COSTS OFF) SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Finalize GroupAggregate
+   Group Key: a, b, (GROUPINGSET_ID())
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a, b, (GROUPINGSET_ID())
+         ->  Sort
+               Sort Key: a, b, (GROUPINGSET_ID())
+               ->  Partial GroupAggregate
+                     Group Key: a
+                     Group Key: ()
+                     Sort Key: b
+                       Group Key: b
+                     ->  Index Scan using gstest3_pkey on gstest3
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+ a | b | count | max | max 
+---+---+-------+-----+-----
+ 1 |   |     1 |   1 |   1
+ 2 |   |     1 |   2 |   2
+   | 1 |     1 |   1 |   1
+   | 2 |     1 |   2 |   2
+   |   |     2 |   2 |   2
+(5 rows)
+
+COMMIT;
 -- More rescan tests
 -- start_ignore
 -- GPDB_95_MERGE_FIXME: the lateral query with grouping sets do not make right plans
@@ -1698,6 +1966,51 @@ select v||'a', case when grouping(v||'a') = 1 then 1 else 0 end, count(*)
           |    1 |     2
 (4 rows)
 
+-- test handling of outer GroupingFunc within subqueries
+explain (costs off)
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by cube(v1);
+             QUERY PLAN              
+-------------------------------------
+ MixedAggregate
+   Hash Key: $2
+   Group Key: ()
+   InitPlan 3 (returns $2)
+     ->  Result
+   ->  Result
+   SubPlan 2
+     ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by cube(v1);
+ grouping 
+----------
+        1
+        0
+(2 rows)
+
+explain (costs off)
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
+             QUERY PLAN              
+-------------------------------------
+ GroupAggregate
+   Group Key: $2
+   InitPlan 1 (returns $1)
+     ->  Result
+   InitPlan 3 (returns $2)
+     ->  Result
+   ->  Result
+   SubPlan 2
+     ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
+ grouping 
+----------
+        0
+(1 row)
+
 --
 -- Compare results between plans using sorting and plans using hash
 -- aggregation. Force spilling in both cases by setting work_mem low
@@ -1736,18 +2049,18 @@ create table gs_group_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 set jit_above_cost to default;
 create table gs_group_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 create table gs_group_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
+group by grouping sets (g100,g10) distributed by (g100);
 -- Produce results with hash aggregation.
 set enable_hashagg = true;
 set enable_sort = false;
@@ -1777,26 +2090,22 @@ create table gs_hash_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 set jit_above_cost to default;
 create table gs_hash_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 create table gs_hash_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
+group by grouping sets (g100,g10) distributed by (g100);
 set enable_sort = true;
 set work_mem to default;
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
--- GPDB_12_MERGE_FIXME: the following comparison query has an ORCA plan that
--- relies on "IS NOT DISTINCT FROM" Hash Join, a variant that we likely have
--- lost during the merge with upstream Postgres 12. Disable ORCA for this query
-SET optimizer TO off;
--- Compare results
+-- Compare results of ORCA plan that relies on "IS NOT DISTINCT FROM" HASH Join
 (select * from gs_hash_1 except select * from gs_group_1)
   union all
 (select * from gs_group_1 except select * from gs_hash_1);
@@ -1820,7 +2129,6 @@ SET optimizer TO off;
 ------+-----+--------+---+---
 (0 rows)
 
-RESET optimizer;
 drop table gs_group_1;
 drop table gs_group_2;
 drop table gs_group_3;

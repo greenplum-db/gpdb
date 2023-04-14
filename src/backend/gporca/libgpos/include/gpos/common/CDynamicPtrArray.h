@@ -158,10 +158,9 @@ public:
 		  m_expansion_factor(std::max((ULONG) 2, expansion_factor)),
 		  m_elems(nullptr)
 	{
-		GPOS_ASSERT(nullptr != CleanupFn &&
-					"No valid destroy function specified");
-
 		// do not allocate in constructor; defer allocation to first insertion
+		static_assert(nullptr != CleanupFn,
+					  "No valid destroy function specified");
 	}
 
 	// dtor

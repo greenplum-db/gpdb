@@ -870,7 +870,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.281939.1.1" Name="hsdss__mgrs_coord" Rows="66979000.000000"/>
-      <dxl:Relation Mdid="0.281939.1.1" Name="hsdss__mgrs_coord" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,5">
+      <dxl:Relation Mdid="6.281939.1.1" Name="hsdss__mgrs_coord" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,5">
         <dxl:Columns>
           <dxl:Column Name="mgrs_coord" Attno="1" Mdid="0.1042.1.0" Nullable="false" ColWidth="15">
             <dxl:DefaultValue/>
@@ -898,7 +898,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -917,7 +916,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.281939.1.1" TableName="hsdss__mgrs_coord">
+          <dxl:TableDescriptor Mdid="6.281939.1.1" TableName="hsdss__mgrs_coord">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="mgrs_coord" TypeMdid="0.1042.1.0" ColWidth="15"/>
               <dxl:Column ColId="2" Attno="2" ColName="prcs_lvl_id" TypeMdid="0.21.1.0"/>
@@ -983,7 +982,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
             </dxl:Comparison>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.281939.1.1" TableName="hsdss__mgrs_coord">
+          <dxl:TableDescriptor Mdid="6.281939.1.1" TableName="hsdss__mgrs_coord">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="mgrs_coord" TypeMdid="0.1042.1.0" ColWidth="15"/>
               <dxl:Column ColId="1" Attno="2" ColName="prcs_lvl_id" TypeMdid="0.21.1.0"/>

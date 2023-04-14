@@ -186,8 +186,7 @@ cdbhash(CdbHash *h, int attno, Datum datum, bool isnull)
 			uint32		hkey;
 
 			InitFunctionCallInfoData(*fcinfo, &h->hashfuncs[attno - 1], 1,
-									 /* GPDB_12_MERGE_FIXME: always use default collation. Is that OK? */
-									 DEFAULT_COLLATION_OID,
+									 DEFAULT_COLLATION_OID, /* have to specify collation for attribute of text or bpchar */
 									 NULL, NULL);
 
 			fcinfo->args[0].value = datum;

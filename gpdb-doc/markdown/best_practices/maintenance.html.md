@@ -11,7 +11,7 @@ Best practices for regular maintenance that will ensure Greenplum Database high 
 -   **[Monitoring Greenplum Database Log Files](logfiles.html)**  
 
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 ## <a id="topic_izw_bwb_s4"></a>Monitoring 
 
@@ -21,13 +21,13 @@ The `gp_toolkit` schema contains several views that can be accessed using SQL co
 
 The `gp_stats_missing` view shows tables that do not have statistics and require `ANALYZE` to be run.
 
-For additional information on `gpstate` and `gpcheckperf` refer to the *Greenplum Database Utility Guide*. For information about the gp\_`toolkit` schema, see the *Greenplum Database Reference Guide*.
+For additional information on `gpstate` and `gpcheckperf` refer to the *Greenplum Database Utility Guide*. For information about the `gp_toolkit` schema, see the *Greenplum Database Reference Guide*.
 
 ### <a id="gpstate"></a>gpstate 
 
-The `gpstate` utility program displays the status of the Greenplum system, including which segments are down, master and segment configuration information \(hosts, data directories, etc.\), the ports used by the system, and mapping of primary segments to their corresponding mirror segments.
+The `gpstate` utility program displays the status of the Greenplum system, including which segments are down, coordinator and segment configuration information \(hosts, data directories, etc.\), the ports used by the system, and mapping of primary segments to their corresponding mirror segments.
 
-Run `gpstate -Q` to get a list of segments that are marked "down" in the master system catalog.
+Run `gpstate -Q` to get a list of segments that are marked "down" in the coordinator system catalog.
 
 To get detailed status information for the Greenplum system, run `gpstate -s`.
 
@@ -41,7 +41,7 @@ The `gpcheckperf` utility tests baseline hardware performance for a list of host
 
 To obtain valid numbers from `gpcheckperf`, the database system must be stopped. The numbers from `gpcheckperf` can be inaccurate even if the system is up and running with no query activity.
 
-`gpcheckperf` requires a trusted host setup between the hosts involved in the performance test. It calls `gpssh` and `gpscp`, so these utilities must also be in your `PATH`. Specify the hosts to check individually \(`-h *host1* -h *host2* ...`\) or with `-f *hosts\_file*`, where `*hosts\_file*` is a text file containing a list of the hosts to check. If you have more than one subnet, create a separate host file for each subnet so that you can test the subnets separately.
+`gpcheckperf` requires a trusted host setup between the hosts involved in the performance test. It calls `gpssh` and `gpsync`, so these utilities must also be in your `PATH`. Specify the hosts to check individually \(`-h *host1* -h *host2* ...`\) or with `-f *hosts_file*`, where `*hosts_file*` is a text file containing a list of the hosts to check. If you have more than one subnet, create a separate host file for each subnet so that you can test the subnets separately.
 
 By default, `gpcheckperf` runs the disk I/O test, the memory test, and a serial pair network performance test. With the disk I/O test, you must use the `-d` option to specify the file systems you want to test. The following command tests disk I/O and memory bandwidth on hosts listed in the `subnet_1_hosts` file:
 

@@ -263,7 +263,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.26854881.1.1" Name="x10" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.26854881.1.1" Name="x10" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.26854881.1.1" Name="x10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
             <dxl:DefaultValue/>
@@ -300,11 +300,10 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.26854909.1.1" Name="y10" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.26854909.1.0" Name="y10" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.26854909.1.0" Name="y10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
             <dxl:DefaultValue/>
@@ -343,7 +342,6 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.26855161.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0" Unbounded="true">
           <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.664.1.0">
@@ -352,7 +350,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           </dxl:Comparison>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.26854909.1.1" Name="y10" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.26854909.1.1" Name="y10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
             <dxl:DefaultValue/>
@@ -391,7 +389,6 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.26855161.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0" Unbounded="true">
           <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.664.1.0">
@@ -545,7 +542,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
       <dxl:CTEList/>
       <dxl:LogicalJoin JoinType="Inner">
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.26854881.1.1" TableName="x10">
+          <dxl:TableDescriptor Mdid="6.26854881.1.1" TableName="x10">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="i" TypeMdid="0.25.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="j" TypeMdid="0.25.1.0"/>
@@ -562,7 +559,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           </dxl:TableDescriptor>
         </dxl:LogicalGet>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.26854909.1.1" TableName="y10">
+          <dxl:TableDescriptor Mdid="6.26854909.1.1" TableName="y10">
             <dxl:Columns>
               <dxl:Column ColId="12" Attno="1" ColName="i" TypeMdid="0.25.1.0"/>
               <dxl:Column ColId="13" Attno="2" ColName="j" TypeMdid="0.25.1.0"/>
@@ -696,7 +693,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.26854881.1.1" TableName="x10">
+              <dxl:TableDescriptor Mdid="6.26854881.1.1" TableName="x10">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.25.1.0"/>
                   <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.25.1.0"/>
@@ -731,7 +728,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
                 <dxl:Ident ColId="14" ColName="m" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartitionSelector RelationMdid="0.26854909.1.1" PartitionLevels="1" ScanId="1">
+            <dxl:PartitionSelector RelationMdid="6.26854909.1.1" PartitionLevels="1" ScanId="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
               </dxl:Properties>
@@ -788,8 +785,9 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
                   <dxl:Ident ColId="0" ColName="i" TypeMdid="0.25.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.26855161.1.0" IndexName="y_idx_1_prt_def"/>
-              <dxl:TableDescriptor Mdid="0.26854909.1.1" TableName="y10">
+              <dxl:TableDescriptor Mdid="6.26854909.1.1" TableName="y10">
                 <dxl:Columns>
                   <dxl:Column ColId="11" Attno="1" ColName="i" TypeMdid="0.25.1.0"/>
                   <dxl:Column ColId="12" Attno="2" ColName="j" TypeMdid="0.25.1.0"/>

@@ -111,28 +111,26 @@ set enable_indexonlyscan=off;
 set enable_indexscan=off;
 set enable_bitmapscan=on;
 explain (costs off)  SELECT a.i, b.i, a.t FROM manycombocids a, manycombocids b WHERE a.i = b.i AND a.distkey=1;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (b.i = a.i)
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: 1
-               ->  Bitmap Heap Scan on manycombocids b
-                     ->  Bitmap Index Scan on manycombocids_i_idx
+               ->  Index Scan using manycombocids_i_idx on manycombocids b
          ->  Hash
-               ->  Bitmap Heap Scan on manycombocids a
+               ->  Index Scan using manycombocids_i_idx on manycombocids a
                      Filter: (distkey = 1)
-                     ->  Bitmap Index Scan on manycombocids_i_idx
  Optimizer: Postgres query optimizer
-(12 rows)
+(10 rows)
 
 DECLARE c CURSOR FOR SELECT a.i, b.i, a.t FROM manycombocids a, manycombocids b WHERE a.i = b.i AND a.distkey=1;
 -- Start the cursor.
 FETCH 1 FROM c;
- i  | i  |         t          
-----+----+--------------------
- 11 | 11 | initially inserted
+ i | i |    t     
+---+---+----------
+ 1 | 1 | updated1
 (1 row)
 
 -- Perform more updates.
@@ -153,6 +151,16 @@ MOVE 9900 FROM c;
 FETCH ALL FROM c;
    i   |   i   |         t          
 -------+-------+--------------------
+  9902 |  9902 | initially inserted
+  9903 |  9903 | initially inserted
+  9904 |  9904 | initially inserted
+  9905 |  9905 | initially inserted
+  9906 |  9906 | initially inserted
+  9907 |  9907 | initially inserted
+  9908 |  9908 | initially inserted
+  9909 |  9909 | initially inserted
+  9910 |  9910 | initially inserted
+  9911 |  9911 | initially inserted
   9912 |  9912 | initially inserted
   9913 |  9913 | initially inserted
   9914 |  9914 | initially inserted
@@ -242,16 +250,6 @@ FETCH ALL FROM c;
   9998 |  9998 | initially inserted
   9999 |  9999 | initially inserted
  10000 | 10000 | initially inserted
-     1 |     1 | updated1
-     2 |     2 | updated1
-     3 |     3 | updated1
-     4 |     4 | updated1
-     5 |     5 | updated1
-     6 |     6 | updated1
-     7 |     7 | updated1
-     8 |     8 | updated1
-     9 |     9 | updated1
-    10 |    10 | updated1
 (99 rows)
 
 rollback;

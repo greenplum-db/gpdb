@@ -21,5 +21,5 @@ External tables enable accessing external data as if it were a regular database 
 -   **[Using the Greenplum Parallel File Server \(gpfdist\)](../external/g-using-the-greenplum-parallel-file-server--gpfdist-.html)**  
 The gpfdist protocol is used in a `CREATE EXTERNAL TABLE` SQL command to access external data served by the Greenplum Database `gpfdist` file server utility. When external data is served by gpfdist, all segments in the Greenplum Database system can read or write external table data in parallel.
 
-**Parent topic:**[Greenplum Database Administrator Guide](../admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](../admin_guide.html)
 

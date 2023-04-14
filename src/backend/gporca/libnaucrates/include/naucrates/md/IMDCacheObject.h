@@ -67,12 +67,14 @@ public:
 		EmdtAgg,
 		EmdtOp,
 		EmdtType,
-		EmdtTrigger,
 		EmdtCheckConstraint,
 		EmdtRelStats,
 		EmdtColStats,
 		EmdtCastFunc,
-		EmdtScCmp
+		EmdtScCmp,
+		EmdtExtStats,
+		EmdtExtStatsInfo,
+		EmdtSentinel
 	};
 
 	// md id of cache object

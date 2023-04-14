@@ -557,7 +557,7 @@
       <dxl:ColumnStatistics Mdid="1.546052.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.546052.1.1.6" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.546052.1.1" Name="dml_heap_r" Rows="100.000000"/>
-      <dxl:Relation Mdid="0.546052.1.1" Name="dml_heap_r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.546052.1.1" Name="dml_heap_r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -593,7 +593,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.546081.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -601,7 +600,7 @@
       <dxl:ColumnStatistics Mdid="1.546052.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.546052.1.1.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.546081.1.1" Name="dml_heap_s" Rows="100.000000"/>
-      <dxl:Relation Mdid="0.546081.1.1" Name="dml_heap_s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.546081.1.1" Name="dml_heap_s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -637,7 +636,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
     </dxl:Metadata>
@@ -645,7 +643,7 @@
       <dxl:OutputColumns/>
       <dxl:CTEList/>
       <dxl:LogicalDelete DeleteColumns="1,2,3" CtidCol="4" SegmentIdCol="10">
-        <dxl:TableDescriptor Mdid="0.546052.1.1" TableName="dml_heap_r">
+        <dxl:TableDescriptor Mdid="6.546052.1.1" TableName="dml_heap_r">
           <dxl:Columns>
             <dxl:Column ColId="21" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
             <dxl:Column ColId="22" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -661,7 +659,7 @@
         </dxl:TableDescriptor>
         <dxl:LogicalJoin JoinType="Inner">
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.546052.1.1" TableName="dml_heap_r">
+            <dxl:TableDescriptor Mdid="6.546052.1.1" TableName="dml_heap_r">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -677,7 +675,7 @@
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.546081.1.1" TableName="dml_heap_s">
+            <dxl:TableDescriptor Mdid="6.546081.1.1" TableName="dml_heap_s">
               <dxl:Columns>
                 <dxl:Column ColId="11" Attno="1" ColName="b" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="12" Attno="2" ColName="a" TypeMdid="0.23.1.0"/>

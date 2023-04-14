@@ -28,6 +28,7 @@
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
 #include "gpopt/operators/CPhysicalIndexScan.h"
 #include "gpopt/operators/CPhysicalMotion.h"
+#include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
@@ -145,6 +146,52 @@ CCostModelGPDB::CostScanOutput(CMemoryPool *,  // mp
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CCostModelGPDB::CostComputeScalar
+//
+//	@doc:
+//		Helper function to return cost of a plan containing compute scalar
+//		operator
+//
+//---------------------------------------------------------------------------
+CCost
+CCostModelGPDB::CostComputeScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  const SCostingInfo *pci,
+								  ICostModelParams *pcp,
+								  const CCostModelGPDB *pcmgpdb)
+{
+	GPOS_ASSERT(nullptr != pci);
+	GPOS_ASSERT(nullptr != pcp);
+	GPOS_ASSERT(nullptr != pcmgpdb);
+
+	DOUBLE rows = pci->Rows();
+	DOUBLE width = pci->Width();
+	DOUBLE num_rebinds = pci->NumRebinds();
+
+	CCost costLocal =
+		CCost(num_rebinds * CostTupleProcessing(rows, width, pcp).Get());
+	CCost costChild = CostChildren(mp, exprhdl, pci, pcp);
+
+	CCost costCompute(0);
+
+	if (exprhdl.DeriveHasScalarFuncProject(1))
+	{
+		// If the compute scalar operator has a scalar func operator in the
+		// project list then aggregate that cost of the scalar func. The number
+		// of times the scalar func is run is proportional to the number of
+		// rows.
+		costCompute =
+			CCost(pcmgpdb->GetCostModelParams()
+					  ->PcpLookup(CCostModelParamsGPDB::EcpScalarFuncCost)
+					  ->Get() *
+				  rows);
+	}
+
+	return costLocal + costChild + costCompute;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CCostModelGPDB::CostUnary
 //
 //	@doc:
@@ -216,7 +263,6 @@ CCostModelGPDB::FUnary(COperator::EOperatorId op_id)
 		   COperator::EopPhysicalComputeScalar == op_id ||
 		   COperator::EopPhysicalLimit == op_id ||
 		   COperator::EopPhysicalPartitionSelector == op_id ||
-		   COperator::EopPhysicalRowTrigger == op_id ||
 		   COperator::EopPhysicalSplit == op_id ||
 		   COperator::EopPhysicalSpool == op_id;
 }
@@ -940,8 +986,24 @@ CCostModelGPDB::CostHashJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 
+	COptimizerConfig *optimizer_config =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
+
 	CDouble skew_ratio = 1;
 	ULONG arity = exprhdl.Arity();
+
+	if (GPOS_FTRACE(EopttraceDiscardRedistributeHashJoin))
+	{
+		for (ULONG ul = 0; ul < arity - 1; ul++)
+		{
+			COperator *popChild = exprhdl.Pop(ul);
+			if (nullptr != popChild &&
+				COperator::EopPhysicalMotionHashDistribute == popChild->Eopid())
+			{
+				return CCost(GPOS_FP_ABS_MAX);
+			}
+		}
+	}
 
 	// Hashjoin with skewed HashRedistribute below them are expensive
 	// find out if there is a skewed redistribute child of this HashJoin.
@@ -979,14 +1041,39 @@ CCostModelGPDB::CostHashJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				skew_ratio = CDouble(std::max(sk.Get(), skew_ratio.Get()));
 			}
 
+			ULONG skew_factor = optimizer_config->GetHint()->UlSkewFactor();
+			if (skew_factor > 0)
+			{
+				// If user specified skew multiplier is larger than 0
+				// Compute skew
+				IStatistics *pcstats = pci->Pcstats(ul)->Pstats();
+				// User specified skew factor is fed to a power function,
+				// whose ouptut becomes the final skew multiplier.
+				// This allows fine tuning when the skew factor is small,
+				// and coarse tuning when the skew factor is big.
+				// The multiplier caps at 1.0307^(100-1) = 20
+				// The base 1.0307 is so chosen that if the data is slightly
+				// skewed, i.e., skew calculated from the histogram is a
+				// little above 1, we get a multiplier of 20 if we max out
+				// the skew factor at 100
+				skew_factor = pow(1.0307, (skew_factor - 1));
+				CDouble sk1 =
+					skew_factor * CPhysical::GetSkew(pcstats, motion->Pds());
+				skew_ratio = CDouble(std::max(sk1.Get(), skew_ratio.Get()));
+			}
+			else
+			{
+				// If user specified skew multiplier is 0
+				// Cap the skew
+				// To avoid gather motions
+				skew_ratio = CDouble(std::min(dPenalizeHJSkewUpperLimit.Get(),
+											  skew_ratio.Get()));
+			}
+
 			columns->Release();
 		}
 	}
 
-	// if we end up penalizing redistribute too much, we will start getting gather motions
-	// which are not necessarily a good idea. So we maintain a upper limit of skew.
-	skew_ratio =
-		CDouble(std::min(dPenalizeHJSkewUpperLimit.Get(), skew_ratio.Get()));
 	return costChild + CCost(costLocal.Get() * skew_ratio);
 }
 
@@ -1383,12 +1470,19 @@ CCostModelGPDB::CostMotion(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	if (COperator::EopPhysicalMotionBroadcast == op_id)
 	{
+		CPhysicalMotionBroadcast *physical_broadcast =
+			CPhysicalMotionBroadcast::PopConvert(exprhdl.Pop());
 		COptimizerConfig *optimizer_config =
 			COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
 		ULONG broadcast_threshold =
 			optimizer_config->GetHint()->UlBroadcastThreshold();
 
-		if (num_rows_outer > broadcast_threshold)
+		// if the broadcast threshold is 0, don't penalize
+		// also, if the replicated distribution is set to ignore the broadcast
+		// threshold (e.g. it's under a LASJ not-in) don't penalize
+		if (broadcast_threshold > 0 && num_rows_outer > broadcast_threshold &&
+			!CDistributionSpecReplicated::PdsConvert(physical_broadcast->Pds())
+				 ->FIgnoreBroadcastThreshold())
 		{
 			DOUBLE ulPenalizationFactor = 100000000000000.0;
 			costLocal = CCost(ulPenalizationFactor);
@@ -1853,7 +1947,8 @@ CCostModelGPDB::CostScan(CMemoryPool *,	 // mp
 	COperator::EOperatorId op_id = pop->Eopid();
 	GPOS_ASSERT(COperator::EopPhysicalTableScan == op_id ||
 				COperator::EopPhysicalDynamicTableScan == op_id ||
-				COperator::EopPhysicalExternalScan == op_id);
+				COperator::EopPhysicalForeignScan == op_id ||
+				COperator::EopPhysicalDynamicForeignScan == op_id);
 
 	const CDouble dInitScan =
 		pcmgpdb->GetCostModelParams()
@@ -1873,7 +1968,8 @@ CCostModelGPDB::CostScan(CMemoryPool *,	 // mp
 	{
 		case COperator::EopPhysicalTableScan:
 		case COperator::EopPhysicalDynamicTableScan:
-		case COperator::EopPhysicalExternalScan:
+		case COperator::EopPhysicalForeignScan:
+		case COperator::EopPhysicalDynamicForeignScan:
 			// table scan cost considers only retrieving tuple cost,
 			// since we scan the entire table here, the cost is correlated with table rows and table width,
 			// since Scan's parent operator may be a filter that will be pushed into Scan node in GPDB plan,
@@ -1941,6 +2037,10 @@ CCostModelGPDB::Cost(
 	GPOS_ASSERT(nullptr != pci);
 
 	COperator::EOperatorId op_id = exprhdl.Pop()->Eopid();
+	if (op_id == COperator::EopPhysicalComputeScalar)
+	{
+		return CostComputeScalar(m_mp, exprhdl, pci, m_cost_model_params, this);
+	}
 	if (FUnary(op_id))
 	{
 		return CostUnary(m_mp, exprhdl, pci, m_cost_model_params);
@@ -1955,7 +2055,9 @@ CCostModelGPDB::Cost(
 		}
 		case COperator::EopPhysicalTableScan:
 		case COperator::EopPhysicalDynamicTableScan:
-		case COperator::EopPhysicalExternalScan:
+		case COperator::EopPhysicalForeignScan:
+		case COperator::EopPhysicalDynamicForeignScan:
+
 		{
 			return CostScan(m_mp, exprhdl, this, pci);
 		}

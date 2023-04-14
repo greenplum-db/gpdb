@@ -307,7 +307,7 @@ SELECT c_bigint, c_text FROM T WHERE c_bigint = -1 LIMIT 1;
                      Output: c_bigint, c_text
                      Filter: (t.c_bigint = '-1'::integer)
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Settings: optimizer = 'off', seq_page_cost = '1'
 (11 rows)
 
 SELECT c_bigint, c_text FROM T WHERE c_text = 'hello' LIMIT 1;
@@ -329,7 +329,7 @@ EXPLAIN (VERBOSE TRUE, COSTS FALSE) SELECT c_bigint, c_text FROM T WHERE c_text 
                      Output: c_bigint, c_text
                      Filter: (t.c_text = 'hello'::text)
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Settings: optimizer = 'off', seq_page_cost = '1'
 (11 rows)
 
 -- COALESCE
@@ -390,7 +390,7 @@ SELECT * FROM T ORDER BY c_bigint, c_text, pk LIMIT 10;
                      ->  Seq Scan on fast_default.t
                            Output: pk, c_bigint, c_text
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Settings: optimizer = 'off', seq_page_cost = '1'
 (14 rows)
 
 -- LIMIT
@@ -427,7 +427,7 @@ SELECT * FROM T WHERE c_bigint > -1 ORDER BY c_bigint, c_text, pk LIMIT 10;
                            Output: pk, c_bigint, c_text
                            Filter: (t.c_bigint > '-1'::integer)
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Settings: optimizer = 'off', seq_page_cost = '1'
 (15 rows)
 
 --  DELETE with RETURNING
@@ -459,7 +459,7 @@ DELETE FROM T WHERE pk BETWEEN 10 AND 20 RETURNING *;
                Output: ctid, gp_segment_id
                Filter: ((t.pk >= 10) AND (t.pk <= 20))
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Settings: optimizer = 'off', seq_page_cost = '1'
 (9 rows)
 
 -- UPDATE
@@ -825,7 +825,26 @@ SELECT * FROM t WHERE a IS NULL;
 (1 row)
 
 ROLLBACK;
+-- verify that a default set on a non-plain table doesn't set a missing
+-- value on the attribute
+CREATE FOREIGN DATA WRAPPER dummy;
+CREATE SERVER s0 FOREIGN DATA WRAPPER dummy;
+CREATE FOREIGN TABLE ft1 (c1 integer NOT NULL) SERVER s0;
+ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer DEFAULT 0;
+ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10);
+SELECT count(*)
+  FROM pg_attribute
+  WHERE attrelid = 'ft1'::regclass AND
+    (attmissingval IS NOT NULL OR atthasmissing);
+ count 
+-------
+     0
+(1 row)
+
 -- cleanup
+DROP FOREIGN TABLE ft1;
+DROP SERVER s0;
+DROP FOREIGN DATA WRAPPER dummy;
 DROP TABLE vtype;
 DROP TABLE vtype2;
 DROP TABLE follower;

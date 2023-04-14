@@ -1020,6 +1020,7 @@ ImportForeignSchemaStmt
 ImportForeignSchemaType
 ImportForeignSchema_function
 ImportQual
+InProgressEnt
 IncludeWal
 InclusionOpaque
 IncrementVarSublevelsUp_context
@@ -1043,6 +1044,7 @@ IndexList
 IndexOnlyScan
 IndexOnlyScanState
 IndexOptInfo
+IndexOrderByDistance
 IndexPath
 IndexRuntimeKeyInfo
 IndexScan
@@ -1177,6 +1179,7 @@ LLVMJitHandle
 LLVMMemoryBufferRef
 LLVMModuleRef
 LLVMOrcJITStackRef
+LLVMOrcLookupStateRef
 LLVMOrcModuleHandle
 LLVMOrcTargetAddress
 LLVMPassManagerBuilderRef
@@ -1789,6 +1792,8 @@ PgStat_MsgTabpurge
 PgStat_MsgTabstat
 PgStat_MsgTempFile
 PgStat_MsgVacuum
+PgStat_MsgWal
+PgStat_SLRUStats
 PgStat_Shared_Reset_Target
 PgStat_Single_Reset_Type
 PgStat_StatDBEntry
@@ -1799,6 +1804,7 @@ PgStat_TableCounts
 PgStat_TableEntry
 PgStat_TableStatus
 PgStat_TableXactStatus
+PgStat_WalStats
 PgXmlErrorContext
 PgXmlStrictness
 Pg_finfo_record
@@ -2620,6 +2626,7 @@ WalSndCtlData
 WalSndSendDataCallback
 WalSndState
 WalTimeSample
+WalUsage
 WalWriteMethod
 Walfile
 WindowAgg
@@ -3405,6 +3412,7 @@ xl_logical_message
 xl_multi_insert_tuple
 xl_multixact_create
 xl_multixact_truncate
+xl_overwrite_contrecord
 xl_parameter_change
 xl_relmap_update
 xl_replorigin_drop

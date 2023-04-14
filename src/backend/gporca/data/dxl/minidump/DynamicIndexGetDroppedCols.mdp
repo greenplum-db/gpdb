@@ -122,7 +122,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="7" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="7" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
       <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -1713,7 +1713,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.28666.1.0" Name="solo" Rows="36.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.28666.1.0" Name="solo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="35,36,30" PartitionColumns="1,2" PartitionTypes="l,l" NumberLeafPartitions="39">
+      <dxl:Relation Mdid="6.28666.1.0" Name="solo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="35,36,30" PartitionColumns="1,2" PartitionTypes="l,l">
         <dxl:Columns>
           <dxl:Column Name="some_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1830,7 +1830,6 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.29404.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint DefaultPartition="0,1" Unbounded="true">
           <dxl:Or>
@@ -2245,7 +2244,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.28666.1.0" TableName="solo">
+          <dxl:TableDescriptor Mdid="6.28666.1.0" TableName="solo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="some_id" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="year_id" TypeMdid="0.21.1.0"/>
@@ -2435,7 +2434,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
               <dxl:Ident ColId="22" ColName="a27" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:PartitionSelector RelationMdid="0.28666.1.0" PartitionLevels="2" ScanId="1">
+          <dxl:PartitionSelector RelationMdid="6.28666.1.0" PartitionLevels="2" ScanId="1">
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
             </dxl:Properties>
@@ -2554,7 +2553,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
               </dxl:Comparison>
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.29404.1.0" IndexName="solo_idx_1_prt_y2016_2_prt_jan"/>
-            <dxl:TableDescriptor Mdid="0.28666.1.0" TableName="solo">
+            <dxl:TableDescriptor Mdid="6.28666.1.0" TableName="solo">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="some_id" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="1" Attno="2" ColName="year_id" TypeMdid="0.21.1.0"/>

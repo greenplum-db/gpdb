@@ -108,6 +108,7 @@ extern Oid	get_opfamily_proc(Oid opfamily, Oid lefttype, Oid righttype,
 							  int16 procnum);
 extern char *get_attname(Oid relid, AttrNumber attnum, bool missing_ok);
 extern AttrNumber get_attnum(Oid relid, const char *attname);
+extern int	get_attstattarget(Oid relid, AttrNumber attnum);
 extern char get_attgenerated(Oid relid, AttrNumber attnum);
 extern Oid	get_atttype(Oid relid, AttrNumber attnum);
 extern void get_atttypetypmodcoll(Oid relid, AttrNumber attnum,
@@ -155,6 +156,7 @@ extern char func_data_access(Oid funcid);
 extern char func_exec_location(Oid funcid);
 extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
+extern bool is_agg_repsafe(Oid aggid);
 extern bool is_agg_partial_capable(Oid aggid);
 extern RegProcedure get_func_support(Oid funcid);
 extern Oid	get_relname_relid(const char *relname, Oid relnamespace);
@@ -215,20 +217,16 @@ extern void free_attstatsslot(AttStatsSlot *sslot);
 extern char *get_namespace_name(Oid nspid);
 extern char *get_namespace_name_or_temp(Oid nspid);
 extern Oid	get_range_subtype(Oid rangeOid);
+extern Oid	get_range_collation(Oid rangeOid);
 extern Oid	get_index_column_opclass(Oid index_oid, int attno);
+extern bool	get_index_isreplident(Oid index_oid);
+extern bool get_index_isvalid(Oid index_oid);
+extern bool get_index_isclustered(Oid index_oid);
 
-extern bool relation_is_partitioned(Oid oid);
-extern bool index_is_partitioned(Oid oid);
-extern List *relation_get_leaf_partitions(Oid oid);
-extern bool relation_exists(Oid oid);
-extern bool index_exists(Oid oid);
-extern bool type_exists(Oid oid);
 extern bool function_exists(Oid oid);
-extern bool operator_exists(Oid oid);
 extern bool aggregate_exists(Oid oid);
 extern Oid get_aggregate(const char *aggname, Oid oidType);
 extern List *get_relation_keys(Oid relid);
-extern bool trigger_exists(Oid oid);
 
 extern bool check_constraint_exists(Oid oidCheckconstraint);
 extern List *get_check_constraint_oids(Oid relid);
@@ -248,6 +246,7 @@ extern CmpType get_comparison_type(Oid oidOp);
 
 extern List *get_operator_opfamilies(Oid opno);
 extern List *get_index_opfamilies(Oid oidIndex);
+extern Oid default_partition_opfamily_for_type(Oid typeoid);
 
 #define type_is_array(typid)  (get_element_type(typid) != InvalidOid)
 /* type_is_array_domain accepts both plain arrays and domains over arrays */

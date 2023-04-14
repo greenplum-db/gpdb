@@ -175,6 +175,9 @@ extern void ResetTupleHashTable(TupleHashTable hashtable);
  */
 extern JunkFilter *ExecInitJunkFilter(List *targetList,
 									  TupleTableSlot *slot);
+extern JunkFilter *ExecInitJunkFilterInsertion(List *targetList,
+											   TupleDesc cleanTupType,
+											   TupleTableSlot *slot);
 extern JunkFilter *ExecInitJunkFilterConversion(List *targetList,
 												TupleDesc cleanTupType,
 												TupleTableSlot *slot);
@@ -207,7 +210,7 @@ extern void CheckValidResultRel(ResultRelInfo *resultRelInfo, CmdType operation)
 extern void InitResultRelInfo(ResultRelInfo *resultRelInfo,
 							  Relation resultRelationDesc,
 							  Index resultRelationIndex,
-							  Relation partition_root,
+							  ResultRelInfo *partition_root_rri,
 							  int instrument_options);
 extern ResultRelInfo *ExecGetTriggerResultRel(EState *estate, Oid relid);
 extern void ExecCleanUpTriggerState(EState *estate);
@@ -222,9 +225,9 @@ extern void ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 extern LockTupleMode ExecUpdateLockMode(EState *estate, ResultRelInfo *relinfo);
 extern ExecRowMark *ExecFindRowMark(EState *estate, Index rti, bool missing_ok);
 extern ExecAuxRowMark *ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist);
-extern TupleTableSlot *EvalPlanQual(EState *estate, EPQState *epqstate,
-									Relation relation, Index rti, TupleTableSlot *testslot);
-extern void EvalPlanQualInit(EPQState *epqstate, EState *estate,
+extern TupleTableSlot *EvalPlanQual(EPQState *epqstate, Relation relation,
+									Index rti, TupleTableSlot *testslot);
+extern void EvalPlanQualInit(EPQState *epqstate, EState *parentestate,
 							 Plan *subplan, List *auxrowmarks, int epqParam);
 extern void EvalPlanQualSetPlan(EPQState *epqstate,
 								Plan *subplan, List *auxrowmarks);
@@ -232,9 +235,9 @@ extern TupleTableSlot *EvalPlanQualSlot(EPQState *epqstate,
 										Relation relation, Index rti);
 
 #define EvalPlanQualSetSlot(epqstate, slot)  ((epqstate)->origslot = (slot))
-extern void EvalPlanQualFetchRowMarks(EPQState *epqstate);
+extern bool EvalPlanQualFetchRowMark(EPQState *epqstate, Index rti, TupleTableSlot *slot);
 extern TupleTableSlot *EvalPlanQualNext(EPQState *epqstate);
-extern void EvalPlanQualBegin(EPQState *epqstate, EState *parentestate);
+extern void EvalPlanQualBegin(EPQState *epqstate);
 extern void EvalPlanQualEnd(EPQState *epqstate);
 
 extern Oid GetIntoRelOid(QueryDesc *queryDesc);
@@ -306,6 +309,12 @@ extern ProjectionInfo *ExecBuildProjectionInfo(List *targetList,
 											   TupleTableSlot *slot,
 											   PlanState *parent,
 											   TupleDesc inputDesc);
+extern ProjectionInfo *ExecBuildProjectionInfoExt(List *targetList,
+												  ExprContext *econtext,
+												  TupleTableSlot *slot,
+												  bool assignJunkEntries,
+												  PlanState *parent,
+												  TupleDesc inputDesc);
 extern ExprState *ExecPrepareExpr(Expr *node, EState *estate);
 extern ExprState *ExecPrepareQual(List *qual, EState *estate);
 extern ExprState *ExecPrepareCheck(List *qual, EState *estate);
@@ -612,6 +621,11 @@ extern TupleTableSlot *ExecGetTriggerOldSlot(EState *estate, ResultRelInfo *relI
 extern TupleTableSlot *ExecGetTriggerNewSlot(EState *estate, ResultRelInfo *relInfo);
 extern TupleTableSlot *ExecGetReturningSlot(EState *estate, ResultRelInfo *relInfo);
 
+extern Bitmapset *ExecGetInsertedCols(ResultRelInfo *relinfo, EState *estate);
+extern Bitmapset *ExecGetUpdatedCols(ResultRelInfo *relinfo, EState *estate);
+extern Bitmapset *ExecGetExtraUpdatedCols(ResultRelInfo *relinfo, EState *estate);
+extern Bitmapset *ExecGetAllUpdatedCols(ResultRelInfo *relinfo, EState *estate);
+
 /*
  * prototypes from functions in execIndexing.c
  */
@@ -659,4 +673,8 @@ extern void mppExecutorCleanup(QueryDesc *queryDesc);
 extern ResultRelInfo *targetid_get_partition(Oid targetid, EState *estate, bool openIndices);
 extern ResultRelInfo *slot_get_partition(TupleTableSlot *slot, EState *estate, bool openIndices);
 
+extern void
+change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
+
+extern bool already_under_executor_run(void);
 #endif							/* EXECUTOR_H  */

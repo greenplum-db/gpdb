@@ -1,4 +1,7 @@
-<!-- doc/src/sgml/ref/pgbench.sgml -->
+<!--
+doc/src/sgml/ref/pgbench.sgml
+PostgreSQL documentation
+-->
 
 <refentry id="pgbench">
  <indexterm zone="pgbench">
@@ -147,6 +150,18 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
     initialization arguments:
 
     <variablelist>
+
+     <varlistentry>
+      <term><replaceable class="parameter">dbname</replaceable></term>
+      <listitem>
+       <para>
+        Specifies the name of the database to test in. If this is
+        not specified, the environment variable
+        <envar>PGDATABASE</envar> is used. If that is not set, the
+        user name specified for the connection is used.
+       </para>
+      </listitem>
+     </varlistentry>
 
      <varlistentry>
       <term><option>-i</option></term>
@@ -343,14 +358,18 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
       <term><option>--builtin</option>=<replaceable>scriptname[@weight]</replaceable></term>
       <listitem>
        <para>
-        Add the specified built-in script to the list of executed scripts.
-        An optional integer weight after <literal>@</literal> allows to adjust the
-        probability of drawing the script.  If not specified, it is set to 1.
+        Add the specified built-in script to the list of scripts to be executed.
         Available built-in scripts are: <literal>tpcb-like</literal>,
         <literal>simple-update</literal> and <literal>select-only</literal>.
         Unambiguous prefixes of built-in names are accepted.
-        With special name <literal>list</literal>, show the list of built-in scripts
+        With the special name <literal>list</literal>, show the list of built-in scripts
         and exit immediately.
+       </para>
+       <para>
+        Optionally, write an integer weight after <literal>@</literal> to
+        adjust the probability of selecting this script versus other ones.
+        The default weight is 1.
+        See below for details.
        </para>
       </listitem>
      </varlistentry>
@@ -405,10 +424,16 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
       <term><option>--file=</option><replaceable>filename[@weight]</replaceable></term>
       <listitem>
        <para>
-        Add a transaction script read from <replaceable>filename</replaceable> to
-        the list of executed scripts.
-        An optional integer weight after <literal>@</literal> allows to adjust the
-        probability of drawing the test.
+        Add a transaction script read from <replaceable>filename</replaceable>
+        to the list of scripts to be executed.
+       </para>
+       <para>
+        Optionally, write an integer weight after <literal>@</literal> to
+        adjust the probability of selecting this script versus other ones.
+        The default weight is 1.
+        (To use a script file name that includes an <literal>@</literal>
+        character, append a weight so that there is no ambiguity, for
+        example <literal>filen@me@1</literal>.)
         See below for details.
        </para>
       </listitem>
@@ -474,10 +499,10 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
            </listitem>
           </itemizedlist>
 
-        Because in "prepared" mode <application>pgbench</application> reuses
-        the parse analysis result for the second and subsequent query
-        iteration, <application>pgbench</application> runs faster in the
-        prepared mode than in other modes.
+        In the <literal>prepared</literal> mode, <application>pgbench</application>
+        reuses the parse analysis result starting from the second query
+        iteration, so <application>pgbench</application> runs faster
+        than in other modes.
        </para>
        <para>
         The default is simple query protocol.  (See <xref linkend="protocol"/>
@@ -565,7 +590,7 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
         transaction to finish. The wait time is called the schedule lag time,
         and its average and maximum are also reported separately. The
         transaction latency with respect to the actual transaction start time,
-        i.e. the time spent executing the transaction in the database, can be
+        i.e., the time spent executing the transaction in the database, can be
         computed by subtracting the schedule lag time from the reported
         latency.
        </para>
@@ -715,7 +740,7 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
         client per thread and there are no external or data dependencies.
         From a statistical viewpoint reproducing runs exactly is a bad idea because
         it can hide the performance variability or improve performance unduly,
-        e.g. by hitting the same pages as a previous run.
+        e.g., by hitting the same pages as a previous run.
         However, it may also be of great help for debugging, for instance
         re-running a tricky case which leads to an error.
         Use wisely.
@@ -735,7 +760,7 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
        <para>
         Remember to take the sampling rate into account when processing the
         log file. For example, when computing TPS values, you need to multiply
-        the numbers accordingly (e.g. with 0.01 sample rate, you'll only get
+        the numbers accordingly (e.g., with 0.01 sample rate, you'll only get
         1/100 of the actual TPS).
        </para>
       </listitem>
@@ -824,18 +849,43 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
  </refsect1>
 
  <refsect1>
+  <title>Environment</title>
+
+  <variablelist>
+   <varlistentry>
+    <term><envar>PGDATABASE</envar></term>
+    <term><envar>PGHOST</envar></term>
+    <term><envar>PGPORT</envar></term>
+    <term><envar>PGUSER</envar></term>
+
+    <listitem>
+     <para>
+      Default connection parameters.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist> 
+
+  <para>
+   This utility, like most other <productname>PostgreSQL</productname> utilities,
+   uses the environment variables supported by <application>libpq</application>
+   (see <xref linkend="libpq-envars"/>).
+  </para>
+ </refsect1>
+ 
+ <refsect1>
   <title>Notes</title>
 
  <refsect2>
-  <title>What is the <quote>Transaction</quote> Actually Performed in <application>pgbench</application>?</title>
+  <title>What Is the <quote>Transaction</quote> Actually Performed in <application>pgbench</application>?</title>
 
   <para>
    <application>pgbench</application> executes test scripts chosen randomly
    from a specified list.
-   They include built-in scripts with <option>-b</option> and
-   user-provided custom scripts with <option>-f</option>.
-   Each script may be given a relative weight specified after a
-   <literal>@</literal> so as to change its drawing probability.
+   The scripts may include built-in scripts specified with <option>-b</option>
+   and user-provided scripts specified with <option>-f</option>.
+   Each script may be given a relative weight specified after an
+   <literal>@</literal> so as to change its selection probability.
    The default weight is <literal>1</literal>.
    Scripts with a weight of <literal>0</literal> are ignored.
  </para>
@@ -843,7 +893,7 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
   <para>
    The default built-in transaction script (also invoked with <option>-b tpcb-like</option>)
    issues seven commands per transaction over randomly chosen <literal>aid</literal>,
-   <literal>tid</literal>, <literal>bid</literal> and <literal>balance</literal>.
+   <literal>tid</literal>, <literal>bid</literal> and <literal>delta</literal>.
    The scenario is inspired by the TPC-B benchmark, but is not actually TPC-B,
    hence the name.
   </para>
@@ -905,7 +955,7 @@ pgbench <optional> <replaceable>options</replaceable> </optional> <replaceable>d
   <para>
    There is a simple variable-substitution facility for script files.
    Variable names must consist of letters (including non-Latin letters),
-   digits, and underscores.
+   digits, and underscores, with the first character not being a digit.
    Variables can be set by the command-line <option>-D</option> option,
    explained above, or by the meta commands explained below.
    In addition to any variables preset by <option>-D</option> command-line options,
@@ -1142,7 +1192,7 @@ SELECT 2 AS two, 3 AS three \gset p_
  </refsect2>
 
  <refsect2 id="pgbench-builtin-operators">
-  <title>Built-In Operators</title>
+  <title>Built-in Operators</title>
 
   <para>
    The arithmetic, bitwise, comparison and logical operators listed in
@@ -1152,7 +1202,7 @@ SELECT 2 AS two, 3 AS three \gset p_
   </para>
 
   <table id="pgbench-operators">
-   <title>pgbench Operators by increasing precedence</title>
+   <title>pgbench Operators by Increasing Precedence</title>
    <tgroup cols="4">
     <thead>
      <row>
@@ -1540,7 +1590,7 @@ f(x) = PHI(2.0 * parameter * (x - mu) / (max - min + 1)) /
       <literal>2.0 / parameter</literal>, that is a relative
       <literal>1.0 / parameter</literal> around the mean; for instance, if
       <replaceable>parameter</replaceable> is 4.0, 67% of values are drawn from the
-      middle quarter (1.0 / 4.0) of the interval (i.e. from
+      middle quarter (1.0 / 4.0) of the interval (i.e., from
       <literal>3.0 / 8.0</literal> to <literal>5.0 / 8.0</literal>) and 95% from
       the middle half (<literal>2.0 / 4.0</literal>) of the interval (second and third
       quartiles). The minimum allowed <replaceable>parameter</replaceable>
@@ -1735,7 +1785,7 @@ END;
    and <replaceable>max_lag</replaceable>, are only present if the <option>--rate</option>
    option is used.
    They provide statistics about the time each transaction had to wait for the
-   previous one to finish, i.e. the difference between each transaction's
+   previous one to finish, i.e., the difference between each transaction's
    scheduled start time and the time it actually started.
    The very last field, <replaceable>skipped</replaceable>,
    is only present if the <option>--latency-limit</option> option is used, too.

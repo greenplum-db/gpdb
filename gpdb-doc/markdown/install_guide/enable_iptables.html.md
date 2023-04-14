@@ -4,9 +4,9 @@ title: Enabling iptables (Optional)
 
 On Linux systems, you can configure and enable the `iptables` firewall to work with Greenplum Database.
 
-**Note:** Greenplum Database performance might be impacted when `iptables` is enabled. You should test the performance of your application with `iptables` enabled to ensure that performance is acceptable.
+> **Note** Greenplum Database performance might be impacted when `iptables` is enabled. You should test the performance of your application with `iptables` enabled to ensure that performance is acceptable.
 
-For more information about `iptables` see the `iptables` and firewall documentation for your operating system. See also [Disabling SELinux and Firewall Software](prep_os.html).
+For more information about `iptables` see the `iptables` and firewall documentation for your operating system. See also [Deactivating SELinux and Firewall Software](prep_os.html).
 
 ## <a id="ji163124"></a>How to Enable iptables 
 
@@ -32,7 +32,7 @@ For more information about `iptables` see the `iptables` and firewall documentat
     ```
 
 
-**Warning:** After enabling `iptables`, this error in the `/var/log/messages` file indicates that the setting for the `iptables` table is too low and needs to be increased.
+> **Caution** After enabling `iptables`, this error in the `/var/log/messages` file indicates that the setting for the `iptables` table is too low and needs to be increased.
 
 ```
 ip_conntrack: table full, dropping packet.
@@ -52,7 +52,7 @@ To ensure that the Greenplum Database workload does not overflow the `iptables` 
 
 The value might need to be adjusted for your hosts. To maintain the value after reboot, you can update the `/etc/sysctl.conf` file as discussed in [Setting the Greenplum Recommended OS Parameters](prep_os.html).
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic16"></a>Example iptables Rules 
 

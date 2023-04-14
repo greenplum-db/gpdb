@@ -4,13 +4,13 @@ title: Creating and Managing Tablespaces
 
 Tablespaces allow database administrators to have multiple file systems per machine and decide how to best use physical storage to store database objects. Tablespaces allow you to assign different storage for frequently and infrequently used database objects or to control the I/O performance on certain database objects. For example, place frequently-used tables on file systems that use high performance solid-state drives \(SSD\), and place other tables on standard hard drives.
 
-A tablespace requires a host file system location to store its database files. In Greenplum Database, the file system location must exist on all hosts including the hosts running the master, standby master, each primary segment, and each mirror segment.
+A tablespace requires a host file system location to store its database files. In Greenplum Database, the file system location must exist on all hosts including the hosts running the coordinator, standby coordinator, each primary segment, and each mirror segment.
 
 A tablespace is Greenplum Database system object \(a global object\), you can use a tablespace from any database if you have appropriate privileges.
 
-**Note:** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
+> **Note** Greenplum Database does not support different tablespace locations for a primary-mirror pair with the same content ID. It is only possible to configure different locations for different content IDs. Do not modify symbolic links under the `pg_tblspc` directory so that primary-mirror pairs point to different file locations; this will lead to erroneous behavior.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="topic13"></a>Creating a Tablespace 
 
@@ -81,7 +81,7 @@ SELECT oid, * FROM pg_tablespace ;
 
 ```
 
-The OID for the tablespace `myspace` is `16391`. Run `gp_tablespace_location()` to display the tablespace locations for a system that consists of two segment instances and the master.
+The OID for the tablespace `myspace` is `16391`. Run `gp_tablespace_location()` to display the tablespace locations for a system that consists of two segment instances and the coordinator.
 
 ```
 # SELECT * FROM gp_tablespace_location(16391);
@@ -104,12 +104,12 @@ WITH spc AS (SELECT * FROM  gp_tablespace_location(16391))
 
 ```
 
-This is information for a test system that consists of two segment instances and the master on a single host.
+This is information for a test system that consists of two segment instances and the coordinator on a single host.
 
 ```
  role | seg_id | hostname |       datadir        |    tblspc_loc
 ------+--------+----------+----------------------+------------------
- p    |     -1 | testhost | /data/master/gpseg-1 | /data/mytblspace
+ p    |     -1 | testhost | /data/coordinator/gpseg-1 | /data/mytblspace
  p    |      0 | testhost | /data/data1/gpseg0   | /data/mytblspace
  p    |      1 | testhost | /data/data2/gpseg1   | /data/mytblspace
 (3 rows)
@@ -121,7 +121,7 @@ To drop a tablespace, you must be the tablespace owner or a superuser. You canno
 
 The `DROP TABLESPACE` command removes an empty tablespace.
 
-**Note:** You cannot drop a tablespace if it is not empty or if it stores temporary or transaction files.
+> **Note** You cannot drop a tablespace if it is not empty or if it stores temporary or transaction files.
 
 ## <a id="topic11"></a>Moving the Location of Temporary or Transaction Files 
 

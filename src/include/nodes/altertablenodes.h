@@ -66,6 +66,8 @@ typedef struct AlteredTableInfo
 	List	   *newvals;		/* List of NewColumnValue */
 	bool		verify_new_notnull; /* T if we should recheck NOT NULL */
 	int			rewrite;		/* Reason for forced rewrite, if any */
+	Oid 		newAccessMethod; /* new access method; 0 means no change */
+	Datum 		newOptions; /* new reloptions, in case when we need a table rewrite */
 	bool		dist_opfamily_changed; /* T if changing datatype of distribution key column and new opclass is in different opfamily than old one */
 	Oid			new_opclass;		/* new opclass, if changing a distribution key column */
 	Oid			newTableSpace;	/* new tablespace; 0 means no change */
@@ -79,6 +81,9 @@ typedef struct AlteredTableInfo
 	List	   *changedConstraintDefs;	/* string definitions of same */
 	List	   *changedIndexOids;	/* OIDs of indexes to rebuild */
 	List	   *changedIndexDefs;	/* string definitions of same */
+	char	   *replicaIdentityIndex;	/* index to reset as REPLICA IDENTITY */
+	char	   *clusterOnIndex;	/* index to use for CLUSTER */
+	List       *new_crsds; /* new column reference storage directives */
 } AlteredTableInfo;
 
 /* Struct describing one new constraint to check in Phase 3 scan */

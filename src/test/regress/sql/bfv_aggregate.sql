@@ -127,16 +127,14 @@ select count_operator('select count(*) from multi_stage_test group by b;','Group
 reset optimizer_segments;
 reset optimizer_force_multistage_agg;
 
---
 -- Testing not picking HashAgg for aggregates without combine functions
---
--- GPDB_12_MERGE_FIXME: The reason that we tested that a HashAggregate is
--- not chosen when an aggregate is missing combine functions is that in
--- GPDB Hybrid Hash Agg, a HashAggregate can spill to disk, and it requires
--- the combine function for that. But that got reverted with the v12 merge.
--- Currently, this does choose a Hash Agg, and as long as we don't do the
--- spilling like we used to, that's OK. But if we resurrect the Hybrid Hash
--- Agg spilling, then this test becomes relevant again.
+
+-- In previous version, a HashAggregate is not chosen when an aggregate misses
+-- combine functions in GPDB Hybrid Hash Agg. HashAggregate can spill to disk,
+-- and it requires the combine function for that(combine function is used to
+-- deserialize the aggregate states loaded from the spill file). But that got
+-- reverted in current version. Currently, this does choose a Hash Agg, because
+-- we spill the raw tuple rather than transvalue to disk now.
 
 -- SETUP
 set optimizer_print_missing_stats = off;
@@ -223,10 +221,11 @@ insert into mtup1 values
 -- to detect duplicate AggRefs, so this starts to get really slow as you add more
 -- aggregates.
 
--- GPDB_12_MERGE_FIXME: we use MinimalTuples in Motions now, and a MinimalTuple
--- has a limit of 1600 columns. With the default plan, you now get an error from
--- exceeding that limit. Are we OK with that limitation? Does the single-phase
--- plan exercise the original bug?
+-- we use MinimalTuples in Motions now, and the support for passing around MemTuples
+-- in TupleTableSlots was removed, so it no longer can exercise the original bug.
+-- In GPDB6, it generates a multiphase agg plan in default, but it will get an error
+-- from exceeding the limit in GPDB7 with that plan(a MinimalTuple has a limit of 1600
+-- columns). So set the parameter to off to prevent error happens.
 set gp_enable_multiphase_agg=off;
 
 
@@ -1398,9 +1397,9 @@ select array_agg(a order by b desc nulls first) from aggordertest;
 select array_agg(a order by b desc nulls last) from aggordertest;
 
 -- begin MPP-14125: if combine function is missing, do not choose hash agg.
--- GPDB_12_MERGE_FIXME: Like in the 'attribute_table' and 'concat' test earlier in this
--- file, a Hash Agg is currently OK, since we lost the Hybrid Hash Agg spilling
--- code in the merge.
+-- Like in the 'attribute_table' and 'concat' test earlier in this file, a
+-- Hash Agg is currently OK, since we lost the Hybrid Hash Agg spilling code
+-- in the merge.
 create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
 explain select string_agg(a, '') from mpp14125 group by b;
 -- end MPP-14125

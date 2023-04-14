@@ -46,8 +46,8 @@ private:
 	// segmentId column
 	CColRef *m_pcrSegmentId;
 
-	// tuple oid column
-	CColRef *m_pcrTupleOid;
+	// Split Update
+	BOOL m_fSplit;
 
 public:
 	CLogicalUpdate(const CLogicalUpdate &) = delete;
@@ -58,8 +58,7 @@ public:
 	// ctor
 	CLogicalUpdate(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 				   CColRefArray *pdrgpcrDelete, CColRefArray *pdrgpcrInsert,
-				   CColRef *pcrCtid, CColRef *pcrSegmentId,
-				   CColRef *pcrTupleOid);
+				   CColRef *pcrCtid, CColRef *pcrSegmentId, BOOL fSplit);
 
 	// dtor
 	~CLogicalUpdate() override;
@@ -106,18 +105,18 @@ public:
 		return m_pcrSegmentId;
 	}
 
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
-	}
-
 	// return table's descriptor
 	CTableDescriptor *
 	Ptabdesc() const
 	{
 		return m_ptabdesc;
+	}
+
+	// Is update using split
+	BOOL
+	FSplit() const
+	{
+		return m_fSplit;
 	}
 
 	// operator specific hash function

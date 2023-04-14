@@ -16,7 +16,7 @@ This section contains the following information.
 
 These topics assume that the Greenplum Database system is configured to authenticate with Kerberos. For information about configuring Greenplum Database with Kerberos authentication, refer to [Using Kerberos Authentication](kerberos.html).
 
-**Parent topic:**[Configuring Client Authentication](client_auth.html)
+**Parent topic:** [Configuring Client Authentication](client_auth.html)
 
 ## <a id="topic_win_kerberos_install"></a>Installing and Configuring Kerberos on a Windows System 
 
@@ -28,7 +28,7 @@ The `kinit`, `kdestroy`, and `klist` MIT Kerberos Windows client programs and su
 
 You must configure Kerberos on the Windows client to authenticate with Greenplum Database:
 
-1.  Copy the Kerberos configuration file `/etc/krb5.conf` from the Greenplum Database master to the Windows system, rename it to `krb5.ini`, and place it in the default Kerberos location on the Windows system, `C:\ProgramData\MIT\Kerberos5\krb5.ini`. This directory may be hidden. This step requires administrative privileges on the Windows client system. You may also choose to place the `/etc/krb5.ini` file in a custom location. If you choose to do this, you must configure and set a system environment variable named `KRB5_CONFIG` to the custom location.
+1.  Copy the Kerberos configuration file `/etc/krb5.conf` from the Greenplum Database coordinator to the Windows system, rename it to `krb5.ini`, and place it in the default Kerberos location on the Windows system, `C:\ProgramData\MIT\Kerberos5\krb5.ini`. This directory may be hidden. This step requires administrative privileges on the Windows client system. You may also choose to place the `/etc/krb5.ini` file in a custom location. If you choose to do this, you must configure and set a system environment variable named `KRB5_CONFIG` to the custom location.
 2.  Locate the `[libdefaults]` section of the `krb5.ini` file, and remove the entry identifying the location of the Kerberos credentials cache file, `default_ccache_name`. This step requires administrative privileges on the Windows client system.
 
     This is an example configuration file with `default_ccache_name` removed. The `[logging]` section is also removed.
@@ -110,7 +110,7 @@ Type "help" for help.
 
 You can create and use a Kerberos `keytab` file to avoid entering a password at the command line or listing a password in a script file when you connect to a Greenplum Database system, perhaps when automating a scheduled Greenplum task such as `gpload`. You can create a keytab file with the Java JRE keytab utility `ktab`. If you use AES256-CTS-HMAC-SHA1-96 encryption, you need to download and install the Java extension *Java Cryptography Extension \(JCE\) Unlimited Strength Jurisdiction Policy Files for JDK/JRE* from Oracle.
 
-**Note:** You must enter the password to create a keytab file. The password is visible onscreen as you enter it.
+> **Note** You must enter the password to create a keytab file. The password is visible onscreen as you enter it.
 
 This example runs the Java `ktab.exe` program to create a keytab file \(`-a` option\) and list the keytab name and entries \(`-l` `-e` `-t` options\).
 

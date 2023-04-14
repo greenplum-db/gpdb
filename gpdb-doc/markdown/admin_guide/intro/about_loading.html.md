@@ -8,9 +8,9 @@ In a large scale, multi-terabyte data warehouse, large amounts of data must be l
 
 By using external tables in conjunction with Greenplum Database's parallel file server \(`gpfdist`\), administrators can achieve maximum parallelism and load bandwidth from their Greenplum Database system.
 
-![](../graphics/ext_tables.jpg "External Tables Using Greenplum Parallel File Server (gpfdist)")
+![External Tables Using Greenplum Parallel File Server (gpfdist)](../graphics/ext_tables.jpg "External Tables Using Greenplum Parallel File Server (gpfdist)")
 
 Another Greenplum utility, `gpload`, runs a load task that you specify in a YAML-formatted control file. You describe the source data locations, format, transformations required, participating hosts, database destinations, and other particulars in the control file and `gpload` runs the load. This allows you to describe a complex task and run it in a controlled, repeatable fashion.
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 

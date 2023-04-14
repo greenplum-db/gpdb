@@ -351,7 +351,7 @@ CBitSet::Union(const CBitSet *pbsOther)
 	CBitSetLink *bsl_other = nullptr;
 
 	// dynamic array of CBitSetLink
-	typedef CDynamicPtrArray<CBitSetLink, CleanupNULL> CBitSetLinkArray;
+	using CBitSetLinkArray = CDynamicPtrArray<CBitSetLink, CleanupNULL>;
 
 	CAutoRef<CBitSetLinkArray> a_drgpbsl;
 	a_drgpbsl = GPOS_NEW(m_mp) CBitSetLinkArray(m_mp);
@@ -436,7 +436,17 @@ CBitSet::Intersection(const CBitSet *pbsOther)
 		if (nullptr != bsl_other && bsl_other->GetOffset() == bsl->GetOffset())
 		{
 			bsl->GetVec()->And(bsl_other->GetVec());
+			CBitSetLink *bsl_prev = bsl;
+
 			bsl = m_bsllist.Next(bsl);
+			// If vector is empty after "ANDing", remove the vector, otherwise
+			// we can get into a situation where an empty vector exists
+			// and causes wrong results for equals/contains operations later
+			if (bsl_prev->GetVec()->IsEmpty())
+			{
+				m_bsllist.Remove(bsl_prev);
+				GPOS_DELETE(bsl_prev);
+			}
 		}
 		else
 		{

@@ -1,3 +1,4 @@
+SET optimizer_trace_fallback=on;
 -- Test external table as left child of union all with replicated table
 CREATE EXTERNAL TABLE multilocation_external_table(a INTEGER)
 location ('file://@hostname@@abs_srcdir@/data/location1.csv', 'file://@hostname@@abs_srcdir@/data/location2.csv', 'file://@hostname@@abs_srcdir@/data/location3.csv')

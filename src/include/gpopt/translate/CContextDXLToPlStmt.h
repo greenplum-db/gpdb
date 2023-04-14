@@ -38,10 +38,10 @@ namespace gpdxl
 // fwd decl
 class CDXLTranslateContext;
 
-typedef CHashMap<ULONG, CDXLTranslateContext, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-				 CleanupDelete<CDXLTranslateContext> >
-	HMUlDxltrctx;
+using HMUlDxltrctx =
+	CHashMap<ULONG, CDXLTranslateContext, gpos::HashValue<ULONG>,
+			 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+			 CleanupDelete<CDXLTranslateContext>>;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -82,10 +82,14 @@ private:
 	};
 
 	// hash maps mapping ULONG -> SCTEConsumerInfo
-	typedef CHashMap<ULONG, SCTEConsumerInfo, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupDelete<SCTEConsumerInfo> >
-		HMUlCTEConsumerInfo;
+	using HMUlCTEConsumerInfo =
+		CHashMap<ULONG, SCTEConsumerInfo, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupDelete<SCTEConsumerInfo>>;
+
+	using HMUlIndex =
+		CHashMap<ULONG, Index, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupDelete<Index>>;
 
 	CMemoryPool *m_mp;
 
@@ -104,12 +108,6 @@ private:
 
 	// list of all rtable entries
 	List *m_rtable_entries_list;
-
-	// list of oids of partitioned tables
-	List *m_partitioned_tables_list;
-
-	// number of partition selectors for each dynamic scan
-	ULongPtrArray *m_num_partition_selectors_array;
 
 	// list of all subplan entries
 	List *m_subplan_entries_list;
@@ -132,11 +130,10 @@ private:
 	// CTAS distribution policy
 	GpPolicy *m_distribution_policy;
 
-	// FXIME: this uses NEW/DELETE, should we use palloc/pfree/memory pool?
-	std::vector<List *> m_static_prune_results;
-
 	UlongToUlongMap *m_part_selector_to_param_map;
 
+	// hash map of the queryid (of DML query) and the target relation index
+	HMUlIndex *m_used_rte_indexes;
 
 public:
 	// ctor/dtor
@@ -176,16 +173,6 @@ public:
 		return m_rtable_entries_list;
 	}
 
-	// return list of partitioned table indexes
-	List *
-	GetPartitionedTablesList() const
-	{
-		return m_partitioned_tables_list;
-	}
-
-	// return list containing number of partition selectors for every scan id
-	List *GetNumPartitionSelectorsList() const;
-
 	List *
 	GetSubplanEntriesList() const
 	{
@@ -206,12 +193,6 @@ public:
 
 	// add a range table entry
 	void AddRTE(RangeTblEntry *rte, BOOL is_result_relation = false);
-
-	// add a partitioned table index
-	void AddPartitionedTable(OID oid);
-
-	// increment the number of partition selectors for the given scan id
-	void IncrementPartitionSelectors(ULONG scan_id);
 
 	void AddSubplan(Plan *);
 
@@ -252,12 +233,18 @@ public:
 	Oid GetDistributionHashOpclassForType(Oid typid);
 	Oid GetDistributionHashFuncForType(Oid typid);
 
-	List *GetStaticPruneResult(ULONG scanId);
-	void SetStaticPruneResult(ULONG scanId, List *static_prune_result);
-
 	ULONG GetParamIdForSelector(OID oid_type, const ULONG selectorId);
 
 	Index FindRTE(Oid reloid);
+
+	// used by internal GPDB functions to build the RelOptInfo when creating foreign scans
+	Query *m_orig_query;
+
+	// get rte from m_rtable_entries_list by given index
+	RangeTblEntry *GetRTEByIndex(Index index);
+
+	Index GetRTEIndexByTableDescr(const CDXLTableDescr *table_descr,
+								  BOOL *is_rte_exists);
 };
 
 }  // namespace gpdxl

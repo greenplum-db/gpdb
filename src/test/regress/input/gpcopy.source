@@ -703,6 +703,8 @@ COPY segment_reject_limit_from to STDOUT log errors segment reject limit 3 rows;
 \copy segment_reject_limit_from from 'stdin';
 \copy segment_reject_limit_from to 'stdout';
 \copy segment_reject_limit_from from 'stdout';
+\!rm stdin
+\!rm stdout
 
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
@@ -1209,6 +1211,7 @@ ALTER TABLE sales EXCHANGE PARTITION dec17 WITH TABLE ext_dec17;
 DROP TABLE ext_dec17;
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_with_external';
+COPY (SELECT * FROM sales) TO PROGRAM 'cat > /tmp/test_sales_with_external';
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 
 -- Verify that the files don't contain the row from the external partition.
@@ -1324,6 +1327,8 @@ DROP DATABASE IF EXISTS "funny copy""db'with\\quotes";
 reset client_min_messages;
 CREATE DATABASE "funny copy""db'with\\quotes";
 
+\! python3 test_dbconn.py 1
+
 \c "funny copy""db'with\\quotes"
 -- echo will behave differently on different platforms, force to use bash with -E option
 COPY (SELECT 'data1') TO PROGRAM 'cat > /tmp/gpcopyenvtest; /usr/bin/env bash -c ''echo -E database in COPY TO: $GP_DATABASE >> /tmp/gpcopyenvtest '' ' ESCAPE 'OFF';
@@ -1333,3 +1338,41 @@ COPY foo FROM PROGRAM 'cat /tmp/gpcopyenvtest' ESCAPE 'OFF';
 COPY foo FROM PROGRAM '/usr/bin/env bash -c ''echo -E database in COPY FROM: $GP_DATABASE''' ESCAPE 'OFF';
 
 select * from foo;
+
+--
+-- Test copy a partitioned table whose columns' orders are not consistent between the root table and partitions.
+--
+
+-- 1. Test copy a partitioned table with a single distribution key on segment.
+CREATE TABLE issue_14353       (a integer, b integer, c text) PARTITION BY RANGE (a) DISTRIBUTED BY (a);
+CREATE TABLE issue_14353_prt_1 (b integer, a integer, c text) DISTRIBUTED BY (a);
+CREATE TABLE issue_14353_def   (a integer, b integer, c text) DISTRIBUTED BY (a);
+
+ALTER TABLE ONLY issue_14353 ATTACH PARTITION issue_14353_prt_1 FOR VALUES FROM (1) TO (2);
+ALTER TABLE ONLY issue_14353 ATTACH PARTITION issue_14353_def DEFAULT;
+INSERT INTO issue_14353 SELECT x, x%3, 'a' FROM generate_series(1, 20)x;
+
+-- Test that the data are successfully copied out and copied in on segment.
+COPY issue_14353 TO   '/tmp/issue_14353_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+COPY issue_14353 FROM '/tmp/issue_14353_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+
+-- Test that gpdb emits an error message saying the data distribution is malformed.
+\! cp /tmp/issue_14353_1.csv /tmp/issue_14353_0.csv
+COPY issue_14353 FROM '/tmp/issue_14353_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+
+-- 2. Test copy a partitioned table with multiple distribution keys on segment.
+CREATE TABLE issue_14353_multi_dist       (a integer, b integer, c text) PARTITION BY RANGE (a) DISTRIBUTED BY (a, c);
+CREATE TABLE issue_14353_multi_dist_prt_1 (b integer, a integer, c text) DISTRIBUTED BY (a, c);
+CREATE TABLE issue_14353_multi_dist_def   (a integer, b integer, c text) DISTRIBUTED BY (a, c);
+
+ALTER TABLE ONLY issue_14353_multi_dist ATTACH PARTITION issue_14353__multi_dist_prt_1 FOR VALUES FROM (1) TO (2);
+ALTER TABLE ONLY issue_14353_multi_dist ATTACH PARTITION issue_14353_multi_dist_def DEFAULT;
+INSERT INTO issue_14353_multi_dist SELECT x, x%3, 'a' || (x%5)::text FROM generate_series(1, 20)x;
+
+-- Test that the data are successfully copied out and copied in on segment.
+COPY issue_14353_multi_dist TO   '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+
+-- Test that gpdb emits an error message saying the data distribution is malformed.
+\! cp /tmp/issue_14353_multi_dist_1.csv /tmp/issue_14353_multi_dist_0.csv
+COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;

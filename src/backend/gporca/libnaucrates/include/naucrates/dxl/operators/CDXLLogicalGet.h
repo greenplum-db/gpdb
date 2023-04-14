@@ -62,7 +62,7 @@ public:
 	{
 		GPOS_ASSERT(nullptr != dxl_op);
 		GPOS_ASSERT(EdxlopLogicalGet == dxl_op->GetDXLOperator() ||
-					EdxlopLogicalExternalGet == dxl_op->GetDXLOperator());
+					EdxlopLogicalForeignGet == dxl_op->GetDXLOperator());
 
 		return dynamic_cast<CDXLLogicalGet *>(dxl_op);
 	}

@@ -12,9 +12,9 @@ gpinitsystem -c <gpinitsystem_config>
             [-h <hostfile_gpinitsystem>]
             [-B <parallel_processes>] 
             [-p <postgresql_conf_param_file>]
-            [-s <standby_coordinator_host>
+            [-s <standby_coordinator_host>]
                 [-P <standby_coordinator_port>] [ {-S | --standby-datadir} <standby_coordinator_datadir>]
-            [-m number | --max_connections=<number>] [--shared_buffers=<size>]
+            [-m number | --max_connections=<number>] [-b size | --shared_buffers=<size>]
             [-n locale | --locale=<locale>] [--lc-collate=<locale>]
             [--lc-ctype=<locale>] [--lc-messages=<locale>] 
             [--lc-monetary=<locale>] [--lc-numeric=<locale>] 

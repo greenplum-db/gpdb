@@ -11,7 +11,7 @@
     </dxl:OutputColumns>
     <dxl:CTEList/>
     <dxl:LogicalInsert InsertColumns="2,3,4,5,22,6,7">
-      <dxl:TableDescriptor Mdid="0.5060573.1.1" TableName="arrtest">
+      <dxl:TableDescriptor Mdid="6.5060573.1.1" TableName="arrtest">
         <dxl:Columns>
           <dxl:Column ColId="8" Attno="1" ColName="a" TypeMdid="0.1005.1.0"/>
           <dxl:Column ColId="9" Attno="2" ColName="b" TypeMdid="0.1007.1.0"/>
@@ -80,14 +80,14 @@
               <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAEAAAAAAAAAAAGQAAAA=="/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="6" Alias="f">
-              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1014.1.0">
+              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1014.1.0" FuncVariadic="false">
                 <dxl:ConstValue TypeMdid="0.1014.1.0" Value="AAAAEAAAAAAAAAAAEgQAAA=="/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="9"/>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
               </dxl:FuncExpr>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="7" Alias="g">
-              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1015.1.0">
+              <dxl:FuncExpr FuncId="0.1291.1.0" FuncRetSet="false" TypeMdid="0.1015.1.0" FuncVariadic="false">
                 <dxl:ConstValue TypeMdid="0.1015.1.0" Value="AAAAEAAAAAAAAAAAEwQAAA=="/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="9"/>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>

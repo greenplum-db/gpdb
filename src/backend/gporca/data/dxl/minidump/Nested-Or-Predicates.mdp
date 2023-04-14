@@ -237,7 +237,7 @@
       <dxl:ColumnStatistics Mdid="1.520054.1.1.3" Name="adjud_dt" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.520054.1.1.2" Name="pgbk_ind" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.520054.1.1" Name="adj_hcs" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.520054.1.1" Name="adj_hcs" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="71,65">
+      <dxl:Relation Mdid="6.520054.1.1" Name="adj_hcs" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="71,65">
         <dxl:Columns>
           <dxl:Column Name="hcs_key" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -479,7 +479,6 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.520054.1.1.65" Name="ctid" Width="6.000000"/>
@@ -594,7 +593,7 @@
           </dxl:And>
         </dxl:Or>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.520054.1.1" TableName="adj_hcs">
+          <dxl:TableDescriptor Mdid="6.520054.1.1" TableName="adj_hcs">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="hcs_key" TypeMdid="0.20.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="adj_nbr" TypeMdid="0.1042.1.0" ColWidth="4"/>
@@ -1102,7 +1101,7 @@
               </dxl:And>
             </dxl:Or>
           </dxl:Filter>
-          <dxl:TableDescriptor Mdid="0.520054.1.1" TableName="adj_hcs">
+          <dxl:TableDescriptor Mdid="6.520054.1.1" TableName="adj_hcs">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="hcs_key" TypeMdid="0.20.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="adj_nbr" TypeMdid="0.1042.1.0" ColWidth="4"/>

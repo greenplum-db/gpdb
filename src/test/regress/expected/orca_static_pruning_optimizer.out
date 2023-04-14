@@ -16,14 +16,14 @@ $query$ AS qry \gset
 SET optimizer_trace_fallback TO on;
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-                   QUERY PLAN                    
--------------------------------------------------
+                    QUERY PLAN                    
+--------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: rp2.a, rp2.b, rp2.c
-   ->  Append
-         ->  Seq Scan on orca_static_pruning.rp2
-               Output: rp2.a, rp2.b, rp2.c
-               Filter: (rp2.b > 4200)
+   Output: a, b, c
+   ->  Dynamic Seq Scan on orca_static_pruning.rp
+         Output: a, b, c
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (rp.b > 4200)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
 (8 rows)
@@ -41,14 +41,14 @@ WHERE b = 4201
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-                   QUERY PLAN                    
--------------------------------------------------
+                    QUERY PLAN                    
+--------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: rp2.a, rp2.b, rp2.c
-   ->  Append
-         ->  Seq Scan on orca_static_pruning.rp2
-               Output: rp2.a, rp2.b, rp2.c
-               Filter: (rp2.b = 4201)
+   Output: a, b, c
+   ->  Dynamic Seq Scan on orca_static_pruning.rp
+         Output: a, b, c
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (rp.b = 4201)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
 (8 rows)
@@ -66,14 +66,14 @@ WHERE b IN (4201, 4200)
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                       QUERY PLAN                        
+---------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: rp2.a, rp2.b, rp2.c
-   ->  Append
-         ->  Seq Scan on orca_static_pruning.rp2
-               Output: rp2.a, rp2.b, rp2.c
-               Filter: (rp2.b = ANY ('{4201,4200}'::integer[]))
+   Output: a, b, c
+   ->  Dynamic Seq Scan on orca_static_pruning.rp
+         Output: a, b, c
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (rp.b = ANY ('{4201,4200}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
 (8 rows)
@@ -101,14 +101,14 @@ WHERE b > 42
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-                   QUERY PLAN                    
--------------------------------------------------
+                    QUERY PLAN                    
+--------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: lp2.a, lp2.b
-   ->  Append
-         ->  Seq Scan on orca_static_pruning.lp2
-               Output: lp2.a, lp2.b
-               Filter: (lp2.b > 42)
+   Output: a, b
+   ->  Dynamic Seq Scan on orca_static_pruning.lp
+         Output: a, b
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (lp.b > 42)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
 (8 rows)
@@ -125,14 +125,14 @@ WHERE b = 42
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-                   QUERY PLAN                    
--------------------------------------------------
+                    QUERY PLAN                    
+--------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: lp2.a, lp2.b
-   ->  Append
-         ->  Seq Scan on orca_static_pruning.lp2
-               Output: lp2.a, lp2.b
-               Filter: (lp2.b = 42)
+   Output: a, b
+   ->  Dynamic Seq Scan on orca_static_pruning.lp
+         Output: a, b
+         Number of partitions to scan: 1 (out of 3)
+         Filter: (lp.b = 42)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
 (8 rows)
@@ -199,25 +199,26 @@ CREATE INDEX rp_bitmap_idx ON rp_multi_inds USING bitmap(b);
 SET optimizer_enable_dynamictablescan TO off;
 SET optimizer_trace_fallback TO on;
 EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM rp_multi_inds WHERE b = 11 AND (c = 11 OR c = 4201);
-                                                           QUERY PLAN                                                            
----------------------------------------------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: a, b, c
-   ->  Append
-         ->  Bitmap Heap Scan on orca_static_pruning.rp_multi_inds_part2
-               Output: a, b, c
-               Recheck Cond: (((rp_multi_inds_part2.c = 11) OR (rp_multi_inds_part2.c = 4201)) AND (rp_multi_inds_part2.b = 11))
-               ->  BitmapAnd
-                     ->  BitmapOr
-                           ->  Bitmap Index Scan on rp_multi_inds_part2_c_idx
-                                 Index Cond: (rp_multi_inds_part2.c = 11)
-                           ->  Bitmap Index Scan on rp_multi_inds_part2_c_idx
-                                 Index Cond: (rp_multi_inds_part2.c = 4201)
-                     ->  Bitmap Index Scan on rp_multi_inds_part2_b_idx
-                           Index Cond: (rp_multi_inds_part2.b = 11)
+   ->  Dynamic Bitmap Heap Scan on orca_static_pruning.rp_multi_inds
+         Output: a, b, c
+         Number of partitions to scan: 1 (out of 3)
+         Recheck Cond: (((rp_multi_inds.c = 11) OR (rp_multi_inds.c = 4201)) AND (rp_multi_inds.b = 11))
+         Filter: (((rp_multi_inds.c = 11) OR (rp_multi_inds.c = 4201)) AND (rp_multi_inds.b = 11))
+         ->  BitmapAnd
+               ->  BitmapOr
+                     ->  Dynamic Bitmap Index Scan on rp_btree_idx
+                           Index Cond: (rp_multi_inds.c = 11)
+                     ->  Dynamic Bitmap Index Scan on rp_btree_idx
+                           Index Cond: (rp_multi_inds.c = 4201)
+               ->  Dynamic Bitmap Index Scan on rp_bitmap_idx
+                     Index Cond: (rp_multi_inds.b = 11)
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: optimizer=on
-(16 rows)
+ Settings: optimizer=on, optimizer_enable_dynamictablescan=off
+(17 rows)
 
 SELECT * FROM rp_multi_inds WHERE b = 11 AND (c = 11 OR c = 4201);
  a  | b  | c  
@@ -248,17 +249,17 @@ EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM foo JOIN bar on foo.a = bar.a AND foo
                                       QUERY PLAN                                       
 ---------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: foo_part2.a, foo_part2.b, bar.a
+   Output: foo.a, foo.b, bar.a
    ->  Nested Loop
-         Output: foo_part2.a, foo_part2.b, bar.a
+         Output: foo.a, foo.b, bar.a
          Join Filter: true
          ->  Seq Scan on orca_static_pruning.bar
                Output: bar.a
-         ->  Append
-               ->  Index Scan using foo_part2_a_idx on orca_static_pruning.foo_part2
-                     Output: foo_part2.a, foo_part2.b
-                     Index Cond: (foo_part2.a = bar.a)
-                     Filter: ((foo_part2.a = bar.a) AND (foo_part2.b = 11))
+         ->  Dynamic Index Scan on foo_idx on orca_static_pruning.foo
+               Output: foo.a, foo.b
+               Index Cond: (foo.a = bar.a)
+               Filter: ((foo.a = bar.a) AND (foo.b = 11))
+               Number of partitions to scan: 1 (out of 3)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_hashjoin=off, enable_mergejoin=off, enable_nestloop=on, optimizer=on
 (14 rows)
@@ -296,19 +297,15 @@ EXPLAIN (COSTS OFF, VERBOSE) INSERT INTO rp_insert VALUES (1, 1), (3, 3);
 
 INSERT INTO rp_insert VALUES (1, 1), (3, 3);
 EXPLAIN (COSTS OFF, VERBOSE) INSERT INTO rp_insert SELECT * FROM rp_insert;
-                             QUERY PLAN                             
---------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Insert on orca_static_pruning.rp_insert
-   ->  Result
-         Output: rp_insert_part_1.a, rp_insert_part_1.b
-         ->  Append
-               ->  Seq Scan on orca_static_pruning.rp_insert_part_1
-                     Output: rp_insert_part_1.a, rp_insert_part_1.b
-               ->  Seq Scan on orca_static_pruning.rp_insert_part_2
-                     Output: rp_insert_part_2.a, rp_insert_part_2.b
+   ->  Dynamic Seq Scan on orca_static_pruning.rp_insert rp_insert_1
+         Output: rp_insert_1.a, rp_insert_1.b
+         Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer=on
-(10 rows)
+(6 rows)
 
 INSERT INTO rp_insert SELECT * FROM rp_insert;
 SELECT * FROM rp_insert;

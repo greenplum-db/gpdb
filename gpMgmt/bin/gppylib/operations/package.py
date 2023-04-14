@@ -11,7 +11,7 @@ try:
     from gppylib import gplog
     from gppylib.commands import gp
     from gppylib.commands.base import Command, REMOTE, WorkerPool, ExecutionError
-    from gppylib.commands.unix import Scp
+    from gppylib.commands.unix import Rsync
     from gppylib.gpversion import GpVersion
     from gppylib.mainUtils import ExceptionNoStackTraceNeeded
     from gppylib.operations import Operation
@@ -302,7 +302,7 @@ class RemoteCommand(Operation):
     """
     DEPRECATED
 
-    TODO: AK: Rename as GpSsh, like GpScp below.
+    TODO: AK: Rename as GpSsh, like GpRsync below.
     """
 
     def __init__(self, cmd_str, host_list):
@@ -1019,7 +1019,7 @@ class SyncPackages(Operation):
             for package in install_package_set:
                 logger.debug('copying %s to %s' % (package, self.host))
                 dstFile = os.path.join(GPHOME, package)
-                Scp(name='copying %s to %s' % (package, self.host),
+                Rsync(name='copying %s to %s' % (package, self.host),
                     srcFile=os.path.join(GPPKG_ARCHIVE_PATH, package),
                     dstFile=dstFile,
                     dstHost=self.host).run(validateAfter=True)
@@ -1072,12 +1072,12 @@ class InstallPackage(Operation):
         if linux_distribution_id() == 'ubuntu':
             # install package on segments
             if self.segment_host_list:
-                GpScp(srcFile, dstFile, self.segment_host_list).run()
+                GpRsync(srcFile, dstFile, self.segment_host_list).run()
                 HostOperation(InstallDebPackageLocally(dstFile), self.segment_host_list).run()
 
             # install package on standby
             if self.standby_host:
-                Scp(name='copying %s to %s' % (srcFile, self.standby_host),
+                Rsync(name='copying %s to %s' % (srcFile, self.standby_host),
                     srcFile=srcFile,
                     dstFile=dstFile,
                     dstHost=self.standby_host).run(validateAfter=True)
@@ -1088,12 +1088,12 @@ class InstallPackage(Operation):
         else:
             # install package on segments
             if self.segment_host_list:
-                GpScp(srcFile, dstFile, self.segment_host_list).run()
+                GpRsync(srcFile, dstFile, self.segment_host_list).run()
                 HostOperation(InstallPackageLocally(dstFile), self.segment_host_list).run()
 
             # install package on standby
             if self.standby_host:
-                Scp(name='copying %s to %s' % (srcFile, self.standby_host),
+                Rsync(name='copying %s to %s' % (srcFile, self.standby_host),
                     srcFile=srcFile,
                     dstFile=dstFile,
                     dstHost=self.standby_host).run(validateAfter=True)
@@ -1141,7 +1141,7 @@ class PerformHooks(Operation):
             if key is None:
                 return
             key_str = key[0]
-            if key_str.lower() == 'coordinator':
+            if key_str.lower() in ('coordinator', 'master'):
                 if self.standby_host:
                     RemoteCommand(hook[key_str], [self.standby_host]).run()
                 LocalCommand(hook[key_str], True).run()
@@ -1408,14 +1408,14 @@ class UpdatePackage(Operation):
         # distribute package to segments
         srcFile = self.gppkg.abspath
         dstFile = os.path.join(GPHOME, self.gppkg.pkg)
-        GpScp(srcFile, dstFile, self.segment_host_list).run()
+        GpRsync(srcFile, dstFile, self.segment_host_list).run()
 
         # update package on segments
         HostOperation(UpdatePackageLocally(dstFile), self.segment_host_list).run()
 
         # update package on standby
         if self.standby_host:
-            Scp(name='copying %s to %s' % (srcFile, self.standby_host),
+            Rsync(name='copying %s to %s' % (srcFile, self.standby_host),
                 srcFile=srcFile,
                 dstFile=dstFile,
                 dstHost=self.standby_host).run(validateAfter=True)
@@ -1552,7 +1552,7 @@ class MigratePackages(Operation):
         logger.info('The package migration has completed.')
 
 
-class GpScp(Operation):
+class GpRsync(Operation):
     """
     TODO: AK: This obviously does not belong here. My preference would be that it remain here until
     the following problem is solved.
@@ -1562,14 +1562,14 @@ class GpScp(Operation):
     I suggest:
 
         We consume an extra parameter 'fanout'. We partition the host_list into a number of buckets
-        given by 'fanout'. For each bucket, we scp the artifact to the first host in the bucket, and then
-        we recursively invoke GpScp on that machine for the remaining hosts in its bucket.
+        given by 'fanout'. For each bucket, we rsync the artifact to the first host in the bucket, and then
+        we recursively invoke GpRsync on that machine for the remaining hosts in its bucket.
 
-        GpScp := ParallelOperation([ A(i) for i in range(0, n) ])
+        GpRsync := ParallelOperation([ A(i) for i in range(0, n) ])
         A := SerialOperation(B, C)
-        B := scp source_path target_path @ host_i
+        B := rsync source_path target_path @ host_i
             where host_i := the first host in the ith bucket
-        C := RemoteOperation(GpScp(target_path, target_path, host_list_i))
+        C := RemoteOperation(GpRsync(target_path, target_path, host_list_i))
             where host_list_i := the remaining hosts in the ith bucket
     """
 
@@ -1582,7 +1582,7 @@ class GpScp(Operation):
     def execute(self):
         self.pool = WorkerPool()
         for host in self.host_list:
-            self.pool.addCommand(Scp(name='copying %s to %s' % (self.source_path, host),
+            self.pool.addCommand(Rsync(name='copying %s to %s' % (self.source_path, host),
                                      srcFile=self.source_path,
                                      dstFile=self.target_path,
                                      dstHost=host))

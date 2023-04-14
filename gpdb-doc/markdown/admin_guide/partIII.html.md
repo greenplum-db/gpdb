@@ -8,6 +8,8 @@ Securing Greenplum Database includes protecting access to the database through n
 This topic explains how to configure client connections and authentication for Greenplum Database.
 -   **[Managing Roles and Privileges](roles_privs.html)**  
 The Greenplum Database authorization mechanism stores roles and permissions to access database objects in the database and is administered using SQL statements or command-line utilities.
+-   **[About Configuring Row-Level Security Policies](row_security.html)**  
+This topic describes how to configure row-level security policies for Greenplum Database tables.
 
-**Parent topic:**[Greenplum Database Administrator Guide](admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](admin_guide.html)
 

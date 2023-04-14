@@ -107,50 +107,20 @@ def check_pid(pid):
 
 
 """
-Given the data directory, port and pid for a segment, 
-kill -9 all the processes associated with that segment.
-If pid is -1, then the postmaster is already stopped, 
-so we check for any leftover processes for that segment 
-and kill -9 those processes
-E.g postgres:  45002, logger process
-    postgres:  45002, sweeper process
-    postgres:  45002, checkpoint process
+Given the data directory, pid list and host,
+kill -9 all the processes from the pid list.
 """
+def kill_9_segment_processes(datadir, pids, host):
+    logger.info('Terminating processes for segment {0}'.format(datadir))
 
+    for pid in pids:
+        if check_pid_on_remotehost(pid, host):
 
-def kill_9_segment_processes(datadir, port, pid):
-    logger.info('Terminating processes for segment %s' % datadir)
+            cmd = Command("kill -9 process", ("kill -9 {0}".format(pid)), ctxt=REMOTE, remoteHost=host)
+            cmd.run()
 
-    pid_list = []
-
-    # pid is the pid of the postgres process.
-    # pid can be -1 if the process is down already
-    if pid != -1:
-        pid_list = [pid]
-
-    cmd = Command('get a list of processes to kill -9',
-                  cmdStr='ps ux | grep "[p]ostgres:\s*%s" | awk \'{print $2}\'' % (port))
-
-    try:
-        cmd.run(validateAfter=True)
-    except Exception as e:
-        logger.warning('Unable to get the pid list of processes for segment %s: (%s)' % (datadir, str(e)))
-        return
-
-    results = cmd.get_results()
-    results = results.stdout.strip().split('\n')
-
-    for result in results:
-        if result:
-            pid_list.append(int(result))
-
-    for pid in pid_list:
-        # Try to kill -9 the process.
-        # We ignore any errors 
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except Exception as e:
-            logger.error('Failed to kill processes for segment %s: (%s)' % (datadir, str(e)))
+            if cmd.get_results().rc != 0:
+                logger.error('Failed to kill process {0} for segment {1}: {2}'.format(pid, datadir, cmd.get_results().stderr))
 
 
 def logandkill(pid, sig):
@@ -501,7 +471,7 @@ class FileDirExists(Command):
         return (not self.results.rc)
 
 
-# -------------scp------------------
+# -------------rsync------------------
 
 # MPP-13617
 def canonicalize(addr):
@@ -510,10 +480,10 @@ def canonicalize(addr):
     return '[' + addr + ']'
 
 
-class Scp(Command):
+class Rsync(Command):
     def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False, ctxt=LOCAL,
                  remoteHost=None):
-        cmdStr = findCmdInPath('scp') + " "
+        cmdStr = findCmdInPath('rsync') + " "
 
         if recursive:
             cmdStr = cmdStr + "-r "
@@ -593,8 +563,8 @@ class PgPortIsActive(Command):
 
         for r in rows:
             val = r.split('.')
-            netstatport = int(val[len(val) - 1])
-            if netstatport == self.port:
+            ssport = int(val[len(val) - 1])
+            if ssport == self.port:
                 return True
 
         return False

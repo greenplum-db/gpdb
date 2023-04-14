@@ -6,7 +6,7 @@
 //		CColumnDescriptor.h
 //
 //	@doc:
-//		Abstraction of columns in tables, functions, external tables etc.
+//		Abstraction of columns in tables, functions, foreign tables etc.
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CColumnDescriptor_H
 #define GPOPT_CColumnDescriptor_H

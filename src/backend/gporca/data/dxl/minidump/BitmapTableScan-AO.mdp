@@ -205,7 +205,7 @@ explain select * from t_ao where c2 = 'HEAP';
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.21846751.1.1" Name="t_ao" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.21846751.1.0" Name="t_ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
+      <dxl:Relation Mdid="6.21846751.1.0" Name="t_ao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -241,10 +241,9 @@ explain select * from t_ao where c2 = 'HEAP';
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.21846783.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.21846751.1.1" Name="t_ao" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
+      <dxl:Relation Mdid="6.21846751.1.1" Name="t_ao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -280,7 +279,6 @@ explain select * from t_ao where c2 = 'HEAP';
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.21846783.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.21846751.1.1.5" Name="c6" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
@@ -774,7 +772,7 @@ explain select * from t_ao where c2 = 'HEAP';
           <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACEhFQVA=" LintValue="146146156"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.21846751.1.1" TableName="t_ao">
+          <dxl:TableDescriptor Mdid="6.21846751.1.1" TableName="t_ao">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>
@@ -864,7 +862,7 @@ explain select * from t_ao where c2 = 'HEAP';
             </dxl:IndexCondList>
             <dxl:IndexDescriptor Mdid="0.21846783.1.0" IndexName="idx_t_ao_3"/>
           </dxl:BitmapIndexProbe>
-          <dxl:TableDescriptor Mdid="0.21846751.1.1" TableName="t_ao">
+          <dxl:TableDescriptor Mdid="6.21846751.1.1" TableName="t_ao">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="c2" TypeMdid="0.25.1.0"/>

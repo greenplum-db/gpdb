@@ -739,8 +739,6 @@ select rnum, c1, sum( (select 1 from tversion) ) from tjoin1 group by rnum, c1
 group by
 f1,f2,f3
 ) Q ) P;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
      test_name_part     | pass_ind 
 ------------------------+----------
  SubqueryInAggregate_p1 |        1

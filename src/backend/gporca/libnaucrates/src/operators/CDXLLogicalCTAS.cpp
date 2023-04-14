@@ -35,7 +35,7 @@ CDXLLogicalCTAS::CDXLLogicalCTAS(
 	CDXLCtasStorageOptions *dxl_ctas_storage_options,
 	IMDRelation::Ereldistrpolicy rel_distr_policy,
 	ULongPtrArray *distr_column_pos_array, IMdIdArray *distr_opfamilies,
-	IMdIdArray *distr_opclasses, BOOL is_temporary, BOOL has_oids,
+	IMdIdArray *distr_opclasses, BOOL is_temporary,
 	IMDRelation::Erelstoragetype rel_storage_type,
 	ULongPtrArray *src_colids_array, IntPtrArray *vartypemod_array)
 	: CDXLLogical(mp),
@@ -49,7 +49,6 @@ CDXLLogicalCTAS::CDXLLogicalCTAS(
 	  m_distr_opfamilies(distr_opfamilies),
 	  m_distr_opclasses(distr_opclasses),
 	  m_is_temp_table(is_temporary),
-	  m_has_oids(has_oids),
 	  m_rel_storage_type(rel_storage_type),
 	  m_src_colids_array(src_colids_array),
 	  m_vartypemod_array(vartypemod_array)
@@ -174,8 +173,6 @@ CDXLLogicalCTAS::SerializeToDXL(CXMLSerializer *xml_serializer,
 
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelTemporary), m_is_temp_table);
-	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenRelHasOids), m_has_oids);
 
 	GPOS_ASSERT(nullptr != IMDRelation::GetStorageTypeStr(m_rel_storage_type));
 	xml_serializer->AddAttribute(

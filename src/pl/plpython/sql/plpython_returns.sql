@@ -777,7 +777,7 @@ SELECT * FROM test_return_setof_circle('[]');
 SELECT test_return_setof_circle('[]') 
 FROM gp_single_row;
 
--- From Python List of compatable values
+-- From Python List of compatible values
 SELECT test_return_setof_circle('[None, ((3,1),4), "((5,3),1)"]');
 SELECT * FROM test_return_setof_circle('[None, ((3,1),4), "((5,3),1)"]');
 SELECT test_return_setof_circle('[None, ((3,1),4), "((5,3),1)"]')

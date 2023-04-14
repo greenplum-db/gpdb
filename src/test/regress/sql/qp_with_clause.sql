@@ -21,6 +21,8 @@ DROP TABLE IF EXISTS countrylanguage cascade;
 
 --end_ignore
 
+SET optimizer_trace_fallback=on;
+
 BEGIN;
 
 --SET client_encoding = 'LATIN1';
@@ -8133,16 +8135,6 @@ CREATE TABLE countrylanguage_ao (
     percentage real NOT NULL
 ) with (appendonly=true) distributed by (countrycode,language);
 
-ALTER TABLE ONLY city_ao
-    ADD CONSTRAINT city_ao_pkey PRIMARY KEY (id);
-
-ALTER TABLE ONLY country_ao
-    ADD CONSTRAINT country_ao_pkey PRIMARY KEY (code);
-
-ALTER TABLE ONLY countrylanguage_ao
-    ADD CONSTRAINT countrylanguage_ao_pkey PRIMARY KEY (countrycode, "language");
-
-
 create index bitmap_city_ao_countrycode on city_ao using bitmap(countrycode);
 create index bitmap_country_ao_gf on country_ao using bitmap(governmentform);
 create index bitmap_country_ao_region on country_ao using bitmap(region);
@@ -8619,16 +8611,6 @@ CREATE TABLE countrylanguage_co (
     isofficial boolean NOT NULL,
     percentage real NOT NULL
 ) with (appendonly=true,orientation=column) distributed by (countrycode,language);
-
-ALTER TABLE ONLY city_co
-    ADD CONSTRAINT city_co_pkey PRIMARY KEY (id);
-
-ALTER TABLE ONLY country_co
-    ADD CONSTRAINT country_co_pkey PRIMARY KEY (code);
-
-ALTER TABLE ONLY countrylanguage_co
-    ADD CONSTRAINT countrylanguage_co_pkey PRIMARY KEY (countrycode, "language");
-
 
 create index bitmap_city_co_countrycode on city_co using bitmap(countrycode);
 create index bitmap_country_co_gf on country_co using bitmap(governmentform);
@@ -10367,3 +10349,5 @@ SELECT * FROM c as c1, zoo WHERE zoo.c = c1.b;
 -- start_ignore
 drop schema qp_with_clause cascade;
 -- end_ignore
+
+RESET optimizer_trace_fallback;

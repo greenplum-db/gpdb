@@ -364,6 +364,32 @@ ExecBuildProjectionInfo(List *targetList,
 						PlanState *parent,
 						TupleDesc inputDesc)
 {
+	return ExecBuildProjectionInfoExt(targetList,
+									  econtext,
+									  slot,
+									  true,
+									  parent,
+									  inputDesc);
+}
+
+/*
+ *		ExecBuildProjectionInfoExt
+ *
+ * As above, with one additional option.
+ *
+ * If assignJunkEntries is true (the usual case), resjunk entries in the tlist
+ * are not handled specially: they are evaluated and assigned to the proper
+ * column of the result slot.  If assignJunkEntries is false, resjunk entries
+ * are evaluated, but their result is discarded without assignment.
+ */
+ProjectionInfo *
+ExecBuildProjectionInfoExt(List *targetList,
+						   ExprContext *econtext,
+						   TupleTableSlot *slot,
+						   bool assignJunkEntries,
+						   PlanState *parent,
+						   TupleDesc inputDesc)
+{
 	ProjectionInfo *projInfo = makeNode(ProjectionInfo);
 	ExprState  *state;
 	ExprEvalStep scratch = {0};
@@ -400,7 +426,8 @@ ExecBuildProjectionInfo(List *targetList,
 		 */
 		if (tle->expr != NULL &&
 			IsA(tle->expr, Var) &&
-			((Var *) tle->expr)->varattno > 0)
+			((Var *) tle->expr)->varattno > 0 &&
+			(assignJunkEntries || !tle->resjunk))
 		{
 			/* Non-system Var, but how safe is it? */
 			variable = (Var *) tle->expr;
@@ -463,6 +490,10 @@ ExecBuildProjectionInfo(List *targetList,
 			 */
 			ExecInitExprRec(tle->expr, state,
 							&state->resvalue, &state->resnull);
+
+			/* This makes it easy to discard resjunk results when told to. */
+			if (!assignJunkEntries && tle->resjunk)
+				continue;
 
 			/*
 			 * Column might be referenced multiple times in upper nodes, so
@@ -835,25 +866,7 @@ ExecInitExprRec(Expr *node, ExprState *state,
 
 		case T_GroupId:
 			{
-				if (state->parent && IsA(state->parent, HashJoinState))
-				{
-					/*
-					 * GPDB_95_MERGE_FIXME: GPDB may choose a HashJoin to combine multiple
-					 * aggregations in targetlist, however, for queries with multiple
-					 * groups, the HashJoin combination will not be taken. For a single
-					 * group, the GROUP_ID() function should always return 0
-					 *
-					 * GPDB_12_MERGE_FIXME: Does GPDB still do that? I think that was
-					 * the old way of construting multi-DQA plans, but now we use the
-					 * TupleSplit node for it.
-					 */
-					scratch.opcode = EEOP_CONST;
-					scratch.d.constval.value = Int32GetDatum(0);
-					scratch.d.constval.isnull = false;
-
-					ExprEvalPushStep(state, &scratch);
-				}
-				else if (!state->parent || !IsA(state->parent, AggState) || !IsA(state->parent->plan, Agg))
+				if (!state->parent || !IsA(state->parent, AggState) || !IsA(state->parent->plan, Agg))
 					elog(ERROR, "parent of GROUP_ID is not Agg node");
 				else
 				{
@@ -1222,7 +1235,7 @@ ExecInitExprRec(Expr *node, ExprState *state,
 				scratch.opcode = EEOP_FIELDSELECT;
 				scratch.d.fieldselect.fieldnum = fselect->fieldnum;
 				scratch.d.fieldselect.resulttype = fselect->resulttype;
-				scratch.d.fieldselect.argdesc = NULL;
+				scratch.d.fieldselect.rowcache.cacheptr = NULL;
 
 				ExprEvalPushStep(state, &scratch);
 				break;
@@ -1232,7 +1245,7 @@ ExecInitExprRec(Expr *node, ExprState *state,
 			{
 				FieldStore *fstore = (FieldStore *) node;
 				TupleDesc	tupDesc;
-				TupleDesc  *descp;
+				ExprEvalRowtypeCache *rowcachep;
 				Datum	   *values;
 				bool	   *nulls;
 				int			ncolumns;
@@ -1248,9 +1261,9 @@ ExecInitExprRec(Expr *node, ExprState *state,
 				values = (Datum *) palloc(sizeof(Datum) * ncolumns);
 				nulls = (bool *) palloc(sizeof(bool) * ncolumns);
 
-				/* create workspace for runtime tupdesc cache */
-				descp = (TupleDesc *) palloc(sizeof(TupleDesc));
-				*descp = NULL;
+				/* create shared composite-type-lookup cache struct */
+				rowcachep = palloc(sizeof(ExprEvalRowtypeCache));
+				rowcachep->cacheptr = NULL;
 
 				/* emit code to evaluate the composite input value */
 				ExecInitExprRec(fstore->arg, state, resv, resnull);
@@ -1258,7 +1271,7 @@ ExecInitExprRec(Expr *node, ExprState *state,
 				/* next, deform the input tuple into our workspace */
 				scratch.opcode = EEOP_FIELDSTORE_DEFORM;
 				scratch.d.fieldstore.fstore = fstore;
-				scratch.d.fieldstore.argdesc = descp;
+				scratch.d.fieldstore.rowcache = rowcachep;
 				scratch.d.fieldstore.values = values;
 				scratch.d.fieldstore.nulls = nulls;
 				scratch.d.fieldstore.ncolumns = ncolumns;
@@ -1316,7 +1329,7 @@ ExecInitExprRec(Expr *node, ExprState *state,
 				/* finally, form result tuple */
 				scratch.opcode = EEOP_FIELDSTORE_FORM;
 				scratch.d.fieldstore.fstore = fstore;
-				scratch.d.fieldstore.argdesc = descp;
+				scratch.d.fieldstore.rowcache = rowcachep;
 				scratch.d.fieldstore.values = values;
 				scratch.d.fieldstore.nulls = nulls;
 				scratch.d.fieldstore.ncolumns = ncolumns;
@@ -1462,17 +1475,24 @@ ExecInitExprRec(Expr *node, ExprState *state,
 		case T_ConvertRowtypeExpr:
 			{
 				ConvertRowtypeExpr *convert = (ConvertRowtypeExpr *) node;
+				ExprEvalRowtypeCache *rowcachep;
+
+				/* cache structs must be out-of-line for space reasons */
+				rowcachep = palloc(2 * sizeof(ExprEvalRowtypeCache));
+				rowcachep[0].cacheptr = NULL;
+				rowcachep[1].cacheptr = NULL;
 
 				/* evaluate argument into step's result area */
 				ExecInitExprRec(convert->arg, state, resv, resnull);
 
 				/* and push conversion step */
 				scratch.opcode = EEOP_CONVERT_ROWTYPE;
-				scratch.d.convert_rowtype.convert = convert;
-				scratch.d.convert_rowtype.indesc = NULL;
-				scratch.d.convert_rowtype.outdesc = NULL;
+				scratch.d.convert_rowtype.inputtype =
+					exprType((Node *) convert->arg);
+				scratch.d.convert_rowtype.outputtype = convert->resulttype;
+				scratch.d.convert_rowtype.incache = &rowcachep[0];
+				scratch.d.convert_rowtype.outcache = &rowcachep[1];
 				scratch.d.convert_rowtype.map = NULL;
-				scratch.d.convert_rowtype.initialized = false;
 
 				ExprEvalPushStep(state, &scratch);
 				break;
@@ -1683,16 +1703,16 @@ ExecInitExprRec(Expr *node, ExprState *state,
 				{
 					/* generic record, use types of given expressions */
 					tupdesc = ExecTypeFromExprList(rowexpr->args);
+					/* ... but adopt RowExpr's column aliases */
+					ExecTypeSetColNames(tupdesc, rowexpr->colnames);
+					/* Bless the tupdesc so it can be looked up later */
+					BlessTupleDesc(tupdesc);
 				}
 				else
 				{
 					/* it's been cast to a named type, use that */
 					tupdesc = lookup_rowtype_tupdesc_copy(rowexpr->row_typeid, -1);
 				}
-				/* In either case, adopt RowExpr's column aliases */
-				ExecTypeSetColNames(tupdesc, rowexpr->colnames);
-				/* Bless the tupdesc in case it's now of type RECORD */
-				BlessTupleDesc(tupdesc);
 
 				/*
 				 * In the named-type case, the tupdesc could have more columns
@@ -2097,7 +2117,7 @@ ExecInitExprRec(Expr *node, ExprState *state,
 						 (int) ntest->nulltesttype);
 				}
 				/* initialize cache in case it's a row test */
-				scratch.d.nulltest_row.argdesc = NULL;
+				scratch.d.nulltest_row.rowcache.cacheptr = NULL;
 
 				/* first evaluate argument into result variable */
 				ExecInitExprRec(ntest->arg, state,
@@ -2486,6 +2506,7 @@ ExecComputeSlotInfo(ExprState *state, ExprEvalStep *op)
 		{
 			isfixed = true;
 			tts_ops = parent->innerops;
+			desc = ExecGetResultType(is);
 		}
 		else if (is)
 		{
@@ -2505,6 +2526,7 @@ ExecComputeSlotInfo(ExprState *state, ExprEvalStep *op)
 		{
 			isfixed = true;
 			tts_ops = parent->outerops;
+			desc = ExecGetResultType(os);
 		}
 		else if (os)
 		{
@@ -2820,11 +2842,14 @@ ExecInitSubscriptingRef(ExprEvalStep *scratch, SubscriptingRef *sbsref,
  * (We could use this in FieldStore too, but in that case passing the old
  * value is so cheap there's no need.)
  *
- * Note: it might seem that this needs to recurse, but it does not; the
- * CaseTestExpr, if any, will be directly the arg or refexpr of the top-level
- * node.  Nested-assignment situations give rise to expression trees in which
- * each level of assignment has its own CaseTestExpr, and the recursive
- * structure appears within the newvals or refassgnexpr field.
+ * Note: it might seem that this needs to recurse, but in most cases it does
+ * not; the CaseTestExpr, if any, will be directly the arg or refexpr of the
+ * top-level node.  Nested-assignment situations give rise to expression
+ * trees in which each level of assignment has its own CaseTestExpr, and the
+ * recursive structure appears within the newvals or refassgnexpr field.
+ * There is an exception, though: if the array is an array-of-domain, we will
+ * have a CoerceToDomain as the refassgnexpr, and we need to be able to look
+ * through that.
  */
 static bool
 isAssignmentIndirectionExpr(Expr *expr)
@@ -2844,6 +2869,12 @@ isAssignmentIndirectionExpr(Expr *expr)
 
 		if (sbsRef->refexpr && IsA(sbsRef->refexpr, CaseTestExpr))
 			return true;
+	}
+	else if (IsA(expr, CoerceToDomain))
+	{
+		CoerceToDomain *cd = (CoerceToDomain *) expr;
+
+		return isAssignmentIndirectionExpr(cd->arg);
 	}
 	return false;
 }
@@ -3212,7 +3243,6 @@ ExecBuildAggTrans(AggState *aggstate, AggStatePerPhase phase,
 	ExprEvalStep scratch = {0};
 	int			transno = 0;
 	int			setoff = 0;
-	bool		isCombine = DO_AGGSPLIT_COMBINE(aggstate->aggsplit);
 	LastAttnumInfo deform = {0, 0, 0};
 
 	state->expr = (Expr *) aggstate;
@@ -3261,6 +3291,7 @@ ExecBuildAggTrans(AggState *aggstate, AggStatePerPhase phase,
 		NullableDatum *strictargs = NULL;
 		bool	   *strictnulls = NULL;
 
+		bool isCombine = DO_AGGSPLIT_COMBINE(pertrans->aggref->aggsplit);
 		/*
 		 * If filter present, emit. Do so before evaluating the input, to
 		 * avoid potentially unneeded computations, or even worse, unintended
@@ -3378,8 +3409,10 @@ ExecBuildAggTrans(AggState *aggstate, AggStatePerPhase phase,
 				scratch.resnull = &trans_fcinfo->args[argno + 1].isnull;
 
 				ExprEvalPushStep(state, &scratch);
-				adjust_bailout = lappend_int(adjust_bailout,
-											 state->steps_len - 1);
+				/* don't add an adjustment unless the function is strict */
+				if (pertrans->deserialfn.fn_strict)
+					adjust_bailout = lappend_int(adjust_bailout,
+												 state->steps_len - 1);
 
 				/* restore normal settings of scratch fields */
 				scratch.resvalue = &state->resvalue;

@@ -346,30 +346,21 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	offsetof(struct pg_conn, requirepeer)},
 
 	/*
-	 * Expose gssencmode similarly to sslmode - we can still handle "disable"
-	 * and "prefer".
+	 * As with SSL, all GSS options are exposed even in builds that don't have
+	 * support.
 	 */
 	{"gssencmode", "PGGSSENCMODE", DefaultGSSMode, NULL,
-		"GSSENC-Mode", "", 7,	/* sizeof("disable") == 7 */
+		"GSSENC-Mode", "", 8,	/* sizeof("disable") == 8 */
 	offsetof(struct pg_conn, gssencmode)},
 
-#if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	/* Kerberos and GSSAPI authentication support specifying the service name */
 	{"krbsrvname", "PGKRBSRVNAME", PG_KRB_SRVNAM, NULL,
 		"Kerberos-service-name", "", 20,
 	offsetof(struct pg_conn, krbsrvname)},
-#endif
 
-#if defined(ENABLE_GSS) && defined(ENABLE_SSPI)
-
-	/*
-	 * GSSAPI and SSPI both enabled, give a way to override which is used by
-	 * default
-	 */
 	{"gsslib", "PGGSSLIB", NULL, NULL,
-		"GSS-library", "", 7,	/* sizeof("gssapi") = 7 */
+		"GSS-library", "", 7,	/* sizeof("gssapi") == 7 */
 	offsetof(struct pg_conn, gsslib)},
-#endif
 
 	{"replication", NULL, NULL, NULL,
 		"Replication", "D", 5,
@@ -521,6 +512,11 @@ pqDropConnection(PGconn *conn, bool flushInput)
 	{
 		OM_uint32	min_s;
 
+		if (conn->gcred != GSS_C_NO_CREDENTIAL)
+		{
+			gss_release_cred(&min_s, &conn->gcred);
+			conn->gcred = GSS_C_NO_CREDENTIAL;
+		}
 		if (conn->gctx)
 			gss_delete_sec_context(&min_s, &conn->gctx, GSS_C_NO_BUFFER);
 		if (conn->gtarg_nam)
@@ -540,6 +536,7 @@ pqDropConnection(PGconn *conn, bool flushInput)
 			free(conn->gss_ResultBuffer);
 			conn->gss_ResultBuffer = NULL;
 		}
+		conn->gssenc = false;
 	}
 #endif
 #ifdef ENABLE_SSPI
@@ -1335,9 +1332,9 @@ connectOptions2(PGconn *conn)
 		if (strcmp(conn->gssencmode, "require") == 0)
 		{
 			conn->status = CONNECTION_BAD;
-			printfPQExpBuffer(
-							  &conn->errorMessage,
-							  libpq_gettext("no GSSAPI support; cannot require GSSAPI\n"));
+			printfPQExpBuffer(&conn->errorMessage,
+							  libpq_gettext("gssencmode value \"%s\" invalid when GSSAPI support is not compiled in\n"),
+							  conn->gssencmode);
 			return false;
 		}
 #endif
@@ -1726,7 +1723,7 @@ useKeepalives(PGconn *conn)
 /*
  * Parse and try to interpret "value" as an integer value, and if successful,
  * store it in *result, complaining if there is any trailing garbage or an
- * overflow.
+ * overflow.  This allows any number of leading and trailing whitespaces.
  */
 static bool
 parse_int_param(const char *value, int *result, PGconn *conn,
@@ -1735,18 +1732,37 @@ parse_int_param(const char *value, int *result, PGconn *conn,
 	char	   *end;
 	long		numval;
 
+	Assert(value != NULL);
+
 	*result = 0;
 
+	/* strtol(3) skips leading whitespaces */
 	errno = 0;
 	numval = strtol(value, &end, 10);
-	if (errno == 0 && *end == '\0' && numval == (int) numval)
-	{
-		*result = numval;
-		return true;
-	}
 
+	/*
+	 * If no progress was done during the parsing or an error happened, fail.
+	 * This tests properly for overflows of the result.
+	 */
+	if (value == end || errno != 0 || numval != (int) numval)
+		goto error;
+
+	/*
+	 * Skip any trailing whitespace; if anything but whitespace remains before
+	 * the terminating character, fail
+	 */
+	while (*end != '\0' && isspace((unsigned char) *end))
+		end++;
+
+	if (*end != '\0')
+		goto error;
+
+	*result = numval;
+	return true;
+
+error:
 	appendPQExpBuffer(&conn->errorMessage,
-					  libpq_gettext("invalid integer value \"%s\" for keyword \"%s\"\n"),
+					  libpq_gettext("invalid integer value \"%s\" for connection option \"%s\"\n"),
 					  value, context);
 	return false;
 }
@@ -1985,11 +2001,6 @@ connectDBStart(PGconn *conn)
 	 */
 	resetPQExpBuffer(&conn->errorMessage);
 
-#ifdef ENABLE_GSS
-	if (conn->gssencmode[0] == 'd') /* "disable" */
-		conn->try_gss = false;
-#endif
-
 	/*
 	 * Set up to try to connect to the first host.  (Setting whichhost = -1 is
 	 * a bit of a cheat, but PQconnectPoll will advance it to 0 before
@@ -2049,7 +2060,11 @@ connectDBComplete(PGconn *conn)
 	{
 		if (!parse_int_param(conn->connect_timeout, &timeout, conn,
 							 "connect_timeout"))
+		{
+			/* mark the connection as bad to report the parsing failure */
+			conn->status = CONNECTION_BAD;
 			return 0;
+		}
 
 		if (timeout > 0)
 		{
@@ -2445,6 +2460,9 @@ keep_going:						/* We will come back to here until there is
 		/* initialize these values based on SSL mode */
 		conn->allow_ssl_try = (conn->sslmode[0] != 'd');	/* "disable" */
 		conn->wait_ssl_try = (conn->sslmode[0] == 'a'); /* "allow" */
+#endif
+#ifdef ENABLE_GSS
+		conn->try_gss = (conn->gssencmode[0] != 'd');	/* "disable" */
 #endif
 
 		reset_connection_state_machine = false;
@@ -2842,13 +2860,13 @@ keep_going:						/* We will come back to here until there is
 #ifdef ENABLE_GSS
 
 				/*
-				 * If GSSAPI is enabled and we have a ccache, try to set it up
-				 * before sending startup messages.  If it's already
+				 * If GSSAPI is enabled and we have a credential cache, try to
+				 * set it up before sending startup messages.  If it's already
 				 * operating, don't try SSL and instead just build the startup
 				 * packet.
 				 */
 				if (conn->try_gss && !conn->gctx)
-					conn->try_gss = pg_GSS_have_ccache(&conn->gcred);
+					conn->try_gss = pg_GSS_have_cred_cache(&conn->gcred);
 				if (conn->try_gss && !conn->gctx)
 				{
 					ProtocolVersion pv = pg_hton32(NEGOTIATE_GSS_CODE);
@@ -2868,7 +2886,7 @@ keep_going:						/* We will come back to here until there is
 				else if (!conn->gctx && conn->gssencmode[0] == 'r')
 				{
 					appendPQExpBuffer(&conn->errorMessage,
-									  libpq_gettext("GSSAPI encryption required, but was impossible (possibly no ccache, no server support, or using a local socket)\n"));
+									  libpq_gettext("GSSAPI encryption required but was impossible (possibly no credential cache, no server support, or using a local socket)\n"));
 					goto error_return;
 				}
 #endif
@@ -2876,11 +2894,16 @@ keep_going:						/* We will come back to here until there is
 #ifdef USE_SSL
 
 				/*
-				 * If SSL is enabled and we haven't already got it running,
-				 * request it instead of sending the startup message.
+				 * If SSL is enabled and we haven't already got encryption of
+				 * some sort running, request SSL instead of sending the
+				 * startup message.
 				 */
 				if (conn->allow_ssl_try && !conn->wait_ssl_try &&
-					!conn->ssl_in_use)
+					!conn->ssl_in_use
+#ifdef ENABLE_GSS
+					&& !conn->gssenc
+#endif
+					)
 				{
 					ProtocolVersion pv;
 
@@ -3009,6 +3032,7 @@ keep_going:						/* We will come back to here until there is
 						}
 						/* Otherwise, proceed with normal startup */
 						conn->allow_ssl_try = false;
+						/* We can proceed using this connection */
 						conn->status = CONNECTION_MADE;
 						return PGRES_POLLING_WRITING;
 					}
@@ -3042,6 +3066,19 @@ keep_going:						/* We will come back to here until there is
 				pollres = pqsecure_open_client(conn);
 				if (pollres == PGRES_POLLING_OK)
 				{
+					/*
+					 * At this point we should have no data already buffered.
+					 * If we do, it was received before we performed the SSL
+					 * handshake, so it wasn't encrypted and indeed may have
+					 * been injected by a man-in-the-middle.
+					 */
+					if (conn->inCursor != conn->inEnd)
+					{
+						appendPQExpBufferStr(&conn->errorMessage,
+											 libpq_gettext("received unencrypted data after SSL response\n"));
+						goto error_return;
+					}
+
 					/* SSL handshake done, ready to send startup packet */
 					conn->status = CONNECTION_MADE;
 					return PGRES_POLLING_WRITING;
@@ -3106,8 +3143,7 @@ keep_going:						/* We will come back to here until there is
 						 * don't hang up the socket, though.
 						 */
 						conn->try_gss = false;
-						pqDropConnection(conn, true);
-						conn->status = CONNECTION_NEEDED;
+						need_new_connection = true;
 						goto keep_going;
 					}
 
@@ -3125,6 +3161,7 @@ keep_going:						/* We will come back to here until there is
 						}
 
 						conn->try_gss = false;
+						/* We can proceed using this connection */
 						conn->status = CONNECTION_MADE;
 						return PGRES_POLLING_WRITING;
 					}
@@ -3141,6 +3178,19 @@ keep_going:						/* We will come back to here until there is
 				pollres = pqsecure_open_gss(conn);
 				if (pollres == PGRES_POLLING_OK)
 				{
+					/*
+					 * At this point we should have no data already buffered.
+					 * If we do, it was received before we performed the GSS
+					 * handshake, so it wasn't encrypted and indeed may have
+					 * been injected by a man-in-the-middle.
+					 */
+					if (conn->inCursor != conn->inEnd)
+					{
+						appendPQExpBufferStr(&conn->errorMessage,
+											 libpq_gettext("received unencrypted data after GSSAPI encryption response\n"));
+						goto error_return;
+					}
+
 					/* All set for startup packet */
 					conn->status = CONNECTION_MADE;
 					return PGRES_POLLING_WRITING;
@@ -3153,8 +3203,7 @@ keep_going:						/* We will come back to here until there is
 					 * the current connection to do so, though.
 					 */
 					conn->try_gss = false;
-					pqDropConnection(conn, true);
-					conn->status = CONNECTION_NEEDED;
+					need_new_connection = true;
 					goto keep_going;
 				}
 				return pollres;
@@ -3325,14 +3374,9 @@ keep_going:						/* We will come back to here until there is
 					 */
 					if (conn->gssenc && conn->gssencmode[0] == 'p')
 					{
-						OM_uint32	minor;
-
-						/* postmaster expects us to drop the connection */
+						/* only retry once */
 						conn->try_gss = false;
-						conn->gssenc = false;
-						gss_delete_sec_context(&minor, &conn->gctx, NULL);
-						pqDropConnection(conn, true);
-						conn->status = CONNECTION_NEEDED;
+						need_new_connection = true;
 						goto keep_going;
 					}
 #endif
@@ -3871,23 +3915,30 @@ makeEmptyPGconn(void)
 #ifdef WIN32
 
 	/*
-	 * Make sure socket support is up and running.
+	 * Make sure socket support is up and running in this process.
+	 *
+	 * Note: the Windows documentation says that we should eventually do a
+	 * matching WSACleanup() call, but experience suggests that that is at
+	 * least as likely to cause problems as fix them.  So we don't.
 	 */
-	WSADATA		wsaData;
+	static bool wsastartup_done = false;
 
-	if (WSAStartup(MAKEWORD(1, 1), &wsaData))
-		return NULL;
+	if (!wsastartup_done)
+	{
+		WSADATA		wsaData;
+
+		if (WSAStartup(MAKEWORD(1, 1), &wsaData) != 0)
+			return NULL;
+		wsastartup_done = true;
+	}
+
+	/* Forget any earlier error */
 	WSASetLastError(0);
-#endif
+#endif							/* WIN32 */
 
 	conn = (PGconn *) malloc(sizeof(PGconn));
 	if (conn == NULL)
-	{
-#ifdef WIN32
-		WSACleanup();
-#endif
 		return conn;
-	}
 
 	/* Zero all pointers and booleans */
 	MemSet(conn, 0, sizeof(PGconn));
@@ -3907,9 +3958,6 @@ makeEmptyPGconn(void)
 	conn->verbosity = PQERRORS_DEFAULT;
 	conn->show_context = PQSHOW_CONTEXT_ERRORS;
 	conn->sock = PGINVALID_SOCKET;
-#ifdef ENABLE_GSS
-	conn->try_gss = true;
-#endif
 
 	/*
 	 * We try to send at least 8K at a time, which is the usual size of pipe
@@ -4051,36 +4099,16 @@ freePGconn(PGconn *conn)
 		free(conn->sslcompression);
 	if (conn->requirepeer)
 		free(conn->requirepeer);
-	if (conn->connip)
-		free(conn->connip);
 	if (conn->gssencmode)
 		free(conn->gssencmode);
-#if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	if (conn->krbsrvname)
 		free(conn->krbsrvname);
-#endif
-#ifdef ENABLE_GSS
-	if (conn->gcred != GSS_C_NO_CREDENTIAL)
-	{
-		OM_uint32	minor;
-
-		gss_release_cred(&minor, &conn->gcred);
-		conn->gcred = GSS_C_NO_CREDENTIAL;
-	}
-	if (conn->gctx)
-	{
-		OM_uint32	minor;
-
-		gss_delete_sec_context(&minor, &conn->gctx, GSS_C_NO_BUFFER);
-		conn->gctx = NULL;
-	}
-#endif
-#if defined(ENABLE_GSS) && defined(ENABLE_SSPI)
 	if (conn->gsslib)
 		free(conn->gsslib);
-#endif
 	if (conn->gpqeid)			/* CDB */
 		free(conn->gpqeid);
+	if (conn->connip)
+		free(conn->connip);
 	/* Note that conn->Pfdebug is not ours to close or free */
 	if (conn->last_query)
 		free(conn->last_query);
@@ -4098,10 +4126,6 @@ freePGconn(PGconn *conn)
 	termPQExpBuffer(&conn->workBuffer);
 
 	free(conn);
-
-#ifdef WIN32
-	WSACleanup();
-#endif
 }
 
 /*
@@ -4365,7 +4389,6 @@ internal_cancel(SockAddr *raddr, int be_pid, int be_key,
 {
 	int			save_errno = SOCK_ERRNO;
 	pgsocket	tmpsock = PGINVALID_SOCKET;
-	char		sebuf[PG_STRERROR_R_BUFLEN];
 	int			maxlen;
 	struct
 	{
@@ -4485,8 +4508,25 @@ cancel_errReturn:
 	maxlen = errbufsize - strlen(errbuf) - 2;
 	if (maxlen >= 0)
 	{
-		strncat(errbuf, SOCK_STRERROR(SOCK_ERRNO, sebuf, sizeof(sebuf)),
-				maxlen);
+		/*
+		 * We can't invoke strerror here, since it's not signal-safe.  Settle
+		 * for printing the decimal value of errno.  Even that has to be done
+		 * the hard way.
+		 */
+		int			val = SOCK_ERRNO;
+		char		buf[32];
+		char	   *bufp;
+
+		bufp = buf + sizeof(buf) - 1;
+		*bufp = '\0';
+		do
+		{
+			*(--bufp) = (val % 10) + '0';
+			val /= 10;
+		} while (val > 0);
+		bufp -= 6;
+		memcpy(bufp, "error ", 6);
+		strncat(errbuf, bufp, maxlen);
 		strcat(errbuf, "\n");
 	}
 	if (tmpsock != PGINVALID_SOCKET)
@@ -5193,6 +5233,8 @@ parseServiceFile(const char *serviceFile,
 
 	while ((line = fgets(buf, sizeof(buf), f)) != NULL)
 	{
+		int			len;
+
 		linenr++;
 
 		if (strlen(line) >= sizeof(buf) - 1)
@@ -5205,16 +5247,18 @@ parseServiceFile(const char *serviceFile,
 			return 2;
 		}
 
-		/* ignore EOL at end of line */
-		if (strlen(line) && line[strlen(line) - 1] == '\n')
-			line[strlen(line) - 1] = 0;
+		/* ignore EOL at end of line, including \r in case it's a DOS file */
+		len = strlen(line);
+		while (len > 0 && (line[len - 1] == '\n' ||
+						   line[len - 1] == '\r'))
+			line[--len] = '\0';
 
 		/* ignore leading blanks */
 		while (*line && isspace((unsigned char) line[0]))
 			line++;
 
 		/* ignore comments and empty lines */
-		if (strlen(line) == 0 || line[0] == '#')
+		if (line[0] == '\0' || line[0] == '#')
 			continue;
 
 		/* Check for right groupname */
@@ -7012,9 +7056,7 @@ passwordFromFile(const char *hostname, const char *port, const char *dbname,
 {
 	FILE	   *fp;
 	struct stat stat_buf;
-
-#define LINELEN NAMEDATALEN*5
-	char		buf[LINELEN];
+	PQExpBufferData buf;
 
 	if (dbname == NULL || dbname[0] == '\0')
 		return NULL;
@@ -7070,63 +7112,81 @@ passwordFromFile(const char *hostname, const char *port, const char *dbname,
 	if (fp == NULL)
 		return NULL;
 
+	/* Use an expansible buffer to accommodate any reasonable line length */
+	initPQExpBuffer(&buf);
+
 	while (!feof(fp) && !ferror(fp))
 	{
-		char	   *t = buf,
-				   *ret,
-				   *p1,
-				   *p2;
-		int			len;
-
-		if (fgets(buf, sizeof(buf), fp) == NULL)
+		/* Make sure there's a reasonable amount of room in the buffer */
+		if (!enlargePQExpBuffer(&buf, 128))
 			break;
 
-		len = strlen(buf);
+		/* Read some data, appending it to what we already have */
+		if (fgets(buf.data + buf.len, buf.maxlen - buf.len, fp) == NULL)
+			break;
+		buf.len += strlen(buf.data + buf.len);
 
-		/* Remove trailing newline */
-		if (len > 0 && buf[len - 1] == '\n')
-		{
-			buf[--len] = '\0';
-			/* Handle DOS-style line endings, too, even when not on Windows */
-			if (len > 0 && buf[len - 1] == '\r')
-				buf[--len] = '\0';
-		}
-
-		if (len == 0)
+		/* If we don't yet have a whole line, loop around to read more */
+		if (!(buf.len > 0 && buf.data[buf.len - 1] == '\n') && !feof(fp))
 			continue;
 
-		if ((t = pwdfMatchesString(t, hostname)) == NULL ||
-			(t = pwdfMatchesString(t, port)) == NULL ||
-			(t = pwdfMatchesString(t, dbname)) == NULL ||
-			(t = pwdfMatchesString(t, username)) == NULL)
-			continue;
-
-		/* Found a match. */
-		ret = strdup(t);
-		fclose(fp);
-
-		if (!ret)
+		/* ignore comments */
+		if (buf.data[0] != '#')
 		{
-			/* Out of memory. XXX: an error message would be nice. */
-			return NULL;
+			char	   *t = buf.data;
+			int			len = buf.len;
+
+			/* Remove trailing newline */
+			if (len > 0 && t[len - 1] == '\n')
+			{
+				t[--len] = '\0';
+				/* Handle DOS-style line endings, too */
+				if (len > 0 && t[len - 1] == '\r')
+					t[--len] = '\0';
+			}
+
+			if (len > 0 &&
+				(t = pwdfMatchesString(t, hostname)) != NULL &&
+				(t = pwdfMatchesString(t, port)) != NULL &&
+				(t = pwdfMatchesString(t, dbname)) != NULL &&
+				(t = pwdfMatchesString(t, username)) != NULL)
+			{
+				/* Found a match. */
+				char	   *ret,
+						   *p1,
+						   *p2;
+
+				ret = strdup(t);
+
+				fclose(fp);
+				termPQExpBuffer(&buf);
+
+				if (!ret)
+				{
+					/* Out of memory. XXX: an error message would be nice. */
+					return NULL;
+				}
+
+				/* De-escape password. */
+				for (p1 = p2 = ret; *p1 != ':' && *p1 != '\0'; ++p1, ++p2)
+				{
+					if (*p1 == '\\' && p1[1] != '\0')
+						++p1;
+					*p2 = *p1;
+				}
+				*p2 = '\0';
+
+				return ret;
+			}
 		}
 
-		/* De-escape password. */
-		for (p1 = p2 = ret; *p1 != ':' && *p1 != '\0'; ++p1, ++p2)
-		{
-			if (*p1 == '\\' && p1[1] != '\0')
-				++p1;
-			*p2 = *p1;
-		}
-		*p2 = '\0';
-
-		return ret;
+		/* No match, reset buffer to prepare for next line. */
+		buf.len = 0;
 	}
 
 	fclose(fp);
+	termPQExpBuffer(&buf);
 	return NULL;
-
-#undef LINELEN
 }
 
 

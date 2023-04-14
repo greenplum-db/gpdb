@@ -596,6 +596,62 @@ CUtils::FScalarConstArray(CExpression *pexprArray)
 	return fAllConsts;
 }
 
+// returns if the scalar const is an array
+BOOL
+CUtils::FIsConstArray(CExpression *pexpr)
+{
+	CScalarConst *popScalarConst = CScalarConst::PopConvert(pexpr->Pop());
+	CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
+	const IMDType *expr_type = mda->RetrieveType(popScalarConst->MdidType());
+	return !IMDId::IsValid(expr_type->GetArrayTypeMdid());
+}
+
+// returns MDId for gp_percentile agg based on return type
+CMDIdGPDB *
+CUtils::GetPercentileAggMDId(CMemoryPool *mp, CExpression *pexprAggFn)
+{
+	GPOS_ASSERT(COperator::EopScalarAggFunc == pexprAggFn->Pop()->Eopid());
+
+	CScalarAggFunc *popScAggFunc =
+		CScalarAggFunc::PopConvert(pexprAggFn->Pop());
+	IMDId *arg_mdid =
+		CScalar::PopConvert((*(*pexprAggFn)[0])[0]->Pop())->MdidType();
+
+	OID oid_arg_type = CMDIdGPDB::CastMdid(arg_mdid)->Oid();
+	OID return_oid = 0;
+
+	if (popScAggFunc->FHasAmbiguousReturnType())
+	{
+		return_oid = GPDB_GP_PERCENTILE_DISC;
+	}
+	else
+	{
+		switch (oid_arg_type)
+		{
+			case GPDB_FLOAT8:
+				return_oid = GPDB_GP_PERCENTILE_CONT_FLOAT8;
+				break;
+
+			case GPDB_INTERVAL:
+				return_oid = GPDB_GP_PERCENTILE_CONT_INTERVAL;
+				break;
+
+			case GPDB_TIMESTAMP:
+				return_oid = GPDB_GP_PERCENTILE_CONT_TIMESTAMP;
+				break;
+
+			case GPDB_TIMESTAMPTZ:
+				return_oid = GPDB_GP_PERCENTILE_CONT_TIMESTAMPTZ;
+				break;
+
+			default:
+				// shouldn't come here
+				GPOS_RTL_ASSERT(!"Invalid arg type");
+		}
+	}
+	return GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, return_oid);
+}
+
 // returns if the scalar constant array has already been collapased
 BOOL
 CUtils::FScalarArrayCollapsed(CExpression *pexprArray)
@@ -680,13 +736,21 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 		return nullptr;
 	}
 
-	pmdidColType->AddRef();
-	pmdidArrType->AddRef();
 	pmdidCmpOp->AddRef();
-
 	const CMDName mdname = md_accessor->RetrieveScOp(pmdidCmpOp)->Mdname();
 	CWStringConst strOp(mdname.GetMDName()->GetBuffer());
 
+	if (pexprScalarChildren->Size() == 1)
+	{
+		(*pexprScalarChildren)[0]->AddRef();
+		CExpression *scalarCmp = CUtils::PexprScalarCmp(
+			mp, colref, (*pexprScalarChildren)[0], strOp, pmdidCmpOp);
+		pexprScalarChildren->Release();
+		return scalarCmp;
+	}
+
+	pmdidColType->AddRef();
+	pmdidArrType->AddRef();
 	CExpression *pexprArray = GPOS_NEW(mp)
 		CExpression(mp,
 					GPOS_NEW(mp) CScalarArray(mp, pmdidColType, pmdidArrType,
@@ -1377,6 +1441,32 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 		{
 			pexpr->Release();
 		}
+
+		// Here we also take into account cast equality expressions. This
+		// allows us to consider the following 2 expressions as duplicates.
+		//
+		//  1)
+		//     +--CScalarCmp (=)
+		//        |--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		//  2)
+		//     +--CScalarCmp (=)
+		//        |--CScalarCast
+		//        |  +--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		if (pexpr->Pop()->Eopid() == COperator::EopScalarCmp)
+		{
+			CExpressionArray *pdexpr =
+				CCastUtils::PdrgpexprCastEquality(mp, pexpr);
+			for (ULONG ulInner = 0; ulInner < pdexpr->Size(); ulInner++)
+			{
+				if (phsexpr->Insert((*pdexpr)[ulInner]))
+				{
+					(*pdexpr)[ulInner]->AddRef();
+				}
+			}
+			pdexpr->Release();
+		}
 	}
 
 	phsexpr->Release();
@@ -1731,16 +1821,16 @@ CUtils::PopAggFunc(
 	BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
 	IMDId *
 		pmdidResolvedReturnType,  // return type to be used if original return type is ambiguous
-	EAggfuncKind aggkind, ULongPtrArray *argtypes)
+	EAggfuncKind aggkind, ULongPtrArray *argtypes, BOOL fRepSafe)
 {
 	GPOS_ASSERT(nullptr != pmdidAggFunc);
 	GPOS_ASSERT(nullptr != pstrAggFunc);
 	GPOS_ASSERT_IMP(nullptr != pmdidResolvedReturnType,
 					pmdidResolvedReturnType->IsValid());
 
-	return GPOS_NEW(mp)
-		CScalarAggFunc(mp, pmdidAggFunc, pmdidResolvedReturnType, pstrAggFunc,
-					   is_distinct, eaggfuncstage, fSplit, aggkind, argtypes);
+	return GPOS_NEW(mp) CScalarAggFunc(
+		mp, pmdidAggFunc, pmdidResolvedReturnType, pstrAggFunc, is_distinct,
+		eaggfuncstage, fSplit, aggkind, argtypes, fRepSafe);
 }
 
 // generate an aggregate function
@@ -1760,7 +1850,7 @@ CUtils::PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 	// generate aggregate function
 	CScalarAggFunc *popScAggFunc =
 		PopAggFunc(mp, pmdidAggFunc, pstrAggFunc, is_distinct, eaggfuncstage,
-				   fSplit, nullptr, EaggfunckindNormal, argtypes);
+				   fSplit, nullptr, EaggfunckindNormal, argtypes, false);
 
 	// generate function arguments
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
@@ -1796,7 +1886,8 @@ CUtils::PexprCountStar(CMemoryPool *mp)
 	// way using MDAccessor
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(GPDB_COUNT_STAR);
+	CMDIdGPDB *mdid =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_COUNT_STAR);
 	CWStringConst *str = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("count"));
 
 	CScalarValuesList *popScalarValuesList = GPOS_NEW(mp) CScalarValuesList(mp);
@@ -1816,10 +1907,10 @@ CUtils::PexprCountStar(CMemoryPool *mp)
 						  CExpression(mp, GPOS_NEW(mp) CScalarValuesList(mp),
 									  GPOS_NEW(mp) CExpressionArray(mp)));
 
-	CScalarAggFunc *popScAggFunc =
-		PopAggFunc(mp, mdid, str, false /*is_distinct*/,
-				   EaggfuncstageGlobal /*eaggfuncstage*/, false /*fSplit*/,
-				   nullptr, EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp));
+	CScalarAggFunc *popScAggFunc = PopAggFunc(
+		mp, mdid, str, false /*is_distinct*/,
+		EaggfuncstageGlobal /*eaggfuncstage*/, false /*fSplit*/, nullptr,
+		EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp), false);
 
 	CExpression *pexprCountStar =
 		GPOS_NEW(mp) CExpression(mp, popScAggFunc, pdrgpexpr);
@@ -2439,6 +2530,13 @@ CUtils::FScalarConstBoolNull(CExpression *pexpr)
 	return false;
 }
 
+
+BOOL
+CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
+{
+	return CUtils::FScalarConst(pexpr) ||
+		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
+}
 // checks to see if the expression is a scalar const TRUE
 BOOL
 CUtils::FScalarConstTrue(CExpression *pexpr)
@@ -3626,7 +3724,6 @@ CUtils::PexprConjINDFCond(CMemoryPool *mp, CColRef2dArray *pdrgpdrgpcrInput)
 	// assemble the new scalar condition
 	CExpression *pexprScCond = nullptr;
 	const ULONG length = (*pdrgpdrgpcrInput)[0]->Size();
-	GPOS_ASSERT(0 != length);
 	GPOS_ASSERT(length == (*pdrgpdrgpcrInput)[1]->Size());
 
 	CExpressionArray *pdrgpexprInput =
@@ -4180,7 +4277,9 @@ CUtils::FEquivalanceClassesEqual(CMemoryPool *mp, CColRefSetArray *pdrgpcrsFst,
 	const ULONG ulLenSecond = pdrgpcrsSnd->Size();
 
 	if (ulLenFrst != ulLenSecond)
+	{
 		return false;
+	}
 
 	ColRefToColRefSetMap *phmcscrs = GPOS_NEW(mp) ColRefToColRefSetMap(mp);
 	for (ULONG ulFst = 0; ulFst < ulLenFrst; ulFst++)
@@ -4241,7 +4340,7 @@ CUtils::ValidateCTEProducerConsumerLocality(
 	COperator *pop = pexpr->Pop();
 	if (COperator::EopPhysicalCTEProducer == pop->Eopid())
 	{
-		// record the location (either master or segment or singleton)
+		// record the location (either coordinator or segment or singleton)
 		// where the CTE producer is being executed
 		ULONG ulCTEID = CPhysicalCTEProducer::PopConvert(pop)->UlCTEId();
 		phmulul->Insert(GPOS_NEW(mp) ULONG(ulCTEID), GPOS_NEW(mp) ULONG(eelt));
@@ -4301,9 +4400,9 @@ CUtils::ExecLocalityType(CDistributionSpec *pds)
 	{
 		CDistributionSpecSingleton *pdss =
 			CDistributionSpecSingleton::PdssConvert(pds);
-		if (pdss->FOnMaster())
+		if (pdss->FOnCoordinator())
 		{
-			eelt = EeltMaster;
+			eelt = EeltCoordinator;
 		}
 		else
 		{
@@ -4335,38 +4434,44 @@ CUtils::PexprLimit(CMemoryPool *mp, CExpression *pexpr, ULONG ulOffSet,
 		CExpression(mp, popLimit, pexpr, pexprLimitOffset, pexprLimitCount);
 }
 
-// generate part oid
-BOOL
-CUtils::FGeneratePartOid(IMDId *mdid)
-{
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel = md_accessor->RetrieveRel(mdid);
-
-	COptimizerConfig *optimizer_config =
-		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
-	BOOL fInsertSortOnRows =
-		(pmdrel->RetrieveRelStorageType() ==
-		 IMDRelation::ErelstorageAppendOnlyRows) &&
-		(optimizer_config->GetHint()->UlMinNumOfPartsToRequireSortOnInsert() <=
-		 pmdrel->PartitionCount());
-
-	return fInsertSortOnRows;
-}
-
 // check if a given operator is a ANY subquery
 BOOL
 CUtils::FAnySubquery(COperator *pop)
 {
 	GPOS_ASSERT(nullptr != pop);
 
-	BOOL fInSubquery = false;
-	if (COperator::EopScalarSubqueryAny == pop->Eopid())
-	{
-		fInSubquery = true;
-	}
+	return COperator::EopScalarSubqueryAny == pop->Eopid();
+}
 
+// check if a given operator is an EXISTS subquery
+BOOL
+CUtils::FExistsSubquery(COperator *pop)
+{
+	GPOS_ASSERT(nullptr != pop);
 
-	return fInSubquery;
+	return COperator::EopScalarSubqueryExists == pop->Eopid();
+}
+
+// check if the expression is a correlated EXISTS/ANY subquery
+BOOL
+CUtils::FCorrelatedExistsAnySubquery(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	return (CUtils::FAnySubquery(pexpr->Pop()) ||
+			CUtils::FExistsSubquery(pexpr->Pop())) &&
+		   (*pexpr)[0]->HasOuterRefs();
+}
+
+CScalarProjectElement *
+CUtils::PNthProjectElement(CExpression *pexpr, ULONG ul)
+{
+	GPOS_ASSERT(pexpr->Pop()->Eopid() == COperator::EopLogicalProject);
+
+	// Logical Project's first child is relational child and the second
+	// child is the project list. We initially get the project list and then
+	// the nth element in the project list
+	return CScalarProjectElement::PopConvert((*(*pexpr)[1])[ul]->Pop());
 }
 
 // returns the expression under the Nth project element of a CLogicalProject
@@ -4419,7 +4524,9 @@ CUtils::FExprHasAnyCrFromCrs(CExpression *pexpr, CColRefSet *pcrs)
 				CScalarProjectElement::PopConvert(pexpr->Pop());
 			colref = (CColRef *) popScalarProjectElement->Pcr();
 			if (pcrs->FMember(colref))
+			{
 				return true;
+			}
 			break;
 		}
 		case COperator::EopScalarIdent:
@@ -4428,7 +4535,9 @@ CUtils::FExprHasAnyCrFromCrs(CExpression *pexpr, CColRefSet *pcrs)
 			CScalarIdent *popScalarOp = CScalarIdent::PopConvert(pexpr->Pop());
 			colref = (CColRef *) popScalarOp->Pcr();
 			if (pcrs->FMember(colref))
+			{
 				return true;
+			}
 			break;
 		}
 		default:
@@ -4440,7 +4549,9 @@ CUtils::FExprHasAnyCrFromCrs(CExpression *pexpr, CColRefSet *pcrs)
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		if (FExprHasAnyCrFromCrs((*pexpr)[ul], pcrs))
+		{
 			return true;
+		}
 	}
 
 	return false;
@@ -4469,6 +4580,21 @@ CUtils::FHasAggWindowFunc(CExpression *pexpr)
 	return fHasAggWindowFunc;
 }
 
+
+// returns true if expression contains ordered aggregate function
+BOOL
+CUtils::FHasOrderedAggToSplit(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	CScalarAggFunc *popScAggFunc = CScalarAggFunc::PopConvert(pexpr->Pop());
+	return popScAggFunc->AggKind() == EaggfunckindOrderedSet &&
+		   (!FScalarConst((*(*pexpr)[1])[0]) ||
+			!FIsConstArray((*(*pexpr)[1])[0])) &&
+		   (FScalarIdent((*(*pexpr)[0])[0]) ||
+			CScalarIdent::FCastedScId((*(*pexpr)[0])[0]));
+}
+
 BOOL
 CUtils::FCrossJoin(CExpression *pexpr)
 {
@@ -4480,7 +4606,9 @@ CUtils::FCrossJoin(CExpression *pexpr)
 		GPOS_ASSERT(3 == pexpr->Arity());
 		CExpression *pexprPred = (*pexpr)[2];
 		if (CUtils::FScalarConstTrue(pexprPred))
+		{
 			fCrossJoin = true;
+		}
 	}
 	return fCrossJoin;
 }
@@ -4680,7 +4808,9 @@ CUtils::PexprMatchEqualityOrINDF(
 	}
 
 	if (nullptr != pexprMatching)
+	{
 		return CCastUtils::PexprWithoutBinaryCoercibleCasts(pexprMatching);
+	}
 	return pexprMatching;
 }
 

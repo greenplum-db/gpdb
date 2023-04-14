@@ -22,5 +22,5 @@ Greenplum Database provides functions for formatting fixed-width data, but you m
 -   **[Examples: Read Fixed-Width Data](../../load/topics/g-examples-read-fixed-width-data.html)**  
 
 
-**Parent topic:**[Loading and Writing Non-HDFS Custom Data](../../load/topics/g-loading-and-writing-non-hdfs-custom-data.html)
+**Parent topic:** [Loading and Writing Non-HDFS Custom Data](../../load/topics/g-loading-and-writing-non-hdfs-custom-data.html)
 

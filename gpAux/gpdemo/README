@@ -37,7 +37,7 @@ RUNNING GP DEMO
 
 3. Source greenplum_path.sh
 
-	. /usr/local/greenplum-db/greenplum_path.sh
+	. /usr/local/gpdb/greenplum_path.sh
 
    Note: There is a space between the dot and the slash.
 

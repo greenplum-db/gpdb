@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Plan Id="0" SpaceSize="0">
-    <dxl:PhysicalCTAS Schema="bla" Name="r" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="2" VarTypeModList="9">
+    <dxl:PhysicalCTAS Schema="bla" Name="r" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="2" VarTypeModList="9">
       <dxl:Properties>
         <dxl:Cost StartupCost="1.005" TotalCost="5.8" Rows="10" Width="8"/>
       </dxl:Properties>

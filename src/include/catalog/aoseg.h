@@ -17,11 +17,32 @@
 #ifndef AOSEG_H
 #define AOSEG_H
 
+#include "access/appendonlytid.h"
 #include "storage/lock.h"
+#include "gp_fastsequence.h"
 
 /*
  * aoseg.c prototypes
  */
 extern void AlterTableCreateAoSegTable(Oid relOid);
+
+/*
+ * Given the aosegrel oid and segno for an append-optimized table, populate the
+ * provided BlockSequence.
+ */
+static inline void
+AOSegment_PopulateBlockSequence(BlockSequence *sequence,
+								Oid segrelid,
+								int segno)
+{
+	int64 lastSequence = ReadLastSequence(segrelid, segno);
+
+	Assert(sequence);
+	Assert(OidIsValid(segrelid));
+	Assert(segno >= 0 && segno <= AOTupleId_MaxSegmentFileNum);
+
+	sequence->startblknum = AOSegmentGet_startHeapBlock(segno);
+	FastSequenceGetNumHeapBlocks(lastSequence, &sequence->nblocks);
+}
 
 #endif   /* AOSEG_H */

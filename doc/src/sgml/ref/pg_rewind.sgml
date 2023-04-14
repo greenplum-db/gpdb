@@ -68,12 +68,10 @@ PostgreSQL documentation
    shut down soon after the divergence, this is not a problem, but if the
    target cluster ran for a long time after the divergence, the old WAL
    files might no longer be present. In that case, they can be manually
-   copied from the WAL archive to the <filename>pg_wal</filename> directory, or
-   fetched on startup by configuring <xref linkend="guc-primary-conninfo"/> or
-   <xref linkend="guc-restore-command"/>.  The use of
-   <application>pg_rewind</application> is not limited to failover, e.g.  a standby
-   server can be promoted, run some write transactions, and then rewinded
-   to become a standby again.
+   copied from the WAL archive to the <filename>pg_wal</filename> directory.
+   The use of <application>pg_rewind</application> is not limited to
+   failover, e.g., a standby server can be promoted, run some write
+   transactions, and then rewound to become a standby again.
   </para>
 
   <para>
@@ -197,8 +195,8 @@ PostgreSQL documentation
         to be written safely to disk.  This option causes
         <command>pg_rewind</command> to return without waiting, which is
         faster, but means that a subsequent operating system crash can leave
-        the synchronized data folder corrupt.  Generally, this option is
-        useful for testing but should not be used when creating a production
+        the data directory corrupt.  Generally, this option is useful for
+        testing but should not be used when creating a production
         installation.
        </para>
       </listitem>
@@ -252,8 +250,8 @@ PostgreSQL documentation
 
   <para>
    The environment variable <envar>PG_COLOR</envar> specifies whether to use
-   color in diagnostics messages.  Possible values are
-   <literal>always</literal>, <literal>auto</literal>,
+   color in diagnostic messages. Possible values are
+   <literal>always</literal>, <literal>auto</literal> and
    <literal>never</literal>.
   </para>
  </refsect1>
@@ -286,7 +284,7 @@ GRANT EXECUTE ON function pg_catalog.pg_read_binary_file(text, bigint, bigint, b
   </para>
 
   <refsect2>
-   <title>How it works</title>
+   <title>How It Works</title>
 
    <para>
     The basic idea is to copy all file system-level changes from the source

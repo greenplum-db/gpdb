@@ -18,7 +18,7 @@ When you set `SEGMENT REJECT LIMIT`, Greenplum scans the external data in single
 
 ```
 
-**Note:** When loading data with the `COPY` command or an external table, the value of the server configuration parameter `gp_initial_bad_row_limit` limits the initial number of rows that are processed that are not formatted properly. The default is to stop processing if the first 1000 rows contain formatting errors. See the *Greenplum Database Reference Guide* for information about the parameter.
+> **Note** When loading data with the `COPY` command or an external table, the value of the server configuration parameter `gp_initial_bad_row_limit` limits the initial number of rows that are processed that are not formatted properly. The default is to stop processing if the first 1000 rows contain formatting errors. See the *Greenplum Database Reference Guide* for information about the parameter.
 
 -   **[Define an External Table with Single Row Error Isolation](../../load/topics/g-define-an-external-table-with-single-row-error-isolation.html)**  
 
@@ -29,5 +29,5 @@ When you set `SEGMENT REJECT LIMIT`, Greenplum scans the external data in single
 -   **[Moving Data between Tables](../../load/topics/g-moving-data-between-tables.html)**  
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

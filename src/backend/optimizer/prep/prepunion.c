@@ -592,7 +592,6 @@ generate_union_paths(SetOperationStmt *op, PlannerInfo *root,
 	List	   *tlist_list;
 	List	   *tlist;
 	Path	   *path;
-	GpSetOpType optype = PSETOP_NONE; /* CDB */
 
 	/*
 	 * If plain UNION, tell children to fetch all tuples.
@@ -656,31 +655,11 @@ generate_union_paths(SetOperationStmt *op, PlannerInfo *root,
 	result_rel->reltarget = create_pathtarget(root, tlist);
 	result_rel->consider_parallel = consider_parallel;
 
-
-	/* GPDB_96_MERGE_FIXME: We should use the new pathified upper planner
-	 * infrastructure for this. I think we should create multiple Paths,
-	 * representing different kinds of PSETOP_* implementations, and
-	 * let the "add_path()" choose the cheapest one.
-	 */
-	/* CDB: Decide on approach, condition argument plans to suit. */
-	if ( Gp_role == GP_ROLE_DISPATCH )
-	{
-		optype = choose_setop_type(pathlist);
-		adjust_setop_arguments(root, pathlist, tlist_list, optype);
-	}
-	else if (Gp_role == GP_ROLE_UTILITY ||
-		Gp_role == GP_ROLE_EXECUTE) /* MPP-2928 */
-	{
-		optype = PSETOP_SEQUENTIAL_QD;
-	}
-
 	/*
 	 * Append the child results together.
 	 */
 	path = (Path *) create_append_path(root, result_rel, pathlist, NIL,
 									   NIL, NULL, 0, false, NIL, -1);
-	// GPDB_96_MERGE_FIXME: Where should this go now?
-	//mark_append_locus(plan, optype); /* CDB: Mark the plan result locus. */
 
 	/*
 	 * For UNION ALL, we just need the Append path.  For UNION, need to add
@@ -688,7 +667,7 @@ generate_union_paths(SetOperationStmt *op, PlannerInfo *root,
 	 */
 	if (!op->all)
 	{
-		if ( optype == PSETOP_PARALLEL_PARTITIONED )
+		if (CdbPathLocus_IsPartitioned(path->locus))
 		{
 			/* CDB: Hash motion to collocate non-distinct tuples. */
 			path = make_motion_hash_all_targets(root, path, tlist);
@@ -1330,13 +1309,9 @@ generate_setop_tlist(List *colTypes, List *colCollations,
 		 * will reach the executor without any further processing.
 		 */
 		if (exprCollation(expr) != colColl)
-		{
-			expr = (Node *) makeRelabelType((Expr *) expr,
-											exprType(expr),
-											exprTypmod(expr),
-											colColl,
-											COERCE_IMPLICIT_CAST);
-		}
+			expr = applyRelabelType(expr,
+									exprType(expr), exprTypmod(expr), colColl,
+									COERCE_IMPLICIT_CAST, -1, false);
 
 		tle = makeTargetEntry((Expr *) expr,
 							  (AttrNumber) resno++,

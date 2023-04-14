@@ -73,35 +73,4 @@ AS
    SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
 LANGUAGE SQL EXECUTE ON COORDINATOR;
 
--- pg_switch_wal wrapper functions to switch WAL segment files on Greenplum cluster-wide
-CREATE FUNCTION gp_switch_wal_on_all_segments (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
-RETURNS SETOF RECORD AS
-$$
-DECLARE
-  seg_id int;
-BEGIN
-  EXECUTE 'select pg_catalog.gp_execution_segment()' INTO seg_id;
-  -- check if execute in entrydb QE to prevent giving wrong results
-  IF seg_id = -1 THEN
-    RAISE EXCEPTION 'Cannot execute in entrydb, this query is not currently supported by GPDB.';
-  END IF;
-  RETURN QUERY SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal();
-END;
-$$ LANGUAGE plpgsql EXECUTE ON ALL SEGMENTS;
-
-CREATE FUNCTION gp_switch_wal (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
-RETURNS SETOF RECORD
-AS
-  'SELECT * FROM pg_catalog.gp_switch_wal_on_all_segments()
-   UNION ALL
-   SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal()'
-LANGUAGE SQL EXECUTE ON COORDINATOR;
-
-COMMENT ON FUNCTION pg_catalog.gp_switch_wal_on_all_segments() IS 'Switch WAL segment files on all primary segments';
-COMMENT ON FUNCTION pg_catalog.gp_switch_wal() IS 'Switch WAL segment files on all segments';
-
-REVOKE EXECUTE ON FUNCTION gp_switch_wal_on_all_segments() FROM public;
-REVOKE EXECUTE ON FUNCTION gp_switch_wal() FROM public;
-
-
 RESET log_min_messages;

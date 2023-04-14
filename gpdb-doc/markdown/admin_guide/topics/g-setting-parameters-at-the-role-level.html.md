@@ -10,5 +10,5 @@ Use `ALTER ROLE` to set a parameter at the role level. For example:
 
 When you set a session parameter at the role level, every session initiated by that role uses that parameter setting. Settings at the role level override settings at the database level.
 
-**Parent topic:**[Setting a Master Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
+**Parent topic:** [Setting a Coordinator Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
 

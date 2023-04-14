@@ -34,11 +34,11 @@
 #include "access/htup.h"
 #include "access/htup_details.h"
 #include "access/bitmap.h"		/* XXX: remove once pull_stream is generic */
+#include "common/hashfn.h"
 #include "executor/instrument.h"	/* Instrumentation */
 #include "nodes/tidbitmap.h"
 #include "storage/lwlock.h"
 #include "utils/dsa.h"
-#include "utils/hashutils.h"
 
 #define WORDNUM(x)	((x) / TBM_BITS_PER_BITMAPWORD)
 #define BITNUM(x)	((x) % TBM_BITS_PER_BITMAPWORD)

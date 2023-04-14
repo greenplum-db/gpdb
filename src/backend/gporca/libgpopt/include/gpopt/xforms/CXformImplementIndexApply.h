@@ -96,11 +96,15 @@ public:
 		CPhysicalNLJoin *pop = nullptr;
 
 		if (CLogicalIndexApply::PopConvert(pexpr->Pop())->FouterJoin())
+		{
 			pop = GPOS_NEW(mp) CPhysicalLeftOuterIndexNLJoin(
 				mp, colref_array, indexApply->OrigJoinPred());
+		}
 		else
+		{
 			pop = GPOS_NEW(mp) CPhysicalInnerIndexNLJoin(
 				mp, colref_array, indexApply->OrigJoinPred());
+		}
 
 		CExpression *pexprResult = GPOS_NEW(mp)
 			CExpression(mp, pop, pexprOuter, pexprInner, pexprScalar);

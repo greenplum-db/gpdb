@@ -3125,13 +3125,15 @@ FastPathGetRelationLockEntry(LOCALLOCK *locallock)
  * The result array is palloc'd and is terminated with an invalid VXID.
  * *countp, if not null, is updated to the number of items set.
  *
- * Of course, the result could be out of date by the time it's returned,
- * so use of this function has to be thought about carefully.
+ * Of course, the result could be out of date by the time it's returned, so
+ * use of this function has to be thought about carefully.  Similarly, a
+ * PGPROC with no "lxid" will be considered non-conflicting regardless of any
+ * lock it holds.  Existing callers don't care about a locker after that
+ * locker's pg_xact updates complete.  CommitTransaction() clears "lxid" after
+ * pg_xact updates and before releasing locks.
  *
  * Note we never include the current xact's vxid in the result array,
- * since an xact never blocks itself.  Also, prepared transactions are
- * ignored, which is a bit more debatable but is appropriate for current
- * uses of the result.
+ * since an xact never blocks itself.
  */
 VirtualTransactionId *
 GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode, int *countp)
@@ -3156,19 +3158,21 @@ GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode, int *countp)
 
 	/*
 	 * Allocate memory to store results, and fill with InvalidVXID.  We only
-	 * need enough space for MaxBackends + a terminator, since prepared xacts
-	 * don't count. InHotStandby allocate once in TopMemoryContext.
+	 * need enough space for MaxBackends + max_prepared_xacts + a terminator.
+	 * InHotStandby allocate once in TopMemoryContext.
 	 */
 	if (InHotStandby)
 	{
 		if (vxids == NULL)
 			vxids = (VirtualTransactionId *)
 				MemoryContextAlloc(TopMemoryContext,
-								   sizeof(VirtualTransactionId) * (MaxBackends + 1));
+								   sizeof(VirtualTransactionId) *
+								   (MaxBackends + max_prepared_xacts + 1));
 	}
 	else
 		vxids = (VirtualTransactionId *)
-			palloc0(sizeof(VirtualTransactionId) * (MaxBackends + 1));
+			palloc0(sizeof(VirtualTransactionId) *
+					(MaxBackends + max_prepared_xacts + 1));
 
 	/* Compute hash code and partition lock, and look up conflicting modes. */
 	hashcode = LockTagHashCode(locktag);
@@ -3243,13 +3247,9 @@ GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode, int *countp)
 				/* Conflict! */
 				GET_VXID_FROM_PGPROC(vxid, *proc);
 
-				/*
-				 * If we see an invalid VXID, then either the xact has already
-				 * committed (or aborted), or it's a prepared xact.  In either
-				 * case we may ignore it.
-				 */
 				if (VirtualTransactionIdIsValid(vxid))
 					vxids[count++] = vxid;
+				/* else, xact already committed or aborted */
 
 				/* No need to examine remaining slots. */
 				break;
@@ -3308,11 +3308,6 @@ GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode, int *countp)
 
 				GET_VXID_FROM_PGPROC(vxid, *proc);
 
-				/*
-				 * If we see an invalid VXID, then either the xact has already
-				 * committed (or aborted), or it's a prepared xact.  In either
-				 * case we may ignore it.
-				 */
 				if (VirtualTransactionIdIsValid(vxid))
 				{
 					int			i;
@@ -3324,6 +3319,7 @@ GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode, int *countp)
 					if (i >= fast_count)
 						vxids[count++] = vxid;
 				}
+				/* else, xact already committed or aborted */
 			}
 		}
 
@@ -3333,7 +3329,7 @@ GetLockConflicts(const LOCKTAG *locktag, LOCKMODE lockmode, int *countp)
 
 	LWLockRelease(partitionLock);
 
-	if (count > MaxBackends)	/* should never happen */
+	if (count > MaxBackends + max_prepared_xacts)	/* should never happen */
 		elog(PANIC, "too many conflicting locks found");
 
 	vxids[count].backendId = InvalidBackendId;
@@ -3436,6 +3432,102 @@ LockRefindAndRelease(LockMethod lockMethodTable, PGPROC *proc,
 		FastPathStrongRelationLocks->count[fasthashcode]--;
 		SpinLockRelease(&FastPathStrongRelationLocks->mutex);
 	}
+}
+
+/*
+ * CheckForSessionAndXactLocks
+ *		Check to see if transaction holds both session-level and xact-level
+ *		locks on the same object; if so, throw an error.
+ *
+ * If we have both session- and transaction-level locks on the same object,
+ * PREPARE TRANSACTION must fail.  This should never happen with regular
+ * locks, since we only take those at session level in some special operations
+ * like VACUUM.  It's possible to hit this with advisory locks, though.
+ *
+ * It would be nice if we could keep the session hold and give away the
+ * transactional hold to the prepared xact.  However, that would require two
+ * PROCLOCK objects, and we cannot be sure that another PROCLOCK will be
+ * available when it comes time for PostPrepare_Locks to do the deed.
+ * So for now, we error out while we can still do so safely.
+ *
+ * Since the LOCALLOCK table stores a separate entry for each lockmode,
+ * we can't implement this check by examining LOCALLOCK entries in isolation.
+ * We must build a transient hashtable that is indexed by locktag only.
+ */
+static void
+CheckForSessionAndXactLocks(void)
+{
+	typedef struct
+	{
+		LOCKTAG		lock;		/* identifies the lockable object */
+		bool		sessLock;	/* is any lockmode held at session level? */
+		bool		xactLock;	/* is any lockmode held at xact level? */
+	} PerLockTagEntry;
+
+	HASHCTL		hash_ctl;
+	HTAB	   *lockhtab;
+	HASH_SEQ_STATUS status;
+	LOCALLOCK  *locallock;
+
+	/* Create a local hash table keyed by LOCKTAG only */
+	hash_ctl.keysize = sizeof(LOCKTAG);
+	hash_ctl.entrysize = sizeof(PerLockTagEntry);
+	hash_ctl.hcxt = CurrentMemoryContext;
+
+	lockhtab = hash_create("CheckForSessionAndXactLocks table",
+						   256, /* arbitrary initial size */
+						   &hash_ctl,
+						   HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
+
+	/* Scan local lock table to find entries for each LOCKTAG */
+	hash_seq_init(&status, LockMethodLocalHash);
+
+	while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
+	{
+		LOCALLOCKOWNER *lockOwners = locallock->lockOwners;
+		PerLockTagEntry *hentry;
+		bool		found;
+		int			i;
+
+		/*
+		 * Ignore VXID locks.  We don't want those to be held by prepared
+		 * transactions, since they aren't meaningful after a restart.
+		 */
+		if (locallock->tag.lock.locktag_type == LOCKTAG_VIRTUALTRANSACTION)
+			continue;
+
+		/* Ignore it if we don't actually hold the lock */
+		if (locallock->nLocks <= 0)
+			continue;
+
+		/* Otherwise, find or make an entry in lockhtab */
+		hentry = (PerLockTagEntry *) hash_search(lockhtab,
+												 (void *) &locallock->tag.lock,
+												 HASH_ENTER, &found);
+		if (!found)				/* initialize, if newly created */
+			hentry->sessLock = hentry->xactLock = false;
+
+		/* Scan to see if we hold lock at session or xact level or both */
+		for (i = locallock->numLockOwners - 1; i >= 0; i--)
+		{
+			if (lockOwners[i].owner == NULL)
+				hentry->sessLock = true;
+			else
+				hentry->xactLock = true;
+		}
+
+		/*
+		 * We can throw error immediately when we see both types of locks; no
+		 * need to wait around to see if there are more violations.
+		 */
+		if (hentry->sessLock && hentry->xactLock)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot PREPARE while holding both session-level and transaction-level locks on the same object")));
+	}
+
+	/* Success, so clean up */
+	hash_destroy(lockhtab);
 }
 
 /*
@@ -3542,11 +3634,10 @@ PrePrepare_Locks(void)
  *
  * Session-level locks are ignored, as are VXID locks.
  *
- * There are some special cases that we error out on: we can't be holding any
- * locks at both session and transaction level (since we must either keep or
- * give away the PROCLOCK object), and we can't be holding any locks on
- * temporary objects (since that would mess up the current backend if it tries
- * to exit before the prepared xact is committed).
+ * For the most part, we don't need to touch shared memory for this ---
+ * all the necessary state information is in the locallock table.
+ * Fast-path locks are an exception, however: we move any such locks to
+ * the main table before allowing PREPARE TRANSACTION to succeed.
  */
 void
 AtPrepare_Locks(void)
@@ -3554,12 +3645,10 @@ AtPrepare_Locks(void)
 	HASH_SEQ_STATUS status;
 	LOCALLOCK  *locallock;
 
-	/*
-	 * For the most part, we don't need to touch shared memory for this ---
-	 * all the necessary state information is in the locallock table.
-	 * Fast-path locks are an exception, however: we move any such locks to
-	 * the main table before allowing PREPARE TRANSACTION to succeed.
-	 */
+	/* First, verify there aren't locks of both xact and session level */
+	CheckForSessionAndXactLocks();
+
+	/* Now do the per-locallock cleanup work */
 	hash_seq_init(&status, LockMethodLocalHash);
 
 	while ((locallock = (LOCALLOCK *) hash_seq_search(&status)) != NULL)
@@ -3595,19 +3684,7 @@ AtPrepare_Locks(void)
 		if (!haveXactLock)
 			continue;
 
-		/*
-		 * If we have both session- and transaction-level locks, fail.  This
-		 * should never happen with regular locks, since we only take those at
-		 * session level in some special operations like VACUUM.  It's
-		 * possible to hit this with advisory locks, though.
-		 *
-		 * It would be nice if we could keep the session hold and give away
-		 * the transactional hold to the prepared xact.  However, that would
-		 * require two PROCLOCK objects, and we cannot be sure that another
-		 * PROCLOCK will be available when it comes time for PostPrepare_Locks
-		 * to do the deed.  So for now, we error out while we can still do so
-		 * safely.
-		 */
+		/* This can't happen, because we already checked it */
 		if (haveSessionLock)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -4834,21 +4911,79 @@ VirtualXactLockTableCleanup(void)
 }
 
 /*
+ *		XactLockForVirtualXact
+ *
+ * If TransactionIdIsValid(xid), this is essentially XactLockTableWait(xid,
+ * NULL, NULL, XLTW_None) or ConditionalXactLockTableWait(xid).  Unlike those
+ * functions, it assumes "xid" is never a subtransaction and that "xid" is
+ * prepared, committed, or aborted.
+ *
+ * If !TransactionIdIsValid(xid), this locks every prepared XID having been
+ * known as "vxid" before its PREPARE TRANSACTION.
+ */
+static bool
+XactLockForVirtualXact(VirtualTransactionId vxid,
+					   TransactionId xid, bool wait)
+{
+	bool		more = false;
+
+	/* There is no point to wait for 2PCs if you have no 2PCs. */
+	if (max_prepared_xacts == 0)
+		return true;
+
+	do
+	{
+		LockAcquireResult lar;
+		LOCKTAG		tag;
+
+		/* Clear state from previous iterations. */
+		if (more)
+		{
+			xid = InvalidTransactionId;
+			more = false;
+		}
+
+		/* If we have no xid, try to find one. */
+		if (!TransactionIdIsValid(xid))
+			xid = TwoPhaseGetXidByVirtualXID(vxid, &more);
+		if (!TransactionIdIsValid(xid))
+		{
+			Assert(!more);
+			return true;
+		}
+
+		/* Check or wait for XID completion. */
+		SET_LOCKTAG_TRANSACTION(tag, xid);
+		lar = LockAcquire(&tag, ShareLock, false, !wait);
+		if (lar == LOCKACQUIRE_NOT_AVAIL)
+			return false;
+		LockRelease(&tag, ShareLock, false);
+	} while (more);
+
+	return true;
+}
+
+/*
  *		VirtualXactLock
  *
- * If wait = true, wait until the given VXID has been released, and then
- * return true.
+ * If wait = true, wait as long as the given VXID or any XID acquired by the
+ * same transaction is still running.  Then, return true.
  *
- * If wait = false, just check whether the VXID is still running, and return
- * true or false.
+ * If wait = false, just check whether that VXID or one of those XIDs is still
+ * running, and return true or false.
  */
 bool
 VirtualXactLock(VirtualTransactionId vxid, bool wait)
 {
 	LOCKTAG		tag;
 	PGPROC	   *proc;
+	TransactionId xid = InvalidTransactionId;
 
 	Assert(VirtualTransactionIdIsValid(vxid));
+
+	if (VirtualTransactionIdIsRecoveredPreparedXact(vxid))
+		/* no vxid lock; localTransactionId is a normal, locked XID */
+		return XactLockForVirtualXact(vxid, vxid.localTransactionId, wait);
 
 	SET_LOCKTAG_VIRTUALTRANSACTION(tag, vxid);
 
@@ -4862,7 +4997,7 @@ VirtualXactLock(VirtualTransactionId vxid, bool wait)
 	 */
 	proc = BackendIdGetProc(vxid.backendId);
 	if (proc == NULL)
-		return true;
+		return XactLockForVirtualXact(vxid, InvalidTransactionId, wait);
 
 	/*
 	 * We must acquire this lock before checking the backendId and lxid
@@ -4871,12 +5006,12 @@ VirtualXactLock(VirtualTransactionId vxid, bool wait)
 	 */
 	LWLockAcquire(&proc->backendLock, LW_EXCLUSIVE);
 
-	/* If the transaction has ended, our work here is done. */
 	if (proc->backendId != vxid.backendId
 		|| proc->fpLocalTransactionId != vxid.localTransactionId)
 	{
+		/* VXID ended */
 		LWLockRelease(&proc->backendLock);
-		return true;
+		return XactLockForVirtualXact(vxid, InvalidTransactionId, wait);
 	}
 
 	/*
@@ -4923,6 +5058,16 @@ VirtualXactLock(VirtualTransactionId vxid, bool wait)
 		proc->fpVXIDLock = false;
 	}
 
+	/*
+	 * If the proc has an XID now, we'll avoid a TwoPhaseGetXidByVirtualXID()
+	 * search.  The proc might have assigned this XID but not yet locked it,
+	 * in which case the proc will lock this XID before releasing the VXID.
+	 * The backendLock critical section excludes VirtualXactLockTableCleanup(),
+	 * so we won't save an XID of a different VXID.  It doesn't matter whether
+	 * we save this before or after setting up the primary lock table entry.
+	 */
+	xid = ProcGlobal->allPgXact[proc->pgprocno].xid;
+
 	/* Done with proc->fpLockBits */
 	LWLockRelease(&proc->backendLock);
 
@@ -4930,7 +5075,7 @@ VirtualXactLock(VirtualTransactionId vxid, bool wait)
 	(void) LockAcquire(&tag, ShareLock, false, false);
 
 	LockRelease(&tag, ShareLock, false);
-	return true;
+	return XactLockForVirtualXact(vxid, xid, wait);
 }
 
 /*

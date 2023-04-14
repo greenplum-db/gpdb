@@ -2,27 +2,27 @@
 title: Starting and Stopping Greenplum Database 
 ---
 
-In a Greenplum Database DBMS, the database server instances \(the master and all segments\) are started or stopped across all of the hosts in the system in such a way that they can work together as a unified DBMS.
+In a Greenplum Database DBMS, the database server instances \(the coordinator and all segments\) are started or stopped across all of the hosts in the system in such a way that they can work together as a unified DBMS.
 
 Because a Greenplum Database system is distributed across many machines, the process for starting and stopping a Greenplum Database system is different than the process for starting and stopping a regular PostgreSQL DBMS.
 
-Use the `gpstart` and `gpstop` utilities to start and stop Greenplum Database, respectively. These utilities are located in the $GPHOME/bin directory on your Greenplum Database master host.
+Use the `gpstart` and `gpstop` utilities to start and stop Greenplum Database, respectively. These utilities are located in the $GPHOME/bin directory on your Greenplum Database coordinator host.
 
-**Important:** Do not issue a `kill` command to end any Postgres process. Instead, use the database command `pg_cancel_backend()`.
+> **Important** Do not issue a `kill` command to end any Postgres process. Instead, use the database command `pg_cancel_backend()`.
 
 Issuing a `kill -9` or `kill -11` can introduce database corruption and prevent root cause analysis from being performed.
 
 For information about `gpstart` and `gpstop`, see the *Greenplum Database Utility Guide*.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## <a id="task_hkd_gzv_fp"></a>Starting Greenplum Database 
 
-Start an initialized Greenplum Database system by running the `gpstart` utility on the master instance.
+Start an initialized Greenplum Database system by running the `gpstart` utility on the coordinator instance.
 
 Use the `gpstart` utility to start a Greenplum Database system that has already been initialized by the `gpinitsystem` utility, but has been stopped by the `gpstop` utility. The `gpstart` utility starts Greenplum Database by starting all the Postgres database instances on the Greenplum Database cluster. `gpstart` orchestrates this process and performs the process in parallel.
 
-Run `gpstart` on the master host to start Greenplum Database:
+Run `gpstart` on the coordinator host to start Greenplum Database:
 ```
 $ gpstart
 ```
@@ -34,7 +34,7 @@ Stop the Greenplum Database system and then restart it.
 
 The `gpstop` utility with the `-r` option can stop and then restart Greenplum Database after the shutdown completes.
 
-To restart Greenplum Database, enter the following command on the master host:
+To restart Greenplum Database, enter the following command on the coordinator host:
 ```
 $ gpstop -r
 ```
@@ -44,7 +44,7 @@ $ gpstop -r
 
 Reload changes to Greenplum Database configuration files without interrupting the system.
 
-The `gpstop` utility can reload changes to the pg\_hba.conf configuration file and to *runtime* parameters in the master postgresql.conf file without service interruption. Active sessions pick up changes when they reconnect to the database. Many server configuration parameters require a full system restart \(`gpstop -r`\) to activate. For information about server configuration parameters, see the *Greenplum Database Reference Guide*.
+The `gpstop` utility can reload changes to the pg\_hba.conf configuration file and to *runtime* parameters in the coordinator postgresql.conf file without service interruption. Active sessions pick up changes when they reconnect to the database. Many server configuration parameters require a full system restart \(`gpstop -r`\) to activate. For information about server configuration parameters, see the *Greenplum Database Reference Guide*.
 
 Reload configuration file changes without shutting down the Greenplum Database system using the `gpstop` utility:
 ```
@@ -52,11 +52,11 @@ $ gpstop -u
 ```
 
 
-## <a id="task_maint_mode"></a>Starting the Master in Maintenance Mode 
+## <a id="task_maint_mode"></a>Starting the Coordinator in Maintenance Mode 
 
-Start only the master to perform maintenance or administrative tasks without affecting data on the segments.
+Start only the coordinator to perform maintenance or administrative tasks without affecting data on the segments.
 
-Maintenance mode should only be used with direction from VMware Technical Support. For example, you could connect to a database only on the master instance in maintenance mode and edit system catalog settings. For more information about system catalog tables, see the *Greenplum Database Reference Guide*.
+Maintenance mode should only be used with direction from VMware Technical Support. For example, you could connect to a database only on the coordinator instance in maintenance mode and edit system catalog settings. For more information about system catalog tables, see the *Greenplum Database Reference Guide*.
 
 1.  Run `gpstart` using the -m option:
 
@@ -64,30 +64,28 @@ Maintenance mode should only be used with direction from VMware Technical Suppor
     $ gpstart -m
     ```
 
-2.  Connect to the master in maintenance mode to do catalog maintenance. For example:
+2.  Connect to the coordinator in maintenance mode to do catalog maintenance. For example:
 
      <a id="kg155401"></a>
      ``` 
      $ PGOPTIONS='-c gp_role=utility' psql postgres
      ```
 
-3.  After completing your administrative tasks, stop the master in maintenance mode. Then, restart it in production mode.
+3.  After completing your administrative tasks, stop the coordinator in maintenance mode. Then, restart it in production mode.
 
     ```
     $ gpstop -m
     $ gpstart
     ```
 
-    **Warning:**
-
-    Incorrect use of maintenance mode connections can result in an inconsistent system state. Only Technical Support should perform this operation.
+    > **Caution** Incorrect use of maintenance mode connections can result in an inconsistent system state. Only Technical Support should perform this operation.
 
 
 ## <a id="task_gpdb_stop"></a>Stopping Greenplum Database 
 
-The `gpstop` utility stops or restarts your Greenplum Database system and always runs on the master host. When activated, `gpstop` stops all `postgres` processes in the system, including the master and all segment instances. The `gpstop` utility uses a default of up to 64 parallel worker threads to bring down the Postgres instances that make up the Greenplum Database cluster. The system waits for any active transactions to finish before shutting down. If after two minutes there are still active connections, `gpstop` will prompt you to either continue waiting in smart mode, stop in fast mode, or stop in immediate mode. To stop Greenplum Database immediately, use fast mode.
+The `gpstop` utility stops or restarts your Greenplum Database system and always runs on the coordinator host. When activated, `gpstop` stops all `postgres` processes in the system, including the coordinator and all segment instances. The `gpstop` utility uses a default of up to 64 parallel worker threads to bring down the Postgres instances that make up the Greenplum Database cluster. The system waits for any active transactions to finish before shutting down. If after two minutes there are still active connections, `gpstop` will prompt you to either continue waiting in smart mode, stop in fast mode, or stop in immediate mode. To stop Greenplum Database immediately, use fast mode.
 
-**Important:** Immediate shut down mode is not recommended. This mode stops all database processes without allowing the database server to complete transaction processing or clean up any temporary or in-process work files.
+> **Important** Immediate shut down mode is not recommended. This mode stops all database processes without allowing the database server to complete transaction processing or clean up any temporary or in-process work files.
 
 -   To stop Greenplum Database:
 

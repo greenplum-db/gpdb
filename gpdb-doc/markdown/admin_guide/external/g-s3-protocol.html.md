@@ -10,7 +10,7 @@ You can define read-only external tables that use existing data files in the S3 
 
 The `s3` protocol also supports [Dell EMC Elastic Cloud Storage](https://www.emc.com/en-us/storage/ecs/index.htm) \(ECS\), an Amazon S3 compatible service.
 
-**Note:** The `pxf` protocol can access data in S3 and other object store systems such as Azure, Google Cloud Storage, and Minio. The `pxf` protocol can also access data in external Hadoop systems \(HDFS, Hive, HBase\), and SQL databases. See [pxf:// Protocol](g-pxf-protocol.html).
+> **Note** The `pxf` protocol can access data in S3 and other object store systems such as Azure, Google Cloud Storage, and Minio. The `pxf` protocol can also access data in external Hadoop systems \(HDFS, Hive, HBase\), and SQL databases. See [pxf:// Protocol](g-pxf-protocol.html).
 
 This topic contains the sections:
 
@@ -20,6 +20,7 @@ This topic contains the sections:
 -   [About Reading and Writing S3 Data Files](#section_c2f_zvs_3x)
 -   [s3 Protocol AWS Server-Side Encryption Support](#s3_serversideencrypt)
 -   [s3 Protocol Proxy Support](#s3_proxy)
+-   [About Providing the S3 Authentication Credentials](#s3_auth)
 -   [About the s3 Protocol Configuration File](#s3_config_file)
 -   [About Specifying the Configuration File Location](#s3_config_param)
 -   [s3 Protocol Limitations](#section_tsq_n3t_3x)
@@ -43,11 +44,20 @@ You must configure the `s3` protocol before you can use it. Perform these steps 
 
 2.  Declare the `s3` protocol and specify the read and write functions you created in the previous step:
 
+    To allow only Greenplum Database superusers to use the protocol, create it as follows:
+
     ```
     CREATE PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);
     ```
 
-    **Note:** The protocol name `s3` must be the same as the protocol of the URL specified for the external table that you create to access an S3 resource.
+    If you want to permit non-superusers to use the `s3` protocol, create it as a `TRUSTED` protocol and `GRANT` access to those users. For example:
+
+    ```
+    CREATE TRUSTED PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);
+    GRANT ALL ON PROTOCOL s3 TO user1, user2;
+    ```
+
+    > **Note** The protocol name `s3` must be the same as the protocol of the URL specified for the external table that you create to access an S3 resource.
 
     The corresponding function is called by every Greenplum Database segment instance.
 
@@ -64,8 +74,10 @@ Follow these basic steps to use the `s3` protocol with Greenplum Database extern
         gpcheckcloud -t > ./mytest_s3.config
         ```
 
-    2.  Edit the template file to specify the `accessid` and `secret` required to connect to the S3 location. See [About the s3 Protocol Configuration File](#s3_config_file) for information about other `s3` protocol configuration parameters.
+    2.  (Optional) Edit the template file to specify the `accessid` and `secret` authentication credentials required to connect to the S3 location. See [About Providing the S3 Authentication Credentials](#s3_auth) and [About the s3 Protocol Configuration File](#s3_config_file) for information about specifying these and other `s3` protocol configuration parameters.
 3.  Greenplum Database can access an `s3` protocol configuration file when the file is located on each segment host or when the file is served up by an `http/https` server. Identify where you plan to locate the configuration file, and note the location and configuration option \(if applicable\). Refer to [About Specifying the Configuration File Location](#s3_config_param) for more information about the location options for the file.
+
+    If you are relying on the AWS credential file to authenticate, this file must reside at `~/.aws/credentials` on each Greenplum Database segment host.
 4.  Use the `gpcheckcloud` utility to validate connectivity to the S3 bucket. You must specify the S3 endpoint name and bucket that you want to check.
 
     For example, if the `s3` protocol configuration file resides in the default location, you would run the following command:
@@ -108,16 +120,16 @@ Follow these basic steps to use the `s3` protocol with Greenplum Database extern
 When you use the `s3` protocol, you specify an S3 file location and optional configuration file location and region parameters in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command. The syntax follows:
 
 ```
-'s3://<S3_endpoint>[:<port>]/<bucket_name>/[<S3_prefix>] [region=<S3_region>] [config=<config_file_location> | config_server=<url>]'
+'s3://<S3_endpoint>[:<port>]/<bucket_name>/[<S3_prefix>] [region=<S3_region>] [config=<config_file_location> | config_server=<url>] [section=<section_name>]'
 ```
 
 The `s3` protocol requires that you specify the S3 endpoint and S3 bucket name. Each Greenplum Database segment host must have access to the S3 location. The optional S3\_prefix value is used to select files for read-only S3 tables, or as a filename prefix to use when uploading files for s3 writable tables.
 
-**Note:** The Greenplum Database `s3` protocol URL must include the S3 endpoint hostname.
+> **Note** The Greenplum Database `s3` protocol URL must include the S3 endpoint hostname.
 
 To specify an ECS endpoint \(an Amazon S3 compatible service\) in the `LOCATION` clause, you must set the `s3` protocol configuration file parameter `version` to `2`. The `version` parameter controls whether the `region` parameter is used in the `LOCATION` clause. You can also specify an Amazon S3 location when the `version` parameter is 2. For information about the `version` parameter, see [About the s3 Protocol Configuration File](#s3_config_file).
 
-**Note:** Although the S3\_prefix is an optional part of the syntax, you should always include an S3 prefix for both writable and read-only s3 tables to separate datasets as part of the [CREATE EXTERNAL TABLE](../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) syntax.
+> **Note** Although the S3\_prefix is an optional part of the syntax, you should always include an S3 prefix for both writable and read-only s3 tables to separate datasets as part of the [CREATE EXTERNAL TABLE](../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) syntax.
 
 For writable s3 tables, the `s3` protocol URL specifies the endpoint and bucket name where Greenplum Database uploads data files for the table. The S3 file prefix is used for each new file uploaded to the S3 location as a result of inserting data to the table. See [About Reading and Writing S3 Data Files](#section_c2f_zvs_3x).
 
@@ -144,6 +156,8 @@ All of the files selected by the S3 URL \(S3\_endpoint/bucket\_name/S3\_prefix\)
 For information about the Amazon S3 endpoints see [http://docs.aws.amazon.com/general/latest/gr/rande.html\#s3\_region](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region). For information about S3 buckets and folders, see the Amazon S3 documentation [https://aws.amazon.com/documentation/s3/](https://aws.amazon.com/documentation/s3/). For information about the S3 file prefix, see the Amazon S3 documentation [Listing Keys Hierarchically Using a Prefix and Delimiter](http://docs.aws.amazon.com/AmazonS3/latest/dev/ListingKeysHierarchy.html).
 
 You use the `config` or `config_server` parameter to specify the location of the required `s3` protocol configuration file that contains AWS connection credentials and communication parameters as described in [About Specifying the Configuration File Location](#s3_config_param).
+
+Use the `section` parameter to specify the name of the configuration file section from which the `s3` protocol reads configuration parameters. The default `section` is named `default`. When you specify the section name in the configuration file, enclose it in brackets (for example, `[default]`).
 
 ## <a id="section_c2f_zvs_3x"></a>About Reading and Writing S3 Data Files 
 
@@ -177,15 +191,15 @@ You can configure the buffer size and the number of threads that segments use fo
 
 Greenplum Database supports server-side encryption using Amazon S3-managed keys \(SSE-S3\) for AWS S3 files you access with readable and writable external tables created using the `s3` protocol. SSE-S3 encrypts your object data as it writes to disk, and transparently decrypts the data for you when you access it.
 
-**Note:** The `s3` protocol supports SSE-S3 only for Amazon Web Services S3 files. SS3-SE is not supported when accessing files in S3 compatible services.
+> **Note** The `s3` protocol supports SSE-S3 only for Amazon Web Services S3 files. SS3-SE is not supported when accessing files in S3 compatible services.
 
-Your S3 `accessid` and `secret` permissions govern your access to all S3 bucket objects, whether the data is encrypted or not. However, you must configure your client to use S3-managed keys for accessing encrypted data.
+Your S3 account permissions govern your access to all S3 bucket objects, whether the data is encrypted or not. However, you must configure your client to use S3-managed keys for accessing encrypted data.
 
 Refer to [Protecting Data Using Server-Side Encryption](http://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html) in the AWS documentation for additional information about AWS Server-Side Encryption.
 
 **Configuring S3 Server-Side Encryption**
 
-`s3` protocol server-side encryption is disabled by default. To take advantage of server-side encryption on AWS S3 objects you write using the Greenplum Database `s3` protocol, you must set the `server_side_encryption` configuration parameter in your `s3` protocol configuration file to the value `sse-s3`:
+`s3` protocol server-side encryption is deactivated by default. To take advantage of server-side encryption on AWS S3 objects you write using the Greenplum Database `s3` protocol, you must set the `server_side_encryption` configuration parameter in your `s3` protocol configuration file to the value `sse-s3`:
 
 ```
 
@@ -212,11 +226,18 @@ The environment variables must be set must and must be accessible to Greenplum D
 
 For information about the configuration parameter `proxy`, see [About the s3 Protocol Configuration File](#s3_config_file).
 
+## <a id="s3_auth"></a>About Providing the S3 Authentication Credentials
+
+The `s3` protocol obtains the S3 authentication credentials as follows:
+
+- You specify the S3 `accessid` and `secret` parameters and their values in a named `section` of an [s3 protocol configuration file](#s3_config_file). The default section from which the `s3` protocol obtains this information is named `[default]`.
+- If you do not specify the `accessid` and `secret`, or these parameter values are empty, the `s3` protocol attempts to obtain the S3 authentication credentials from the `aws_access_key_id` and `aws_secret_access_key` parameters specified in a named `section` of the user's AWS credential file. The default location of this file is `~/.aws/credentials`, and the default section is named `[default]`.
+
 ## <a id="s3_config_file"></a>About the s3 Protocol Configuration File 
 
-An `s3` protocol configuration file contains Amazon Web Services \(AWS\) connection credentials and communication parameters. This file is required to use the `s3` protocol.
+An `s3` protocol configuration file contains Amazon Web Services \(AWS\) connection credentials and communication parameters.
 
-The `s3` protocol configuration file is a text file that contains a `[default]` section and parameters. An example configuration file follows:
+The `s3` protocol configuration file is a text file that contains named sections and parameters. The default section is named `[default]`. An example configuration file follows:
 
 ```
 [default]
@@ -231,10 +252,10 @@ You can use the Greenplum Database `gpcheckcloud` utility to test the s3 protoco
 **s3 Configuration File Parameters**
 
 `accessid`
-:   Required. AWS S3 ID to access the S3 bucket.
+:   Optional. AWS S3 ID to access the S3 bucket. Refer to [About Providing the S3 Authentication Credentials](#s3_auth) for more information about specifying authentication credentials.
 
 `secret`
-:   Required. AWS S3 passcode for the S3 ID to access the S3 bucket.
+:   Optional. AWS S3 passcode for the S3 ID to access the S3 bucket. Refer to [About Providing the S3 Authentication Credentials](#s3_auth) for more information about specifying authentication credentials.
 
 `autocompress`
 :   For writable s3 external tables, this parameter specifies whether to compress files \(using gzip\) before uploading to S3. Files are compressed by default if you do not specify this parameter.
@@ -274,7 +295,7 @@ If this parameter is not set or is an empty string \(`proxy = ""`\), S3 uses the
 There can be at most one `proxy` parameter in the configuration file. The URL specified by the parameter is the proxy for all supported protocols.
 
 `server_side_encryption`
-:   The S3 server-side encryption method that has been configured for the bucket. Greenplum Database supports only server-side encryption with Amazon S3-managed keys, identified by the configuration parameter value `sse-s3`. Server-side encryption is disabled \(`none`\) by default.
+:   The S3 server-side encryption method that has been configured for the bucket. Greenplum Database supports only server-side encryption with Amazon S3-managed keys, identified by the configuration parameter value `sse-s3`. Server-side encryption is deactivated \(`none`\) by default.
 
 `threadnum`
 :   The maximum number of concurrent threads a segment can create when uploading data to or downloading data from the S3 bucket. The default is 4. The minimum is 1 and the maximum is 8.
@@ -287,7 +308,7 @@ There can be at most one `proxy` parameter in the configuration file. The URL sp
 
 Setting the value to `false` can be useful in testing and development environments to allow communication without changing certificates.
 
-**Warning:** Setting the value to `false` exposes a security risk by ignoring invalid credentials when establishing communication between a client and a S3 data store.
+> **Caution** Setting the value to `false` exposes a security risk by ignoring invalid credentials when establishing communication between a client and a S3 data store.
 
 `version`
 :   Specifies the version of the information specified in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command. The value is either `1` or `2`. The default value is `1`.
@@ -312,7 +333,7 @@ If `version` is 2, the `LOCATION` clause can also specify an Amazon S3 endpoint.
 LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ region=us-west-2 config=/home/gpadmin/aws_s3/s3.conf') 
 ```
 
-**Note:** Greenplum Database can require up to `threadnum * chunksize` memory on each segment host when uploading or downloading S3 files. Consider this `s3` protocol memory requirement when you configure overall Greenplum Database memory.
+> **Note** Greenplum Database can require up to `threadnum * chunksize` memory on each segment host when uploading or downloading S3 files. Consider this `s3` protocol memory requirement when you configure overall Greenplum Database memory.
 
 ## <a id="s3_config_param"></a>About Specifying the Configuration File Location 
 
@@ -436,5 +457,5 @@ Download all files from the S3 bucket location and send the output to `STDOUT`.
 gpcheckcloud -d "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"
 ```
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

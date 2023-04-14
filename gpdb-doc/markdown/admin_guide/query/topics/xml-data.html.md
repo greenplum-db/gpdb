@@ -6,7 +6,7 @@ Greenplum Database supports the `xml` data type that stores XML data.
 
 The `xml` data type checks the input values for well-formedness, providing an advantage over simply storing XML data in a text field. Additionally, support functions allow you to perform type-safe operations on this data; refer to [XML Function Reference](#topic_gn4_x3w_mq), below.
 
-Use of this data type requires the installation to have been built with `configure --with-libxml`. This is enabled by default for VMware Tanzu Greenplum builds.
+Use of this data type requires the installation to have been built with `configure --with-libxml`. This is enabled by default for VMware Greenplum builds.
 
 The `xml` type can store well-formed "documents", as defined by the XML standard, as well as "content" fragments, which are defined by reference to the more permissive [document node](https://www.w3.org/TR/2010/REC-xpath-datamodel-20101214/#DocumentNode) of the XQuery and XPath model. Roughly, this means that content fragments can have more than one top-level element or character node. The expression `xmlvalue IS DOCUMENT` can be used to evaluate whether a particular `xml` value is a full document or only a content fragment.
 
@@ -19,7 +19,7 @@ This section contains the following topics:
 -   [Mapping Tables to XML](#topic_ucn_mkp_xz)
 -   [Using XML Functions and Expressions](#topic_gn4_x3w_mq)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic_upc_tcs_fz"></a>Creating XML Values 
 
@@ -74,9 +74,7 @@ Be careful when dealing with multiple character encodings on the client, server,
 
 When using binary mode to pass query parameters to the server and query results back to the client, no character set conversion is performed, so the situation is different. In this case, an encoding declaration in the XML data will be observed, and if it is absent, the data will be assumed to be in UTF-8 \(as required by the XML standard; note that Greenplum Database does not support UTF-16\). On output, data will have an encoding declaration specifying the client encoding, unless the client encoding is UTF-8, in which case it will be omitted.
 
-**Note:**
-
-Processing XML data with Greenplum Database will be less error-prone and more efficient if the XML data encoding, client encoding, and server encoding are the same. Because XML data is internally processed in UTF-8, computations will be most efficient if the server encoding is also UTF-8.
+> **Note** Processing XML data with Greenplum Database will be less error-prone and more efficient if the XML data encoding, client encoding, and server encoding are the same. Because XML data is internally processed in UTF-8, computations will be most efficient if the server encoding is also UTF-8.
 
 ## <a id="topic_kxv_4gq_vz"></a>Accessing XML Values 
 
@@ -469,7 +467,7 @@ SELECT xmlelement(name foo, xmlattributes('xyz' as bar),
  <foo bar="xyz"><abc/><!--test--><xyz/></foo>
 ```
 
-Content of other types will be formatted into valid XML character data. This means in particular that the characters `<`, `>`, and `&` will be converted to entities. Binary data \(data type `bytea`\) will be represented in base64 or hex encoding, depending on the setting of the configuration parameter [xmlbinary](https://www.postgresql.org/docs/9.4/runtime-config-client.html#GUC-XMLBINARY). The particular behavior for individual data types is expected to evolve in order to align the SQL and Greenplum Database data types with the XML schema specification, at which point a more precise description will appear.
+Content of other types will be formatted into valid XML character data. This means in particular that the characters `<`, `>`, and `&` will be converted to entities. Binary data \(data type `bytea`\) will be represented in base64 or hex encoding, depending on the setting of the configuration parameter [xmlbinary](https://www.postgresql.org/docs/12/runtime-config-client.html#GUC-XMLBINARY). The particular behavior for individual data types is expected to evolve in order to align the SQL and Greenplum Database data types with the XML schema specification, at which point a more precise description will appear.
 
 **Function:**
 

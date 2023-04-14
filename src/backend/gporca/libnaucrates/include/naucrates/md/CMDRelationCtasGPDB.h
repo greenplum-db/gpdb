@@ -62,9 +62,6 @@ private:
 	// is this a temporary relation
 	BOOL m_is_temp_table;
 
-	// does this table have oids
-	BOOL m_has_oids;
-
 	// storage type
 	Erelstoragetype m_rel_storage_type;
 
@@ -111,7 +108,7 @@ public:
 	// ctor
 	CMDRelationCtasGPDB(
 		CMemoryPool *mp, IMDId *mdid, CMDName *mdname_schema, CMDName *mdname,
-		BOOL fTemporary, BOOL fHasOids, Erelstoragetype rel_storage_type,
+		BOOL fTemporary, Erelstoragetype rel_storage_type,
 		Ereldistrpolicy rel_distr_policy, CMDColumnArray *mdcol_array,
 		ULongPtrArray *distr_col_array, IMdIdArray *distr_opfamilies,
 		IMdIdArray *distr_opclasses, ULongPtr2dArray *keyset_array,
@@ -139,13 +136,6 @@ public:
 
 	// distribution policy (none, hash, random)
 	Ereldistrpolicy GetRelDistribution() const override;
-
-	// does this table have oids
-	BOOL
-	HasOids() const override
-	{
-		return m_has_oids;
-	}
 
 	// is this a temp relation
 	BOOL
@@ -216,13 +206,6 @@ public:
 		return 0;
 	}
 
-	// number of triggers
-	ULONG
-	TriggerCount() const override
-	{
-		return 0;
-	}
-
 	// return the absolute position of the given attribute position excluding dropped columns
 	ULONG
 	NonDroppedColAt(ULONG pos) const override
@@ -244,14 +227,6 @@ public:
 	) const override
 	{
 		GPOS_ASSERT("CTAS tables have no indexes");
-		return nullptr;
-	}
-
-	// retrieve the id of the metadata cache trigger at the given position
-	IMDId *TriggerMDidAt(ULONG	// pos
-	) const override
-	{
-		GPOS_ASSERT("CTAS tables have no triggers");
 		return nullptr;
 	}
 
@@ -278,6 +253,12 @@ public:
 	GetVarTypeModArray() const
 	{
 		return m_vartypemod_array;
+	}
+
+	IMDId *
+	ForeignServer() const override
+	{
+		return nullptr;
 	}
 
 #ifdef GPOS_DEBUG

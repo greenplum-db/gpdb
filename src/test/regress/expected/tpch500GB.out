@@ -2005,7 +2005,7 @@ order by
                                  ->  Unique  (cost=78801360.21..78983928.42 rows=18256821 width=22)
                                        Group By: orders.ctid
                                        ->  Sort  (cost=78801360.21..78892644.32 rows=18256821 width=22)
-                                             Sort Key (Distinct): orders.ctid
+                                             Sort Key: orders.ctid
                                              ->  Hash Join  (cost=14835362.82..71460313.52 rows=18256821 width=22)
                                                    Hash Cond: lineitem.l_orderkey = orders.o_orderkey
                                                    ->  Seq Scan on lineitem  (cost=0.00..51767512.60 rows=489638315 width=8)

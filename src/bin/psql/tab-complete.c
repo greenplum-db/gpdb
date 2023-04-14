@@ -63,6 +63,8 @@ extern char *filename_completion_function();
 #define completion_matches rl_completion_matches
 #endif
 
+#define PQmblenBounded(s, e)  strnlen(s, PQmblen(s, e))
+
 /* word break characters */
 #define WORD_BREAKS		"\t\n@$><=;|&{() "
 
@@ -207,19 +209,22 @@ do { \
 	matches = completion_matches(text, complete_from_versioned_schema_query); \
 } while (0)
 
+/*
+ * Caution: COMPLETE_WITH_CONST is not for general-purpose use; you probably
+ * want COMPLETE_WITH() with one element, instead.
+ */
+#define COMPLETE_WITH_CONST(cs, con) \
+do { \
+	completion_case_sensitive = (cs); \
+	completion_charp = (con); \
+	matches = completion_matches(text, complete_from_const); \
+} while (0)
+
 #define COMPLETE_WITH_LIST_INT(cs, list) \
 do { \
 	completion_case_sensitive = (cs); \
-	if (!(list)[1]) \
-	{ \
-		completion_charp = (list)[0]; \
-		matches = completion_matches(text, complete_from_const); \
-	} \
-	else \
-	{ \
-		completion_charpp = (list); \
-		matches = completion_matches(text, complete_from_list); \
-	} \
+	completion_charpp = (list); \
+	matches = completion_matches(text, complete_from_list); \
 } while (0)
 
 #define COMPLETE_WITH_LIST(list) COMPLETE_WITH_LIST_INT(false, list)
@@ -1049,6 +1054,7 @@ static const pgsql_thing_t words_after_create[] = {
 
 /* Storage parameters for CREATE TABLE and ALTER TABLE */
 static const char *const table_storage_parameters[] = {
+	"analyze_hll_non_part_table",
 	"autovacuum_analyze_scale_factor",
 	"autovacuum_analyze_threshold",
 	"autovacuum_enabled",
@@ -1063,6 +1069,7 @@ static const char *const table_storage_parameters[] = {
 	"autovacuum_vacuum_scale_factor",
 	"autovacuum_vacuum_threshold",
 	"fillfactor",
+	"gp_autovacuum_scope",
 	"log_autovacuum_min_duration",
 	"parallel_workers",
 	"toast.autovacuum_enabled",
@@ -1691,7 +1698,7 @@ psql_completion(const char *text, int start, int end)
 
 	/* ALTER LANGUAGE <name> */
 	else if (Matches("ALTER", "LANGUAGE", MatchAny))
-		COMPLETE_WITH("OWNER_TO", "RENAME TO");
+		COMPLETE_WITH("OWNER TO", "RENAME TO");
 
 	/* ALTER LARGE OBJECT <oid> */
 	else if (Matches("ALTER", "LARGE", "OBJECT", MatchAny))
@@ -1991,8 +1998,15 @@ psql_completion(const char *text, int start, int end)
 	}
 	/* If we have ALTER TABLE <sth> SET, provide list of attributes and '(' */
 	else if (Matches("ALTER", "TABLE", MatchAny, "SET"))
-		COMPLETE_WITH("(", "LOGGED", "SCHEMA", "TABLESPACE", "UNLOGGED",
-					  "WITH", "WITHOUT");
+		COMPLETE_WITH("(", "ACCESS METHOD", "LOGGED", "SCHEMA",
+					  "TABLESPACE", "UNLOGGED", "WITH", "WITHOUT");
+
+	/*
+	 * If we have ALTER TABLE <smt> SET ACCESS METHOD provide a list of table
+	 * AMs.
+	 */
+	else if (Matches("ALTER", "TABLE", MatchAny, "SET", "ACCESS", "METHOD"))
+		COMPLETE_WITH_QUERY(Query_for_list_of_table_access_methods);
 
 	/*
 	 * If we have ALTER TABLE <sth> SET TABLESPACE provide a list of
@@ -2708,7 +2722,7 @@ psql_completion(const char *text, int start, int end)
 	else if (TailMatches("RESOURCE", "GROUP", MatchAny, "WITH", "("))
 	{
 		static const char *const list_CREATERESOURCEGROUP[] =
-		{"CONCURRENCY", "CPU_RATE_LIMIT", "MEMORY_LIMIT", "MEMORY_REDZONE_LIMIT", NULL};
+		{"CONCURRENCY", "cpu_hard_quota_limit", "MEMORY_LIMIT", "MEMORY_REDZONE_LIMIT", NULL};
 
 		COMPLETE_WITH_LIST(list_CREATERESOURCEGROUP);
 	}
@@ -2913,9 +2927,9 @@ psql_completion(const char *text, int start, int end)
 		 * one word, so the above test is correct.
 		 */
 		if (ends_with(prev_wd, '(') || ends_with(prev_wd, ','))
-			COMPLETE_WITH("ANALYZE", "VERBOSE", "COSTS", "BUFFERS",
-						  "TIMING", "SUMMARY", "FORMAT");
-		else if (TailMatches("ANALYZE|VERBOSE|COSTS|BUFFERS|TIMING|SUMMARY"))
+			COMPLETE_WITH("ANALYZE", "VERBOSE", "COSTS", "SETTINGS",
+						  "BUFFERS", "TIMING", "SUMMARY", "FORMAT");
+		else if (TailMatches("ANALYZE|VERBOSE|COSTS|SETTINGS|BUFFERS|TIMING|SUMMARY"))
 			COMPLETE_WITH("ON", "OFF");
 		else if (TailMatches("FORMAT"))
 			COMPLETE_WITH("TEXT", "XML", "JSON", "YAML");
@@ -3393,8 +3407,13 @@ psql_completion(const char *text, int start, int end)
 	else if (HeadMatches("ALTER", "DATABASE|FUNCTION|PROCEDURE|ROLE|ROUTINE|USER") &&
 			 TailMatches("SET", MatchAny))
 		COMPLETE_WITH("FROM CURRENT", "TO");
-	/* Suggest possible variable values */
-	else if (TailMatches("SET", MatchAny, "TO|="))
+
+	/*
+	 * Suggest possible variable values in SET variable TO|=, along with the
+	 * preceding ALTER syntaxes.
+	 */
+	else if (TailMatches("SET", MatchAny, "TO|=") &&
+			 !TailMatches("UPDATE", MatchAny, "SET", MatchAny, "TO|="))
 	{
 		/* special cased code for individual GUCs */
 		if (TailMatches("DateStyle", "TO|="))
@@ -3412,21 +3431,29 @@ psql_completion(const char *text, int start, int end)
 			/* generic, type based, GUC support */
 			char	   *guctype = get_guctype(prev2_wd);
 
-			if (guctype && strcmp(guctype, "enum") == 0)
-			{
-				char		querybuf[1024];
-
-				snprintf(querybuf, sizeof(querybuf), Query_for_enum, prev2_wd);
-				COMPLETE_WITH_QUERY(querybuf);
-			}
-			else if (guctype && strcmp(guctype, "bool") == 0)
-				COMPLETE_WITH("on", "off", "true", "false", "yes", "no",
-							  "1", "0", "DEFAULT");
-			else
-				COMPLETE_WITH("DEFAULT");
-
+			/*
+			 * Note: if we don't recognize the GUC name, it's important to not
+			 * offer any completions, as most likely we've misinterpreted the
+			 * context and this isn't a GUC-setting command at all.
+			 */
 			if (guctype)
+			{
+				if (strcmp(guctype, "enum") == 0)
+				{
+					char		querybuf[1024];
+
+					snprintf(querybuf, sizeof(querybuf),
+							 Query_for_enum, prev2_wd);
+					COMPLETE_WITH_QUERY(querybuf);
+				}
+				else if (strcmp(guctype, "bool") == 0)
+					COMPLETE_WITH("on", "off", "true", "false", "yes", "no",
+								  "1", "0", "DEFAULT");
+				else
+					COMPLETE_WITH("DEFAULT");
+
 				free(guctype);
+			}
 		}
 	}
 
@@ -3736,7 +3763,7 @@ psql_completion(const char *text, int start, int end)
 		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_routines, NULL);
 	else if (TailMatchesCS("\\sv*"))
 		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_views, NULL);
-	else if (TailMatchesCS("\\cd|\\e|\\edit|\\g|\\i|\\include|"
+	else if (TailMatchesCS("\\cd|\\e|\\edit|\\g|\\gx|\\i|\\include|"
 						   "\\ir|\\include_relative|\\o|\\out|"
 						   "\\s|\\w|\\write|\\lo_import"))
 	{
@@ -3776,7 +3803,7 @@ psql_completion(const char *text, int start, int end)
 	 */
 	if (matches == NULL)
 	{
-		COMPLETE_WITH("");
+		COMPLETE_WITH_CONST(true, "");
 #ifdef HAVE_RL_COMPLETION_APPEND_CHARACTER
 		rl_completion_append_character = '\0';
 #endif
@@ -3983,7 +4010,7 @@ _complete_from_query(const char *simple_query,
 		while (*pstr)
 		{
 			char_length++;
-			pstr += PQmblen(pstr, pset.encoding);
+			pstr += PQmblenBounded(pstr, pset.encoding);
 		}
 
 		/* Free any prior result */
@@ -4206,10 +4233,21 @@ complete_from_list(const char *text, int state)
 
 /*
  * This function returns one fixed string the first time even if it doesn't
- * match what's there, and nothing the second time. This should be used if
- * there is only one possibility that can appear at a certain spot, so
- * misspellings will be overwritten.  The string to be passed must be in
- * completion_charp.
+ * match what's there, and nothing the second time.  The string
+ * to be used must be in completion_charp.
+ *
+ * If the given string is "", this has the effect of preventing readline
+ * from doing any completion.  (Without this, readline tries to do filename
+ * completion which is seldom the right thing.)
+ *
+ * If the given string is not empty, readline will replace whatever the
+ * user typed with that string.  This behavior might be useful if it's
+ * completely certain that we know what must appear at a certain spot,
+ * so that it's okay to overwrite misspellings.  In practice, given the
+ * relatively lame parsing technology used in this file, the level of
+ * certainty is seldom that high, so that you probably don't want to
+ * use this.  Use complete_from_list with a one-element list instead;
+ * that won't try to auto-correct "misspellings".
  */
 static char *
 complete_from_const(const char *text, int state)

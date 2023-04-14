@@ -24,7 +24,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25"/>
       <dxl:TraceFlags Value="101013,102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -34,7 +34,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
       <dxl:ColumnStatistics Mdid="1.16423.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.16423.1.1.2" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.16396.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16396.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16396.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -65,7 +65,6 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -176,7 +175,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16423.1.1" Name="bar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16423.1.1" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16423.1.1" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -207,7 +206,6 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16450.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -218,7 +216,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
       <dxl:ColumnStatistics Mdid="1.16396.1.1.5" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.16396.1.1.4" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.16450.1.1" Name="jazz" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16450.1.1" Name="jazz" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.16450.1.1" Name="jazz" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="e" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -249,7 +247,6 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16450.1.1.5" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -327,7 +324,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:LogicalGet>
-                      <dxl:TableDescriptor Mdid="0.16423.1.1" TableName="bar">
+                      <dxl:TableDescriptor Mdid="6.16423.1.1" TableName="bar">
                         <dxl:Columns>
                           <dxl:Column ColId="10" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="11" Attno="2" ColName="d" TypeMdid="0.23.1.0"/>
@@ -361,7 +358,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                       <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                     <dxl:LogicalGet>
-                      <dxl:TableDescriptor Mdid="0.16450.1.1" TableName="jazz">
+                      <dxl:TableDescriptor Mdid="6.16450.1.1" TableName="jazz">
                         <dxl:Columns>
                           <dxl:Column ColId="20" Attno="1" ColName="e" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="21" Attno="2" ColName="f" TypeMdid="0.23.1.0"/>
@@ -383,7 +380,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.16396.1.1" TableName="foo">
+          <dxl:TableDescriptor Mdid="6.16396.1.1" TableName="foo">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -399,7 +396,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
         </dxl:LogicalGet>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="544">
+    <dxl:Plan Id="0" SpaceSize="464">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.000816" Rows="1.000000" Width="8"/>
@@ -463,7 +460,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="0.16396.1.1" TableName="foo">
+                <dxl:TableDescriptor Mdid="6.16396.1.1" TableName="foo">
                   <dxl:Columns>
                     <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -538,7 +535,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.16450.1.1" TableName="jazz">
+                      <dxl:TableDescriptor Mdid="6.16450.1.1" TableName="jazz">
                         <dxl:Columns>
                           <dxl:Column ColId="19" Attno="1" ColName="e" TypeMdid="0.23.1.0"/>
                           <dxl:Column ColId="21" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -631,7 +628,7 @@ SELECT (SELECT jazz.count FROM (SELECT count(*) FROM bar GROUP BY c LIMIT 1) AS 
                                   </dxl:ProjElem>
                                 </dxl:ProjList>
                                 <dxl:Filter/>
-                                <dxl:TableDescriptor Mdid="0.16423.1.1" TableName="bar">
+                                <dxl:TableDescriptor Mdid="6.16423.1.1" TableName="bar">
                                   <dxl:Columns>
                                     <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
                                     <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

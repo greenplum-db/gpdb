@@ -81,9 +81,10 @@ ALTER TABLE name
     CLUSTER ON <replaceable class="parameter">index_name</replaceable>
     SET WITHOUT CLUSTER
     SET WITHOUT OIDS
+    SET ACCESS METHOD <replaceable class="parameter">new_access_method</replaceable>
     SET TABLESPACE <replaceable class="parameter">new_tablespace</replaceable>
     SET { LOGGED | UNLOGGED }
-    SET ( <replaceable class="parameter">storage_parameter</replaceable> = <replaceable class="parameter">value</replaceable> [, ... ] )
+    SET ( <replaceable class="parameter">storage_parameter</replaceable> [= <replaceable class="parameter">value</replaceable>] [, ... ] )
     RESET ( <replaceable class="parameter">storage_parameter</replaceable> [, ... ] )
     INHERIT <replaceable class="parameter">parent_table</replaceable>
     NO INHERIT <replaceable class="parameter">parent_table</replaceable>
@@ -208,9 +209,9 @@ Where column_reference_storage_directive is:
   <para>
    <command>ALTER TABLE</command> changes the definition of an existing table.
    There are several subforms described below. Note that the lock level required
-   may differ for each subform. An <literal>ACCESS EXCLUSIVE</literal> lock is held
-   unless explicitly noted. When multiple subcommands are listed, the lock
-   held will be the strictest one required from any subcommand.
+   may differ for each subform. An <literal>ACCESS EXCLUSIVE</literal> lock is
+   acquired unless explicitly noted. When multiple subcommands are given, the
+   lock acquired will be the strictest one required by any subcommand.
 
   <variablelist>
    <varlistentry>
@@ -287,7 +288,7 @@ Where column_reference_storage_directive is:
 
      <para>
       <literal>SET NOT NULL</literal> may only be applied to a column
-      providing none of the records in the table contain a
+      provided none of the records in the table contain a
       <literal>NULL</literal> value for the column.  Ordinarily this is
       checked during the <literal>ALTER TABLE</literal> by scanning the
       entire table; however, if a valid <literal>CHECK</literal> constraint is
@@ -431,8 +432,8 @@ Where column_reference_storage_directive is:
     <term><literal>ADD <replaceable class="parameter">table_constraint</replaceable> [ NOT VALID ]</literal></term>
     <listitem>
      <para>
-      This form adds a new constraint to a table using the same syntax as
-      <xref linkend="sql-createtable"/>, plus the option <literal>NOT
+      This form adds a new constraint to a table using the same constraint
+      syntax as <xref linkend="sql-createtable"/>, plus the option <literal>NOT
       VALID</literal>, which is currently only allowed for foreign key
       and CHECK constraints.
      </para>
@@ -455,9 +456,14 @@ Where column_reference_storage_directive is:
      </para>
 
      <para>
-      Addition of a foreign key constraint requires a
-      <literal>SHARE ROW EXCLUSIVE</literal> lock on the referenced table,
-      in addition to the lock on the table receiving the constraint.
+      Although most forms of <literal>ADD
+      <replaceable class="parameter">table_constraint</replaceable></literal>
+      require an <literal>ACCESS EXCLUSIVE</literal> lock, <literal>ADD
+      FOREIGN KEY</literal> requires only a <literal>SHARE ROW
+      EXCLUSIVE</literal> lock.  Note that <literal>ADD FOREIGN KEY</literal>
+      also acquires a <literal>SHARE ROW EXCLUSIVE</literal> lock on the
+      referenced table, in addition to the lock on the table on which the
+      constraint is declared.
      </para>
 
      <para>
@@ -546,6 +552,9 @@ Where column_reference_storage_directive is:
       (See <xref linkend="sql-altertable-notes"
       endterm="sql-altertable-notes-title"/> below for an explanation of the
       usefulness of this command.)
+     </para>
+     <para>
+      This command acquires a <literal>SHARE UPDATE EXCLUSIVE</literal> lock.
      </para>
     </listitem>
    </varlistentry>
@@ -700,6 +709,16 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
+    <term><literal>SET ACCESS METHOD</literal></term>
+    <listitem>
+     <para>
+      This form changes the access method of the table by rewriting it. See
+      <xref linkend="tableam"/> for more information.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>SET TABLESPACE</literal></term>
     <listitem>
      <para>
@@ -743,7 +762,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>SET ( <replaceable class="parameter">storage_parameter</replaceable> = <replaceable class="parameter">value</replaceable> [, ... ] )</literal></term>
+    <term><literal>SET ( <replaceable class="parameter">storage_parameter</replaceable> [= <replaceable class="parameter">value</replaceable>] [, ... ] )</literal></term>
     <listitem>
      <para>
       This form changes one or more storage parameters for the table.  See
@@ -763,9 +782,7 @@ Where column_reference_storage_directive is:
      <para>
       <literal>SHARE UPDATE EXCLUSIVE</literal> lock will be taken for
       fillfactor, toast and autovacuum storage parameters, as well as the
-      following planner related parameters:
-      <varname>effective_io_concurrency</varname>, <varname>parallel_workers</varname>, <varname>seq_page_cost</varname>,
-      <varname>random_page_cost</varname>, <varname>n_distinct</varname> and <varname>n_distinct_inherited</varname>.
+      planner parameter <varname>parallel_workers</varname>.
      </para>
     </listitem>
    </varlistentry>
@@ -859,17 +876,53 @@ Where column_reference_storage_directive is:
     <listitem>
      <para>
       This form changes the information which is written to the write-ahead log
-      to identify rows which are updated or deleted.  This option has no effect
-      except when logical replication is in use.  <literal>DEFAULT</literal>
-      (the default for non-system tables) records the
-      old values of the columns of the primary key, if any.  <literal>USING INDEX</literal>
-      records the old values of the columns covered by the named index, which
-      must be unique, not partial, not deferrable, and include only columns marked
-      <literal>NOT NULL</literal>.  <literal>FULL</literal> records the old values of all columns
-      in the row.  <literal>NOTHING</literal> records no information about the old row.
-      (This is the default for system tables.)
-      In all cases, no old values are logged unless at least one of the columns
-      that would be logged differs between the old and new versions of the row.
+      to identify rows which are updated or deleted.
+      In most cases, the old value of each column is only logged if it differs
+      from the new value; however, if the old value is stored externally, it is
+      always logged regardless of whether it changed.
+      This option has no effect except when logical replication is in use.
+     <variablelist>
+      <varlistentry>
+       <term><literal>DEFAULT</literal></term>
+       <listitem>
+        <para>
+         Records the old values of the columns of the primary key, if any.
+         This is the default for non-system tables. 
+        </para>
+       </listitem>
+      </varlistentry>
+
+      <varlistentry>
+       <term><literal>USING INDEX <replaceable class="parameter">index_name</replaceable></literal></term>
+       <listitem>
+        <para>
+         Records the old values of the columns covered by the named index,
+         that must be unique, not partial, not deferrable, and include only
+         columns marked <literal>NOT NULL</literal>. If this index is
+         dropped, the behavior is the same as <literal>NOTHING</literal>.
+        </para>
+       </listitem>
+      </varlistentry>
+
+      <varlistentry>
+       <term><literal>FULL</literal></term>
+       <listitem>
+        <para>
+         Records the old values of all columns in the row.
+        </para>
+       </listitem>
+      </varlistentry>
+
+      <varlistentry>
+       <term><literal>NOTHING</literal></term>
+       <listitem>
+        <para>
+         Records no information about the old row. This is the default for
+         system tables.
+        </para>
+       </listitem>
+      </varlistentry>
+     </variablelist>
      </para>
     </listitem>
    </varlistentry>
@@ -898,7 +951,7 @@ Where column_reference_storage_directive is:
     </listitem>
    </varlistentry>
 
-   <varlistentry>
+   <varlistentry id="sql-altertable-attach-partition">
     <term><literal>ATTACH PARTITION <replaceable class="parameter">partition_name</replaceable> { FOR VALUES <replaceable class="parameter">partition_bound_spec</replaceable> | DEFAULT }</literal></term>
     <listitem>
      <para>
@@ -908,12 +961,14 @@ Where column_reference_storage_directive is:
       or as a default partition by using <literal>DEFAULT</literal>.
       For each index in the target table, a corresponding
       one will be created in the attached table; or, if an equivalent
-      index already exists, will be attached to the target table's index,
+      index already exists, it will be attached to the target table's index,
       as if <command>ALTER INDEX ATTACH PARTITION</command> had been executed.
       Note that if the existing table is a foreign table, it is currently not
       allowed to attach the table as a partition of the target table if there
       are <literal>UNIQUE</literal> indexes on the target table.  (See also
-      <xref linkend="sql-createforeigntable"/>.)
+      <xref linkend="sql-createforeigntable"/>.)  For each user-defined
+      row-level trigger that exists in the target table, a corresponding one
+      is created in the attached table.
      </para>
 
      <para>
@@ -930,24 +985,25 @@ Where column_reference_storage_directive is:
       from the parent table will be created in the partition, if they don't
       already exist.
       If any of the <literal>CHECK</literal> constraints of the table being
-      attached is marked <literal>NO INHERIT</literal>, the command will fail;
-      such a constraint must be recreated without the <literal>NO INHERIT</literal>
-      clause.
+      attached are marked <literal>NO INHERIT</literal>, the command will fail;
+      such constraints must be recreated without the
+      <literal>NO INHERIT</literal> clause.
      </para>
 
      <para>
       If the new partition is a regular table, a full table scan is performed
-      to check that no existing row in the table violates the partition
-      constraint.  It is possible to avoid this scan by adding a valid
-      <literal>CHECK</literal> constraint to the table that would allow only
-      the rows satisfying the desired partition constraint before running this
-      command.  It will be determined using such a constraint that the table
-      need not be scanned to validate the partition constraint.  This does not
-      work, however, if any of the partition keys is an expression and the
-      partition does not accept <literal>NULL</literal> values.  If attaching
-      a list partition that will not accept <literal>NULL</literal> values,
-      also add <literal>NOT NULL</literal> constraint to the partition key
-      column, unless it's an expression.
+      to check that existing rows in the table do not violate the partition
+      constraint. It is possible to avoid this scan by adding a valid
+      <literal>CHECK</literal> constraint to the table that allows only
+      rows satisfying the desired partition constraint before running this
+      command. The <literal>CHECK</literal> constraint will be used to
+      determine that the table need not be scanned to validate the partition
+      constraint. This does not work, however, if any of the partition keys
+      is an expression and the partition does not accept
+      <literal>NULL</literal> values. If attaching a list partition that will
+      not accept <literal>NULL</literal> values, also add
+      <literal>NOT NULL</literal> constraint to the partition key column,
+      unless it's an expression.
      </para>
 
      <para>
@@ -967,6 +1023,22 @@ Where column_reference_storage_directive is:
       the scan of the new partition, it is always skipped when the default
       partition is a foreign table.
      </para>
+
+     <para>
+      Attaching a partition acquires a
+      <literal>SHARE UPDATE EXCLUSIVE</literal> lock on the parent table,
+      in addition to the <literal>ACCESS EXCLUSIVE</literal> locks on the table
+      being attached and on the default partition (if any).
+     </para>
+
+     <para>
+      Further locks must also be held on all sub-partitions if the table being
+      attached is itself a partitioned table.  Likewise if the default
+      partition is itself a partitioned table.  The locking of the
+      sub-partitions can be avoided by adding a <literal>CHECK</literal>
+      constraint as described in
+      <xref linkend="ddl-partitioning-declarative-maintenance"/>.
+     </para>
     </listitem>
    </varlistentry>
 
@@ -974,10 +1046,13 @@ Where column_reference_storage_directive is:
     <term><literal>DETACH PARTITION</literal> <replaceable class="parameter">partition_name</replaceable></term>
     <listitem>
      <para>
-      This form detaches specified partition of the target table.  The detached
+      This form detaches the specified partition of the target table.  The detached
       partition continues to exist as a standalone table, but no longer has any
       ties to the table from which it was detached.  Any indexes that were
-      attached to the target table's indexes are detached.
+      attached to the target table's indexes are detached.  Any triggers that
+      were created as clones of those in the target table are removed.
+      <literal>SHARE</literal> lock is obtained on any tables that reference
+      this partitioned table in foreign key constraints.
      </para>
     </listitem>
    </varlistentry>
@@ -1204,6 +1279,15 @@ Where column_reference_storage_directive is:
       <listitem>
        <para>
         The user name of the new owner of the table.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><replaceable class="parameter">new_access_method</replaceable></term>
+      <listitem>
+       <para>
+        The name of the access method to which the table will be converted.
        </para>
       </listitem>
      </varlistentry>

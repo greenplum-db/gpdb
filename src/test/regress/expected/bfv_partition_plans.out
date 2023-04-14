@@ -1,9 +1,24 @@
 -- start_matchsubs
 -- m/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/
 -- s/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/xxx xx xx xx:xx:xx xxxx"/
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory: \d+kB/
+-- s/Memory: \d+kB/Memory: ###kB/
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
+-- m/segment \d+/
+-- s/segment \d+/segment ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 create schema bfv_partition_plans;
 set search_path=bfv_partition_plans;
+SET optimizer_trace_fallback=on;
 --
 -- Initial setup for all the partitioning test for this suite
 --
@@ -442,244 +457,6 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.
 drop table if exists mpp23288;
 set optimizer_enable_broadcast_nestloop_outer_child=off;
 -- end_ignore
---
--- Tests if DynamicIndexScan sets tuple descriptor of the planstate->ps_ResultTupleSlot
---
--- SETUP
--- start_ignore
-drop table if exists mpp24151_t;
-NOTICE:  table "mpp24151_t" does not exist, skipping
-drop table if exists mpp24151_pt;
-NOTICE:  table "mpp24151_pt" does not exist, skipping
--- end_ignore
-create table mpp24151_t(dist int, tid int, t1 text, t2 text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dist' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table mpp24151_pt(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
-DISTRIBUTED BY (dist)
-PARTITION BY RANGE(ptid) 
-          (
-          START (0) END (5) EVERY (1),
-          DEFAULT PARTITION junk_data
-          )
-;
-create index pt1_idx on mpp24151_pt using btree (pt1);
-create index ptid_idx on mpp24151_pt using btree (ptid);
-insert into mpp24151_pt select i, 'hello' || 0, 'world', 'drop this', i % 6 from generate_series(0,100)i;
-insert into mpp24151_pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(0,200000)i;
-insert into mpp24151_t select i, i % 6, 'hello' || i, 'bar' from generate_series(0,10)i;
-analyze mpp24151_pt;
-analyze mpp24151_t;
--- TEST
-set optimizer_enable_dynamictablescan = off;
--- GPDB_12_MERGE_FIXME: With the big refactoring t how Partition Selectors are
--- implemented during the v12 merge, I'm not sure if this test is testing anything
--- useful anymore. And/or it redundant with the tests in 'dpe'?
-select count_operator('select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = E''hello0'';','->  Partition Selector');
- count_operator 
-----------------
-              1
-(1 row)
-
-select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
- dist | tid |   t1    | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
-------+-----+---------+-----+------+--------+-------+-----------+------
-    5 |   5 | hello5  | bar |    5 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   41 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   53 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   77 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   89 | hello0 | world | drop this |    5
-    6 |   0 | hello6  | bar |   96 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   96 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   90 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   90 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   54 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   54 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   42 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   42 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   18 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   18 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |    6 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |    6 | hello0 | world | drop this |    0
-    7 |   1 | hello7  | bar |    7 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |    7 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   19 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   19 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   55 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   55 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   73 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   73 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   91 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   91 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   97 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   97 | hello0 | world | drop this |    1
-    2 |   2 | hello2  | bar |   20 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   20 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   38 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   38 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   56 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   56 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   74 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   74 | hello0 | world | drop this |    2
-    3 |   3 | hello3  | bar |    3 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |    3 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   21 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   21 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   39 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   39 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   57 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   57 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   75 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   75 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   87 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   87 | hello0 | world | drop this |    3
-    4 |   4 | hello4  | bar |    4 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |    4 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   22 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   22 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   40 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   40 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   76 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   76 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   88 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   88 | hello0 | world | drop this |    4
-    5 |   5 | hello5  | bar |   17 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   29 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   35 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   71 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   83 | hello0 | world | drop this |    5
-    6 |   0 | hello6  | bar |    0 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |    0 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   84 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   84 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   72 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   72 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   48 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   48 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   36 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   36 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   30 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   30 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |    0 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |    0 | hello0 | world | drop this |    0
-    7 |   1 | hello7  | bar |    1 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |    1 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   13 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   13 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   31 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   31 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   37 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   37 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   49 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   49 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   85 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   85 | hello0 | world | drop this |    1
-    2 |   2 | hello2  | bar |    2 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |    2 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   14 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   14 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   50 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   50 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   68 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   68 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   86 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   86 | hello0 | world | drop this |    2
-    3 |   3 | hello3  | bar |   15 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   15 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   33 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   33 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   51 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   51 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   63 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   63 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   69 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   69 | hello0 | world | drop this |    3
-    4 |   4 | hello4  | bar |   16 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   16 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   28 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   28 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   34 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   34 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   52 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   52 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   70 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   70 | hello0 | world | drop this |    4
-    5 |   5 | hello5  | bar |   11 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   23 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   47 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   59 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   65 | hello0 | world | drop this |    5
-    5 |   5 | hello5  | bar |   95 | hello0 | world | drop this |    5
-    6 |   0 | hello6  | bar |   78 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   78 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   66 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   66 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   60 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   60 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   24 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   24 | hello0 | world | drop this |    0
-    6 |   0 | hello6  | bar |   12 | hello0 | world | drop this |    0
-    0 |   0 | hello0  | bar |   12 | hello0 | world | drop this |    0
-    7 |   1 | hello7  | bar |   25 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   25 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   43 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   43 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   61 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   61 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   67 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   67 | hello0 | world | drop this |    1
-    7 |   1 | hello7  | bar |   79 | hello0 | world | drop this |    1
-    1 |   1 | hello1  | bar |   79 | hello0 | world | drop this |    1
-    2 |   2 | hello2  | bar |    8 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |    8 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   26 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   26 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   32 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   32 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   44 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   44 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   62 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   62 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   80 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   80 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   92 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   92 | hello0 | world | drop this |    2
-    2 |   2 | hello2  | bar |   98 | hello0 | world | drop this |    2
-    8 |   2 | hello8  | bar |   98 | hello0 | world | drop this |    2
-    3 |   3 | hello3  | bar |    9 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |    9 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   27 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   27 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   45 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   45 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   81 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   81 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   93 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   93 | hello0 | world | drop this |    3
-    3 |   3 | hello3  | bar |   99 | hello0 | world | drop this |    3
-    9 |   3 | hello9  | bar |   99 | hello0 | world | drop this |    3
-    4 |   4 | hello4  | bar |   10 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   10 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   46 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   46 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   58 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   58 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   64 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   64 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   82 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   82 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |   94 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |   94 | hello0 | world | drop this |    4
-    4 |   4 | hello4  | bar |  100 | hello0 | world | drop this |    4
-   10 |   4 | hello10 | bar |  100 | hello0 | world | drop this |    4
-(188 rows)
-
--- CLEANUP
-drop index ptid_idx;
-drop index pt1_idx;
-drop table if exists mpp24151_t;
-drop table if exists mpp24151_pt;
-reset optimizer_enable_dynamictablescan;
 --
 -- No DPE (Dynamic Partition Elimination) on second child of a union under a join
 --
@@ -1391,6 +1168,142 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 
 drop table mpp6247_bar;
 drop table mpp6247_foo;
+-- Validate that basic DELETE on partition table with index functions properly
+CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);
+INSERT INTO delete_from_indexed_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Delete on delete_from_indexed_pt
+   Delete on delete_from_indexed_pt_1_prt_1
+   ->  Bitmap Heap Scan on delete_from_indexed_pt_1_prt_1
+         Recheck Cond: (b = 1)
+         ->  Bitmap Index Scan on delete_from_indexed_pt_1_prt_1_b_idx
+               Index Cond: (b = 1)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+DELETE FROM delete_from_indexed_pt WHERE b=1;
+SELECT * FROM delete_from_indexed_pt;
+ a  | b 
+----+---
+  2 | 2
+  8 | 2
+  3 | 3
+  4 | 4
+  6 | 0
+  5 | 5
+  9 | 3
+ 10 | 4
+(8 rows)
+
+-- Validate that basic DELETE on partition table using DPE functions properly
+CREATE TABLE delete_from_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE t(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO delete_from_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+INSERT INTO t VALUES (1);
+ANALYZE delete_from_pt, t;
+EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt WHERE b IN (SELECT b FROM delete_from_pt, t WHERE t.a=delete_from_pt.b);
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Delete on delete_from_pt (actual rows=0 loops=1)
+   Delete on delete_from_pt_1_prt_1
+   Delete on delete_from_pt_1_prt_2
+   Delete on delete_from_pt_1_prt_3
+   ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
+         ->  Hash Semi Join (actual rows=2 loops=1)
+               Hash Cond: (delete_from_pt_1_prt_1.b = t.a)
+               Extra Text: (seg1)   Hash chain length 2.0 avg, 2 max, using 1 of 65536 buckets.
+               ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
+                     Hash Key: delete_from_pt_1_prt_1.b
+                     ->  Seq Scan on delete_from_pt_1_prt_1 (actual rows=3 loops=1)
+               ->  Hash (actual rows=2 loops=1)
+                     Buckets: 65536  Batches: 1  Memory Usage: 513kB
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
+                           Hash Key: t.a
+                           ->  Hash Join (actual rows=1 loops=1)
+                                 Hash Cond: (delete_from_pt_1_prt_1_1.b = t.a)
+                                 Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 65536 buckets.
+                                 ->  Append (actual rows=3 loops=1)
+                                       Partition Selectors: $1
+                                       ->  Seq Scan on delete_from_pt_1_prt_1 delete_from_pt_1_prt_1_1 (actual rows=3 loops=1)
+                                       ->  Seq Scan on delete_from_pt_1_prt_2 delete_from_pt_1_prt_2_1 (never executed)
+                                       ->  Seq Scan on delete_from_pt_1_prt_3 delete_from_pt_1_prt_3_1 (never executed)
+                                 ->  Hash (actual rows=1 loops=1)
+                                       Buckets: 65536  Batches: 1  Memory Usage: 513kB
+                                       ->  Partition Selector (selector id: $1) (actual rows=1 loops=1)
+                                             ->  Broadcast Motion 3:3  (slice4; segments: 3) (actual rows=1 loops=1)
+                                                   ->  Seq Scan on t (actual rows=1 loops=1)
+   ->  Explicit Redistribute Motion 3:3  (slice5; segments: 3) (actual rows=0 loops=1)
+         ->  Hash Semi Join (actual rows=0 loops=1)
+               Hash Cond: (delete_from_pt_1_prt_2.b = t.a)
+               ->  Redistribute Motion 3:3  (slice6; segments: 3) (actual rows=0 loops=1)
+                     Hash Key: delete_from_pt_1_prt_2.b
+                     ->  Seq Scan on delete_from_pt_1_prt_2 (actual rows=3 loops=1)
+               ->  Hash (actual rows=2 loops=1)
+                     Buckets: 65536  Batches: 1  Memory Usage: 513kB
+                     ->  Redistribute Motion 3:3  (slice7; segments: 3) (actual rows=2 loops=1)
+                           Hash Key: t.a
+                           ->  Hash Join (actual rows=1 loops=1)
+                                 Hash Cond: (delete_from_pt_1_prt_1_1.b = t.a)
+                                 Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 65536 buckets.
+                                 ->  Append (actual rows=3 loops=1)
+                                       Partition Selectors: $2
+                                       ->  Seq Scan on delete_from_pt_1_prt_1 delete_from_pt_1_prt_1_1 (actual rows=3 loops=1)
+                                       ->  Seq Scan on delete_from_pt_1_prt_2 delete_from_pt_1_prt_2_1 (never executed)
+                                       ->  Seq Scan on delete_from_pt_1_prt_3 delete_from_pt_1_prt_3_1 (never executed)
+                                 ->  Hash (actual rows=1 loops=1)
+                                       Buckets: 65536  Batches: 1  Memory Usage: 513kB
+                                       ->  Partition Selector (selector id: $2) (actual rows=1 loops=1)
+                                             ->  Broadcast Motion 3:3  (slice8; segments: 3) (actual rows=1 loops=1)
+                                                   ->  Seq Scan on t (actual rows=1 loops=1)
+   ->  Explicit Redistribute Motion 3:3  (slice9; segments: 3) (actual rows=0 loops=1)
+         ->  Hash Semi Join (actual rows=0 loops=1)
+               Hash Cond: (delete_from_pt_1_prt_3.b = t.a)
+               ->  Redistribute Motion 3:3  (slice10; segments: 3) (actual rows=0 loops=1)
+                     Hash Key: delete_from_pt_1_prt_3.b
+                     ->  Seq Scan on delete_from_pt_1_prt_3 (actual rows=0 loops=1)
+               ->  Hash (actual rows=2 loops=1)
+                     Buckets: 65536  Batches: 1  Memory Usage: 513kB
+                     ->  Redistribute Motion 3:3  (slice11; segments: 3) (actual rows=2 loops=1)
+                           Hash Key: t.a
+                           ->  Hash Join (actual rows=1 loops=1)
+                                 Hash Cond: (delete_from_pt_1_prt_1_1.b = t.a)
+                                 Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 65536 buckets.
+                                 ->  Append (actual rows=3 loops=1)
+                                       Partition Selectors: $3
+                                       ->  Seq Scan on delete_from_pt_1_prt_1 delete_from_pt_1_prt_1_1 (actual rows=3 loops=1)
+                                       ->  Seq Scan on delete_from_pt_1_prt_2 delete_from_pt_1_prt_2_1 (never executed)
+                                       ->  Seq Scan on delete_from_pt_1_prt_3 delete_from_pt_1_prt_3_1 (never executed)
+                                 ->  Hash (actual rows=1 loops=1)
+                                       Buckets: 65536  Batches: 1  Memory Usage: 513kB
+                                       ->  Partition Selector (selector id: $3) (actual rows=1 loops=1)
+                                             ->  Broadcast Motion 3:3  (slice12; segments: 3) (actual rows=1 loops=1)
+                                                   ->  Seq Scan on t (actual rows=1 loops=1)
+ Optimizer: Postgres query optimizer
+(75 rows)
+
+SELECT * FROM delete_from_pt order by a;
+ a  | b 
+----+---
+  2 | 2
+  3 | 3
+  4 | 4
+  5 | 5
+  6 | 0
+  8 | 2
+  9 | 3
+ 10 | 4
+(8 rows)
+
+RESET optimizer_trace_fallback;
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition_plans cascade;

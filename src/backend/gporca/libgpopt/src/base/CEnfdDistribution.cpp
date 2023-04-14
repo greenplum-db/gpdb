@@ -15,6 +15,7 @@
 
 #include "gpopt/base/CDistributionSpec.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CReqdPropPlan.h"
@@ -138,6 +139,12 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 			// child delivers a replicated distribution, no need to enforce hashed distribution
 			// if only satisfiability is needed
 			return EpetUnnecessary;
+		}
+
+		if (CDistributionSpec::EdtNonSingleton == m_pds->Edt() &&
+			!CDistributionSpecNonSingleton::PdsConvert(m_pds)->FAllowEnforced())
+		{
+			return EpetProhibited;
 		}
 
 		// N.B.: subtlety ahead:

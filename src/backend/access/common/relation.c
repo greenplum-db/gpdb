@@ -58,7 +58,7 @@ relation_open(Oid relationId, LOCKMODE lockmode)
 	/* The relcache does all the real work... */
 	r = RelationIdGetRelation(relationId);
 
-	/* GPDB_12_AFTER_MERGE_FIXME: We had added the errdetail in GPDB. Is it still valid? */
+	/* GPDB_12_MERGE_FIXME: We had added the errdetail in GPDB. Is it still valid? */
 	if (!RelationIsValid(r))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_TABLE),

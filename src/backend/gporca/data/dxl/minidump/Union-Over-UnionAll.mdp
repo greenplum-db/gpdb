@@ -197,7 +197,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.17297760.1.1" Name="foo_hashed" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.17297760.1.1" Name="foo_hashed" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.17297760.1.1" Name="foo_hashed" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -228,7 +228,6 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.17297760.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -248,7 +247,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
             <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
           </dxl:Columns>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17297760.1.1" TableName="foo_hashed">
+            <dxl:TableDescriptor Mdid="6.17297760.1.1" TableName="foo_hashed">
               <dxl:Columns>
                 <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -263,7 +262,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
             </dxl:TableDescriptor>
           </dxl:LogicalGet>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17297760.1.1" TableName="foo_hashed">
+            <dxl:TableDescriptor Mdid="6.17297760.1.1" TableName="foo_hashed">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -285,7 +284,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:LogicalGet>
-            <dxl:TableDescriptor Mdid="0.17297760.1.1" TableName="foo_hashed">
+            <dxl:TableDescriptor Mdid="6.17297760.1.1" TableName="foo_hashed">
               <dxl:Columns>
                 <dxl:Column ColId="19" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:Column ColId="20" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -416,7 +415,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.17297760.1.1" TableName="foo_hashed">
+                        <dxl:TableDescriptor Mdid="6.17297760.1.1" TableName="foo_hashed">
                           <dxl:Columns>
                             <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
@@ -439,7 +438,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.17297760.1.1" TableName="foo_hashed">
+                        <dxl:TableDescriptor Mdid="6.17297760.1.1" TableName="foo_hashed">
                           <dxl:Columns>
                             <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -471,7 +470,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="0.17297760.1.1" TableName="foo_hashed">
+                        <dxl:TableDescriptor Mdid="6.17297760.1.1" TableName="foo_hashed">
                           <dxl:Columns>
                             <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
                             <dxl:Column ColId="20" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>

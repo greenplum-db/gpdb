@@ -9,6 +9,8 @@
 /* Actual function body */
 #include "../ftsmessagehandler.c"
 
+static XLogRecPtr fakeRedoRecPtr = 8948;
+
 static void
 expectSendFtsResponse(const char *expectedMessageType, const FtsResponse *expectedResponse)
 {
@@ -77,12 +79,11 @@ test_HandleFtsWalRepProbePrimary(void **state)
 
 	expect_any(GetMirrorStatus, response);
 	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
+	expect_any(GetMirrorStatus, ready_for_syncrep);
+	will_assign_value(GetMirrorStatus, ready_for_syncrep, (bool) false);
 	will_be_called(GetMirrorStatus);
 
-	will_be_called(SetSyncStandbysDefined);
-
-	/* SyncRep should be enabled as soon as we found mirror is up. */
-	mockresponse.IsSyncRepEnabled = true;
+	/* mirror being up does not mean SyncRep should be enabled. */
 	expectSendFtsResponse(FTS_MSG_PROBE, &mockresponse);
 
 	HandleFtsWalRepProbe();
@@ -101,6 +102,7 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 
 	expect_any(GetMirrorStatus, response);
 	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
+	expect_any(GetMirrorStatus, ready_for_syncrep);
 	will_be_called(GetMirrorStatus);
 
 	will_be_called(UnsetSyncStandbysDefined);
@@ -150,6 +152,7 @@ test_HandleFtsWalRepPromoteMirror(void **state)
 	am_mirror = true;
 
 	will_return(GetCurrentDBState, DB_IN_ARCHIVE_RECOVERY);
+	will_return(GetRedoRecPtr, &fakeRedoRecPtr);
 	will_be_called(UnsetSyncStandbysDefined);
 	will_be_called(SignalPromote);
 
@@ -185,6 +188,7 @@ test_HandleFtsWalRepPromotePrimary(void **state)
 	am_mirror = false;
 
 	will_return(GetCurrentDBState, DB_IN_PRODUCTION);
+	will_return(GetRedoRecPtr, &fakeRedoRecPtr);
 
 	FtsResponse mockresponse;
 	mockresponse.IsMirrorUp       = false;

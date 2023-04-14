@@ -80,7 +80,7 @@ CPartPruneStepsBuilder::CreatePartPruneInfoForOneLevel(CDXLNode *filterNode)
 	// partitions that survived static partition pruning; iterate over this list
 	// to populate pinfo->subplan_map, pinfo->relid_map & pinfo->present_parts
 	ULONG part_ptr = 0;
-	for (int i = 0; i < pinfo->nparts; ++i)
+	for (ULONG i = 0; (int) i < pinfo->nparts; ++i)
 	{
 		pinfo->subpart_map[i] = -1;
 		if (part_ptr < m_part_indexes->Size() &&
@@ -116,13 +116,12 @@ CPartPruneStepsBuilder::PartPruneStepFromScalarCmp(CDXLNode *node, int *step_id,
 	Oid opno = CMDIdGPDB::CastMdid(dxlop->MDId())->Oid();
 	Oid opfamily = m_relation->rd_partkey->partopfamily[0 /* col */];
 
-	// GPDB_12_MERGE_FIXME: This *should* be StrategyNumber, but IndexOpProperties takes an INT
-	INT strategy;
+	StrategyNumber strategy_num;
 	Oid righttype = InvalidOid;
 
 	// extract the strategy (<, >, = etc) of the operator in the scalar cmp
 	// and confirm that it's usable given the partition column's opfamily
-	gpdb::IndexOpProperties(opno, opfamily, &strategy, &righttype);
+	gpdb::IndexOpProperties(opno, opfamily, &strategy_num, &righttype);
 
 	if (InvalidOid == righttype)
 	{
@@ -138,7 +137,7 @@ CPartPruneStepsBuilder::PartPruneStepFromScalarCmp(CDXLNode *node, int *step_id,
 
 	PartitionPruneStepOp *step = MakeNode(PartitionPruneStepOp);
 	step->step.step_id = (*step_id)++;
-	step->opstrategy = strategy;
+	step->opstrategy = strategy_num;
 
 	// Use cmpfns from the partitioned table, since the op was confirmed
 	// to be part of partitioning column opfamily above.

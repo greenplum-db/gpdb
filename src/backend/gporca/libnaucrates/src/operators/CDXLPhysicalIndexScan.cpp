@@ -13,6 +13,7 @@
 
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
+#include "naucrates/md/IMDCacheObject.h"
 
 using namespace gpos;
 using namespace gpdxl;
@@ -148,6 +149,12 @@ CDXLPhysicalIndexScan::SerializeToDXL(CXMLSerializer *xml_serializer,
 	// serialize children
 	node->SerializeChildrenToDXL(xml_serializer);
 
+	// serialize partition mdids (null in this case)
+	IMdIdArray *empty = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+	IMDCacheObject::SerializeMDIdList(
+		xml_serializer, empty, CDXLTokens::GetDXLTokenStr(EdxltokenPartitions),
+		CDXLTokens::GetDXLTokenStr(EdxltokenPartition));
+	empty->Release();
 	// serialize index descriptor
 	m_dxl_index_descr->SerializeToDXL(xml_serializer);
 

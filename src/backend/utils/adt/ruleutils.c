@@ -53,9 +53,10 @@
 #include "optimizer/optimizer.h"
 #include "parser/parse_node.h"
 #include "parser/parse_agg.h"
+#include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
-#include "parser/parse_cte.h"
+#include "parser/parse_relation.h"
 #include "parser/parser.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteHandler.h"
@@ -376,26 +377,29 @@ static void make_ruledef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 static void make_viewdef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 						 int prettyFlags, int wrapColumn);
 static void get_query_def(Query *query, StringInfo buf, List *parentnamespace,
-						  TupleDesc resultDesc,
+						  TupleDesc resultDesc, bool colNamesVisible,
 						  int prettyFlags, int wrapColumn, int startIndent);
 static void get_values_def(List *values_lists, deparse_context *context);
 static void get_with_clause(Query *query, deparse_context *context);
 static void get_select_query_def(Query *query, deparse_context *context,
-								 TupleDesc resultDesc);
-static void get_insert_query_def(Query *query, deparse_context *context);
-static void get_update_query_def(Query *query, deparse_context *context);
+								 TupleDesc resultDesc, bool colNamesVisible);
+static void get_insert_query_def(Query *query, deparse_context *context,
+								 bool colNamesVisible);
+static void get_update_query_def(Query *query, deparse_context *context,
+								 bool colNamesVisible);
 static void get_update_query_targetlist_def(Query *query, List *targetList,
 											deparse_context *context,
 											RangeTblEntry *rte);
-static void get_delete_query_def(Query *query, deparse_context *context);
+static void get_delete_query_def(Query *query, deparse_context *context,
+								 bool colNamesVisible);
 static void get_utility_query_def(Query *query, deparse_context *context);
 static void get_basic_select_query(Query *query, deparse_context *context,
-								   TupleDesc resultDesc);
+								   TupleDesc resultDesc, bool colNamesVisible);
 static void get_target_list(List *targetList, deparse_context *context,
-							TupleDesc resultDesc);
+							TupleDesc resultDesc, bool colNamesVisible);
 static void get_setop_query(Node *setOp, Query *query,
 							deparse_context *context,
-							TupleDesc resultDesc);
+							TupleDesc resultDesc, bool colNamesVisible);
 static Node *get_rule_sortgroupclause(Index ref, List *tlist,
 									  bool force_colno,
 									  deparse_context *context);
@@ -423,6 +427,8 @@ static void removeStringInfoSpaces(StringInfo str);
 static void get_rule_expr(Node *node, deparse_context *context,
 						  bool showimplicit);
 static void get_rule_expr_toplevel(Node *node, deparse_context *context,
+								   bool showimplicit);
+static void get_rule_list_toplevel(List *lst, deparse_context *context,
 								   bool showimplicit);
 static void get_rule_expr_funccall(Node *node, deparse_context *context,
 								   bool showimplicit);
@@ -3113,13 +3119,14 @@ print_function_trftypes(StringInfo buf, HeapTuple proctup)
 	{
 		int			i;
 
-		appendStringInfoString(buf, "\n TRANSFORM ");
+		appendStringInfoString(buf, " TRANSFORM ");
 		for (i = 0; i < ntypes; i++)
 		{
 			if (i != 0)
 				appendStringInfoString(buf, ", ");
 			appendStringInfo(buf, "FOR TYPE %s", format_type_be(trftypes[i]));
 		}
+		appendStringInfoChar(buf, '\n');
 	}
 }
 
@@ -3907,9 +3914,9 @@ set_relation_column_names(deparse_namespace *dpns, RangeTblEntry *rte,
 	int			j;
 
 	/*
-	 * Extract the RTE's "real" column names.  This is comparable to
-	 * get_rte_attribute_name, except that it's important to disregard dropped
-	 * columns.  We put NULL into the array for a dropped column.
+	 * Construct an array of the current "real" column names of the RTE.
+	 * real_colnames[] will be indexed by physical column number, with NULL
+	 * entries for dropped columns.
 	 */
 	if (rte->rtekind == RTE_RELATION)
 	{
@@ -3936,19 +3943,43 @@ set_relation_column_names(deparse_namespace *dpns, RangeTblEntry *rte,
 	}
 	else
 	{
-		/* Otherwise use the column names from eref */
+		/* Otherwise get the column names from eref or expandRTE() */
+		List	   *colnames;
 		ListCell   *lc;
 
-		ncolumns = list_length(rte->eref->colnames);
+		/*
+		 * Functions returning composites have the annoying property that some
+		 * of the composite type's columns might have been dropped since the
+		 * query was parsed.  If possible, use expandRTE() to handle that
+		 * case, since it has the tedious logic needed to find out about
+		 * dropped columns.  However, if we're explaining a plan, then we
+		 * don't have rte->functions because the planner thinks that won't be
+		 * needed later, and that breaks expandRTE().  So in that case we have
+		 * to rely on rte->eref, which may lead us to report a dropped
+		 * column's old name; that seems close enough for EXPLAIN's purposes.
+		 *
+		 * For non-RELATION, non-FUNCTION RTEs, we can just look at rte->eref,
+		 * which should be sufficiently up-to-date: no other RTE types can
+		 * have columns get dropped from under them after parsing.
+		 */
+		if (rte->rtekind == RTE_FUNCTION && rte->functions != NIL)
+		{
+			/* Since we're not creating Vars, rtindex etc. don't matter */
+			expandRTE(rte, 1, 0, -1, true /* include dropped */ ,
+					  &colnames, NULL);
+		}
+		else
+			colnames = rte->eref->colnames;
+
+		ncolumns = list_length(colnames);
 		real_colnames = (char **) palloc(ncolumns * sizeof(char *));
 
 		i = 0;
-		foreach(lc, rte->eref->colnames)
+		foreach(lc, colnames)
 		{
 			/*
-			 * If the column name shown in eref is an empty string, then it's
-			 * a column that was dropped at the time of parsing the query, so
-			 * treat it as dropped.
+			 * If the column name we find here is an empty string, then it's a
+			 * dropped column, so change to NULL.
 			 */
 			char	   *cname = strVal(lfirst(lc));
 
@@ -4985,7 +5016,7 @@ make_ruledef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 		foreach(action, actions)
 		{
 			query = (Query *) lfirst(action);
-			get_query_def(query, buf, NIL, viewResultDesc,
+			get_query_def(query, buf, NIL, viewResultDesc, true,
 						  prettyFlags, WRAP_COLUMN_DEFAULT, 0);
 			if (prettyFlags)
 				appendStringInfoString(buf, ";\n");
@@ -5003,7 +5034,7 @@ make_ruledef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 		Query	   *query;
 
 		query = (Query *) linitial(actions);
-		get_query_def(query, buf, NIL, viewResultDesc,
+		get_query_def(query, buf, NIL, viewResultDesc, true,
 					  prettyFlags, WRAP_COLUMN_DEFAULT, 0);
 		appendStringInfoChar(buf, ';');
 	}
@@ -5086,7 +5117,7 @@ make_viewdef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 		return;
 	}
 
-	get_query_def(query, buf, NIL, RelationGetDescr(ev_relation),
+	get_query_def(query, buf, NIL, RelationGetDescr(ev_relation), true,
 				  prettyFlags, wrapColumn, 0);
 	appendStringInfoChar(buf, ';');
 
@@ -5097,13 +5128,23 @@ make_viewdef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 /* ----------
  * get_query_def			- Parse back one query parsetree
  *
- * If resultDesc is not NULL, then it is the output tuple descriptor for
- * the view represented by a SELECT query.
+ * query: parsetree to be displayed
+ * buf: output text is appended to buf
+ * parentnamespace: list (initially empty) of outer-level deparse_namespace's
+ * resultDesc: if not NULL, the output tuple descriptor for the view
+ *		represented by a SELECT query.  We use the column names from it
+ *		to label SELECT output columns, in preference to names in the query
+ * colNamesVisible: true if the surrounding context cares about the output
+ *		column names at all (as, for example, an EXISTS() context does not);
+ *		when false, we can suppress dummy column labels such as "?column?"
+ * prettyFlags: bitmask of PRETTYFLAG_XXX options
+ * wrapColumn: maximum line length, or -1 to disable wrapping
+ * startIndent: initial indentation amount
  * ----------
  */
 static void
 get_query_def(Query *query, StringInfo buf, List *parentnamespace,
-			  TupleDesc resultDesc,
+			  TupleDesc resultDesc, bool colNamesVisible,
 			  int prettyFlags, int wrapColumn, int startIndent)
 {
 	deparse_context context;
@@ -5141,19 +5182,19 @@ get_query_def(Query *query, StringInfo buf, List *parentnamespace,
 	switch (query->commandType)
 	{
 		case CMD_SELECT:
-			get_select_query_def(query, &context, resultDesc);
+			get_select_query_def(query, &context, resultDesc, colNamesVisible);
 			break;
 
 		case CMD_UPDATE:
-			get_update_query_def(query, &context);
+			get_update_query_def(query, &context, colNamesVisible);
 			break;
 
 		case CMD_INSERT:
-			get_insert_query_def(query, &context);
+			get_insert_query_def(query, &context, colNamesVisible);
 			break;
 
 		case CMD_DELETE:
-			get_delete_query_def(query, &context);
+			get_delete_query_def(query, &context, colNamesVisible);
 			break;
 
 		case CMD_NOTHING:
@@ -5277,6 +5318,7 @@ get_with_clause(Query *query, deparse_context *context)
 		if (PRETTY_INDENT(context))
 			appendContextKeyword(context, "", 0, 0, 0);
 		get_query_def((Query *) cte->ctequery, buf, context->namespaces, NULL,
+					  true,
 					  context->prettyFlags, context->wrapColumn,
 					  context->indentLevel);
 		if (PRETTY_INDENT(context))
@@ -5300,7 +5342,7 @@ get_with_clause(Query *query, deparse_context *context)
  */
 static void
 get_select_query_def(Query *query, deparse_context *context,
-					 TupleDesc resultDesc)
+					 TupleDesc resultDesc, bool colNamesVisible)
 {
 	StringInfo	buf = context->buf;
 	List	   *save_windowclause;
@@ -5327,13 +5369,14 @@ get_select_query_def(Query *query, deparse_context *context,
 	 */
 	if (query->setOperations)
 	{
-		get_setop_query(query->setOperations, query, context, resultDesc);
+		get_setop_query(query->setOperations, query, context, resultDesc,
+						colNamesVisible);
 		/* ORDER BY clauses must be simple in this case */
 		force_colno = true;
 	}
 	else
 	{
-		get_basic_select_query(query, context, resultDesc);
+		get_basic_select_query(query, context, resultDesc, colNamesVisible);
 		force_colno = false;
 	}
 
@@ -5444,19 +5487,20 @@ get_select_query_def(Query *query, deparse_context *context,
 }
 
 /*
- * Detect whether query looks like SELECT ... FROM VALUES();
- * if so, return the VALUES RTE.  Otherwise return NULL.
+ * Detect whether query looks like SELECT ... FROM VALUES(),
+ * with no need to rename the output columns of the VALUES RTE.
+ * If so, return the VALUES RTE.  Otherwise return NULL.
  */
 static RangeTblEntry *
-get_simple_values_rte(Query *query)
+get_simple_values_rte(Query *query, TupleDesc resultDesc)
 {
 	RangeTblEntry *result = NULL;
 	ListCell   *lc;
 
 	/*
-	 * We want to return true even if the Query also contains OLD or NEW rule
-	 * RTEs.  So the idea is to scan the rtable and see if there is only one
-	 * inFromCl RTE that is a VALUES RTE.
+	 * We want to detect a match even if the Query also contains OLD or NEW
+	 * rule RTEs.  So the idea is to scan the rtable and see if there is only
+	 * one inFromCl RTE that is a VALUES RTE.
 	 */
 	foreach(lc, query->rtable)
 	{
@@ -5479,23 +5523,36 @@ get_simple_values_rte(Query *query)
 	 * parser/analyze.c will never generate a "bare" VALUES RTE --- they only
 	 * appear inside auto-generated sub-queries with very restricted
 	 * structure.  However, DefineView might have modified the tlist by
-	 * injecting new column aliases; so compare tlist resnames against the
-	 * RTE's names to detect that.
+	 * injecting new column aliases, or we might have some other column
+	 * aliases forced by a resultDesc.  We can only simplify if the RTE's
+	 * column names match the names that get_target_list() would select.
 	 */
 	if (result)
 	{
 		ListCell   *lcn;
+		int			colno;
 
 		if (list_length(query->targetList) != list_length(result->eref->colnames))
 			return NULL;		/* this probably cannot happen */
+		colno = 0;
 		forboth(lc, query->targetList, lcn, result->eref->colnames)
 		{
 			TargetEntry *tle = (TargetEntry *) lfirst(lc);
 			char	   *cname = strVal(lfirst(lcn));
+			char	   *colname;
 
 			if (tle->resjunk)
 				return NULL;	/* this probably cannot happen */
-			if (tle->resname == NULL || strcmp(tle->resname, cname) != 0)
+
+			/* compute name that get_target_list would use for column */
+			colno++;
+			if (resultDesc && colno <= resultDesc->natts)
+				colname = NameStr(TupleDescAttr(resultDesc, colno - 1)->attname);
+			else
+				colname = tle->resname;
+
+			/* does it match the VALUES RTE? */
+			if (colname == NULL || strcmp(colname, cname) != 0)
 				return NULL;	/* column name has been changed */
 		}
 	}
@@ -5505,7 +5562,7 @@ get_simple_values_rte(Query *query)
 
 static void
 get_basic_select_query(Query *query, deparse_context *context,
-					   TupleDesc resultDesc)
+					   TupleDesc resultDesc, bool colNamesVisible)
 {
 	StringInfo	buf = context->buf;
 	RangeTblEntry *values_rte;
@@ -5523,7 +5580,7 @@ get_basic_select_query(Query *query, deparse_context *context,
 	 * VALUES part.  This reverses what transformValuesClause() did at parse
 	 * time.
 	 */
-	values_rte = get_simple_values_rte(query);
+	values_rte = get_simple_values_rte(query, resultDesc);
 	if (values_rte)
 	{
 		get_values_def(values_rte->values_lists, context);
@@ -5558,7 +5615,7 @@ get_basic_select_query(Query *query, deparse_context *context,
 	}
 
 	/* Then we tell what to select (the targetlist) */
-	get_target_list(query->targetList, context, resultDesc);
+	get_target_list(query->targetList, context, resultDesc, colNamesVisible);
 
 	/* Add the FROM clause if needed */
 	get_from_clause(query, " FROM ", context);
@@ -5650,11 +5707,13 @@ get_basic_select_query(Query *query, deparse_context *context,
  * get_target_list			- Parse back a SELECT target list
  *
  * This is also used for RETURNING lists in INSERT/UPDATE/DELETE.
+ *
+ * resultDesc and colNamesVisible are as for get_query_def()
  * ----------
  */
 static void
 get_target_list(List *targetList, deparse_context *context,
-				TupleDesc resultDesc)
+				TupleDesc resultDesc, bool colNamesVisible)
 {
 	StringInfo	buf = context->buf;
 	StringInfoData targetbuf;
@@ -5705,8 +5764,13 @@ get_target_list(List *targetList, deparse_context *context,
 		else
 		{
 			get_rule_expr((Node *) tle->expr, context, true);
-			/* We'll show the AS name unless it's this: */
-			attname = "?column?";
+
+			/*
+			 * When colNamesVisible is true, we should always show the
+			 * assigned column name explicitly.  Otherwise, show it only if
+			 * it's not FigureColname's fallback.
+			 */
+			attname = colNamesVisible ? NULL : "?column?";
 		}
 
 		/*
@@ -5785,7 +5849,7 @@ get_target_list(List *targetList, deparse_context *context,
 
 static void
 get_setop_query(Node *setOp, Query *query, deparse_context *context,
-				TupleDesc resultDesc)
+				TupleDesc resultDesc, bool colNamesVisible)
 {
 	StringInfo	buf = context->buf;
 	bool		need_paren;
@@ -5811,6 +5875,7 @@ get_setop_query(Node *setOp, Query *query, deparse_context *context,
 		if (need_paren)
 			appendStringInfoChar(buf, '(');
 		get_query_def(subquery, buf, context->namespaces, resultDesc,
+					  colNamesVisible,
 					  context->prettyFlags, context->wrapColumn,
 					  context->indentLevel);
 		if (need_paren)
@@ -5853,7 +5918,7 @@ get_setop_query(Node *setOp, Query *query, deparse_context *context,
 		else
 			subindent = 0;
 
-		get_setop_query(op->larg, query, context, resultDesc);
+		get_setop_query(op->larg, query, context, resultDesc, colNamesVisible);
 
 		if (need_paren)
 			appendContextKeyword(context, ") ", -subindent, 0, 0);
@@ -5897,7 +5962,7 @@ get_setop_query(Node *setOp, Query *query, deparse_context *context,
 			subindent = 0;
 		appendContextKeyword(context, "", subindent, 0, 0);
 
-		get_setop_query(op->rarg, query, context, resultDesc);
+		get_setop_query(op->rarg, query, context, resultDesc, false);
 
 		if (PRETTY_INDENT(context))
 			context->indentLevel -= subindent;
@@ -6197,7 +6262,8 @@ get_rule_windowspec(WindowClause *wc, List *targetList,
  * ----------
  */
 static void
-get_insert_query_def(Query *query, deparse_context *context)
+get_insert_query_def(Query *query, deparse_context *context,
+					 bool colNamesVisible)
 {
 	StringInfo	buf = context->buf;
 	RangeTblEntry *select_rte = NULL;
@@ -6307,6 +6373,7 @@ get_insert_query_def(Query *query, deparse_context *context)
 	{
 		/* Add the SELECT */
 		get_query_def(select_rte->subquery, buf, NIL, NULL,
+					  false,
 					  context->prettyFlags, context->wrapColumn,
 					  context->indentLevel);
 	}
@@ -6320,7 +6387,7 @@ get_insert_query_def(Query *query, deparse_context *context)
 		/* Add the single-VALUES expression list */
 		appendContextKeyword(context, "VALUES (",
 							 -PRETTYINDENT_STD, PRETTYINDENT_STD, 2);
-		get_rule_expr((Node *) strippedexprs, context, false);
+		get_rule_list_toplevel(strippedexprs, context, false);
 		appendStringInfoChar(buf, ')');
 	}
 	else
@@ -6400,7 +6467,7 @@ get_insert_query_def(Query *query, deparse_context *context)
 	{
 		appendContextKeyword(context, " RETURNING",
 							 -PRETTYINDENT_STD, PRETTYINDENT_STD, 1);
-		get_target_list(query->returningList, context, NULL);
+		get_target_list(query->returningList, context, NULL, colNamesVisible);
 	}
 }
 
@@ -6410,7 +6477,8 @@ get_insert_query_def(Query *query, deparse_context *context)
  * ----------
  */
 static void
-get_update_query_def(Query *query, deparse_context *context)
+get_update_query_def(Query *query, deparse_context *context,
+					 bool colNamesVisible)
 {
 	StringInfo	buf = context->buf;
 	RangeTblEntry *rte;
@@ -6455,7 +6523,7 @@ get_update_query_def(Query *query, deparse_context *context)
 	{
 		appendContextKeyword(context, " RETURNING",
 							 -PRETTYINDENT_STD, PRETTYINDENT_STD, 1);
-		get_target_list(query->returningList, context, NULL);
+		get_target_list(query->returningList, context, NULL, colNamesVisible);
 	}
 }
 
@@ -6618,7 +6686,8 @@ get_update_query_targetlist_def(Query *query, List *targetList,
  * ----------
  */
 static void
-get_delete_query_def(Query *query, deparse_context *context)
+get_delete_query_def(Query *query, deparse_context *context,
+					 bool colNamesVisible)
 {
 	StringInfo	buf = context->buf;
 	RangeTblEntry *rte;
@@ -6659,7 +6728,7 @@ get_delete_query_def(Query *query, deparse_context *context)
 	{
 		appendContextKeyword(context, " RETURNING",
 							 -PRETTYINDENT_STD, PRETTYINDENT_STD, 1);
-		get_target_list(query->returningList, context, NULL);
+		get_target_list(query->returningList, context, NULL, colNamesVisible);
 	}
 }
 
@@ -6839,9 +6908,16 @@ get_variable(Var *var, int levelsup, bool istoplevel, deparse_context *context)
 			elog(ERROR, "invalid attnum %d for relation \"%s\"",
 				 attnum, rte->eref->aliasname);
 		attname = colinfo->colnames[attnum - 1];
-		if (attname == NULL)	/* dropped column? */
-			elog(ERROR, "invalid attnum %d for relation \"%s\"",
-				 attnum, rte->eref->aliasname);
+
+		/*
+		 * If we find a Var referencing a dropped column, it seems better to
+		 * print something (anything) than to fail.  In general this should
+		 * not happen, but there are specific cases involving functions
+		 * returning named composite types where we don't sufficiently enforce
+		 * that you can't drop a column that's referenced in some view.
+		 */
+		if (attname == NULL)
+			attname = "?dropped?column?";
 	}
 	else
 	{
@@ -7522,12 +7598,13 @@ get_parameter(Param *param, deparse_context *context)
 		context->varprefix = true;
 
 		/*
-		 * A Param's expansion is typically a Var, Aggref, or upper-level
-		 * Param, which wouldn't need extra parentheses.  Otherwise, insert
-		 * parens to ensure the expression looks atomic.
+		 * A Param's expansion is typically a Var, Aggref, GroupingFunc, or
+		 * upper-level Param, which wouldn't need extra parentheses.
+		 * Otherwise, insert parens to ensure the expression looks atomic.
 		 */
 		need_paren = !(IsA(expr, Var) ||
 					   IsA(expr, Aggref) ||
+					   IsA(expr, GroupingFunc) ||
 					   IsA(expr, Param));
 		if (need_paren)
 			appendStringInfoChar(context->buf, '(');
@@ -7609,6 +7686,8 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 		case T_NextValueExpr:
 		case T_NullIfExpr:
 		case T_Aggref:
+		case T_GroupingFunc:
+		case T_WindowFunc:
 		case T_FuncExpr:
 			/* function-like: name(..) or name[..] */
 			return true;
@@ -7724,6 +7803,7 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 				case T_XmlExpr: /* own parentheses */
 				case T_NullIfExpr:	/* other separators */
 				case T_Aggref:	/* own parentheses */
+				case T_GroupingFunc:	/* own parentheses */
 				case T_WindowFunc:	/* own parentheses */
 				case T_CaseExpr:	/* other separators */
 					return true;
@@ -7774,6 +7854,7 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 				case T_XmlExpr: /* own parentheses */
 				case T_NullIfExpr:	/* other separators */
 				case T_Aggref:	/* own parentheses */
+				case T_GroupingFunc:	/* own parentheses */
 				case T_WindowFunc:	/* own parentheses */
 				case T_CaseExpr:	/* other separators */
 					return true;
@@ -8502,7 +8583,7 @@ get_rule_expr(Node *node, deparse_context *context,
 				Query			*subquery = (Query*) tabexpr->subquery;
 
 				appendStringInfo(buf, "TABLE(");
-				get_query_def(subquery, buf, context->namespaces, NULL,
+				get_query_def(subquery, buf, context->namespaces, NULL, false,
 							  context->prettyFlags, context->wrapColumn,
 							  context->indentLevel);
 				appendStringInfoChar(buf, ')');
@@ -8574,23 +8655,15 @@ get_rule_expr(Node *node, deparse_context *context,
 		case T_RowCompareExpr:
 			{
 				RowCompareExpr *rcexpr = (RowCompareExpr *) node;
-				ListCell   *arg;
-				char	   *sep;
 
 				/*
 				 * SQL99 allows "ROW" to be omitted when there is more than
-				 * one column, but for simplicity we always print it.
+				 * one column, but for simplicity we always print it.  Within
+				 * a ROW expression, whole-row Vars need special treatment, so
+				 * use get_rule_list_toplevel.
 				 */
 				appendStringInfoString(buf, "(ROW(");
-				sep = "";
-				foreach(arg, rcexpr->largs)
-				{
-					Node	   *e = (Node *) lfirst(arg);
-
-					appendStringInfoString(buf, sep);
-					get_rule_expr(e, context, true);
-					sep = ", ";
-				}
+				get_rule_list_toplevel(rcexpr->largs, context, true);
 
 				/*
 				 * We assume that the name of the first-column operator will
@@ -8603,15 +8676,7 @@ get_rule_expr(Node *node, deparse_context *context,
 								 generate_operator_name(linitial_oid(rcexpr->opnos),
 														exprType(linitial(rcexpr->largs)),
 														exprType(linitial(rcexpr->rargs))));
-				sep = "";
-				foreach(arg, rcexpr->rargs)
-				{
-					Node	   *e = (Node *) lfirst(arg);
-
-					appendStringInfoString(buf, sep);
-					get_rule_expr(e, context, true);
-					sep = ", ";
-				}
+				get_rule_list_toplevel(rcexpr->rargs, context, true);
 				appendStringInfoString(buf, "))");
 			}
 			break;
@@ -9143,6 +9208,168 @@ get_rule_expr(Node *node, deparse_context *context,
 			}
 			break;
 
+		case T_GpPartitionDefinition:
+			{
+				GpPartitionDefinition *def = (GpPartitionDefinition*)node;
+				ListCell *lc;
+				char *sep = "";
+
+				if (def->isTemplate)
+					appendStringInfo(buf, "SUBPARTITION TEMPLATE(");
+
+				foreach(lc, def->partDefElems)
+				{
+					GpPartDefElem *elem = lfirst_node(GpPartDefElem, lc);
+
+					if (elem->colencs)
+						elog(ERROR, "Partition specific ENCODING clause not supported yet");
+
+					appendStringInfoString(buf, sep);
+					sep = ", ";
+					if (elem->partName)
+					{
+						if (elem->isDefault)
+							appendStringInfo(buf, "DEFAULT SUBPARTITION %s", elem->partName);
+						else
+							appendStringInfo(buf, "SUBPARTITION %s", elem->partName);
+					}
+
+					if (elem->boundSpec)
+					{
+						switch (nodeTag(elem->boundSpec))
+						{
+							case T_GpPartitionRangeSpec:
+							{
+								GpPartitionRangeSpec *rspec =
+														 (GpPartitionRangeSpec *) elem->boundSpec;
+								if (rspec->partStart)
+								{
+									Const *val = castNode(Const,
+														  linitial(rspec->partStart->val));
+									Assert(!val->constisnull);
+									Assert(rspec->partStart->edge ==
+											   PART_EDGE_INCLUSIVE);
+									appendStringInfo(buf, " START (");
+									get_const_expr(val, context, true);
+									appendStringInfo(buf, ")");
+								}
+								if (rspec->partEnd)
+								{
+									Const *val = castNode(Const,
+														  linitial(rspec->partEnd->val));
+									Assert(!val->constisnull);
+									Assert(rspec->partEnd->edge ==
+											   PART_EDGE_EXCLUSIVE);
+									appendStringInfo(buf, " END (");
+									get_const_expr(val, context, true);
+									appendStringInfo(buf, ")");
+								}
+								if (rspec->partEvery)
+								{
+									OpExpr *opexpr;
+									Node   *every;
+
+									opexpr =
+										(OpExpr *) strip_implicit_coercions((Node *) linitial(
+											rspec->partEvery));
+									every  = (Node *) lsecond(opexpr->args);
+
+									appendStringInfo(buf, " Every (");
+									get_rule_expr(every, context, true);
+									appendStringInfo(buf, ")");
+								}
+							}
+								break;
+							case T_GpPartitionListSpec:
+							{
+								GpPartitionListSpec *lspec = (GpPartitionListSpec *) elem->boundSpec;
+								ListCell *cell;
+
+								appendStringInfoString(buf, " VALUES (");
+								sep = "";
+								foreach(cell, lspec->partValues)
+								{
+									Const *val;
+
+									Assert(list_length(lfirst(cell)) == 1);
+									val = castNode(Const, linitial(lfirst(cell)));
+									appendStringInfoString(buf, sep);
+									get_const_expr(val, context, -1);
+									sep = ", ";
+								}
+								appendStringInfoChar(buf, ')');
+							}
+								break;
+							default:
+								elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
+						}
+					}
+					if (elem->options)
+					{
+						ListCell *cell;
+
+						appendStringInfoString(buf, sep);
+						appendStringInfoString(buf, " WITH (");
+						if (elem->accessMethod)
+						{
+							if (pg_strcasecmp(elem->accessMethod, "ao_row") != 0)
+							{
+								appendStringInfoString(buf, "appendonly=true, orientation=row");
+								sep = ", ";
+							}
+							else if (pg_strcasecmp(elem->accessMethod, "ao_column") != 0)
+							{
+								appendStringInfoString(buf, "appendonly=true, orientation=column");
+								sep = ", ";
+							}
+						}
+						foreach (cell, elem->options)
+						{
+							DefElem *el = lfirst_node(DefElem, cell);
+							char *arg;
+
+							appendStringInfoString(buf, sep);
+							appendStringInfo(buf, "%s=", el->defname);
+							appendStringInfo(buf, "%s", arg = defGetString(el));
+							sep = ", ";
+						}
+						appendStringInfoChar(buf, ')');
+					}
+				}
+
+				if (def->encClauses)
+					appendStringInfoString(buf, ", ");
+
+				sep = "";
+				foreach(lc, def->encClauses)
+				{
+					ColumnReferenceStorageDirective *crsd = lfirst_node(ColumnReferenceStorageDirective, lc);
+					ListCell *cell;
+
+					appendStringInfoString(buf, sep);
+					if (crsd->deflt)
+						appendStringInfo(buf, "DEFAULT COLUMN ENCODING (");
+					else
+						appendStringInfo(buf, "COLUMN %s ENCODING (", crsd->column);
+
+					sep = "";
+					foreach(cell, crsd->encoding)
+					{
+						DefElem *el = lfirst_node(DefElem, cell);
+						char *arg;
+
+						appendStringInfoString(buf, sep);
+						appendStringInfo(buf, "%s=", el->defname);
+						appendStringInfo(buf, "%s", arg = defGetString(el));
+						sep = ", ";
+					}
+					appendStringInfo(buf, ")");
+				}
+				if (def->isTemplate)
+					appendStringInfo(buf, ")");
+			}
+			break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			break;
@@ -9168,6 +9395,32 @@ get_rule_expr_toplevel(Node *node, deparse_context *context,
 		(void) get_variable((Var *) node, 0, true, context);
 	else
 		get_rule_expr(node, context, showimplicit);
+}
+
+/*
+ * get_rule_list_toplevel		- Parse back a list of toplevel expressions
+ *
+ * Apply get_rule_expr_toplevel() to each element of a List.
+ *
+ * This adds commas between the expressions, but caller is responsible
+ * for printing surrounding decoration.
+ */
+static void
+get_rule_list_toplevel(List *lst, deparse_context *context,
+					   bool showimplicit)
+{
+	const char *sep;
+	ListCell   *lc;
+
+	sep = "";
+	foreach(lc, lst)
+	{
+		Node	   *e = (Node *) lfirst(lc);
+
+		appendStringInfoString(context->buf, sep);
+		get_rule_expr_toplevel(e, context, showimplicit);
+		sep = ", ";
+	}
 }
 
 /*
@@ -9697,6 +9950,14 @@ get_coercion_expr(Node *arg, deparse_context *context,
 		if (!PRETTY_PAREN(context))
 			appendStringInfoChar(buf, ')');
 	}
+
+	/*
+	 * Never emit resulttype(arg) functional notation. A pg_proc entry could
+	 * take precedence, and a resulttype in pg_temp would require schema
+	 * qualification that format_type_with_typemod() would usually omit. We've
+	 * standardized on arg::resulttype, but CAST(arg AS resulttype) notation
+	 * would work fine.
+	 */
 	appendStringInfo(buf, "::%s",
 					 format_type_with_typemod(resulttype, resulttypmod));
 }
@@ -10003,7 +10264,7 @@ get_sublink_expr(SubLink *sublink, deparse_context *context)
 	if (need_paren)
 		appendStringInfoChar(buf, '(');
 
-	get_query_def(query, buf, context->namespaces, NULL,
+	get_query_def(query, buf, context->namespaces, NULL, false,
 				  context->prettyFlags, context->wrapColumn,
 				  context->indentLevel);
 
@@ -10257,6 +10518,7 @@ get_from_clause_item(Node *jtnode, Query *query, deparse_context *context)
 				/* Subquery RTE */
 				appendStringInfoChar(buf, '(');
 				get_query_def(rte->subquery, buf, context->namespaces, NULL,
+							  true,
 							  context->prettyFlags, context->wrapColumn,
 							  context->indentLevel);
 				appendStringInfoChar(buf, ')');

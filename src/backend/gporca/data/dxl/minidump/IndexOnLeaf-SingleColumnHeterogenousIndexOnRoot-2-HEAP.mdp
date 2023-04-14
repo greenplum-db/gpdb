@@ -24,7 +24,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
       <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -33,8 +33,8 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.827725001.1.0"/>
-          <dxl:Partition Mdid="0.827725002.1.0"/>
+          <dxl:Partition Mdid="6.827725001.1.0"/>
+          <dxl:Partition Mdid="6.827725002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:GPDBScalarOp Mdid="0.523.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true">
@@ -160,8 +160,8 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.827753001.1.0"/>
-          <dxl:Partition Mdid="0.827753002.1.0"/>
+          <dxl:Partition Mdid="6.827753001.1.0"/>
+          <dxl:Partition Mdid="6.827753002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.827681.1.0.10" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -169,7 +169,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
       <dxl:ColumnStatistics Mdid="1.827681.1.0.3" Name="d" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.827681.1.0.5" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.827681.1.0.4" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Relation Mdid="0.827678.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="6.827678.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -209,14 +209,13 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:IndexInfo Mdid="0.827725.1.0" IsPartial="true"/>
           <dxl:IndexInfo Mdid="0.827753.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:Partitions>
-          <dxl:Partition Mdid="0.827678001.1.0"/>
-          <dxl:Partition Mdid="0.827678002.1.0"/>
+          <dxl:Partition Mdid="6.827678001.1.0"/>
+          <dxl:Partition Mdid="6.827678002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.827678001.1.0" Name="foo_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.827678001.1.0" Name="foo_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -256,7 +255,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:IndexInfo Mdid="0.827725001.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.827753001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -274,7 +272,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.827678002.1.0" Name="foo_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.827678002.1.0" Name="foo_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -314,7 +312,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:IndexInfo Mdid="0.827725002.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.827753002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints/>
         <dxl:PartConstraint>
           <dxl:And>
@@ -332,7 +329,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:CheckConstraint Mdid="0.827684.1.0" Name="foo_1_prt_p1_check" RelationMdid="0.827681.1.0">
+      <dxl:CheckConstraint Mdid="0.827684.1.0" Name="foo_1_prt_p1_check" RelationMdid="6.827681.1.0">
         <dxl:And>
           <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
             <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -357,7 +354,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.827681.1.0" Name="foo_1_prt_p1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.827681.1.0" Name="foo_1_prt_p1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.827681.1.0" Name="foo_1_prt_p1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -397,7 +394,6 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:IndexInfo Mdid="0.827725.1.0" IsPartial="false"/>
           <dxl:IndexInfo Mdid="0.827753.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
-        <dxl:Triggers/>
         <dxl:CheckConstraints>
           <dxl:CheckConstraint Mdid="0.827684.1.0"/>
         </dxl:CheckConstraints>
@@ -419,7 +415,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="0.827681.1.0" TableName="foo_1_prt_p1">
+          <dxl:TableDescriptor Mdid="6.827681.1.0" TableName="foo_1_prt_p1">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>
@@ -483,8 +479,9 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE d < 10;
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.827753.1.0" IndexName="idx_root_d_1_prt_p1"/>
-          <dxl:TableDescriptor Mdid="0.827681.1.0" TableName="foo_1_prt_p1">
+          <dxl:TableDescriptor Mdid="6.827681.1.0" TableName="foo_1_prt_p1">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0"/>

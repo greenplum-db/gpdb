@@ -3,6 +3,7 @@
 -- ----------------------------------------------------------------------
 create schema DML_over_joins;
 set search_path to DML_over_joins;
+set optimizer_trace_fallback=on;
 -- ----------------------------------------------------------------------
 -- Test: heap_motion1.sql
 -- ----------------------------------------------------------------------
@@ -973,6 +974,11 @@ DECLARE
    region VARCHAR;
    tablename VARCHAR;
 BEGIN
+   -- Set trace fallback to off to stabilize the test. Issue is that ORCA can
+   -- fallback due to Query Parameter not supported in DXL. That is
+   -- non-deterministic based on plancache.  This can be removed this after
+   -- ORCA implements Query Parameters.
+   set optimizer_trace_fallback=off;
    rowCount = $1;
    tablename = $2;
    FOR i IN 1 .. rowCount LOOP
@@ -988,6 +994,7 @@ BEGIN
       END IF;
       PERFORM insertIntoSales(tablename, i, region );
    END LOOP;
+   set optimizer_trace_fallback=on;
 END;
 $$ LANGUAGE plpgsql;
 --
@@ -1635,11 +1642,177 @@ explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and 
 (15 rows)
 
 -- ----------------------------------------------------------------------
+-- Test delete on partition table from join on another partition table
+-- ----------------------------------------------------------------------
+drop table if exists part_eq_dis_1;
+NOTICE:  table "part_eq_dis_1" does not exist, skipping
+drop table if exists part_eq_dis_2;
+NOTICE:  table "part_eq_dis_2" does not exist, skipping
+create table part_eq_dis_1 (a int4, b int4) partition by range (a) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table part_eq_dis_2 (c int4, d int4) partition by range (c) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into part_eq_dis_1 select generate_series(1,40), generate_series(1,40);
+insert into part_eq_dis_2 select generate_series(1,40), generate_series(1,40);
+drop table if exists part_neq_dis_1;
+NOTICE:  table "part_neq_dis_1" does not exist, skipping
+drop table if exists part_neq_dis_2;
+NOTICE:  table "part_neq_dis_2" does not exist, skipping
+create table part_neq_dis_1 (a int4, b int4) partition by range (b) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table part_neq_dis_2 (c int4, d int4) partition by range (d) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into part_neq_dis_1 select generate_series(1,40), generate_series(1,40);
+insert into part_neq_dis_2 select generate_series(1,40), generate_series(1,40);
+-- T1 - distribution partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select c from part_eq_dis_2 where c=1);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select c from part_eq_dis_2 where c=21);
+-- T1 - distribution partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select d from part_eq_dis_2 where c=2);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select d from part_eq_dis_2 where c=22);
+-- T1 - distribution partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select c from part_neq_dis_2 where c=3);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select c from part_neq_dis_2 where c=23);
+-- T1 - distribution partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select d from part_neq_dis_2 where c=4);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select d from part_neq_dis_2 where c=24);
+-- T1 - non-distribution non-partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select c from part_eq_dis_2 where c=5);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select c from part_eq_dis_2 where c=25);
+-- T1 - non-distribution non-partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select d from part_eq_dis_2 where c=6);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select d from part_eq_dis_2 where c=26);
+-- T1 - non-distribution non-partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select c from part_neq_dis_2 where c=7);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select c from part_neq_dis_2 where c=27);
+-- T1 - non-distribution non-partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select d from part_neq_dis_2 where c=8);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select d from part_neq_dis_2 where c=28);
+-- T1 - distribution non-partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select c from part_eq_dis_2 where c=9);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select c from part_eq_dis_2 where c=29);
+-- T1 - distribution non-partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select d from part_eq_dis_2 where c=10);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select d from part_eq_dis_2 where c=30);
+-- T1 - distribution non-partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select d from part_neq_dis_2 where c=11);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select d from part_neq_dis_2 where c=31);
+-- T1 - distribution non-partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select c from part_neq_dis_2 where c=12);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select c from part_neq_dis_2 where c=32);
+-- T1 - non-distribution partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select c from part_eq_dis_2 where c=13);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select c from part_eq_dis_2 where c=33);
+-- T1 - non-distribution partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select d from part_eq_dis_2 where c=14);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select d from part_eq_dis_2 where c=34);
+-- T1 - non-distribution partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select d from part_neq_dis_2 where c=15);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select d from part_neq_dis_2 where c=35);
+-- T1 - non-distribution partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select c from part_neq_dis_2 where c=16);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select c from part_neq_dis_2 where c=36);
+select * from part_eq_dis_1;
+ a  | b  
+----+----
+ 16 | 16
+ 18 | 18
+ 19 | 19
+ 29 | 29
+ 34 | 34
+ 37 | 37
+ 39 | 39
+ 12 | 12
+ 15 | 15
+ 20 | 20
+ 30 | 30
+ 31 | 31
+ 35 | 35
+ 36 | 36
+ 38 | 38
+ 40 | 40
+  9 |  9
+ 10 | 10
+ 11 | 11
+ 13 | 13
+ 14 | 14
+ 17 | 17
+ 32 | 32
+ 33 | 33
+(24 rows)
+
+select * from part_neq_dis_1;
+ a  | b  
+----+----
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
+ 18 | 18
+ 19 | 19
+ 22 | 22
+ 24 | 24
+ 27 | 27
+ 37 | 37
+ 39 | 39
+  1 |  1
+ 20 | 20
+ 23 | 23
+ 26 | 26
+ 38 | 38
+ 40 | 40
+  5 |  5
+  6 |  6
+ 17 | 17
+ 21 | 21
+ 25 | 25
+ 28 | 28
+(24 rows)
+
+reset optimizer_trace_fallback;
+-- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
 -- start_ignore
 drop schema DML_over_joins cascade;
-NOTICE:  drop cascades to 15 other objects
+NOTICE:  drop cascades to 22 other objects
 DETAIL:  drop cascades to table update_test
 drop cascades to table t1
 drop cascades to table t2
@@ -1655,4 +1828,11 @@ drop cascades to table sales_par_co
 drop cascades to function insertintosales(character varying,integer,character varying)
 drop cascades to function insertmanyintosales(integer,character varying)
 drop cascades to table s_ao
+drop cascades to table tab1
+drop cascades to table tab2
+drop cascades to table tab3
+drop cascades to table part_eq_dis_1
+drop cascades to table part_eq_dis_2
+drop cascades to table part_neq_dis_1
+drop cascades to table part_neq_dis_2
 -- end_ignore

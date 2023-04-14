@@ -6,8 +6,8 @@ In Greenplum Database, the default GPORCA optimizer co-exists with the Postgres 
 
 -   **[Overview of GPORCA](../../query/topics/query-piv-opt-overview.html)**  
 GPORCA extends the planning and optimization capabilities of the Postgres Planner.
--   **[Enabling and Disabling GPORCA](../../query/topics/query-piv-opt-enable.html)**  
-By default, Greenplum Database uses GPORCA instead of the Postgres Planner. Server configuration parameters enable or disable GPORCA.
+-   **[Activating and Deactivating GPORCA](../../query/topics/query-piv-opt-enable.html)**  
+By default, Greenplum Database uses GPORCA instead of the Postgres Planner. Server configuration parameters activate or deactivate GPORCA.
 -   **[Collecting Root Partition Statistics](../../query/topics/query-piv-opt-root-partition.html)**  
 For a partitioned table, GPORCA uses statistics of the table root partition to generate query plans. These statistics are used for determining the join order, for splitting and joining aggregate nodes, and for costing the query steps. In contrast, the Postgres Planner uses the statistics of each leaf partition.
 -   **[Considerations when Using GPORCA](../../query/topics/query-piv-opt-notes.html)**  
@@ -23,5 +23,5 @@ There are limitations in Greenplum Database when using the default GPORCA optimi
 -   **[About Uniform Multi-level Partitioned Tables](../../query/topics/query-piv-uniform-part-tbl.html)**  
 
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 

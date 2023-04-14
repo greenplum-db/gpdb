@@ -22,6 +22,7 @@
 #include "access/amapi.h"
 #include "access/heapam.h"
 #include "access/multixact.h"
+#include "access/reloptions.h"
 #include "access/relscan.h"
 #include "access/tableam.h"
 #include "access/transam.h"
@@ -52,6 +53,7 @@
 #include "storage/lmgr.h"
 #include "storage/predicate.h"
 #include "utils/acl.h"
+#include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
@@ -300,15 +302,14 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
  * If indexOid is InvalidOid, the table will be rewritten in physical order
  * instead of index order.  This is the new implementation of VACUUM FULL,
  * and error messages should refer to the operation as VACUUM not CLUSTER.
- *
- * Note that we don't support clustering on an AO table. If printError is true,
- * this function errors out when the relation is an AO table. Otherwise, this
- * functions prints out a warning message when the relation is an AO table.
  */
 bool
 cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 {
 	Relation	OldHeap;
+	Oid			save_userid;
+	int			save_sec_context;
+	int			save_nestlevel;
 	bool		verbose = ((options & CLUOPT_VERBOSE) != 0);
 	bool		recheck = ((options & CLUOPT_RECHECK) != 0);
 
@@ -339,6 +340,16 @@ cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 	}
 
 	/*
+	 * Switch to the table owner's userid, so that any index functions are run
+	 * as that user.  Also lock down security-restricted operations and
+	 * arrange to make GUC variable changes local to this command.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(OldHeap->rd_rel->relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	save_nestlevel = NewGUCNestLevel();
+
+	/*
 	 * Since we may open a new transaction for each relation, we have to check
 	 * that the relation still is what we think it is.
 	 *
@@ -352,11 +363,10 @@ cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 		Form_pg_index indexForm;
 
 		/* Check that the user still owns the relation */
-		if (!pg_class_ownercheck(tableOid, GetUserId()))
+		if (!pg_class_ownercheck(tableOid, save_userid))
 		{
 			relation_close(OldHeap, AccessExclusiveLock);
-			pgstat_progress_end_command();
-			return false;
+			goto out;
 		}
 
 		/*
@@ -370,8 +380,7 @@ cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 		if (RELATION_IS_OTHER_TEMP(OldHeap))
 		{
 			relation_close(OldHeap, AccessExclusiveLock);
-			pgstat_progress_end_command();
-			return false;
+			goto out;
 		}
 
 		if (OidIsValid(indexOid))
@@ -382,8 +391,7 @@ cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 			if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(indexOid)))
 			{
 				relation_close(OldHeap, AccessExclusiveLock);
-				pgstat_progress_end_command();
-				return false;
+				goto out;
 			}
 
 			/*
@@ -393,16 +401,14 @@ cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 			if (!HeapTupleIsValid(tuple))	/* probably can't happen */
 			{
 				relation_close(OldHeap, AccessExclusiveLock);
-				pgstat_progress_end_command();
-				return false;
+				goto out;
 			}
 			indexForm = (Form_pg_index) GETSTRUCT(tuple);
 			if (!indexForm->indisclustered)
 			{
 				ReleaseSysCache(tuple);
 				relation_close(OldHeap, AccessExclusiveLock);
-				pgstat_progress_end_command();
-				return false;
+				goto out;
 			}
 			ReleaseSysCache(tuple);
 		}
@@ -456,8 +462,7 @@ cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 		!RelationIsPopulated(OldHeap))
 	{
 		relation_close(OldHeap, AccessExclusiveLock);
-		pgstat_progress_end_command();
-		return false;
+		goto out;
 	}
 
 	/*
@@ -472,6 +477,13 @@ cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)
 	rebuild_relation(OldHeap, indexOid, verbose);
 
 	/* NB: rebuild_relation does table_close() on OldHeap */
+
+out:
+	/* Roll back any GUC changes executed by index functions */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
 
 	pgstat_progress_end_command();
 	return true;
@@ -632,6 +644,7 @@ static void
 rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 {
 	Oid			tableOid = RelationGetRelid(OldHeap);
+	Oid			accessMethod = OldHeap->rd_rel->relam;
 	Oid			tableSpace = OldHeap->rd_rel->reltablespace;
 	Oid			OIDNewHeap;
 	char		relpersistence;
@@ -659,6 +672,8 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 
 	/* Create the transient table that will receive the re-ordered data */
 	OIDNewHeap = make_new_heap(tableOid, tableSpace,
+							   accessMethod, NULL,
+							   (Datum)0, /* newoptions */
 							   relpersistence,
 							   AccessExclusiveLock,
 							   true /* createAoBlockDirectory */,
@@ -680,29 +695,45 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 					 relpersistence);
 }
 
+static char *
+make_column_name(char *prefix, char *colname)
+{
+	StringInfoData namebuf;
+
+	initStringInfo(&namebuf);
+	appendStringInfo(&namebuf, "%s%s", prefix, colname);
+	return namebuf.data;
+}
 
 /*
  * Create the transient table that will be filled with new data during
  * CLUSTER, ALTER TABLE, and similar operations.  The transient table
- * duplicates the logical structure of the OldHeap, but is placed in
- * NewTableSpace which might be different from OldHeap's.  Also, it's built
- * with the specified persistence, which might differ from the original's.
+ * duplicates the logical structure of the OldHeap; but will have the
+ * specified physical storage properties NewTableSpace, NewAccessMethod, and
+ * relpersistence.
+ *
+ * Specify a colprefix can create a table with different colname, incase
+ * column conflict issue happens in REFRESH MATERIALIZED VIEW operation.
  *
  * After this, the caller should load the new heap with transferred/modified
  * data, then call finish_heap_swap to complete the operation.
  */
 Oid
-make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
+make_new_heap_with_colname(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
+			  List *NewEncodings,
+			  Datum newoptions,
+			  char relpersistence,
 			  LOCKMODE lockmode,
 			  bool createAoBlockDirectory,
-			  bool makeCdbPolicy)
+			  bool makeCdbPolicy,
+			  char *colprefix)
 {
 	TupleDesc	OldHeapDesc;
 	char		NewHeapName[NAMEDATALEN];
 	Oid			OIDNewHeap;
 	Oid			toastid;
 	Relation	OldHeap;
-	HeapTuple	tuple;
+	HeapTuple	tuple = NULL;
 	Datum		reloptions;
 	bool		isNull;
 	Oid			namespaceid;
@@ -710,6 +741,16 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
 	OldHeap = table_open(OIDOldHeap, lockmode);
 	OldHeapDesc = RelationGetDescr(OldHeap);
 
+	if (colprefix != NULL)
+	{
+		for (int i = 0; i < OldHeapDesc->natts; i++)
+		{
+			Form_pg_attribute attr = TupleDescAttr(OldHeapDesc, i);
+			char *attname = make_column_name(colprefix, NameStr(attr->attname));
+			namestrcpy(&(attr->attname), attname);
+			pfree(attname);
+		}
+	}
 	/*
 	 * Note that the NewHeap will not receive any of the defaults or
 	 * constraints associated with the OldHeap; we don't need 'em, and there's
@@ -718,15 +759,28 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
 	 */
 
 	/*
-	 * But we do want to use reloptions of the old heap for new heap.
+	 * When the caller passes reloptions to use for the new table, use that.
+	 * Otherwise, copy from the existing pg_class.reloptions of the old.
 	 */
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(OIDOldHeap));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", OIDOldHeap);
-	reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
-								 &isNull);
-	if (isNull)
+	if (newoptions != (Datum) 0)
+	{
+		reloptions = newoptions;
+	}
+	/* Shouldn't copy from existing pg_class.reloptions if AM changed */
+	else if (OldHeap->rd_rel->relam != NewAccessMethod)
+	{
 		reloptions = (Datum) 0;
+	}
+	else
+	{
+		tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(OIDOldHeap));
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for relation %u", OIDOldHeap);
+		reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
+									 &isNull);
+		if (isNull)
+			reloptions = (Datum) 0;
+	}
 
 	if (relpersistence == RELPERSISTENCE_TEMP)
 		namespaceid = LookupCreationNamespace("pg_temp");
@@ -754,7 +808,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
 										  InvalidOid,
 										  InvalidOid,
 										  OldHeap->rd_rel->relowner,
-										  OldHeap->rd_rel->relam,
+										  NewAccessMethod,
 										  OldHeapDesc,
 										  NIL,
 										  RELKIND_RELATION,
@@ -769,10 +823,11 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
 										  true,
 										  OIDOldHeap,
 										  NULL,
-										  /* valid_opts */ true);
+										  true);
 	Assert(OIDNewHeap != InvalidOid);
 
-	ReleaseSysCache(tuple);
+	if (HeapTupleIsValid(tuple))
+		ReleaseSysCache(tuple);
 
 	/*
 	 * Advance command counter so that the newly-created relation's catalog
@@ -803,23 +858,52 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, char relpersistence,
 									 &isNull);
 		if (isNull)
 			reloptions = (Datum) 0;
-		NewHeapCreateToastTable(OIDNewHeap, reloptions, lockmode);
+
+		NewHeapCreateToastTable(OIDNewHeap, reloptions, lockmode, toastid);
 
 		ReleaseSysCache(tuple);
 	}
 
-	if (RelationIsAppendOptimized(OldHeap))
+	if (IsAccessMethodAO(NewAccessMethod))
 		NewRelationCreateAOAuxTables(OIDNewHeap, createAoBlockDirectory);
 
 	CacheInvalidateRelcacheByRelid(OIDNewHeap);
 
-	cloneAttributeEncoding(OIDOldHeap,
-						   OIDNewHeap,
-						   RelationGetNumberOfAttributes(OldHeap));
-
+	/* 
+	 * Copy the pg_attribute_encoding entries over if new table needs them.
+	 * Note that in the case of AM change from heap/ao to aoco, we still need 
+	 * to do this since we created those entries for the heap/ao table at the 
+	 * phase 2 of ATSETAM (see ATExecCmd).
+	 *
+	 * If we are also altering any column's encodings, (AT_SetColumnEncoding)
+	 * we update those columns with the new encoding values
+	 */
+	if (NewAccessMethod == AO_COLUMN_TABLE_AM_OID)
+	{
+		CloneAttributeEncodings(OIDOldHeap,
+								OIDNewHeap,
+								RelationGetNumberOfAttributes(OldHeap));
+		CommandCounterIncrement();
+		UpdateAttributeEncodings(OIDNewHeap, NewEncodings);
+	}
 	table_close(OldHeap, NoLock);
 
 	return OIDNewHeap;
+}
+
+Oid
+make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
+			  List *NewEncodings,
+			  Datum newoptions,
+			  char relpersistence,
+			  LOCKMODE lockmode,
+			  bool createAoBlockDirectory,
+			  bool makeCdbPolicy)
+{
+	return make_new_heap_with_colname(OIDOldHeap, NewTableSpace, NewAccessMethod,
+						NewEncodings, newoptions, relpersistence, lockmode, createAoBlockDirectory, makeCdbPolicy,
+						NULL);
+
 }
 
 /*
@@ -1151,6 +1235,32 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		elog(ERROR, "cache lookup failed for relation %u", r2);
 	relform2 = (Form_pg_class) GETSTRUCT(reltup2);
 
+	if (relform1->relam == AO_ROW_TABLE_AM_OID || relform1->relam == AO_COLUMN_TABLE_AM_OID ||
+		relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID)
+		ATAOEntries(relform1, relform2);
+
+	/* Also swap reloptions */
+	{
+		Datum		val[Natts_pg_class] = {0};
+		bool		null[Natts_pg_class] = {0};
+		bool		repl[Natts_pg_class] = {0};
+		bool 		isNull;
+
+		val[Anum_pg_class_reloptions - 1] = SysCacheGetAttr(RELOID, reltup2, Anum_pg_class_reloptions, &isNull);
+		null[Anum_pg_class_reloptions - 1] = isNull;
+		repl[Anum_pg_class_reloptions - 1] = true;
+
+		reltup1 = heap_modify_tuple(reltup1, RelationGetDescr(relRelation),
+									val, null, repl);
+		relform1 = (Form_pg_class) GETSTRUCT(reltup1);
+	}
+
+	if (relform2->relam == AO_COLUMN_TABLE_AM_OID)
+	{
+		RemoveAttributeEncodingsByRelid(r1);
+		CloneAttributeEncodings(r2, r1, relform2->relnatts);
+	}
+
 	relfilenode1 = relform1->relfilenode;
 	relfilenode2 = relform2->relfilenode;
 
@@ -1169,6 +1279,10 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		swaptemp = relform1->reltablespace;
 		relform1->reltablespace = relform2->reltablespace;
 		relform2->reltablespace = swaptemp;
+
+		swaptemp = relform1->relam;
+		relform1->relam = relform2->relam;
+		relform2->relam = swaptemp;
 
 		swptmpchr = relform1->relpersistence;
 		relform1->relpersistence = relform2->relpersistence;
@@ -1204,6 +1318,9 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 				 NameStr(relform1->relname));
 		if (relform1->relpersistence != relform2->relpersistence)
 			elog(ERROR, "cannot change persistence of mapped relation \"%s\"",
+				 NameStr(relform1->relname));
+		if (relform1->relam != relform2->relam)
+			elog(ERROR, "cannot change access method of mapped relation \"%s\"",
 				 NameStr(relform1->relname));
 		if (!swap_toast_by_content &&
 			(relform1->reltoastrelid || relform2->reltoastrelid))
@@ -1246,18 +1363,19 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	{
 		Assert(!TransactionIdIsValid(frozenXid) ||
 			   TransactionIdIsNormal(frozenXid));
-		/*
-		 * Greenplum: append-optimized tables do not have a valid relfrozenxid.
-		 * Leave the relfrozenxid as invalid after rewrite if it is currently
-		 * invalid.
-		 */
-		if (TransactionIdIsValid(relform1->relfrozenxid))
-			relform1->relfrozenxid = frozenXid;
-		else
-			relform1->relfrozenxid = InvalidTransactionId;
+		relform1->relfrozenxid = frozenXid;
 		Assert(MultiXactIdIsValid(cutoffMulti));
 		relform1->relminmxid = cutoffMulti;
 	}
+	/*
+	 * Greenplum: append-optimized tables do not have a valid relfrozenxid.
+	 * Overwrite the entry for both relations.
+	 */
+	if (relform1->relkind != RELKIND_INDEX && IsAccessMethodAO(relform1->relam))
+		relform1->relfrozenxid = InvalidTransactionId;
+	if (relform2->relkind != RELKIND_INDEX && IsAccessMethodAO(relform2->relam))
+		relform2->relfrozenxid = InvalidTransactionId;
+
 	/* swap size statistics too, since new rel has freshly-updated stats */
 	if (swap_stats)
 	{
@@ -1277,8 +1395,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		relform1->relallvisible = relform2->relallvisible;
 		relform2->relallvisible = swap_allvisible;
 	}
-
-	SwapAppendonlyEntries(r1, r2);
 
 	/*
 	 * Update the tuples in pg_class --- unless the target relation of the
@@ -1327,15 +1443,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 			if (relform1->reltoastrelid && relform2->reltoastrelid)
 			{
 				/* Recursively swap the contents of the toast tables */
-				/*
-				 * CLUSTER operation on append-optimized tables does not
-				 * compute freeze limit (frozenXid) because AO tables do not
-				 * have relfrozenxid.  The toast tables need to keep existing
-				 * relfrozenxid value unchanged in this case.
-				 *
-				 * GPDB_12_MERGE_FIXME: If the above argument is correct,
-				 * figure out a way check it with an assert.
-				 */
 				swap_relation_files(relform1->reltoastrelid,
 									relform2->reltoastrelid,
 									target_is_pg_class,
@@ -1381,6 +1488,24 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 								  "TOAST");
 		}
 	}
+
+#ifdef USE_ASSERT_CHECKING
+		/* 
+		 * Check with assert if AO table's toast table kept existing relfrozenxid unchanged.
+		 * 
+		 * CLUSTER operation on append-optimized tables does not
+		 * compute freeze limit (frozenXid) because AO tables do not
+		 * have relfrozenxid.  The toast tables need to keep existing
+		 * relfrozenxid value unchanged in this case.
+		*/
+		if (swap_toast_by_content 
+			&& frozenXid == InvalidTransactionId 
+			&& relform1->relkind == RELKIND_TOASTVALUE 
+			&& relform2->relkind == RELKIND_TOASTVALUE)
+		{
+			Assert(relform1->relfrozenxid == relform2->relfrozenxid);
+		}
+#endif
 
 	/*
 	 * If we're swapping two toast tables by content, do the same for their
@@ -1611,7 +1736,7 @@ finish_heap_swap(Oid OIDOldHeap, Oid OIDNewHeap,
 
 			/* Get the associated valid index to be renamed */
 			toastidx = toast_get_valid_index(newrel->rd_rel->reltoastrelid,
-											 AccessShareLock);
+											 NoLock);
 
 			/* rename the toast table ... */
 			snprintf(NewToastName, NAMEDATALEN, "pg_toast_%u",
@@ -1625,6 +1750,14 @@ finish_heap_swap(Oid OIDOldHeap, Oid OIDNewHeap,
 
 			RenameRelationInternal(toastidx,
 								   NewToastName, true, true);
+
+			/*
+			 * Reset the relrewrite for the toast. The command-counter
+			 * increment is required here as we are about to update
+			 * the tuple that is updated as part of RenameRelationInternal.
+			 */
+			CommandCounterIncrement();
+			ResetRelRewrite(newrel->rd_rel->reltoastrelid);
 		}
 		relation_close(newrel, NoLock);
 	}

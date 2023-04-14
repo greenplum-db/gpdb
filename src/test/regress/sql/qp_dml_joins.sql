@@ -1679,6 +1679,7 @@ rollback;
 
 --Negative test - Update with sub-query returning more than one row
 SELECT SUM(a) FROM dml_heap_r;
+ANALYZE dml_heap_s, dml_heap_r;
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
 SELECT SUM(a) FROM dml_heap_r;
 
@@ -1693,8 +1694,8 @@ UPDATE dml_heap_r SET b = MAX(dml_heap_s.b) FROM dml_heap_s WHERE dml_heap_r.b =
 SELECT SUM(b) FROM dml_heap_r;
 
 --Negative test - Update WHERE join returns more than one tuple with different values.
-CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i;
-CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i;
+CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i distributed by (a);
+CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i distributed by (a);
 SELECT SUM(a) FROM dml_heap_v;
 UPDATE dml_heap_v SET a = dml_heap_u.a FROM dml_heap_u WHERE dml_heap_u.b = dml_heap_v.b;
 SELECT SUM(a) FROM dml_heap_v;

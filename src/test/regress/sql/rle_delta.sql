@@ -26,7 +26,7 @@ Create table delta_all(
     a7 text ENCODING (compresstype=rle_type,compresslevel=4)
     ) with(appendonly=true, orientation=column);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_all'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_all'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_all
 
@@ -70,7 +70,7 @@ Create table delta_alter(
     a7 text ENCODING (compresstype=rle_type,compresslevel=4)
     ) with(appendonly=true, orientation=column);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_alter'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_alter'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_alter
 
@@ -127,7 +127,7 @@ Create table delta_bitmap_ins(
 
 Create index dl_ix_bt on  delta_bitmap_ins using bitmap(a1);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_bitmap_ins'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_bitmap_ins'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_bitmap_ins
 
@@ -175,7 +175,7 @@ Create table delta_btree_ins(
 
 Create index dl_ix_br on  delta_btree_ins(a1);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_btree_ins'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_btree_ins'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_btree_ins
 
@@ -220,7 +220,7 @@ Create table delta_ins_bitmap(
     a7 text ENCODING (compresstype=rle_type,compresslevel=4)
     ) with(appendonly=true, orientation=column);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_ins_bitmap'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_ins_bitmap'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_ins_bitmap
 
@@ -270,7 +270,7 @@ Create table delta_ins_btree(
     ) with(appendonly=true, orientation=column);
 
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_ins_btree'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_ins_btree'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_ins_btree
 
@@ -373,7 +373,7 @@ Create table delta_none(
     a9 text ENCODING (compresstype=rle_type,compresslevel=2)
     ) with(appendonly=true, orientation=column);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_none'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_none'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_none
 
@@ -566,7 +566,7 @@ Create table delta_zlib(
     a9 text ENCODING (compresstype=rle_type,compresslevel=2)
     ) with(appendonly=true, orientation=column);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_zlib'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'delta_zlib'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ delta_zlib
 
@@ -602,7 +602,7 @@ Create table rle_type_1_delta_null(
     a6 timestamp with time zone
     ) with(appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_1_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_1_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ rle_type_1_delta_null
 
@@ -648,7 +648,7 @@ Create table rle_type_2_delta_chkt(
     a6 timestamp with time zone
     ) with(appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=true);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_2_delta_chkt'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_2_delta_chkt'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ rle_type_2_delta_chkt
 
@@ -677,7 +677,7 @@ Create table rle_type_2_delta_chkf(
     a6 timestamp with time zone
     ) with(appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=false);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_2_delta_chkf'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_2_delta_chkf'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ rle_type_2_delta_chkf
 
@@ -709,7 +709,7 @@ Create table rle_type_2_delta_null(
     a6 timestamp with time zone
     ) with(appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_2_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_2_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ rle_type_2_delta_null
 
@@ -757,7 +757,7 @@ Create table rle_type_3_delta_null(
     a6 timestamp with time zone
     ) with(appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_3_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_3_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ rle_type_3_delta_null
 
@@ -803,7 +803,7 @@ Create table rle_type_4_delta_null(
     a6 timestamp with time zone
     ) with(appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4);
 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_4_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_4_delta_null'  and c.oid=e.attrelid  order by relname, attnum;
 
 \d+ rle_type_4_delta_null
 

@@ -28,23 +28,26 @@
 
 ProtocolVersion FrontendProtocol;
 
-volatile sig_atomic_t InterruptPending = false;
-volatile sig_atomic_t QueryCancelPending = false;
-volatile sig_atomic_t QueryCancelCleanup = false;
-volatile sig_atomic_t QueryFinishPending = false;
-volatile sig_atomic_t ProcDiePending = false;
 volatile sig_atomic_t CheckClientConnectionPending = false;
 volatile sig_atomic_t ClientConnectionLost = false;
-volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;
-volatile sig_atomic_t IdleGangTimeoutPending = false;
 volatile sig_atomic_t ConfigReloadPending = false;
+volatile sig_atomic_t IdleGangTimeoutPending = false;
+volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;
+volatile sig_atomic_t InterruptPending = false;
+volatile sig_atomic_t LogMemoryContextPending = false;
+volatile sig_atomic_t ProcDiePending = false;
+volatile sig_atomic_t QueryCancelCleanup = false;
+volatile sig_atomic_t QueryCancelPending = false;
+volatile sig_atomic_t QueryFinishPending = false;
+
 /*
  * GPDB: Make these signed integers (instead of uint32) to detect garbage
  * negative values.
  */
+volatile int32 CritSectionCount = 0;
 volatile int32 InterruptHoldoffCount = 0;
 volatile int32 QueryCancelHoldoffCount = 0;
-volatile int32 CritSectionCount = 0;
+
 
 int			MyProcPid;
 pg_time_t	MyStartTime;
@@ -185,3 +188,9 @@ bool	pljava_classpath_insecure = false;
 /* Memory protection GUCs*/
 int gp_vmem_protect_limit = 8192;
 int gp_vmem_protect_gang_cache_limit = 500;
+
+/* Parallel cursor concurrency limit */
+int	gp_max_parallel_cursors = -1;
+
+/* Utility mode restriction */
+bool should_reject_connection = false;

@@ -1484,7 +1484,7 @@ CExpressionHandle::PfpChild(ULONG child_index) const
 //		CExpressionHandle::FChildrenHaveVolatileFuncScan
 //
 //	@doc:
-//		Check whether an expression's children have a volatile function
+//		Check whether an expression's children have a volatile function scan
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -1494,6 +1494,29 @@ CExpressionHandle::FChildrenHaveVolatileFuncScan() const
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		if (PfpChild(ul)->FHasVolatileFunctionScan())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CExpressionHandle::FChildrenHaveVolatileFunc
+//
+//	@doc:
+//		Check whether an expression's children have a volatile function
+//
+//---------------------------------------------------------------------------
+BOOL
+CExpressionHandle::FChildrenHaveVolatileFunc() const
+{
+	const ULONG arity = Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		if (PfpChild(ul)->Efs() == IMDFunction::EfsVolatile)
 		{
 			return true;
 		}
@@ -2091,5 +2114,30 @@ CExpressionHandle::DeriveHasScalarArrayCmp(ULONG child_index) const
 	}
 
 	return GetDrvdScalarProps(child_index)->HasScalarArrayCmp();
+}
+
+BOOL
+CExpressionHandle::DeriveHasScalarFuncProject(ULONG child_index) const
+{
+	if (nullptr != Pexpr())
+	{
+		return (*Pexpr())[child_index]->DeriveHasScalarFuncProject();
+	}
+
+	return GetDrvdScalarProps(child_index)->HasScalarFuncProject();
+}
+
+BOOL
+CExpressionHandle::DeriveContainsOnlyReplicationSafeAggFuncs(
+	ULONG child_index) const
+{
+	if (nullptr != Pexpr())
+	{
+		return (*Pexpr())[child_index]
+			->DeriveContainsOnlyReplicationSafeAggFuncs();
+	}
+
+	return GetDrvdScalarProps(child_index)
+		->ContainsOnlyReplicationSafeAggFuncs();
 }
 // EOF

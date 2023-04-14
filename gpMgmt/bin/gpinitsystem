@@ -120,7 +120,7 @@ USAGE () {
 		$ECHO "      -q, quiet mode, do not log progress to screen [default:- verbose output to screen]"
 		$ECHO
 		$ECHO "      Configuration options:"
-		$ECHO "      -b, shared_buffers per instance [default $DEFAULT_BUFFERS]"
+		$ECHO "      -b, <size> shared_buffers per instance [default $DEFAULT_BUFFERS]"
 		$ECHO "          Specify either the number of database I/O buffers (without suffix) or the"
 		$ECHO "          amount of memory to use for buffers (with suffix 'kB', 'MB' or 'GB')."
 		$ECHO "          Applies to coordinator and all segments."
@@ -129,7 +129,7 @@ USAGE () {
 		$ECHO "          Supplies all Greenplum configuration information required by this utility."
 		$ECHO "          Full description of all parameters contained within the example file"
 		$ECHO "          supplied with this distribution."
-		$ECHO "          Also see gpinitsystem_INSTRUCTIONS file for greater detail on"
+		$ECHO "          Also see file $HELP_DOC_NAME for greater detail on"
 		$ECHO "          the operation and configuration of this script"
 		$ECHO "      -e, <password>, password to set for Greenplum superuser in database [default $GP_PASSWD]"
 		$ECHO "      -S, standby_datadir [optional]"
@@ -477,7 +477,7 @@ CHK_PARAMS () {
 		# segment hosts.
 		LOCALE_SETTING=$(USE_FIRST_SET_ARG $REQ_LOCALE_SETTING $LC_ALL)
 		if [ x"" != x"$LOCALE_SETTING" ]; then
-			IN_ARRAY $LOCALE_SETTING "`locale -a`"
+			LOCALE_IS_AVAILABLE $LOCALE_SETTING
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LOCALE_SETTING is not a valid value for --locale on this system."
 			fi
@@ -485,7 +485,7 @@ CHK_PARAMS () {
 
 		LCCOLLATE=$(USE_FIRST_SET_ARG $LCCOLLATE $LC_COLLATE $LOCALE_SETTING)
 		if [ x"" != x"$LCCOLLATE" ]; then
-			IN_ARRAY $LCCOLLATE "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCCOLLATE
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCCOLLATE is not a valid value for --lc-collate on this system."
 			fi	
@@ -493,7 +493,7 @@ CHK_PARAMS () {
 
 		LCCTYPE=$(USE_FIRST_SET_ARG $LCCTYPE $LC_CTYPE $LOCALE_SETTING)
 		if [ x"" != x"$LCCTYPE" ]; then
-			IN_ARRAY $LCCTYPE "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCCTYPE
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCCTYPE is not a valid value for --lc-ctype on this system."
 			fi
@@ -501,7 +501,7 @@ CHK_PARAMS () {
 
 		LCMESSAGES=$(USE_FIRST_SET_ARG $LCMESSAGES $LC_MESSAGES $LOCALE_SETTING)
 		if [ x"" != x"$LCMESSAGES" ]; then
-			IN_ARRAY $LCMESSAGES "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCMESSAGES
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCMESSAGES is not a valid value for --lc-messages on this system."
 			fi
@@ -509,7 +509,7 @@ CHK_PARAMS () {
 		
 		LCMONETARY=$(USE_FIRST_SET_ARG $LCMONETARY $LC_MONETARY $LOCALE_SETTING)
 		if [ x"" != x"$LCMONETARY" ]; then
-			IN_ARRAY $LCMONETARY "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCMONETARY
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCMONETARY is not a valid value for --lc-monetary on this system."
 			fi
@@ -517,7 +517,7 @@ CHK_PARAMS () {
 		
 		LCNUMERIC=$(USE_FIRST_SET_ARG $LCNUMERIC $LC_NUMERIC $LOCALE_SETTING)
 		if [ x"" != x"$LCNUMERIC" ]; then
-			IN_ARRAY $LCNUMERIC "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCNUMERIC
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCNUMERIC is not a valid value for --lc-numeric on this system."
 			fi
@@ -525,7 +525,7 @@ CHK_PARAMS () {
 		
 		LCTIME=$(USE_FIRST_SET_ARG $LCTIME $LC_TIME $LOCALE_SETTING)
 		if [ x"" != x"$LCTIME" ]; then
-			IN_ARRAY $LCTIME "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCTIME
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCTIME is not a valid value for --lc-time on this system."
 			fi
@@ -547,11 +547,8 @@ CHK_MULTI_HOME () {
 		PING_HOST $MHOST
 		SEG_HOSTNAME=$( REMOTE_EXECUTE_AND_GET_OUTPUT $MHOST "$HOSTNAME" )
 		if [ $? -ne 0 ];then
-			LOG_MSG "[FATAL]:-Remote command to host $MHOST failed to get value of hostname"
-			$ECHO "[FATAL]:-Remote command to host $MHOST failed to get value of hostname"
-			LOG_MSG "[FATAL]:-Check to see that you have setup trusted remote ssh on all hosts"
-			$ECHO "[FATAL]:-Check to see that you have setup trusted remote ssh on all hosts"
-
+			LOG_MSG "[FATAL]:-Remote command to host $MHOST failed to get value of hostname" 1
+			LOG_MSG "[FATAL]:-Check to see that you have setup trusted remote ssh on all hosts" 1
 			ERROR_EXIT "[FATAL]:-Unable to get hostname output for $MHOST"
 		fi
 		if [ `$ECHO ${T_SEG_ARRAY[@]}|$TR ' ' '\n'|$GREP -c "^${SEG_HOSTNAME}$"` -eq 0 ];then
@@ -641,7 +638,8 @@ CHK_LOCALE_KNOWN () {
 
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ $# -eq 0 ];then
-		if [ `$LOCALE -a |$GREP -ic $LOCALE_SETTING` -eq 0 ];then
+		if [ `$LOCALE -a |$GREP -ic $(NORMALIZE_CODESET_IN_LOCALE $LOCALE_SETTING)` -eq 0 ] \
+			&& [`$LOCALE -a |$GREP -ic $LOCALE_SETTING` -eq 0];then
 			LOG_MSG "[INFO]:-Coordinator host available locale values"
 			$LOCALE -a >> $LOG_FILE
 			LOG_MSG "[FATAL]:-Unable to locate locale value $LOCALE_SETTING on this host" 1
@@ -653,7 +651,8 @@ CHK_LOCALE_KNOWN () {
 		fi
 	else
 		# Hostname has been passed so check remote locale value
-		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT $1 "$LOCALE -a|$GREP -ic '$LOCALE_SETTING'" ) -eq 0 ];then
+		if [ $( REMOTE_EXECUTE_AND_GET_OUTPUT $1 "$LOCALE -a|$GREP -ic '$(NORMALIZE_CODESET_IN_LOCALE $LOCALE_SETTING)'" ) -eq 0 ] \
+			&& [ $( REMOTE_EXECUTE_AND_GET_OUTPUT $1 "$LOCALE -a|$GREP -ic '$LOCALE_SETTING'" ) -eq 0 ] ;then
 			LOG_MSG "[INFO]:-Host $1 available locale values"
 			`$TRUSTED_SHELL $1 "$LOCALE -a"` >> $LOG_FILE
 			LOG_MSG "[FATAL]:-Unable to locate locale value $LOCALE_SETTING on $1" 1
@@ -1129,29 +1128,6 @@ DISPLAY_CONFIG () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
-SET_VAR () {
-    # 
-    # MPP-13617: If segment contains a ~, we assume ~ is the field delimiter.
-    # Otherwise we assume : is the delimiter.  This allows us to easily 
-    # handle IPv6 addresses which may contain a : by using a ~ as a delimiter. 
-    # 
-    I=$1
-    case $I in
-        *~*)
-	    S="~"
-            ;;
-        *)
-	    S=":"
-            ;;
-    esac
-    GP_HOSTNAME=`$ECHO $I|$CUT -d$S -f1`
-    GP_HOSTADDRESS=`$ECHO $I|$CUT -d$S -f2`
-    GP_PORT=`$ECHO $I|$CUT -d$S -f3`
-    GP_DIR=`$ECHO $I|$CUT -d$S -f4`
-    GP_DBID=`$ECHO $I|$CUT -d$S -f5`
-    GP_CONTENT=`$ECHO $I|$CUT -d$S -f6`
-}
-
 # Retrieve locale settings from the coordinator and set locale variables
 # appropriately so those values can be used when initializing the segments.
 SET_LOCALE_VARS_BASED_ON_COORDINATOR() {
@@ -1167,7 +1143,7 @@ SET_LOCALE_VARS_BASED_ON_COORDINATOR() {
 	#
 	# --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8 ...
 	psql_cmd="SELECT '--' || REPLACE(name, '_', '-') || '=' || setting FROM pg_settings WHERE name LIKE 'lc_%' ORDER BY name"
-	export LC_ALL_SETTINGS=$($PSQL -d template1 -X -A -t -c "$psql_cmd")
+	export LC_ALL_SETTINGS=$(env PGOPTIONS="-c gp_role=utility" $PSQL -d template1 -X -A -t -c "$psql_cmd")
 }
 
 CREATE_QD_DB () {
@@ -1279,8 +1255,7 @@ CREATE_QD_DB () {
 		BACKOUT_COMMAND "if [ -d $GP_DIR ]; then $EXPORT_LIB_PATH;export PGPORT=$GP_PORT; $PG_CTL -D $GP_DIR stop; fi"
 		BACKOUT_COMMAND "$ECHO \"Stopping Coordinator instance\""
 		LOG_MSG "[INFO]:-Completed starting the Coordinator in admin mode"
-		GP_HOSTNAME=$GP_HOSTADDRESS
-		PING_HOST $GP_HOSTNAME
+		PING_HOST $GP_HOSTADDRESS
 		RETVAL=$?
 		if [ $RETVAL -ne 0 ]; then
 			ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration."
@@ -1326,8 +1301,7 @@ LOAD_QE_SYSTEM_DATA () {
 		do
 				SET_VAR $I
 				LOG_MSG "[INFO]:-Adding segment $GP_HOSTADDRESS to Coordinator system tables"
-				GP_HOSTNAME=$GP_HOSTADDRESS
-				PING_HOST $GP_HOSTNAME
+				PING_HOST $GP_HOSTADDRESS
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
 					ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration."
@@ -1399,7 +1373,7 @@ CREATE_SEGMENT () {
 			# SEGMENT_INFO: ~ separated value, ex: host1~port1~data_dir~dbid1~contentid
 			# PAIR_SEGMENT_INFO: corresponding pair, ex: host2~port2~data_dir~dbid2~contentid
 			# INST_COUNT: Number of parallel script count
-			COORDINATOR_HOSTNAME=${COORDINATOR_HOSTNAME} HBA_HOSTNAMES=${HBA_HOSTNAMES} $GPCREATESEG $FLAG $$ $PREFERRED_ROLE $SEGMENT_INFO "${PAIR_SEGMENT_INFO}" $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
+			COORDINATOR_HOSTNAME=${COORDINATOR_HOSTNAME} HBA_HOSTNAMES=${HBA_HOSTNAMES} TRUSTED_SHELL=${TRUSTED_SHELL} $GPCREATESEG $FLAG $$ $PREFERRED_ROLE $SEGMENT_INFO "${PAIR_SEGMENT_INFO}" $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${COORDINATOR_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 			PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT

@@ -157,16 +157,21 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	hints.ai_socktype = SOCK_STREAM;	/* Two-way, out of band connection */
 	hints.ai_protocol = 0;		/* Any protocol - TCP implied for network use due to SOCK_STREAM */
 
-	/*
-	 * Restrict what IP address we will listen on to just the one that was
-	 * used to create this QE session.
-	 */
-	Assert(interconnect_address && strlen(interconnect_address) > 0);
-	hints.ai_flags |= AI_NUMERICHOST;
-	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		ereport(DEBUG1,
-				(errmsg("getaddrinfo called with interconnect_address %s",
-						interconnect_address)));
+	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST)
+	{
+		Assert(interconnect_address && strlen(interconnect_address) > 0);
+		hints.ai_flags |= AI_NUMERICHOST;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with unicast address: %s",
+						  interconnect_address)));
+	}
+	else
+	{
+		Assert(interconnect_address == NULL);
+		hints.ai_flags |= AI_PASSIVE;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with wildcard address")));
+	}
 
 	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
@@ -997,11 +1002,15 @@ readRegisterMessage(ChunkTransportState *transportStates,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect error: Invalid registration message received from %s",
 						conn->remoteHostAndPort),
-				 errdetail("sendSlice=%d recvSlice=%d srcContentId=%d srcPid=%d srcListenerPort=%d srcSessionId=%d srcCommandCount=%d motnode=%d",
+				 errdetail("sendSlice=%d recvSlice=%d srcContentId=%d srcPid=%d "
+						   "srcListenerPort=%d srcSessionId=%d srcCommandCount=%d "
+						   "motnode=%d transportStates->size=%d "
+						   "transportStates->sliceId=%d",
 						   msg.sendSliceIndex, msg.recvSliceIndex,
 						   msg.srcContentId, msg.srcPid,
 						   msg.srcListenerPort, msg.srcSessionId,
-						   msg.srcCommandCount, msg.sendSliceIndex)));
+						   msg.srcCommandCount, msg.sendSliceIndex,
+						   transportStates->size, transportStates->sliceId)));
 	}
 
 	/*
@@ -1030,9 +1039,13 @@ readRegisterMessage(ChunkTransportState *transportStates,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect error: Invalid registration message received from %s",
 						conn->remoteHostAndPort),
-				 errdetail("sendSlice=%d srcContentId=%d srcPid=%d srcListenerPort=%d",
-						   msg.sendSliceIndex, msg.srcContentId,
-						   msg.srcPid, msg.srcListenerPort)));
+					errdetail("sendSlice=%d recvSlice=%d srcContentId=%d srcPid=%d "
+							  "srcListenerPort=%d srcSessionId=%d srcCommandCount=%d "
+							  "motnode=%d iconn=%d",
+							  msg.sendSliceIndex, msg.recvSliceIndex,
+							  msg.srcContentId, msg.srcPid,
+							  msg.srcListenerPort, msg.srcSessionId,
+							  msg.srcCommandCount, msg.sendSliceIndex, iconn)));
 	}
 
 	/*
@@ -2302,8 +2315,8 @@ flushInterconnectListenerBacklog(void)
 
 /*
  * Wait for our peer to close the socket (at which point our select(2)
- * will tell us that the socket is ready to read, and the socket-read
- * will only return 0.
+ * will tell us that the socket is ready to read, and the socket recv
+ * will return 0 or a 'stop' message.
  *
  * This works without the select, but burns tons of CPU doing nothing
  * useful.
@@ -2325,19 +2338,23 @@ flushInterconnectListenerBacklog(void)
  * can tell, the only interrupt-driven state change we care
  * about). This should give us notification of ProcDiePending and
  * QueryCancelPending
+ *
+ * XXX: Consider using something like WaitLatchOrSocket() instead of select().
  */
 static void
 waitOnOutbound(ChunkTransportStateEntry *pEntry)
 {
 	MotionConn *conn;
 
-	struct timeval timeout;
 	mpp_fd_set	waitset,
 				curset;
 	int			maxfd = -1;
 	int			i,
 				n,
 				conn_count = 0;
+	struct timeval endtime;
+
+	SIMPLE_FAULT_INJECTOR("waitOnOutbound");
 
 	MPP_FD_ZERO(&waitset);
 
@@ -2354,9 +2371,15 @@ waitOnOutbound(ChunkTransportStateEntry *pEntry)
 		}
 	}
 
+	gettimeofday(&endtime, NULL);
+	endtime.tv_sec += Gp_interconnect_transmit_timeout;
+
 	for (;;)
 	{
 		int			saved_err;
+		struct timeval timeout;
+		struct timeval now;
+		int64		timeoutval;
 
 		if (conn_count == 0)
 			return;
@@ -2369,28 +2392,59 @@ waitOnOutbound(ChunkTransportStateEntry *pEntry)
 			return;
 		}
 
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 500000;
+		gettimeofday(&now, NULL);
+		timeoutval = (endtime.tv_sec * 1000000 + endtime.tv_usec) - (now.tv_sec * 1000000 + now.tv_usec);
+		if (timeoutval <= 0)
+		{
+			/*
+			 * We timed out trying to receive a final response from the motion
+			 * receiver (either a 'stop' message or 0). Since this response
+			 * confirms that the receiver has received the EOS from this sender
+			 * (and all preceding data), receipt of this response is vital.
+			 * Hence, we error out.
+			 */
+			ereport(ERROR,
+					errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					errmsg("timed out waiting for response from motion receiver during TCP interconnect teardown"),
+					errdetail("%d connection(s) with pending response after %d seconds",
+							  conn_count,
+							  Gp_interconnect_transmit_timeout));
+		}
+		timeout.tv_sec = timeoutval / 1000000;
+		timeout.tv_usec = timeoutval % 1000000;
 
 		memcpy(&curset, &waitset, sizeof(mpp_fd_set));
 
 		n = select(maxfd + 1, (fd_set *) &curset, NULL, NULL, &timeout);
-		if (n == 0 || (n < 0 && errno == EINTR))
+		if (n < 0)
 		{
-			continue;
-		}
-		else if (n < 0)
-		{
+			if (errno == EINTR)
+				continue;
+
 			saved_err = errno;
 
 			if (CancelRequested() || QueryFinishPending)
 				return;
 
-			/*
-			 * Something unexpected, but probably not horrible warn and return
-			 */
+			/* Something unexpected, but probably not horrible warn and return */
 			elog(LOG, "TeardownTCPInterconnect: waitOnOutbound select errno=%d", saved_err);
 			break;
+		}
+		if (n == 0)
+		{
+			/*
+			 * We timed out trying to receive a final response from the motion
+			 * receiver (either a 'stop' message or 0). Since this response
+			 * confirms that the receiver has received the EOS from this sender
+			 * (and all preceding data), receipt of this response is vital.
+			 * Hence, we error out.
+			 */
+			ereport(ERROR,
+					errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					errmsg("timed out waiting for response from motion receiver during TCP interconnect teardown"),
+					errdetail("%d connection(s) with pending response after %d seconds",
+							  conn_count,
+							  Gp_interconnect_transmit_timeout));
 		}
 
 		for (i = 0; i < pEntry->numConns; i++)
@@ -2442,6 +2496,8 @@ doSendStopMessageTCP(ChunkTransportState *transportStates, int16 motNodeID)
 	int			i;
 	char		m = 'S';
 	ssize_t		written;
+
+	SIMPLE_FAULT_INJECTOR("doSendStopMessageTCP");
 
 	getChunkTransportState(transportStates, motNodeID, &pEntry);
 	Assert(pEntry);

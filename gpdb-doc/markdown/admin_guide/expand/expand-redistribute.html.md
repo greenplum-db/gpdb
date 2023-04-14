@@ -6,7 +6,7 @@ Redistribute tables to balance existing data over the newly expanded cluster.
 
 After creating an expansion schema, you can redistribute tables across the entire system with [gpexpand](../../utility_guide/ref/gpexpand.html). Plan to run this during low-use hours when the utility's CPU usage and table locks have minimal impact on operations. Rank tables to redistribute the largest or most critical tables first.
 
-**Note:** When redistributing data, Greenplum Database must be running in production mode. Greenplum Database cannot be in restricted mode or in master mode. The [gpstart](../../utility_guide/ref/gpstart.html) options `-R` or `-m` cannot be specified to start Greenplum Database.
+> **Note** When redistributing data, Greenplum Database must be running in production mode. Greenplum Database cannot be in restricted mode or in coordinator mode. The [gpstart](../../utility_guide/ref/gpstart.html) options `-R` or `-m` cannot be specified to start Greenplum Database.
 
 While table redistribution is underway, any new tables or partitions created are distributed across all segments exactly as they would be under normal operating conditions. Queries can access all segments, even before the relevant data is redistributed to tables on the new segments. The table or partition being redistributed is locked and unavailable for read or write operations. When its redistribution completes, normal operations resume.
 
@@ -14,7 +14,7 @@ While table redistribution is underway, any new tables or partitions created are
 -   [Redistributing Tables Using gpexpand](#topic30)
 -   [Monitoring Table Redistribution](#topic31)
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## <a id="topic29"></a>Ranking Tables for Redistribution 
 
@@ -35,7 +35,7 @@ These commands lower the priority of all tables to `10` and then assign a rank o
 
 ### <a id="no162282"></a>To redistribute tables with gpexpand 
 
-1.  Log in on the master host as the user who will run your Greenplum Database system, for example, `gpadmin`.
+1.  Log in on the coordinator host as the user who will run your Greenplum Database system, for example, `gpadmin`.
 2.  Run the `gpexpand` utility. You can use the `-d` or `-e` option to define the expansion session time period. For example, to run the utility for up to 60 consecutive hours:
 
     ```
@@ -45,7 +45,7 @@ These commands lower the priority of all tables to `10` and then assign a rank o
     The utility redistributes tables until the last table in the schema completes or it reaches the specified duration or end time. `gpexpand` updates the status and time in *[gpexpand.status](../../ref_guide/system_catalogs/gp_expansion_status.html)* when a session starts and finishes.
 
 
-**Note:** After completing table redistribution, run the `VACUUM ANALYZE` and `REINDEX`commands on the catalog tables to update table statistics, and rebuild indexes. See [Routine Vacuum and Analyze](../managing/maintain.html) in the *Administration Guide* and [`VACUUM`](../../ref_guide/sql_commands/VACUUM.html#er20941) in the *Reference Guide*.
+> **Note** After completing table redistribution, run the `VACUUM ANALYZE` and `REINDEX`commands on the catalog tables to update table statistics, and rebuild indexes. See [Routine Vacuum and Analyze](../managing/maintain.html) in the *Administration Guide* and [`VACUUM`](../../ref_guide/sql_commands/VACUUM.html#er20941) in the *Reference Guide*.
 
 ## <a id="topic31"></a>Monitoring Table Redistribution 
 

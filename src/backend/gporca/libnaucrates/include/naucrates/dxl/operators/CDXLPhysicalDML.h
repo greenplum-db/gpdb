@@ -54,26 +54,17 @@ private:
 	// action column id
 	ULONG m_action_colid;
 
-	// oid column id
-	ULONG m_oid_colid;
-
 	// ctid column id
 	ULONG m_ctid_colid;
 
 	// segmentid column id
 	ULONG m_segid_colid;
 
-	// should update preserve tuple oids
-	BOOL m_preserve_oids;
-
-	// tuple oid column id
-	ULONG m_tuple_oid;
-
 	// direct dispatch info for insert statements
 	CDXLDirectDispatchInfo *m_direct_dispatch_info;
 
-	// needs the data to be sorted or not
-	BOOL m_input_sort_req;
+	// Is Split Update
+	BOOL m_fSplit;
 
 public:
 	CDXLPhysicalDML(const CDXLPhysicalDML &) = delete;
@@ -82,10 +73,9 @@ public:
 	CDXLPhysicalDML(CMemoryPool *mp, const EdxlDmlType dxl_dml_type,
 					CDXLTableDescr *table_descr,
 					ULongPtrArray *src_colids_array, ULONG action_colid,
-					ULONG oid_colid, ULONG ctid_colid, ULONG segid_colid,
-					BOOL preserve_oids, ULONG tuple_oid,
+					ULONG ctid_colid, ULONG segid_colid,
 					CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
-					BOOL input_sort_req);
+					BOOL fSplit);
 
 	// dtor
 	~CDXLPhysicalDML() override;
@@ -124,13 +114,6 @@ public:
 		return m_action_colid;
 	}
 
-	// oid column id
-	ULONG
-	OidColId() const
-	{
-		return m_oid_colid;
-	}
-
 	// ctid column id
 	ULONG
 	GetCtIdColId() const
@@ -145,20 +128,6 @@ public:
 		return m_segid_colid;
 	}
 
-	// does update preserve oids
-	BOOL
-	IsOidsPreserved() const
-	{
-		return m_preserve_oids;
-	}
-
-	// tuple oid column id
-	ULONG
-	GetTupleOid() const
-	{
-		return m_tuple_oid;
-	}
-
 	// direct dispatch info
 	CDXLDirectDispatchInfo *
 	GetDXLDirectDispatchInfo() const
@@ -166,11 +135,11 @@ public:
 		return m_direct_dispatch_info;
 	}
 
-	// needs the data to be sorted or not
+	// Is update using split
 	BOOL
-	IsInputSortReq() const
+	FSplit() const
 	{
-		return m_input_sort_req;
+		return m_fSplit;
 	}
 
 #ifdef GPOS_DEBUG

@@ -83,6 +83,8 @@ private:
 
 	IMDId *m_legacy_distr_opfamily;
 
+	IMDId *m_part_opfamily;
+
 	// id of equality operator for type
 	IMDId *m_mdid_op_eq;
 
@@ -151,12 +153,13 @@ public:
 		CMemoryPool *mp, IMDId *mdid, CMDName *mdname, BOOL is_redistributable,
 		BOOL is_fixed_length, ULONG length, BOOL is_passed_by_value,
 		IMDId *mdid_distr_opfamily, IMDId *mdid_legacy_distr_opfamily,
-		IMDId *mdid_op_eq, IMDId *mdid_op_neq, IMDId *mdid_op_lt,
-		IMDId *mdid_op_leq, IMDId *mdid_op_gt, IMDId *mdid_op_geq,
-		IMDId *mdid_op_cmp, IMDId *pmdidMin, IMDId *pmdidMax, IMDId *pmdidAvg,
-		IMDId *pmdidSum, IMDId *pmdidCount, BOOL is_hashable,
-		BOOL is_merge_joinable, BOOL is_composite_type, BOOL is_text_related,
-		IMDId *mdid_base_relation, IMDId *mdid_type_array, INT gpdb_length);
+		IMDId *mdid_part_opfamily, IMDId *mdid_op_eq, IMDId *mdid_op_neq,
+		IMDId *mdid_op_lt, IMDId *mdid_op_leq, IMDId *mdid_op_gt,
+		IMDId *mdid_op_geq, IMDId *mdid_op_cmp, IMDId *pmdidMin,
+		IMDId *pmdidMax, IMDId *pmdidAvg, IMDId *pmdidSum, IMDId *pmdidCount,
+		BOOL is_hashable, BOOL is_merge_joinable, BOOL is_composite_type,
+		BOOL is_text_related, IMDId *mdid_base_relation, IMDId *mdid_type_array,
+		INT gpdb_length);
 
 	// dtor
 	~CMDTypeGenericGPDB() override;
@@ -245,6 +248,8 @@ public:
 	}
 
 	IMDId *GetDistrOpfamilyMdid() const override;
+
+	IMDId *GetPartOpfamilyMdid() const override;
 
 	// serialize object in DXL format
 	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;

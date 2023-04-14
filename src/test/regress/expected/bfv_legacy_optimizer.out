@@ -86,10 +86,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into bfv_int4_tbl values(123456), (-2147483647), (0), (-123456), (2147483647);
 update bfv_s set c_v = 11
 from bfv_int4_tbl a join bfv_int4_tbl b on (a.f1 = (select f1 from bfv_int4_tbl c where c.f1=b.f1));
-ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.0.1:7002 pid=20972)
 update bfv_s set c_v = 11
 from bfv_int4_tbl a join bfv_int4_tbl b on (a.f1 = (select f1 from bfv_int4_tbl c where c.f1=b.f1));
-ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.0.1:7002 pid=20972)
 --
 --
 --

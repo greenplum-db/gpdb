@@ -12,4 +12,5 @@ test: parallel_retrieve_cursor/retrieve_quit_wait
 test: parallel_retrieve_cursor/fault_inject
 test: parallel_retrieve_cursor/security
 test: parallel_retrieve_cursor/privilege
+test: parallel_retrieve_cursor/concurrency
 test: parallel_retrieve_cursor/unset
