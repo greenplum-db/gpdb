@@ -3558,7 +3558,7 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 	 * process, so we don't need to release it here if something will go wrong
 	 */
 
-	cmd = psprintf("SELECT gp_toolkit.pg_resgroup_move_query(%d, %s)",
+	cmd = psprintf("SELECT pg_resgroup_move_query(%d, %s)",
 				   sessionId,
 				   quote_literal_cstr(groupName));
 

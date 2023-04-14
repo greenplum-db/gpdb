@@ -250,6 +250,7 @@ $$ LANGUAGE plpython3u;
     import pg
     import time
     import re
+    import paramiko
 
     conn = pg.connect(dbname="isolation2resgrouptest")
     pt = re.compile(r'con(\d+)')
@@ -260,16 +261,31 @@ $$ LANGUAGE plpython3u;
 
     sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname='%s'" % groupname
     result = conn.query(sql).getresult()
-    groupid = result[0][0]
+    group_id = result[0][0]
 
-    process = subprocess.Popen("ps -ef | grep postgres | grep con%d | grep -v grep | awk '{print $2}'" % session_id, shell=True, stdout=subprocess.PIPE)
-    session_pids = process.communicate()[0].decode().split('\n')[:-1]
+    sql = "select hostname from gp_segment_configuration group by hostname"
+    result = conn.query(sql).getresult()
+    hosts = result[0]
 
-    cgroups_pids = []
-    path = "/sys/fs/cgroup/cpu/gpdb/%d/cgroup.procs" % groupid
-    fd = open(path)
-    for line in fd.readlines():
-        cgroups_pids.append(line.strip('\n'))
+    def get_result(host):
+        import paramiko
 
-    return set(session_pids).issubset(set(cgroups_pids))
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=host)
+
+        stdin, stdout, stderr = ssh.exec_command("ps -ef | grep postgres | grep con{} | grep -v grep | awk '{{print $2}}'".format(session_id))
+        session_pids = [i.strip() for i in stdout.readlines()]
+
+        path = "/sys/fs/cgroup/cpu/gpdb/{}/cgroup.procs".format(group_id)
+        stdin, stdout, stderr = ssh.exec_command("cat {}".format(path))
+        cgroups_pids = [i.strip() for i in stdout.readlines()]
+
+        return set(session_pids).issubset(set(cgroups_pids))
+
+    for host in hosts:
+        if not get_result(host):
+            return False
+    return True
+
 $$ LANGUAGE plpython3u;

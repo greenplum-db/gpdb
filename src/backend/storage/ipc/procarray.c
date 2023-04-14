@@ -5188,6 +5188,7 @@ ResGroupMoveSignalTarget(int sessionId, void *slot, Oid groupId,
 				elog(NOTICE, "cannot move process, which is already moving");
 				break;
 			}
+			Assert(proc->movetoCallerPid == InvalidPid);
 			Assert(proc->movetoResSlot == NULL);
 			Assert(slot != NULL);
 

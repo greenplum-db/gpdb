@@ -426,30 +426,6 @@ dumpResGroupInfo(StringInfo str)
 }
 
 
-Datum
-pg_resgroup_check_move_query(PG_FUNCTION_ARGS)
-{
-	TupleDesc	tupdesc;
-	Datum		values[2];
-	bool		nulls[2];
-	HeapTuple	htup;
-	int sessionId = PG_GETARG_INT32(0);
-	Oid groupId = PG_GETARG_OID(1);
-	int32 sessionMem = ResGroupGetSessionMemUsage(sessionId);
-	int32 availMem = ResGroupGetGroupAvailableMem(groupId);
-
-	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
-		elog(ERROR, "return type must be a row type");
-	tupdesc = BlessTupleDesc(tupdesc);
-
-	MemSet(nulls, 0, sizeof(nulls));
-	values[0] = Int32GetDatum(sessionMem);
-	values[1] = Int32GetDatum(availMem);
-	htup = heap_form_tuple(tupdesc, values, nulls);
-
-	PG_RETURN_DATUM(HeapTupleGetDatum(htup));
-}
-
 /*
  * move a query to a resource group
  */

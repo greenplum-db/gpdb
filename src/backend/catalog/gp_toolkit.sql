@@ -1811,20 +1811,6 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_segment AS
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_segment TO public;
 
-CREATE FUNCTION gp_toolkit.pg_resgroup_check_move_query(IN session_id int, IN groupid oid, OUT session_mem int, OUT available_mem int)
-RETURNS SETOF record
-AS 'gp_resource_group', 'pg_resgroup_check_move_query'
-VOLATILE LANGUAGE C;
-
-GRANT EXECUTE ON FUNCTION gp_toolkit.pg_resgroup_check_move_query(int, oid, OUT int, OUT int) TO public;
-
-CREATE FUNCTION gp_toolkit.pg_resgroup_move_query(session_id int4, groupid text)
-RETURNS bool
-AS 'gp_resource_group', 'pg_resgroup_move_query'
-VOLATILE LANGUAGE C;
-
-GRANT EXECUTE ON FUNCTION gp_toolkit.pg_resgroup_move_query(int4, text) TO public;
-
 --------------------------------------------------------------------------------
 -- @view:
 --        gp_toolkit.gp_resgroup_role

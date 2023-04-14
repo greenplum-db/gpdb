@@ -69,6 +69,8 @@ run_resgroup_test() {
             --disable-gpcloud --disable-gpfdist --disable-orca \
             --without-python PKG_CONFIG_PATH="\${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 
+        pip3 install -r python-dependencies.txt
+
         make -C /home/gpadmin/gpdb_src/src/test/regress
         ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/regress </dev/null
         ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/isolation2 </dev/null
