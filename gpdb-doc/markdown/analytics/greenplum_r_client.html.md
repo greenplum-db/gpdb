@@ -221,7 +221,7 @@ Connection  :    1
 
 ### <a id="run_greenplum"></a>Running R Functions in Greenplum Database 
 
-GreenplumR supports two functions that allow you to run an R function, in-database, on every row of a Greenplum Database table: [db.gpapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/master/db.gpapply.html) and [db.gptapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/master/db.gptapply.html). You can use the Greenplum PL/R or PL/Container procedural language as the vehicle in which to run the function.
+GreenplumR supports two functions that allow you to run an R function, in-database, on every row of a Greenplum Database table: [db.gpapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/main/db.gpapply.md) and [db.gptapply\(\)](https://github.com/greenplum-db/GreenplumR/blob/main/db.gptapply.md). You can use the Greenplum PL/R or PL/Container procedural language as the vehicle in which to run the function.
 
 The function signatures follow:
 
