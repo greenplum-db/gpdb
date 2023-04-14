@@ -163,6 +163,17 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                            None)]
             },
             {
+                "name": "mirrors_inconfig_have_running_pgrewind_and_pgbasebackup",
+                "gparray": self.three_failedover_segs_gparray_str,
+                "new_hosts": [],
+                "config": """sdw1|20000|/primary/gpseg0
+                             sdw1|20001|/primary/gpseg1
+                             sdw2|20000|/primary/gpseg2""",
+                "segments_with_running_basebackup": {1, 2},
+                "is_pgrewind_running": [True, False, False],
+                "expected": []
+            },
+            {
                 "name": "some_mirrors_inconfig_have_running_pgrewind",
                 "gparray": self.three_failedover_segs_gparray_str,
                 "new_hosts": [],
@@ -248,6 +259,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                 "name": "no_peer_for_failed_seg",
                 "gparray": self.content0_no_peer_gparray_str,
                 "config": "sdw1|20000|/primary/gpseg0 sdw3|20000|/primary/gpseg5",
+                "is_pgrewind_running": [True],
                 "expected": "No peer found for dbid 2. liveSegment is None"
             },
             {
@@ -427,6 +439,16 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                            None)]
             },
             {
+                "name": "failed_segments_have_running_pgrewind_or_pgbasebackup",
+                "gparray": self.three_failedover_segs_gparray_str,
+                "new_hosts": [],
+                "segments_with_running_basebackup": {1},
+                "is_pgrewind_running": [True, False, False],
+                "expected": [self._triplet('4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2',
+                                           '8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2',
+                                           None)]
+            },
+            {
                 "name": "some_failed_segments_have_running_pgrewind",
                 "gparray": self.three_failedover_segs_gparray_str,
                 "new_hosts": [],
@@ -496,6 +518,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                 "gparray": self.content0_no_peer_gparray_str,
                 "new_hosts": ['new_1', 'new_2'],
                 "unreachable_hosts": [],
+                "is_pgrewind_running": [True],
                 "expected": "No peer found for dbid 2. liveSegment is None"
             },
             {

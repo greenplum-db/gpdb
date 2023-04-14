@@ -894,7 +894,7 @@ def impl(context, contentids):
         primary = segpair.primaryDB
         mirror = segpair.mirrorDB
         if primary.content in content_ids:
-            msg = "Skipping incremental recovery of segment on host {} and port {} because it has an active pg_rewind " \
+            msg = "Skipping recovery of segment on host {} and port {} because it has an active pg_rewind " \
                   "connection with segment on host {} and port {}".format(mirror.getSegmentHostName(), mirror.getSegmentPort(),
                                                                           primary.getSegmentHostName(), primary.getSegmentPort())
 
