@@ -597,7 +597,7 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     {% if os_type == default_os_type %}
-    regexp: clients/published/gpdb6/clients-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: clients/published/gpdb6/clients-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
     {% else %}
     regexp: clients/published/gpdb6/clients-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
     {% endif %}
@@ -649,7 +649,7 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
 {% if os_type == default_os_type %}
-    regexp: server/published/gpdb6/server-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/gpdb6/server-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
 {% else %}
     regexp: server/published/gpdb6/server-rc-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
@@ -673,7 +673,7 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
 {% if os_type == default_os_type %}
-    regexp: server/published/gpdb6/greenplum-db-(.*)-el8-x86_64((rc-build-type-gcs)).rpm
+    regexp: server/published/gpdb6/greenplum-db-(.*)-rhel8-x86_64((rc-build-type-gcs)).rpm
 {% else %}
     regexp: server/published/gpdb6/greenplum-db-(.*)-[[ os_type ]]-x86_64((rc-build-type-gcs)).rpm
 {% endif %}
@@ -716,7 +716,7 @@ resources:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     {% if os_type == default_os_type %}
-    regexp: server/published/gpdb6/server-build-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/gpdb6/server-build-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
     {% else %}
     regexp: server/published/gpdb6/server-build-(.*)-[[ os_type ]]_x86_64((rc-build-type-gcs)).tar.gz
     {% endif %}

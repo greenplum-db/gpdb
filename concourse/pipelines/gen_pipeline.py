@@ -118,10 +118,10 @@ def create_pipeline(args, git_remote, git_branch):
     dist = {
         "centos6" : "rhel6",
         "centos7" : "rhel7",
-        "rhel8" : "el8",
+        "rhel8" : "rhel8",
         "ubuntu18.04" : "ubuntu18.04",
-        "rocky8" : "el8",
-        "oel8" : "el8",
+        "rocky8" : "rhel8",
+        "oel8" : "rhel8",
         "oel7" : "oel7"
     }
     rpm_platform = {

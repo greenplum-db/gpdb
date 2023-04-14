@@ -472,7 +472,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: clients/published/gpdb6/clients-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: clients/published/gpdb6/clients-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_photon3_rc
   type: gcs
@@ -507,7 +507,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/gpdb6/server-rc-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_centos7_rc
   type: gcs
@@ -521,7 +521,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/greenplum-db-(.*)-el8-x86_64((rc-build-type-gcs)).rpm
+    regexp: server/published/gpdb6/greenplum-db-(.*)-rhel8-x86_64((rc-build-type-gcs)).rpm
 
 - name: greenplum-database-release
   type: git
@@ -555,7 +555,7 @@ resources:
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-build-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
+    regexp: server/published/gpdb6/server-build-(.*)-rhel8_x86_64((rc-build-type-gcs)).tar.gz
 
 - name: bin_gpdb_photon3
   type: gcs
@@ -954,12 +954,12 @@ jobs:
           - -exc
           - |
             server_version="$(./gpdb_src/getversion --short)"
-            cp bin_gpdb/bin_gpdb.tar.gz "output/server-build-${server_version}-el8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
+            cp bin_gpdb/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
             cp bin_gpdb_photon3/bin_gpdb.tar.gz "output/server-build-${server_version}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
   - in_parallel:
     - put: server-build-rocky8
       params:
-        file: output/server-build-*-el8*.tar.gz
+        file: output/server-build-*-rhel8*.tar.gz
     - put: server-build-photon3
       params:
         file: output/server-build-*-photon3*.tar.gz
@@ -2943,8 +2943,8 @@ jobs:
               - -ec
               - |
                 gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
-                cp -v bin_gpdb/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-el8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
-                cp -v bin_gpdb_clients/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-el8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+                cp -v bin_gpdb/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-rhel8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
+                cp -v bin_gpdb_clients/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-rhel8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 cp -v bin_gpdb_photon3/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 cp -v bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 cp -v bin_gpdb_clients_sles12/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-sles12_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
@@ -2963,10 +2963,10 @@ jobs:
       steps:
       - put: bin_gpdb_rocky8_rc
         params:
-          file: "release_candidates/server-rc-*el8*.tar.gz"
+          file: "release_candidates/server-rc-*rhel8*.tar.gz"
       - put: bin_gpdb_clients_rocky8_rc
         params:
-          file: "release_candidates/clients-rc-*el8*.tar.gz"
+          file: "release_candidates/clients-rc-*rhel8*.tar.gz"
       - put: bin_gpdb_photon3_rc
         params:
           file: "release_candidates/server-rc-*photon3*.tar.gz"
@@ -3043,7 +3043,7 @@ jobs:
           - -exc
           - |
             gpdb_semver=$(gpdb_src/getversion | cut -d' ' -f1)
-            cp -v gpdb_rpm_rocky8/*.rpm renamed_gpdb_rpm_rocky8/greenplum-db-${gpdb_semver}-el8-x86_64${RC_BUILD_TYPE_GCS}.rpm
+            cp -v gpdb_rpm_rocky8/*.rpm renamed_gpdb_rpm_rocky8/greenplum-db-${gpdb_semver}-rhel8-x86_64${RC_BUILD_TYPE_GCS}.rpm
             cp -v gpdb_rpm_photon3/*.rpm renamed_gpdb_rpm_photon3/greenplum-db-${gpdb_semver}-photon3-x86_64${RC_BUILD_TYPE_GCS}.rpm
   - in_parallel:
       steps:
