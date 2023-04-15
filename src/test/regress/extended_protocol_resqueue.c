@@ -31,7 +31,6 @@ main(int argc, char **argv)
 	const char *execrole;
 	PGconn     *conn;
 	PGresult   *res;
-	const char *paramValues[1];
 	char		buf[80];
 
 	conninfo = argv[1];

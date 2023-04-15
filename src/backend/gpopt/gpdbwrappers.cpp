@@ -1156,6 +1156,18 @@ gpdb::GetDefaultDistributionOpfamilyForType(Oid typid)
 }
 
 Oid
+gpdb::GetDefaultPartitionOpfamilyForType(Oid typid)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_type, pg_opclass */
+		return default_partition_opfamily_for_type(typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
 gpdb::GetHashProcInOpfamily(Oid opfamily, Oid typid)
 {
 	GP_WRAP_START;
@@ -2517,6 +2529,17 @@ gpdb::GetRelChildIndexes(Oid reloid)
 	GP_WRAP_END;
 
 	return partoids;
+}
+
+Oid
+gpdb::GetForeignServerId(Oid reloid)
+{
+	GP_WRAP_START;
+	{
+		return GetForeignServerIdByRelId(reloid);
+	}
+	GP_WRAP_END;
+	return 0;
 }
 
 // Locks on partition leafs and indexes are held during optimizer (after

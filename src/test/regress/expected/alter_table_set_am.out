@@ -147,9 +147,9 @@ SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao')).* FROM gp_dist_random('gp_id');
@@ -168,9 +168,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2ao')).* FROM gp_dist_rando
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao2');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao2')).* FROM gp_dist_random('gp_id');
@@ -306,9 +306,9 @@ SELECT count(*) FROM (SELECT * FROM inheritchildrelfilebefore UNION SELECT * FRO
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_random('gp_id');
@@ -319,9 +319,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_ran
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase2')).* FROM gp_dist_random('gp_id');
@@ -741,17 +741,17 @@ SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
 (0 rows)
 
 -- pg_attribute_encoding should have columns for the AOCO table
-SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
- relname | attnum |                       attoptions                        
----------+--------+---------------------------------------------------------
- ao2co   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co2  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co2  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co3  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
- ao2co3  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
- ao2co4  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
- ao2co4  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+SELECT c.relname, a.attnum, a.filenum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
+ relname | attnum | filenum |                       attoptions                        
+---------+--------+---------+---------------------------------------------------------
+ ao2co   |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co   |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co2  |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co2  |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co3  |      2 |       2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co3  |      1 |       1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  |      2 |       2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  |      1 |       1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
 (8 rows)
 
 -- AM and reloptions changed accordingly
@@ -801,17 +801,17 @@ SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
 (4 rows)
 
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
- relname  | attnum |                     attoptions                      
-----------+--------+-----------------------------------------------------
- co2heap  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap2 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap2 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap3 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap3 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap4 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap4 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+ relname  | attnum | filenum |                     attoptions                      
+----------+--------+---------+-----------------------------------------------------
+ co2heap  |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap  |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap2 |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap2 |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap3 |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap3 |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap4 |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap4 |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
 (8 rows)
 
 CREATE TEMP TABLE relfilebeforeco2heap AS
@@ -916,9 +916,9 @@ SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'co2heap%';
 (4 rows)
 
 -- The pg_attribute_encoding entries for the altered tables should have all gone.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
- relname | attnum | attoptions 
----------+--------+------------
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+ relname | attnum | filenum | attoptions 
+---------+--------+---------+------------
 (0 rows)
 
 DROP TABLE co2heap;
@@ -948,17 +948,17 @@ SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 (4 rows)
 
 -- Check once that the pg_attribute_encoding has entries for the AOCO tables.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
- relname | attnum |                       attoptions                        
----------+--------+---------------------------------------------------------
- co2ao   |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao   |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao2  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao2  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao3  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao3  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao4  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao4  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+ relname | attnum | filenum |                       attoptions                        
+---------+--------+---------+---------------------------------------------------------
+ co2ao   |      2 |       2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao   |      1 |       1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao2  |      2 |       2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao2  |      1 |       1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao3  |      2 |       2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao3  |      1 |       1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao4  |      2 |       2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao4  |      1 |       1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
 (8 rows)
 
 -- Check once on the aoblkdirs
@@ -1038,9 +1038,9 @@ SELECT count(*) FROM co2ao4;
 SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
 (3 rows)
 
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao');
@@ -1061,9 +1061,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao')).* FROM gp_dist_random(
 SELECT * FROM gp_toolkit.__gp_aoseg('co2ao3');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
 (3 rows)
 
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao3');
@@ -1102,9 +1102,9 @@ SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 (4 rows)
 
 -- The pg_attribute_encoding entries for the altered tables should have all gone.
-SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
- relname | attnum | attoptions 
----------+--------+------------
+SELECT c.relname, a.attnum, a.filenum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+ relname | attnum | filenum | attoptions 
+---------+--------+---------+------------
 (0 rows)
 
 DROP TABLE co2ao;
@@ -1247,17 +1247,17 @@ SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co3');
 (1 row)
 
 -- pg_attribute_encoding should have columns for the AOCO table
-SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
- relname  | attnum |                     attoptions                      
-----------+--------+-----------------------------------------------------
- heap2co  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- heap2co  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- heap2co2 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- heap2co2 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- heap2co3 |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- heap2co3 |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- heap2co4 |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- heap2co4 |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+SELECT c.relname, a.attnum, a.filenum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
+ relname  | attnum | filenum |                     attoptions                      
+----------+--------+---------+-----------------------------------------------------
+ heap2co  |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co  |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co2 |      2 |       2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co2 |      1 |       1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co3 |      2 |       2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ heap2co3 |      1 |       1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ heap2co4 |      2 |       2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ heap2co4 |      1 |       1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
 (8 rows)
 
 -- AM and reloptions changed accordingly

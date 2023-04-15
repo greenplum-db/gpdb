@@ -3383,7 +3383,7 @@ fetch_more_data(ForeignScanState *node)
 
 		for (i = 0; i < numrows; i++)
 		{
-			Assert(IsA(node->ss.ps.plan, ForeignScan));
+			Assert(IsA(node->ss.ps.plan, ForeignScan) || IsA(node->ss.ps.plan, DynamicForeignScan));
 
 			fsstate->tuples[i] =
 				make_tuple_from_result_row(res, i,

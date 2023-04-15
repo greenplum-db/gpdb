@@ -71,6 +71,7 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalMaterialize.o \
               CDXLPhysicalMergeJoin.o \
               CDXLPhysicalMotion.o \
+              CDXLPhysicalDynamicForeignScan.o \
               CDXLPhysicalNLJoin.o \
               CDXLPhysicalPartitionSelector.o \
               CDXLPhysicalProperties.o \

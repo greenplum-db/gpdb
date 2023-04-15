@@ -465,3 +465,27 @@ DROP TABLE hash_prt_tbl;
 
 RESET enable_seqscan;
 RESET optimizer_enable_dynamictablescan;
+--
+-- Enable the index only scan in append only table.
+-- Note: expect ORCA to use seq scan rather than index only scan like planner,
+-- because ORCA hasn't yet implemented index only scan for AO/CO tables.
+--
+CREATE TABLE bfv_index_only_ao(a int, b int) WITH (appendonly =true);
+CREATE INDEX bfv_index_only_ao_a_b on bfv_index_only_ao(a) include (b);
+
+insert into bfv_index_only_ao select i,i from generate_series(1, 10000) i;
+
+explain select count(*) from bfv_index_only_ao where a < 100;
+select count(*) from bfv_index_only_ao where a < 100;
+explain select count(*) from bfv_index_only_ao where a < 1000;
+select count(*) from bfv_index_only_ao where a < 1000;
+
+CREATE TABLE bfv_index_only_aocs(a int, b int) WITH (appendonly =true, orientation=column);
+CREATE INDEX bfv_index_only_aocs_a_b on bfv_index_only_aocs(a) include (b);
+
+insert into bfv_index_only_aocs select i,i from generate_series(1, 10000) i;
+
+explain select count(*) from bfv_index_only_aocs where a < 100;
+select count(*) from bfv_index_only_aocs where a < 100;
+explain select count(*) from bfv_index_only_aocs where a < 1000;
+select count(*) from bfv_index_only_aocs where a < 1000;

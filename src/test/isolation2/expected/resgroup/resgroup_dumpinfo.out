@@ -16,7 +16,9 @@ groups = [g for g in qd_info["groups"] if g["group_id"] > 6441] #validate user c
 return True 
 conn = pg.connect(dbname="postgres") 
 r = conn.query("select count(*) from gp_segment_configuration where  role = 'p';") n = r.getresult()[0][0] 
-r = conn.query("select value from pg_resgroup_get_status_kv('dump');") json_text =  r.getresult()[0][0] json_obj = json.loads(json_text) 
+# The pg_resgroup_get_status_kv() function must output valid result in CTAS # and simple select queries 
+r = conn.query("select value from pg_resgroup_get_status_kv('dump');") json_text =  r.getresult()[0][0] json_obj = json.loads(json_text) if not validate(json_obj, n): return False 
+conn.query("""CREATE TEMPORARY TABLE t_pg_resgroup_get_status_kv AS SELECT * FROM pg_resgroup_get_status_kv('dump');""") r = conn.query("SELECT value FROM t_pg_resgroup_get_status_kv;") json_text =  r.getresult()[0][0] json_obj = json.loads(json_text) 
 return validate(json_obj, n) 
 $$ LANGUAGE plpython3u;
 CREATE
@@ -65,6 +67,19 @@ ERROR:  only superusers can call this function
 
 RESET ROLE;
 RESET
+
+-- Now 'dump' is the only value at which the function outputs tuples, but the
+-- function must correctly handle any value
+SELECT count(*) FROM pg_resgroup_get_status_kv('not_dump');
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(*) FROM pg_resgroup_get_status_kv(NULL);
+ count 
+-------
+ 0     
+(1 row)
 
 DROP ROLE role_dumpinfo_test;
 DROP

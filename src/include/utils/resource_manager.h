@@ -40,6 +40,7 @@
 
 typedef enum
 {
+	RESOURCE_MANAGER_POLICY_NONE,			/* Do not use any resource manager*/
 	RESOURCE_MANAGER_POLICY_QUEUE,
 	RESOURCE_MANAGER_POLICY_GROUP,			/* Linux Cgroup v1 */
 	RESOURCE_MANAGER_POLICY_GROUP_V2,		/* Linux Cgroup v2 */

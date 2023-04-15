@@ -154,7 +154,10 @@ ic_proxy_peer_update_name(ICProxyPeer *peer)
 static void
 ic_proxy_peer_unregister(ICProxyPeer *peer)
 {
-	Assert(peer->dbid > 0);
+	/* invalid peer */
+	if (peer->dbid == IC_PROXY_INVALID_DBID ||
+		peer->content == IC_PROXY_INVALID_CONTENT)
+		return;
 
 	if (ic_proxy_peers[peer->dbid] == peer)
 	{
@@ -538,6 +541,9 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	ICProxyPeer *peer = opaque;
 	ICProxyKey	key;
 
+	/* we only expect one hello message */
+	uv_read_stop((uv_stream_t *) &peer->tcp);
+
 	/* sanity check: drop the packet with incorrect magic number */
 	if (!ic_proxy_pkt_is_valid(pkt))
 	{
@@ -546,9 +552,6 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 					peer->name, ic_proxy_pkt_to_str(pkt));
 		return;
 	}
-
-	/* we only expect one hello message */
-	uv_read_stop((uv_stream_t *) &peer->tcp);
 
 	ic_proxy_key_from_p2c_pkt(&key, pkt);
 
@@ -654,15 +657,6 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 		elog(ERROR, "ic-proxy: %s: received incomplete HELLO ACK: size = %d",
 					 peer->name, size);
 
-	/* sanity check: drop the packet with incorrect magic number */
-	if (!ic_proxy_pkt_is_valid(pkt))
-	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
-			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
-					peer->name, ic_proxy_pkt_to_str(pkt));
-		return;
-	}
-
 	if (peer->state & IC_PROXY_PEER_STATE_RECEIVED_HELLO_ACK)
 	{
 		/*
@@ -680,6 +674,18 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 		return;
 	}
 
+	/* we only expect one hello ack message */
+	uv_read_stop((uv_stream_t *) &peer->tcp);
+
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					peer->name, ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	if (!ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_PEER_HELLO_ACK))
 		elog(ERROR, "ic-proxy: %s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
@@ -687,9 +693,6 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	if (pkt->dstDbid != peer->dbid)
 		elog(ERROR, "ic-proxy: %s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
-
-	/* we only expect one hello ack message */
-	uv_read_stop((uv_stream_t *) &peer->tcp);
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
 		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));

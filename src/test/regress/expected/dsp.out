@@ -226,14 +226,14 @@ select * from t2 order by 1;
  5 | 14 | 10 | abc10
 (5 rows)
 
-select attrelid::regclass, attnum, attoptions
+select attrelid::regclass, attnum, filenum, attoptions
 	from pg_attribute_encoding order by 1,2;
- attrelid | attnum |                       attoptions                        
-----------+--------+---------------------------------------------------------
- t2       |      1 | {blocksize=65536,compresstype=zlib,compresslevel=2}
- t2       |      2 | {compresstype=zlib,compresslevel=2,blocksize=32768}
- t2       |      3 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- t2       |      4 | {compresstype=zlib,blocksize=32768,compresslevel=2}
+ attrelid | attnum | filenum |                       attoptions                        
+----------+--------+---------+---------------------------------------------------------
+ t2       |      1 |       1 | {blocksize=65536,compresstype=zlib,compresslevel=2}
+ t2       |      2 |       2 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+ t2       |      3 |       3 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ t2       |      4 |       4 | {compresstype=zlib,blocksize=32768,compresslevel=2}
 (4 rows)
 
 -- SET operation in a session has higher precedence.  Also test if
@@ -364,34 +364,34 @@ create table co7(
 	b varchar encoding(compresstype=zlib,compresslevel=6),
 	c char encoding(compresstype=rle_type))
 	with (checksum=false) distributed by (a);
-select attrelid::regclass,attnum,attoptions
+select attrelid::regclass,attnum,filenum,attoptions
 	from pg_attribute_encoding order by 1,2;
- attrelid | attnum |                       attoptions                        
-----------+--------+---------------------------------------------------------
- t2       |      1 | {blocksize=65536,compresstype=zlib,compresslevel=2}
- t2       |      2 | {compresstype=zlib,compresslevel=2,blocksize=32768}
- t2       |      3 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
- t2       |      4 | {compresstype=zlib,blocksize=32768,compresslevel=2}
- co1      |      1 | {compresstype=zlib,blocksize=32768,compresslevel=1}
- co1      |      2 | {compresstype=zlib,blocksize=32768,compresslevel=1}
- co2      |      1 | {blocksize=8192,compresstype=zlib,compresslevel=1}
- co2      |      2 | {blocksize=8192,compresstype=zlib,compresslevel=1}
- co3      |      1 | {blocksize=65536,compresstype=zlib,compresslevel=1}
- co3      |      2 | {compresstype=zlib,compresslevel=6,blocksize=32768}
- co3      |      3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- co4      |      1 | {compresslevel=5,compresstype=zlib,blocksize=32768}
- co4      |      2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
- co4      |      3 | {compresslevel=5,compresstype=zlib,blocksize=32768}
- co5      |      1 | {compresslevel=5,compresstype=zlib,blocksize=32768}
- co5      |      2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
- co5      |      3 | {compresslevel=0,compresstype=none,blocksize=32768}
- co6      |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- co6      |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- co6      |      3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- co6      |      4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- co7      |      1 | {blocksize=8192,compresstype=none,compresslevel=0}
- co7      |      2 | {compresstype=zlib,compresslevel=6,blocksize=32768}
- co7      |      3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ attrelid | attnum | filenum |                       attoptions                        
+----------+--------+---------+---------------------------------------------------------
+ t2       |      1 |       1 | {blocksize=65536,compresstype=zlib,compresslevel=2}
+ t2       |      2 |       2 | {compresstype=zlib,compresslevel=2,blocksize=32768}
+ t2       |      3 |       3 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ t2       |      4 |       4 | {compresstype=zlib,blocksize=32768,compresslevel=2}
+ co1      |      1 |       1 | {compresstype=zlib,blocksize=32768,compresslevel=1}
+ co1      |      2 |       2 | {compresstype=zlib,blocksize=32768,compresslevel=1}
+ co2      |      1 |       1 | {blocksize=8192,compresstype=zlib,compresslevel=1}
+ co2      |      2 |       2 | {blocksize=8192,compresstype=zlib,compresslevel=1}
+ co3      |      1 |       1 | {blocksize=65536,compresstype=zlib,compresslevel=1}
+ co3      |      2 |       2 | {compresstype=zlib,compresslevel=6,blocksize=32768}
+ co3      |      3 |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ co4      |      1 |       1 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ co4      |      2 |       2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ co4      |      3 |       3 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ co5      |      1 |       1 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ co5      |      2 |       2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ co5      |      3 |       3 | {compresslevel=0,compresstype=none,blocksize=32768}
+ co6      |      1 |       1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ co6      |      2 |       2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ co6      |      3 |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ co6      |      4 |       4 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ co7      |      1 |       1 | {blocksize=8192,compresstype=none,compresslevel=0}
+ co7      |      2 |       2 | {compresstype=zlib,compresslevel=6,blocksize=32768}
+ co7      |      3 |       3 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
 (24 rows)
 
 drop database if exists dsp3;
@@ -462,22 +462,22 @@ where relname in ('co1', 'co2', 'co3', 'co5') order by 1;
  co5     | ao_column | r       | {checksum=false,blocksize=32768,compresslevel=0,compresstype=none}
 (4 rows)
 
-select attrelid::regclass,attnum,attoptions
+select attrelid::regclass,attnum,filenum,attoptions
 	from pg_attribute_encoding order by 1,2;
- attrelid | attnum |                       attoptions                        
-----------+--------+---------------------------------------------------------
- co1      |      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
- co1      |      2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
- co1      |      3 | {compresslevel=0,blocksize=65536,compresstype=none}
- co1      |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
- co2      |      1 | {compresstype=rle_type,compresslevel=3,blocksize=32768}
- co2      |      2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
- co2      |      3 | {compresslevel=0,blocksize=65536,compresstype=none}
- co2      |      4 | {compresstype=none,compresslevel=0,blocksize=32768}
- co3      |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
- co3      |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
- co5      |      1 | {blocksize=8192,compresstype=none,compresslevel=0}
- co5      |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ attrelid | attnum | filenum |                       attoptions                        
+----------+--------+---------+---------------------------------------------------------
+ co1      |      1 |       1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ co1      |      2 |       2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ co1      |      3 |       3 | {compresslevel=0,blocksize=65536,compresstype=none}
+ co1      |      4 |       4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ co2      |      1 |       1 | {compresstype=rle_type,compresslevel=3,blocksize=32768}
+ co2      |      2 |       2 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+ co2      |      3 |       3 | {compresslevel=0,blocksize=65536,compresstype=none}
+ co2      |      4 |       4 | {compresstype=none,compresslevel=0,blocksize=32768}
+ co3      |      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ co3      |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ co5      |      1 |       1 | {blocksize=8192,compresstype=none,compresslevel=0}
+ co5      |      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (12 rows)
 
 -- misc tests
@@ -745,13 +745,13 @@ set default_table_access_method = ao_row;
 set gp_default_storage_options = "compresstype=NONE";
 create table co10 (a int, b int, c int) with (appendonly=true,orientation=column)
     distributed by (a);
-select attnum,attoptions from pg_attribute_encoding
+select attnum,filenum,attoptions from pg_attribute_encoding
     where attrelid = 'co10'::regclass order by attnum;
- attnum |                     attoptions                      
---------+-----------------------------------------------------
-      1 | {compresstype=none,blocksize=32768,compresslevel=0}
-      2 | {compresstype=none,blocksize=32768,compresslevel=0}
-      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ attnum | filenum |                     attoptions                      
+--------+---------+-----------------------------------------------------
+      1 |       1 | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {compresstype=none,blocksize=32768,compresslevel=0}
 (3 rows)
 
 -- compression disabled by default, enable in WITH clause

@@ -896,11 +896,26 @@ plan_tree_mutator(Node *node,
 			break;
 
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 			{
 				ForeignScan *fdwscan = (ForeignScan *) node;
 				ForeignScan *newfdwscan;
 
-				FLATCOPY(newfdwscan, fdwscan, ForeignScan);
+				if (IsA(node, DynamicForeignScan))
+				{
+					/*
+					 * A DynamicForeignScan is identical to ForeignScan, except for
+					 * additional fields. This convoluted coding is to avoid
+					 * copy-pasting this code and risking bugs of omission if
+					 * new fields are added to ForeignScan in upstream.
+					 */
+					DynamicForeignScan *newdfdwscan;
+
+					FLATCOPY(newdfdwscan, fdwscan, DynamicForeignScan);
+					newfdwscan = (ForeignScan *) newdfdwscan;
+				}
+				else
+					FLATCOPY(newfdwscan, fdwscan, ForeignScan);
 				SCANMUTATE(newfdwscan, fdwscan);
 
 				MUTATE(newfdwscan->fdw_exprs, fdwscan->fdw_exprs, List *);

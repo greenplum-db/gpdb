@@ -541,6 +541,10 @@ _readAExpr(void)
 
 			READ_NODE_FIELD(name);
 			break;
+		case AEXPR_NOT_DISTINCT:
+
+			READ_NODE_FIELD(name);
+			break;
 		case AEXPR_NULLIF:
 
 			READ_NODE_FIELD(name);
@@ -1810,6 +1814,9 @@ readNodeBinary(void)
 				break;
 			case T_ForeignScan:
 				return_value = _readForeignScan();
+				break;
+			case T_DynamicForeignScan:
+				return_value = _readDynamicForeignScan();
 				break;
 			case T_CustomScan:
 				return_value = _readCustomScan();

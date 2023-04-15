@@ -18,6 +18,7 @@
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarIdent.h"
+#include "naucrates/md/IMDIndex.h"
 
 namespace gpopt
 {
@@ -186,9 +187,9 @@ public:
 
 	// is the given expression a comparison between a scalar ident and a constant
 	static BOOL FCompareIdentToConst(CExpression *pexpr);
-	static BOOL FCompareIdentToConst(CExpression *pexpr,
-									 CExpression *&pexprIdent,
-									 CExpression *&pexprConst);
+
+	// is the given expression an equality between ident/const without cast
+	static BOOL FPlainEqualityIdentConstWithoutCast(CExpression *pexpr);
 
 	// is the given expression a comparison between a const and a const
 	static BOOL FCompareConstToConstIgnoreCast(CExpression *pexpr);
@@ -352,6 +353,18 @@ public:
 		CMemoryPool *mp, CExpression *pexprScalar,
 		CColRef2dArray *pdrgpdrgpcrPartKeys, CColRefSet *pcrsAllowedRefs,
 		BOOL fUseConstraints, const IMDRelation *pmdrel = nullptr);
+
+	// checks if the operator belongs to the column's opfamily
+	static BOOL FOpInOpfamily(CColRef *colref, CExpression *pexpr,
+							  IMDIndex::EmdindexType access_method);
+
+	// checks if the operator belongs to the scalar expression's opfamily
+	static BOOL FOpInOpfamily(CExpression *pexprScalar, CExpression *pexpr,
+							  IMDIndex::EmdindexType access_method);
+
+	// checks if the operator belongs to the column's opfamily
+	static BOOL FOpInOpfamily(IMDId *col_mdid, CExpression *pexpr,
+							  IMDIndex::EmdindexType access_method);
 
 	// extract the constraint on the given column and return the corresponding
 	// scalar expression

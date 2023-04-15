@@ -97,8 +97,8 @@ SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
  pg_stat_last_operation_test               | CREATE     | TABLE
  mdt_test_part1                            | CREATE     | TABLE
  mdt_test_part1_1_prt_1                    | CREATE     | TABLE
- mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
  mdt_test_part1_1_prt_2                    | CREATE     | TABLE
+ mdt_test_part1_1_prt_1_2_prt_1            | CREATE     | TABLE
  mdt_test_part1_1_prt_2_2_prt_1            | CREATE     | TABLE
  mdt_test_part1_1_prt_default_part         | CREATE     | TABLE
  mdt_test_part1_1_prt_default_part_2_prt_1 | CREATE     | TABLE
@@ -169,6 +169,22 @@ SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'TRUNCATE';
  pg_stat_last_operation_test | TRUNCATE   | 
 (1 row)
 
+-- CREATE INDEX
+CREATE INDEX idx_mt ON mdt_all_types (a);
+REINDEX INDEX idx_mt;
+SELECT * FROM pg_stat_last_operation_testview WHERE objname = 'idx_mt';
+ objname | actionname | subtype 
+---------+------------+---------
+ idx_mt  | CREATE     | INDEX
+ idx_mt  | VACUUM     | REINDEX
+(2 rows)
+
+-- QEs shouldn't do meta tracking stuff
+SELECT gp_execution_dbid(), * FROM gp_dist_random('pg_stat_last_operation_testview') WHERE objname = 'idx_mt';
+ gp_execution_dbid | objname | actionname | subtype 
+-------------------+---------+------------+---------
+(0 rows)
+
 -- DROP TABLE
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'DROP';
  objname | actionname | subtype 
@@ -179,7 +195,6 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
                   objname                  | actionname | subtype  
 -------------------------------------------+------------+----------
  mdt_test_part1                            | CREATE     | TABLE
- mdt_test_part1                            | PARTITION  | DROP
  mdt_test_part1_1_prt_1                    | CREATE     | TABLE
  mdt_test_part1_1_prt_1                    | PARTITION  | ATTACH
  mdt_test_part1_1_prt_2                    | CREATE     | TABLE
@@ -201,6 +216,7 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
  mdt_test_newpart                          | PARTITION  | ATTACH
  mdt_test_detach                           | CREATE     | TABLE
  mdt_test_detach                           | PARTITION  | DETACH
+ mdt_test_part1                            | PARTITION  | DROP
  mdt_all_types                             | PRIVILEGE  | GRANT
  mdt_all_types                             | VACUUM     | 
  mdt_all_types                             | ANALYZE    | 
@@ -211,7 +227,6 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
                   objname                  | actionname | subtype 
 -------------------------------------------+------------+---------
  mdt_test_part1                            | CREATE     | TABLE
- mdt_test_part1                            | PARTITION  | DROP
  mdt_test_part1_1_prt_1                    | CREATE     | TABLE
  mdt_test_part1_1_prt_1                    | PARTITION  | ATTACH
  mdt_test_part1_1_prt_2                    | CREATE     | TABLE
@@ -228,6 +243,7 @@ SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
  mdt_test_newpart                          | PARTITION  | ATTACH
  mdt_test_detach                           | CREATE     | TABLE
  mdt_test_detach                           | PARTITION  | DETACH
+ mdt_test_part1                            | PARTITION  | DROP
 (18 rows)
 
 DROP TABLE mdt_test_part1;

@@ -304,15 +304,29 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';
 alter table ext_part attach partition p1 for values in (1);
 alter table ext_part attach partition p2_ext for values in (2);
-explain select * from ext_part;
+explain insert into ext_part values (1);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Partitioned table with external/foreign partition
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..57799.50 rows=3096300 width=4)
-   ->  Append  (cost=0.00..16515.50 rows=1032100 width=4)
-         ->  Seq Scan on p1  (cost=0.00..355.00 rows=32100 width=4)
-         ->  Foreign Scan on p2_ext  (cost=0.00..11000.00 rows=1000000 width=4)
+DETAIL:  Feature not supported: Insert with External/foreign partition storage types
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on ext_part  (cost=0.00..0.03 rows=1 width=4)
+   ->  Result  (cost=0.00..0.01 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+explain delete from ext_part where a=1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Delete with External/foreign partition storage types
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Delete on ext_part  (cost=0.00..435.25 rows=32 width=10)
+   Delete on p1
+   ->  Seq Scan on p1  (cost=0.00..435.25 rows=32 width=10)
+         Filter: (a = 1)
  Optimizer: Postgres query optimizer
 (5 rows)
 
+explain update ext_part set a=1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Update with External/foreign partition storage types
+ERROR:  cannot update foreign table "p2_ext"

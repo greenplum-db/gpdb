@@ -46,18 +46,6 @@ CLogicalUnion::CLogicalUnion(CMemoryPool *mp, CColRefArray *pdrgpcrOutput,
 							 CColRef2dArray *pdrgpdrgpcrInput)
 	: CLogicalSetOp(mp, pdrgpcrOutput, pdrgpdrgpcrInput)
 {
-#ifdef GPOS_DEBUG
-	CColRefArray *pdrgpcrInput = (*pdrgpdrgpcrInput)[0];
-	const ULONG num_cols = pdrgpcrOutput->Size();
-	GPOS_ASSERT(num_cols == pdrgpcrInput->Size());
-
-	// Ensure that the output columns are the same as first input
-	for (ULONG ul = 0; ul < num_cols; ul++)
-	{
-		GPOS_ASSERT((*pdrgpcrOutput)[ul] == (*pdrgpcrInput)[ul]);
-	}
-
-#endif	// GPOS_DEBUG
 }
 
 //---------------------------------------------------------------------------

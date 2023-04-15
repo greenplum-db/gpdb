@@ -845,37 +845,6 @@ memtuple_form_to(MemTupleBinding *pbind,
 	return mtup;
 }
 
-bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
-{
-	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup) ? &pbind->large_bind : &pbind->bind;
-	unsigned char 		*nullp;
-	MemTupleAttrBinding *attrbind;
-
-	Assert(mtup && pbind && pbind->tupdesc);
-	Assert(attnum > 0);
-	
-	/*
-	 * This used to be an Assert. However, we follow the logic of
-	 * heap_attisnull() and treat attnums > lastatt as NULL. This
-	 * is currently used in ALTER ADD COLUMN NOT NULL.
-	 * 
-	 * Unfortunately this also means that the caller needs to be
-	 * extra careful passing in the correct attnum argument.
-	 */
-	if (attnum > (int) pbind->tupdesc->natts)
-		return true;
-	
-	/*
-	 * is there a NULL value in any of the attributes?
-	 */
-	if(!memtuple_get_hasnull(mtup))
-		return false;
-	
-	nullp = memtuple_get_nullp(mtup, pbind);
-	attrbind = &(colbind->bindings[attnum - 1]);
-	return (nullp[attrbind->null_byte] & attrbind->null_mask);
-}
-
 static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull, bool use_null_saves_aligned)
 {
 	bool hasnull = memtuple_get_hasnull(mtup);
@@ -917,22 +886,6 @@ Datum memtuple_getattr(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *
 	return memtuple_getattr_by_alignment(mtup, pbind, attnum, isnull, true /* aligned */);
 }
 
-/*
- * Return a palloc'd copy of 'mtup'.
- *
- * This corresponds to heap_copytuple() for HeapTuples.
- */
-MemTuple
-memtuple_copy(MemTuple mtup)
-{
-	MemTuple	dest;
-	uint32		len = memtuple_get_size(mtup);
-
-	dest = (MemTuple) palloc(len);
-	memcpy((char *) dest, (char *) mtup, len);
-	return dest;
-}
-
 static void memtuple_get_values(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull, bool use_null_saves_aligned)
 {
 	int i;
@@ -943,22 +896,6 @@ static void memtuple_get_values(MemTuple mtup, MemTupleBinding *pbind, Datum *da
 void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull)
 {
 	memtuple_get_values(mtup, pbind, datum, isnull, true /* aligned */);
-}
-
-
-/*
- * Deform a memtuple with old binding alignment.
- *
- * We assume that the 'mtup' was created using null_saves, where the
- * binding length is not aligned to the following binding's alignment. In
- * this case, we create an "upgraded" clone using null_saves_aligned, which
- * uses properly aligned binding length.
- */
-void
-memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind,
-						   Datum *datum, bool *isnull)
-{
-	memtuple_get_values(mtup, pbind, datum, isnull, false /* aligned */);
 }
 
 bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)
@@ -978,59 +915,6 @@ bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)
 				if(VARATT_IS_EXTERNAL(DatumGetPointer(d)))
 					return true;
 			}
-		}
-	}
-
-	return false;
-}
-
-/*
- * Check if a memtuple has null attributes with bindings that can possibly be misaligned.
- *
- * MPP-7372: This is an issue only for memtuples stored in AO tables before applying
- * the fix that enforces the proper alignment of the binding length.
- */
-bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind)
-{
- 	Assert(mtup);
-	Assert(pbind);
-
-	/* Check if the memtuple has an attribute with mismatching alignment and length */
-	if (!(pbind->bind.has_null_saves_alignment_mismatch))
-	{
-		return false;
-	}
-
-	/*
-	 * Check if the memtuple has a dropped attribute with mismatching alignment and length.
-	 * Dropped attributes are treated as null.
-	 */
-	if (pbind->bind.has_dropped_attr_alignment_mismatch)
-	{
-		return true;
-	}
-
-	/* Check if the memtuple has no null values */
-	if (!(memtuple_get_hasnull(mtup)))
-	{
-		return false;
-	}
-
-	unsigned char *nullp = memtuple_get_nullp(mtup, pbind);
-
-	int attr_idx = 0;
-
-	/*
-	 * Check if an attribute with mismatching alignment and length is null.
-	 */
-	for (attr_idx = 0; attr_idx < pbind->tupdesc->natts; attr_idx++)
-	{
-		MemTupleAttrBinding *bind = &pbind->bind.bindings[attr_idx];
-
-		if (bind->len != bind->len_aligned &&
-			(nullp[bind->null_byte] & bind->null_mask))
-		{
-			return true;
 		}
 	}
 

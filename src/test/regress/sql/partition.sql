@@ -540,7 +540,7 @@ insert into foo_p values(1), (5), (10);
 drop table foo_p;
 
 -- MPP-3264
--- mix AO with master HEAP and see if copy works
+-- mix AO with coordinator HEAP and see if copy works
 create table foo_p (i int)
 partition by list(i)
 (partition p1 values(1, 2, 3) with (appendonly = true),
@@ -1747,7 +1747,7 @@ PARTITION st_default );
 
 drop table sg_cal_event_silvertail_hour;
 
--- Make sure we inherit master's storage settings
+-- Make sure we inherit coordinator's storage settings
 create table foo_p (i int, j int, k text)
 with (appendonly = true, compresslevel = 5)
 partition by range(j) (start(1) end(10) every(1), default partition def);
@@ -3725,11 +3725,11 @@ alter table pt_tab_encode add partition "s_xyz" values ('xyz') WITH (appendonly=
 
 select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'pt_tab_encode%';
 
-select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass;
-select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass order by 1,3 limit 5;
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass;
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass order by 1,3 limit 5;
 
-select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
-select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass order by 1,3 limit 5;
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass order by 1,3 limit 5;
 
 select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'pt_tab_encode_1_prt_s_abc'::regclass;
 select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'pt_tab_encode_1_prt_s_xyz'::regclass;

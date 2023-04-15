@@ -26,13 +26,28 @@ private:
 	// replicated support
 	CDistributionSpec::EDistributionType m_replicated;
 
+	BOOL m_ignore_broadcast_threshold;
+
 public:
 	CDistributionSpecReplicated(const CDistributionSpecReplicated &) = delete;
 
 	// ctor
 	CDistributionSpecReplicated(
 		CDistributionSpec::EDistributionType replicated_type)
-		: m_replicated(replicated_type)
+		: m_replicated(replicated_type), m_ignore_broadcast_threshold(false)
+	{
+		GPOS_ASSERT(replicated_type == CDistributionSpec::EdtReplicated ||
+					replicated_type ==
+						CDistributionSpec::EdtTaintedReplicated ||
+					replicated_type == CDistributionSpec::EdtStrictReplicated);
+	}
+
+	// ctor
+	CDistributionSpecReplicated(
+		CDistributionSpec::EDistributionType replicated_type,
+		BOOL ignore_broadcast_threshold)
+		: m_replicated(replicated_type),
+		  m_ignore_broadcast_threshold(ignore_broadcast_threshold)
 	{
 		GPOS_ASSERT(replicated_type == CDistributionSpec::EdtReplicated ||
 					replicated_type ==
@@ -94,6 +109,12 @@ public:
 					EdtTaintedReplicated == pds->Edt());
 
 		return dynamic_cast<CDistributionSpecReplicated *>(pds);
+	}
+
+	BOOL
+	FIgnoreBroadcastThreshold() const
+	{
+		return m_ignore_broadcast_threshold;
 	}
 
 };	// class CDistributionSpecReplicated

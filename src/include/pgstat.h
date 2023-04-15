@@ -1360,6 +1360,17 @@ typedef struct LocalPgBackendStatus
 	 * not.
 	 */
 	TransactionId backend_xmin;
+
+	/*
+	 * Number of cached subtransactions in the current session.
+	 */
+	int	backend_subxact_count;
+
+	/*
+	 * The number of subtransactions in the current session exceeded the cached
+	 * subtransaction limit.
+	 */
+	bool backend_subxact_overflowed;
 } LocalPgBackendStatus;
 
 /*
@@ -1672,6 +1683,13 @@ pgstat_report_wait_end(void)
 			((pentry)->queueentry).elapsed_wait += 						\
 				(PgStat_Counter)((pentry)->t_wait_end - (pentry)->t_wait_start);			\
 		}																\
+	} while (0)
+
+/* GPDB */
+#define pgstat_count_buffer_read_ao(rel, nblocks)					\
+	do {															\
+		if ((rel)->pgstat_info != NULL)								\
+			(rel)->pgstat_info->t_counts.t_blocks_fetched = nblocks;\
 	} while (0)
 	
 extern void pgstat_count_heap_insert(Relation rel, PgStat_Counter n);

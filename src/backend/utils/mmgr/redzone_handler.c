@@ -108,10 +108,6 @@ RedZoneHandler_ShmemInit()
 		 * Also, during gpinitsystem we may start a QD without initializing the
 		 * gp_vmem_protect_limit. This may result in 0 vmem protect limit. In such case,
 		 * we ensure that the redZoneChunks is set to a large value.
-		 *
-		 * When we enable resource group, we will not use redZoneChunks to determine
-		 * whether the current process is in red-zone or not, so we can calculate the
-		 * redZoneChunks, but it'll never be used.
 		 */
 		if (runaway_detector_activation_percent != 0 &&
 			runaway_detector_activation_percent != 100 &&
@@ -163,7 +159,6 @@ RedZoneHandler_FlagTopConsumer()
 
 	Assert(NULL != MySessionState);
 
-	Oid resGroupId = InvalidOid;
 	uint32 expected = 0;
 	bool success = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) isRunawayDetector, &expected, 1);
 
@@ -178,19 +173,6 @@ RedZoneHandler_FlagTopConsumer()
 	{
 		return;
 	}
-
-	/*
-	 * In resource group mode, we should acquire ResGroupLock to avoid
-	 * resource group slot being changed during flag top consumer in redzone.
-	 * Note that flag top consumer is a low frequency action, so the
-	 * additional overhead is acceptable.
-	 *
-	 * Note that we also need to acquire SessionStateLock as well, so the lock
-	 * order is important to avoid deadlock. Make sure always acquire
-	 * ResGroupLock ahead.
-	 */
-	if (IsResGroupEnabled())
-		LWLockAcquire(ResGroupLock, LW_SHARED);
 
 	/*
 	 * Grabbing a shared lock prevents others to modify the SessionState
@@ -212,16 +194,6 @@ RedZoneHandler_FlagTopConsumer()
 	while (curSessionState != NULL)
 	{
 		Assert(INVALID_SESSION_ID != curSessionState->sessionId);
-
-		/* 
-		 * in resgroup mode, we should only flag top consumer in group which uses
-		 * the most of the global shared memory
-		 */
-		if (IsResGroupEnabled() && SessionGetResGroupId(curSessionState) != resGroupId)
-		{
-			curSessionState = curSessionState->next;	
-			continue;
-		}
 
 		int32 curVmem = curSessionState->sessionVmem;
 
@@ -322,9 +294,6 @@ RedZoneHandler_FlagTopConsumer()
 	}
 
 	LWLockRelease(SessionStateLock);
-
-	if (IsResGroupEnabled())
-		LWLockRelease(ResGroupLock);
 }
 
 /*

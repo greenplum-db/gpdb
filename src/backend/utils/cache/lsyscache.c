@@ -4452,6 +4452,34 @@ get_index_opfamilies(Oid oidIndex)
 }
 
 /*
+ * Return the default operator opfamily to use for the partition key.
+ */
+Oid
+default_partition_opfamily_for_type(Oid typeoid)
+{
+    TypeCacheEntry *tcache;
+
+    // flags required for or applicable to btree opfamily
+    // required: TYPECACHE_CMP_PROC, TYPECACHE_CMP_PROC_FINFO, TYPECACHE_BTREE_OPFAMILY
+    // applicable: TYPECACHE_EQ_OPR, TYPECACHE_LT_OPR, TYPECACHE_GT_OPR, TYPECACHE_EQ_OPR_FINFO
+    // Note we don't need all the flags to obtain the btree opfamily
+    // But applying all the flags allows us to abstract away the lookup_type_cache call
+    tcache = lookup_type_cache(typeoid, TYPECACHE_EQ_OPR | TYPECACHE_LT_OPR | TYPECACHE_GT_OPR |
+                                        TYPECACHE_CMP_PROC |
+                                        TYPECACHE_EQ_OPR_FINFO | TYPECACHE_CMP_PROC_FINFO |
+                                        TYPECACHE_BTREE_OPFAMILY);
+
+    if (!tcache->btree_opf)
+        return InvalidOid;
+    if (!tcache->cmp_proc)
+        return InvalidOid;
+    if (!tcache->eq_opr && !tcache->lt_opr && !tcache->gt_opr)
+        return InvalidOid;
+
+    return tcache->btree_opf;
+}
+
+/*
  *  relation_policy
  *  Return the distribution policy of a table. 
  */

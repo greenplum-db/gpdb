@@ -274,14 +274,22 @@ typedef struct AOCSUniqueCheckDescData
 
 typedef struct AOCSUniqueCheckDescData *AOCSUniqueCheckDesc;
 
+typedef struct AOCSIndexOnlyDescData
+{
+	AppendOnlyBlockDirectory *blockDirectory;
+	AppendOnlyVisimap 		 *visimap;
+} AOCSIndexOnlyDescData, *AOCSIndexOnlyDesc;
+
 /*
  * Descriptor for fetches from table via an index.
  */
 typedef struct IndexFetchAOCOData
 {
-	IndexFetchTableData xs_base;	/* AM independent part of the descriptor */
+	IndexFetchTableData xs_base;		/* AM independent part of the descriptor */
 
-	AOCSFetchDesc       aocofetch;
+	AOCSFetchDesc       aocofetch;		/* used only for index scans */
+
+	AOCSIndexOnlyDesc	indexonlydesc;	/* used only for index only scans */
 
 	bool                *proj;
 } IndexFetchAOCOData;
@@ -299,6 +307,7 @@ typedef struct IndexFetchAOCOData
 
 typedef struct AOCSHeaderScanDescData
 {
+	Oid   relid;  /* relid of the relation */
 	int32 colno;  /* chosen column number to read headers from */
 
 	AppendOnlyStorageRead ao_read;
@@ -354,6 +363,12 @@ extern bool aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 					   AOTupleId *aoTupleId,
 					   TupleTableSlot *slot);
 extern void aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc);
+extern AOCSIndexOnlyDesc aocs_index_only_init(Relation relation,
+											  Snapshot snapshot);
+extern bool aocs_index_only_check(AOCSIndexOnlyDesc indexonlydesc,
+								  AOTupleId *aotid,
+								  Snapshot snapshot);
+extern void aocs_index_only_finish(AOCSIndexOnlyDesc indexonlydesc);
 extern AOCSDeleteDesc aocs_delete_init(Relation rel);
 extern TM_Result aocs_delete(AOCSDeleteDesc desc, 
 		AOTupleId *aoTupleId);

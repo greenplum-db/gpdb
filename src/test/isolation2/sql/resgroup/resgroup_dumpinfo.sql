@@ -49,7 +49,18 @@ conn = pg.connect(dbname="postgres")
 r = conn.query("select count(*) from gp_segment_configuration where  role = 'p';")
 n = r.getresult()[0][0]
 
+# The pg_resgroup_get_status_kv() function must output valid result in CTAS
+# and simple select queries
+
 r = conn.query("select value from pg_resgroup_get_status_kv('dump');")
+json_text =  r.getresult()[0][0]
+json_obj = json.loads(json_text)
+if not validate(json_obj, n):
+   return False
+
+conn.query("""CREATE TEMPORARY TABLE t_pg_resgroup_get_status_kv AS
+              SELECT * FROM pg_resgroup_get_status_kv('dump');""")
+r = conn.query("SELECT value FROM t_pg_resgroup_get_status_kv;")
 json_text =  r.getresult()[0][0]
 json_obj = json.loads(json_text)
 
@@ -82,6 +93,11 @@ SET ROLE role_permission;
 select value from pg_resgroup_get_status_kv('dump');
 
 RESET ROLE;
+
+-- Now 'dump' is the only value at which the function outputs tuples, but the
+-- function must correctly handle any value
+SELECT count(*) FROM pg_resgroup_get_status_kv('not_dump');
+SELECT count(*) FROM pg_resgroup_get_status_kv(NULL);
 
 DROP ROLE role_dumpinfo_test;
 DROP ROLE role_permission;

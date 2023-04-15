@@ -20,7 +20,7 @@
 #include "postmaster/postmaster.h"
 
 #define IC_PROXY_BACKLOG 1024
-#define IC_PROXY_INVALID_CONTENT ((uint16) -2)
+#define IC_PROXY_INVALID_CONTENT ((int16) -2)
 #define IC_PROXY_INVALID_DBID ((int16) 0)
 /* pause the sender when the unack packet increase to this threshold */
 #define IC_PROXY_TRESHOLD_UNACK_PACKET_PAUSE 100

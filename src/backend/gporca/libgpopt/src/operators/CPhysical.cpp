@@ -257,9 +257,9 @@ CPhysical::PdsCompute(CMemoryPool *mp, const CTableDescriptor *ptabdesc,
 
 	switch (ptabdesc->GetRelDistribution())
 	{
-		case IMDRelation::EreldistrMasterOnly:
+		case IMDRelation::EreldistrCoordinatorOnly:
 			pds = GPOS_NEW(mp) CDistributionSpecSingleton(
-				CDistributionSpecSingleton::EstMaster);
+				CDistributionSpecSingleton::EstCoordinator);
 			break;
 
 		case IMDRelation::EreldistrRandom:
@@ -620,9 +620,9 @@ CPhysical::PdssMatching(CMemoryPool *mp, CDistributionSpecSingleton *pdss)
 {
 	CDistributionSpecSingleton::ESegmentType est =
 		CDistributionSpecSingleton::EstSegment;
-	if (pdss->FOnMaster())
+	if (pdss->FOnCoordinator())
 	{
-		est = CDistributionSpecSingleton::EstMaster;
+		est = CDistributionSpecSingleton::EstCoordinator;
 	}
 
 	return GPOS_NEW(mp) CDistributionSpecSingleton(est);

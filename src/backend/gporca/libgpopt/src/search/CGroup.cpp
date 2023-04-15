@@ -919,14 +919,14 @@ CGroup::AddDuplicateGrp(CGroup *pgroup)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGroup::ResolveDuplicateMaster
+//		CGroup::ResolveDuplicateCoordinator
 //
 //	@doc:
-//		Resolve master duplicate group
+//		Resolve coordinator duplicate group
 //
 //---------------------------------------------------------------------------
 void
-CGroup::ResolveDuplicateMaster()
+CGroup::ResolveDuplicateCoordinator()
 {
 	if (!FDuplicateGroup())
 	{
@@ -963,7 +963,7 @@ CGroup::MergeGroup()
 	GPOS_ASSERT(!FImplemented());
 
 	// resolve target group
-	ResolveDuplicateMaster();
+	ResolveDuplicateCoordinator();
 	CGroup *pgroupTarget = m_pgroupDuplicate;
 
 	// move group expressions from this group to target

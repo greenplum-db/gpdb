@@ -25,14 +25,16 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   Indexed expressions \(an index defined as expression based on one or more columns of the table\)
 -   SP-GiST indexing method. GPORCA supports only B-tree, bitmap, GIN, and GiST indexes. GPORCA ignores indexes created with unsupported methods.
 -   External parameters
--   These types of partitioned tables:
-    -   Non-uniform partitioned tables.
-    -   Partitioned tables that have been altered to use an external table as a leaf child partition.
+-   Non-uniform partitioned tables.
 -   SortMergeJoin \(SMJ\).
 -   Ordered aggregations.
 -   Multi-argument `DISTINCT` qualified aggregates, for example `SELECT corr(DISTINCT a, b) FROM tbl1;`
--   These analytics extensions:
-    -   Multiple grouping sets
+-   Multiple grouping sets specified using a duplicate alias in a null-producing grouping set spec. Such queries fall back to the Postgres Planner unless you directly coerce the alias to a separate variable as shown in the example below:
+
+    ``` sql
+    CREATE TEMP TABLE tempt AS SELECT i AS ai1, i AS ai2 FROM generate_series(1, 3)i;
+    SELECT ai1, ai2 FROM tempt GROUP BY ai2, ROLLUP(ai1) ORDER BY ai1, ai2;
+    ```
 -   These scalar operators:
     -   ROW
     -   ROWCOMPARE
@@ -45,6 +47,7 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   Queries that contain UNICODE characters in metadata names, such as table names, and the characters are not compatible with the host system locale.
 -   `SELECT`, `UPDATE`, and `DELETE` commands where a table name is qualified by the `ONLY` keyword.
 -   Per-column collation. GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
+-   DML and `COPY ... FROM` operations on foreign tables.
 
 ## <a id="topic_u4t_vxl_vp"></a>Performance Regressions 
 

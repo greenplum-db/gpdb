@@ -11,7 +11,7 @@ CREATE SCHEMA test_schema_1
 -- Test GRANT/REVOKE
 CREATE SCHEMA test_schema_2;
 CREATE TABLE test_schema_2.abc as select * from test_schema_1.abc DISTRIBUTED BY (a);
-create role tmp_test_schema_role RESOURCE QUEUE pg_default;
+create role tmp_test_schema_role;
 GRANT ALL ON SCHEMA test_schema_1 to tmp_test_schema_role;
 
 SET SESSION AUTHORIZATION tmp_test_schema_role;

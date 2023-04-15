@@ -25,6 +25,7 @@ test: unlogged_heap_tables
 test: unlogged_appendonly_tables
 test: udf_exception_blocks_panic_scenarios
 test: ao_same_trans_truncate_crash
+test: frozen_insert_crash
 
 test: prevent_ao_wal
 
@@ -64,14 +65,8 @@ test: deadlock_under_entry_db_singleton
 #  conflict when running in parallel with other cases.
 test: misc
 
-test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue bitmap_index_ao_sparse
+test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock bitmap_index_ao_sparse
 
-# Test deadlock situation when waiting on a resource queue lock
-test: resource_queue_deadlock
-
-# Test simple cancellation for resource queues and cancellation/deadlocks for
-# sessions with multiple portals.
-test: resource_queue_cancel resource_queue_multi_portal
 
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
@@ -120,6 +115,7 @@ test: uao/cursor_withhold_row
 test: uao/cursor_withhold2_row
 test: uao/delete_while_vacuum_row
 test: uao/index_build_reltuples_row
+test: uao/index_only_scan_row
 test: uao/insert_policy_row
 test: uao/insert_while_vacuum_row
 test: uao/max_concurrency_row
@@ -159,8 +155,12 @@ test: uao/vacuum_index_stats_row
 test: uao/bitmapindex_rescan_row
 test: uao/limit_indexscan_inits_row
 test: uao/create_index_allows_readonly_row
+test: uao/test_pg_appendonly_version_row
+test: uao/cluster_progress_row
 # Refer to the case comment for why it is commented out.
 # test: uao/bad_buffer_on_temp_ao_row
+# check storage-dependent collected statistics views
+test: uao/collected_stats_views_row
 
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
@@ -179,6 +179,7 @@ test: uao/cursor_withhold_column
 test: uao/cursor_withhold2_column
 test: uao/delete_while_vacuum_column
 test: uao/index_build_reltuples_column
+test: uao/index_only_scan_column
 test: uao/insert_policy_column
 test: uao/insert_while_vacuum_column
 test: uao/max_concurrency_column
@@ -218,8 +219,12 @@ test: uao/vacuum_index_stats_column
 test: uao/bitmapindex_rescan_column
 test: uao/limit_indexscan_inits_column
 test: uao/create_index_allows_readonly_column
+test: uao/test_pg_appendonly_version_column
+test: uao/cluster_progress_column
 # Refer to the case comment for why it is commented out.
 # test: uao/bad_buffer_on_temp_ao_column
+# check storage-dependent collected statistics views
+test: uao/collected_stats_views_column
 
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
@@ -232,6 +237,8 @@ test: workfile_mgr_test
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: pg_basebackup_large_database_oid
+test: vacuum_progress_row
+test: vacuum_progress_column
 test: enable_autovacuum
 test: idle_gang_cleaner
 # test idle_in_transaction_session_timeout
@@ -324,5 +331,8 @@ test: ao_unique_index
 test: aocs_unique_index
 test: uao/ao_unique_index_vacuum_row
 test: uao/ao_unique_index_vacuum_column
+
+# test for free remapper's memory correctly in FATAL
+test: free_remapper_fatal
 
 test: spilling_hashagg

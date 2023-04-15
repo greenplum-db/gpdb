@@ -51,7 +51,7 @@ typedef struct AppendOnlyStorageWrite
 	/*
 	 * Version number indicating the AO table format version to write in.
 	 */
-	AORelationVersion formatVersion;
+	AOSegfileFormatVersion formatVersion;
 
 	/*
 	 * Name of the relation to use in system logging and error messages.

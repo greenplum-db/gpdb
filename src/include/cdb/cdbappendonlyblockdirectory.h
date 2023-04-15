@@ -110,7 +110,7 @@ typedef struct AppendOnlyBlockDirectory
 	bool *proj; /* projected columns, used only if isAOCol = TRUE */
 
 	MemoryContext memoryContext;
-	
+
 	int				totalSegfiles;
 	FileSegInfo 	**segmentFileInfo;
 
@@ -220,6 +220,10 @@ extern void AppendOnlyBlockDirectory_Init_forUniqueChecks(AppendOnlyBlockDirecto
 														  Relation aoRel,
 														  int numColumnGroups,
 														  Snapshot snapshot);
+extern void AppendOnlyBlockDirectory_Init_forIndexOnlyScan(AppendOnlyBlockDirectory *blockDirectory,
+														   Relation aoRel,
+														   int numColumnGroups,
+														   Snapshot snapshot);
 extern void AppendOnlyBlockDirectory_Init_addCol(
 	AppendOnlyBlockDirectory *blockDirectory,
 	Snapshot appendOnlyMetaDataSnapshot,
@@ -247,6 +251,8 @@ extern void AppendOnlyBlockDirectory_DeleteSegmentFile(
 		int segno,
 		int columnGroupNo);
 extern void AppendOnlyBlockDirectory_End_forUniqueChecks(
+	AppendOnlyBlockDirectory *blockDirectory);
+extern void AppendOnlyBlockDirectory_End_forIndexOnlyScan(
 	AppendOnlyBlockDirectory *blockDirectory);
 
 extern void AppendOnlyBlockDirectory_InsertPlaceholder(AppendOnlyBlockDirectory *blockDirectory,

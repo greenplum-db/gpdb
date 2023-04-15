@@ -18,7 +18,7 @@ If the partitioned table contains more than 20,000 partitions, consider a redesi
 
 These server configuration parameters affect GPORCA query processing.
 
--   `optimizer_cte_inlining_bound` controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WHERE` clause\).
+-   `optimizer_cte_inlining_bound` controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WITH` clause\).
 -   `optimizer_force_comprehensive_join_implementation` affects GPORCA's consideration of nested loop join and hash join alternatives. When the value is `false` \(the default\), GPORCA does not consider nested loop join alternatives when a hash join is available.
 -   `optimizer_force_multistage_agg` forces GPORCA to choose a multi-stage aggregate plan for a scalar distinct qualified aggregate. When the value is `off` \(the default\), GPORCA chooses between a one-stage and two-stage aggregate plan based on cost.
 -   `optimizer_force_three_stage_scalar_dqa` forces GPORCA to choose a plan with multistage aggregates when such a plan alternative is generated.

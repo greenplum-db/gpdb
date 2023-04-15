@@ -3361,7 +3361,7 @@ drop table agg_hash_4;
 set enable_indexonlyscan=off;
 explain analyze select count(*) from pg_class, (select count(*) > 0 from (select count(*) from pg_class where relnatts > 8) x) y;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
                                                       QUERY PLAN                                                       
 -----------------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=10000000047.27..10000000047.28 rows=1 width=8) (actual time=0.435..0.437 rows=1 loops=1)

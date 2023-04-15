@@ -852,11 +852,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 																		true,
 																		RELOPT_KIND_APPENDOPTIMIZED);
 
-		/* Validate the StdRdOptions parsed or error out */
-		validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-									 stdRdOptions->compresslevel,
-									 stdRdOptions->compresstype,
-									 stdRdOptions->checksum,
+		/* check orientation-specific rules */
+		validateOrientationRelOptions(stdRdOptions->compresstype,
 									 (accessMethodId == AO_COLUMN_TABLE_AM_OID));
 
 		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions, RELKIND_HAS_STORAGE(relkind));
@@ -7791,7 +7788,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		}
 
 		/*
-		 * Handling of default NULL for AO/CO tables.
+		 * Handling of default NULL for ao_row tables.
 		 *
 		 * Currently memtuples cannot deal with the scenario where the number of
 		 * attributes in the tuple data don't match the attnum. We will generate an
@@ -7804,19 +7801,18 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		 * workaround; see GitHub issue
 		 *     https://github.com/greenplum-db/gpdb/issues/3756
 		 *
-		 * GPDB_12_MERGE_FIXME: we used to do this only if no default was given,
-		 * but starting with PostgreSQL v11, a table doesn't need to be rewritten
-		 * even if a non-NULL default is used. That caused an assertion failure in
-		 * the 'uao_ddl/alter_ao_table_constraint_column' test. To make that go
-		 * away, always force full rewrite on AO_ROW and AO_COLUMN tables. We
-		 * should be smarter..
+		 * For ao_column tables, we won't rewrite the entire table but only the 
+		 * new column. However, we still need to generate a explicit NULL value so
+		 * we have something to write.
+		 * XXX: it would be even better if we could use pg_attribute.attmissingval 
+		 * and do not write the column at all. 
 		 */
 
-		if (RelationIsAppendOptimized(rel))
+		if (!defval && RelationIsAppendOptimized(rel))
 		{
-			if (!defval)
-				defval = (Expr *) makeNullConst(typeOid, -1, collOid);
-			tab->rewrite |= AT_REWRITE_DEFAULT_VAL;
+			defval = (Expr *) makeNullConst(typeOid, -1, collOid);
+			if (RelationIsAoRows(rel))
+				tab->rewrite |= AT_REWRITE_DEFAULT_VAL;
 		}
 
 		if (defval)
@@ -7842,6 +7838,13 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 				Assert(tab->newvals != NULL);
 			}
+
+			/* 
+			 * We need to write the new column for AOCO tables. But don't do that
+			 * if we are going to rewrite the whole table anyway.
+			 */
+			if (RelationIsAoCols(rel) && tab->rewrite == 0)
+				tab->rewrite |= AT_REWRITE_NEW_COLUMNS_ONLY_AOCS;
 		}
 
 		if (DomainHasConstraints(typeOid))
@@ -15019,10 +15022,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
 																				 true,
 																				 RELOPT_KIND_APPENDOPTIMIZED);
-				validateAppendOnlyRelOptions(stdRdOptions->blocksize,
-											 stdRdOptions->compresslevel,
-											 stdRdOptions->compresstype,
-											 stdRdOptions->checksum,
+				validateOrientationRelOptions(stdRdOptions->compresstype,
 											 tableam == AO_COLUMN_TABLE_AM_OID);
 
 				newOptions = transformAOStdRdOptions(stdRdOptions, newOptions, RELKIND_HAS_STORAGE(rel->rd_rel->relkind));

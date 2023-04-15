@@ -34,6 +34,8 @@ System catalog table and view definitions in alphabetical order.
 
 -   [gp\_id](../system_catalogs/gp_id.html)  
 
+-   [gp\_partition\_template](../system_catalogs/gp_partition_template.html)  
+
 -   [gp\_pgdatabase](../system_catalogs/gp_pgdatabase.html)  
 
 -   [gp\_resgroup\_config](../system_catalogs/gp_resgroup_config.html)  
@@ -81,6 +83,7 @@ System catalog table and view definitions in alphabetical order.
 -   [pg\_available\_extension\_versions](../system_catalogs/pg_available_extension_versions.html)  
 
 -   [pg\_available\_extensions](../system_catalogs/pg_available_extensions.html)  
+-   [pg_backend_memory_contexts](../system_catalogs/pg_backend_memory_contexts.html)  
 
 -   [pg\_cast](../system_catalogs/pg_cast.html)  
 
@@ -138,13 +141,7 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_partition](../system_catalogs/pg_partition.html)  
 
--   [pg\_partition\_columns](../system_catalogs/pg_partition_columns.html)  
-
--   [pg\_partition\_encoding](../system_catalogs/pg_partition_encoding.html)  
-
--   [pg\_partition\_rule](../system_catalogs/pg_partition_rule.html)  
-
--   [pg\_partition\_templates](../system_catalogs/pg_partition_templates.html)  
+-   [pg\_partitioned\_table](../system_catalogs/pg_partitioned_table.html)  
 
 -   [pg\_partitions](../system_catalogs/pg_partitions.html)  
 
@@ -192,7 +189,6 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_stat\_operations](../system_catalogs/pg_stat_operations.html)  
 
--   [pg\_stat\_partition\_operations](../system_catalogs/pg_stat_partition_operations.html)  
 -   [pg\_stat\_replication](../system_catalogs/pg_stat_replication.html)  
 
 -   [pg\_stat\_resqueues](../system_catalogs/pg_stats_resqueue.html)  

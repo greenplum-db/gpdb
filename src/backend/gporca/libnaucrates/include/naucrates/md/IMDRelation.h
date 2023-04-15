@@ -62,7 +62,7 @@ public:
 	//-------------------------------------------------------------------
 	enum Ereldistrpolicy
 	{
-		EreldistrMasterOnly,
+		EreldistrCoordinatorOnly,
 		EreldistrHash,
 		EreldistrRandom,
 		EreldistrReplicated,
@@ -194,6 +194,9 @@ public:
 		return st == ErelstorageAppendOnlyCols ||
 			   st == ErelstorageAppendOnlyRows;
 	}
+
+	// get oid of foreign server for foreign table
+	virtual IMDId *ForeignServer() const = 0;
 };
 
 // common structure over relation and external relation metadata for index info

@@ -1530,9 +1530,12 @@ transformGpPartDefElemWithRangeSpec(ParseState *pstate, Relation parentrel, GpPa
 		param->paramcollid = part_col_collation;
 		param->location = -1;
 
-		/* Look up + operator */
+		/*
+		 * Look up the '+' operator in the current searching path (controlled by search_path parameter).
+		 * Just like what we do for the 'BETWEEN ... AND ...' clause.
+		 */
 		plusexpr = (Node *) make_op(pstate,
-									list_make2(makeString("pg_catalog"), makeString("+")),
+									list_make1(makeString("+")),
 									(Node *) param,
 									(Node *) transformExpr(pstate, every, EXPR_KIND_PARTITION_BOUND),
 									pstate->p_last_srf,

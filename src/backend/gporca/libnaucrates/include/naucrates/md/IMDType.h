@@ -92,6 +92,8 @@ public:
 
 	virtual IMDId *GetDistrOpfamilyMdid() const = 0;
 
+	virtual IMDId *GetPartOpfamilyMdid() const = 0;
+
 	// md id of cache object
 	IMDId *MDId() const override = 0;
 

@@ -424,12 +424,6 @@ XLogInsert(RmgrId rmid, uint8 info)
 	return XLogInsert_Internal(rmid, info, GetCurrentTransactionIdIfAny());
 }
 
-XLogRecPtr
-XLogInsert_OverrideXid(RmgrId rmid, uint8 info, TransactionId overrideXid)
-{
-	return XLogInsert_Internal(rmid, info, overrideXid);
-}
-
 static XLogRecPtr
 XLogInsert_Internal(RmgrId rmid, uint8 info, TransactionId headerXid)
 {

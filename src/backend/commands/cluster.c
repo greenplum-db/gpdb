@@ -302,10 +302,6 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
  * If indexOid is InvalidOid, the table will be rewritten in physical order
  * instead of index order.  This is the new implementation of VACUUM FULL,
  * and error messages should refer to the operation as VACUUM not CLUSTER.
- *
- * Note that we don't support clustering on an AO table. If printError is true,
- * this function errors out when the relation is an AO table. Otherwise, this
- * functions prints out a warning message when the relation is an AO table.
  */
 bool
 cluster_rel(Oid tableOid, Oid indexOid, int options, bool printError)

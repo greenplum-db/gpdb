@@ -17,7 +17,7 @@
 	explain select * from bar where b = 0 or b is not null;
 
         Physical plan:
-        +--CPhysicalMotionGather(master)   rows:399999   width:10042  rebinds:1   cost:18579.330599   origin: [Grp:7, GrpExpr:2]
+        +--CPhysicalMotionGather(coordinator)   rows:399999   width:10042  rebinds:1   cost:18579.330599   origin: [Grp:7, GrpExpr:2]
            +--CPhysicalFilter   rows:399999   width:10042  rebinds:1   cost:3654.775988   origin: [Grp:7, GrpExpr:1]
               |--CPhysicalDynamicTableScan "bar" ("bar"), Columns: ["a" (0), "b" (1), "c" (2), "ctid" (3), "xmin" (4), "cmin" (5), "xmax" (6), "cmax" (7), "tableoid" (8), "gp_segment_id" (9)] Scan Id: 1   rows:399999   width:10042  rebinds:1   cost:1167.413331   origin: [Grp:0, GrpExpr:1]
               +--CScalarBoolOp (EboolopOr)   origin: [Grp:6, GrpExpr:0]

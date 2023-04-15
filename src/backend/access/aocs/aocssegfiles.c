@@ -83,7 +83,7 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, Oid segrelid
 	ValidateAppendonlySegmentDataBeforeStorage(segno);
 
 	/* New segments are always created in the latest format */
-	formatVersion = AORelationVersion_GetLatest();
+	formatVersion = AOSegfileFormatVersion_GetLatest();
 
 	segrel = heap_open(segrelid, RowExclusiveLock);
 
@@ -96,7 +96,8 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, Oid segrelid
 
 	segtup = heap_form_tuple(RelationGetDescr(segrel), values, nulls);
 
-	CatalogTupleInsertFrozen(segrel, segtup);
+	CatalogTupleInsert(segrel, segtup);
+	heap_freeze_tuple_wal_logged(segrel, segtup);
 
 	/*
 	 * Lock the tuple so that a concurrent insert transaction will not
@@ -591,10 +592,6 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = table_beginscan_catalog(segrel, 0, NULL);
 	while (segno != tuple_segno && (oldtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
@@ -683,10 +680,6 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = table_beginscan_catalog(segrel, 0, NULL);
 	while (segno != tuple_segno && (oldtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
@@ -722,7 +715,7 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	repl[Anum_pg_aocs_varblockcount - 1] = true;
 
 	/* When the segment is later recreated, it will be in new format */
-	d[Anum_pg_aocs_formatversion - 1] = Int16GetDatum(AORelationVersion_GetLatest());
+	d[Anum_pg_aocs_formatversion - 1] = Int16GetDatum(AOSegfileFormatVersion_GetLatest());
 	repl[Anum_pg_aocs_formatversion - 1] = true;
 
 	/* We do not reset the modcount here */
@@ -774,10 +767,6 @@ UpdateAOCSFileSegInfo(AOCSInsertDesc idesc)
 	segrel = heap_open(idesc->segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = systable_beginscan(segrel, InvalidOid, false, idesc->appendOnlyMetaDataSnapshot, 0, NULL);
 	while (idesc->cur_segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
 	{
@@ -971,10 +960,6 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = systable_beginscan(segrel, InvalidOid, false, NULL, 0, NULL);
 	while (segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
 	{
@@ -1090,10 +1075,6 @@ AOCSFileSegInfoAddCount(Relation prel, int32 segno,
 	segrel = heap_open(segrelid, RowExclusiveLock);
 	tupdesc = RelationGetDescr(segrel);
 
-	/*
-	 * Since we have the segment-file entry under lock (with
-	 * LockRelationAppendOnlySegmentFile) we can use SnapshotNow.
-	 */
 	scan = systable_beginscan(segrel, InvalidOid, false, NULL, 0, NULL);
 	while (segno != tuple_segno && (oldtup = systable_getnext(scan)) != NULL)
 	{
@@ -1261,7 +1242,8 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		context->aocsRelOid = aocsRelOid;
 
 		aocsRel = heap_open(aocsRelOid, AccessShareLock);
-		if (!RelationIsAoCols(aocsRel))
+		if (!RelationIsAoCols(aocsRel) ||
+				aocsRel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only columnar relation",

@@ -44,7 +44,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -64,7 +64,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -95,7 +95,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -132,7 +132,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -144,11 +144,11 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1260.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1260.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -162,7 +162,7 @@
         <dxl:CheckConstraint Mdid="0.561000.1.0"/>
       </dxl:CheckConstraints>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="Foreign" DistributionPolicy="CoordinatorOnly" ForeignServer="0.91908.1.0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -190,6 +190,7 @@
       <dxl:CountAgg Mdid="0.2147.1.0"/>
     </dxl:Type>
     <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="4" PassByValue="true">
+      <dxl:PartOpfamily Mdid="0.1976.1.0"/>
       <dxl:EqualityOp Mdid="0.96.1.0"/>
       <dxl:InequalityOp Mdid="0.518.1.0"/>
       <dxl:LessThanOp Mdid="0.97.1.0"/>
@@ -251,7 +252,7 @@
     <dxl:Index Mdid="0.17027.1.0" Name="r_ind" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
       <dxl:Opfamilies/>
     </dxl:Index>
-    <dxl:Relation Mdid="6.378383.1.0" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4">
+    <dxl:Relation Mdid="6.378383.1.0" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4" ForeignServer="0.91908.1.0">
       <dxl:Columns>
         <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -290,7 +291,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.378406.1.0" Name="ext_2" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="7,1">
+    <dxl:Relation Mdid="6.378406.1.0" Name="ext_2" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="7,1" ForeignServer="0.91908.1.0">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -320,7 +321,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.378429.1.0" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" Keys="7,1">
+    <dxl:Relation Mdid="6.378429.1.0" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="CoordinatorOnly" Keys="7,1" ForeignServer="0.91908.1.0">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -350,7 +351,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.876377.1.0" Name="ext_4" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="8,2">
+    <dxl:Relation Mdid="6.876377.1.0" Name="ext_4" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="8,2" ForeignServer="0.91908.1.0">
       <dxl:Columns>
         <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -387,7 +388,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">

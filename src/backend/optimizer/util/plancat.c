@@ -190,6 +190,16 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 		LOCKMODE	lmode;
 		ListCell   *l;
 
+		/*
+		 * GPDB needs to get AO relation version from pg_appendonly catalog to
+		 * determine whether enabling IndexOnlyScan on AO or not.
+		 * GPDB supports index-only scan on AO starting from AORelationVersion_GP7.
+		 */
+		bool enable_ios_ao = false;
+		if (RelationAMIsAO(relation) &&
+			AORelationVersion_Validate(relation, AORelationVersion_GP7))
+			enable_ios_ao = true;
+
 		indexoidlist = RelationGetIndexList(relation);
 
 		/*
@@ -274,7 +284,12 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 			for (i = 0; i < ncolumns; i++)
 			{
 				info->indexkeys[i] = index->indkey.values[i];
-				info->canreturn[i] = index_can_return(indexRelation, i + 1);
+
+				/* GPDB: This AO table might not have met the requirement for IOScan. */
+				if (RelationAMIsAO(relation) && !enable_ios_ao)
+					info->canreturn[i] = false;
+				else
+					info->canreturn[i] = index_can_return(indexRelation, i + 1);
 			}
 
 			for (i = 0; i < nkeycolumns; i++)
@@ -613,7 +628,12 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	 * pages added since the last VACUUM are most likely not marked
 	 * all-visible.  But costsize.c wants it converted to a fraction.
 	 */
-	if (relallvisible == 0 || curpages <= 0)
+	if (RelationAMIsAO(rel))
+	{
+		/* see appendonly_estimate_rel_size()/aoco_estimate_rel_size() */
+		*allvisfrac = 1;
+	}
+	else if (relallvisible == 0 || curpages <= 0)
 		*allvisfrac = 0;
 	else if ((double) relallvisible >= curpages)
 		*allvisfrac = 1;

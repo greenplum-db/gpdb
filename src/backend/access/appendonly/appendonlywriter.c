@@ -215,7 +215,7 @@ LockSegnoForWrite(Relation rel, int segno)
 			elog(ERROR, "segfile %d is full", segno);
 
 		/* Skip using the ao segment if not latest version (except as a compaction target) */
-		if (formatversion != AORelationVersion_GetLatest())
+		if (formatversion != AOSegfileFormatVersion_GetLatest())
 			elog(ERROR, "segfile %d is not of the latest version", segno);
 
 		found = true;
@@ -477,7 +477,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 				continue;
 
 			/* Skip using the ao segment if not latest version (except as a compaction target) */
-			if (formatversion != AORelationVersion_GetLatest())
+			if (formatversion != AOSegfileFormatVersion_GetLatest())
 				continue;
 
 			/*

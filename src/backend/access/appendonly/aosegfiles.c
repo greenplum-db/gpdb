@@ -45,6 +45,7 @@
 #include "storage/lmgr.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/int8.h"
 #include "utils/lsyscache.h"
@@ -106,7 +107,7 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	ValidateAppendonlySegmentDataBeforeStorage(segno);
 
 	/* New segments are always created in the latest format */
-	formatVersion = AORelationVersion_GetLatest();
+	formatVersion = AOSegfileFormatVersion_GetLatest();
 
 	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
@@ -134,7 +135,15 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	if (!HeapTupleIsValid(pg_aoseg_tuple))
 		elog(ERROR, "failed to build AO file segment tuple");
 
-	CatalogTupleInsertFrozen(pg_aoseg_rel, pg_aoseg_tuple);
+	CatalogTupleInsert(pg_aoseg_rel, pg_aoseg_tuple);
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+							"insert_aoseg_before_freeze",
+							DDLNotSpecified,
+							"", //databaseName
+							RelationGetRelationName(parentrel));
+#endif
+	heap_freeze_tuple_wal_logged(pg_aoseg_rel, pg_aoseg_tuple);
 
 	/*
 	 * Lock the tuple so that a concurrent insert transaction will not
@@ -298,7 +307,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("got invalid formatversion value: NULL")));
-	AORelationVersion_CheckValid(fsinfo->formatversion);
+	AOSegfileFormatVersion_CheckValid(fsinfo->formatversion);
 
 	/* get the state */
 	fsinfo->state = DatumGetInt16(
@@ -373,7 +382,6 @@ GetAllFileSegInfo(Relation parentrel,
 
 	return result;
 }
-
 
 /*
  * The comparison routine that sorts an array of FileSegInfos
@@ -490,7 +498,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid formatversion value: NULL")));
 
-		AORelationVersion_CheckValid(formatversion);
+		AOSegfileFormatVersion_CheckValid(formatversion);
 		oneseginfo->formatversion = DatumGetInt16(formatversion);
 
 		/* get the state */
@@ -661,7 +669,7 @@ ClearFileSegInfo(Relation parentrel, int segno)
 	new_record_repl[Anum_pg_aoseg_eofuncompressed - 1] = true;
 
 	/* When the segment is later recreated, it will be in new format */
-	new_record[Anum_pg_aoseg_formatversion - 1] = Int16GetDatum(AORelationVersion_GetLatest());
+	new_record[Anum_pg_aoseg_formatversion - 1] = Int16GetDatum(AOSegfileFormatVersion_GetLatest());
 	new_record_repl[Anum_pg_aoseg_formatversion - 1] = true;
 
 	/* We do not reset the modcount here */

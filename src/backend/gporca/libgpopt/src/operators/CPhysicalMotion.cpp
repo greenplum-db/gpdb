@@ -42,13 +42,11 @@ CPhysicalMotion::FValidContext(CMemoryPool *, COptimizationContext *poc,
 	GPOS_ASSERT(nullptr != pccBest);
 
 	CDrvdPropPlan *pdpplanChild = pccBest->Pdpplan();
-	// GPDB_12_MERGE_FIXME: Check partition propagation spec
-#if 0
-	if (pdpplanChild->Ppim()->FContainsUnresolved())
+	CPartitionPropagationSpec *pps_req = poc->Prpp()->Pepp()->PppsRequired();
+	if (pdpplanChild->Ppps()->IsUnsupportedPartSelector(pps_req))
 	{
 		return false;
 	}
-#endif
 
 	CEnfdDistribution *ped = poc->Prpp()->Ped();
 	if (ped->FCompatible(this->Pds()) && ped->FCompatible(pdpplanChild->Pds()))

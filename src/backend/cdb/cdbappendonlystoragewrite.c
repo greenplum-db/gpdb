@@ -308,7 +308,7 @@ AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite,
 	 * Assume that we only write in the current latest format. (it's redundant
 	 * to pass the version number as argument, currently)
 	 */
-	if (version != AORelationVersion_GetLatest())
+	if (version != AOSegfileFormatVersion_GetLatest())
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("cannot write append-only table version %d", version)));

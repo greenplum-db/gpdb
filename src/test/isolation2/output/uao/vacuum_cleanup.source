@@ -115,12 +115,12 @@ VACUUM
 1: SELECT * FROM gp_ao_or_aocs_seg('ao_@amname@_vacuum_cleanup3');
  segment_id | segno | tupcount | modcount | formatversion | state 
 ------------+-------+----------+----------+---------------+-------
- 0          | 1     | 0        | 2        | 4             | 1     
- 0          | 2     | 0        | 0        | 4             | 1     
- 2          | 1     | 0        | 2        | 4             | 1     
- 2          | 2     | 0        | 0        | 4             | 1     
- 1          | 1     | 0        | 2        | 4             | 1     
- 1          | 2     | 0        | 0        | 4             | 1     
+ 0          | 1     | 0        | 2        | 3             | 1     
+ 0          | 2     | 0        | 0        | 3             | 1     
+ 2          | 1     | 0        | 2        | 3             | 1     
+ 2          | 2     | 0        | 0        | 3             | 1     
+ 1          | 1     | 0        | 2        | 3             | 1     
+ 1          | 2     | 0        | 0        | 3             | 1     
 (6 rows)
 
 2: commit;
@@ -151,7 +151,7 @@ UPDATE 11
 0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
  segno | tupcount | modcount | formatversion | state 
 -------+----------+----------+---------------+-------
- 1     | 22       | 2        | 4             | 1     
+ 1     | 22       | 2        | 3             | 1     
 (1 row)
 
 -- start a reader before VACUUM
@@ -170,8 +170,8 @@ VACUUM
 0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
  segno | tupcount | modcount | formatversion | state 
 -------+----------+----------+---------------+-------
- 1     | 22       | 2        | 4             | 2     
- 2     | 11       | 0        | 4             | 1     
+ 1     | 22       | 2        | 3             | 2     
+ 2     | 11       | 0        | 3             | 1     
 (2 rows)
 
 1: select * from vacuum_concurrent_test_@amname@ where b = 5;
@@ -210,8 +210,8 @@ BEGIN
 0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
  segno | tupcount | modcount | formatversion | state 
 -------+----------+----------+---------------+-------
- 1     | 22       | 2        | 4             | 2     
- 2     | 11       | 0        | 4             | 1     
+ 1     | 22       | 2        | 3             | 2     
+ 2     | 11       | 0        | 3             | 1     
 (2 rows)
 
 vacuum vacuum_concurrent_test_@amname@;
@@ -221,8 +221,8 @@ VACUUM
 0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
  segno | tupcount | modcount | formatversion | state 
 -------+----------+----------+---------------+-------
- 1     | 0        | 2        | 4             | 1     
- 2     | 11       | 0        | 4             | 1     
+ 1     | 0        | 2        | 3             | 1     
+ 2     | 11       | 0        | 3             | 1     
 (2 rows)
 
 2: select * from vacuum_concurrent_test_@amname@ where b = 7;

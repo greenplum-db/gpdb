@@ -14,8 +14,8 @@ SELECT count(*) from gp_opt_version();
 -- fix the number of segments for Orca
 set optimizer_segments = 3;
 
-set optimizer_enable_master_only_queries = on;
--- master only tables
+set optimizer_enable_coordinator_only_queries = on;
+-- coordinator only tables
 
 create schema orca;
 -- start_ignore
@@ -1509,8 +1509,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql volatile;
 
--- force_explain
-set optimizer_segments = 3;
 explain
 select c.cid cid,
        c.firstname firstname,
@@ -1519,7 +1517,7 @@ select c.cid cid,
 from cust c, sales s, datedim d
 where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
-reset optimizer_segments;
+
 -- Bitmap indexes
 drop table if exists orca.bm_test;
 create table orca.bm_test (i int, t text);
@@ -1774,15 +1772,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql volatile;
 
--- start_ignore
-select disable_xform('CXformInnerJoin2DynamicIndexGetApply');
-select disable_xform('CXformInnerJoin2HashJoin');
-select disable_xform('CXformInnerJoin2IndexGetApply');
-select disable_xform('CXformInnerJoin2NLJoin');
--- end_ignore
-
-set optimizer_enable_indexjoin=on;
-
 -- force_explain
 set optimizer_segments = 3;
 EXPLAIN
@@ -1794,16 +1783,6 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-reset optimizer_segments;
-reset optimizer_enable_constant_expression_evaluation;
-reset optimizer_enable_indexjoin;
-
--- start_ignore
-select enable_xform('CXformInnerJoin2DynamicIndexGetApply');
-select enable_xform('CXformInnerJoin2HashJoin');
-select enable_xform('CXformInnerJoin2IndexGetApply');
-select enable_xform('CXformInnerJoin2NLJoin');
--- end_ignore
 
 -- MPP-25661: IndexScan crashing for qual with reference to outer tuple
 drop table if exists idxscan_outer;
@@ -2173,7 +2152,7 @@ select count(*) from wst0 where exists (select 1, rank() over (order by wst1.a1)
 
 --
 -- Test to ensure sane behavior when DML queries are optimized by ORCA by
--- enforcing a non-master gather motion, controlled by
+-- enforcing a non-coordinator gather motion, controlled by
 -- optimizer_enable_gather_on_segment_for_DML GUC
 --
 
@@ -2581,15 +2560,17 @@ ANALYZE foo3;
 set optimizer_join_order=query;
 -- we ignore enable/disable_xform statements as their output will differ if the server is compiled without Orca (the xform won't exist)
 -- start_ignore
-select disable_xform('CXformInnerJoin2HashJoin');
+select disable_xform('CXformLeftOuterJoin2HashJoin');
+select disable_xform('CXformImplementInnerJoin');
 -- end_ignore
 
-EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
-SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
+EXPLAIN SELECT 1 FROM foo1 left join foo2 on foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
+SELECT 1 FROM foo1 left join foo2 on foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
 
 reset optimizer_join_order;
 -- start_ignore
-select enable_xform('CXformInnerJoin2HashJoin');
+select enable_xform('CXformLeftOuterJoin2HashJoin');
+select enable_xform('CXformImplementInnerJoin');
 -- end_ignore
 -- Test that duplicate sensitive redistributes don't have invalid projection (eg: element that can't be hashed)
 drop table if exists t55;
@@ -2957,12 +2938,12 @@ explain (costs off) select * from tpart_dim d join tpart_ao_btree f on d.a=f.a w
 select disable_xform('CXformSelect2BitmapBoolOp');
 select disable_xform('CXformSelect2DynamicBitmapBoolOp');
 select disable_xform('CXformJoin2BitmapIndexGetApply');
-select disable_xform('CXformInnerJoin2NLJoin');
+set optimizer_enable_nljoin=off;
 -- end_ignore
 
 -- Make sure we don't allow a regular (btree) index scan or index join for an AO table
 -- We disabled hash join, and bitmap index joins, NLJs, so this should leave ORCA no other choices
--- expect a sequential scan, not an index scan, from these two queries
+-- other than an index-only scan or sequential scan.
 explain (costs off) select * from t_ao_btree where a = 3 and b = 3;
 explain (costs off) select * from tpart_ao_btree where a = 3 and b = 3;
 -- expect a fallback for all four of these queries
@@ -2973,7 +2954,7 @@ select * from tpart_dim d join tpart_ao_btree f on d.a=f.a where d.b=1;
 select enable_xform('CXformSelect2BitmapBoolOp');
 select enable_xform('CXformSelect2DynamicBitmapBoolOp');
 select enable_xform('CXformJoin2BitmapIndexGetApply');
-select enable_xform('CXformInnerJoin2NLJoin');
+reset optimizer_enable_nljoin;
 -- end_ignore
 
 reset optimizer_enable_hashjoin;

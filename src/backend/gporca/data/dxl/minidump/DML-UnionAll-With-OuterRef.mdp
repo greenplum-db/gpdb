@@ -3,7 +3,7 @@
  <dxl:Comment><![CDATA[
 	Objective: For a DML query with a Union All containing an outer-ref;
 	the PhysicaUnionAll generated from such a predicate should request for
-	Singleton Segment distribution spec instead of Singleton Master. 
+	Singleton Segment distribution spec instead of Singleton coordinator.
 
 	create table x(a int);
 	create table y(b int);

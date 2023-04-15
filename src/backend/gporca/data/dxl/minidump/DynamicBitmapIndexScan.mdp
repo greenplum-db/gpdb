@@ -14,7 +14,7 @@ see sql/DynamicBitmapIndexScan.sql
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="102001,102002,102003,102024,102029,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102024,103045,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.17408.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>

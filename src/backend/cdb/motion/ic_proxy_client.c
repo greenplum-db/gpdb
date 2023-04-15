@@ -662,6 +662,9 @@ ic_proxy_client_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	ICProxyKey	key;
 	ICProxyPkt *ackpkt;
 
+	/* we only expect one HELLO message */
+	uv_read_stop((uv_stream_t *) &client->pipe);
+
 	/* sanity check: drop the packet with incorrect magic number */
 	if (!ic_proxy_pkt_is_valid(pkt))
 	{
@@ -670,9 +673,6 @@ ic_proxy_client_on_hello_pkt(void *opaque, const void *data, uint16 size)
 					ic_proxy_client_get_name(client), ic_proxy_pkt_to_str(pkt));
 		return;
 	}
-
-	/* we only expect one HELLO message */
-	uv_read_stop((uv_stream_t *) &client->pipe);
 
 	if (!ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_HELLO))
 	{

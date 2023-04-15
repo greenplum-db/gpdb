@@ -19,17 +19,6 @@
 -- m/.*Table doesn't have 'DISTRIBUTED BY' clause*/
 -- end_matchignore
 
--- start_matchsubs
--- m/tx:\s+\d+/
--- s/tx:\s+\d+/tx: ##/
-
--- m/lsn: \d\/[0-9a-fA-F]+, prev \d\/[0-9a-fA-F]+/
--- s/lsn: \d\/[0-9a-fA-F]+, prev \d\/[0-9a-fA-F]+/lsn: #\/########, prev #\/########/
-
--- m/rel \d+\/\d+\/\d+/
--- s/rel \d+\/\d+\/\d+/rel ####\/######\/######/
--- end_matchsubs
-
 -- Create tables (AO, AOCO)
 -1U: CREATE TABLE ao_foo (n int) WITH (appendonly=true);
 -1U: CREATE TABLE aoco_foo (n int, m int) WITH (appendonly=true, orientation=column);

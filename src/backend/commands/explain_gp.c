@@ -124,7 +124,7 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg workmemused;
 	CdbExplain_Agg workmemwanted;
 	CdbExplain_Agg totalWorkfileCreated;
-	/* Used for DynamicSeqScan, DynamicIndexScan and DynamicBitmapHeapScan */
+	/* Used for DynamicSeqScan, DynamicIndexScan, DynamicBitmapHeapScan, and DynamicForeignScan */
 	CdbExplain_Agg totalPartTableScanned;
 	/* Summary of space used by sort */
 	CdbExplain_Agg sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
@@ -1413,6 +1413,27 @@ cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
 }								/* cdbexplain_showExecStatsBegin */
 
 /*
+ * cdbexplain_showStatCtxFree
+ *	  Release memory allocated for CdbExplain_ShowStatCtx structure and its
+ *	  internals. Memory for insides of the slices array elements is allocated
+ *	  in ExplainPrintPlan(). If ExplainPrintPlan() is called from the
+ *	  auto_explain extension, then this memory is released in
+ *	  standard_ExecutorEnd() -> FreeExecutorState() to avoid memory leak in the
+ *	  case of queries with multiple call of SQL functions.
+ *	  If ExplainPrintPlan() is called from ExplainOnePlan(), then this memory
+ *	  is released in PortalDrop().
+ */
+void
+cdbexplain_showStatCtxFree(struct CdbExplain_ShowStatCtx *ctx)
+{
+	Assert(ctx != NULL);
+
+	pfree(ctx->extratextbuf.data);
+	pfree(ctx->slices);
+	pfree(ctx);
+}
+
+/*
  * nodeSupportWorkfileCaching
  *	 Return true if a given node supports workfile caching.
  */
@@ -1563,7 +1584,8 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	 */
 	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
 												|| T_DynamicIndexScanState == planstate->type
-												|| T_DynamicBitmapHeapScanState == planstate->type))
+												|| T_DynamicBitmapHeapScanState == planstate->type
+												|| T_DynamicForeignScanState == planstate->type))
 	{
 		/*
 		 * FIXME: Only displayed in TEXT format

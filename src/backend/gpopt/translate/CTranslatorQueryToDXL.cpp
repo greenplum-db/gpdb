@@ -783,6 +783,16 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 				   GPOS_WSZ_LIT("INSERT with constraints"));
 	}
 
+	BOOL contains_foreign_parts =
+		CTranslatorUtils::RelContainsForeignPartitions(md_rel, m_md_accessor);
+	if (contains_foreign_parts)
+	{
+		// Partitioned tables with external/foreign partitions
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT(
+					   "Insert with External/foreign partition storage types"));
+	}
+
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
@@ -987,7 +997,7 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 			nullptr);
 	}
 
-	GPOS_ASSERT(IMDRelation::EreldistrMasterOnly != rel_distr_policy);
+	GPOS_ASSERT(IMDRelation::EreldistrCoordinatorOnly != rel_distr_policy);
 	m_context->m_has_distributed_tables = true;
 
 	// TODO: Mar 5, 2014; reserve an OID
@@ -1208,6 +1218,15 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
+	BOOL contains_foreign_parts =
+		CTranslatorUtils::RelContainsForeignPartitions(md_rel, m_md_accessor);
+	if (contains_foreign_parts)
+	{
+		// Partitioned tables with external/foreign partitions
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT(
+					   "Delete with External/foreign partition storage types"));
+	}
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
@@ -1281,6 +1300,15 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 				   GPOS_WSZ_LIT("UPDATE with constraints"));
 	}
 
+	BOOL contains_foreign_parts =
+		CTranslatorUtils::RelContainsForeignPartitions(md_rel, m_md_accessor);
+	if (contains_foreign_parts)
+	{
+		// Partitioned tables with external/foreign partitions
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT(
+					   "Update with External/foreign partition storage types"));
+	}
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
@@ -3381,22 +3409,6 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
 
-	IMdIdArray *partition_mdids = md_rel->ChildPartitionMdids();
-	for (ULONG ul = 0; partition_mdids && ul < partition_mdids->Size(); ++ul)
-	{
-		IMDId *part_mdid = (*partition_mdids)[ul];
-		const IMDRelation *partrel = m_md_accessor->RetrieveRel(part_mdid);
-
-		if (partrel->RetrieveRelStorageType() ==
-			IMDRelation::ErelstorageForeign)
-		{
-			// Partitioned tables with external/foreign partitions
-			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				GPOS_WSZ_LIT("External/foreign partition storage types"));
-		}
-	}
-
 	return dxl_node;
 }
 
@@ -3440,7 +3452,7 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 		gpdb::RelationWrapper rel = gpdb::GetRelation(rte->relid);
 		GpPolicy *policy = rel->rd_cdbpolicy;
 
-		// master-only tables
+		// coordinator-only tables
 		if (nullptr == policy)
 		{
 			return;

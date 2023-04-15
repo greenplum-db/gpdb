@@ -315,7 +315,6 @@ BEGIN;
 DROP ROLE IF EXISTS guc_gp_test_role1;
 NOTICE:  role "guc_gp_test_role1" does not exist, skipping
 CREATE ROLE guc_gp_test_role1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role1;
 RESET ROLE;
 END;
@@ -330,7 +329,6 @@ BEGIN ISOLATION LEVEL REPEATABLE READ;
 DROP ROLE IF EXISTS guc_gp_test_role2;
 NOTICE:  role "guc_gp_test_role2" does not exist, skipping
 CREATE ROLE guc_gp_test_role2;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role2;
 RESET ROLE;
 END;
@@ -348,7 +346,6 @@ FETCH c1;
 
 DROP ROLE IF EXISTS guc_gp_test_role1;
 CREATE ROLE guc_gp_test_role1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role1;
 RESET ROLE;
 FETCH c2;
@@ -739,3 +736,7 @@ ALTER RESOURCE QUEUE pg_default ACTIVE THRESHOLD -10;
 ERROR:  active threshold cannot be less than -1 or equal to 0
 -- Reset
 RESET log_statement;
+-- Try to set statement_mem > max_statement_mem
+SET statement_mem = '4000MB';
+ERROR:  Invalid input for statement_mem, must be less than max_statement_mem (2048000 kB)
+RESET statement_mem;

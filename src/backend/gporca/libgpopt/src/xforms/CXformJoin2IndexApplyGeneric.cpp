@@ -21,7 +21,7 @@ using namespace gpopt;
 // Can transform left outer join to left outer index apply?
 // For hash distributed table, we can do outer index apply only
 // when the inner columns used in the join condition contains
-// the inner distribution key set. Master only table is ok to
+// the inner distribution key set. Coordinator only table is ok to
 // transform to outer index apply, but random table is not.
 // Because if the inner is random distributed, there is no way
 // to redistribute outer child to match inner on the join keys.
@@ -36,7 +36,7 @@ CXformJoin2IndexApplyGeneric::FCanLeftOuterIndexApply(
 	{
 		return false;
 	}
-	else if (ereldist == IMDRelation::EreldistrMasterOnly)
+	else if (ereldist == IMDRelation::EreldistrCoordinatorOnly)
 	{
 		return true;
 	}

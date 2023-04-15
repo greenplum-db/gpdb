@@ -4,7 +4,7 @@
 	Objective: For a DML query with a predicate containing an outer
 	reference, predicate (x.a + y.b) in the below query; the PhysicalFilter
 	generated from such a predicate should request for Singleton Segment
-	distribution spec instead of Singleton Master. 
+	distribution spec instead of Singleton coordinator.
 
 	create table x(a int);
 	create table y(b int);

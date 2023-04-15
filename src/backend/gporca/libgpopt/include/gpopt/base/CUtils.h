@@ -22,7 +22,6 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarConst.h"
-#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/xforms/CXform.h"
 
@@ -77,7 +76,7 @@ private:
 public:
 	enum EExecLocalityType
 	{
-		EeltMaster,
+		EeltCoordinator,
 		EeltSegments,
 		EeltSingleton
 	};
@@ -1000,10 +999,6 @@ public:
 
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
 
-	static CScalarIdent *PscalarIdent(CExpression *pexpr);
-
-	static CScalarConst *PscalarConst(CExpression *pexpr);
-
 	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
 };	// class CUtils
 
@@ -1319,10 +1314,6 @@ CUtils::FMatchDynamicScan(T *pop1, COperator *pop2)
 	T *popScan2 = T::PopConvert(pop2);
 
 	// match if the table descriptors are identical
-	// Possible improvement:
-	// For partial scans, we use pointer comparison of part constraints to avoid
-	// memory allocation because matching function was used while holding spin locks.
-	// Using a match function would mean improved matches for partial scans.
 	return pop1->ScanId() == popScan2->ScanId() &&
 		   pop1->Ptabdesc()->MDId()->Equals(popScan2->Ptabdesc()->MDId()) &&
 		   pop1->PdrgpcrOutput()->Equals(popScan2->PdrgpcrOutput());

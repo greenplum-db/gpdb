@@ -896,23 +896,26 @@ externalgettup_custom(FileScanDesc scan)
 	CopyState	pstate = scan->fs_pstate;
 	FormatterData *formatter = scan->fs_formatter;
 	MemoryContext oldctxt = CurrentMemoryContext;
+	bool need_more_data = false;
+	bool infinite_loop_detect = false;
 
 	Assert(formatter);
-	Assert(pstate->raw_buf_len >= 0);
 
 	/* while didn't finish processing the entire file */
-	/* raw_buf_len was set to 0 in BeginCopyFrom() or external_rescan() */
-	while (pstate->raw_buf_len != 0 || !pstate->reached_eof)
+	while (formatter->fmt_databuf.len != 0 || !pstate->reached_eof)
 	{
+		if (infinite_loop_detect) {
+			break;
+		}
 		/* need to fill our buffer with data? */
-		if (pstate->raw_buf_len == 0)
+		if (formatter->fmt_databuf.len == 0 || need_more_data)
 		{
 			int			bytesread = external_getdata(scan->fs_file, pstate, pstate->raw_buf, RAW_BUF_SIZE);
 
 			if (bytesread > 0)
 			{
 				appendBinaryStringInfo(&formatter->fmt_databuf, pstate->raw_buf, bytesread);
-				pstate->raw_buf_len = bytesread;
+				need_more_data = false;
 			}
 
 			/* HEADER not yet supported ... */
@@ -921,7 +924,7 @@ externalgettup_custom(FileScanDesc scan)
 		}
 
 		/* while there is still data in our buffer */
-		while (pstate->raw_buf_len > 0)
+		while (formatter->fmt_databuf.len > 0)
 		{
 			bool		error_caught = false;
 
@@ -1010,15 +1013,23 @@ externalgettup_custom(FileScanDesc scan)
 						 * Callee consumed all data in the buffer. Prepare
 						 * to read more data into it.
 						 */
-						pstate->raw_buf_len = 0;
+						if (pstate->reached_eof) {
+							infinite_loop_detect = true;
+						}
+						need_more_data = true;
 						justifyDatabuf(&formatter->fmt_databuf);
-						continue;
+						break;
 
 					default:
 						elog(ERROR, "unsupported formatter notification (%d)",
 								formatter->fmt_notification);
 						break;
 				}
+				/* 
+				 * We can only get here when (formatter->fmt_notification == FMT_NEED_MORE_DATA).
+				 * We need to get more data from external source(call external_getdata()) 
+				 */
+				break;
 			}
 			else
 			{
@@ -1384,7 +1395,10 @@ external_getdata(URL_FILE *extfile, CopyState pstate, void *outbuf, int maxread)
 	 * CK: this code is very delicate. The caller expects this: - if url_fread
 	 * returns something, and the EOF is reached, it this call must return
 	 * with both the content and the reached_eof flag set. - failing to do so will
-	 * result in skipping the last line.
+	 * result in skipping the last line. But for custom protocol, it is not possible
+	 * to reach EOF when the bytesread > 0, so we need to give them a second
+	 * chance to reach EOF when the bytesread = 0, so the formatter is responsible
+	 * for dealing with eof flag properly, otherwise infinite loop may be created.
 	 */
 	bytesread = url_fread((void *) outbuf, maxread, extfile, pstate);
 

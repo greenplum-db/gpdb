@@ -2530,21 +2530,6 @@ CUtils::FScalarConstBoolNull(CExpression *pexpr)
 	return false;
 }
 
-CScalarIdent *
-CUtils::PscalarIdent(CExpression *pexpr)
-{
-	CScalarIdent *popScId;
-	if (CUtils::FScalarIdent(pexpr))
-	{
-		popScId = CScalarIdent::PopConvert(pexpr->Pop());
-	}
-	else
-	{
-		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedScId(pexpr));
-		popScId = CScalarIdent::PopConvert((*pexpr)[0]->Pop());
-	}
-	return popScId;
-}
 
 BOOL
 CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
@@ -2552,23 +2537,6 @@ CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
 	return CUtils::FScalarConst(pexpr) ||
 		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
 }
-
-CScalarConst *
-CUtils::PscalarConst(CExpression *pexpr)
-{
-	CScalarConst *popScConst;
-	if (CUtils::FScalarConst(pexpr))
-	{
-		popScConst = CScalarConst::PopConvert(pexpr->Pop());
-	}
-	else
-	{
-		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedConst(pexpr));
-		popScConst = CScalarConst::PopConvert((*pexpr)[0]->Pop());
-	}
-	return popScConst;
-}
-
 // checks to see if the expression is a scalar const TRUE
 BOOL
 CUtils::FScalarConstTrue(CExpression *pexpr)
@@ -4372,7 +4340,7 @@ CUtils::ValidateCTEProducerConsumerLocality(
 	COperator *pop = pexpr->Pop();
 	if (COperator::EopPhysicalCTEProducer == pop->Eopid())
 	{
-		// record the location (either master or segment or singleton)
+		// record the location (either coordinator or segment or singleton)
 		// where the CTE producer is being executed
 		ULONG ulCTEID = CPhysicalCTEProducer::PopConvert(pop)->UlCTEId();
 		phmulul->Insert(GPOS_NEW(mp) ULONG(ulCTEID), GPOS_NEW(mp) ULONG(eelt));
@@ -4432,9 +4400,9 @@ CUtils::ExecLocalityType(CDistributionSpec *pds)
 	{
 		CDistributionSpecSingleton *pdss =
 			CDistributionSpecSingleton::PdssConvert(pds);
-		if (pdss->FOnMaster())
+		if (pdss->FOnCoordinator())
 		{
-			eelt = EeltMaster;
+			eelt = EeltCoordinator;
 		}
 		else
 		{

@@ -106,6 +106,7 @@ enum Edxltoken
 	EdxltokenPhysicalAggregate,
 	EdxltokenPhysicalAppend,
 	EdxltokenPhysicalMaterialize,
+	EdxltokenPhysicalDynamicForeignScan,
 	EdxltokenPhysicalSequence,
 	EdxltokenPhysicalDynamicTableScan,
 	EdxltokenPhysicalDynamicIndexScan,
@@ -392,6 +393,7 @@ enum Edxltoken
 
 	EdxltokenFuncId,
 	EdxltokenFuncRetSet,
+	EdxltokenFuncVariadic,
 
 
 	EdxltokenSortOpId,
@@ -485,7 +487,7 @@ enum Edxltoken
 	EdxltokenPartTypes,
 
 	EdxltokenRelDistrPolicy,
-	EdxltokenRelDistrMasterOnly,
+	EdxltokenRelDistrCoordinatorOnly,
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,
@@ -497,9 +499,7 @@ enum Edxltoken
 	EdxltokenRelDistrOpclasses,
 	EdxltokenRelDistrOpclass,
 
-	EdxltokenExtRelRejLimit,
-	EdxltokenExtRelRejLimitInRows,
-	EdxltokenExtRelFmtErrRel,
+	EdxltokenRelForeignServer,
 
 	EdxltokenMetadataColumns,
 	EdxltokenMetadataColumn,
@@ -555,6 +555,7 @@ enum Edxltoken
 	EdxltokenMDTypeByValue,
 	EdxltokenMDTypeDistrOpfamily,
 	EdxltokenMDTypeLegacyDistrOpfamily,
+	EdxltokenMDTypePartOpfamily,
 	EdxltokenMDTypeEqOp,
 	EdxltokenMDTypeNEqOp,
 	EdxltokenMDTypeLTOp,
@@ -735,6 +736,9 @@ enum Edxltoken
 	EdxltokenVarTypeModList,
 
 	EdxltokenIndexTypeBrin,
+
+	EdxltokenForeignServerOid,
+
 	EdxltokenSentinel
 };
 

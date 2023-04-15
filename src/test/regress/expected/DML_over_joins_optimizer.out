@@ -1851,16 +1851,16 @@ analyze tab3;
 set allow_system_table_mods=true;
 update pg_class set relpages = 10000 where oid='tab2'::regclass;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 update pg_class set reltuples = 100000000 where oid='tab2'::regclass;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 update pg_class set relpages = 100000000 where oid='tab3'::regclass;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 update pg_class set reltuples = 100000 where oid='tab3'::regclass;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 -- Planner: there is redistribute motion above tab1, however, we can also
 -- remove the explicit redistribute motion here because the final join
 -- co-locate with the result relation tab1.

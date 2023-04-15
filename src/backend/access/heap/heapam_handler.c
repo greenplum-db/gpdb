@@ -809,7 +809,18 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
 									 PROGRESS_CLUSTER_PHASE_SEQ_SCAN_HEAP);
 
-		tableScan = table_beginscan(OldHeap, SnapshotAny, 0, (ScanKey) NULL);
+		/*
+		 * For Catalog tables avoid syncscan, so that scan always starts from
+		 * block 0 during rewrite and helps retain bootstrap tuples in initial
+		 * pages only. If using syncscan, then bootstrap tuples may move to
+		 * higher blocks, which will lead to degraded performance for relcache
+		 * initialization during connection starts.
+		*/
+		if (IsCatalogRelation(OldHeap))
+			tableScan = table_beginscan_strat(OldHeap,
+											  SnapshotAny, 0, (ScanKey) NULL, true, false);
+		else
+			tableScan = table_beginscan(OldHeap, SnapshotAny, 0, (ScanKey) NULL);
 		heapScan = (HeapScanDesc) tableScan;
 		indexScan = NULL;
 

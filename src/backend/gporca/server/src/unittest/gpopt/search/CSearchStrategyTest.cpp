@@ -225,7 +225,7 @@ CSearchStrategyTest::PdrgpssRandom(CMemoryPool *mp)
 	// first xforms set contains essential rules to produce simple equality join plan
 	(void) pxfsFst->ExchangeSet(CXform::ExfGet2TableScan);
 	(void) pxfsFst->ExchangeSet(CXform::ExfSelect2Filter);
-	(void) pxfsFst->ExchangeSet(CXform::ExfInnerJoin2HashJoin);
+	(void) pxfsFst->ExchangeSet(CXform::ExfImplementInnerJoin);
 
 	// second xforms set contains all other rules
 	pxfsSnd->Union(CXformFactory::Pxff()->PxfsExploration());

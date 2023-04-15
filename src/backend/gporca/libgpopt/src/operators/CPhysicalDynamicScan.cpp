@@ -124,6 +124,7 @@ CPhysicalDynamicScan::OsPrint(IOstream &os) const
 	os << "), Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "] Scan Id: " << m_scan_id;
+	os << " Parts to scan: " << m_partition_mdids->Size();
 
 
 	return os;

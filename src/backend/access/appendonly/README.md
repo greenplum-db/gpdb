@@ -25,7 +25,13 @@ also be larger than 1 GB, and are not expanded in BLCKSZ-sized blocks,
 like heap segments are. Segment zero is empty unless data has been
 inserted during utility mode, in which case it's inserted into segment
 zero. Extending the table by adding attributes via ALTER TABLE will also
-push data to segment zero. Each table can have at most 127 segment files.
+push data to segment zero. Each table can have at most 128 segment files.
+
+AOCS tables can similarly have at most 128 segment files for each column.
+The range of segno is dependent on the filenum value in pg_attribute_encoding.
+`segno 0,1-127 (filenum = 1), segno 128,129-255 (filenum = 2),...`
+To find the file range for an AOCS table column, find the attnum of that column
+and then find the corresponding filenum for that attnum from pg_attribute_encoding.
 
 An append-only segfile consists of a number of variable-sized blocks
 ("varblocks"), one after another. The varblocks are aligned to 4 bytes.
@@ -222,7 +228,7 @@ degradation in the worst case) in setting up and tearing down scan descriptors
 for AO/CO tables, we avoid the scanbegin..fetch..scanend construct in
 table_index_fetch_tuple_check().
 
-So, a new tableam API index_fetch_tuple_exists() is used, which is implemented
+So, a new tableam API index_unique_check() is used, which is implemented
 only for AO/CO tables. Here, we fetch a UniqueCheckDesc, which stores all the
 in-memory state to help us perform a unique index check. This descriptor is
 attached to the DMLState structs. The descriptor holds a block directory struct
@@ -259,3 +265,50 @@ index, and hence there are no uniqueness checks triggered (see
 ExecInsertIndexTuples()). Also during partial unique index builds, keys that
 don't satisfy the partial index predicate are never inserted into the index
 (see *_index_build_range_scan()).
+
+# Index only scan
+
+Index scan has been disabled on append-optimized tables is mainly because index
+fetch tuples in random I/O pattern is not friendly to append-optimized varblock
+lookups. Not only it depends on additional auxiliary tables (such as AO block
+directory, visibility map) lookups in random order, it also needs to extract the
+tuple from uncompressed target varblock, which could yield to extremely poor
+performance in a typical case that the fetching tuples sparsely distributed in
+different varblocks.
+
+Index only scan could save cycles from no access of append-optimized varblocks,
+but only randomly reads auxiliary Heap tables. Hence it is more performant than
+index scan. Based on this theory, we enable index only scan on append-optimized
+tables to serve satisfied queries that no need to fetch tuples from physical
+append-optimized data files.
+
+Index only scan functionality is based on the target tuple visibility check.
+In past (before removing aoblkdir hole filling mechanism [1]), pg_aoseg/pg_aocsseg
+stored EOF (or checking physical file for tuple presence) was the only source to
+perform transaction visibility checks for append-optimized tables (block directory
+was only used for optimization).
+
+With the change made by removing aoblkdir hole filling mechanism to align block
+directory reflect the reality of block information on-disk, now the design is:
+
+- for non-indexed append-optimized tables EOF acts as source (along with visimap)
+- for indexed append-optimized tables block directory acts as source (along with visimap)
+
+So to perform the visibility check, we rely on the block directory to see if the tid
+is covered by a block directory entry. If no, the tid is not visible to the index only
+scan. If yes, we check if the tid is deleted in the visimap and if it isn't we declare
+that the tid is visible to the index only scan. This mechanism is very similar to unique
+index checks, except that we use a regular MVCC snapshot (and not SNAPSHOT_DIRTY).
+
+A note about upgrades:
+given the commit of removing aoblkdir hole filling mechanism was introduced from GP7,
+old block directory may still contain gaps in the case of tables in-place upgrade.
+To make index only scan work properly on append-optimized tables, we introduced
+"version" column into pg_appendonly catalog [2] to be as a factor to determine whether
+selecting index only path or not during planning stage. The strategy is, if the version
+is not less than AORelationVersion_GP7, index only scan is selectable; otherwise, it is
+disabled because we are still working with a gapped block directory which can't be used
+as a source of tuple visibility determination.
+
+[1] https://github.com/greenplum-db/gpdb/commit/258ec966b26929430fc5dc9f6e6fe09854644302
+[2] https://github.com/greenplum-db/gpdb/commit/9d7cfbf62d06cf4825de6589b321c11d7596a947

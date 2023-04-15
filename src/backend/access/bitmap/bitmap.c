@@ -144,7 +144,7 @@ bmbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	_bitmap_init_buildstate(index, &bmstate);
 
 	/* do the heap scan */
-	reltuples = table_index_build_scan(heap, index, indexInfo, true, true,
+	reltuples = table_index_build_scan(heap, index, indexInfo, false, true,
 									   bmbuildCallback, (void *) &bmstate,
 									   NULL);
 	/* clean up the build state */

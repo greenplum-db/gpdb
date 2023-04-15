@@ -45,8 +45,6 @@ extern void CatalogTupleUpdateWithInfo(Relation heapRel,
 									   CatalogIndexState indstate);
 extern void CatalogTupleDelete(Relation heapRel, ItemPointer tid);
 
-extern void CatalogTupleInsertFrozen(Relation heapRel, HeapTuple tup);
-
 /*
  * These macros are just to keep the C compiler from spitting up on the
  * upcoming commands for Catalog.pm.
@@ -399,6 +397,8 @@ DECLARE_INDEX(pg_attribute_encoding_attrelid_index, 6236, on pg_attribute_encodi
 #define AttributeEncodingAttrelidIndexId	6236
 DECLARE_UNIQUE_INDEX(pg_attribute_encoding_attrelid_attnum_index, 6237, on pg_attribute_encoding using btree(attrelid oid_ops, attnum int2_ops));
 #define AttributeEncodingAttrelidAttnumIndexId	6237
+DECLARE_UNIQUE_INDEX(pg_attribute_encoding_attrelid_filenum_index, 6238, on pg_attribute_encoding using btree(attrelid oid_ops, filenum int2_ops));
+#define AttributeEncodingAttrelidFilenumIndexId	6238
 
 DECLARE_UNIQUE_INDEX(pg_type_encoding_typid_index, 6207, on pg_type_encoding using btree(typid oid_ops));
 #define TypeEncodingTypidIndexId	6207

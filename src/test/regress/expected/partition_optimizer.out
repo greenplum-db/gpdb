@@ -157,7 +157,6 @@ ALTER TABLE two_level_pt ALTER PARTITION FOR (1)
 ERROR:  child table is missing column "b"
 -- different owner 
 create role part_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 create table bar_p (i int, j int) distributed by (i);
 set session authorization part_role;
 -- should fail
@@ -248,7 +247,6 @@ select * from bar_d;
 drop table foo_p, bar_d;
 -- permissions
 create role part_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 create table foo_p (i int) partition by range(i) (start(1) end(10) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -903,7 +901,7 @@ Distributed by: (i)
 insert into foo_p values(1), (5), (10);
 drop table foo_p;
 -- MPP-3264
--- mix AO with master HEAP and see if copy works
+-- mix AO with coordinator HEAP and see if copy works
 create table foo_p (i int)
 partition by list(i)
 (partition p1 values(1, 2, 3) with (appendonly = true),
@@ -1453,7 +1451,6 @@ LINE 2: end('f'::bool));
             ^
 -- see that grant and revoke cascade to children
 create role part_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 create table granttest (i int, j int) partition by range(i) 
 subpartition by list(j) subpartition template (values(1, 2, 3))
 (start(1) end(4) every(1));
@@ -2011,7 +2008,6 @@ drop table k;
 -- ADD and SPLIT must get inherit permissions of the partition they're
 -- modifying
 create role part_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 create table a (a int, b int, c int) partition by range(a) subpartition by
 range(b) subpartition template (subpartition h start(1) end(10)) 
 subpartition by range(c)
@@ -2551,7 +2547,7 @@ Distributed by: (ip)
 Options: compresstype=zlib, compresslevel=5, blocksize=32768, checksum=true
 
 drop table sg_cal_event_silvertail_hour;
--- Make sure we inherit master's storage settings
+-- Make sure we inherit coordinator's storage settings
 create table foo_p (i int, j int, k text)
 with (appendonly = true, compresslevel = 5)
 partition by range(j) (start(1) end(10) every(1), default partition def);
@@ -5785,38 +5781,38 @@ select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 
  pt_tab_encode_1_prt_s_xyz | FOR VALUES IN ('xyz')
 (3 rows)
 
-select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass;
- gp_segment_id |         attrelid          | attnum |                     attoptions                      
----------------+---------------------------+--------+-----------------------------------------------------
-            -1 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-            -1 | pt_tab_encode_1_prt_s_abc |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass;
+ gp_segment_id |         attrelid          | attnum | filenum |                     attoptions                      
+---------------+---------------------------+--------+---------+-----------------------------------------------------
+            -1 | pt_tab_encode_1_prt_s_abc |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+            -1 | pt_tab_encode_1_prt_s_abc |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
-select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass order by 1,3 limit 5;
- gp_segment_id |         attrelid          | attnum |                     attoptions                      
----------------+---------------------------+--------+-----------------------------------------------------
-             0 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             0 | pt_tab_encode_1_prt_s_abc |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             1 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             1 | pt_tab_encode_1_prt_s_abc |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             2 | pt_tab_encode_1_prt_s_abc |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_abc'::regclass order by 1,3 limit 5;
+ gp_segment_id |         attrelid          | attnum | filenum |                     attoptions                      
+---------------+---------------------------+--------+---------+-----------------------------------------------------
+             0 | pt_tab_encode_1_prt_s_abc |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             0 | pt_tab_encode_1_prt_s_abc |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_abc |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_abc |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             2 | pt_tab_encode_1_prt_s_abc |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (5 rows)
 
-select gp_segment_id, attrelid::regclass, attnum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
- gp_segment_id |         attrelid          | attnum |                     attoptions                      
----------------+---------------------------+--------+-----------------------------------------------------
-            -1 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-            -1 | pt_tab_encode_1_prt_s_xyz |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from pg_attribute_encoding where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
+ gp_segment_id |         attrelid          | attnum | filenum |                     attoptions                      
+---------------+---------------------------+--------+---------+-----------------------------------------------------
+            -1 | pt_tab_encode_1_prt_s_xyz |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+            -1 | pt_tab_encode_1_prt_s_xyz |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (2 rows)
 
-select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass order by 1,3 limit 5;
- gp_segment_id |         attrelid          | attnum |                     attoptions                      
----------------+---------------------------+--------+-----------------------------------------------------
-             0 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             0 | pt_tab_encode_1_prt_s_xyz |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             1 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             1 | pt_tab_encode_1_prt_s_xyz |      2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-             2 | pt_tab_encode_1_prt_s_xyz |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+select gp_segment_id, attrelid::regclass, attnum, filenum, attoptions from gp_dist_random('pg_attribute_encoding') where attrelid = 'pt_tab_encode_1_prt_s_xyz'::regclass order by 1,3 limit 5;
+ gp_segment_id |         attrelid          | attnum | filenum |                     attoptions                      
+---------------+---------------------------+--------+---------+-----------------------------------------------------
+             0 | pt_tab_encode_1_prt_s_xyz |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             0 | pt_tab_encode_1_prt_s_xyz |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_xyz |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             1 | pt_tab_encode_1_prt_s_xyz |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+             2 | pt_tab_encode_1_prt_s_xyz |      1 |       1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (5 rows)
 
 select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'pt_tab_encode_1_prt_s_abc'::regclass;
@@ -5958,7 +5954,6 @@ DROP TABLE IF EXISTS user_prt_acl.t_part_acl;
 DROP SCHEMA IF EXISTS user_prt_acl;
 DROP ROLE IF EXISTS user_prt_acl;
 CREATE ROLE user_prt_acl;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE SCHEMA schema_part_acl;
 GRANT USAGE ON SCHEMA schema_part_acl TO user_prt_acl;
 ALTER DEFAULT PRIVILEGES IN SCHEMA schema_part_acl GRANT SELECT ON TABLES TO user_prt_acl;

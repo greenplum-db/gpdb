@@ -303,12 +303,12 @@ set allow_system_table_mods = on;
 update gp_distribution_policy set numsegments = 2
   where localoid = 'rep2'::regclass;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 select localoid::regclass, policytype, numsegments
   from gp_distribution_policy
   where localoid::regclass in ('rep2', 'rep3');
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
  localoid | policytype | numsegments 
 ----------+------------+-------------
  rep3     | r          |           3
@@ -2134,11 +2134,11 @@ set allow_system_table_mods = on;
 update gp_distribution_policy set numsegments = 1
   where localoid = 'union_schema.t1'::regclass::oid;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 update gp_distribution_policy set numsegments = 2
   where localoid = 'union_schema.t2'::regclass::oid;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 select relname, policytype, numsegments, distkey
   from pg_class, gp_distribution_policy, pg_namespace ns
   where pg_class.oid = localoid and relnamespace = ns.oid

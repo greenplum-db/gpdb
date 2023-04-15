@@ -388,6 +388,10 @@ public:
 	// check if const func returns composite type
 	static BOOL IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
 								 const RangeTblFunction *rtfunc);
+
+	// check if rel contains foreign partitions
+	static BOOL RelContainsForeignPartitions(const IMDRelation *rel,
+											 CMDAccessor *md_accessor);
 };
 }  // namespace gpdxl
 

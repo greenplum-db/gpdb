@@ -35,12 +35,6 @@ BEGIN
 END;
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION get_tablespace_version_directory_name()
-	RETURNS TEXT
-	AS '@abs_builddir@/regress.so', 'get_tablespace_version_directory_name'
-    LANGUAGE C;
-
-
 -- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
 CREATE TABLESPACE ul_testspace LOCATION '@testtablespace@_unlogged';

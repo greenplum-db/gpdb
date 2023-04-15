@@ -15,8 +15,8 @@ SELECT count(*) from gp_opt_version();
 -- end_matchsubs
 -- fix the number of segments for Orca
 set optimizer_segments = 3;
-set optimizer_enable_master_only_queries = on;
--- master only tables
+set optimizer_enable_coordinator_only_queries = on;
+-- coordinator only tables
 create schema orca;
 create table orca.r();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
@@ -9854,8 +9854,6 @@ BEGIN
     SELECT $1 + 1;
 END;
 $$ LANGUAGE plpgsql volatile;
--- force_explain
-set optimizer_segments = 3;
 explain
 select c.cid cid,
        c.firstname firstname,
@@ -9866,28 +9864,26 @@ where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
                                                                                QUERY PLAN                                                                               
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=2215.04..2775.38 rows=110 width=72)
-   ->  Hash Join  (cost=2215.04..2775.38 rows=37 width=72)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=738.36..913.37 rows=109 width=72)
+   ->  Hash Join  (cost=738.36..911.92 rows=36 width=72)
          Hash Cond: (c.cid = s.cid)
-         ->  Seq Scan on cust c  (cost=0.00..434.00 rows=11134 width=68)
-         ->  Hash  (cost=2214.95..2214.95 rows=3 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=940.72..2214.95 rows=3 width=8)
+         ->  Seq Scan on cust c  (cost=0.00..145.33 rows=11133 width=68)
+         ->  Hash  (cost=738.33..738.33 rows=2 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=314.24..738.33 rows=2 width=8)
                      Hash Key: s.cid
-                     ->  Hash Join  (cost=940.72..2214.80 rows=3 width=8)
+                     ->  Hash Join  (cost=314.24..738.28 rows=2 width=8)
                            Hash Cond: (d.date_sk = s.date_sk)
                            Join Filter: (((d.year = 2001) AND (lower(s.type) = 't1'::text) AND (plusone(d.moy) = 5)) OR ((d.moy = 4) AND (upper(s.type) = 'T2'::text)))
-                           ->  Seq Scan on datedim d  (cost=0.00..1268.50 rows=52 width=12)
+                           ->  Seq Scan on datedim d  (cost=0.00..423.50 rows=52 width=12)
                                  Filter: ((year = 2001) OR (moy = 4))
-                           ->  Hash  (cost=939.68..939.68 rows=28 width=40)
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..939.68 rows=28 width=40)
+                           ->  Hash  (cost=313.89..313.89 rows=28 width=40)
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..313.89 rows=28 width=40)
                                        Hash Key: s.date_sk
-                                       ->  Seq Scan on sales s  (cost=0.00..938.00 rows=28 width=40)
+                                       ->  Seq Scan on sales s  (cost=0.00..313.33 rows=28 width=40)
                                              Filter: ((lower(type) = 't1'::text) OR (upper(type) = 'T2'::text))
- Planning time: 2.896 ms
  Optimizer: Postgres query optimizer
-(19 rows)
+(18 rows)
 
-reset optimizer_segments;
 -- Bitmap indexes
 drop table if exists orca.bm_test;
 NOTICE:  table "bm_test" does not exist, skipping
@@ -10276,32 +10272,6 @@ BEGIN
     SELECT $1 + 1;
 END;
 $$ LANGUAGE plpgsql volatile;
--- start_ignore
-select disable_xform('CXformInnerJoin2DynamicIndexGetApply');
-                  disable_xform
---------------------------------------------------
- CXformInnerJoin2DynamicIndexGetApply is disabled
-(1 row)
-
-select disable_xform('CXformInnerJoin2HashJoin');
-            disable_xform
---------------------------------------
- CXformInnerJoin2HashJoin is disabled
-(1 row)
-
-select disable_xform('CXformInnerJoin2IndexGetApply');
-               disable_xform
--------------------------------------------
- CXformInnerJoin2IndexGetApply is disabled
-(1 row)
-
-select disable_xform('CXformInnerJoin2NLJoin');
-           disable_xform
-------------------------------------
- CXformInnerJoin2NLJoin is disabled
-(1 row)
--- end_ignore
-set optimizer_enable_indexjoin=on;
 -- force_explain
 set optimizer_segments = 3;
 EXPLAIN
@@ -10336,37 +10306,8 @@ ORDER BY 1 asc ;
                                  ->  Hash  (cost=108.67..108.67 rows=7467 width=108)
                                        ->  Seq Scan on my_tt_agg_opt tt  (cost=0.00..108.67 rows=7467 width=108)
  Optimizer: Postgres query optimizer
-(19 rows)
+(21 rows)
 
-reset optimizer_segments;
-reset optimizer_enable_constant_expression_evaluation;
-reset optimizer_enable_indexjoin;
--- start_ignore
-select enable_xform('CXformInnerJoin2DynamicIndexGetApply');
-                  enable_xform
--------------------------------------------------
- CXformInnerJoin2DynamicIndexGetApply is enabled
-(1 row)
-
-select enable_xform('CXformInnerJoin2HashJoin');
-            enable_xform
--------------------------------------
- CXformInnerJoin2HashJoin is enabled
-(1 row)
-
-select enable_xform('CXformInnerJoin2IndexGetApply');
-               enable_xform
-------------------------------------------
- CXformInnerJoin2IndexGetApply is enabled
-(1 row)
-
-select enable_xform('CXformInnerJoin2NLJoin');
-           enable_xform
------------------------------------
- CXformInnerJoin2NLJoin is enabled
-(1 row)
-
--- end_ignore
 -- MPP-25661: IndexScan crashing for qual with reference to outer tuple
 drop table if exists idxscan_outer;
 NOTICE:  table "idxscan_outer" does not exist, skipping
@@ -10530,7 +10471,6 @@ create rule can_set_tag_audit_update AS
   VALUES (now(), old.x, old.y, old.z);
 insert into can_set_tag_target select i, i + 1, i + 2 from generate_series(1,2) as i;
 create role unpriv;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 grant all on can_set_tag_target to unpriv;
 grant all on can_set_tag_audit to unpriv;
 set role unpriv;
@@ -11046,7 +10986,7 @@ select count(*) from wst0 where exists (select 1, rank() over (order by wst1.a1)
 
 --
 -- Test to ensure sane behavior when DML queries are optimized by ORCA by
--- enforcing a non-master gather motion, controlled by
+-- enforcing a non-coordinator gather motion, controlled by
 -- optimizer_enable_gather_on_segment_for_DML GUC
 --
 --
@@ -12030,45 +11970,61 @@ ANALYZE foo3;
 set optimizer_join_order=query;
 -- we ignore enable/disable_xform statements as their output will differ if the server is compiled without Orca (the xform won't exist)
 -- start_ignore
-select disable_xform('CXformInnerJoin2HashJoin');
+select disable_xform('CXformLeftOuterJoin2HashJoin');
+              disable_xform               
+------------------------------------------
+ CXformLeftOuterJoin2HashJoin is disabled
+(1 row)
+
+select disable_xform('CXformImplementInnerJoin');
             disable_xform             
 --------------------------------------
- CXformInnerJoin2HashJoin is disabled
+ CXformImplementInnerJoin is disabled
 (1 row)
 
 -- end_ignore
-EXPLAIN SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=2.07..3.17 rows=3 width=4)
-   ->  Hash Semi Join  (cost=2.07..3.13 rows=1 width=4)
-         Hash Cond: (foo2.b = foo3.b)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.02..2.07 rows=1 width=4)
-               Hash Key: foo2.b
-               ->  Hash Join  (cost=1.02..2.05 rows=1 width=4)
-                     Hash Cond: (foo2.a = foo1.a)
-                     ->  Seq Scan on foo2  (cost=0.00..1.01 rows=1 width=8)
-                           Filter: (c = 3)
-                     ->  Hash  (cost=1.01..1.01 rows=1 width=4)
-                           ->  Seq Scan on foo1  (cost=0.00..1.01 rows=1 width=4)
-         ->  Hash  (cost=1.03..1.03 rows=1 width=4)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                     Hash Key: foo3.b
-                     ->  Seq Scan on foo3  (cost=0.00..1.01 rows=1 width=4)
+EXPLAIN SELECT 1 FROM foo1 left join foo2 on foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.07..3.19 rows=3 width=4)
+   ->  Hash Right Join  (cost=2.07..3.15 rows=1 width=4)
+         Hash Cond: (foo2.a = foo1.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.04..2.11 rows=1 width=4)
+               Hash Key: foo2.a
+               ->  Hash Semi Join  (cost=1.04..2.09 rows=1 width=4)
+                     Hash Cond: (foo2.b = foo3.b)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+                           Hash Key: foo2.b
+                           ->  Seq Scan on foo2  (cost=0.00..1.01 rows=1 width=8)
+                                 Filter: (c = 3)
+                     ->  Hash  (cost=1.03..1.03 rows=1 width=4)
+                           ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                 Hash Key: foo3.b
+                                 ->  Seq Scan on foo3  (cost=0.00..1.01 rows=1 width=4)
+         ->  Hash  (cost=1.01..1.01 rows=1 width=4)
+               ->  Seq Scan on foo1  (cost=0.00..1.01 rows=1 width=4)
  Optimizer: Postgres query optimizer
-(16 rows)
+(18 rows)
 
-SELECT 1 FROM foo1, foo2 WHERE foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
+SELECT 1 FROM foo1 left join foo2 on foo1.a = foo2.a AND foo2.c = 3 AND foo2.b IN (SELECT b FROM foo3);
  ?column? 
 ----------
-(0 rows)
+        1
+        1
+(2 rows)
 
 reset optimizer_join_order;
 -- start_ignore
-select enable_xform('CXformInnerJoin2HashJoin');
+select enable_xform('CXformLeftOuterJoin2HashJoin');
+              enable_xform               
+-----------------------------------------
+ CXformLeftOuterJoin2HashJoin is enabled
+(1 row)
+
+select enable_xform('CXformImplementInnerJoin');
             enable_xform             
 -------------------------------------
- CXformInnerJoin2HashJoin is enabled
+ CXformImplementInnerJoin is enabled
 (1 row)
 
 -- end_ignore
@@ -13252,36 +13208,28 @@ select disable_xform('CXformJoin2BitmapIndexGetApply');
  CXformJoin2BitmapIndexGetApply is disabled
 (1 row)
 
-select disable_xform('CXformInnerJoin2NLJoin');
-           disable_xform            
-------------------------------------
- CXformInnerJoin2NLJoin is disabled
-(1 row)
+set optimizer_enable_nljoin=off;
 -- end_ignore
 -- Make sure we don't allow a regular (btree) index scan or index join for an AO table
 -- We disabled hash join, and bitmap index joins, NLJs, so this should leave ORCA no other choices
--- expect a sequential scan, not an index scan, from these two queries
+-- other than an index-only scan or sequential scan.
 explain (costs off) select * from t_ao_btree where a = 3 and b = 3;
                    QUERY PLAN                    
 -------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Bitmap Heap Scan on t_ao_btree
-         Recheck Cond: ((a = 3) AND (b = 3))
-         ->  Bitmap Index Scan on t_ao_btree_ix
-               Index Cond: ((a = 3) AND (b = 3))
+   ->  Index Only Scan using t_ao_btree_ix on t_ao_btree
+         Index Cond: ((a = 3) AND (b = 3))
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 explain (costs off) select * from tpart_ao_btree where a = 3 and b = 3;
                            QUERY PLAN                            
 -----------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Bitmap Heap Scan on tpart_ao_btree_1_prt_1
-         Recheck Cond: ((a = 3) AND (b = 3))
-         ->  Bitmap Index Scan on tpart_ao_btree_1_prt_1_a_b_idx
-               Index Cond: ((a = 3) AND (b = 3))
+   ->  Index Only Scan using tpart_ao_btree_1_prt_1_a_b_idx on tpart_ao_btree_1_prt_1
+         Index Cond: ((a = 3) AND (b = 3))
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 -- expect a fallback for all four of these queries
 select * from tpart_dim d join t_ao_btree f on d.a=f.a where d.b=1;
@@ -13315,12 +13263,7 @@ select enable_xform('CXformJoin2BitmapIndexGetApply');
  CXformJoin2BitmapIndexGetApply is enabled
 (1 row)
 
-select enable_xform('CXformInnerJoin2NLJoin');
-           enable_xform            
------------------------------------
- CXformInnerJoin2NLJoin is enabled
-(1 row)
-
+reset optimizer_enable_nljoin;
 -- end_ignore
 reset optimizer_enable_hashjoin;
 -- Tests converted from MDPs that use tables partitioned on text columns and similar types,

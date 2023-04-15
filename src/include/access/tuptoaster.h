@@ -149,12 +149,12 @@ do { \
 extern HeapTuple toast_insert_or_update(Relation rel,
 										HeapTuple newtup, HeapTuple oldtup,
 										int toast_tuple_target,
-										bool isFrozen, int options);
+										int options);
 
 extern MemTuple toast_insert_or_update_memtup(Relation rel,
 											  MemTuple newtup, MemTuple oldtup,
 											  MemTupleBinding *pbind, int toast_tuple_target,
-											  bool isFrozen, int options);
+											  int options);
 
 /* ----------
  * toast_delete -

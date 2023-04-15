@@ -142,7 +142,7 @@
       <dxl:ColumnStatistics Mdid="1.133758.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.133758.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.133758.1.1" Name="ext_nation" Rows="1000000.000000"/>
-      <dxl:Relation Mdid="6.133758.1.1" Name="ext_nation" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4">
+      <dxl:Relation Mdid="6.133758.1.1" Name="ext_nation" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4" ForeignServer="0.91908.1.0">
         <dxl:Columns>
           <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

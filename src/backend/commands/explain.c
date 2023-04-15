@@ -48,8 +48,10 @@
 
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
+#include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
 #include "optimizer/optimizer.h"
+#include "optimizer/orca.h"
 
 #ifdef USE_ORCA
 extern char *SerializeDXLPlan(Query *parse);
@@ -384,6 +386,9 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	MemoryContext oldcxt = CurrentMemoryContext;
 	bool		save_enumerate;
 	char	   *dxl = NULL;
+	PlannerInfo		*root;
+	PlannerGlobal	*glob;
+	Query			*pqueryCopy;
 
 	save_enumerate = optimizer_enumerate_plans;
 
@@ -392,8 +397,53 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	/* enable plan enumeration before calling optimizer */
 	optimizer_enumerate_plans = true;
 
+	/*
+	 * Initialize a dummy PlannerGlobal struct. ORCA doesn't use it, but the
+	 * pre- and post-processing steps do.
+	 */
+	glob = makeNode(PlannerGlobal);
+	glob->subplans = NIL;
+	glob->subroots = NIL;
+	glob->rewindPlanIDs = NULL;
+	glob->transientPlan = false;
+	glob->oneoffPlan = false;
+	glob->share.shared_inputs = NULL;
+	glob->share.shared_input_count = 0;
+	glob->share.motStack = NIL;
+	glob->share.qdShares = NULL;
+	/* these will be filled in below, in the pre- and post-processing steps */
+	glob->finalrtable = NIL;
+	glob->relationOids = NIL;
+	glob->invalItems = NIL;
+
+	root = makeNode(PlannerInfo);
+	root->parse = query;
+	root->glob = glob;
+	root->query_level = 1;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+
+	/* create a local copy to hand to the optimizer */
+	pqueryCopy = (Query *) copyObject(query);
+
+	/*
+	 * Pre-process the Query tree before calling optimizer.
+	 *
+	 * Constant folding will add dependencies to functions or relations in
+	 * glob->invalItems, for any functions that are inlined or eliminated
+	 * away. (We will find dependencies to other objects later, after planning).
+	 */
+	pqueryCopy = fold_constants(root, pqueryCopy, params, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
+
+	/*
+	 * If any Query in the tree mixes window functions and aggregates, we need to
+	 * transform it such that the grouped query appears as a subquery
+	 */
+	pqueryCopy = (Query *) transformGroupedWindows((Node *) pqueryCopy, NULL);
+
+
 	/* optimize query using optimizer and get generated plan in DXL format */
-	dxl = SerializeDXLPlan(query);
+	dxl = SerializeDXLPlan(pqueryCopy);
 
 	/* restore old value of enumerate plans GUC */
 	optimizer_enumerate_plans = save_enumerate;
@@ -625,8 +675,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
         queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
 															   starttime);
     }
-	else
-		queryDesc->showstatctx = NULL;
 
 	/* Select execution options */
 	if (es->analyze)
@@ -1382,6 +1430,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 										((Scan *) plan)->scanrelid);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 			*rels_used = bms_add_members(*rels_used,
 										 ((ForeignScan *) plan)->fs_relids);
 			break;
@@ -1616,6 +1665,31 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					break;
 				case CMD_DELETE:
 					pname = "Foreign Delete";
+					operation = "Delete";
+					break;
+				default:
+					pname = "???";
+					break;
+			}
+			break;
+		case T_DynamicForeignScan:
+			sname = "Dynamic Foreign Scan";
+			switch (((ForeignScan *)((DynamicForeignScan *) plan))->operation)
+			{
+				case CMD_SELECT:
+					pname = "Dynamic Foreign Scan";
+					operation = "Select";
+					break;
+				case CMD_INSERT:
+					pname = "Dynamic Foreign Insert";
+					operation = "Insert";
+					break;
+				case CMD_UPDATE:
+					pname = "Dynamic Foreign Update";
+					operation = "Update";
+					break;
+				case CMD_DELETE:
+					pname = "Dynamic Foreign Delete";
 					operation = "Delete";
 					break;
 				default:
@@ -1862,6 +1936,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			ExplainScanTarget((Scan *) plan, es);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 			if (((Scan *) plan)->scanrelid > 0)
 				ExplainScanTarget((Scan *) plan, es);
@@ -2392,12 +2467,29 @@ ExplainNode(PlanState *planstate, List *ancestors,
 											   planstate, es);
 			}
 			break;
+		case T_DynamicForeignScan:
 		case T_ForeignScan:
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
-			show_foreignscan_info((ForeignScanState *) planstate, es);
+			if (IsA(plan, DynamicForeignScan))
+			{
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicForeignScan *)plan)
+							->foreignscan.scan.scanrelid,
+							es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
+				ExplainPropertyInteger(
+					"Number of partitions to scan", buf,
+					list_length(((DynamicForeignScan *)plan)->partOids),es);
+				// TODO: Maybe add show_foreignscan_info here? We'd need to populate the planstate
+			}
+			else
+			{
+				show_foreignscan_info((ForeignScanState *) planstate, es);
+			}
 			break;
 		case T_CustomScan:
 			{
@@ -3421,7 +3513,7 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
 									 agg->vcnt);
 				else
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+					appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
 									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
 									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
 									 agg->vcnt);
@@ -3951,6 +4043,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 		case T_ModifyTable:
 			/* Assert it's on a real relation */

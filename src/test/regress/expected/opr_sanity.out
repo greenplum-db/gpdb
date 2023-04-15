@@ -168,13 +168,14 @@ WHERE p1.oid < p2.oid AND
      p1.proretset != p2.proretset OR
      p1.provolatile != p2.provolatile OR
      p1.pronargs != p2.pronargs);
- oid  |      proname      | oid  |       proname       
-------+-------------------+------+---------------------
- 6212 | int2_matrix_accum | 6214 | int8_matrix_accum
- 6212 | int2_matrix_accum | 6215 | float8_matrix_accum
- 6213 | int4_matrix_accum | 6214 | int8_matrix_accum
- 6213 | int4_matrix_accum | 6215 | float8_matrix_accum
-(4 rows)
+ oid  |            proname             | oid  |            proname             
+------+--------------------------------+------+--------------------------------
+ 7143 | gp_log_backend_memory_contexts | 7144 | gp_log_backend_memory_contexts
+ 6212 | int2_matrix_accum              | 6215 | float8_matrix_accum
+ 6212 | int2_matrix_accum              | 6214 | int8_matrix_accum
+ 6213 | int4_matrix_accum              | 6215 | float8_matrix_accum
+ 6213 | int4_matrix_accum              | 6214 | int8_matrix_accum
+(5 rows)
 
 -- Look for uses of different type OIDs in the argument/result type fields
 -- for different aliases of the same built-in function.

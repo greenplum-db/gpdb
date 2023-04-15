@@ -200,3 +200,11 @@ DROP TABLE capitals;
 DROP TABLE cities;
 set gp_statistics_pullup_from_child_partition to off;
 -- gpdb end: test inherit/partition table distinct when gp_statistics_pullup_from_child_partition is on
+
+-- please refer to https://github.com/greenplum-db/gpdb/issues/15033
+CREATE TABLE t1_issue_15033(c DECIMAL CHECK (0.4 IS DISTINCT FROM 0.3));
+CREATE TABLE t2_issue_15033(c DECIMAL CHECK (0.4 IS NOT DISTINCT FROM 0.3));
+INSERT INTO t1_issue_15033 VALUES(10);
+SELECT * FROM t1_issue_15033;
+INSERT INTO t2_issue_15033 VALUES(10);
+SELECT * FROM t2_issue_15033;

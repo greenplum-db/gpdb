@@ -173,8 +173,8 @@ enum EOptTraceFlag
 	// enable motion hazard handling during NLJ optimization
 	EopttraceMotionHazardHandling = 103027,
 
-	// non-master gather enforcement for DML queries
-	EopttraceDisableNonMasterGatherForDML = 103028,
+	// non-coordinator gather enforcement for DML queries
+	EopttraceDisableNonCoordinatorGatherForDML = 103028,
 
 	// Force the optimizer to pick a plan that minimizes skew but adds an extra motion node when aggs are used
 	EopttraceForceAggSkewAvoidance = 103029,
@@ -217,6 +217,12 @@ enum EOptTraceFlag
 
 	// Discard HashJoin with RedistributeMotion nodes
 	EopttraceDiscardRedistributeHashJoin = 103044,
+
+	// disable hash join alternatives
+	EopttraceDisableInnerHashJoin = 103045,
+
+	// enable nested loop join alternatives
+	EopttraceDisableInnerNLJ = 103046,
 
 	///////////////////////////////////////////////////////
 	///////////////////// statistics flags ////////////////

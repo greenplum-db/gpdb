@@ -183,6 +183,11 @@ public:
 	// satisfies function
 	BOOL FSatisfies(const CPartitionPropagationSpec *pps_reqd) const;
 
+	// Check if there is an unsupported part prop spec between two properties
+	BOOL IsUnsupportedPartSelector(
+		const CPartitionPropagationSpec *pps_reqd) const;
+
+
 
 	SPartPropSpecInfo *FindPartPropSpecInfo(ULONG scan_id) const;
 

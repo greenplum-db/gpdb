@@ -554,9 +554,12 @@ CREATE VIEW pg_config AS
 REVOKE ALL on pg_config FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION pg_config() FROM PUBLIC;
 
+CREATE VIEW pg_backend_memory_contexts AS
+    SELECT * FROM pg_get_backend_memory_contexts();
+
 -- Statistics views
 
-CREATE VIEW pg_stat_all_tables_internal AS
+CREATE VIEW pg_stat_all_tables AS
     SELECT
             C.oid AS relid,
             N.nspname AS schemaname,
@@ -589,7 +592,7 @@ CREATE VIEW pg_stat_all_tables_internal AS
 
 -- Gather data from segments on user tables, and use data on coordinator on system tables.
 
-CREATE VIEW pg_stat_all_tables AS
+CREATE VIEW gp_stat_all_tables_summary AS
 SELECT
     s.relid,
     s.schemaname,
@@ -638,7 +641,7 @@ FROM
          max(analyze_count) as analyze_count,
          max(autoanalyze_count) as autoanalyze_count
      FROM
-         gp_dist_random('pg_stat_all_tables_internal') allt
+         gp_dist_random('pg_stat_all_tables') allt
          inner join pg_class c
                on allt.relid = c.oid
          left outer join gp_distribution_policy d
@@ -656,9 +659,9 @@ FROM
      SELECT
          *
      FROM
-         pg_stat_all_tables_internal
+         pg_stat_all_tables
      WHERE
-             relid < 16384) m, pg_stat_all_tables_internal s
+             relid < 16384) m, pg_stat_all_tables s
 WHERE m.relid = s.relid;
 
 CREATE VIEW pg_stat_xact_all_tables AS
@@ -693,12 +696,17 @@ CREATE VIEW pg_stat_xact_sys_tables AS
 
 CREATE VIEW pg_stat_user_tables AS
     SELECT * FROM pg_stat_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
+          schemaname !~ '^pg_toast';
+
+CREATE VIEW gp_stat_user_tables_summary AS
+    SELECT * FROM gp_stat_all_tables_summary
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_xact_user_tables AS
     SELECT * FROM pg_stat_xact_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_tables AS
@@ -733,10 +741,10 @@ CREATE VIEW pg_statio_sys_tables AS
 
 CREATE VIEW pg_statio_user_tables AS
     SELECT * FROM pg_statio_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
-CREATE VIEW pg_stat_all_indexes_internal AS
+CREATE VIEW pg_stat_all_indexes AS
     SELECT
             C.oid AS relid,
             I.oid AS indexrelid,
@@ -754,7 +762,7 @@ CREATE VIEW pg_stat_all_indexes_internal AS
 
 -- Gather data from segments on user tables, and use data on coordinator on system tables.
 
-CREATE VIEW pg_stat_all_indexes AS
+CREATE VIEW gp_stat_all_indexes_summary AS
 SELECT
     s.relid,
     s.indexrelid,
@@ -775,7 +783,7 @@ FROM
          sum(idx_tup_read) as idx_tup_read,
          sum(idx_tup_fetch) as idx_tup_fetch
      FROM
-         gp_dist_random('pg_stat_all_indexes_internal')
+         gp_dist_random('pg_stat_all_indexes')
      WHERE
              relid >= 16384
      GROUP BY relid, indexrelid, schemaname, relname, indexrelname
@@ -785,9 +793,9 @@ FROM
      SELECT
          *
      FROM
-         pg_stat_all_indexes_internal
+         pg_stat_all_indexes
      WHERE
-             relid < 16384) m, pg_stat_all_indexes_internal s
+             relid < 16384) m, pg_stat_all_indexes s
 WHERE m.relid = s.relid;
 
 CREATE VIEW pg_stat_sys_indexes AS
@@ -797,7 +805,12 @@ CREATE VIEW pg_stat_sys_indexes AS
 
 CREATE VIEW pg_stat_user_indexes AS
     SELECT * FROM pg_stat_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
+          schemaname !~ '^pg_toast';
+
+CREATE VIEW gp_stat_user_indexes_summary AS
+    SELECT * FROM gp_stat_all_indexes_summary
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_indexes AS
@@ -823,7 +836,7 @@ CREATE VIEW pg_statio_sys_indexes AS
 
 CREATE VIEW pg_statio_user_indexes AS
     SELECT * FROM pg_statio_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_sequences AS
@@ -840,12 +853,12 @@ CREATE VIEW pg_statio_all_sequences AS
 
 CREATE VIEW pg_statio_sys_sequences AS
     SELECT * FROM pg_statio_all_sequences
-    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+    WHERE schemaname IN ('pg_catalog', 'information_schema', 'pg_aoseg') OR
           schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_statio_user_sequences AS
     SELECT * FROM pg_statio_all_sequences
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_activity AS
@@ -924,6 +937,7 @@ $$
 $$
 LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
 
+-- This view has an additional column than pg_stat_replication so cannot be generated using system_views_gp.in
 CREATE VIEW gp_stat_replication AS
     SELECT *, pg_catalog.gp_replication_error() AS sync_error
     FROM pg_catalog.gp_stat_get_master_replication() AS R
@@ -1398,6 +1412,9 @@ CREATE VIEW pg_stat_progress_vacuum AS
                       WHEN 4 THEN 'cleaning up indexes'
                       WHEN 5 THEN 'truncating heap'
                       WHEN 6 THEN 'performing final cleanup'
+                      WHEN 7 THEN 'append-optimized pre-cleanup'
+                      WHEN 8 THEN 'append-optimized compact'
+                      WHEN 9 THEN 'append-optimized post-cleanup'
                       END AS phase,
         S.param2 AS heap_blks_total, S.param3 AS heap_blks_scanned,
         S.param4 AS heap_blks_vacuumed, S.param5 AS index_vacuum_count,
@@ -1422,6 +1439,8 @@ CREATE VIEW pg_stat_progress_cluster AS
                       WHEN 5 THEN 'swapping relation files'
                       WHEN 6 THEN 'rebuilding index'
                       WHEN 7 THEN 'performing final cleanup'
+                      WHEN 8 THEN 'seq scanning append-optimized'
+                      WHEN 9 THEN 'writing new append-optimized'
                       END AS phase,
         CAST(S.param3 AS oid) AS cluster_index_relid,
         S.param4 AS heap_tuples_scanned,
@@ -1816,6 +1835,8 @@ REVOKE EXECUTE ON FUNCTION pg_stat_file(text,boolean) FROM public;
 REVOKE EXECUTE ON FUNCTION pg_ls_dir(text) FROM public;
 REVOKE EXECUTE ON FUNCTION pg_ls_dir(text,boolean,boolean) FROM public;
 
+REVOKE EXECUTE ON FUNCTION pg_log_backend_memory_contexts(integer) FROM PUBLIC;
+
 --
 -- GPDB: These GPDB-specific catalog functions need to have their
 -- default permissions changed as well.
@@ -1849,11 +1870,6 @@ $$
   select sum(n) from brin_summarize_new_values_internal(t) as n;
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
-
-CREATE OR REPLACE VIEW gp_stat_archiver AS
-    SELECT -1 AS gp_segment_id, * FROM pg_stat_archiver
-    UNION
-    SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');
 
 CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
 									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),

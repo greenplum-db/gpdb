@@ -47,13 +47,57 @@ test_get_func_arg_types_can_correctly_return_more_than_one_argtype(void **state)
 	assert_int_equal(22, lfirst_oid(lnext(list_head(result))));
 }
 
+static void
+test_default_partition_opfamily_for_type(void **state)
+{
+    TypeCacheEntry *tcache;
+    tcache = malloc(sizeof(struct TypeCacheEntry));
+    tcache->btree_opf = 111;
+    tcache->cmp_proc = 0;
+    tcache->eq_opr = 0;
+    tcache->lt_opr = 0;
+    tcache->gt_opr = 0;
+    will_return(lookup_type_cache, tcache);
+    expect_value(lookup_type_cache, type_id, 23);
+    expect_value(lookup_type_cache, flags, 623);
+
+    // if btree_opf has a non-zero value,
+    // but cmp_proc, eq_opr, lt_opr, and gt_opr are all zero,
+    // return invalid oid
+    Oid result1 = default_partition_opfamily_for_type(23);
+    assert_int_equal(0, result1);
+
+    tcache->cmp_proc = 222;
+    will_return(lookup_type_cache, tcache);
+    expect_value(lookup_type_cache, type_id, 23);
+    expect_value(lookup_type_cache, flags, 623);
+
+    // if btree_opf and cmp_proc have non-zero values,
+    // but eq_opr, lt_opr, and gt_opr are all zero,
+    // return invalid oid
+    Oid result2 = default_partition_opfamily_for_type(23);
+    assert_int_equal(0, result2);
+
+    tcache->gt_opr = 333;
+    will_return(lookup_type_cache, tcache);
+    expect_value(lookup_type_cache, type_id, 23);
+    expect_value(lookup_type_cache, flags, 623);
+
+    // if btree_opf and cmp_proc have non-zero values,
+    // and at least eq/lt/gt_opr has a non-zero value,
+    // return btree opfamily
+    Oid result3 = default_partition_opfamily_for_type(23);
+    assert_int_equal(111, result3);
+}
+
 int
 main(int argc, char* argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-		unit_test(test_get_func_arg_types_can_correctly_return_more_than_one_argtype)
+		unit_test(test_get_func_arg_types_can_correctly_return_more_than_one_argtype),
+            unit_test(test_default_partition_opfamily_for_type)
 	};
 	MemoryContextInit();
 	return run_tests(tests);

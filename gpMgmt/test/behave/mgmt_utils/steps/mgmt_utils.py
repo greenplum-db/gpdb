@@ -22,7 +22,7 @@ from contextlib import closing
 
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
-from gppylib.commands import gp
+from gppylib.commands import gp, unix
 from gppylib.commands.pg import PgBaseBackup
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
@@ -2300,6 +2300,22 @@ ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c g
 """ % (host, source_file, user, port, dbname, table)
     run_command(context, remote_cmd.strip())
 
+@when('a table "{table}" in database "{dbname}" has its relnatts inflated on segment with content id "{segid}"')
+def impl(context, table, dbname, segid):
+    local_cmd = 'psql %s -t -c "SELECT port,hostname FROM gp_segment_configuration WHERE content=%s and role=\'p\';"' % (
+        dbname, segid)
+    run_command(context, local_cmd)
+    port, host = context.stdout_message.split("|")
+    port = port.strip()
+    host = host.strip()
+    user = os.environ.get('USER')
+    source_file = os.path.join(os.environ.get('GPHOME'), 'greenplum_path.sh')
+    # Yes, the below line is ugly.  It looks much uglier when done with separate strings, given the multiple levels of escaping required.
+    remote_cmd = """
+ssh %s "source %s; export PGUSER=%s; export PGPORT=%s; export PGOPTIONS=\\\"-c gp_role=utility\\\"; psql -d %s -c \\\"SET allow_system_table_mods=true; UPDATE pg_class SET relnatts=relnatts + 2 WHERE relname=\'%s\';\\\""
+""" % (host, source_file, user, port, dbname, table)
+    run_command(context, remote_cmd.strip())
+
 
 @then('The user runs sql "{query}" in "{dbname}" on first primary segment')
 @when('The user runs sql "{query}" in "{dbname}" on first primary segment')
@@ -2355,7 +2371,7 @@ def impl(context, query, dbname, host, port):
 @then('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
 @given('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
 def impl(context, psql_cmd, dbname, utility_mode):
-    if utility_mode == "True":
+    if eval(utility_mode) == 'True':
         cmd = "PGOPTIONS=\'-c gp_role=utility\' psql -d \'{}\' {};".format(dbname, psql_cmd)
     else:
         cmd = "psql -d \'{}\' {};".format(dbname, psql_cmd)
@@ -3194,6 +3210,21 @@ def impl(context, num_of_segments):
             "%s\ndump of gp_segment_configuration: %s" %
             (context.start_data_segments, end_data_segments, rows))
 
+@when('verify that {table_name} catalog table is present on new segments')
+@then('verify that {table_name} catalog table is present on new segments')
+def impl(context, table_name):
+    dbname = 'gptest'
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
+        query = """SELECT count(*) from gp_segment_configuration where -1 < content and role='p'"""
+        no_of_segments = dbconn.querySingleton(conn, query)
+
+        query = """select count(distinct(gp_segment_id)) from gp_dist_random('%s')""" % table_name
+        no_segments_table_present = dbconn.querySingleton(conn, query)
+
+    if no_of_segments != no_segments_table_present:
+        raise Exception("Table %s is not present on newly expanded segments" % table_name)
+
+
 @given('the cluster is setup for an expansion on hosts "{hostnames}"')
 def impl(context, hostnames):
     hosts = hostnames.split(",")
@@ -4004,3 +4035,33 @@ def impl(context):
 
     with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, query)
+
+@given('running postgres processes are saved in context')
+@when('running postgres processes are saved in context')
+@then('running postgres processes are saved in context')
+def impl(context):
+
+    # Store the pids in a dictionary where key will be the hostname and the
+    # value will be the pids of all the postgres processes running on that host
+    host_to_pid_map = dict()
+    segs = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    for seg in segs:
+        pids = gp.get_postgres_segment_processes(seg.datadir, seg.hostname)
+        if seg.hostname not in host_to_pid_map:
+            host_to_pid_map[seg.hostname] = pids
+        else:
+            host_to_pid_map[seg.hostname].extend(pids)
+
+    context.host_to_pid_map = host_to_pid_map
+
+
+@given('verify no postgres process is running on all hosts')
+@when('verify no postgres process is running on all hosts')
+@then('verify no postgres process is running on all hosts')
+def impl(context):
+    host_to_pid_map = context.host_to_pid_map
+
+    for host in host_to_pid_map:
+        for pid in host_to_pid_map[host]:
+            if unix.check_pid_on_remotehost(pid, host):
+                raise Exception("Postgres process {0} not killed on {1}.".format(pid, host))

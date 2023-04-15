@@ -593,9 +593,11 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 	const IMDRelation *pmdrel = m_pmda->RetrieveRel(table_descr->MDId());
 	if (pmdrel->IsPartitioned())
 	{
-		GPOS_ASSERT(EdxlopLogicalGet == edxlopid);
+		GPOS_ASSERT(EdxlopLogicalGet == edxlopid ||
+					EdxlopLogicalForeignGet == edxlopid);
 
 		IMdIdArray *partition_mdids = pmdrel->ChildPartitionMdids();
+		IMdIdArray *foreign_server_mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
 		{
 			IMDId *part_mdid = (*partition_mdids)[ul];
@@ -607,13 +609,30 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 						   GPOS_WSZ_LIT("Multi-level partitioned tables"));
 			}
+
+			// store array of foreign partitions
+			IMDId *foreign_server_mdid = nullptr;
+			if (IMDRelation::ErelstorageForeign ==
+				partrel->RetrieveRelStorageType())
+			{
+				foreign_server_mdid = partrel->ForeignServer();
+				foreign_server_mdid->AddRef();
+			}
+			else
+			{
+				// not foreign, store as invalid mdid
+				foreign_server_mdid =
+					GPOS_NEW(m_mp) CMDIdGPDB(CMDIdGPDB::m_mdid_invalid_key);
+			}
+			foreign_server_mdids->Append(foreign_server_mdid);
 		}
 
 		// generate a part index id
 		ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
 		partition_mdids->AddRef();
-		popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(
-			m_mp, pname, ptabdesc, part_idx_id, partition_mdids);
+		popGet = GPOS_NEW(m_mp)
+			CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id,
+							   partition_mdids, foreign_server_mdids);
 		CLogicalDynamicGet *popDynamicGet =
 			CLogicalDynamicGet::PopConvert(popGet);
 
@@ -1797,7 +1816,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 		{
 			// if no partition-by columns, window functions need gathered input
 			pds = GPOS_NEW(m_mp) CDistributionSpecSingleton(
-				CDistributionSpecSingleton::EstMaster);
+				CDistributionSpecSingleton::EstCoordinator);
 		}
 		colref_array->Release();
 
@@ -2178,9 +2197,9 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	phmiulAttnoColMapping->Release();
 	phmululColMapping->Release();
 
-	if (IMDRelation::EreldistrMasterOnly == rel_distr_policy)
+	if (IMDRelation::EreldistrCoordinatorOnly == rel_distr_policy)
 	{
-		COptCtxt::PoctxtFromTLS()->SetHasMasterOnlyTables();
+		COptCtxt::PoctxtFromTLS()->SetHasCoordinatorOnlyTables();
 	}
 
 	if (IMDRelation::EreldistrReplicated == rel_distr_policy)
@@ -2972,7 +2991,8 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 		pop = GPOS_NEW(m_mp) CScalarFunc(
 			m_mp, mdid_func, mdid_return_type, pdxlopFuncExpr->TypeModifier(),
 			GPOS_NEW(m_mp) CWStringConst(
-				m_mp, (pmdfunc->Mdname().GetMDName())->GetBuffer()));
+				m_mp, (pmdfunc->Mdname().GetMDName())->GetBuffer()),
+			pdxlopFuncExpr->IsFuncVariadic());
 	}
 
 	CExpression *pexprFunc = nullptr;

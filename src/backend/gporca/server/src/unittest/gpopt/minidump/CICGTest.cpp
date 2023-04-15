@@ -285,8 +285,7 @@ CICGTest::EresUnittest_NegativeIndexApplyTests()
 		true);
 	CAutoTraceFlag atfTS(EopttraceDisableXformBase + CXform::ExfGet2TableScan,
 						 true);
-	CAutoTraceFlag atfNLJ(
-		EopttraceDisableXformBase + CXform::ExfInnerJoin2NLJoin, true);
+	CAutoTraceFlag atfNLJ(EopttraceDisableInnerNLJ, true);
 
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone);
 	CMemoryPool *mp = amp.Pmp();

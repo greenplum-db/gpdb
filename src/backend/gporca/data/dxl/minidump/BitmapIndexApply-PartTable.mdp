@@ -50,7 +50,7 @@ ORDER BY 1 asc ;
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102024,102027,102029,102115,102116,102117,102119,102144,103027,103033"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102024,103046,103045,102115,102116,102117,102119,102144,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Relation Mdid="6.16166659.1.0" Name="my_tq_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">

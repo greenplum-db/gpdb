@@ -81,7 +81,7 @@ static TM_Result heap_update_internal(Relation relation, ItemPointer otid, HeapT
 									  TM_FailureData *tmfd, LockTupleMode *lockmode, bool simple);
 
 static HeapTuple heap_prepare_insert(Relation relation, HeapTuple tup,
-									 TransactionId xid, CommandId cid, int options, bool isFrozen);
+									 TransactionId xid, CommandId cid, int options);
 static XLogRecPtr log_heap_update(Relation reln, Buffer oldbuf,
 								  Buffer newbuf, HeapTuple oldtup,
 								  HeapTuple newtup, HeapTuple old_key_tup,
@@ -1964,7 +1964,6 @@ void
 heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 			int options, BulkInsertState bistate, TransactionId xid)
 {
-	bool		isFrozen = (xid == FrozenTransactionId);
 	HeapTuple	heaptup;
 	Buffer		buffer;
 	Buffer		vmbuffer = InvalidBuffer;
@@ -1989,7 +1988,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 	 * Note: below this point, heaptup is the data we actually intend to store
 	 * into the relation; tup is the caller's original untoasted data.
 	 */
-	heaptup = heap_prepare_insert(relation, tup, xid, cid, options, isFrozen);
+	heaptup = heap_prepare_insert(relation, tup, xid, cid, options);
 
 	/*
 	 * Find buffer to insert this tuple into.  If the page is all visible,
@@ -2115,10 +2114,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 		/* filtering by origin on a row level is much more efficient */
 		XLogSetRecordFlags(XLOG_INCLUDE_ORIGIN);
 
-		if (!isFrozen)
-			recptr = XLogInsert(RM_HEAP_ID, info);
-		else
-			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, info, FrozenTransactionId);
+		recptr = XLogInsert(RM_HEAP_ID, info);
 
 		PageSetLSN(page, recptr);
 	}
@@ -2163,7 +2159,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
  */
 static HeapTuple
 heap_prepare_insert(Relation relation, HeapTuple tup, TransactionId xid,
-					CommandId cid, int options, bool isFrozen)
+					CommandId cid, int options)
 {
 	/*
 	 * Parallel operations are required to be strictly read-only in a parallel
@@ -2179,8 +2175,6 @@ heap_prepare_insert(Relation relation, HeapTuple tup, TransactionId xid,
 				 errmsg("cannot insert tuples in a parallel worker")));
 
 	tup->t_data->t_infomask &= ~(HEAP_XACT_MASK);
-	if (isFrozen)
-		tup->t_data->t_infomask |= HEAP_XMIN_COMMITTED;
 	tup->t_data->t_infomask2 &= ~(HEAP2_XACT_MASK);
 	tup->t_data->t_infomask |= HEAP_XMAX_INVALID;
 	HeapTupleHeaderSetXmin(tup->t_data, xid);
@@ -2204,7 +2198,7 @@ heap_prepare_insert(Relation relation, HeapTuple tup, TransactionId xid,
 	}
 	else if (HeapTupleHasExternal(tup) || tup->t_len > TOAST_TUPLE_THRESHOLD)
 		return toast_insert_or_update(relation, tup, NULL,
-									  TOAST_TUPLE_TARGET, isFrozen,
+									  TOAST_TUPLE_TARGET,
 									  options);
 	else
 		return tup;
@@ -2226,7 +2220,6 @@ heap_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
 				  CommandId cid, int options, BulkInsertState bistate)
 {
 	TransactionId xid = GetCurrentTransactionId();
-	bool        isFrozen = false;
 	HeapTuple  *heaptuples;
 	int			i;
 	int			ndone;
@@ -2254,7 +2247,7 @@ heap_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
 		slots[i]->tts_tableOid = RelationGetRelid(relation);
 		tuple->t_tableOid = slots[i]->tts_tableOid;
 		heaptuples[i] = heap_prepare_insert(relation, tuple, xid, cid,
-											options, isFrozen);
+											options);
 	}
 
 	/*
@@ -3664,7 +3657,7 @@ l2:
 		{
 			/* Note we always use WAL and FSM during updates */
 			heaptup = toast_insert_or_update(relation, newtup, &oldtup,
-											 TOAST_TUPLE_TARGET, false, 0);
+											 TOAST_TUPLE_TARGET, 0);
 			newtupsize = MAXALIGN(heaptup->t_len);
 		}
 		else
@@ -6632,6 +6625,64 @@ heap_freeze_tuple(HeapTupleHeader tuple,
 }
 
 /*
+ * GPDB: heap_freeze_tuple_wal_logged
+ *		Similar to heap_freeze_tuple, but with WAL logging AND do not check
+ * 		cutoff xid (i.e. we blindly freeze a tuple and write WAL for it).
+ *
+ * Useful when we want to freeze a tuple immediately after inserting it.
+ */
+void
+heap_freeze_tuple_wal_logged(Relation rel, HeapTuple tup)
+{
+	xl_heap_freeze_tuple 	frozen = {0};
+	Buffer 			buffer;
+	Page 			page;
+	HeapTupleHeader		htup;
+
+	/* Set the passed-in tuple to be frozen */
+	HeapTupleHeaderSetXminFrozen(tup->t_data);
+
+	/*
+	 * Prepare the xl_heap_freeze_tuple manually (instead of heap_prepare_freeze_tuple)
+	 * as we do not need the checks in heap_prepare_freeze_tuple. Note that this would
+	 * suffer from having more field been added to xl_heap_freeze_tuple in future. 
+	 * But that would be caught by a test case in isolation2/frozen_insert_crash.
+	 * Also, we don't set frozen->frzflags as those are to be set only during vacuum.
+	 */
+	frozen.xmax = HeapTupleHeaderGetRawXmax(tup->t_data);
+	frozen.offset = ItemPointerGetOffsetNumber(&(tup->t_self));
+	frozen.t_infomask = tup->t_data->t_infomask;
+	frozen.t_infomask2 = tup->t_data->t_infomask2;
+
+	buffer = ReadBuffer(rel, ItemPointerGetBlockNumber(&(tup->t_self)));
+	LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
+
+	page = (Page) BufferGetPage(buffer);
+
+	START_CRIT_SECTION();
+
+	MarkBufferDirty(buffer);
+
+	/* freeze the tuple in buffer */
+	htup = (HeapTupleHeader) PageGetItem(page, PageGetItemId(page, frozen.offset));
+	heap_execute_freeze_tuple(htup, &frozen);
+
+	/* WAL logging */
+	if (RelationNeedsWAL(rel))
+	{
+		XLogRecPtr      	recptr;
+
+		recptr = log_heap_freeze(rel, buffer, InvalidTransactionId /* cutoff_xid */,
+									&frozen, 1 /*ntuples*/);
+		PageSetLSN(page, recptr);
+	}
+
+	END_CRIT_SECTION();
+
+	UnlockReleaseBuffer(buffer);
+}
+
+/*
  * For a given MultiXactId, return the hint bits that should be set in the
  * tuple's infomask.
  *
@@ -8229,8 +8280,11 @@ heap_xlog_freeze_page(XLogReaderState *record)
 	/*
 	 * In Hot Standby mode, ensure that there's no queries running which still
 	 * consider the frozen xids as running.
+	 * GPDB: but do nothing if there is no valid cutoff xid, which means the
+	 * record is not generated by vacuum but by specifically freezing a tuple
+	 * (see heap_freeze_tuple_no_cutoff).
 	 */
-	if (InHotStandby)
+	if (InHotStandby && TransactionIdIsValid(cutoff_xid))
 	{
 		RelFileNode rnode;
 		TransactionId latestRemovedXid = cutoff_xid;

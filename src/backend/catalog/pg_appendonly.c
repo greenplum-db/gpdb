@@ -49,7 +49,8 @@ void
 InsertAppendOnlyEntry(Oid relid,
 					  Oid segrelid,
 					  Oid blkdirrelid,
-					  Oid visimaprelid)
+					  Oid visimaprelid,
+					  int16 version)
 {
 	Relation	pg_appendonly_rel;
 	HeapTuple	pg_appendonly_tuple = NULL;
@@ -70,6 +71,7 @@ InsertAppendOnlyEntry(Oid relid,
 	values[Anum_pg_appendonly_segrelid - 1] = ObjectIdGetDatum(segrelid);
 	values[Anum_pg_appendonly_blkdirrelid - 1] = ObjectIdGetDatum(blkdirrelid);
 	values[Anum_pg_appendonly_visimaprelid - 1] = ObjectIdGetDatum(visimaprelid);
+	values[Anum_pg_appendonly_version - 1] = Int16GetDatum(version);
 
 	/*
 	 * form the tuple and insert it
@@ -118,24 +120,16 @@ GetAppendOnlyEntryAttributes(Oid relid,
 	relopts = (StdRdOptions *) default_reloptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED);
 
 	if (blocksize != NULL)
-		*blocksize = relopts->blocksize ? relopts->blocksize : DEFAULT_APPENDONLY_BLOCK_SIZE;
+		*blocksize = relopts->blocksize;
 
-	/* If compresstype not specified, set to none */
 	if (compresstype != NULL)
-		*relopts->compresstype ? namestrcpy(compresstype, relopts->compresstype) : namestrcpy(compresstype, "none");
+		namestrcpy(compresstype, relopts->compresstype);
 
 	if (compresslevel != NULL)
-	{
-		if (relopts->compresslevel)
-			*compresslevel = relopts->compresslevel;
-		else if (!compresstype || pg_strcasecmp(compresstype->data, "none") == 0) /* no compression */
-			*compresslevel = 0;
-		else /* zlib, quicklz, zstd and RLE */
-			*compresslevel = 1;
-	}
+		*compresslevel = relopts->compresslevel;
 
 	if (checksum != NULL)
-			*checksum = relopts->checksum ? relopts->checksum : AO_DEFAULT_CHECKSUM;
+		*checksum = relopts->checksum;
 
 	ReleaseSysCache(tuple);
 	table_close(ao_rel, AccessShareLock);
@@ -143,7 +137,8 @@ GetAppendOnlyEntryAttributes(Oid relid,
 
 /*
  * Get the OIDs of the auxiliary relations and their indexes for an appendonly
- * relation.
+ * relation. This should only be called on tables with pg_appendonly entries,
+ * which currently are just non-partitioned AO/CO tables.
  *
  * The OIDs will be retrieved only when the corresponding output variable is
  * not NULL.
@@ -155,6 +150,9 @@ GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *visimaprelid)
 {
 	Form_pg_appendonly	aoForm;
+
+	/* the relation has to be a non-partitioned AO/CO table */
+	Assert(RelationIsAppendOptimized(rel));
 
 	aoForm = rel->rd_appendonly;
 
@@ -168,12 +166,23 @@ GetAppendOnlyEntryAuxOids(Relation rel,
 		*visimaprelid = aoForm->visimaprelid;
 }
 
+/*
+ * Get the pg_appendonly entry for the relation. This should only be called on 
+ * tables with pg_appendonly entries, which currently are just non-partitioned
+ * AO/CO tables. The pg_appendonly data is copied into the Form_pg_appendonly
+ * pointer which should be valid.
+ */
 void
 GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry)
 {
 	Form_pg_appendonly	aoForm;
 
+	/* the relation has to be a non-partitioned AO/CO table and the aoEntry is valid */
+	Assert(RelationIsAppendOptimized(rel));
+	Assert(aoEntry);
+
 	aoForm = rel->rd_appendonly;
+
 	memcpy(aoEntry, aoForm, APPENDONLY_TUPLE_SIZE);
 }
 
