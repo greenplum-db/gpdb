@@ -1,8 +1,0 @@
-Pkgname: pgcrypto
-Architecture: #arch
-Version: ossv1.1_pv1.2_gpdb4.3orca
-OS: #os
-GPDBVersion: 4.3
-Description: Pgcrypto provides cryptographic functions for the Greenplum Database. 
-PostInstall:
-- Master:  "echo 'Please run psql -d mydatabase -f $GPHOME/share/postgresql/contrib/pgcrypto.sql to enable the package.'"
