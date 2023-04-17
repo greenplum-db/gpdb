@@ -419,8 +419,8 @@ void
 ExecForeignScanError(ForeignScanState *node)
 {
 	FdwRoutine *fdwroutine = node->fdwroutine;
-	if (fdwroutine->ScanErrorHandle)
-		fdwroutine->ScanErrorHandle(node);
+	if (fdwroutine->ScanErrorHandler)
+		fdwroutine->ScanErrorHandler(node);
 	else 
 		PG_RE_THROW();
 	return;

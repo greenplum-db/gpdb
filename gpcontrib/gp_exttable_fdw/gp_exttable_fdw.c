@@ -814,7 +814,8 @@ static void
 exttable_ErrorHandling(ForeignScanState *node)
 {
 	exttable_fdw_state *fdw_state = (exttable_fdw_state *) node->fdw_state;
-	extTableErrorHandling(fdw_state->ess_ScanDesc);
+	CopyState	pstate = fdw_state->ess_ScanDesc->fs_pstate;
+	HandleCopyError(pstate);
 }
 
 Datum
@@ -829,7 +830,7 @@ gp_exttable_fdw_handler(PG_FUNCTION_ARGS)
 	routine->IterateForeignScan = exttable_IterateForeignScan;
 	routine->ReScanForeignScan = exttable_ReScanForeignScan;
 	routine->EndForeignScan = exttable_EndForeignScan;
-	routine->ScanErrorHandle = exttable_ErrorHandling;
+	routine->ScanErrorHandler = exttable_ErrorHandling;
 
 	routine->IsForeignRelUpdatable = exttable_IsForeignRelUpdatable;
 	routine->BeginForeignModify = exttable_BeginForeignModify;

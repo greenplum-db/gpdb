@@ -581,6 +581,7 @@ extern char *pg_custom_to_server(const char *s, int len, int src_encoding, void 
 extern char *pg_server_to_custom(const char *s, int len, int dest_encoding, void *cep); /* Obsolete? */
 extern char *pg_any_to_server(const char *s, int len, int encoding);
 extern char *pg_server_to_any(const char *s, int len, int encoding);
+extern bool safe_pg_any_to_server(char *src, char **dst, int len, int encoding);
 
 extern unsigned short BIG5toCNS(unsigned short big5, unsigned char *lc);
 extern unsigned short CNStoBIG5(unsigned short cns, unsigned char lc);

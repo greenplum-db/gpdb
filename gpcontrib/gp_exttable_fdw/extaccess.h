@@ -123,6 +123,5 @@ extern void external_insert(ExternalInsertDesc extInsertDesc, TupleTableSlot *sl
 extern void external_insert_finish(ExternalInsertDesc extInsertDesc);
 
 extern List *appendCopyEncodingOption(List *copyFmtOpts, int encoding);
-extern void extTableErrorHandling(FileScanDesc scan);
 
 #endif   /* EXT_ACCESS_H */

@@ -577,6 +577,24 @@ pg_client_to_server(const char *s, int len)
 	return pg_any_to_server(s, len, ClientEncoding->encoding);
 }
 
+bool
+safe_pg_any_to_server(char *src, char **dst, int len, int encoding)
+{
+	bool res = false;
+	PG_TRY();
+	{
+		*dst = pg_any_to_server(src, len, encoding);
+		res = true;
+	}
+	PG_CATCH();
+	{
+		*dst = src;
+	}
+	PG_END_TRY();
+
+	return res;
+}
+
 /*
  * Convert any encoding to server encoding.
  *

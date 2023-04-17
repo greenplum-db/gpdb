@@ -5383,9 +5383,22 @@ HandleCopyError(CopyState cstate)
 		 * if the error count is reached.
 		 */
 		cdbsreh->rawdata->cursor = 0;
-		cdbsreh->rawdata->data = cstate->line_buf.data;
-		cdbsreh->rawdata->len = cstate->line_buf.len;
+		if (cstate->line_buf_converted == false) {
+			cstate->line_buf_converted = safe_pg_any_to_server(cstate->line_buf.data, 
+															&(cdbsreh->rawdata->data), 
+															cstate->line_buf.len, 
+															cstate->file_encoding);
 
+			if (cstate->line_buf_converted)
+				cdbsreh->rawdata->len = strlen(cdbsreh->rawdata->data);
+			else
+				cdbsreh->rawdata->len = cstate->line_buf.len;
+		}
+		else
+		{
+			cdbsreh->rawdata->data = cstate->line_buf.data;
+			cdbsreh->rawdata->len = cstate->line_buf.len;
+		}
 		cdbsreh->is_server_enc = cstate->line_buf_converted;
 		cdbsreh->linenumber = cstate->cur_lineno;
 		if (cstate->cur_attname)
