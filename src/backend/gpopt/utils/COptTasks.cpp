@@ -605,6 +605,15 @@ COptTasks::OptimizeTask(void *ptr)
 					(PlannedStmt *) gpdb::CopyObject(ConvertToPlanStmtFromDXL(
 						mp, &mda, plan_dxl, opt_ctxt->m_query->canSetTag,
 						query_to_dxl_translator->GetDistributionHashOpsKind()));
+
+				if(opt_ctxt->m_plan_stmt->queryId==0)
+				{
+					//The function PlannedStmt *gpdxl::CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(...)
+					//which is called in static PlannedStmt *COptTasks::ConvertToPlanStmtFromDXL(...),
+					//losts the value of queryId.
+					//So we set it.
+					opt_ctxt->m_plan_stmt->queryId=opt_ctxt->m_query->queryId;
+				}
 			}
 
 			CStatisticsConfig *stats_conf = optimizer_config->GetStatsConf();
