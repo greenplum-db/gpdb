@@ -3374,13 +3374,8 @@ ResourceGroupGetQueryMemoryLimit(void)
 	if (bypassedGroup)
 		return 0;
 
-	if (gp_resgroup_memory_query_fixed_mem)
-	{
-		/*
-		 * If user requests more than statement_mem, grant that.
-		 */
-		return Max((uint64) gp_resgroup_memory_query_fixed_mem * 1024L, stateMem);
-	}
+	if (gp_resgroup_memory_query_fixed_mem > 0)
+		return (uint64) gp_resgroup_memory_query_fixed_mem * 1024L;
 
 	Assert(selfIsAssigned());
 
