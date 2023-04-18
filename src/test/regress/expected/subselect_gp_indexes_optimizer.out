@@ -119,7 +119,7 @@ explain select t1.id1, (select count(*) from choose_seqscan_t2 t2 where t2.id1 =
 (13 rows)
 
 -- Test using a join within the subplan. It could perhaps use an Nested Loop Join +
--- Index Scan to do the join, but at the memont, the planner doesn't consider distributing
+-- Index Scan to do the join, but at the moment, the planner doesn't consider distributing
 -- the Function Scan.
 select t1.id1, (select count(*) from generate_series(1,5) g, choose_seqscan_t2 t2 where t1.id1 = t2.id1 and t2.id2 = g) from choose_seqscan_t1 t1 where t1.id1 < 10;
  id1 | count 
