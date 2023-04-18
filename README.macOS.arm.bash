@@ -72,7 +72,6 @@ ln -s /opt/homebrew/Cellar/python@3.9/$python_version/bin/pip3.9 /opt/homebrew/b
 pip3 install -r python-dependencies.txt
 pyenv install $python_version
 
-#echo -e "127.0.0.1\t$(hostname)" | sudo tee -a /etc/hosts
 echo 127.0.0.1$'\t'$(hostname) | sudo tee -a /etc/hosts
 
 # OS settings
