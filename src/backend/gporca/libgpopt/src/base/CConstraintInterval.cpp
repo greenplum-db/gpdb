@@ -90,7 +90,9 @@ CConstraintInterval::FContradiction() const
 		m_pdrgprng->Size() == 1 && !m_fIncludesNull)
 	{
 		if ((*m_pdrgprng)[0]->EriLeft() == CRange::EriExcluded &&
-			(*m_pdrgprng)[0]->EriRight() == CRange::EriExcluded)
+			(*m_pdrgprng)[0]->EriRight() == CRange::EriExcluded &&
+			(*m_pdrgprng)[0]->PdatumLeft() != nullptr &&
+			(*m_pdrgprng)[0]->PdatumRight() != nullptr)
 		{
 			return true;
 		}
