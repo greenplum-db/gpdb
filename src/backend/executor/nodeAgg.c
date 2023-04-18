@@ -2137,10 +2137,12 @@ lookup_hash_entry(AggState *aggstate, uint32 hash, bool *in_hash_table)
 		}
 	}
 
+#ifdef FAULT_INJECTOR
 	/* Fault inject to force the hash table streaming for testing purpose */
 	if (SIMPLE_FAULT_INJECTOR("force_hashagg_stream_hashtable") == FaultInjectorTypeSkip)
 		if (aggstate->streaming)
 			hash_agg_enter_spill_mode(aggstate);
+#endif
 
 	return entry->additional;
 }
