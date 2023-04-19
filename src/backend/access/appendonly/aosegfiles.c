@@ -38,6 +38,7 @@
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/gp_fastsequence.h"
+#include "catalog/pg_inherits.h"
 #include "cdb/cdbvars.h"
 #include "executor/spi.h"
 #include "nodes/makefuncs.h"
@@ -55,6 +56,7 @@
 #include "utils/numeric.h"
 
 static float8 aorow_compression_ratio_internal(Relation parentrel);
+static bool is_partition_root_with_ao_child(Relation relation); 
 static void UpdateFileSegInfo_internal(Relation parentrel,
 						   int segno,
 						   int64 eof,
@@ -1534,6 +1536,13 @@ get_ao_compression_ratio(PG_FUNCTION_ARGS)
 	/* open the parent (main) relation */
 	parentrel = table_open(relid, AccessShareLock);
 
+	if(RelationGetPartitionKey(parentrel) && is_partition_root_with_ao_child(parentrel))
+	{
+		table_close(parentrel, AccessShareLock);
+		result = -1;
+		PG_RETURN_FLOAT8(result);
+	}
+
 	if (!RelationIsAppendOptimized(parentrel))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1548,6 +1557,29 @@ get_ao_compression_ratio(PG_FUNCTION_ARGS)
 	table_close(parentrel, AccessShareLock);
 
 	PG_RETURN_FLOAT8(result);
+}
+
+static bool 
+is_partition_root_with_ao_child(Relation relation) 
+{
+	List		*inhoids;
+	ListCell	*cell;
+	Relation	childrel;
+	inhoids = find_inheritance_children(RelationGetRelid(relation), NoLock);
+	int nparts = list_length(inhoids);
+	foreach(cell, inhoids)
+	{
+		Oid			inhrelid = lfirst_oid(cell);
+		/* open the child relation */
+		childrel = table_open(inhrelid, AccessShareLock);
+		if (RelationIsAppendOptimized(childrel))
+		{
+			table_close(childrel, AccessShareLock);
+			return true;
+		}
+		table_close(childrel, AccessShareLock);
+	}
+	return false;
 }
 
 static float8
