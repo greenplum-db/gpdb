@@ -125,6 +125,9 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- m/Memory used: \d+/
 -- s/Memory used: \d+/Memory used: ###/
 -- end_matchsubs
+-- start_matchignore
+-- m/\s*optimizer:\s*"off"/
+-- end_matchignore
 -- Check Explain YAML output
 EXPLAIN (FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
 QUERY PLAN
@@ -509,12 +512,14 @@ QUERY PLAN
 -- m/Executor Memory: \d+kB  Segments: 3  Max: \d+kB \(segment \d\)/
 -- s/Executor Memory: \d+kB  Segments: 3  Max: \d+kB \(segment \d\)/Executor Memory: ###kB  Segments: 3  Max: ##kB (segment #)/
 -- end_matchsubs
--- ignore the variable JIT gucs in Settings (unaligned mode + text format)
+-- ignore the variable JIT gucs and "optimizer = 'off'" in Settings (unaligned mode + text format)
 -- start_matchsubs
 -- m/^Settings:.*/
 -- s/,?\s*jit\w*\s*=\s*[^,\n]+//g
 -- m/^Settings:.*/
 -- s/^Settings:[,\s]*/Settings: /
+-- m/^Settings:.*/
+-- s/,?\s*optimizer\w*\s*=\s*'off'//g
 -- end_matchsubs
 --- Check explain analyze sort infomation in verbose mode
 EXPLAIN (ANALYZE, VERBOSE) SELECT * from boxes ORDER BY apple_id;
