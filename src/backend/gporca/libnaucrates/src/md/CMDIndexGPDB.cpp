@@ -401,7 +401,13 @@ BOOL
 CMDIndexGPDB::IsCompatible(const IMDScalarOp *md_scalar_op, ULONG key_pos) const
 {
 	GPOS_ASSERT(nullptr != md_scalar_op);
-	GPOS_ASSERT(key_pos < m_mdid_opfamilies_array->Size());
+
+	// In cover indexes the non-key "payload" should not be considered
+	// compatible with a predicate
+	if (key_pos >= m_mdid_opfamilies_array->Size())
+	{
+		return false;
+	}
 
 	// check if the index opfamily for the key at the given position is one of
 	// the families the scalar comparison belongs to

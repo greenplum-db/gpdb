@@ -2698,12 +2698,6 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 {
 	HeapTupleData *tup = index_rel->rd_indextuple;
 
-	// covering index -- it has INCLUDE (...) columns
-	if (index_rel->rd_index->indnatts > index_rel->rd_index->indnkeyatts)
-	{
-		return false;
-	}
-
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&
 		   gpdb::HeapAttIsNull(tup, Anum_pg_index_indpred) &&

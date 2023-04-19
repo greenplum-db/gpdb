@@ -188,11 +188,16 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 
 		IMDId *mdid =
 			colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
-		mdid->AddRef();
 
-		// TODO:  March 27th 2012; we hard-code NULL treatment
-		// need to revisit
-		pos->Append(mdid, colref, COrderSpec::EntLast);
+		// Include key columns. Exclude non-key "cover" INCLUDE columns
+		if (mdid->IsValid())
+		{
+			mdid->AddRef();
+
+			// TODO:  March 27th 2012; we hard-code NULL treatment
+			// need to revisit
+			pos->Append(mdid, colref, COrderSpec::EntLast);
+		}
 	}
 
 	return pos;
