@@ -14,8 +14,8 @@ SELECT count(*) from gp_opt_version();
 -- fix the number of segments for Orca
 set optimizer_segments = 3;
 
-set optimizer_enable_master_only_queries = on;
--- master only tables
+set optimizer_enable_coordinator_only_queries = on;
+-- coordinator only tables
 
 create schema orca;
 -- start_ignore
@@ -2152,7 +2152,7 @@ select count(*) from wst0 where exists (select 1, rank() over (order by wst1.a1)
 
 --
 -- Test to ensure sane behavior when DML queries are optimized by ORCA by
--- enforcing a non-master gather motion, controlled by
+-- enforcing a non-coordinator gather motion, controlled by
 -- optimizer_enable_gather_on_segment_for_DML GUC
 --
 

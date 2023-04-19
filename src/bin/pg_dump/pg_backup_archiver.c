@@ -416,7 +416,7 @@ RestoreArchive(Archive *AHX)
 		AHX->minRemoteVersion = 0;
 		AHX->maxRemoteVersion = 9999999;
 
-		ConnectDatabase(AHX, &ropt->cparams, false, false);
+		ConnectDatabase(AHX, &ropt->cparams, false, ropt->binary_upgrade);
 
 		/*
 		 * If we're talking to the DB directly, don't send comments since they
@@ -4220,7 +4220,7 @@ restore_toc_entries_postfork(ArchiveHandle *AH, TocEntry *pending_list)
 	/*
 	 * Now reconnect the single parent connection.
 	 */
-	ConnectDatabase((Archive *) AH, &ropt->cparams, true, false);
+	ConnectDatabase((Archive *) AH, &ropt->cparams, true, ropt->binary_upgrade);
 
 	/* re-establish fixed state */
 	_doSetFixedOutputState(AH);
@@ -4885,7 +4885,7 @@ CloneArchive(ArchiveHandle *AH)
 	 * Connect our new clone object to the database, using the same connection
 	 * parameters used for the original connection.
 	 */
-	ConnectDatabase((Archive *) clone, &clone->public.ropt->cparams, true, false);
+	ConnectDatabase((Archive *) clone, &clone->public.ropt->cparams, true, &clone->public.ropt->binary_upgrade);
 
 	/* re-establish fixed state */
 	if (AH->mode == archModeRead)

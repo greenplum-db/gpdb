@@ -393,6 +393,7 @@ enum Edxltoken
 
 	EdxltokenFuncId,
 	EdxltokenFuncRetSet,
+	EdxltokenFuncVariadic,
 
 
 	EdxltokenSortOpId,
@@ -486,7 +487,7 @@ enum Edxltoken
 	EdxltokenPartTypes,
 
 	EdxltokenRelDistrPolicy,
-	EdxltokenRelDistrMasterOnly,
+	EdxltokenRelDistrCoordinatorOnly,
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,
@@ -554,6 +555,7 @@ enum Edxltoken
 	EdxltokenMDTypeByValue,
 	EdxltokenMDTypeDistrOpfamily,
 	EdxltokenMDTypeLegacyDistrOpfamily,
+	EdxltokenMDTypePartOpfamily,
 	EdxltokenMDTypeEqOp,
 	EdxltokenMDTypeNEqOp,
 	EdxltokenMDTypeLTOp,

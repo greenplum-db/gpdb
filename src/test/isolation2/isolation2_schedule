@@ -25,6 +25,7 @@ test: unlogged_heap_tables
 test: unlogged_appendonly_tables
 test: udf_exception_blocks_panic_scenarios
 test: ao_same_trans_truncate_crash
+test: frozen_insert_crash
 
 test: prevent_ao_wal
 
@@ -330,5 +331,8 @@ test: ao_unique_index
 test: aocs_unique_index
 test: uao/ao_unique_index_vacuum_row
 test: uao/ao_unique_index_vacuum_column
+
+# test for free remapper's memory correctly in FATAL
+test: free_remapper_fatal
 
 test: spilling_hashagg

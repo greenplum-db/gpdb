@@ -153,7 +153,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>
@@ -175,7 +175,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>
@@ -209,7 +209,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>
@@ -693,7 +693,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>

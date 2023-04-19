@@ -19,6 +19,7 @@
 -   pg\_appendonly\_alter\_column \(not supported\)
 -   [pg\_attrdef](pg_attrdef.html)
 -   [pg\_attribute](pg_attribute.html)
+-   [pg\_attribute_encoding](pg_attribute_encoding.html)
 -   [pg\_auth\_members](pg_auth_members.html)
 -   [pg\_authid](pg_authid.html)
 -   pg\_autovacuum \(not supported\)

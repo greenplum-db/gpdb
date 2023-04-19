@@ -1287,6 +1287,25 @@ This parameter can be set for a session. The parameter cannot be set within a tr
 |-----------|-------|-------------------|
 |Boolean|false|local, session, reload|
 
+## <a id="gp_resource_group_bypass_catalog_query"></a>gp_resource_group_bypass_catalog_query
+
+> **Note** 
+>The `gp_resource_group_bypass_catalog_query` server configuration parameter is enforced only when resource group-based resource management is active.
+
+When set to `true` -- the default -- Greenplum Database's resource group scheduler bypasses all queries that fulfill both of the following criteria:
+
+- They read exclusively from system catalogs
+- They contain in their query text `pg_catalog` schema tables only
+
+>**Note**
+>If a query contains a mix of `pg_catalog` and any other schema tables the scheduler will **not** bypass the query.
+
+When this configuration parameter is set to `false` and the database has reached the maximum amount of concurrent transactions, the scheduler can block queries that exclusively read from system catalogs. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|true|local, session, reload|
+
 ## <a id="gp_resource_group_cpu_ceiling_enforcement"></a>gp\_resource\_group\_cpu\_ceiling\_enforcement 
 
 Enables the Ceiling Enforcement mode when assigning CPU resources by Percentage. When deactivated, the Elastic mode will be used.
@@ -2226,7 +2245,7 @@ The default cost model, `calibrated`, is more likely to choose a faster bitmap i
 
 ## <a id="optimizer_cte_inlining_bound"></a>optimizer\_cte\_inlining\_bound 
 
-When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WHERE` clause\). The default value, 0, deactivates inlining.
+When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WITH` clause\). The default value, 0, deactivates inlining.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2278,6 +2297,14 @@ When set to `false`, Greenplum Database always falls back to the Postgres Planne
 The parameter can be set for a database system, an individual database, or a session or query.
 
 For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|true|master, session, reload|
+
+## <a id="optimizer_enable_foreign_table"></a>optimizer\_enable\_foreign\_table
+
+When GPORCA is enabled \(the default\) and this configuration parameter is `true` \(the default\), GPORCA generates plans for queries that involve foreign tables. When `false`, queries that include foreign tables fall back to the Postgres Planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

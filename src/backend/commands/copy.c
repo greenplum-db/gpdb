@@ -85,7 +85,7 @@
 #include "utils/metrics_utils.h"
 #include "utils/resscheduler.h"
 #include "utils/string_utils.h"
-
+#include "partitioning/partdesc.h"
 
 #define ISOCTAL(c) (((c) >= '0') && ((c) <= '7'))
 #define OCTVALUE(c) ((c) - '0')
@@ -1122,21 +1122,8 @@ DoCopy(ParseState *pstate, const CopyStmt *stmt,
 		 *
 		 * If RLS is not enabled for this, then just fall through to the
 		 * normal non-filtering relation handling.
-		 *
-		 * GPDB: Also do this for partitioned tables. In PostgreSQL, you get
-		 * an error:
-		 *
-		 * ERROR:  cannot copy from partitioned table "foo"
-		 * HINT:  Try the COPY (SELECT ...) TO variant.
-		 *
-		 * In GPDB 6 and before, support for COPYing partitioned table was
-		 * implemented deenop in the COPY processing code. In GPDB 7,
-		 * partitiong was replaced with upstream impementation, but for
-		 * backwards-compatibility, we do the translation to "COPY (SELECT
-		 * ...)" variant automatically, just like PostgreSQL does for RLS.
 		 */
-		if (check_enable_rls(rte->relid, InvalidOid, false) == RLS_ENABLED ||
-			(!is_from && rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE))
+		if (check_enable_rls(rte->relid, InvalidOid, false) == RLS_ENABLED)
 		{
 			SelectStmt *select;
 			ColumnRef  *cr;
@@ -2570,7 +2557,7 @@ BeginCopyTo(ParseState *pstate,
 		0
 	};
 
-	if (rel != NULL && rel->rd_rel->relkind != RELKIND_RELATION)
+	if (rel != NULL && rel->rd_rel->relkind != RELKIND_RELATION && rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 	{
 		if (rel->rd_rel->relkind == RELKIND_VIEW)
 			ereport(ERROR,
@@ -2595,16 +2582,6 @@ BeginCopyTo(ParseState *pstate,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("cannot copy from sequence \"%s\"",
 							RelationGetRelationName(rel))));
-		/*
-		 * GPDB: This is not reached in GPDB, because we transform the command
-		 * to the COPY (SELECT ...) TO variant automatically earlier already.
-		 */
-		else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
-			ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					 errmsg("cannot copy from partitioned table \"%s\"",
-							RelationGetRelationName(rel)),
-					 errhint("Try the COPY (SELECT ...) TO variant.")));
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -3154,33 +3131,119 @@ CopyTo(CopyState cstate)
 
 	if (cstate->rel)
 	{
-		TupleTableSlot *slot;
-		TableScanDesc scandesc;
+		List				*relids;
+		ListCell			*lc;
+		TupleTableSlot		*slot;
+		TableScanDesc		 scandesc;
+		bool foreign_partition_was_skipped = false;
 
-		scandesc = table_beginscan_es(cstate->rel, GetActiveSnapshot(), 0, NULL, proj, NULL);
-		slot = table_slot_create(cstate->rel, NULL);
-
-		processed = 0;
-		while (table_scan_getnextslot(scandesc, ForwardScanDirection, slot))
+		relids = lappend_oid(NIL, cstate->rel->rd_rel->oid);
+		while (relids != NIL)
 		{
-			CHECK_FOR_INTERRUPTS();
+			List *inhRelIds = NIL;
+			foreach(lc, relids)
+			{
+				Oid relid = lfirst_oid(lc);
+				Relation rel;
+				if (relid == cstate->rel->rd_rel->oid)
+					rel = cstate->rel;
+				else
+					rel = relation_open(relid, AccessShareLock);
 
-			/* Deconstruct the tuple ... */
-			slot_getallattrs(slot);
+				/*
+				 * Support `COPY partitioned_table TO file` in GPDB 7 for backwards-compatibility.
+				 * In PostgreSQL, you get an error:
+				 *
+				 * ERROR:  cannot copy from partitioned table "foo"
+				 * HINT:  Try the COPY (SELECT ...) TO variant.
+				 */
+				if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+				{
+					for (int i = 0; i < rel->rd_partdesc->nparts; i++)
+						inhRelIds = lappend_oid(inhRelIds, rel->rd_partdesc->oids[i]);
+				}
+				else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+				{
+					if (!cstate->skip_foreign_partitions)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+										errmsg("cannot copy from relation \"%s\" which has external partition(s)",
+											   RelationGetRelationName(cstate->rel)),
+										errhint("Try the COPY (SELECT ...) TO variant.")));
+					}
+					if (!foreign_partition_was_skipped)
+					{
+						ereport(NOTICE,
+								(errmsg("COPY ignores external partition(s)")));
+						foreign_partition_was_skipped = true;
+					}
+				}
+				else
+				{
+					/*
+					 * We need to update attnumlist because different partition
+					 * entries might have dropped tables.
+					 */
+					if (rel != cstate->rel)
+					{
+						tupDesc = RelationGetDescr(rel);
+						num_phys_attrs = tupDesc->natts;
 
-			/* Format and send the data */
-			CopyOneRowTo(cstate, slot);
+						/* Get info about the columns we need to process. */
+						cstate->out_functions = (FmgrInfo *) palloc(num_phys_attrs * sizeof(FmgrInfo));
+						cstate->attnumlist = CopyGetAttnums(tupDesc, rel, cstate->attnamelist);
+						proj = palloc0(sizeof(bool) * num_phys_attrs);
+						foreach(cur, cstate->attnumlist)
+						{
+							int			attnum = lfirst_int(cur);
+							proj[attnum-1] = true;
+							Oid			out_func_oid;
+							bool		isvarlena;
+							Form_pg_attribute attr = TupleDescAttr(tupDesc, attnum - 1);
 
-			/*
-			 * Increment the number of processed tuples, and report the
-			 * progress.
-			 */
-			pgstat_progress_update_param(PROGRESS_COPY_TUPLES_PROCESSED,
-										 ++processed);
+							if (cstate->binary)
+								getTypeBinaryOutputInfo(attr->atttypid,
+														&out_func_oid,
+														&isvarlena);
+							else
+								getTypeOutputInfo(attr->atttypid,
+												  &out_func_oid,
+												  &isvarlena);
+							fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
+						}
+					}
+					scandesc = table_beginscan_es(rel, GetActiveSnapshot(), 0, NULL, proj, NULL);
+					slot = table_slot_create(rel, NULL);
+
+					while (table_scan_getnextslot(scandesc, ForwardScanDirection, slot))
+					{
+						CHECK_FOR_INTERRUPTS();
+
+						/* Deconstruct the tuple ... */
+						slot_getallattrs(slot);
+
+						/* Format and send the data */
+						CopyOneRowTo(cstate, slot);
+
+						/*
+						* Increment the number of processed tuples, and report the
+						* progress.
+						*/
+						pgstat_progress_update_param(PROGRESS_COPY_TUPLES_PROCESSED,
+													 ++processed);
+					}
+					ExecDropSingleTupleTableSlot(slot);
+					table_endscan(scandesc);
+					pfree(proj);
+					pfree(cstate->out_functions);
+				}
+				if (rel != cstate->rel)
+					relation_close(rel, AccessShareLock);
+			}
+			list_free(relids);
+			relids = inhRelIds;
 		}
-
-		ExecDropSingleTupleTableSlot(slot);
-		table_endscan(scandesc);
 	}
 	else
 	{

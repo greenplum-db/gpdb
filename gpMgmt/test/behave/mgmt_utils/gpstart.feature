@@ -75,11 +75,6 @@ Feature: gpstart behave tests
          | non-super user connections | False                   | -U foouser -c '\l'   |
 
 
-    # NOTE: On GP-7x, There are couple of open bugs existing for utility mode connections (gpstart -m & gpstart -mR)
-    # https://github.com/greenplum-db/gpdb/issues/12217 : "gpstart -m" accepts connections without checking "gp_role=utility"
-    # https://github.com/greenplum-db/gpdb/issues/12566 :  Non-superuser should not be able to connect via utility mode
-
-    # Expected result of below test cases might change based on above issues fix
     @concourse_cluster
     @demo_cluster
     Scenario Outline: "gpstart -m" accepts <test_scenarios> when utility mode is set to <utility_mode>
@@ -97,8 +92,25 @@ Feature: gpstart behave tests
          | test_scenarios             | utility_mode            | psql_cmd             |
          | super user connections     | True                    | -c '\l'              |
          | non-super user connections | True                    | -U foouser -c '\l'   |
-         | super user connections     | False                   | -c '\l'              |
-         | non-super user connections | False                   | -U foouser -c '\l'   |
+
+    @concourse_cluster
+    @demo_cluster
+    Scenario Outline: "gpstart -m" accepts <test_scenarios> when utility mode is set to <utility_mode>
+        Given the database is not running
+          And the user runs "gpstart -ma"
+          And "gpstart -ma" should return a return code of 0
+
+         When The user runs psql "<psql_cmd>" against database "postgres" when utility mode is set to "<utility_mode>"
+         Then psql_cmd should return a return code of <return_code>
+          And psql_cmd should print "<error_msg>" error message
+
+          And the user runs "gpstop -mai"
+          And "gpstop -mai" should return a return code of 0
+
+     Examples:
+         | test_scenarios             | utility_mode            | psql_cmd             | return_code | error_msg                                                                                                                     |
+         | super user connections     | False                   | -c '\l'              | 2           | psql: error: FATAL:  System was started in single node mode - only utility mode connections are allowed          |
+         | non-super user connections | False                   | -U foouser -c '\l'   | 2           | psql: error: FATAL:  System was started in single node mode - only utility mode connections are allowed          |
 
     @concourse_cluster
     @demo_cluster
@@ -115,11 +127,11 @@ Feature: gpstart behave tests
           And "gpstop -mai" should return a return code of 0
 
       Examples:
-         | test_scenarios             | utility_mode            | psql_cmd             | return_code | database      | error_out_state | error_msg                                                                                                       |
-         | super user connections     | True                    | -c '\l'              | 0           | accepts       | should not      | psql: error: FATAL:  remaining connection slots are reserved for non-replication superuser connections          |
-         | non-super user connections | True                    | -U foouser -c '\l'   | 2           | rejects       | should          | psql: error: FATAL:  remaining connection slots are reserved for non-replication superuser connections          |
-         | super user connections     | False                   | -c '\l'              | 0           | accepts       | should not      | psql: error: FATAL:  remaining connection slots are reserved for non-replication superuser connections          |
-         | non-super user connections | False                   | -U foouser -c '\l'   | 2           | rejects       | should          | psql: error: FATAL:  remaining connection slots are reserved for non-replication superuser connections          |
+         | test_scenarios             | utility_mode            | psql_cmd             | return_code | database      | error_out_state | error_msg                                                                                                                     |
+         | super user connections     | True                    | -c '\l'              | 0           | accepts       | should not      | psql: error: FATAL:  remaining connection slots are reserved for non-replication superuser connections                        |
+         | non-super user connections | True                    | -U foouser -c '\l'   | 2           | rejects       | should          | psql: error: FATAL:  remaining connection slots are reserved for non-replication superuser connections                        |
+         | super user connections     | False                   | -c '\l'              | 2           | accepts       | should          | psql: error: FATAL:  System was started in single node mode - only utility mode connections are allowed          |
+         | non-super user connections | False                   | -U foouser -c '\l'   | 2           | rejects       | should          | psql: error: FATAL:  System was started in single node mode - only utility mode connections are allowed          |
 
     @concourse_cluster
     @demo_cluster

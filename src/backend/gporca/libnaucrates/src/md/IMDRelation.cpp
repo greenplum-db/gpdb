@@ -31,8 +31,8 @@ IMDRelation::GetDistrPolicyStr(Ereldistrpolicy rel_distr_policy)
 {
 	switch (rel_distr_policy)
 	{
-		case EreldistrMasterOnly:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrMasterOnly);
+		case EreldistrCoordinatorOnly:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrCoordinatorOnly);
 		case EreldistrHash:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenRelDistrHash);
 		case EreldistrRandom:

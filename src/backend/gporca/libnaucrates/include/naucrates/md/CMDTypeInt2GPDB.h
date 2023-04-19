@@ -22,6 +22,7 @@
 #define GPDB_INT2_OID OID(21)
 #define GPDB_INT2_OPFAMILY OID(1977)
 #define GPDB_INT2_LEGACY_OPFAMILY OID(7100)
+#define GPDB_INT2_PART_OPFAMILY OID(1976)
 #define GPDB_INT2_LENGTH 2
 #define GPDB_INT2_EQ_OP OID(94)
 #define GPDB_INT2_NEQ_OP OID(519)
@@ -75,6 +76,7 @@ private:
 	IMDId *m_mdid;
 	IMDId *m_distr_opfamily;
 	IMDId *m_legacy_distr_opfamily;
+	IMDId *m_part_opfamily;
 
 	// mdids of different operators
 	IMDId *m_mdid_op_eq;
@@ -135,6 +137,8 @@ public:
 	IMDId *MDId() const override;
 
 	IMDId *GetDistrOpfamilyMdid() const override;
+
+	IMDId *GetPartOpfamilyMdid() const override;
 
 	// accessor of type name
 	CMDName Mdname() const override;

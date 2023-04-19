@@ -447,7 +447,7 @@ The following built-in window functions are Greenplum extensions to the PostgreS
                                 <span class="ph">expr</span>
                                 <code class="ph codeph">] ORDER BY </code>
                                 <span class="ph">expr</span>
-                                <code class="ph codeph"> [ROWS|RANGE </code>
+                                <code class="ph codeph"> [ROWS|RANGE|GROUPS </code>
                                 <span class="ph">frame_expr</span>
                                 <code class="ph codeph">] )</code>
                             </td>
@@ -487,7 +487,7 @@ The following built-in window functions are Greenplum extensions to the PostgreS
                             <td class="entry" headers="topic30__in164369__entry__2">same as input <em class="ph i">expr</em> type</td>
                             <td class="entry" headers="topic30__in164369__entry__3">
                                 <code class="ph codeph">LAST_VALUE(<em class="ph i">expr</em>) OVER ( [PARTITION BY <em class="ph i">expr</em>]
-                                    ORDER BY <em class="ph i">expr</em> [ROWS|RANGE <em class="ph i">frame_expr</em>] )</code>
+                                    ORDER BY <em class="ph i">expr</em> [ROWS|RANGE|GROUPS <em class="ph i">frame_expr</em>] )</code>
                             </td>
                             <td class="entry" headers="topic30__in164369__entry__4">Returns the last value in an ordered set of
                                 values.</td>
@@ -516,7 +516,17 @@ The following built-in window functions are Greenplum extensions to the PostgreS
                         </tr>
                         <tr class="row">
                             <td class="entry" headers="topic30__in164369__entry__1">
-                                <code class="ph codeph">ntile(<em class="ph i">expr</em>)</code>
+                                <code class="ph codeph">nth_value(<em class="ph i">expr</em>)</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__2">same as input <em class="ph i">expr</em> type</td>
+                            <td class="entry" headers="topic30__in164369__entry__3">
+                                <code class="ph codeph">NTH_VALUE(<em class="ph i">expr</em>) OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER
+                                    BY <em class="ph i">expr</em> [ROWS|RANGE|GROUPS <em class="ph i">frame_expr</em>] )</code>
+                            </td>
+                            <td class="entry" headers="topic30__in164369__entry__4">Returns the value evaluated at the row that is the <em class="ph i">nth</em> row of the window frame (counting                                   from 1); null if no such row.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" headers="topic30__in164369__entry__1"><code class="ph codeph">ntile(<em class="ph i">expr</em>)</code>
                             </td>
                             <td class="entry" headers="topic30__in164369__entry__2"><code class="ph codeph">bigint</code></td>
                             <td class="entry" headers="topic30__in164369__entry__3">

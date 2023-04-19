@@ -265,34 +265,32 @@ begin;
 insert into addcol6 select i,i from generate_series(1,10)i;
 -- abort the first insert, still should advance gp_fastsequence for this
 -- relation.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
-   case    | objmod | last_sequence | gp_segment_id 
------------+--------+---------------+---------------
- NormalXid |      0 |             0 |             1
- FrozenXid |      1 |           100 |             1
- NormalXid |      0 |             0 |             2
- FrozenXid |      1 |           100 |             2
- NormalXid |      0 |             0 |             0
- FrozenXid |      1 |           100 |             0
+ objmod | last_sequence | gp_segment_id 
+--------+---------------+---------------
+      0 |             0 |             1
+      1 |           100 |             1
+      0 |             0 |             2
+      1 |           100 |             2
+      0 |             0 |             0
+      1 |           100 |             0
 (6 rows)
 
 abort;
 -- check gp_fastsequence remains advanced.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
-   case    | objmod | last_sequence | gp_segment_id 
------------+--------+---------------+---------------
- NormalXid |      0 |             0 |             1
- FrozenXid |      1 |           100 |             1
- NormalXid |      0 |             0 |             2
- FrozenXid |      1 |           100 |             2
- NormalXid |      0 |             0 |             0
- FrozenXid |      1 |           100 |             0
+ objmod | last_sequence | gp_segment_id 
+--------+---------------+---------------
+      0 |             0 |             1
+      1 |           100 |             1
+      0 |             0 |             2
+      1 |           100 |             2
+      0 |             0 |             0
+      1 |           100 |             0
 (6 rows)
 
 insert into addcol6 select i,i/2 from generate_series(1,20)i;
@@ -312,18 +310,17 @@ select a,c from addcol6 where b > 5 order by a;
 (9 rows)
 
 -- Lets validate after alter gp_fastsequence reflects correctly.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
-   case    | objmod | last_sequence | gp_segment_id 
------------+--------+---------------+---------------
- NormalXid |      0 |             0 |             0
- FrozenXid |      1 |           200 |             0
- NormalXid |      0 |             0 |             1
- FrozenXid |      1 |           200 |             1
- NormalXid |      0 |             0 |             2
- FrozenXid |      1 |           200 |             2
+ objmod | last_sequence | gp_segment_id 
+--------+---------------+---------------
+      0 |             0 |             0
+      1 |           200 |             0
+      0 |             0 |             1
+      1 |           200 |             1
+      0 |             0 |             2
+      1 |           200 |             2
 (6 rows)
 
 -- add column with default value as sequence

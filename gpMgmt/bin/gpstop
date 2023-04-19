@@ -419,6 +419,10 @@ class GpStop:
         e = GpEraFile(self.coordinator_datadir, logger=get_logger_if_verbose())
         e.end_era()
 
+        # Get a list of postgres processes running before stopping the server
+        postgres_pids = gp.get_postgres_segment_processes(self.coordinator_datadir, self.gparray.coordinator.hostname)
+        logger.debug("Postgres processes running on coordinator host: {0}".format(postgres_pids))
+
         try:
             if self.mode == 'smart':
                 self._stop_coordinator_smart()
@@ -450,10 +454,10 @@ class GpStop:
                         if os.path.exists(lockfile):
                             logger.info("Clearing segment instance lock files")
                             os.remove(lockfile)
+
+        # Use the process list and make sure that all the processes are killed at the end
         logger.info('Attempting forceful termination of any leftover coordinator process')
-        (succeeded, mypid, file_datadir) = pg.ReadPostmasterTempFile.local("Read coordinator tmp file",
-                                                                           self.dburl.pgport).getResults()
-        unix.kill_9_segment_processes(self.coordinator_datadir, self.dburl.pgport, mypid)
+        unix.kill_9_segment_processes(self.coordinator_datadir, postgres_pids, self.gparray.coordinator.hostname)
 
         logger.debug("Successfully shutdown the Coordinator instance in admin mode")
 
@@ -469,6 +473,10 @@ class GpStop:
             if get_unreachable_segment_hosts([standby.hostname], 1):
                 logger.warning("Standby is unreachable, skipping shutdown on standby")
                 return True
+
+            # Get a list of postgres processes running before stopping the server
+            postgres_pids = gp.get_postgres_segment_processes(standby.datadir, standby.hostname)
+            logger.debug("Postgres processes running on standby host: {0}".format(postgres_pids))
 
             logger.info("Stopping coordinator standby host %s mode=%s" % (standby.hostname, self.mode))
             try:
@@ -499,10 +507,10 @@ class GpStop:
                     return True
                 else:
                     logger.error('Failed to stop standby. Attempting forceful termination of standby process')
-                    (succeeded, mypid, file_datadir) = pg.ReadPostmasterTempFile.remote("Read standby tmp file",
-                                                                                        self.dburl.pgport,
-                                                                                        standby.hostname).getResults()
-                    unix.kill_9_segment_processes(self.coordinator_datadir, self.dburl.pgport, mypid)
+
+                    # Use the process list and make sure that all the processes are killed at the end
+                    unix.kill_9_segment_processes(standby.datadir, postgres_pids, standby.hostname)
+
                     if not pg.DbStatus.remote('checking status of standby coordinator instance', standby, standby.hostname):
                         logger.info("Successfully shutdown coordinator standby process on %s" % standby.hostname)
                         return True

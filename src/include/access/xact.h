@@ -408,7 +408,6 @@ extern void SetSharedTransactionId_writer(DtxContext distributedTransactionConte
 extern void SetSharedTransactionId_reader(FullTransactionId xid, CommandId cid, DtxContext distributedTransactionContext);
 extern bool IsTransactionState(void);
 extern bool IsAbortInProgress(void);
-extern bool IsTransactionPreparing(void);
 extern bool IsAbortedTransactionBlockState(void);
 extern bool TransactionDidWriteXLog(void);
 extern bool TopXactExecutorDidWriteXLog(void);

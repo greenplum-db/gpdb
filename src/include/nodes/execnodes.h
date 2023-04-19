@@ -2562,6 +2562,9 @@ typedef struct AggState
 
 	/* if input tuple has an AggExprId, save the Attribute Number */
 	Index       AggExprId_AttrNum;
+
+	/* stream entries when out of memory instead of spilling to disk */
+	bool		streaming;
 } AggState;
 
 typedef struct TupleSplitState

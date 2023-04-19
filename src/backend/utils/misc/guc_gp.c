@@ -297,7 +297,7 @@ char	   *optimizer_search_strategy_path = NULL;
 /* GUCs to tell Optimizer to enable a physical operator */
 bool		optimizer_enable_nljoin;
 bool		optimizer_enable_indexjoin;
-bool		optimizer_enable_motions_masteronly_queries;
+bool		optimizer_enable_motions_coordinatoronly_queries;
 bool		optimizer_enable_motions;
 bool		optimizer_enable_motion_broadcast;
 bool		optimizer_enable_motion_gather;
@@ -321,7 +321,7 @@ bool		optimizer_enable_outerjoin_to_unionall_rewrite;
 bool		optimizer_enable_ctas;
 bool		optimizer_enable_dml;
 bool		optimizer_enable_dml_constraints;
-bool		optimizer_enable_master_only_queries;
+bool		optimizer_enable_coordinator_only_queries;
 bool		optimizer_enable_hashjoin;
 bool		optimizer_enable_dynamictablescan;
 bool		optimizer_enable_indexscan;
@@ -2044,7 +2044,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_enable_motions_masteronly_queries,
+		&optimizer_enable_motions_coordinatoronly_queries,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2170,11 +2170,11 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_enable_master_only_queries", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Process master only queries via the optimizer."),
+			gettext_noop("Process coordinator only queries via the optimizer."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_enable_master_only_queries,
+		&optimizer_enable_coordinator_only_queries,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2916,6 +2916,26 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_enable_foreign_table,
 		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_coordinator_only_queries", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Process coordinator only queries via the optimizer."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_coordinator_only_queries,
+		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_motions_coordinatoronly_queries", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enable plans with Motion operators in the optimizer for queries with no distributed tables."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_motions_coordinatoronly_queries,
+		false,
 		NULL, NULL, NULL
 	},
 	{
@@ -4334,6 +4354,17 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
+		{"gp_session_role", PGC_BACKEND, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Alias of gp_role for compatibility."),
+			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
+			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
+		},
+		&gp_role_string,
+		"undefined",
+		check_gp_role, assign_gp_role, show_gp_role
+	},
+
+	{
 		{"gp_role", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Sets the role for the session."),
 			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
@@ -4963,7 +4994,6 @@ storageOptToString(const StdRdOptions *ao_opts)
 static bool
 check_gp_default_storage_options(char **newval, void **extra, GucSource source)
 {
-	/* Value of "appendonly" option if one is specified. */
 	StdRdOptions *newopts;
 
 	newopts = calloc(sizeof(*newopts), 1);
@@ -4975,16 +5005,28 @@ check_gp_default_storage_options(char **newval, void **extra, GucSource source)
 	resetAOStorageOpts(newopts);
 
 	/*
+	 * Discard any existing values in gp_default_storage_options,
+	 * we will only use the new ones.
+	 */
+	resetDefaultAOStorageOpts();
+
+	/*
 	 * Perform identical validations as in case of options specified
 	 * in a WITH() clause.
 	 */
 	if ((*newval)[0])
 	{
 		Datum		newopts_datum;
+		relopt_value 	*options;
+		int		num_options;
 
+		/* Convert the raw string into text array */
 		newopts_datum = parseAOStorageOpts(*newval);
-		parse_validate_reloptions(newopts, newopts_datum,
-								  /* validate */ true, RELOPT_KIND_APPENDOPTIMIZED);
+
+		/* Use the same routine as for "WITH (...)" clause to validate the options. */
+		options = parseRelOptions(newopts_datum, /* validate */ true, RELOPT_KIND_APPENDOPTIMIZED, &num_options);
+		validate_and_adjust_options(newopts, options, num_options, RELOPT_KIND_APPENDOPTIMIZED, /* validate */ true);
+		free_options_deep(options, num_options);
 	}
 
 	/*

@@ -76,7 +76,7 @@ private:
 public:
 	enum EExecLocalityType
 	{
-		EeltMaster,
+		EeltCoordinator,
 		EeltSegments,
 		EeltSingleton
 	};

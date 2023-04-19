@@ -567,4 +567,6 @@ extern bool has_rolreplication(Oid roleid);
 extern bool BackupInProgress(void);
 extern void CancelBackup(void);
 
+extern bool should_reject_connection;
+
 #endif							/* MISCADMIN_H */

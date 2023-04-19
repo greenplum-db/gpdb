@@ -5,7 +5,7 @@
 -- s/tableoid \d+/tableoid XXXXX/
 -- end_matchsubs
 -- start_matchignore
--- m/^LOG: .*Feature not supported: Queries on master-only tables./
+-- m/^LOG: .*Feature not supported: Queries on coordinator-only tables./
 -- m/^LOG:.*ERROR,"PG exception raised"/
 -- end_matchignore
 set gp_autostats_mode=on_change;

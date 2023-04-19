@@ -540,7 +540,7 @@ insert into foo_p values(1), (5), (10);
 drop table foo_p;
 
 -- MPP-3264
--- mix AO with master HEAP and see if copy works
+-- mix AO with coordinator HEAP and see if copy works
 create table foo_p (i int)
 partition by list(i)
 (partition p1 values(1, 2, 3) with (appendonly = true),
@@ -1747,7 +1747,7 @@ PARTITION st_default );
 
 drop table sg_cal_event_silvertail_hour;
 
--- Make sure we inherit master's storage settings
+-- Make sure we inherit coordinator's storage settings
 create table foo_p (i int, j int, k text)
 with (appendonly = true, compresslevel = 5)
 partition by range(j) (start(1) end(10) every(1), default partition def);

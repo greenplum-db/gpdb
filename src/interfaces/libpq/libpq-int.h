@@ -475,7 +475,7 @@ struct pg_conn
 	int			be_pid;			/* PID of backend --- needed for cancels */
 	int			be_key;			/* key of backend --- needed for cancels */
 
-    int64      mop_high_watermark;   /* highwater mark for mop */
+	int64      mop_high_watermark;   /* highwater mark for mop */
 
 	pgParameterStatus *pstatus; /* ParameterStatus data */
 	int			client_encoding;	/* encoding id */

@@ -22,6 +22,8 @@
 #include "cdb/cdbappendonlyxlog.h"
 #include "cdb/cdbbufferedappend.h"
 #include "pgstat.h"
+#include "storage/bufmgr.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 
 static void BufferedAppendWrite(
@@ -155,12 +157,28 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend, bool needsWAL)
 	while (bytesleft > 0)
 	{
 		int32		byteswritten;
+		instr_time	io_start,
+					io_time;
+
+		if (track_io_timing)
+			INSTR_TIME_SET_CURRENT(io_start);
 
 		byteswritten = FileWrite(bufferedAppend->file,
 								 (char *) largeWriteMemory + bytestotal,
 								 bytesleft,
 								 bufferedAppend->largeWritePosition + bytestotal,
 								 WAIT_EVENT_DATA_FILE_WRITE);
+
+		SIMPLE_FAULT_INJECTOR("ao_storage_write_after_filewrite");
+
+		if (track_io_timing)
+		{
+			INSTR_TIME_SET_CURRENT(io_time);
+			INSTR_TIME_SUBTRACT(io_time, io_start);
+			pgstat_count_buffer_write_time(INSTR_TIME_GET_MICROSEC(io_time));
+			INSTR_TIME_ADD(pgBufferUsage.blk_write_time, io_time);
+		}
+
 		if (byteswritten < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),

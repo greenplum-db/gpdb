@@ -2474,7 +2474,7 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
@@ -2483,7 +2483,7 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 
-	// we require exact matching on distribution since final query results must be sent to master
+	// we require exact matching on distribution since final query results must be sent to coordinator
 	CEnfdDistribution *ped =
 		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
 
@@ -2555,14 +2555,14 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr)
 				pcrsOutput->PcrAny(), COrderSpec::EntFirst);
 
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 
-	// we require exact matching on distribution since final query results must be sent to master
+	// we require exact matching on distribution since final query results must be sent to coordinator
 	CEnfdDistribution *ped =
 		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
 

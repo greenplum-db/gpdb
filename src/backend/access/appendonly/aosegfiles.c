@@ -45,6 +45,7 @@
 #include "storage/lmgr.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/int8.h"
 #include "utils/lsyscache.h"
@@ -134,7 +135,15 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	if (!HeapTupleIsValid(pg_aoseg_tuple))
 		elog(ERROR, "failed to build AO file segment tuple");
 
-	CatalogTupleInsertFrozen(pg_aoseg_rel, pg_aoseg_tuple);
+	CatalogTupleInsert(pg_aoseg_rel, pg_aoseg_tuple);
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+							"insert_aoseg_before_freeze",
+							DDLNotSpecified,
+							"", //databaseName
+							RelationGetRelationName(parentrel));
+#endif
+	heap_freeze_tuple_wal_logged(pg_aoseg_rel, pg_aoseg_tuple);
 
 	/*
 	 * Lock the tuple so that a concurrent insert transaction will not

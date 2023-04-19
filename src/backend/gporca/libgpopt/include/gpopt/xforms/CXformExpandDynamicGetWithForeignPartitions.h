@@ -27,11 +27,11 @@ struct SForeignServer
 {
 	ULONG m_foreign_server_oid;
 
-	BOOL m_is_master_only;
+	BOOL m_is_coordinator_only;
 
-	SForeignServer(ULONG foreign_server_oid, BOOL is_master_only)
+	SForeignServer(ULONG foreign_server_oid, BOOL is_coordinator_only)
 		: m_foreign_server_oid(foreign_server_oid),
-		  m_is_master_only(is_master_only)
+		  m_is_coordinator_only(is_coordinator_only)
 	{
 	}
 };
@@ -46,7 +46,7 @@ static BOOL
 FEqualSForeignServer(const SForeignServer *fs1, const SForeignServer *fs2)
 {
 	return fs1->m_foreign_server_oid == fs2->m_foreign_server_oid &&
-		   fs1->m_is_master_only == fs2->m_is_master_only;
+		   fs1->m_is_coordinator_only == fs2->m_is_coordinator_only;
 }
 
 // hash maps ULONG -> array of ULONGs

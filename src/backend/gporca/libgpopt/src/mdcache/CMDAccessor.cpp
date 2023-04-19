@@ -972,7 +972,7 @@ CMDAccessor::Pmdsccmp(IMDId *left_mdid, IMDId *right_mdid,
 					  IMDType::ECmpType cmp_type)
 {
 	GPOS_ASSERT(nullptr != left_mdid);
-	GPOS_ASSERT(nullptr != left_mdid);
+	GPOS_ASSERT(nullptr != right_mdid);
 	GPOS_ASSERT(IMDType::EcmptOther > cmp_type);
 
 	left_mdid->AddRef();

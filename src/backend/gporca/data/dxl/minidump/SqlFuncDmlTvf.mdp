@@ -3,7 +3,7 @@
   <dxl:Comment><![CDATA[
 -- A set-returning function that "CONTAINS SQL" used to be passed up for
 -- singleton-segment distribution consideration. Instead it used to require a
--- singleton-master distribution if we ever try to "gather" from it, e.g. when
+-- singleton-coordinator distribution if we ever try to "gather" from it, e.g. when
 -- we need to perform a global limit.
 --
 -- The following plan used to gather to QD node. Subtle difference: the old

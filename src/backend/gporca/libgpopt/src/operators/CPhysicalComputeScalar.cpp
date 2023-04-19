@@ -41,7 +41,7 @@ CPhysicalComputeScalar::CPhysicalComputeScalar(CMemoryPool *mp) : CPhysical(mp)
 	// (1) Any: impose no distribution requirement on the child in order to push scalar computation below
 	// Motions, and then enforce required distribution on top of ComputeScalar if needed
 	// (2) Pass-Thru: impose distribution requirement on child, and then perform scalar computation after
-	// Motions are enforced, this is more efficient for Master-Only plans below ComputeScalar
+	// Motions are enforced, this is more efficient for Coordinator-Only plans below ComputeScalar
 
 	// Otherwise, correlated execution has to be enforced.
 	// In this case, we create two child optimization requests to guarantee correct evaluation of parameters
@@ -374,7 +374,7 @@ CPhysicalComputeScalar::PdsDerive(CMemoryPool *mp,
 				CDistributionSpecSingleton::EstSegment);
 		}
 		return GPOS_NEW(mp) CDistributionSpecStrictSingleton(
-			CDistributionSpecSingleton::EstMaster);
+			CDistributionSpecSingleton::EstCoordinator);
 	}
 
 	pds->AddRef();

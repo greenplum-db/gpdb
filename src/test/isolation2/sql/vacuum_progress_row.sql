@@ -30,6 +30,10 @@ CREATE INDEX on vacuum_progress_ao_row(j);
 -- Also delete half of the tuples evenly before the EOF of segno 2.
 DELETE FROM vacuum_progress_ao_row where j % 2 = 0;
 
+-- Lookup pg_class and collected stats view before VACUUM
+SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_row';
+SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_row' and gp_segment_id = 1;
+
 -- Perform VACUUM and observe the progress
 
 -- Suspend execution at pre-cleanup phase after truncating both segfiles to their logical EOF.
@@ -64,6 +68,11 @@ SELECT gp_wait_until_triggered_fault('vacuum_ao_post_cleanup_end', 1, dbid) FROM
 SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 1<:
 
+-- pg_class and collected stats view should be updated after the 1st VACUUM
+1U: SELECT wait_until_dead_tup_change_to('vacuum_progress_ao_row'::regclass::oid, 0);
+SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_row';
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_row' and gp_segment_id = 1;
+
 -- Perform VACUUM again to recycle the remaining awaiting drop segment marked by the previous run.
 SELECT gp_inject_fault('vacuum_ao_after_index_delete', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 1&: VACUUM vacuum_progress_ao_row;
@@ -83,8 +92,13 @@ SELECT gp_wait_until_triggered_fault('appendonly_after_truncate_segment_file', 1
 SELECT gp_inject_fault('appendonly_after_truncate_segment_file', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 1<:
 
--- Vacuum has finished, nothing should show up in the view.
+-- Vacuum has finished, nothing should show up in the progress view.
 1U: select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from pg_stat_progress_vacuum;
+
+-- pg_class and collected stats view should be updated after the 2nd VACUUM
+1U: SELECT wait_until_dead_tup_change_to('vacuum_progress_ao_row'::regclass::oid, 0);
+SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_row';
+SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_row' and gp_segment_id = 1;
 
 -- Cleanup
 SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration;

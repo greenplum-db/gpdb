@@ -5,47 +5,14 @@
 -- Define mpp administrative schema and several SQL functions to aid 
 -- in maintaining the mpp administrative schema.  
 --
--- This is version 2 of the schema.
---
--- TODO Error checking is rudimentary and needs improvment.
---
+-- XXX: over the years most of the view/functions have been removed from 
+-- this file. Right now it does not really serve its original purpose,
+-- but just contains the functions that need plpgsql support (and their
+-- related ones). At some point we can consider either rename this
+-- file (to something like 'system_plpgsql_func.sql'), or simply rewrite
+-- the plpgsql function in C.
 --
 -- --------------------------------------------------------------------
-SET log_min_messages = WARNING;
-
--------------------------------------------------------------------
--- database
--------------------------------------------------------------------
-CREATE OR REPLACE VIEW pg_catalog.gp_pgdatabase AS 
-    SELECT *
-      FROM gp_pgdatabase() AS L(dbid smallint, isprimary boolean, content smallint, valid boolean, definedprimary boolean);
-
-GRANT SELECT ON pg_catalog.gp_pgdatabase TO PUBLIC;
-
-------------------------------------------------------------------
--- distributed transaction related
-------------------------------------------------------------------
-CREATE OR REPLACE VIEW pg_catalog.gp_distributed_xacts AS 
-    SELECT *
-      FROM gp_distributed_xacts() AS L(distributed_xid xid, state text, gp_session_id int, xmin_distributed_snapshot xid);
-
-GRANT SELECT ON pg_catalog.gp_distributed_xacts TO PUBLIC;
-
-
-CREATE OR REPLACE VIEW pg_catalog.gp_transaction_log AS 
-    SELECT *
-      FROM gp_transaction_log() AS L(segment_id smallint, dbid smallint, transaction xid, status text);
-
-GRANT SELECT ON pg_catalog.gp_transaction_log TO PUBLIC;
-
-CREATE OR REPLACE VIEW pg_catalog.gp_distributed_log AS 
-    SELECT *
-      FROM gp_distributed_log() AS L(segment_id smallint, dbid smallint, distributed_xid xid, status text, local_transaction xid);
-
-GRANT SELECT ON pg_catalog.gp_distributed_log TO PUBLIC;
-
-ALTER RESOURCE QUEUE pg_default WITH (priority=medium, memory_limit='-1');
-
 
 -- pg_tablespace_location wrapper functions to see Greenplum cluster-wide tablespace locations
 CREATE FUNCTION gp_tablespace_segment_location (IN tblspc_oid oid, OUT gp_segment_id int, OUT tblspc_loc text)
@@ -72,5 +39,3 @@ AS
    UNION ALL
    SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
 LANGUAGE SQL EXECUTE ON COORDINATOR;
-
-RESET log_min_messages;

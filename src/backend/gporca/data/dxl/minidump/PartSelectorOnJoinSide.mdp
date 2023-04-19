@@ -14,7 +14,7 @@
 
         explain select * from t1w join t2w on t1w.a=t2w.a and t1w.b=t2w.b where t2w.c < 74;
 
-   +--CPhysicalMotionGather(master)   rows:73705   width:84  rebinds:1   cost:898.322204   origin: [Grp:13, GrpExpr:7]
+   +--CPhysicalMotionGather(coordinator)   rows:73705   width:84  rebinds:1   cost:898.322204   origin: [Grp:13, GrpExpr:7]
       +--CPhysicalInnerHashJoin   rows:73705   width:84  rebinds:1   cost:891.729992   origin: [Grp:13, GrpExpr:5]
           |--CPhysicalDynamicTableScan "t1w" ("t1w") ...
           |--CPhysicalPartitionSelector, Scan Id: 1, Part Table: (16385,1.0)   rows:73705   width:42  rebinds:1   cost:433.715830   origin: [Grp:5, GrpExpr:3]

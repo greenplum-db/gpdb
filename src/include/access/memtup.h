@@ -69,13 +69,6 @@ typedef MemTupleData *MemTuple;
 #define MEMTUP_LARGETUP  2
 #define MEMTUP_HASEXTERNAL 	 4
 
-/*
- * MEMTUP_HAS_MATCH is a temporary flag used during hash joins. It's
- * equivalent to HEAP_TUPLE_HAS_MATCH for HeapTuples, but in GPDB we
- * store MemTuples in hash table instead of HeapTuples.
- */
-#define MEMTUP_HAS_MATCH 0x40000000
-
 #define MEMTUP_ALIGN(LEN) TYPEALIGN(8, (LEN)) 
 #define MEMTUPLE_LEN_FITSHORT 0xFFF0
 
@@ -138,38 +131,15 @@ extern void destroy_memtuple_binding(MemTupleBinding *pbind);
 extern MemTupleBinding* create_memtuple_binding(TupleDesc tupdesc);
 
 extern Datum memtuple_getattr(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull);
-extern bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum);
 
 extern uint32 compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull, uint32 *nullsaves, bool *has_nulls);
 
-extern MemTuple memtuple_copy(MemTuple mtup);
 extern MemTuple memtuple_form(MemTupleBinding *pbind, Datum *values, bool *isnull);
 extern MemTuple memtuple_form_to(MemTupleBinding *pbind, Datum *values, bool *isnull,
 								 uint32 len, uint32 null_save_len, bool hasnull,
 								 MemTuple mtup);
 extern void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
-extern void memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull);
-
-static inline bool
-MemTupleHasMatch(MemTuple mtup)
-{
-	return (mtup->PRIVATE_mt_len & MEMTUP_HAS_MATCH) != 0;
-}
-
-static inline void
-MemTupleSetMatch(MemTuple mtup)
-{
-	mtup->PRIVATE_mt_len |= MEMTUP_HAS_MATCH;
-}
-
-static inline void
-MemTupleClearMatch(MemTuple mtup)
-{
-	mtup->PRIVATE_mt_len &= ~MEMTUP_HAS_MATCH;
-}
 
 extern bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind);
-
-extern bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind);
 
 #endif /* MEMTUP_H */

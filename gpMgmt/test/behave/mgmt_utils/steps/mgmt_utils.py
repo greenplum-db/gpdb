@@ -22,7 +22,7 @@ from contextlib import closing
 
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
-from gppylib.commands import gp
+from gppylib.commands import gp, unix
 from gppylib.commands.pg import PgBaseBackup
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
@@ -2371,7 +2371,7 @@ def impl(context, query, dbname, host, port):
 @then('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
 @given('The user runs psql "{psql_cmd}" against database "{dbname}" when utility mode is set to {utility_mode}')
 def impl(context, psql_cmd, dbname, utility_mode):
-    if utility_mode == "True":
+    if eval(utility_mode) == 'True':
         cmd = "PGOPTIONS=\'-c gp_role=utility\' psql -d \'{}\' {};".format(dbname, psql_cmd)
     else:
         cmd = "psql -d \'{}\' {};".format(dbname, psql_cmd)
@@ -4026,3 +4026,42 @@ def impl(context, contentids):
 
      if not no_basebackup:
          raise Exception("pg_basebackup entry was found for contents %s in gp_stat_replication after %d retries" % (contentids, retries))
+
+
+@given("create event trigger function")
+def impl(context):
+    dbname = "gptest"
+    query = "create or replace function notcie_ddl() returns event_trigger as $$ begin raise notice 'command % is executed.', tg_tag; end $$ language plpgsql"
+
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
+        dbconn.execSQL(conn, query)
+
+@given('running postgres processes are saved in context')
+@when('running postgres processes are saved in context')
+@then('running postgres processes are saved in context')
+def impl(context):
+
+    # Store the pids in a dictionary where key will be the hostname and the
+    # value will be the pids of all the postgres processes running on that host
+    host_to_pid_map = dict()
+    segs = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    for seg in segs:
+        pids = gp.get_postgres_segment_processes(seg.datadir, seg.hostname)
+        if seg.hostname not in host_to_pid_map:
+            host_to_pid_map[seg.hostname] = pids
+        else:
+            host_to_pid_map[seg.hostname].extend(pids)
+
+    context.host_to_pid_map = host_to_pid_map
+
+
+@given('verify no postgres process is running on all hosts')
+@when('verify no postgres process is running on all hosts')
+@then('verify no postgres process is running on all hosts')
+def impl(context):
+    host_to_pid_map = context.host_to_pid_map
+
+    for host in host_to_pid_map:
+        for pid in host_to_pid_map[host]:
+            if unix.check_pid_on_remotehost(pid, host):
+                raise Exception("Postgres process {0} not killed on {1}.".format(pid, host))

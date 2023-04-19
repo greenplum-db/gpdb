@@ -452,8 +452,8 @@ CMemo::MarkDuplicates(CGroup *pgroupFst, CGroup *pgroupSnd)
 	GPOS_ASSERT(nullptr != pgroupSnd);
 
 	pgroupFst->AddDuplicateGrp(pgroupSnd);
-	pgroupFst->ResolveDuplicateMaster();
-	pgroupSnd->ResolveDuplicateMaster();
+	pgroupFst->ResolveDuplicateCoordinator();
+	pgroupSnd->ResolveDuplicateCoordinator();
 }
 
 

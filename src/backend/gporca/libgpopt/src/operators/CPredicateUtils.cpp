@@ -1022,6 +1022,31 @@ CPredicateUtils::FCompareIdentToConst(CExpression *pexpr)
 	return true;
 }
 
+// is the given expression an equality between ident/const without cast
+// Return true for the below cases:
+// 	ident = ident
+// 	ident = const
+// 	const = ident
+// 	const = const
+BOOL
+CPredicateUtils::FPlainEqualityIdentConstWithoutCast(CExpression *pexpr)
+{
+	if (IsEqualityOp(pexpr))
+	{
+		COperator::EOperatorId leftChildEopId = ((*pexpr)[0])->Pop()->Eopid();
+		COperator::EOperatorId rightChildEopId = ((*pexpr)[1])->Pop()->Eopid();
+
+		if ((COperator::EopScalarIdent == leftChildEopId ||
+			 COperator::EopScalarConst == leftChildEopId) &&
+			(COperator::EopScalarIdent == rightChildEopId ||
+			 COperator::EopScalarConst == rightChildEopId))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 // is the given expression of the form (col IS DISTINCT FROM const)
 BOOL
 CPredicateUtils::FIdentIDFConst(CExpression *pexpr)
@@ -1589,16 +1614,23 @@ CPredicateUtils::PexprExtractPredicatesOnPartKeys(
 			isKnownToBeListPartitioned /* allowNotEqualPreds */);
 		CRefCount::SafeRelease(pexprCol);
 		GPOS_ASSERT_IMP(
-			nullptr != pexprCmp &&
-				COperator::EopScalarCmp == pexprCmp->Pop()->Eopid(),
+			nullptr != pexprCmp && CUtils::FScalarCmp(pexprCmp),
 			IMDType::EcmptOther !=
 				CScalarCmp::PopConvert(pexprCmp->Pop())->ParseCmpType());
 
+		// include comparison predicate if it is non-trivial
 		if (nullptr != pexprCmp && !CUtils::FScalarConstTrue(pexprCmp))
 		{
-			// include comparison predicate if it is non-trivial
-			pexprCmp->AddRef();
-			pdrgpexpr->Append(pexprCmp);
+			// The trace flag is ONLY used here to pass the icw tests,
+			// due to the difficulty in reverse engineering a bunch of
+			// mdp tests that don't include the original query.
+			if (!GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution) ||
+				FOpInOpfamily(colref, pexprCmp, IMDIndex::EmdindBtree))
+			{
+				// operator has to belong to the column's btree (partition) opfamily
+				pexprCmp->AddRef();
+				pdrgpexpr->Append(pexprCmp);
+			}
 		}
 		CRefCount::SafeRelease(pexprCmp);
 	}
@@ -1613,6 +1645,125 @@ CPredicateUtils::PexprExtractPredicatesOnPartKeys(
 	}
 
 	return PexprConjunction(mp, pdrgpexpr);
+}
+
+// checks if the operator belongs to the column's opfamily
+BOOL
+CPredicateUtils::FOpInOpfamily(CColRef *colref, CExpression *pexpr,
+							   IMDIndex::EmdindexType access_method)
+{
+	IMDId *col_mdid = colref->RetrieveType()->MDId();
+	return FOpInOpfamily(col_mdid, pexpr, access_method);
+}
+
+// checks if the operator belongs to the scalar expression's opfamily
+BOOL
+CPredicateUtils::FOpInOpfamily(CExpression *pexprScalar, CExpression *pexpr,
+							   IMDIndex::EmdindexType access_method)
+{
+	GPOS_ASSERT(nullptr != pexprScalar);
+
+	// We look at the data type before casting, instead of after.
+	// Be it distribution or partition, it's performed based on
+	// the input data type
+	if (CCastUtils::FScalarCast(pexprScalar))
+	{
+		return FOpInOpfamily((*pexprScalar)[0], pexpr, access_method);
+	}
+
+	GPOS_ASSERT(CUtils::FScalarIdent(pexprScalar) ||
+				CUtils::FScalarConst(pexprScalar));
+
+	IMDId *col_mdid = CScalar::PopConvert(pexprScalar->Pop())->MdidType();
+	return FOpInOpfamily(col_mdid, pexpr, access_method);
+}
+
+// checks if the operator belongs to the column's opfamily
+BOOL
+CPredicateUtils::FOpInOpfamily(IMDId *col_mdid, CExpression *pexpr,
+							   IMDIndex::EmdindexType access_method)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	// base case: expression has a comparison operator
+	if (CUtils::FScalarCmp(pexpr))
+	{
+		CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
+
+		// retrieve scalar operator
+		CScalarCmp *popScCmp = CScalarCmp::PopConvert(pexpr->Pop());
+		const IMDScalarOp *op = mda->RetrieveScOp(popScCmp->MdIdOp());
+
+		// retieve column's opfamily
+		const IMDType *col_type = mda->RetrieveType(col_mdid);
+		const IMDId *col_dist_opfamily = nullptr, *col_part_opfamily = nullptr;
+		if (IMDIndex::EmdindHash == access_method)
+		{
+			col_dist_opfamily = col_type->GetDistrOpfamilyMdid();
+		}
+		else if (IMDIndex::EmdindBtree == access_method)
+		{
+			col_part_opfamily = col_type->GetPartOpfamilyMdid();
+		}
+		else
+		{
+			GPOS_ASSERT(IMDIndex::EmdindSentinel == access_method);
+			// In case of IMDIndex::EmdindSentinel
+			// We extract both hash and btree opfamilies,
+			// cause we cannot be sure if the predicate will be
+			// used for distribution or partition. We aim to be
+			// as specific as possible in the caller function.
+			// Here we have to be open to both options.
+			col_dist_opfamily = col_type->GetDistrOpfamilyMdid();
+			col_part_opfamily = col_type->GetPartOpfamilyMdid();
+		}
+
+		ULONG opfamily_count = op->OpfamiliesCount();
+
+		// If an operator doesn't belong to any opfamily,
+		// it means it's compatible with any opfamily.
+		// So we return true. Eg. operators  <> or !=,
+		// with op oid 19493, is compatible with any opfamily.
+		if (0 == opfamily_count)
+		{
+			return true;
+		}
+
+
+		// An operator may belong to multiple opfamilies,
+		// associated with different access methods.
+		// Eg. Hash and btree both support equality
+		// We iterate through the opfamilies array and
+		// compare each opfamily to the column's opfamily.
+		// We return true if a match is found.
+		for (ULONG ul = 0; ul < opfamily_count; ul++)
+		{
+			IMDId *op_opfamily = op->OpfamilyMdidAt(ul);
+
+			// Return true if either hash or btree opfamily matches
+			if (CUtils::Equals(op_opfamily, col_dist_opfamily) ||
+				CUtils::Equals(op_opfamily, col_part_opfamily))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// recursive case: expression has a boolean operator
+	GPOS_ASSERT(CUtils::FScalarBoolOp(pexpr));
+
+	const ULONG arity = pexpr->Arity();
+
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CExpression *pexprChild = (*pexpr)[ul];
+		if (!FOpInOpfamily(col_mdid, pexprChild, access_method))
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 // extract the constraint on the given column and return the corresponding scalar expression
@@ -2280,8 +2431,8 @@ CPredicateUtils::PexprRemoveImpliedConjuncts(CMemoryPool *mp,
 
 		// add predicate to current equivalence classes
 		CColRefSetArray *pdrgpcrsConj = nullptr;
-		CConstraint *pcnstr =
-			CConstraint::PcnstrFromScalarExpr(mp, pexprConj, &pdrgpcrsConj);
+		CConstraint *pcnstr = CConstraint::PcnstrFromScalarExpr(
+			mp, pexprConj, &pdrgpcrsConj, false, IMDIndex::EmdindHash);
 		CRefCount::SafeRelease(pcnstr);
 		if (nullptr != pdrgpcrsConj)
 		{

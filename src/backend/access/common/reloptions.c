@@ -1448,7 +1448,7 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 	fillRelOptions((void *) rdopts, sizeof(StdRdOptions), options, numoptions,
 				   validate, tab, lengthof(tab));
 
-	validate_and_refill_options(rdopts, options, numoptions, kind, validate);
+	validate_and_adjust_options(rdopts, options, numoptions, kind, validate);
 
 	free_options_deep(options, numoptions);
 

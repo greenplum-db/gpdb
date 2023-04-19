@@ -90,7 +90,7 @@ Join-INDF Join-INDF-NoBroadcast Join-INDF-Nulls-Not-Collocated;
 
 CLeftOuterIndexApplyTest:
 IndexApply-LeftOuter-NLJoin LOJ-IndexApply-MultiIndexes LOJ-IndexApply-Negative-NonEqual-Predicate
-LOJ-IndexApply-DistKey-Multiple-Predicates LOJ-IndexApply-MasterOnly-Table LOJ-IndexApply-NonDistKey
+LOJ-IndexApply-DistKey-Multiple-Predicates LOJ-IndexApply-CoordinatorOnly-Table LOJ-IndexApply-NonDistKey
 LOJ-IndexApply-CompsiteKey-Equiv LOJ-IndexApply-CompsiteKey-NoMotion LOJ-IndexApply-MultiDistKeys-IndexKeys
 LOJ-IndexApply-WithComplexPredicates LOJ-IndexApply-MultiDistKeys-WithComplexPreds
 LOJ-IndexApply-MultiDistKey-MultiIndexKey-NoExtraFilter LOJ-IndexApply-MultiDistKey-MultiIndexKey
@@ -117,7 +117,7 @@ IndexNLJ-IndexGet-OuterRef IndexApply_NestLoopWithNestParamTrue IndexApply1
 IndexApply1-CalibratedCostModel IndexApply2 IndexApply3 IndexApply4
 IndexApply-IndexCondDisjointWithHashedDistr IndexApply-IndexCondIntersectWithHashedDistr
 IndexApply-IndexCondMatchHashedDistr IndexApply-IndexCondSubsetOfHashedDistr
-IndexApply-IndexCondSupersetOfHashedDistr IndexApply-IndexOnMasterOnlyTable
+IndexApply-IndexCondSupersetOfHashedDistr IndexApply-IndexOnCoordinatorOnlyTable
 IndexApply-PartTable IndexApply-Heterogeneous-NoDTS
 IndexApply-No-Motion-Below-Join IndexApply-Redistribute-Const-Table
 IndexApply-InnerSelect-Basic IndexApply-InnerSelect-PartTable IndexApply-PartKey-Is-IndexKey
@@ -164,11 +164,10 @@ Correlated-Stat-NDistinct Correlated-Stat-NDistinct-2 Correlated-Stat-NDistinct-
 
 CICGMiscTest:
 BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashToRandomInsert HJN-DeeperOuter CTAS CTAS-Random CheckAsUser
-CTAS-random-distributed-from-replicated-distributed-table
 ProjectRepeatedColumn1 ProjectRepeatedColumn2 NLJ-BC-Outer-Spool-Inner Self-Comparison Self-Comparison-Nullable
 SelectCheckConstraint ExpandJoinOrder SelectOnBpchar EqualityJoin EffectsOfJoinFilter InnerJoin-With-OuterRefs
 UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 Join-Varchar-Equality NLJ-Rewindability
-NLJ-Rewindability-CTAS DisableBroadcastThreshold;
+NLJ-Rewindability-CTAS DisableBroadcastThreshold VariadicFlagWithJson VariadicFlagWithFormatQuery VariadicFlagWithUnionAll;
 
 CJoinPredTest:
 MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDistKeyJoinCardinality
@@ -235,7 +234,7 @@ PartTbl-DPE PartTbl-DPE-GroupBy PartTbl-DPE-Limit
 DPE-with-unsupported-pred DPE-SemiJoin DPE-IN DPE-NOT-IN HJN-DPE-Bitmap-Outer-Child
 NLJ-Broadcast-DPE-Outer-Child PartTbl-MultiWayJoinWithDPE PartTbl-MultiWayJoinWithDPE-2
 PartTbl-LeftOuterHashJoin-DPE-IsNull PartTbl-LeftOuterNLJoin-DPE-IsNull
-PartTbl-List-DPE-Int-Predicates JoinOrderDPE;
+PartTbl-List-DPE-Int-Predicates JoinOrderDPE PartTbl-DPE-Opfamily;
 
 CPartTblSPETest:
 PartTbl-SPE-DynamicTableScan-Range-Cost1 PartTbl-SPE-DynamicTableScan-Range-Cost2
@@ -276,7 +275,8 @@ ExpandNAryJoinGreedyWithLOJOnly NaryWithLojAndNonLojChilds LOJ_bb_mpph LOJ-Condi
 LeftJoin-With-Pred-On-Inner LeftJoin-With-Pred-On-Inner2
 LeftJoin-With-Col-Const-Pred LeftJoin-With-Coalesce LOJWithFalsePred LeftJoin-DPv2-With-Select
 DPv2GreedyOnly DPv2MinCardOnly DPv2QueryOnly LOJ-PushDown LeftJoinDPv2JoinOrder
-LeftJoinNullsNotColocated InnerJoinBroadcastTableHashSpec LeftJoinBroadcastTableHashSpec InnerJoinReplicatedTableHashSpec;
+LeftJoinNullsNotColocated InnerJoinBroadcastTableHashSpec LeftJoinBroadcastTableHashSpec InnerJoinReplicatedTableHashSpec
+LeftJoinPruning LeftJoinPruningOuterQuery LeftJoinPruningInnerQuery LeftJoinPruningInOuterInnerQuery;
 
 COuterJoin2Test:
 LOJ-IsNullPred Select-Proj-OuterJoin OuterJoin-With-OuterRefs Join-Disj-Subqs
@@ -321,7 +321,7 @@ SpoolShouldInvalidateUnresolvedDynamicScans DiscardRedistributeHashJoin;
 CRandomDataInsertionTest:
 AddRedistributeBeforeInsert-1 AddRedistributeBeforeInsert-2 AddRedistributeBeforeInsert-3
 AddRedistributeBeforeInsert-4 AddRedistributeBeforeInsert-5 DontAddRedistributeBeforeInsert-1
-DontAddRedistributeBeforeInsert-2;
+DontAddRedistributeBeforeInsert-2 CTAS-random-distr CTAS-random-distributed-from-replicated-distributed-table;
 
 CGistIndexTest:
 Gist-AOCOTable-NonLossy-BitmapIndexPlan Gist-NonPart-Lossy-BitmapIndexPlan Gist-NonPart-Lossy-IndexPlan

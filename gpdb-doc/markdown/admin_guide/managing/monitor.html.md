@@ -12,7 +12,7 @@ Also, be sure to review [Recommended Monitoring and Maintenance Tasks](../monito
 
 ## <a id="topic2"></a>Monitoring Database Activity and Performance 
 
-VMware Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site.
+VMware Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Greenplum-Command-Center/index.html) web site.
 
 ## <a id="topic3"></a>Monitoring System State 
 
@@ -23,6 +23,7 @@ As a Greenplum Database administrator, you must monitor the system for problem e
 -   [Checking for Data Distribution Skew](#topic20)
 -   [Viewing Metadata Information about Database Objects](#topic24)
 -   [Viewing Session Memory Usage Information](#topic_slt_ddv_1q)
+-   [Viewing and Logging Per-Process Memory Usage Information](#topic_memcontext)
 -   [Viewing Query Workfile Usage Information](#topic27)
 
 ## <a id="topic12"></a>Checking System State 
@@ -267,6 +268,65 @@ The `is_runaway`, `runaway_vmem_mb`, and `runaway_command_cnt` columns are not a
 |`runaway_vmem_mb`|integer| |Amount of vmem memory that the session was consuming when it was marked as a runaway session.|
 |`runaway_command_cnt`|integer| |Command count for the session when it was marked as a runaway session.|
 |`idle_start`|timestamptz| |The last time a query process in this session became idle.|
+
+## <a id="topic_memcontext"></a>Viewing and Logging Per-Process Memory Usage Information
+
+Greenplum Database allocates all memory within memory contexts. Memory contexts provide a convenient way to manage allocations made in different places that need to live for differing amounts of time. Destroying a context releases all of the memory that was allocated in it.
+
+Tracking the amount of memory used by a server process or a long-running query can help detect the source of a potential out-of-memory condition. Greenplum Database provides a system view and administration functions that you can use for this purpose.
+
+### <a id="topic_memcontext_view"></a>About the pg_backend_memory_contexts View
+
+To display the memory usage of all active memory contexts in the server process attached to the current session, use the [pg_backend_memory_contexts](../../ref_guide/system_catalogs/pg_backend_memory_contexts.html) system view. This view is restricted to superusers, but access may be granted to other roles.
+
+``` sql
+SELECT * FROM pg_backend_memory_contexts;
+```
+
+### <a id="topic_memcontext_func"></a>About the Memory Context Admin Functions
+
+You can use the system administration function `pg_log_backend_memory_contexts()` to instruct Greenplum Database to dump the memory usage of other sessions running on the coordinator host into the server log. Execution of this function is restricted to superusers only, and cannot be granted to other roles.
+
+The signature of `pg_log_backend_memory_contexts()` function follows:
+
+``` pre
+pg_log_backend_memory_contexts( pid integer )
+```
+
+where `pid` identifies the process whose memory contexts you want dumped.
+
+`pg_log_backend_memory_contexts()` returns `true` when memory context logging is successfully activated for the process on the local host. When logging is activated, Greenplum writes one message to the log for each memory context at the `LOG` message level. The log messages appear in the server log based on the log configuration set; refer to [Error Reporting and Logging](https://www.postgresql.org/docs/12/runtime-config-logging.html) in the PostgreSQL documentation for more information. *The memory context log messages are not sent to the client*.
+
+Memory context logging functions that dump memory usage across all Greenplum segments, or dump usage for a specific segment are named `gp_log_backend_memory_contexts()`.
+
+`gp_log_backend_memory_contexts()` has two signatures:
+
+``` pre
+gp_log_backend_memory_contexts( sess_id integer )
+gp_log_backend_memory_contexts( sess_id integer, contentId integer )
+```
+
+where `sess_id` is the Greenplum Database identifier assigned to the session (typically obtained from the `pg_stat_activity` view), and `contentID` in the second signature identifies the segment instance of interest.
+
+When you invoke `gp_log_backend_memory_contexts()` on the Greenplum Database coordinator host, it invokes `pg_log_backend_memory_contexts()` on the individual segments, which in turn triggers a memory usage dump to each segment log. The functions return an integer identifying the number of segments on which memory context logging was successfully activated.
+
+### <a id="topic_memcontext_samplelog"></a>Sample Log Messages
+
+The command:
+
+``` sql
+SELECT pg_log_backend_memory_contexts( pg_backend_pid() );
+```
+
+triggered the dumping of the following (subset of) memory context messages to the local server log file:
+
+``` pre
+2023-03-23 16:45:57.228512 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","logging memory contexts of PID 16389",,,,,,"SELECT pg_log_backend_memory_contexts(pg_backend_pid());",0,,"mcxt.c",1278,
+2023-03-23 16:45:57.229275 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 0; TopMemoryContext: 108384 total in 6 blocks; 23248 free (21 chunks); 85136 used",,,,,,,0,,"mcxt.c",884,
+2023-03-23 16:45:57.229822 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 1; pgstat TabStatusArray lookup hash table: 8192 total in 1 blocks; 1416 free (0 chunks); 6776 used",,,,,,,0,,"mcxt.c",884,
+2023-03-23 16:45:57.230387 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 1; TopTransactionContext: 8192 total in 1 blocks; 7576 free (1 chunks); 616 used",,,,,,,0,,"mcxt.c",884,
+2023-03-23 16:45:57.230961 UTC,"gpadmin","testdb",p16389,th-557447104,"[local]",,2023-03-23 15:57:32 UTC,0,,cmd10,seg-1,,,,sx1,"LOG","00000","level: 1; TableSpace cache: 8192 total in 1 blocks; 2056 free (0 chunks); 6136 used",,,,,,,0,,"mcxt.c",884,
+```
 
 ## <a id="topic27"></a>Viewing Query Workfile Usage Information 
 

@@ -270,7 +270,7 @@ Using VMware Greenplum Command Center, an administrator can create and manage re
 
 Workload management assignment rules assign transactions to different resource groups based on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the transaction to the role's default resource group.
 
-Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) for more information about creating and managing resource groups and workload management rules.
+Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Greenplum-Command-Center/index.html) for more information about creating and managing resource groups and workload management rules.
 
 ## <a id="topic71717999"></a>Configuring and Using Resource Groups 
 

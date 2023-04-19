@@ -441,6 +441,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenFuncId, GPOS_WSZ_LIT("FuncId")},
 		{EdxltokenFuncRetSet, GPOS_WSZ_LIT("FuncRetSet")},
+		{EdxltokenFuncVariadic, GPOS_WSZ_LIT("FuncVariadic")},
+
 
 		{EdxltokenAlias, GPOS_WSZ_LIT("Alias")},
 
@@ -536,7 +538,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenRelStorageCompositeType, GPOS_WSZ_LIT("Composite")},
 
 		{EdxltokenRelDistrPolicy, GPOS_WSZ_LIT("DistributionPolicy")},
-		{EdxltokenRelDistrMasterOnly, GPOS_WSZ_LIT("MasterOnly")},
+		{EdxltokenRelDistrCoordinatorOnly, GPOS_WSZ_LIT("CoordinatorOnly")},
 		{EdxltokenRelDistrHash, GPOS_WSZ_LIT("Hash")},
 		{EdxltokenRelDistrRandom, GPOS_WSZ_LIT("Random")},
 		{EdxltokenRelDistrReplicated, GPOS_WSZ_LIT("Replicated")},
@@ -612,6 +614,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenMDTypeDistrOpfamily, GPOS_WSZ_LIT("DistrOpfamily")},
 		{EdxltokenMDTypeLegacyDistrOpfamily,
 		 GPOS_WSZ_LIT("LegacyDistrOpfamily")},
+		{EdxltokenMDTypePartOpfamily, GPOS_WSZ_LIT("PartOpfamily")},
 		{EdxltokenMDTypeEqOp, GPOS_WSZ_LIT("EqualityOp")},
 		{EdxltokenMDTypeNEqOp, GPOS_WSZ_LIT("InequalityOp")},
 		{EdxltokenMDTypeLTOp, GPOS_WSZ_LIT("LessThanOp")},

@@ -25,6 +25,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpressionFactorizer.h"
 #include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CLeftJoinPruningPreprocessor.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalCTEProducer.h"
@@ -2806,8 +2807,11 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			CLogicalDynamicGet::PopConvert((*expr)[0]->Pop());
 
 		CColRefSetArray *pdrgpcrsChild = nullptr;
-		CConstraint *pred_cnstr =
-			CConstraint::PcnstrFromScalarExpr(mp, filter_pred, &pdrgpcrsChild);
+		// As of now, partition's default opfamily is btree
+		// ORCA doesn't support hash partition yet
+		CConstraint *pred_cnstr = CConstraint::PcnstrFromScalarExpr(
+			mp, filter_pred, &pdrgpcrsChild, false /* infer_nulls_as*/,
+			IMDIndex::EmdindBtree);
 		CRefCount::SafeRelease(pdrgpcrsChild);
 
 		IMdIdArray *selected_partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
@@ -2957,9 +2961,12 @@ CExpressionPreprocessor::PcnstrFromChildPartition(
 	GPOS_ASSERT(CUtils::FPredicate(part_constraint_expr));
 
 	CColRefSetArray *pdrgpcrsChild = nullptr;
-	CConstraint *cnstr = CConstraint::PcnstrFromScalarExpr(
-		mp, part_constraint_expr, &pdrgpcrsChild, true /* infer_nulls_as */);
-
+	CConstraint *cnstr;
+	// As of now, partition's default opfamily is btree
+	// ORCA doesn't support hash partition yet
+	cnstr = CConstraint::PcnstrFromScalarExpr(
+		mp, part_constraint_expr, &pdrgpcrsChild, true /* infer_nulls_as */,
+		IMDIndex::EmdindBtree);
 	CRefCount::SafeRelease(part_constraint_expr);
 	CRefCount::SafeRelease(pdrgpcrsChild);
 	GPOS_ASSERT(cnstr);
@@ -3364,10 +3371,17 @@ CExpressionPreprocessor::PexprPreprocess(
 		pexprUnnested->Release();
 	}
 
-	// (11) infer predicates from constraints
-	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprConvert2In);
+	// (11.a) Left Outer Join Pruning
+	CExpression *pexprJoinPruned =
+		CLeftJoinPruningPreprocessor::PexprPreprocess(mp, pexprConvert2In,
+													  pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
 	pexprConvert2In->Release();
+
+	// (11.b) infer predicates from constraints
+	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprJoinPruned);
+	GPOS_CHECK_ABORT;
+	pexprJoinPruned->Release();
 
 	// (12) eliminate self comparisons
 	CExpression *pexprSelfCompEliminated =

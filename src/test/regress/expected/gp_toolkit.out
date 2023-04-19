@@ -38,6 +38,22 @@ group by iaotype;
      6 | f
 (2 rows)
 
+select fnnspname, fnrelname from gp_toolkit.__gp_fullname where fnrelname like 'toolkit_%';
+ fnnspname |            fnrelname            
+-----------+---------------------------------
+ public    | toolkit_ao
+ public    | toolkit_aopart
+ public    | toolkit_aopart_1_prt_p1
+ public    | toolkit_aopart_1_prt_p1_2_prt_1
+ public    | toolkit_aopart_1_prt_p1_2_prt_2
+ public    | toolkit_aopart_1_prt_p2
+ public    | toolkit_aopart_1_prt_p2_2_prt_1
+ public    | toolkit_aopart_1_prt_p2_2_prt_2
+ public    | toolkit_heap
+ public    | toolkit_matview
+ public    | toolkit_matview_nodata
+(11 rows)
+
 drop table toolkit_aopart;
 select count(iaotype),iaotype
 from gp_toolkit.__gp_is_append_only iao
@@ -559,6 +575,17 @@ select * from gp_toolkit.gp_resq_activity_by_queue;
 ---------+----------+----------+------------+-----------
 (0 rows)
 
+-- should be empty too
+select * from gp_toolkit.gp_resq_priority_statement;
+ rqpdatname | rqpusename | rqpsession | rqpcommand | rqppriority | rqpweight | rqpquery 
+------------+------------+------------+------------+-------------+-----------+----------
+(0 rows)
+
+select * from gp_toolkit.gp_resq_priority_backend;
+ rqpsession | rqpcommand | rqppriority | rqpweight 
+------------+------------+-------------+-----------
+(0 rows)
+
 -- gp_resq_role
 select * from gp_toolkit.gp_resq_role where rrrolname like 'toolkit%';
    rrrolname   | rrrsqname  
@@ -587,6 +614,14 @@ select * from gp_toolkit.gp_resq_activity where resqrole = 'toolkit_user1';
  resqprocpid | resqrole | resqoid | resqname | resqstart | resqstatus 
 -------------+----------+---------+----------+-----------+------------
 (0 rows)
+
+-- resource group view
+select * from gp_toolkit.gp_resgroup_role where rrrolname like 'toolkit%';
+   rrrolname   |   rrrsgname   
+---------------+---------------
+ toolkit_admin | admin_group
+ toolkit_user1 | default_group
+(2 rows)
 
 -- gp_pgdatabase_invalid
 -- Should be empty unless there is failure in the segment, it's a view from gp_pgdatabase

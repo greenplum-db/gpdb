@@ -228,7 +228,7 @@ public:
 	{
 		if (CDistributionSpec::EdtSingleton == m_pds->Edt())
 		{
-			// if target table is master only, request simple satisfiability, as it will not introduce duplicates
+			// if target table is coordinator only, request simple satisfiability, as it will not introduce duplicates
 			return CEnfdDistribution::EdmSatisfy;
 		}
 

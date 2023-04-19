@@ -120,24 +120,16 @@ GetAppendOnlyEntryAttributes(Oid relid,
 	relopts = (StdRdOptions *) default_reloptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED);
 
 	if (blocksize != NULL)
-		*blocksize = relopts->blocksize ? relopts->blocksize : DEFAULT_APPENDONLY_BLOCK_SIZE;
+		*blocksize = relopts->blocksize;
 
-	/* If compresstype not specified, set to none */
 	if (compresstype != NULL)
-		*relopts->compresstype ? namestrcpy(compresstype, relopts->compresstype) : namestrcpy(compresstype, "none");
+		namestrcpy(compresstype, relopts->compresstype);
 
 	if (compresslevel != NULL)
-	{
-		if (relopts->compresslevel)
-			*compresslevel = relopts->compresslevel;
-		else if (!compresstype || pg_strcasecmp(compresstype->data, "none") == 0) /* no compression */
-			*compresslevel = 0;
-		else /* zlib, quicklz, zstd and RLE */
-			*compresslevel = 1;
-	}
+		*compresslevel = relopts->compresslevel;
 
 	if (checksum != NULL)
-			*checksum = relopts->checksum ? relopts->checksum : AO_DEFAULT_CHECKSUM;
+		*checksum = relopts->checksum;
 
 	ReleaseSysCache(tuple);
 	table_close(ao_rel, AccessShareLock);

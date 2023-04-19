@@ -3,10 +3,11 @@ use warnings;
 use Cwd;
 use Config;
 use File::Basename qw(basename dirname);
+use File::Compare;
 use File::Path qw(rmtree);
 use PostgresNode;
 use TestLib;
-use Test::More tests => 107 + 21;
+use Test::More tests => 107 + 25;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -176,6 +177,52 @@ $node->command_ok([ 'pg_basebackup', '-D', "$tempdir/tarbackup", '--target-gp-db
 	'tar format');
 ok(-f "$tempdir/tarbackup/base.tar", 'backup tar was created');
 rmtree("$tempdir/tarbackup");
+
+########################## Test that the headers are zeroed out in both the primary and mirror WAL files
+my $compare_tempdir = "$tempdir/checksum_test";
+
+# Ensure that when pg_basebackup is run that the last WAL segment file
+# containing the BACKUP_END and wal SWITCH records match on both
+# the primary and mirror segment. We want to ensure that all pages after
+# the wal SWITCH record are all zeroed out. Previously, the primary
+# segment's WAL segment file would have interleaved page headers instead
+# of all zeros. Although the WAL segment files from the primary and
+# mirror segments were logically the same, they were different physically
+# and would lead to checksum mismatches for external tools that checked
+# for that.
+
+#Insert data and then run pg_basebackup
+$node->safe_psql('postgres',  'CREATE TABLE zero_header_test as SELECT generate_series(1,1000);');
+$node->command_ok([ 'pg_basebackup', '-D', $compare_tempdir, '--target-gp-dbid', '123' , '-X', 'stream'],
+	'pg_basebackup wal file comparison test');
+ok( -f "$compare_tempdir/PG_VERSION", 'pg_basebackup ran successfully');
+
+my $current_wal_file = $node->safe_psql('postgres', "SELECT pg_walfile_name(pg_current_wal_lsn());");
+my $primary_wal_file_path = "$pgdata/pg_wal/$current_wal_file";
+my $mirror_wal_file_path = "$compare_tempdir/pg_wal/$current_wal_file";
+
+## Test that primary and mirror WAL file is the same
+ok(compare($primary_wal_file_path, $mirror_wal_file_path) eq 0, "wal file comparison");
+
+## Test that all the bytes after the last written record in the WAL file are zeroed out
+my $total_bytes_cmd = 'pg_controldata ' . $compare_tempdir .  ' | grep "Bytes per WAL segment:" |  awk \'{print $5}\'';
+my $total_allocated_bytes = `$total_bytes_cmd`;
+
+my $current_lsn_cmd = 'pg_waldump -f ' . $primary_wal_file_path . ' | grep "SWITCH" | awk \'{print $10}\' | sed "s/,//"';
+my $current_lsn = `$current_lsn_cmd`;
+chomp($current_lsn);
+my $current_byte_offset = $node->safe_psql('postgres', "SELECT file_offset FROM pg_walfile_name_offset('$current_lsn');");
+
+#Get offset of last written record
+open my $fh, '<:raw', $primary_wal_file_path;
+#Since pg_walfile_name_offset does not account for the wal switch record, we need to add it ourselves
+my $wal_switch_record_len = 32;
+seek $fh, $current_byte_offset + $wal_switch_record_len, 0;
+my $bytes_read = "";
+my $len_bytes_to_validate = $total_allocated_bytes - $current_byte_offset;
+read($fh, $bytes_read, $len_bytes_to_validate);
+close $fh;
+ok($bytes_read =~ /\A\x00*+\z/, 'make sure wal segment is zeroed');
 
 $node->command_fails(
 	[ 'pg_basebackup', '-D', "$tempdir/backup_foo", '--target-gp-dbid', '123', '-Fp', "-T=/foo" ],

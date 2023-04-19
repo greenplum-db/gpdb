@@ -1172,6 +1172,13 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		CheckMyDatabase(dbname, am_superuser, override_allow_connections);
 
 	/*
+	 * Reject non-utility connections if the PostMaster was started in the
+	 * utility mode.
+	 */
+	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess() && Gp_role == GP_ROLE_UTILITY)
+		should_reject_connection = true;
+
+	/*
 	 * Now process any command-line switches and any additional GUC variable
 	 * settings passed in the startup packet.   We couldn't do this before
 	 * because we didn't know if client is a superuser.
@@ -1186,6 +1193,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	if (am_cursor_retrieve_handler)
 	{
 		Gp_role = GP_ROLE_UTILITY;
+		should_reject_connection = false;
 
 		/* Sanity check for security: This should not happen but in case ... */
 		if (!retrieve_conn_authenticated)
@@ -1205,6 +1213,10 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("maintenance mode: connected by superuser only")));
+
+	if (should_reject_connection)
+		ereport(FATAL,(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+					   errmsg("System was started in single node mode - only utility mode connections are allowed")));
 
 	if (Gp_role == GP_ROLE_EXECUTE && gp_session_id < 0)
 		ereport(FATAL,

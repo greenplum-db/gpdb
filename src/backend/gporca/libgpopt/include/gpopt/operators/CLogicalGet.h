@@ -45,7 +45,7 @@ private:
 	// partition keys
 	CColRef2dArray *m_pdrgpdrgpcrPart;
 
-	// distribution columns (empty for master only tables)
+	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
 	void CreatePartCols(CMemoryPool *mp, const ULongPtrArray *pdrgpulPart);

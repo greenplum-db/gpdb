@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
  <dxl:Comment><![CDATA[
-	Objective: For a DML query with a limit on a Master Only table, 
+	Objective: For a DML query with a limit on a coordinator Only table,
 	ensure that no Singleton Segment request is generated. 
 
 	create table x(a int);
-	set optimizer_enable_master_only_queries = on;
+	set optimizer_enable_coordinator_only_queries = on;
   explain delete from x where exists (select port from gp_segment_configuration limit 10);
 
                                                     QUERY PLAN
@@ -230,7 +230,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.5036.1.0" Name="gp_segment_configuration" Rows="8.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.5036.1.0" Name="gp_segment_configuration" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="16,10">
+      <dxl:Relation Mdid="6.5036.1.0" Name="gp_segment_configuration" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="16,10">
         <dxl:Columns>
           <dxl:Column Name="dbid" Attno="1" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
             <dxl:DefaultValue/>

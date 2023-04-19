@@ -162,7 +162,7 @@ int			max_parallel_workers = 8;
 int			MaxBackends = 0;
 
 int			VacuumCostPageHit = 1;	/* GUC parameters for vacuum */
-int			VacuumCostPageMiss = 10;
+int			VacuumCostPageMiss = 2;
 int			VacuumCostPageDirty = 20;
 int			VacuumCostLimit = 200;
 double		VacuumCostDelay = 0;
@@ -191,3 +191,6 @@ int gp_vmem_protect_gang_cache_limit = 500;
 
 /* Parallel cursor concurrency limit */
 int	gp_max_parallel_cursors = -1;
+
+/* Utility mode restriction */
+bool should_reject_connection = false;
