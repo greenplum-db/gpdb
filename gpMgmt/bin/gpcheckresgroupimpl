@@ -172,7 +172,7 @@ class CgroupValidationVersionOne(CgroupValidation):
 
     @staticmethod
     def required_comps():
-        comps = ["cpu", "cpuacct", "cpuset"]
+        comps = ["cpu", "cpuacct", "cpuset", "memory"]
         return comps
 
     def fallback_comp_dirs(self):

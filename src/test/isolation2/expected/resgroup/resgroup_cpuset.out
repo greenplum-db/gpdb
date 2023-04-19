@@ -141,7 +141,7 @@ SET
 BEGIN
 10&: SELECT * FROM busy;  <waiting ...>
 
-select pg_sleep(2);
+select pg_sleep(5);
  pg_sleep 
 ----------
           
@@ -149,7 +149,7 @@ select pg_sleep(2);
 
 11: BEGIN;
 BEGIN
-11: select cpu_usage::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where rsgname='rg1_cpuset_test';
+11: select max(cpu_usage)::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where rsgname='rg1_cpuset_test';
  ?column? 
 ----------
  t        

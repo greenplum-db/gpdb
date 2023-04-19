@@ -799,6 +799,11 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		{
 			cgroupOpsRoutine->setcpulimit(callbackCtx->groupid,
 										callbackCtx->caps.cpuHardQuotaLimit);
+
+			/* We should set cpuset to the default value */
+			char *cpuset = (char *) palloc(MaxCpuSetLength);
+			sprintf(cpuset, "0-%d", cgroupSystemInfo->ncores-1);
+			cgroupOpsRoutine->setcpuset(callbackCtx->groupid, cpuset);
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU_SHARES)
 		{

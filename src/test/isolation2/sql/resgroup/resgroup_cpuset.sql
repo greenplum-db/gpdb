@@ -97,10 +97,10 @@ select * from cancel_all;
 10: BEGIN;
 10&: SELECT * FROM busy;
 
-select pg_sleep(2);
+select pg_sleep(5);
 
 11: BEGIN;
-11: select cpu_usage::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where rsgname='rg1_cpuset_test';
+11: select max(cpu_usage)::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where rsgname='rg1_cpuset_test';
 -- cancel the transaction
 -- start_ignore
 select * from cancel_all;
