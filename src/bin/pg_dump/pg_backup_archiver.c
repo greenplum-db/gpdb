@@ -4885,7 +4885,7 @@ CloneArchive(ArchiveHandle *AH)
 	 * Connect our new clone object to the database, using the same connection
 	 * parameters used for the original connection.
 	 */
-	ConnectDatabase((Archive *) clone, &clone->public.ropt->cparams, true, &clone->public.ropt->binary_upgrade);
+	ConnectDatabase((Archive *) clone, &clone->public.ropt->cparams, true, clone->public.ropt->binary_upgrade);
 
 	/* re-establish fixed state */
 	if (AH->mode == archModeRead)
