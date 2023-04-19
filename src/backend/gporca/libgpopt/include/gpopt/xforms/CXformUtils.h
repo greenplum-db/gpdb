@@ -70,7 +70,8 @@ private:
 	enum EIndexCols
 	{
 		EicKey,
-		EicIncluded
+		EicIncluded,
+		EicKeyAndIncluded
 	};
 
 	// create a logical assert for the not nullable columns of the given table
@@ -380,6 +381,11 @@ public:
 										  CColRefArray *colref_array,
 										  const IMDIndex *pmdindex,
 										  const IMDRelation *pmdrel);
+
+	static CColRefSet *PcrsIndexKeysAndIncludes(CMemoryPool *mp,
+												CColRefArray *colref_array,
+												const IMDIndex *pmdindex,
+												const IMDRelation *pmdrel);
 
 	// return the set of key columns from the given array of columns which appear
 	// in the index key columns

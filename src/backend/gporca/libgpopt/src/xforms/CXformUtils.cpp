@@ -1772,6 +1772,16 @@ CXformUtils::PstrErrorMessage(CMemoryPool *mp, ULONG major, ULONG minor, ...)
 	return GPOS_NEW(mp) CWStringConst(mp, str.GetBuffer());
 }
 
+CColRefSet *
+CXformUtils::PcrsIndexKeysAndIncludes(CMemoryPool *mp,
+									  CColRefArray *colref_array,
+									  const IMDIndex *pmdindex,
+									  const IMDRelation *pmdrel)
+{
+	return PcrsIndexColumns(mp, colref_array, pmdindex, pmdrel,
+							EicKeyAndIncluded);
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CXformUtils::PdrgpcrIndexKeys
@@ -1836,7 +1846,8 @@ CXformUtils::PcrsIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 							  const IMDIndex *pmdindex,
 							  const IMDRelation *pmdrel, EIndexCols eic)
 {
-	GPOS_ASSERT(EicKey == eic || EicIncluded == eic);
+	GPOS_ASSERT(EicKey == eic || EicIncluded == eic ||
+				EicKeyAndIncluded == eic);
 	CColRefArray *pdrgpcrIndexColumns =
 		PdrgpcrIndexColumns(mp, colref_array, pmdindex, pmdrel, eic);
 	CColRefSet *pcrsCols = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrIndexColumns);
@@ -1860,7 +1871,8 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 								 const IMDIndex *pmdindex,
 								 const IMDRelation *pmdrel, EIndexCols eic)
 {
-	GPOS_ASSERT(EicKey == eic || EicIncluded == eic);
+	GPOS_ASSERT(EicKey == eic || EicIncluded == eic ||
+				EicKeyAndIncluded == eic);
 
 	CColRefArray *pdrgpcrIndex = GPOS_NEW(mp) CColRefArray(mp);
 
@@ -1890,6 +1902,21 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 		pdrgpcrIndex->Append(colref);
 	}
 
+	if (EicKeyAndIncluded == eic)
+	{
+		for (ULONG ul = 0; ul < pmdindex->IncludedCols(); ul++)
+		{
+			ULONG ulPos = pmdindex->IncludedColAt(ul);
+			ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
+
+			GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
+			GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
+
+			CColRef *colref = (*colref_array)[ulPosNonDropped];
+			pdrgpcrIndex->Append(colref);
+		}
+	}
+
 	return pdrgpcrIndex;
 }
 
@@ -1905,7 +1932,8 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 BOOL
 CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 							  const IMDRelation *pmdrel,
-							  CColRefArray *pdrgpcrOutput, CColRefSet *pcrsReqd,
+							  CColRefArray *pdrgpcrOutput,
+							  CColRefSet *pcrsReqd GPOS_UNUSED,
 							  CColRefSet *pcrsScalar,
 							  IMDIndex::EmdindexType emdindtype,
 							  IMDIndex::EmdindexType altindtype)
@@ -1943,19 +1971,15 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 
 	BOOL fApplicable = true;
 
-	CColRefSet *pcrsIncludedCols =
-		CXformUtils::PcrsIndexIncludedCols(mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CColRefSet *pcrsIndexCols =
 		CXformUtils::PcrsIndexKeys(mp, pdrgpcrOutput, pmdindex, pmdrel);
-	if (!pcrsIncludedCols->ContainsAll(pcrsReqd) ||	 // index is not covering
-		pcrsScalar->IsDisjoint(
+	if (pcrsScalar->IsDisjoint(
 			pcrsIndexCols))	 // indexing columns disjoint from the columns used in the scalar expression
 	{
 		fApplicable = false;
 	}
 
 	// clean up
-	pcrsIncludedCols->Release();
 	pcrsIndexCols->Release();
 
 	return fApplicable;

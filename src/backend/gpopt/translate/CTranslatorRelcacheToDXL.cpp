@@ -978,18 +978,28 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	// extract the position of the key columns
 	index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
+	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
 		INT attno = form_pg_index->indkey.values[i];
 		GPOS_ASSERT(0 != attno && "Index expressions not supported");
 
-		index_key_cols_array->Append(
-			GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		// key columns are indexed [0, indnkeyatts)
+		if (i < form_pg_index->indnkeyatts)
+		{
+			index_key_cols_array->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
+		// include columns are indexed [indnkeyatts, indnatts)
+		else
+		{
+			included_cols->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
 	}
 	mdid_rel->Release();
 
-	ULongPtrArray *included_cols = ComputeIncludedCols(mp, md_rel);
 	mdid_index->AddRef();
 	IMdIdArray *op_families_mdids = RetrieveIndexOpFamilies(mp, mdid_index);
 
@@ -1012,34 +1022,6 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::ComputeIncludedCols
-//
-//	@doc:
-//		Compute the included columns in an index
-//
-//---------------------------------------------------------------------------
-ULongPtrArray *
-CTranslatorRelcacheToDXL::ComputeIncludedCols(CMemoryPool *mp,
-											  const IMDRelation *md_rel)
-{
-	// TODO: 3/19/2012; currently we assume that all the columns
-	// in the table are available from the index.
-
-	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
-	const ULONG num_included_cols = md_rel->ColumnCount();
-	for (ULONG ul = 0; ul < num_included_cols; ul++)
-	{
-		if (!md_rel->GetMdCol(ul)->IsDropped())
-		{
-			included_cols->Append(GPOS_NEW(mp) ULONG(ul));
-		}
-	}
-
-	return included_cols;
 }
 
 
@@ -2660,12 +2642,6 @@ BOOL
 CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 {
 	HeapTupleData *tup = index_rel->rd_indextuple;
-
-	// covering index -- it has INCLUDE (...) columns
-	if (index_rel->rd_index->indnatts > index_rel->rd_index->indnkeyatts)
-	{
-		return false;
-	}
 
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&

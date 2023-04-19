@@ -244,10 +244,6 @@ private:
 	// check if index is supported
 	static BOOL IsIndexSupported(Relation index_rel);
 
-	// compute the array of included columns
-	static ULongPtrArray *ComputeIncludedCols(CMemoryPool *mp,
-											  const IMDRelation *md_rel);
-
 	// is given level included in the default partitions
 	static BOOL LevelHasDefaultPartition(List *default_levels, ULONG level);
 

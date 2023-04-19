@@ -860,6 +860,7 @@ TranslateDXLIndexTList(const IMDRelation *md_rel, const IMDIndex *md_index,
 
 	index_context->SetRelIndex(INDEX_VAR);
 
+	// Translate KEY columns
 	for (ULONG ul = 0; ul < md_index->Keys(); ul++)
 	{
 		ULONG key = md_index->KeyAt(ul);
@@ -887,6 +888,38 @@ TranslateDXLIndexTList(const IMDRelation *md_rel, const IMDIndex *md_index,
 			{
 				(void) index_context->InsertMapping(dxl_col_descr->Id(),
 													ul + 1);
+				break;
+			}
+		}
+
+		target_list = gpdb::LAppend(target_list, target_entry);
+	}
+
+	// Translate INCLUDED columns
+	for (ULONG ul = 0; ul < md_index->IncludedCols(); ul++)
+	{
+		ULONG includecol = md_index->IncludedColAt(ul);
+
+		const IMDColumn *col = md_rel->GetMdCol(includecol);
+
+		TargetEntry *target_entry = MakeNode(TargetEntry);
+		// KEY columns preceed INCLUDE columns
+		target_entry->resno = (AttrNumber) ul + 1 + md_index->Keys();
+
+		Expr *indexvar = (Expr *) gpdb::MakeVar(
+			new_varno, col->AttrNum(),
+			CMDIdGPDB::CastMdid(col->MdidType())->Oid(),
+			col->TypeModifier() /*vartypmod*/, 0 /*varlevelsup*/);
+		target_entry->expr = indexvar;
+
+		for (ULONG j = 0; j < table_descr->Arity(); j++)
+		{
+			const CDXLColDescr *dxl_col_descr =
+				table_descr->GetColumnDescrAt(j);
+			if (dxl_col_descr->AttrNum() == ((Var *) indexvar)->varattno)
+			{
+				(void) index_context->InsertMapping(dxl_col_descr->Id(),
+													target_entry->resno);
 				break;
 			}
 		}
