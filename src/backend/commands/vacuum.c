@@ -1557,8 +1557,8 @@ vac_update_relstats(Relation relation,
 		dirty = true;
 	}
 
-	elog(DEBUG2, "Vacuum oid=%u pages=%d tuples=%f",
-		 relid, pgcform->relpages, pgcform->reltuples);
+	elog(DEBUG2, "Vacuum oid=%u pages=%d tuples=%f visible pages=%d",
+		 relid, pgcform->relpages, pgcform->reltuples, pgcform->relallvisible);
 
 	/* Apply DDL updates, but not inside an outer transaction (see above) */
 

@@ -500,6 +500,8 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	Bitmapset **colLargeRowIndexes;
 	double     *colLargeRowLength;
 	bool		sample_needed;
+	HeapTuple	ctup;
+	Form_pg_class pgcform;
 
 	if (inh)
 		ereport(elevel,
@@ -1002,20 +1004,32 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	 * Update pages/tuples stats in pg_class ... but not if we're doing
 	 * inherited stats.
 	 *
-	 * GPDB_92_MERGE_FIXME: In postgres it is sufficient to check the number of
-	 * pages that are visible with visibilitymap_count(), but in GPDB this
-	 * needs to be the count of all pages marked all visible across the all the
-	 * QEs. We need to gather this information from the segments and then update
-	 * it here.
+	 * GPDB: Corrdinator node does not store relation data or metadata. That
+	 * includes visibility map information. Instead, relevant info is gathered
+	 * through dispatch requests. In this case, after vacuum is dispatched then
+	 * relallvisible is aggregated and stored in pg_class. Corrdinator node
+	 * should look there for relallvisible.
 	 */
 	if (!inh)
 	{
 		BlockNumber relallvisible;
 
-		if (RelationStorageIsAO(onerel))
-			relallvisible = 0;
+		if (Gp_role != GP_ROLE_DISPATCH)
+		{
+			if (RelationStorageIsAO(onerel))
+				relallvisible = 0;
+			else
+				visibilitymap_count(onerel, &relallvisible, NULL);
+		}
 		else
-			visibilitymap_count(onerel, &relallvisible, NULL);
+		{
+			ctup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(onerel->rd_id));
+			if (!HeapTupleIsValid(ctup))
+				elog(ERROR, "pg_class entry for relid %u vanished during analyzing",
+					 onerel->rd_id);
+			pgcform = (Form_pg_class) GETSTRUCT(ctup);
+			relallvisible = pgcform->relallvisible;
+		}
 
 		vac_update_relstats(onerel,
 							relpages,
