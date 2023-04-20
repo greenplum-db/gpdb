@@ -4687,9 +4687,11 @@ HandleMoveResourceGroup(void)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
+		SpinLockAcquire(&MyProc->movetoMutex);
 		slot = (ResGroupSlotData *)MyProc->movetoResSlot;
 		group = slot->group;
 		MyProc->movetoResSlot = NULL;
+		SpinLockRelease(&MyProc->movetoMutex);
 
 		/* unassign the old resource group and release the old slot */
 		UnassignResGroup(true);
@@ -4717,8 +4719,10 @@ HandleMoveResourceGroup(void)
 	}
 	else if (Gp_role == GP_ROLE_EXECUTE)
 	{
+		SpinLockAcquire(&MyProc->movetoMutex);
 		Oid groupId = MyProc->movetoGroupId;
 		MyProc->movetoGroupId = InvalidOid;
+		SpinLockRelease(&MyProc->movetoMutex);
 
 		slot = sessionGetSlot();
 		Assert(slot != NULL);
