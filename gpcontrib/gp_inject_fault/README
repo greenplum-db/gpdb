@@ -142,3 +142,7 @@ many backends, such as in parallel regress tests.
 
 * Be sure to "reset" all fault points at the end of a test that
 associates actions with them.
+
+* We let some background process ignore all but a few faults. If one wants
+to test fault injection in background processese, add the exception in
+checkBgProcessSkipFault().

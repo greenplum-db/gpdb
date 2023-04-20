@@ -3,6 +3,7 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION gp_fault_inject" to load this file. \quit
 
+-- NOTE: we let some background process ignore all but a few faults (check checkBgProcessSkipFault()).
 CREATE FUNCTION @extschema@.gp_inject_fault(
   faultname text,
   type text,

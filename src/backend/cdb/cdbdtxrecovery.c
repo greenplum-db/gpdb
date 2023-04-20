@@ -67,6 +67,11 @@ static void doAbortInDoubt(char *gid);
 static bool doNotifyCommittedInDoubt(char *gid);
 static void AbortOrphanedPreparedTransactions(void);
 
+bool IsDtxRecoveryProcess()
+{
+	return getpid() == DtxRecoveryPID();
+}
+
 static bool
 doNotifyCommittedInDoubt(char *gid)
 {
