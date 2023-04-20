@@ -518,7 +518,7 @@ struct QENotice
 	char		sqlstate[6];
 	char		severity[10];
 	char	   *file;
-	char		line[10];
+	char	   *line;
 	char	   *func;
 	char	   *message;
 	char	   *detail;
@@ -550,9 +550,9 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 	int			elevel = INFO;
 	char	   *sqlstate = "00000";
 	char	   *severity = "WARNING";
-	char	   *file = "";
+	char	   *file = NULL;
 	char	   *line = NULL;
-	char	   *func = "";
+	char	   *func = NULL;
 	char		message[1024];
 	char	   *detail = NULL;
 	char	   *hint = NULL;
@@ -646,6 +646,7 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 		uint64		size;
 		char	   *bufptr;
 		int			file_len;
+		int			line_len;
 		int			func_len;
 		int			message_len;
 		int			detail_len;
@@ -674,6 +675,7 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 
 		size = offsetof(QENotice, buf);
 		SIZE_VARLEN_FIELD(file);
+		SIZE_VARLEN_FIELD(line);
 		SIZE_VARLEN_FIELD(func);
 		SIZE_VARLEN_FIELD(message);
 		SIZE_VARLEN_FIELD(detail);
@@ -714,7 +716,7 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 		strlcpy(notice->sqlstate, sqlstate, sizeof(notice->sqlstate));
 		strlcpy(notice->severity, severity, sizeof(notice->severity));
 		COPY_VARLEN_FIELD(file);
-		strlcpy(notice->line, line, sizeof(notice->line));
+		COPY_VARLEN_FIELD(line);
 		COPY_VARLEN_FIELD(func);
 		COPY_VARLEN_FIELD(message);
 		COPY_VARLEN_FIELD(detail);
