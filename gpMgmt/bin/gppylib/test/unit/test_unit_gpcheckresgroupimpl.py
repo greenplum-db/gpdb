@@ -29,6 +29,7 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpu"), 0o755)
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuacct"), 0o755)
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuset"), 0o755)
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "memory"), 0o755)
 
         self.cgroup = gpcheckresgroupimpl.CgroupValidationVersionOne()
         self.cgroup.mount_point = self.cgroup_mntpnt
@@ -53,6 +54,10 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.cpus"), 0o600)
         self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.mems"), 0o600)
 
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "memory", "gpdb"), 0o700)
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "cgroup.procs"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.usage_in_bytes"), 0o600)
+
     def tearDown(self):
         shutil.rmtree(self.cgroup_mntpnt)
         self.cgroup = None
@@ -70,7 +75,7 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
     def test_comp_lists(self):
         # this looks like redundant as it's just a copy of required_comps(),
         # however it is necessary to verify this unit test is up-to-date.
-        comps = ['cpu', 'cpuacct']
+        comps = ['cpu', 'cpuacct', 'memory']
         if gpver.version >= [6, 0, 0]:
             comps.extend(['cpuset'])
         self.assertEqual(self.cgroup.required_comps(), comps)
