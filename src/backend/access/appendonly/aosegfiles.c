@@ -38,7 +38,6 @@
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/gp_fastsequence.h"
-#include "catalog/pg_inherits.h"
 #include "cdb/cdbvars.h"
 #include "executor/spi.h"
 #include "nodes/makefuncs.h"
