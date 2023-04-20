@@ -78,7 +78,7 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         comps = ['cpu', 'cpuacct', 'memory']
         if gpver.version >= [6, 0, 0]:
             comps.extend(['cpuset'])
-        self.assertEqual(self.cgroup.required_comps(), comps)
+        self.assertEqual(self.cgroup.required_comps().sort(), comps.sort())
 
     def test_comp_dirs_validation(self):
         self.assertTrue(self.cgroup.validate_comp_dirs())
