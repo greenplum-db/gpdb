@@ -1803,3 +1803,4 @@ PARTITION BY RANGE (sales_date)
   START (date '2020-12-01') INCLUSIVE END (date '2021-01-01') EXCLUSIVE  EVERY (INTERVAL '1 month')
 );
 SELECT get_ao_compression_ratio('public.partitioned_table_14876');
+DROP TABLE public.partitioned_table_14876;

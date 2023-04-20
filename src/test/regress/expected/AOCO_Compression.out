@@ -3653,3 +3653,4 @@ SELECT get_ao_compression_ratio('public.partitioned_table_14876');
                        -1
 (1 row)
 
+DROP TABLE public.partitioned_table_14876;
