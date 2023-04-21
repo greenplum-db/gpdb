@@ -3187,7 +3187,7 @@ binary_upgrade_set_namespace_oid(Archive *fout, PQExpBuffer upgrade_buffer,
 	appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_namespace oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 	 "SELECT binary_upgrade.set_next_pg_namespace_oid('%u'::pg_catalog.oid, "
-													 "$$%s$$::text);\n\n",
+													 "$_GPDB_$%s$_GPDB_$::text);\n\n",
 					  pg_namespace_oid, pg_nspname);
 	PQclear(upgrade_res);
 	destroyPQExpBuffer(upgrade_query);
@@ -3205,7 +3205,7 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 						"SELECT binary_upgrade.set_next_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
+						"'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n\n",
 						tyinfo->dobj.catId.oid, tyinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
 
 	if (OidIsValid(pg_type_array_oid))
@@ -3215,7 +3215,7 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 							 "\n-- For binary upgrade, must preserve pg_type array oid\n");
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.set_next_array_pg_type_oid('%u'::pg_catalog.oid, "
-						  "'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
+						  "'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n\n",
 						  pg_type_array_oid, tyinfo->typarrayns,
 						  tyinfo->typarrayname);
 	}
@@ -3251,7 +3251,7 @@ binary_upgrade_set_type_oids_of_child_partition(Archive *fout,
 	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 			"SELECT binary_upgrade.set_next_pg_type_oid('%u'::pg_catalog.oid, "
-			"'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
+			"'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n\n",
 			tyinfo->dobj.catId.oid, parenttblinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
 }
 
@@ -3277,7 +3277,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 							"\n-- For binary upgrade, must preserve pg_class oids\n");
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
-							  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
+							  "'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n",
 							  tblinfo->dobj.catId.oid, parenttblinfo->dobj.namespace->dobj.catId.oid, tblinfo->dobj.name);
 		}
 		else
@@ -3286,7 +3286,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 							"\n-- For binary upgrade, must preserve pg_class oids\n");
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
-							  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
+							  "'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n",
 							  tblinfo->dobj.catId.oid, tblinfo->dobj.namespace->dobj.catId.oid, tblinfo->dobj.name);
 		}
 
@@ -3305,7 +3305,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 		simple_oid_list_append(&preassigned_oids, pg_class_oid);
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.set_next_index_pg_class_oid('%u'::pg_catalog.oid, "
-							"'%u'::pg_catalog.oid, $$%s$$::text);\n",
+							"'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n",
 						  idxinfo->dobj.catId.oid, idxinfo->dobj.namespace->dobj.catId.oid, idxinfo->dobj.name);
 
 		/* Set up bitmap index auxiliary tables */
@@ -8469,7 +8469,7 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 			if (i == 0)
 				appendPQExpBufferStr(q, "\n-- For binary upgrade, must preserve pg_enum oids\n");
 			appendPQExpBuffer(q,
-							  "SELECT binary_upgrade.set_next_pg_enum_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
+							  "SELECT binary_upgrade.set_next_pg_enum_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n",
 							  enum_oid, tyinfo->dobj.catId.oid, label);
 
 			appendPQExpBuffer(q, "ALTER TYPE %s.",
