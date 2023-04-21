@@ -422,8 +422,12 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
 		 * ideally one should succeed and one fail.  Getting that to work
 		 * exactly seems more trouble than it is worth, however; instead we
 		 * just document that the connection limit is approximate.
+		 *
+		 * We do not want to do this for QEs since a single QD might initialise
+		 * many connections to each segment to execute a non-trivial plan and
+		 * the db connection limit does not map, semantically, to that idea.
 		 */
-		if (dbform->datconnlimit >= 0 &&
+		if (Gp_role == GP_ROLE_DISPATCH && dbform->datconnlimit >= 0 &&
 			!am_superuser &&
 			CountDBConnections(MyDatabaseId) > dbform->datconnlimit)
 			ereport(FATAL,
