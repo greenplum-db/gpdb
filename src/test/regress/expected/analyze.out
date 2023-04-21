@@ -942,58 +942,6 @@ select attname, null_frac, avg_width, n_distinct from pg_stats where tablename =
  d       |         0 |         5 |         -1
 (3 rows)
 
--- Test ANALYZE on an aoco table does not scan a dropped column
--- First record total blocks scanned for the ANALYZE, then record blocks scanned after
--- issuing an ALTER TABLE .. DROP COLUMN.
-create table aoco_analyze_dropped_col(i int, j bigint, k int) WITH (appendonly=true, orientation=column);
-insert into aoco_analyze_dropped_col select 0, i, 1 from generate_series(1, 100000) i;
-select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
-    from gp_segment_configuration where content = 1 AND role = 'p';
- gp_inject_fault 
------------------
- Success:
-(1 row)
-
-analyze aoco_analyze_dropped_col;
-select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
-    from gp_segment_configuration where content = 1 AND role = 'p';
-                                                                                                                  gp_inject_fault                                                                                                                  
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'51' +
- 
-(1 row)
-
-select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
-    from gp_segment_configuration WHERE content = 1 AND role = 'p';
- gp_inject_fault 
------------------
- Success:
-(1 row)
-
-alter table aoco_analyze_dropped_col drop column j;
-select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
-    from gp_segment_configuration WHERE content = 1 AND role = 'p';
- gp_inject_fault 
------------------
- Success:
-(1 row)
-
-analyze aoco_analyze_dropped_col;
-select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
-    from gp_segment_configuration WHERE content = 1 AND role = 'p';
-                                                                                                                  gp_inject_fault                                                                                                                  
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'26' +
- 
-(1 row)
-
-select gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
-    from gp_segment_configuration WHERE content = 1 AND role = 'p';
- gp_inject_fault 
------------------
- Success:
-(1 row)
-
 -- Test analyze without USAGE privilege on schema
 create schema test_ns;
 revoke all on schema test_ns from public;

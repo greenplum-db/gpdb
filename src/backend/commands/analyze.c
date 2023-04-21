@@ -1731,10 +1731,6 @@ acquire_sample_rows_ao(Relation onerel, int elevel,
 	int			numrows = 0;	/* # rows now in reservoir */
 	double		samplerows = 0; /* total # rows collected */
 	double		rowstoskip = -1;	/* -1 means not set yet */
-	int natts = RelationGetNumberOfAttributes(onerel);
-	bool *proj = palloc0(sizeof(bool) * natts);
-
-	Assert(RelationIsAppendOptimized(onerel));
 
 	/*
 	 * the append-only meta data should never be fetched with
@@ -1749,14 +1745,13 @@ acquire_sample_rows_ao(Relation onerel, int elevel,
 										  0, NULL);
 	else
 	{
-		/* Build column projection excluding dropped columns and pass to table scan */
-		for(int i = 0; i < natts; i++)
-		{
-			Form_pg_attribute attr = onerel->rd_att->attrs[i];
+		int			natts = RelationGetNumberOfAttributes(onerel);
+		bool	   *proj = (bool *) palloc(natts * sizeof(bool));
+		int			i;
 
-		if (!attr->attisdropped)
-				proj[i] = true;
-		}
+		for(i = 0; i < natts; i++)
+			proj[i] = true;
+
 		Assert(RelationIsAoCols(onerel));
 		aocsScanDesc = aocs_beginscan(onerel,
 									  SnapshotSelf,
