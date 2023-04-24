@@ -547,15 +547,15 @@ COptTasks::OptimizeTask(void *ptr)
 				query_to_dxl_translator->GetCTEs();
 			GPOS_ASSERT(nullptr != query_output_dxlnode_array);
 
-			BOOL is_master_only =
+			BOOL is_coordinator_only =
 				!optimizer_enable_motions ||
-				(!optimizer_enable_motions_masteronly_queries &&
+				(!optimizer_enable_motions_coordinatoronly_queries &&
 				 !query_to_dxl_translator->HasDistributedTables());
 			// See NoteDistributionPolicyOpclasses() in src/backend/gpopt/translate/CTranslatorQueryToDXL.cpp
 			BOOL use_legacy_opfamilies =
 				(query_to_dxl_translator->GetDistributionHashOpsKind() ==
 				 DistrUseLegacyHashOps);
-			CAutoTraceFlag atf1(EopttraceDisableMotions, is_master_only);
+			CAutoTraceFlag atf1(EopttraceDisableMotions, is_coordinator_only);
 			CAutoTraceFlag atf2(EopttraceUseLegacyOpfamilies,
 								use_legacy_opfamilies);
 

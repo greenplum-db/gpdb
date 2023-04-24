@@ -22,6 +22,7 @@
 #ifdef USE_ORCA
 
 extern PlannedStmt * optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams);
+extern Node *transformGroupedWindows(Node *node, void *context);
 
 #else
 

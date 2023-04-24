@@ -1732,7 +1732,8 @@ GRANT SELECT ON gp_toolkit.gp_resgroup_config TO public;
 --------------------------------------------------------------------------------
 
 CREATE VIEW gp_toolkit.gp_resgroup_status AS
-    SELECT r.rsgname, s.*
+    SELECT r.rsgname, s.groupid, s.num_running, s.num_queueing,
+           s.num_queued, s.num_executed, s.total_queue_duration
     FROM pg_resgroup_get_status(null) AS s,
          pg_resgroup AS r
     WHERE s.groupid = r.oid;
@@ -1749,67 +1750,34 @@ GRANT SELECT ON gp_toolkit.gp_resgroup_status TO public;
 --------------------------------------------------------------------------------
 
 CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
-    WITH s AS (
+    WITH es AS (
         SELECT
             rsgname
           , groupid
           , (json_each(cpu_usage)).key::smallint AS segment_id
-          , (json_each(cpu_usage)).value AS cpu
-        FROM gp_toolkit.gp_resgroup_status
+          , (json_each(cpu_usage)).value AS cpu_usage
+          , (json_each(memory_usage)).value AS memory_usage
+        FROM pg_resgroup_get_status(null) as s,
+             pg_resgroup AS r
+        WHERE s.groupid = r.oid
     )
     SELECT
-        s.rsgname
-      , s.groupid
+        es.rsgname
+      , es.groupid
       , c.hostname
-      , round(avg((s.cpu)::text::numeric), 2) AS cpu
-    FROM s
+      , round(avg((es.cpu_usage)::text::numeric), 2) AS cpu_usage
+      , round(avg((es.memory_usage)::text::numeric), 2) AS memory_usage
+    FROM es
     INNER JOIN pg_catalog.gp_segment_configuration AS c
-        ON s.segment_id = c.content
+        ON es.segment_id = c.content
         AND c.role = 'p'
     GROUP BY
-        s.rsgname
-      , s.groupid
+        es.rsgname
+      , es.groupid
       , c.hostname
     ;
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_host TO public;
-
---------------------------------------------------------------------------------
--- @view:
---              gp_toolkit.gp_resgroup_status_per_segment
---
--- @doc:
---              Resource group runtime status information grouped by segment
---
---------------------------------------------------------------------------------
-
-CREATE VIEW gp_toolkit.gp_resgroup_status_per_segment AS
-    WITH s AS (
-        SELECT
-            rsgname
-          , groupid
-          , (json_each(cpu_usage)).key::smallint AS segment_id
-          , (json_each(cpu_usage)).value AS cpu
-        FROM gp_toolkit.gp_resgroup_status
-    )
-    SELECT
-        s.rsgname
-      , s.groupid
-      , c.hostname
-      , s.segment_id
-      , sum((s.cpu)::text::numeric) AS cpu
-    FROM s
-    INNER JOIN pg_catalog.gp_segment_configuration AS c
-        ON s.segment_id = c.content
-        AND c.role = 'p'
-    GROUP BY
-        s.rsgname
-      , s.groupid
-      , c.hostname
-      , s.segment_id
-    ;
-
-GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_segment TO public;
 
 --------------------------------------------------------------------------------
 -- @view:

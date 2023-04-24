@@ -73,7 +73,7 @@ Indexes can even concatenate columns:
 CREATE INDEX pgweb_idx ON pgweb USING GIN (to_tsvector('english', title || ' ' || body));
 ```
 
-Another approach is to create a separate `tsvector` column to hold the output of `to_tsvector`. This example is a concatenation of title and body, using `coalesce` to ensure that one field will still be indexed when the other is NULL:
+Another approach is to create a separate `tsvector` column to hold the output of `to_tsvector`. To keep this column automatically up to date with its source data, use a stored generated column.  This example is a concatenation of title and body, using `coalesce` to ensure that one field will still be indexed when the other is NULL:
 
 ```
 ALTER TABLE pgweb 

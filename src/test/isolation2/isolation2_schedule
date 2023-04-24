@@ -332,4 +332,7 @@ test: aocs_unique_index
 test: uao/ao_unique_index_vacuum_row
 test: uao/ao_unique_index_vacuum_column
 
+# test for free remapper's memory correctly in FATAL
+test: free_remapper_fatal
+
 test: spilling_hashagg

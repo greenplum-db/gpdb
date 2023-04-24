@@ -1,58 +1,14 @@
-## For CentOS:
+## For RHEL/Rocky8:
 
-- Install Dependencies
-
-  ```bash
-  ./README.CentOS.bash
-  ```
-
-- If you want to link cmake3 to cmake, run:
-
-  ```bash
-  sudo ln -sf /usr/bin/cmake3 /usr/local/bin/cmake
-  ```
-
-- Make sure that you add `/usr/local/lib` and `/usr/local/lib64` to
-`/etc/ld.so.conf`, then run command `ldconfig`.
-
-- If you want to install and use gcc-7 by default, run:
-
-  ```bash
-  sudo yum install -y centos-release-scl
-  sudo yum install -y devtoolset-7-toolchain
-  echo 'source scl_source enable devtoolset-7' >> ~/.bashrc
-  ```
-
-## For RHEL:
-
-- Install Development Tools.
-  - For RHEL 8: Install `Development Tools`:
-
-    ```bash
-    sudo yum group install -y "Development Tools"
-    ```
-
-  - For RHEL versions (< 8.0): Install `devtoolset-7`:
-
-    ```bash
-    sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
-    sudo yum install -y devtoolset-7-toolchain
-    ```
-  
-- Install dependencies using README.CentOS.bash script.
-  - For RHEL 8: Execute additional step before running README.CentOS.bash script.
-  
-    Note: Make sure installation of `Development Tools` includes `git` and `make` else install these tools manually.
-
-    ```bash
-    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-    ```
-
-  - Install dependencies using README.CentOS.bash script.
-
-    ```bash
-    ./README.CentOS.bash
-    ```
+  - For EL versions (> 8.0):
+    - Install git
+      ```bash
+      sudo yum install git
+      ```
+  - Install dependencies using README.Rhel-Rocky.bash script.
+       ```bash
+       ./README.Rhel-Rocky.bash
+       ```
 
 ## For Ubuntu:
 

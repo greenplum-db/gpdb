@@ -1,4 +1,4 @@
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 set optimizer_segments = 3;
 set optimizer_nestloop_factor = 1.0;
 --
@@ -286,7 +286,7 @@ select array(select x from csq_d1); -- {1}
 (1 row)
 
 --
--- CSQs involving master-only and distributed tables
+-- CSQs involving coordinator-only and distributed tables
 --
 drop table if exists t3cozlib;
 NOTICE:  table "t3cozlib" does not exist, skipping
@@ -321,7 +321,7 @@ ORDER BY a.attnum
 (2 rows)
 
 --
--- More CSQs involving master-only and distributed relations
+-- More CSQs involving coordinator-only and distributed relations
 --
 drop table if exists csq_m1;
 create table csq_m1();
@@ -354,7 +354,7 @@ select * from csq_d1;
 (3 rows)
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 explain select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- gather motion
                                                                                                                      QUERY PLAN                                                                                                                      
@@ -391,7 +391,7 @@ select * from csq_m1 where x not in (select x from csq_d1) or x < -100; -- (3)
 (1 row)
 
 --
--- outer plan node is master-only and CSQ has distributed relation
+-- outer plan node is coordinator-only and CSQ has distributed relation
 --
 explain select * from csq_d1 where x not in (select x from csq_m1) or x < -100; -- broadcast motion
                                                                                                                      QUERY PLAN                                                                                                                      

@@ -511,6 +511,13 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients/bin_gpdb_clients.tar.gz
 
+- name: llvm-with-asserts-packages
+  type: gcs
+  source:
+    bucket: pivotal-gpdb-concourse-resources-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/[[ default_os_type ]]/llvm-with-asserts-(.*)-el8_x86_64.tar.gz
+
 {% if os_type == default_os_type %}
 - name: server-build-[[ os_type ]]
   type: gcs
@@ -611,6 +618,7 @@ jobs:
           {% endif %}
         trigger: true
       - get: gpdb7-[[ default_os_type ]]-build
+      - get: llvm-with-asserts-packages
   - task: compile_gpdb
     image: gpdb7-[[ default_os_type ]]-build
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -798,6 +806,7 @@ jobs:
         passed: [gate_icw_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
   - task: ic_gpdb
     {% if use_ICW_workers %}
     tags: [icw-worker]
@@ -820,6 +829,7 @@ jobs:
         passed: [gate_icw_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
   - task: ic_gpdb
     {% if use_ICW_workers %}
     tags: [icw-worker]
@@ -842,6 +852,7 @@ jobs:
         passed: [gate_icw_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
   - task: ic_gpdb
     {% if use_ICW_workers %}
     tags: [icw-worker]
@@ -869,6 +880,7 @@ jobs:
         passed: [gate_icw_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
   - task: ic_gpdb
     {% if use_ICW_workers %}
     tags: [icw-worker]
@@ -891,6 +903,7 @@ jobs:
         passed: [gate_icw_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
   - task: ic_gpdb
     {% if use_ICW_workers %}
     tags: [icw-worker]
@@ -913,6 +926,7 @@ jobs:
         passed: [gate_icw_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
   - task: ic_gpdb
     {% if use_ICW_workers %}
     tags: [icw-worker]
@@ -935,6 +949,7 @@ jobs:
         passed: [gate_icw_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
   - task: ic_gpdb
     {% if use_ICW_workers %}
     tags: [icw-worker]
@@ -945,6 +960,7 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on -c jit=off' installcheck-world
       TEST_OS: [[ test_os ]]
+      CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_mirrorless_[[ os_type ]]
   plan:

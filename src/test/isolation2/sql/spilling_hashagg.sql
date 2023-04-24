@@ -8,10 +8,6 @@ DROP TABLE IF EXISTS test_hashagg_off;
 -- Test Orca properly removes duplicates in DQA
 -- (https://github.com/greenplum-db/gpdb/issues/14993)
 
--- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: After streaming hash aggregates are
--- supported then add a fault injection for 'force_hashagg_stream_hashtable'.
--- Until then this test doesn't actually test spilling.
-
 CREATE TABLE test_src_tbl AS
 WITH cte1 AS (
     SELECT field5 from generate_series(1,1000) field5

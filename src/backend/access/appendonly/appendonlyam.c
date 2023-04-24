@@ -2721,7 +2721,6 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		tup = toast_insert_or_update_memtup(relation, instup,
 											NULL, aoInsertDesc->mt_bind,
 											aoInsertDesc->toast_tuple_target,
-											false,	/* errtbl is never AO */
 											0);
 	else
 		tup = instup;

@@ -33,6 +33,8 @@ inner join pg_catalog.pg_class c on iao.iaooid = c.oid
 where c.relname like 'toolkit_%'
 group by iaotype;
 
+select fnnspname, fnrelname from gp_toolkit.__gp_fullname where fnrelname like 'toolkit_%';
+
 drop table toolkit_aopart;
 
 select count(iaotype),iaotype
@@ -349,6 +351,10 @@ select * from gp_toolkit.gp_resq_activity;
 -- There is no resource queue, so should be empty
 select * from gp_toolkit.gp_resq_activity_by_queue;
 
+-- should be empty too
+select * from gp_toolkit.gp_resq_priority_statement;
+select * from gp_toolkit.gp_resq_priority_backend;
+
 -- gp_resq_role
 select * from gp_toolkit.gp_resq_role where rrrolname like 'toolkit%';
 
@@ -363,6 +369,9 @@ select resqname, resqstatus from gp_toolkit.gp_resq_activity where resqname='pg_
 reset session authorization;
 -- should be empty because the sql is completed
 select * from gp_toolkit.gp_resq_activity where resqrole = 'toolkit_user1';
+
+-- resource group view
+select * from gp_toolkit.gp_resgroup_role where rrrolname like 'toolkit%';
 
 -- gp_pgdatabase_invalid
 -- Should be empty unless there is failure in the segment, it's a view from gp_pgdatabase

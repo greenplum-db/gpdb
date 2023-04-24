@@ -372,9 +372,9 @@ SELECT tableoid::regclass, * FROM update_gp_rangep WHERE b = 1;
 
 -- Test for update with LASJ_NOTIN
 -- See Issue: https://github.com/greenplum-db/gpdb/issues/13265
--- Actually master branch does not have the above issue even master
+-- Actually main branch does not have the above issue even main
 -- does have the same problematic code (other parts of code are
--- refactored). Also cherry-pick the case to master and keep it
+-- refactored). Also cherry-pick the case to main and keep it
 -- since more test cases do no harm.
 create table t1_13265(a int, b int, c int, d int) distributed by (a);
 create table t2_13265(a int, b int, c int, d int) distributed by (a);

@@ -15,6 +15,7 @@ Greenplum Database provides the following system views.
 -   [gp_session_endpoints](gp_session_endpoints.html)
 -   [gp_transaction_log](gp_transaction_log.html)
 -   [gpexpand.expansion_progress](gpexpand_expansion_progress.html)
+-   [pg_backend_memory_contexts](pg_backend_memory_contexts.html)
 -   [pg_cursors](pg_cursors.html)
 -   [pg_matviews](pg_matviews.html)
 -   [pg_max_external_files](pg_max_external_files.html)

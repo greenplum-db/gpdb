@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
-    Test case: When `optimizer_cost_model` is set to calibrated, we should choose a bitmap index scan that has a diff cost than master. The intent of this test is to ensure the traceflag properly works and changes the cost model.
+    Test case: When `optimizer_cost_model` is set to calibrated, we should choose a bitmap index scan that has a diff cost than coordinator. The intent of this test is to ensure the traceflag properly works and changes the cost model.
     create table foo(a int);
     create index my_idx on foo using bitmap(a);
     insert into foo select i%100 from generate_series(1,100000)i;

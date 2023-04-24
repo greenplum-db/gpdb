@@ -459,7 +459,7 @@
               <dxl:ConstValue TypeMdid="0.1082.1.0" Value="zioAAA==" LintValue="10958"/>
             </dxl:Comparison>
           </dxl:And>
-&gt;&gt;&gt;&gt;&gt;&gt;&gt; master
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; coordinator
         </dxl:PartConstraint>
       </dxl:Relation>
     </dxl:Metadata>

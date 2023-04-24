@@ -1816,7 +1816,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 		{
 			// if no partition-by columns, window functions need gathered input
 			pds = GPOS_NEW(m_mp) CDistributionSpecSingleton(
-				CDistributionSpecSingleton::EstMaster);
+				CDistributionSpecSingleton::EstCoordinator);
 		}
 		colref_array->Release();
 
@@ -2197,9 +2197,9 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	phmiulAttnoColMapping->Release();
 	phmululColMapping->Release();
 
-	if (IMDRelation::EreldistrMasterOnly == rel_distr_policy)
+	if (IMDRelation::EreldistrCoordinatorOnly == rel_distr_policy)
 	{
-		COptCtxt::PoctxtFromTLS()->SetHasMasterOnlyTables();
+		COptCtxt::PoctxtFromTLS()->SetHasCoordinatorOnlyTables();
 	}
 
 	if (IMDRelation::EreldistrReplicated == rel_distr_policy)

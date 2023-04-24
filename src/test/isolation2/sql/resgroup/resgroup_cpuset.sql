@@ -9,6 +9,11 @@ CREATE TABLE bigtable AS
     SELECT i AS c1, 'abc' AS c2
     FROM generate_series(1,50000) i;
 
+CREATE OR REPLACE FUNCTION get_cpu_cores() RETURNS INTEGER AS $$
+    import os
+    return os.cpu_count()
+$$ LANGUAGE plpython3u;
+
 CREATE VIEW busy AS
     SELECT count(*)
     FROM
@@ -92,10 +97,10 @@ select * from cancel_all;
 10: BEGIN;
 10&: SELECT * FROM busy;
 
-select pg_sleep(2);
+select pg_sleep(5);
 
 11: BEGIN;
-11: select (cpu_usage::json->>'0')::float > 50 from gp_toolkit.gp_resgroup_status where rsgname='rg1_cpuset_test';
+11: select max(cpu_usage)::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where rsgname='rg1_cpuset_test';
 -- cancel the transaction
 -- start_ignore
 select * from cancel_all;

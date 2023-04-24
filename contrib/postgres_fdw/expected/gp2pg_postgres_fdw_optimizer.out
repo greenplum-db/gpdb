@@ -3682,7 +3682,7 @@ select sum(c1) from ft1 group by c2 having avg(c1 * (random() <= 1)::int) > 100 
 explain (verbose, costs off)
 select exists(select 1 from pg_enum), sum(c1) from ft1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
                     QUERY PLAN                    
 --------------------------------------------------
  Foreign Scan
@@ -3697,7 +3697,7 @@ DETAIL:  Feature not supported: Queries on master-only tables
 
 select exists(select 1 from pg_enum), sum(c1) from ft1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
  exists |  sum   
 --------+--------
  t      | 500500
@@ -3706,7 +3706,7 @@ DETAIL:  Feature not supported: Queries on master-only tables
 explain (verbose, costs off)
 select exists(select 1 from pg_enum), sum(c1) from ft1 group by 1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
                     QUERY PLAN                     
 ---------------------------------------------------
  GroupAggregate
@@ -3723,7 +3723,7 @@ DETAIL:  Feature not supported: Queries on master-only tables
 
 select exists(select 1 from pg_enum), sum(c1) from ft1 group by 1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
  exists |  sum   
 --------+--------
  t      | 500500
@@ -7755,7 +7755,7 @@ CREATE VIEW rw_view AS SELECT * FROM foreign_tbl
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -7765,7 +7765,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
                            View "public.rw_view"
  Column |  Type   | Collation | Nullable | Default | Storage | Description 
 --------+---------+-----------+----------+---------+---------+-------------
@@ -7894,7 +7894,7 @@ CREATE VIEW rw_view AS SELECT * FROM parent_tbl
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -7904,7 +7904,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
                            View "public.rw_view"
  Column |  Type   | Collation | Nullable | Default | Storage | Description 
 --------+---------+-----------+----------+---------+---------+-------------
@@ -10498,7 +10498,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10512,7 +10512,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                          Foreign table "import_dest1.t1"
@@ -10524,7 +10524,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't1')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10538,7 +10538,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                          Foreign table "import_dest1.t2"
@@ -10551,7 +10551,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't2')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10565,7 +10565,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                              Foreign table "import_dest1.t3"
@@ -10577,7 +10577,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't3')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10591,7 +10591,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                     Foreign table "import_dest1.t4"
@@ -10602,7 +10602,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't4')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10616,7 +10616,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                            Foreign table "import_dest1.x 4"
@@ -10629,7 +10629,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 'x 4')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10643,7 +10643,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                Foreign table "import_dest1.x 5"
@@ -10653,7 +10653,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 'x 5')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10667,7 +10667,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                                   Foreign table "import_dest1.x 6"
@@ -10701,7 +10701,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10715,7 +10715,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                          Foreign table "import_dest2.t1"
@@ -10727,7 +10727,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't1')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10741,7 +10741,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                          Foreign table "import_dest2.t2"
@@ -10754,7 +10754,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't2')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10768,7 +10768,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                              Foreign table "import_dest2.t3"
@@ -10780,7 +10780,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't3')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10794,7 +10794,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                     Foreign table "import_dest2.t4"
@@ -10805,7 +10805,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't4')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10819,7 +10819,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                            Foreign table "import_dest2.x 4"
@@ -10832,7 +10832,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 'x 4')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10846,7 +10846,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                Foreign table "import_dest2.x 5"
@@ -10856,7 +10856,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 'x 5')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10870,7 +10870,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                                   Foreign table "import_dest2.x 6"
@@ -10903,7 +10903,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10917,7 +10917,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                          Foreign table "import_dest3.t1"
@@ -10929,7 +10929,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't1')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10943,7 +10943,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                          Foreign table "import_dest3.t2"
@@ -10956,7 +10956,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't2')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10970,7 +10970,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                              Foreign table "import_dest3.t3"
@@ -10982,7 +10982,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't3')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -10996,7 +10996,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                     Foreign table "import_dest3.t4"
@@ -11007,7 +11007,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 't4')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -11021,7 +11021,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                            Foreign table "import_dest3.x 4"
@@ -11034,7 +11034,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 'x 4')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -11048,7 +11048,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                Foreign table "import_dest3.x 5"
@@ -11058,7 +11058,7 @@ Server: pgserver
 FDW options: (schema_name 'import_source', table_name 'x 5')
 
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -11072,7 +11072,7 @@ DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on master-only tables
+DETAIL:  Feature not supported: Queries on coordinator-only tables
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Non-default collation
                     Foreign table "import_dest3.x 6"

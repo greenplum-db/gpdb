@@ -368,7 +368,7 @@ CPhysicalSpool::FValidContext(CMemoryPool *, COptimizationContext *poc,
 	// won't be able to influence inner side of the nested loop join as intended
 	// ("blocked" by the spool):
 
-	// +--CPhysicalMotionGather(master)
+	// +--CPhysicalMotionGather(coordinator)
 	//    +--CPhysicalInnerNLJoin
 	//       |--CPhysicalPartitionSelector
 	//       |  +--CPhysicalMotionBroadcast

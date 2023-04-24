@@ -1313,7 +1313,7 @@ CExpression::FValidChildrenDistribution(CDrvdPropCtxtPlan *pdpctxtplan)
 		return false;
 	}
 
-	// we cannot enforce a motion gather if the input is already on the master
+	// we cannot enforce a motion gather if the input is already on the coordinator
 	if (COperator::EopPhysicalMotionGather == Pop()->Eopid())
 	{
 		CExpression *pexprChild = (*this)[0];

@@ -297,7 +297,7 @@ char	   *optimizer_search_strategy_path = NULL;
 /* GUCs to tell Optimizer to enable a physical operator */
 bool		optimizer_enable_nljoin;
 bool		optimizer_enable_indexjoin;
-bool		optimizer_enable_motions_masteronly_queries;
+bool		optimizer_enable_motions_coordinatoronly_queries;
 bool		optimizer_enable_motions;
 bool		optimizer_enable_motion_broadcast;
 bool		optimizer_enable_motion_gather;
@@ -321,7 +321,7 @@ bool		optimizer_enable_outerjoin_to_unionall_rewrite;
 bool		optimizer_enable_ctas;
 bool		optimizer_enable_dml;
 bool		optimizer_enable_dml_constraints;
-bool		optimizer_enable_master_only_queries;
+bool		optimizer_enable_coordinator_only_queries;
 bool		optimizer_enable_hashjoin;
 bool		optimizer_enable_dynamictablescan;
 bool		optimizer_enable_indexscan;
@@ -2044,7 +2044,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_enable_motions_masteronly_queries,
+		&optimizer_enable_motions_coordinatoronly_queries,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2170,11 +2170,11 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_enable_master_only_queries", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Process master only queries via the optimizer."),
+			gettext_noop("Process coordinator only queries via the optimizer."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
-		&optimizer_enable_master_only_queries,
+		&optimizer_enable_coordinator_only_queries,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2916,6 +2916,26 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_enable_foreign_table,
 		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_coordinator_only_queries", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Process coordinator only queries via the optimizer."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_coordinator_only_queries,
+		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_motions_coordinatoronly_queries", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enable plans with Motion operators in the optimizer for queries with no distributed tables."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_motions_coordinatoronly_queries,
+		false,
 		NULL, NULL, NULL
 	},
 	{

@@ -94,11 +94,11 @@ class GlobalShellExecutor(object):
         self.initfile_prefix = initfile_prefix
         self.v_cnt = 0
         # open pseudo-terminal to interact with subprocess
-        self.master_fd, self.slave_fd = pty.openpty()
+        self.primary_fd, self.subsidiary_fd = pty.openpty()
         self.sh_proc = subprocess.Popen(['/bin/bash', '--noprofile', '--norc', '--noediting', '-i'],
-                                        stdin=self.slave_fd,
-                                        stdout=self.slave_fd,
-                                        stderr=self.slave_fd,
+                                        stdin=self.subsidiary_fd,
+                                        stdout=self.subsidiary_fd,
+                                        stderr=self.subsidiary_fd,
                                         start_new_session=True,
                                         universal_newlines=True)
         self.bash_log_file = open("%s.log" % self.initfile_prefix, "w+")
@@ -129,22 +129,22 @@ class GlobalShellExecutor(object):
     def __run_command(self, sh_cmd):
         # Strip extra new lines
         sh_cmd = sh_cmd.rstrip()
-        os.write(self.master_fd, sh_cmd.encode()+b'\n')
+        os.write(self.primary_fd, sh_cmd.encode()+b'\n')
 
         output = ""
         while self.sh_proc.poll() is None:
             # If times out, consider it as an fatal error.
-            r, _, e = select.select([self.master_fd], [], [self.master_fd], 30)
+            r, _, e = select.select([self.primary_fd], [], [self.primary_fd], 30)
             if e:
                 # Terminate the shell when we get any output from stderr
-                o = os.read(self.master_fd, 10240)
+                o = os.read(self.primary_fd, 10240)
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 self.terminate(True)
                 raise GlobalShellExecutor.ExecutionError("Error happened to the bash process, see %s for details." % self.bash_log_file.name)
 
             if r:
-                o = os.read(self.master_fd, 10240).decode()
+                o = os.read(self.primary_fd, 10240).decode()
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 output += o

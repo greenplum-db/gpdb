@@ -696,17 +696,17 @@ CREATE VIEW pg_stat_xact_sys_tables AS
 
 CREATE VIEW pg_stat_user_tables AS
     SELECT * FROM pg_stat_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW gp_stat_user_tables_summary AS
     SELECT * FROM gp_stat_all_tables_summary
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_xact_user_tables AS
     SELECT * FROM pg_stat_xact_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_tables AS
@@ -741,7 +741,7 @@ CREATE VIEW pg_statio_sys_tables AS
 
 CREATE VIEW pg_statio_user_tables AS
     SELECT * FROM pg_statio_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_all_indexes AS
@@ -805,12 +805,12 @@ CREATE VIEW pg_stat_sys_indexes AS
 
 CREATE VIEW pg_stat_user_indexes AS
     SELECT * FROM pg_stat_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW gp_stat_user_indexes_summary AS
     SELECT * FROM gp_stat_all_indexes_summary
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_indexes AS
@@ -836,7 +836,7 @@ CREATE VIEW pg_statio_sys_indexes AS
 
 CREATE VIEW pg_statio_user_indexes AS
     SELECT * FROM pg_statio_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_sequences AS
@@ -853,12 +853,12 @@ CREATE VIEW pg_statio_all_sequences AS
 
 CREATE VIEW pg_statio_sys_sequences AS
     SELECT * FROM pg_statio_all_sequences
-    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+    WHERE schemaname IN ('pg_catalog', 'information_schema', 'pg_aoseg') OR
           schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_statio_user_sequences AS
     SELECT * FROM pg_statio_all_sequences
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_activity AS
@@ -1557,6 +1557,44 @@ REVOKE ALL ON pg_subscription FROM public;
 GRANT SELECT (subdbid, subname, subowner, subenabled, subslotname, subpublications)
     ON pg_subscription TO public;
 
+-------------------------------------------------------------------
+-- GPDB legacy cluster-wise segment view
+-------------------------------------------------------------------
+CREATE OR REPLACE VIEW gp_pgdatabase AS 
+    SELECT *
+      FROM gp_pgdatabase() AS L(dbid smallint, isprimary boolean, content smallint, valid boolean, definedprimary boolean);
+
+GRANT SELECT ON gp_pgdatabase TO PUBLIC;
+
+------------------------------------------------------------------
+-- GPDB distributed transaction related views
+------------------------------------------------------------------
+CREATE OR REPLACE VIEW gp_distributed_xacts AS 
+    SELECT *
+      FROM gp_distributed_xacts() AS L(distributed_xid xid, state text, gp_session_id int, xmin_distributed_snapshot xid);
+
+GRANT SELECT ON gp_distributed_xacts TO PUBLIC;
+
+
+CREATE OR REPLACE VIEW gp_transaction_log AS 
+    SELECT *
+      FROM gp_transaction_log() AS L(segment_id smallint, dbid smallint, transaction xid, status text);
+
+GRANT SELECT ON gp_transaction_log TO PUBLIC;
+
+CREATE OR REPLACE VIEW gp_distributed_log AS 
+    SELECT *
+      FROM gp_distributed_log() AS L(segment_id smallint, dbid smallint, distributed_xid xid, status text, local_transaction xid);
+
+GRANT SELECT ON gp_distributed_log TO PUBLIC;
+
+------------------------------------------------------------------
+-- GPDB view for aggregating the backends information of subtransactions overflowed
+------------------------------------------------------------------
+CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
+  SELECT -1, gp_get_suboverflowed_backends()
+UNION ALL
+  SELECT gp_segment_id, gp_get_suboverflowed_backends() FROM gp_dist_random('gp_id') order by 1;
 
 --
 -- We have a few function definitions in here, too.
@@ -1871,6 +1909,9 @@ $$
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
 
+------------------------------------------------------------------
+-- GPDB endpoint related views and functions
+------------------------------------------------------------------
 CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
 									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),
 									  OUT port int, OUT username text, OUT state text,
@@ -1893,8 +1934,3 @@ CREATE VIEW pg_catalog.gp_segment_endpoints AS
 CREATE VIEW pg_catalog.gp_session_endpoints AS
     SELECT * FROM pg_catalog.gp_get_session_endpoints();
 
--- Dispatch and Aggregate the backends information of subtransactions overflowed
-CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
-  SELECT -1, gp_get_suboverflowed_backends()
-UNION ALL
-  SELECT gp_segment_id, gp_get_suboverflowed_backends() FROM gp_dist_random('gp_id') order by 1;

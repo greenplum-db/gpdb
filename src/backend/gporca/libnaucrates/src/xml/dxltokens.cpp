@@ -538,7 +538,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenRelStorageCompositeType, GPOS_WSZ_LIT("Composite")},
 
 		{EdxltokenRelDistrPolicy, GPOS_WSZ_LIT("DistributionPolicy")},
-		{EdxltokenRelDistrMasterOnly, GPOS_WSZ_LIT("MasterOnly")},
+		{EdxltokenRelDistrCoordinatorOnly, GPOS_WSZ_LIT("CoordinatorOnly")},
 		{EdxltokenRelDistrHash, GPOS_WSZ_LIT("Hash")},
 		{EdxltokenRelDistrRandom, GPOS_WSZ_LIT("Random")},
 		{EdxltokenRelDistrReplicated, GPOS_WSZ_LIT("Replicated")},

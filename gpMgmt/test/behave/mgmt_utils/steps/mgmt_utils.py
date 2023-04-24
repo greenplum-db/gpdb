@@ -4028,6 +4028,14 @@ def impl(context, contentids):
          raise Exception("pg_basebackup entry was found for contents %s in gp_stat_replication after %d retries" % (contentids, retries))
 
 
+@given("create event trigger function")
+def impl(context):
+    dbname = "gptest"
+    query = "create or replace function notcie_ddl() returns event_trigger as $$ begin raise notice 'command % is executed.', tg_tag; end $$ language plpgsql"
+
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
+        dbconn.execSQL(conn, query)
+
 @given('running postgres processes are saved in context')
 @when('running postgres processes are saved in context')
 @then('running postgres processes are saved in context')

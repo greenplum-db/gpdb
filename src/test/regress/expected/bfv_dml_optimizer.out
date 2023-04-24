@@ -86,7 +86,7 @@ select * from yyy order by 1, 2;
 drop table yyy;
 -- Now repeat all the above tests, but using a hacked master-only 'm' table
 drop table m;
-set optimizer_enable_master_only_queries=on;
+set optimizer_enable_coordinator_only_queries=on;
 -- create master-only table
 create table m();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.

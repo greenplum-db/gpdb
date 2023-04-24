@@ -4340,7 +4340,7 @@ CUtils::ValidateCTEProducerConsumerLocality(
 	COperator *pop = pexpr->Pop();
 	if (COperator::EopPhysicalCTEProducer == pop->Eopid())
 	{
-		// record the location (either master or segment or singleton)
+		// record the location (either coordinator or segment or singleton)
 		// where the CTE producer is being executed
 		ULONG ulCTEID = CPhysicalCTEProducer::PopConvert(pop)->UlCTEId();
 		phmulul->Insert(GPOS_NEW(mp) ULONG(ulCTEID), GPOS_NEW(mp) ULONG(eelt));
@@ -4400,9 +4400,9 @@ CUtils::ExecLocalityType(CDistributionSpec *pds)
 	{
 		CDistributionSpecSingleton *pdss =
 			CDistributionSpecSingleton::PdssConvert(pds);
-		if (pdss->FOnMaster())
+		if (pdss->FOnCoordinator())
 		{
-			eelt = EeltMaster;
+			eelt = EeltCoordinator;
 		}
 		else
 		{

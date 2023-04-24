@@ -3,6 +3,8 @@ image_resource:
   type: registry-image
 inputs:
   - name: gpdb_src
+  - name: llvm-with-asserts-packages
+    optional: true
 outputs:
   - name: gpdb_artifacts
 run:

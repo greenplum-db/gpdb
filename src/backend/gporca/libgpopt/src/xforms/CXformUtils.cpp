@@ -2020,8 +2020,8 @@ CXformUtils::PexprWindowWithRowNumber(CMemoryPool *mp,
 	}
 	else
 	{
-		pds = GPOS_NEW(mp)
-			CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		pds = GPOS_NEW(mp) CDistributionSpecSingleton(
+			CDistributionSpecSingleton::EstCoordinator);
 	}
 
 	// window frames

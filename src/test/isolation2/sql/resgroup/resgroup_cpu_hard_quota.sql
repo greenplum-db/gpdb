@@ -22,10 +22,10 @@ CREATE OR REPLACE FUNCTION fetch_sample() RETURNS text AS $$
     import json
 
     group_cpus = plpy.execute('''
-        SELECT rsgname, cpu_usage FROM gp_toolkit.gp_resgroup_status
+        SELECT rsgname, cpu_usage FROM gp_toolkit.gp_resgroup_status_per_host
     ''')
-    json_text = json.dumps(dict([(row['rsgname'], json.loads(row['cpu_usage']))
-                                 for row in group_cpus]))
+    plpy.notice(group_cpus)
+    json_text = json.dumps(dict([(row['rsgname'], float(row['cpu_usage'])) for row in group_cpus]))
     plpy.execute('''
         INSERT INTO cpu_usage_samples VALUES ('{value}')
     '''.format(value=json_text))
@@ -40,24 +40,12 @@ RETURNS BOOL AS $$
     import json
     import functools
 
-    def add_vector(vec1, vec2):
-        r = dict()
-        for seg_id1, value1 in vec1.items():
-            r[seg_id1] = value1 + vec2[seg_id1]
-        return r
+    all_info = plpy.execute('''
+        SELECT sample::json->'{name}' AS cpu FROM cpu_usage_samples
+    '''.format(name=groupname))
+    usage = float(all_info[0]['cpu'])
 
-    def verify_cpu_usage():
-        all_info = plpy.execute('''
-            SELECT sample::json->'{name}' AS cpu FROM cpu_usage_samples
-        '''.format(name=groupname))
-        usage_sum = functools.reduce(add_vector,
-                           [json.loads(row['cpu']) for row in all_info])
-        usage = [(float(v) / all_info.nrows())
-                 for k, v in usage_sum.items() if k != "-1"]
-        avg = sum(usage) / len(usage)
-        return abs(avg - expect_cpu_usage) <= err_rate
-
-    return verify_cpu_usage()
+    return abs(usage - expect_cpu_usage) <= err_rate
 $$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION busy() RETURNS void AS $$

@@ -57,7 +57,7 @@ Group 5 (#GExprs: 8):
     Cost Ctxts:
       main ctxt (stage 0)1.3, cost lower bound: 1324031.092755   PRUNED
       main ctxt (stage 0)0.3, cost lower bound: 1324031.116949   PRUNED
-  7: CPhysicalMotionGather(master) [ 5 ]
+  7: CPhysicalMotionGather(coordinator) [ 5 ]
     Cost Ctxts:
       main ctxt (stage 0)0.0, child ctxts:[1], rows:1.000000 (group), cost: 862.000458
   Grp OptCtxts:
@@ -78,12 +78,12 @@ In this case, it picked best expression 7 (`Best Expr:7`). If we look at `Expr:7
 ```
 Group 5 (#GExprs: 8):
   ...
-  7: CPhysicalMotionGather(master) [ 5 ]
+  7: CPhysicalMotionGather(coordinator) [ 5 ]
     Cost Ctxts:
       main ctxt (stage 0)0.0, child ctxts:[1], rows:1.000000 (group), cost: 862.000458
 ```
 
-We see `CPhysicalMotionGather(master) [ 5 ]`. This tells us that the next group
+We see `CPhysicalMotionGather(coordinator) [ 5 ]`. This tells us that the next group
 is again Group 5. There is also a single entry in cost context with cost
 862.000458 and `child ctxts:[1]`.  This tells us that the next group
 optimization context is 1.
@@ -140,7 +140,7 @@ Group 0 (#GExprs: 4):
       main ctxt (stage 0)6.0, child ctxts:[], ..., cost: 431.000019
       main ctxt (stage 0)1.0, child ctxts:[], ..., cost: 431.000019
       main ctxt (stage 0)2.0, child ctxts:[], ..., cost: 431.000019
-  2: CPhysicalMotionGather(master) [ 0 ]
+  2: CPhysicalMotionGather(coordinator) [ 0 ]
     Cost Ctxts:
       main ctxt (stage 0)0.0, child ctxts:[1], ..., cost: 431.000071
       main ctxt (stage 0)4.0, child ctxts:[1], ..., cost: 431.000071
@@ -187,7 +187,7 @@ Group 1 (#GExprs: 4):
       main ctxt (stage 0)5.0, child ctxts:[], ..., cost: 431.000019
       main ctxt (stage 0)3.0, child ctxts:[], ..., cost: 431.000019
       main ctxt (stage 0)1.0, child ctxts:[], ..., cost: 431.000019
-  2: CPhysicalMotionGather(master) [ 1 ]
+  2: CPhysicalMotionGather(coordinator) [ 1 ]
     Cost Ctxts:
       main ctxt (stage 0)0.0, child ctxts:[1], ..., cost: 431.000071
       main ctxt (stage 0)4.0, child ctxts:[1], ..., cost: 431.000071
@@ -253,7 +253,7 @@ Group 1 (#GExprs: 4):
 At this point we now know the plan optimized based on the nodes traversed in
 the memo:
 ```
-CPhysicalMotionGather(master)
+CPhysicalMotionGather(coordinator)
 +--CPhysicalInnerHashJoin
    |--CPhysicalTableScan "t" ("t")
    |--CPhysicalTableScan "t" ("t")

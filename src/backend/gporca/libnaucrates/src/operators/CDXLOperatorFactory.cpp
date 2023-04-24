@@ -3530,10 +3530,11 @@ CDXLOperatorFactory::ParseRelationDistPolicy(const XMLCh *xml_val)
 	IMDRelation::Ereldistrpolicy rel_distr_policy =
 		IMDRelation::EreldistrSentinel;
 
-	if (0 == XMLString::compareString(
-				 xml_val, CDXLTokens::XmlstrToken(EdxltokenRelDistrMasterOnly)))
+	if (0 ==
+		XMLString::compareString(
+			xml_val, CDXLTokens::XmlstrToken(EdxltokenRelDistrCoordinatorOnly)))
 	{
-		rel_distr_policy = IMDRelation::EreldistrMasterOnly;
+		rel_distr_policy = IMDRelation::EreldistrCoordinatorOnly;
 	}
 	else if (0 == XMLString::compareString(
 					  xml_val, CDXLTokens::XmlstrToken(EdxltokenRelDistrHash)))

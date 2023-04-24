@@ -767,7 +767,7 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 {
 	if (nullptr == gp_policy)
 	{
-		return IMDRelation::EreldistrMasterOnly;
+		return IMDRelation::EreldistrCoordinatorOnly;
 	}
 
 	if (POLICYTYPE_REPLICATED == gp_policy->ptype)
@@ -787,7 +787,7 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 
 	if (POLICYTYPE_ENTRY == gp_policy->ptype)
 	{
-		return IMDRelation::EreldistrMasterOnly;
+		return IMDRelation::EreldistrCoordinatorOnly;
 	}
 
 	GPOS_RAISE(gpdxl::ExmaMD, ExmiDXLUnrecognizedType,

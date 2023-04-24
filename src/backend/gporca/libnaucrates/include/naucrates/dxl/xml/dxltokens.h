@@ -487,7 +487,7 @@ enum Edxltoken
 	EdxltokenPartTypes,
 
 	EdxltokenRelDistrPolicy,
-	EdxltokenRelDistrMasterOnly,
+	EdxltokenRelDistrCoordinatorOnly,
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,

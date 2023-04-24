@@ -5,7 +5,7 @@ This tool traces busy processes associated with a Greenplum Database session. Th
 ## <a id="usage"></a>Usage 
 
 ```
-gpmt analyze_session [-session <session_id> ] [-master-dir <directory>] 
+gpmt analyze_session [-session <session_id> ] [-coordinator-dir <directory>] 
 [-segment-dir <directory>] 
 ```
 
@@ -14,7 +14,7 @@ gpmt analyze_session [-session <session_id> ] [-master-dir <directory>]
 -session
 :   Greenplum session ID which is referenced in `pg_stat_activity`.
 
--master-dir
+-coordinator-dir
 :   Working directory for coordinator process.
 
 -segment-dir

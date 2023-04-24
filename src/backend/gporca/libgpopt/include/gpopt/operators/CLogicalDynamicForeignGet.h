@@ -28,7 +28,7 @@ class CLogicalDynamicForeignGet : public CLogicalDynamicGetBase
 private:
 	OID m_foreign_server_oid;
 
-	BOOL m_is_master_only;
+	BOOL m_is_coordinator_only;
 
 public:
 	CLogicalDynamicForeignGet(const CLogicalDynamicForeignGet &) = delete;
@@ -41,7 +41,7 @@ public:
 							  CColRefArray *pdrgpcrOutput,
 							  CColRef2dArray *pdrgpdrgpcrPart,
 							  IMdIdArray *partition_mdids,
-							  OID foreign_server_oid, BOOL is_master_only);
+							  OID foreign_server_oid, BOOL is_coordinator_only);
 
 	// ident accessors
 
@@ -73,9 +73,9 @@ public:
 	}
 
 	BOOL
-	IsMasterOnly() const
+	IsCoordinatorOnly() const
 	{
-		return m_is_master_only;
+		return m_is_coordinator_only;
 	}
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties

@@ -471,7 +471,7 @@ CPhysicalAgg::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 			exprhdl.DeriveScalarFunctionProperties(1)->Efs())
 	{
 		return GPOS_NEW(mp) CDistributionSpecStrictSingleton(
-			CDistributionSpecSingleton::EstMaster);
+			CDistributionSpecSingleton::EstCoordinator);
 	}
 	else if (CDistributionSpec::EdtStrictReplicated == pds->Edt())
 	{

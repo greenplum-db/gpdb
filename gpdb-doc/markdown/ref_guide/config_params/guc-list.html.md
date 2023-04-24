@@ -2245,7 +2245,7 @@ The default cost model, `calibrated`, is more likely to choose a faster bitmap i
 
 ## <a id="optimizer_cte_inlining_bound"></a>optimizer\_cte\_inlining\_bound 
 
-When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WHERE` clause\). The default value, 0, deactivates inlining.
+When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WITH` clause\). The default value, 0, deactivates inlining.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
