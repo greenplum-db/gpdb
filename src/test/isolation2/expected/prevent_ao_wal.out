@@ -73,10 +73,10 @@ pg_waldump: fatal: error in WAL record at 0/10081FB8: invalid record length at 0
 
 
 -- *********** Set wal_level=minimal **************
-!\retcode gpconfig -c wal_level -v minimal --masteronly;
+!\retcode gpconfig -c wal_level -v minimal --coordinatoronly;
 (exited with code 0)
 -- Set max_wal_senders to 0 because a non-zero value requires wal_level >= 'archive'
-!\retcode gpconfig -c max_wal_senders -v 0 --masteronly;
+!\retcode gpconfig -c max_wal_senders -v 0 --coordinatoronly;
 (exited with code 0)
 -- Restart QD
 !\retcode pg_ctl -l /dev/null -D $COORDINATOR_DATA_DIRECTORY restart -w -t 600 -m fast;
@@ -115,10 +115,10 @@ DROP
 DROP
 
 -- Reset wal_level
-!\retcode gpconfig -r wal_level --masteronly;
+!\retcode gpconfig -r wal_level --coordinatoronly;
 (exited with code 0)
 -- Reset max_wal_senders
-!\retcode gpconfig -r max_wal_senders --masteronly;
+!\retcode gpconfig -r max_wal_senders --coordinatoronly;
 (exited with code 0)
 -- Restart QD
 !\retcode pg_ctl -l /dev/null -D $COORDINATOR_DATA_DIRECTORY restart -w -t 600 -m fast;

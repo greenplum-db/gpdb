@@ -1211,7 +1211,7 @@ DECLARE
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
--- quit all sessions on the master, because connect lost
+-- quit all sessions on the coordinator, because connect lost
 1q: ... <quitting>
 2q: ... <quitting>
 -1Uq: ... <quitting>
@@ -1400,7 +1400,7 @@ FATAL:  terminating connection due to administrator command
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
--- quit all sessions on the master, because connect lost
+-- quit all sessions on the coordinator, because connect lost
 1q: ... <quitting>
 2q: ... <quitting>
 -1Uq: ... <quitting>

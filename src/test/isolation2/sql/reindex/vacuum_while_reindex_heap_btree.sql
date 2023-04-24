@@ -9,7 +9,7 @@ create index idx_btree_reindex_heap on reindex_heap(a);
 
 DELETE FROM reindex_heap WHERE a < 128;
 1: BEGIN;
--- Remember index relfilenodes from master and segments before
+-- Remember index relfilenodes from coordinator and segments before
 -- reindex.
 1: create temp table old_relfilenodes as
    (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class')
@@ -21,7 +21,7 @@ DELETE FROM reindex_heap WHERE a < 128;
 2&: VACUUM reindex_heap;
 1: COMMIT;
 2<:
--- Validate that reindex changed all index relfilenodes on master as well as
+-- Validate that reindex changed all index relfilenodes on coordinator as well as
 -- segments.  The following query should return 0 tuples.
 1: select oldrels.* from old_relfilenodes oldrels join
    (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class')

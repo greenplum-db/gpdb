@@ -7,7 +7,7 @@ FROM gp_segment_configuration WHERE content=-1 and role='p';
 
 -- Run pg_basebackup which should trigger and suspend at the fault
 1&: SELECT pg_basebackup(hostname, 100, port, false, NULL,
-        '/tmp/master_wal_switch_test', true, 'fetch')
+        '/tmp/coordinator_wal_switch_test', true, 'fetch')
     from gp_segment_configuration where content=-1 and role='p';
 
 -- Wait until fault has been triggered
@@ -22,7 +22,7 @@ SELECT application_name, state FROM pg_stat_replication;
 -- suffice to generate new WAL file.
 CREATE TEMP TABLE walfile(fname text) DISTRIBUTED BY (fname);
 INSERT INTO walfile SELECT pg_walfile_name(pg_switch_wal());
-CREATE TABLE master_wal_dummy();
+CREATE TABLE coordinator_wal_dummy();
 -- This should return false, indicating current WAL segment is
 -- different than what was previously recorded walfile table.
 SELECT fname = pg_walfile_name(pg_switch_wal()) FROM walfile;
@@ -40,4 +40,4 @@ FROM gp_segment_configuration WHERE content=-1 and role='p';
 -- Verify if basebackup completed successfully
 -- See if recovery.conf exists (Yes - Pass)
 SELECT application_name, state FROM pg_stat_replication;
-!\retcode ls /tmp/master_wal_switch_test/postgresql.auto.conf /tmp/master_wal_switch_test/standby.signal;
+!\retcode ls /tmp/coordinator_wal_switch_test/postgresql.auto.conf /tmp/coordinator_wal_switch_test/standby.signal;

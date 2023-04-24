@@ -1,5 +1,5 @@
 -- Test if ALTER RENAME followed by ANALYZE executed concurrently with
--- DROP does not introduce inconsistency between master and segments.
+-- DROP does not introduce inconsistency between coordinator and segments.
 -- DROP should be blocked because of ALTER-ANALYZE.  After being
 -- unblocked, DROP should lookup the old name again and fail with
 -- relation does not exist error.
@@ -30,7 +30,7 @@
 2:select count(*) from newt2;
 
 -- The same, but with DROP IF EXISTS. (We used to have a bug, where the DROP
--- command found and drop the relation in the segments, but not in master.)
+-- command found and drop the relation in the segments, but not in coordinator.)
 1:drop table if exists t3;
 1:create table t3 (a int, b text) distributed by (a);
 1:insert into t3 select i, '123 '||i from generate_series(1,10)i;

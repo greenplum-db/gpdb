@@ -33,7 +33,7 @@ begin	/* in func */
 end;	/* in func */
 $$ LANGUAGE plpgsql;
 
--- Show locks in master and in segments. Because the number of segments
+-- Show locks in coordinator and in segments. Because the number of segments
 -- in the cluster depends on configuration, we print only summary information
 -- of the locks in segments. If a relation is locked only on one segment,
 -- we print that as a special case, but otherwise we just print "n segments",
@@ -382,9 +382,9 @@ create or replace function validate_tablespace_symlink(datadir text, tablespaced
     return os.readlink('%s/pg_tblspc/%d' % (datadir, tablespace_oid)) == ('%s/%d' % (tablespacedir, dbid))
 $$ language plpython3u;
 
--- This function is used to loop until master shutsdown, to make sure
+-- This function is used to loop until coordinator shutsdown, to make sure
 -- next command executed is only after restart and doesn't go through
--- while PANIC is still being processed by master, as master continues
+-- while PANIC is still being processed by coordinator, as coordinator continues
 -- to accept connections for a while despite undergoing PANIC.
 CREATE OR REPLACE FUNCTION wait_till_master_shutsdown()
 RETURNS void AS

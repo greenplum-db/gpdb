@@ -226,7 +226,7 @@ insert into t1 select generate_series(1,100);
 0U: @pre_run 'kill -s QUIT ${PID71}&& sleep 5 && echo "${RAW_STR}" ': SELECT 1;
 -- check it can cancel the "gp_wait_parallel_retrieve_cursor"
 1<:
--- quit all sessions on the master, because connect lost
+-- quit all sessions on the coordinator, because connect lost
 1q:
 2q:
 -1Uq:

@@ -11,7 +11,7 @@ CREATE
 CREATE OR REPLACE FUNCTION gp_ao_or_aocs_seg(rel regclass, segment_id OUT integer, segno OUT integer, tupcount OUT bigint, modcount OUT bigint, formatversion OUT smallint, state OUT smallint) RETURNS SETOF record as $$ declare amname_var text;	/* in func */ begin	/* in func */ select amname into amname_var from pg_class c, pg_am am where c.relam = am.oid and c.oid = rel; /* in func */ if amname_var = 'ao_column' then	/* in func */ for segment_id, segno, tupcount, modcount, formatversion, state in SELECT DISTINCT x.segment_id, x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aocsseg(rel) x loop	/* in func */ return next;	/* in func */ end loop;	/* in func */ elsif amname_var = 'ao_row' then	/* in func */ for segment_id, segno, tupcount, modcount, formatversion, state in SELECT x.segment_id, x.segno, x.tupcount, x.modcount, x.formatversion, x.state FROM gp_toolkit.__gp_aoseg(rel) x loop	/* in func */ return next;	/* in func */ end loop;	/* in func */ else	/* in func */ raise '% is not an AO_ROW or AO_COLUMN table', rel::text;	/* in func */ end if;	/* in func */ end;	/* in func */ $$ LANGUAGE plpgsql;
 CREATE
 
--- Show locks in master and in segments. Because the number of segments
+-- Show locks in coordinator and in segments. Because the number of segments
 -- in the cluster depends on configuration, we print only summary information
 -- of the locks in segments. If a relation is locked only on one segment,
 -- we print that as a special case, but otherwise we just print "n segments",
@@ -129,9 +129,9 @@ CREATE
 create or replace function validate_tablespace_symlink(datadir text, tablespacedir text, dbid int, tablespace_oid oid) returns boolean as $$ import os return os.readlink('%s/pg_tblspc/%d' % (datadir, tablespace_oid)) == ('%s/%d' % (tablespacedir, dbid)) $$ language plpython3u;
 CREATE
 
--- This function is used to loop until master shutsdown, to make sure
+-- This function is used to loop until coordinator shutsdown, to make sure
 -- next command executed is only after restart and doesn't go through
--- while PANIC is still being processed by master, as master continues
+-- while PANIC is still being processed by coordinator, as coordinator continues
 -- to accept connections for a while despite undergoing PANIC.
 CREATE OR REPLACE FUNCTION wait_till_master_shutsdown() RETURNS void AS $$ DECLARE i int; /* in func */ BEGIN i := 0; /* in func */ while i < 120 loop i := i + 1; /* in func */ PERFORM pg_sleep(.5); /* in func */ end loop; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
 CREATE

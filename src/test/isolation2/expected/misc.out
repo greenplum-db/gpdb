@@ -1,7 +1,7 @@
 --
 -- Validate GPDB can create unique index on a table created in utility mode
 --
--- NOTICE: we must connect to master in utility mode because the oid of table is
+-- NOTICE: we must connect to coordinator in utility mode because the oid of table is
 -- preassigned in QD, if we create a table in utility mode in QE, the oid might
 -- conflict with preassigned oid.
 -1U: create table utilitymode_primary_key_tab (c1 int);

@@ -7,12 +7,12 @@
 -- end_matchsubs
 
 -- Let FTS detect/declare failure sooner 
-!\retcode gpconfig -c gp_fts_probe_interval -v 10 --masteronly;
+!\retcode gpconfig -c gp_fts_probe_interval -v 10 --coordinatoronly;
 -- Because after RESET, it still takes a little while for the primary
 -- to restart, and potentially makes FTS think it's in "recovery not
 -- in progress" stage and promote the mirror, we would need the FTS
 -- to make that decision a bit less frequently.
-!\retcode gpconfig -c gp_fts_probe_retries -v 15 --masteronly;
+!\retcode gpconfig -c gp_fts_probe_retries -v 15 --coordinatoronly;
 !\retcode gpstop -u;
 
 -- Let the background writer sleep 17 seconds to delay the resetting.
@@ -59,6 +59,6 @@ drop table fts_reset_t3;
 !\retcode gprecoverseg -ar
 
 -- restore parameters
-!\retcode gpconfig -r gp_fts_probe_interval --masteronly;
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+!\retcode gpconfig -r gp_fts_probe_interval --coordinatoronly;
+!\retcode gpconfig -r gp_fts_probe_retries --coordinatoronly;
 !\retcode gpstop -u;

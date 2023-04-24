@@ -164,7 +164,7 @@ test: uao/collected_stats_views_row
 
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
-test: segwalrep/master_wal_switch
+test: segwalrep/coordinator_wal_switch
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column

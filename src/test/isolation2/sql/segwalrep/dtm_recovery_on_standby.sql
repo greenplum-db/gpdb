@@ -1,13 +1,13 @@
 -- Validate that standby performs DTM recovery upon promotion.
 
 -- Check that are starting with a clean slate, standby must be in sync
--- with master.
+-- with coordinator.
 select application_name, state, sync_state from pg_stat_replication;
 
 -- Scenario1: standby broadcasts commit-prepared for a transaction
--- that was prepared on master.
+-- that was prepared on coordinator.
 
--- Suspend master backend before it sends commit-prepared
+-- Suspend coordinator backend before it sends commit-prepared
 select gp_inject_fault('dtm_broadcast_commit_prepared', 'suspend', dbid)
 from gp_segment_configuration where content = -1 and role = 'p';
 
@@ -66,7 +66,7 @@ where content = -1 and role = 'm';
 -- by gpinitstandby needs access exclusive lock and the backend for
 -- this isolation spec is already holding an access share lock on
 -- gp_segment_configuration.
--- NOTE: the select query should fail since the gang for master has been
+-- NOTE: the select query should fail since the gang for coordinator has been
 -- terminated by the dtx recovery process on standby during standby promote. We
 -- do not test the result of the select query; just expect it fail so that the
 -- next mpp query could recreate the gang and succeed.
@@ -80,14 +80,14 @@ create or replace function reinitialize_standby()
 returns text as $$
     import subprocess
     rv = plpy.execute("select hostname, datadir, port from standby_config order by role", 2)
-    standby = rv[0] # role = 'm'
-    master = rv[1] # role = 'p'
+    standby = rv[0] # role = 'c'
+    coordinator = rv[1] # role = 'p'
     try:
         cmd = 'rm -rf %s.dtm_recovery && cp -R %s %s.dtm_recovery' % (standby['datadir'], standby['datadir'], standby['datadir'])
         remove_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('ascii')
-        cmd = 'gpinitstandby -ar -P %d' % master['port']
+        cmd = 'gpinitstandby -ar -P %d' % coordinator['port']
         remove_output += subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('ascii')
-        cmd = 'export PGPORT=%d; gpinitstandby -a -s %s -S %s -P %d' % (master['port'], standby['hostname'], standby['datadir'], standby['port'])
+        cmd = 'export PGPORT=%d; gpinitstandby -a -s %s -S %s -P %d' % (coordinator['port'], standby['hostname'], standby['datadir'], standby['port'])
         init_output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('ascii')
     except subprocess.CalledProcessError as e:
         plpy.info(e.output)
@@ -102,5 +102,5 @@ $$ language plpython3u;
 
 select reinitialize_standby();
 
--- Sync state between master and standby must be restored at the end.
+-- Sync state between coordinator and standby must be restored at the end.
 select wait_until_standby_in_state('streaming');

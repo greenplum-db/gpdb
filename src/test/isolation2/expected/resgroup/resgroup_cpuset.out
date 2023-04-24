@@ -272,7 +272,7 @@ DROP RESOURCE GROUP rg1_test_group;
 ERROR:  resource group "rg1_test_group" does not exist
 -- end_ignore
 
--- test segment/master cpuset
+-- test segment/coordinator cpuset
 CREATE RESOURCE GROUP rg_multi_cpuset1 WITH (concurrency=2, cpuset='0;0');
 CREATE
 ALTER RESOURCE GROUP rg_multi_cpuset1 set CPUSET '1;1';
