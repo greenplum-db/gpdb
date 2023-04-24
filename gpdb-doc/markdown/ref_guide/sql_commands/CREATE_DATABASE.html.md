@@ -54,7 +54,7 @@ allowconn
 :   If `false`, then no one can connect to this database. The default is `true`, allowing connections \(except as restricted by other mechanisms, such as `GRANT/REVOKE CONNECT`\).
 
 connlimit
-:   The maximum number of concurrent connections allowed to this database. The default is `-1`, no limit. Greenplum Database superusers are exempt from this limit.
+:   The maximum number of concurrent connections allowed to this database on the coordinator. The default is `-1`, no limit. Greenplum Database superusers are exempt from this limit.
 
 istemplate
 :   If `true`, then this database can be cloned by any user with `CREATEDB` privileges; if `false` \(the default\), then only superusers or the owner of the database can clone it. Note that template databases cannot be dropped.
