@@ -4946,10 +4946,9 @@ ResGroupSignalMoveQuery(int sessionId, void *slot, Oid groupId)
 		pid = proc->pid;
 		backendId = proc->backendId;
 
-		SpinLockAcquire(&proc->movetoMutex);
-
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
+			SpinLockAcquire(&proc->movetoMutex);
 			Assert(proc->movetoResSlot == NULL);
 			Assert(slot != NULL);
 			proc->movetoResSlot = slot;
@@ -4959,6 +4958,7 @@ ResGroupSignalMoveQuery(int sessionId, void *slot, Oid groupId)
 		}
 		else if (Gp_role == GP_ROLE_EXECUTE)
 		{
+			SpinLockAcquire(&proc->movetoMutex);
 			Assert(groupId != InvalidOid);
 			Assert(proc->movetoGroupId == InvalidOid);
 			proc->movetoGroupId = groupId;
