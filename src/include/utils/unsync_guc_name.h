@@ -375,6 +375,7 @@
 		"optimizer_enable_outerjoin_to_unionall_rewrite",
 		"optimizer_enable_partition_propagation",
 		"optimizer_enable_partition_selection",
+		"optimizer_enable_push_join_below_union_all",
 		"optimizer_enable_range_predicate_dpe",
 		"optimizer_enable_redistribute_nestloop_loj_inner_child",
 		"optimizer_enable_replicated_table",

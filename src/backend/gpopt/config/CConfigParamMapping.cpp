@@ -411,6 +411,16 @@ CConfigParamMapping::PackConfigParamInBitset(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfGet2TableScan));
 	}
 
+	if (!optimizer_enable_push_join_below_union_all)
+	{
+		// disable push join below union all transform if
+		// the corresponding GUC is turned off
+		traceflag_bitset->ExchangeSet(
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfPushJoinBelowLeftUnionAll));
+		traceflag_bitset->ExchangeSet(
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfPushJoinBelowRightUnionAll));
+	}
+
 	if (!optimizer_enable_indexscan)
 	{
 		// disable index scan if the corresponding GUC is turned off
