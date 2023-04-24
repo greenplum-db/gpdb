@@ -785,13 +785,6 @@ resources:
     versioned_file: compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
 
 {% endif %}
-- name: reduced-frequency-trigger
-  type: time
-  source:
-    location: America/Los_Angeles
-    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
-    start: {{reduced-frequency-trigger-start}}
-    stop: {{reduced-frequency-trigger-stop}}
 
 {% if "ICW" in test_sections %}
 - name: icw_planner_centos6_dump
@@ -1011,6 +1004,8 @@ cs_ccp_aggregate_dpm_start_anchor: &cs_ccp_aggregate_dpm_start
 cs_ccp_aggregate_mpp_start_anchor: &cs_ccp_aggregate_mpp_start
   - get: gpdb_src
     passed: [gate_cs_start]
+  - get: weekly-trigger
+    passed: [gate_cs_start]
   - get: gpdb_binary
     resource: bin_gpdb_centos6
     passed: [gate_cs_start]
@@ -1060,7 +1055,7 @@ jobs:
     - get: gpdb_src
       trigger: true
     - get: weekly-trigger
-      trigger: true
+      trigger: ((weekly-trigger-flag))
     - task: check_format
       file: gpdb_src/concourse/tasks/check_format.yml
 
@@ -1080,6 +1075,10 @@ jobs:
       passed:
         - check_format
       trigger: true
+    - get: weekly-trigger
+      passed:
+      - check_format
+      trigger: ((weekly-trigger-flag))
     - get: gpaddon_src
       trigger: true
     - get: centos-gpdb-dev-6
@@ -1089,8 +1088,9 @@ jobs:
 - name: compile_gpdb_centos6
   plan:
   - in_parallel:
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
+    - get: weekly-trigger
+      passed: [gate_compile_start]
+      trigger: ((weekly-trigger-flag))
     - get: gpdb_src
       passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
@@ -1126,8 +1126,9 @@ jobs:
 - name: compile_gpdb_centos7
   plan:
   - in_parallel:
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
+    - get: weekly-trigger
+      passed: [gate_compile_start]
+      trigger: ((weekly-trigger-flag))
     - get: gpdb_src
       passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
@@ -1163,8 +1164,9 @@ jobs:
 - name: compile_gpdb_sles11
   plan:
   - in_parallel:
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
+    - get: weekly-trigger
+      passed: [gate_compile_start]
+      trigger: ((weekly-trigger-flag))
     - get: gpdb_src
       passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
@@ -1218,8 +1220,9 @@ jobs:
 - name: compile_gpdb_open_source_centos6
   plan:
   - in_parallel:
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
+    - get: weekly-trigger
+      passed: [gate_compile_start]
+      trigger: ((weekly-trigger-flag))
     - get: gpdb_src
       passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
@@ -1234,8 +1237,9 @@ jobs:
 - name: compile_gpdb_windows_cl
   plan:
   - in_parallel:
-    - get: reduced-frequency-trigger
-      trigger: ((reduced-frequency-trigger-flag))
+    - get: weekly-trigger
+      passed: [gate_compile_start]
+      trigger: ((weekly-trigger-flag))
       tags: ["wix"]
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
@@ -1287,6 +1291,14 @@ jobs:
       - compile_gpdb_centos7
       - compile_gpdb_sles11
       trigger: true
+    - get: weekly-trigger
+      passed:
+      - gate_compile_start
+      - compile_gpdb_centos6
+      - compile_gpdb_open_source_centos6
+      - compile_gpdb_centos7
+      - compile_gpdb_sles11
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_sles11
       passed:
       - compile_gpdb_sles11
@@ -1316,6 +1328,10 @@ jobs:
         passed:
         - gate_compile_end
         trigger: true
+      - get: weekly-trigger
+        passed:
+        - gate_compile_end
+        trigger: ((weekly-trigger-flag))
       - get: bin_gpdb_sles11
         passed:
         - gate_compile_end
@@ -1333,6 +1349,8 @@ jobs:
   plan:
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: weekly-trigger
       passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
@@ -1362,6 +1380,8 @@ jobs:
   - in_parallel:
     - get: gpdb_src
       passed: [gate_icw_start]
+    - get: weekly-trigger
+      passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [gate_icw_start]
@@ -1380,6 +1400,8 @@ jobs:
   plan:
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: weekly-trigger
       passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
@@ -1401,6 +1423,8 @@ jobs:
   - in_parallel:
     - get: gpdb_src
       passed: [gate_icw_start]
+    - get: weekly-trigger
+      passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos7
       passed: [gate_icw_start]
@@ -1421,6 +1445,8 @@ jobs:
   - in_parallel:
     - get: gpdb_src
       passed: [gate_icw_start]
+    - get: weekly-trigger
+      passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos7
       passed: [gate_icw_start]
@@ -1440,6 +1466,8 @@ jobs:
   plan:
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: weekly-trigger
       passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_sles11
@@ -1462,6 +1490,8 @@ jobs:
     - get: gpdb_src
       passed: [gate_icw_start]
       trigger: [[ test_trigger ]]
+    - get: weekly-trigger
+      passed: [gate_icw_start]
     - get: bin_gpdb_centos6
       passed: [gate_icw_start]
     - get: centos-gpdb-dev-6
@@ -1496,6 +1526,8 @@ jobs:
     - get: gpdb_src
       params: {submodules: none}
       passed: [gate_icw_start]
+    - get: weekly-trigger
+      passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [gate_icw_start]
@@ -1525,6 +1557,8 @@ jobs:
   plan:
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: weekly-trigger
       passed: [gate_icw_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -1578,6 +1612,18 @@ jobs:
       - QP_optimizer-functional
       - fips_centos6
       trigger: true
+    - get: weekly-trigger
+      passed:
+      - icw_planner_centos6
+      - icw_gporca_centos6
+      - icw_planner_ictcp_centos6
+      - icw_gporca_centos7
+      - icw_planner_centos7
+      - icw_gporca_sles11
+      - icw_extensions_gpcloud
+      - QP_optimizer-functional
+      - fips_centos6
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - icw_planner_centos6
@@ -1636,6 +1682,9 @@ jobs:
       passed:
       - gate_compile_end
       trigger: true
+    - get: weekly-trigger
+      passed: [gate_compile_end]
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_sles11
       passed:
       - gate_compile_end
@@ -1655,6 +1704,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_cs_start]
+    - get: weekly-trigger
       passed: [gate_cs_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -1693,6 +1744,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_cs_start]
+    - get: weekly-trigger
       passed: [gate_cs_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -1753,6 +1806,8 @@ jobs:
     - get: gpdb_src
       params: {submodules: none}
       passed: [gate_cs_start]
+    - get: weekly-trigger
+      passed: [gate_cs_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [gate_cs_start]
@@ -1789,6 +1844,8 @@ jobs:
   - in_parallel:
     - get: gpdb_src
       params: {submodules: none}
+      passed: [gate_cs_start]
+    - get: weekly-trigger
       passed: [gate_cs_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
@@ -1845,6 +1902,9 @@ jobs:
       - fts
       - storage
       trigger: true
+    - get: weekly-trigger
+      passed: *gate_cs_passed
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed: *gate_cs_passed
 
@@ -1878,6 +1938,10 @@ jobs:
       passed:
       - gate_compile_end
       trigger: true
+    - get: weekly-trigger
+      passed:
+      - gate_compile_end
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - gate_compile_end
@@ -1893,6 +1957,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_mpp_start]
+    - get: weekly-trigger
       passed: [gate_mpp_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -1924,6 +1990,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_mpp_start]
+    - get: weekly-trigger
       passed: [gate_mpp_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
@@ -1967,6 +2035,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_mpp_start]
+    - get: weekly-trigger
       passed: [gate_mpp_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos7
@@ -2016,6 +2086,12 @@ jobs:
         - mpp_resource_group_centos6
         - mpp_resource_group_centos7
       trigger: true
+    - get: weekly-trigger
+      passed:
+      - mpp_interconnect
+      - mpp_resource_group_centos6
+      - mpp_resource_group_centos7
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
         - mpp_interconnect
@@ -2054,6 +2130,10 @@ jobs:
       passed:
       - gate_compile_end
       trigger: true
+    - get: weekly-trigger
+      passed:
+      - gate_compile_end
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - gate_compile_end
@@ -2073,6 +2153,8 @@ jobs:
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_start]
+    - get: weekly-trigger
       passed: [gate_mm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -2117,6 +2199,8 @@ jobs:
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_start]
+    - get: weekly-trigger
       passed: [gate_mm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -2164,6 +2248,8 @@ jobs:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_start]
+    - get: weekly-trigger
+      passed: [gate_mm_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [gate_mm_start]
@@ -2184,6 +2270,8 @@ jobs:
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_start]
+    - get: weekly-trigger
       passed: [gate_mm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -2250,6 +2338,8 @@ jobs:
   - in_parallel:
     - get: gpdb_src
       passed: [gate_mm_start]
+    - get: weekly-trigger
+      passed: [gate_mm_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [gate_mm_start]
@@ -2268,6 +2358,8 @@ jobs:
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_start]
+    - get: weekly-trigger
       passed: [gate_mm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -2315,6 +2407,9 @@ jobs:
       - MM_pt-rebuild
       - MU_check_centos
       trigger: true
+    - get: weekly-trigger
+      passed: *gate_mm_end_passed
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed: *gate_mm_end_passed
 
@@ -2348,6 +2443,9 @@ jobs:
       passed:
       - gate_compile_end
       trigger: true
+    - get: weekly-trigger
+      passed: [gate_compile_end]
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - gate_compile_end
@@ -2360,6 +2458,8 @@ jobs:
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_dpm_start]
+    - get: weekly-trigger
       passed: [gate_dpm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -2399,6 +2499,8 @@ jobs:
       tags: ["ddboost"]
     - get: gpdb_src
       tags: ["ddboost"]
+      passed: [gate_dpm_start]
+    - get: weekly-trigger
       passed: [gate_dpm_start]
     - get: gpdb_binary
       tags: ["ddboost"]
@@ -2481,6 +2583,8 @@ jobs:
     - get: gpdb_src
       tags: ["ddboost"]
       passed: [gate_dpm_start]
+    - get: weekly-trigger
+      passed: [gate_dpm_start]
     - get: gpdb_binary
       tags: ["ddboost"]
       resource: bin_gpdb_centos6
@@ -2562,6 +2666,8 @@ jobs:
     - get: gpdb_src
       tags: ["ddboost"]
       passed: [gate_dpm_start]
+    - get: weekly-trigger
+      passed: [gate_dpm_start]
     - get: gpdb_binary
       tags: ["ddboost"]
       resource: bin_gpdb_centos6
@@ -2639,6 +2745,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_dpm_start]
+    - get: weekly-trigger
       passed: [gate_dpm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -2748,6 +2856,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_dpm_start]
+    - get: weekly-trigger
       passed: [gate_dpm_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -2861,6 +2971,15 @@ jobs:
       - DPM_backup-restore_ddboost_part3
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x
+    - get: weekly-trigger
+      passed:
+      - DPM_backup-restore
+      - DPM_backup-restore_ddboost_part1
+      - DPM_backup-restore_ddboost_part2
+      - DPM_backup-restore_ddboost_part3
+      - gptransfer-43x-to-5x
+      - gptransfer-5x-to-5x
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - DPM_backup-restore
@@ -2900,6 +3019,9 @@ jobs:
       passed:
       - gate_compile_end
       trigger: true
+    - get: weekly-trigger
+      passed: [gate_compile_end]
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - gate_compile_end
@@ -2911,6 +3033,8 @@ jobs:
   plan:
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_ud_start]
+    - get: weekly-trigger
       passed: [gate_ud_start]
     - get: bin_gpdb
       passed: [gate_ud_start]
@@ -2931,6 +3055,9 @@ jobs:
       passed: &gate_ud_end
       - regression_tests_gphdfs_hadoop_centos
       trigger: true
+    - get: weekly-trigger
+      passed: *gate_ud_end
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed: *gate_ud_end
 
@@ -2964,6 +3091,9 @@ jobs:
       passed:
       - gate_compile_end
       trigger: true
+    - get: weekly-trigger
+      passed: [gate_compile_end]
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - gate_compile_end
@@ -2981,6 +3111,8 @@ jobs:
     - get: gpdb_src
       passed:
       - gate_advanced_analytics_start
+    - get: weekly-trigger
+      passed: [gate_advanced_analytics_start]
     - get: bin_gpdb
       resource: bin_gpdb_[[ platform ]]
       trigger: [[ test_trigger ]]
@@ -3013,6 +3145,8 @@ jobs:
     - get: gpdb_src
       passed:
       - gate_advanced_analytics_start
+    - get: weekly-trigger
+      passed: [gate_advanced_analytics_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos[[ platform_version ]]
       trigger: [[ test_trigger ]]
@@ -3050,6 +3184,9 @@ jobs:
     - get: gpdb_src
       passed:
       - postgis_build_centos[[ platform_version ]]
+    - get: weekly-trigger
+      passed:
+      - postgis_build_centos[[ platform_version ]]
     - get: gcc_4.4.2_snowflake
     - get: postgis_artifacts_centos[[ platform_version ]]
   - task: test_postgis
@@ -3067,6 +3204,15 @@ jobs:
   - in_parallel:
     - get: gpdb_src
       trigger: true
+      passed:
+{% for test_name in aa_Test_suites %}
+{% set platform_version = '7' if "centos7" in test_name else '6' %}
+{% set orca_state = 'off' if "Planner" in test_name else 'on' %}
+      - MADlib_Test_[[ test_name ]]
+      - Postgis_Test_[[ test_name ]]
+{% endfor %}
+    - get: weekly-trigger
+      trigger: ((weekly-trigger-flag))
       passed:
 {% for test_name in aa_Test_suites %}
 {% set platform_version = '7' if "centos7" in test_name else '6' %}
@@ -3124,6 +3270,9 @@ jobs:
       passed:
       - gate_compile_end
       trigger: true
+    - get: weekly-trigger
+      passed: [gate_compile_end]
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
       - gate_compile_end
@@ -3134,6 +3283,8 @@ jobs:
   - *ccp_jitter_delay
   - in_parallel:
     - get: gpdb_src
+      passed: [gate_filerep_start]
+    - get: weekly-trigger
       passed: [gate_filerep_start]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
@@ -3180,6 +3331,12 @@ jobs:
       - cs_[[ test_name ]]
 {% endfor %}
       trigger: true
+    - get: weekly-trigger
+      passed:
+{% for test_name in cs_filerep_end_to_end_suites %}
+      - cs_[[ test_name ]]
+{% endfor %}
+      trigger: ((weekly-trigger-flag))
     - get: bin_gpdb_centos6
       passed:
 {% for test_name in cs_filerep_end_to_end_suites %}

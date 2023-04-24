@@ -6,9 +6,7 @@ bin_gpdb_centos_versioned_file: bin_gpdb_centos/bin_gpdb.tar.gz
 bin_gpdb_centos7_versioned_file: bin_gpdb_centos7/bin_gpdb.tar.gz
 bin_gpdb_sles11_versioned_file: bin_gpdb_sles11/bin_gpdb.tar.gz
 binary_swap_gpdb_centos_versioned_file: bin_gpdb_centos_binary_swap/bin_gpdb.tar.gz
-reduced-frequency-trigger-start: 1:00 AM
-reduced-frequency-trigger-stop: 0:59 AM
-reduced-frequency-trigger-flag: false
+weekly-trigger-flag: true
 ccp_delay_jitter: 60
 tf-bucket-name: gpdb5-pipeline-dynamic-terraform
 tf-machine-region: us-west-2
