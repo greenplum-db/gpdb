@@ -591,7 +591,7 @@ class SQLIsolationExecutor(object):
 
     def get_all_primary_contentids(self, dbname):
         """
-        Retrieves all primary content IDs (including the master). Intended for
+        Retrieves all primary content IDs (including the coordinator). Intended for
         use by *U queries.
         """
         if not dbname:
@@ -852,11 +852,11 @@ class SQLIsolationTestCase:
            followed by U (for utility-mode connections) or R (for retrieve-mode
            connection). In 'U' mode or 'R' mode, the
            content-id can alternatively be an asterisk '*' to perform a
-           utility-mode/retrieve-mode query on the master and all primary segments.
+           utility-mode/retrieve-mode query on the coordinator and all primary segments.
            If you want to create multiple connections to the same content-id, just
            increase N in: "content-id + {gpdb segment node number} * N",
            e.g. if gpdb cluster segment number is 3, then:
-           (1) the master utility connections can be: -1U, -4U, -7U;
+           (1) the coordinator utility connections can be: -1U, -4U, -7U;
            (2) the seg0 connections can be: 0U, 3U, 6U;
            (3) the seg1 connections can be: 1U, 4U, 7U;
            (4) the seg2 connections can be: 2U, 5U, 8U;
@@ -986,7 +986,7 @@ class SQLIsolationTestCase:
 
         Some tests are easier to write if it's possible to modify a system
         catalog across the *entire* cluster. To perform a utility-mode query on
-        all segments and the master, you can use *U commands:
+        all segments and the coordinator, you can use *U commands:
 
         *U: SET allow_system_table_mods = true;
         *U: UPDATE pg_catalog.<table> SET <column> = <value> WHERE <cond>;
