@@ -105,7 +105,7 @@ This example shows how to edit the `pg_hba.conf` file on the coordinator host 
 
 To edit `pg_hba.conf`:
 
-1.  Open the file `$MASTER_DATA_DIRECTORY/pg_hba.conf` in a text editor.
+1.  Open the file `$COORDINATOR_DATA_DIRECTORY/pg_hba.conf` in a text editor.
 2.  Add a line to the file for each type of connection you want to allow. Records are read sequentially, so the order of the records is significant. Typically, earlier records will have tight connection match parameters and weaker authentication methods, while later records will have looser match parameters and stronger authentication methods. For example:
 
     ```
@@ -222,7 +222,7 @@ Following are the recommended steps for configuring your system for LDAP authent
 1.   Set up the LDAP server with the database users/roles to be authenticated via LDAP.
 2.  On the database:
     1.  Verify that the database users to be authenticated via LDAP exist on the database. LDAP is only used for verifying username/password pairs, so the roles should exist in the database.
-    2.  Update the `pg_hba.conf` file in the `$MASTER_DATA_DIRECTORY` to use LDAP as the authentication method for the respective users. Note that the first entry to match the user/role in the `pg_hba.conf` file will be used as the authentication mechanism, so the position of the entry in the file is important.
+    2.  Update the `pg_hba.conf` file in the `$COORDINATOR_DATA_DIRECTORY` to use LDAP as the authentication method for the respective users. Note that the first entry to match the user/role in the `pg_hba.conf` file will be used as the authentication mechanism, so the position of the entry in the file is important.
     3.  Reload the server for the `pg_hba.conf` configuration settings to take effect \(`gpstop -u`\).
 
 Specify the following parameter `auth-options`.
@@ -360,14 +360,14 @@ The following Server settings need to be specified in the `postgresql.conf` con
     It is possible to have authentication without encryption overhead by using `NULL-SHA` or `NULL-MD5` ciphers. However, a man-in-the-middle could read and pass communications between client and server. Also, encryption overhead is minimal compared to the overhead of authentication. For these reasons, NULL ciphers should not be used.
 
 
-The default location for the following SSL server files is the Greenplum Database coordinator data directory \(`$MASTER_DATA_DIRECTORY`\):
+The default location for the following SSL server files is the Greenplum Database coordinator data directory \(`$COORDINATOR_DATA_DIRECTORY`\):
 
 -   `server.crt` - Server certificate.
 -   `server.key` - Server private key.
 -   `root.crt` - Trusted certificate authorities.
 -   `root.crl` - Certificates revoked by certificate authorities.
 
-If Greenplum Database coordinator mirroring is enabled with SSL client authentication, the SSL server files *should not be placed* in the default directory `$MASTER_DATA_DIRECTORY`. If a `gpinitstandby` operation is performed, the contents of `$MASTER_DATA_DIRECTORY` is copied from the coordinator to the standby coordinator and the incorrect SSL key, and cert files \(the coordinator files, and not the standby coordinator files\) will prevent standby coordinator start up.
+If Greenplum Database coordinator mirroring is enabled with SSL client authentication, the SSL server files *should not be placed* in the default directory `$COORDINATOR_DATA_DIRECTORY`. If a `gpinitstandby` operation is performed, the contents of `$COORDINATOR_DATA_DIRECTORY` is copied from the coordinator to the standby coordinator and the incorrect SSL key, and cert files \(the coordinator files, and not the standby coordinator files\) will prevent standby coordinator start up.
 
 You can specify a different directory for the location of the SSL server files with the `postgresql.conf` parameters `sslcert`, `sslkey`, `sslrootcert`, and `sslcrl`.
 
@@ -388,16 +388,16 @@ sslmode
 :   Only use an SSL connection. Verify that the server certificate is issued by a trusted CA and that the server host name matches that in the certificate.
 
 sslcert
-:   The file name of the client SSL certificate. The default is `$MASTER_DATA_DIRECTORY/postgresql.crt`.
+:   The file name of the client SSL certificate. The default is `$COORDINATOR_DATA_DIRECTORY/postgresql.crt`.
 
 sslkey
-:   The secret key used for the client certificate. The default is `$MASTER_DATA_DIRECTORY/postgresql.key`.
+:   The secret key used for the client certificate. The default is `$COORDINATOR_DATA_DIRECTORY/postgresql.key`.
 
 sslrootcert
-:   The name of a file containing SSL Certificate Authority certificate\(s\). The default is `$MASTER_DATA_DIRECTORY/root.crt`.
+:   The name of a file containing SSL Certificate Authority certificate\(s\). The default is `$COORDINATOR_DATA_DIRECTORY/root.crt`.
 
 sslcrl
-:   The name of the SSL certificate revocation list. The default is `$MASTER_DATA_DIRECTORY/root.crl`.
+:   The name of the SSL certificate revocation list. The default is `$COORDINATOR_DATA_DIRECTORY/root.crl`.
 
 The client connection parameters can be set using the following environment variables:
 
@@ -407,7 +407,7 @@ The client connection parameters can be set using the following environment vari
 -   `sslrootcert` – `PGSSLROOTCERT`
 -   `sslcrl` – `PGSSLCRL` 
 
-For example, run the following command to connect to the `postgres` database from `localhost` and verify the certificate present in the default location under `$MASTER_DATA_DIRECTORY`:
+For example, run the following command to connect to the `postgres` database from `localhost` and verify the certificate present in the default location under `$COORDINATOR_DATA_DIRECTORY`:
 
 ```
 psql "sslmode=verify-ca host=localhost dbname=postgres"
@@ -426,8 +426,8 @@ Greenplum Database does not install a PAM configuration file. If you choose to u
 1.  Log in to the Greenplum Database coordinator host and set up your environment. For example:
 
     ```
-    $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    $ ssh gpadmin@<gpcoord>
+    gpadmin@gpcoord$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2.  Identify the `pamservice` name for Greenplum Database. In this procedure, we choose the name `greenplum`.
@@ -499,7 +499,7 @@ To limit the number of active concurrent sessions to your Greenplum Database sys
 
 When you set `max_connections`, you must also set the dependent parameter `max_prepared_transactions`. This value must be at least as large as the value of `max_connections` on the coordinator, and segment instances should be set to the same value as the coordinator.
 
-In `$MASTER_DATA_DIRECTORY/postgresql.conf` \(including standby coordinator\):
+In `$COORDINATOR_DATA_DIRECTORY/postgresql.conf` \(including standby coordinator\):
 
 ```
 max_connections=100
@@ -523,7 +523,7 @@ To change the number of allowed connections:
     $ gpstop
     ```
 
-2.  On the coordinator host, edit `$MASTER_DATA_DIRECTORY/postgresql.conf` and change the following two parameters:
+2.  On the coordinator host, edit `$COORDINATOR_DATA_DIRECTORY/postgresql.conf` and change the following two parameters:
     -   `max_connections` – the number of active user sessions you want to allow plus the number of `superuser_reserved_connections`.
     -   `max_prepared_transactions` – must be greater than or equal to `max_connections`.
 3.  On each segment instance, edit `SEGMENT_DATA_DIRECTORY/postgresql.conf` and change the following two parameters:

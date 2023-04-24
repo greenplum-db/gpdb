@@ -15,12 +15,12 @@ ic-proxy is disabled by default, we could enable it with `configure
 
 After the installation we also need to setup the ic-proxy network, it is done
 by setting the GUC `gp_interconnect_proxy_addresses`, for example if a cluster
-has one master, one standby master, one primary segment and one mirror segment,
+has one coordinator, one standby coordinator, one primary segment and one mirror segment,
 we could set it like below:
 
     gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'1:-1:localhost:2000,2:0:localhost:2002,3:0:localhost:2003,4:-1:localhost:2001'"
 
-It contains information for all the master, standby, primary and mirror
+It contains information for all the coordinator, standby, primary and mirror
 segments, the syntax is as below:
 
     dbid:segid:hostname:port[,dbid:segid:ip:port]
@@ -464,9 +464,9 @@ Each segment only has one proxy process, each process can use at most 100% of
 one cpu core, then can the proxy process become the performance bottleneck?
 
 The answer is yes.  When running the select-only test with `pgbench -S` on a
-8x32 cluster (8 hosts, 32 segments per host) on GCP, the master proxy bgworker
+8x32 cluster (8 hosts, 32 segments per host) on GCP, the coordinator proxy bgworker
 process will reach 100% cpu usage at concurrency=15, the overall cpu usage of
-all the QD processes are 25%, which indicates the master proxy process is the
+all the QD processes are 25%, which indicates the coordinator proxy process is the
 bottleneck.
 
 To leverage more cpu cores we could consider using a proxy pool, like this:
@@ -510,7 +510,7 @@ theory we do not need K to be large as that, in our example, let `K=4` is
 enough to resolve the bottleneck.
 
 Specifically, when `K=1` it's exactly the same with our original design, when
-`K=N-1`, where N is the count of segments (including the master), a proxy
+`K=N-1`, where N is the count of segments (including the coordinator), a proxy
 bgworker only connects to one remote segment:
 
     ╔═════════════════════════╗
@@ -545,7 +545,7 @@ However launching so many proxy bgworkers might not be a good idea.
 
 ## Proxy-Proxy Communication
 
-In a Greenplum cluster there is one master segment and N primary segments,
+In a Greenplum cluster there is one coordinator segment and N primary segments,
 there is a connection between every two of them, all these connections make the
 proxy network.  In current implementation the proxy-proxy communication is via
 TCP, but it is possible to switch to something like QUIC or udpifc.
@@ -567,7 +567,7 @@ For any solution it must be able to handle several cases:
    connections between it and all the other segments must be re-established;
 2. if the corresponding standby, or mirror, is launched, the standby proxy must
    be able to establish the connections to all the other segments, too,
-   furthermore, the connections with the previous master proxy must be replaced
+   furthermore, the connections with the previous coordinator proxy must be replaced
    with the standby ones;
 
 So we only need to improve our simple solution slightly: a timer is put in the
@@ -583,9 +583,9 @@ retry to mirror connections again and again.
 
 ### Standby and Mirror
 
-The ic-proxy bgworker processes are launched on all the master and primary
+The ic-proxy bgworker processes are launched on all the coordinator and primary
 segments, as long as a ic-proxy bgworker is launched it listens to its port,
-and connects to other proxies.  The master and standby proxies will listen on
+and connects to other proxies.  The coordinator and standby proxies will listen on
 different ports, so they can co-exist even if they are on the same host; the
 same to primary and mirror proxies.
 

@@ -152,7 +152,7 @@ Libraries provided in the R Data Science package include:
 
 ## <a id="topic_instpdsl"></a>Installing the R Data Science Library Package 
 
-Before you install the R Data Science Library package, make sure that your Greenplum Database is running, you have sourced `greenplum_path.sh`, and that the `$MASTER_DATA_DIRECTORY` and `$GPHOME` environment variables are set.
+Before you install the R Data Science Library package, make sure that your Greenplum Database is running, you have sourced `greenplum_path.sh`, and that the `COORDINATOR_DATA_DIRECTORY` and `$GPHOME` environment variables are set.
 
 1.  Locate the R Data Science library package that you built or downloaded.
 

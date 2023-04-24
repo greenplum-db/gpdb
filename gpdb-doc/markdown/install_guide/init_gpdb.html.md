@@ -96,9 +96,9 @@ Your Greenplum Database configuration file tells the [gpinitsystem](../utility_g
     SEG_PREFIX=gpseg
     PORT_BASE=6000 
     declare -a DATA_DIRECTORY=(/data1/primary /data1/primary /data1/primary /data2/primary /data2/primary /data2/primary)
-    MASTER_HOSTNAME=cdw 
-    MASTER_DIRECTORY=/data/coordinator 
-    MASTER_PORT=5432 
+    COORDINATOR_HOSTNAME=cdw 
+    COORDINATOR_DIRECTORY=/data/coordinator 
+    COORDINATOR_PORT=5432 
     TRUSTED SHELL=ssh
     CHECK_POINT_SEGMENTS=8
     ENCODING=UNICODE
@@ -201,7 +201,7 @@ For more information about the Greenplum Database timezone, see [Configuring Tim
 
 You must set environment variables in the Greenplum Database user \(`gpadmin`\) environment that runs Greenplum Database on the Greenplum Database coordinator and standby coordinator hosts. A `greenplum_path.sh` file is provided in the Greenplum Database installation directory with environment variable settings for Greenplum Database.
 
-The Greenplum Database management utilities also require that the `MASTER_DATA_DIRECTORY` environment variable be set. This should point to the directory created by the `gpinitsystem` utility in the coordinator data directory location.
+The Greenplum Database management utilities also require that the `COORDINATOR_DATA_DIRECTORY` environment variable be set. This should point to the directory created by the `gpinitsystem` utility in the coordinator data directory location.
 
 > **Note** The `greenplum_path.sh` script changes the operating environment in order to support running the Greenplum Database-specific utilities. These same changes to the environment can negatively affect the operation of other system-level utilities, such as `ps` or `yum`. Use separate accounts for performing system administration and database administration, instead of attempting to perform both functions as `gpadmin`.
 

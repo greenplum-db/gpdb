@@ -46,13 +46,13 @@ LD_LIBRARY_PATH=$GPHOME/lib
 export LD_LIBRARY_PATH
 ```
 
-### <a id="topic6"></a>MASTER\_DATA\_DIRECTORY 
+### <a id="topic6"></a>COORDINATOR\_DATA\_DIRECTORY 
 
 This should point to the directory created by the gpinitsystem utility in the coordinator data directory location. For example:
 
 ```
-MASTER_DATA_DIRECTORY=/data/coordinator/gpseg-1
-export MASTER_DATA_DIRECTORY
+COORDINATOR_DATA_DIRECTORY=/data/coordinator/gpseg-1
+export COORDINATOR_DATA_DIRECTORY
 ```
 
 ## <a id="topic7"></a>Optional Environment Variables 

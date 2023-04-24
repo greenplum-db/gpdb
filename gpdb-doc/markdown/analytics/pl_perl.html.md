@@ -48,7 +48,7 @@ Before you enable or remove PL/Perl support in a database, ensure that:
 
 -   Your Greenplum Database is running.
 -   You have sourced `greenplum_path.sh`.
--   You have set the `$MASTER_DATA_DIRECTORY` and `$GPHOME` environment variables.
+-   You have set the `$COORDINATOR_DATA_DIRECTORY` and `$GPHOME` environment variables.
 
 ### <a id="topic61"></a>Enabling PL/Perl Support 
 
@@ -147,7 +147,7 @@ CREATE OR REPLACE FUNCTION return_match(varchar) RETURNS SETOF test AS $$
         }
     }
     return undef;
-$$ LANGUAGE plperl EXECUTE ON MASTER ;
+$$ LANGUAGE plperl EXECUTE ON COORDINATOR ;
 
 SELECT return_match( 'iff' );
  return_match

@@ -1,16 +1,16 @@
 ## Dispatcher API
 This document illustrates the interfaces of a GPDB component called dispatcher, which is responsible for
-1) building connections from master node to segments,
+1) building connections from coordinator node to segments,
 2) managing query/plan dispatching, and
 3) collecting query execution results.
 
 The implementation of dispatcher is mainly located under this directory.
 
 ### Terms Used:
-* QD: Query Dispatcher, a backend forked by master with role GP_ROLE_DISPATCH who dispatches plan/command to QEs and get the results from QEs.
-* QE: Query Executor, a backend forked by master/segments with role GP_ROLE_EXECUTOR who gets plan/command from QD and pick a piece of it to execute.
+* QD: Query Dispatcher, a backend forked by coordinator with role GP_ROLE_DISPATCH who dispatches plan/command to QEs and get the results from QEs.
+* QE: Query Executor, a backend forked by coordinator/segments with role GP_ROLE_EXECUTOR who gets plan/command from QD and pick a piece of it to execute.
 * Gang: Gang refers to a group of processes on segments. There are 4 types of Gang:
-	* `GANGTYPE_ENTRYDB_READER`: consist of one single process on master node
+	* `GANGTYPE_ENTRYDB_READER`: consist of one single process on coordinator node
 	* `GANGTYPE_SINGLETON_READER`: consist of one single process on a segment node
 	* `GANGTYPE_PRIMARY_READER`: consist of N (number of segments) processes, each process is on a different segment
 	* `GANGTYPE_PRIMARY_WRITER`: like `GANGTYPE_PRIMARY_READER`, while it can update segment databases, and is responsible for DTM (Distributed Transaction Management). A session can have at most one Gang of this type, and reader Gangs cannot exist without a writer Gang

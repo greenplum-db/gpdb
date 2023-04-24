@@ -88,10 +88,10 @@ To create the database `test` using the default options:
 createdb test
 ```
 
-To create the database `demo` using the Greenplum coordinator on host `gpmaster`, port `54321`, using the `LATIN1` encoding scheme:
+To create the database `demo` using the Greenplum coordinator on host `gpcoord`, port `54321`, using the `LATIN1` encoding scheme:
 
 ```
-createdb -p 54321 -h gpmaster -E LATIN1 demo
+createdb -p 54321 -h gpcoord -E LATIN1 demo
 ```
 
 ## <a id="section7"></a>See Also 

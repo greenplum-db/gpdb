@@ -78,7 +78,7 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 :   The number of hosts to work on in parallel. If not specified, the utility will start working on up to 16 hosts in parallel. Valid values are `1` to `64`.
 
 -d coordinator\_data\_directory
-:   Optional. The coordinator host data directory. If not specified, the value set for `$MASTER_DATA_DIRECTORY` will be used.
+:   Optional. The coordinator host data directory. If not specified, the value set for `$COORDINATOR_DATA_DIRECTORY` will be used.
 
 -F \(full recovery\)
 :   Optional. Perform a full copy of the active segment instance in order to recover the failed segment. The default is to only copy over the incremental changes that occurred while the segment was down.

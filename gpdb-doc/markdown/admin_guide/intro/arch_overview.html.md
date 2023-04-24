@@ -30,13 +30,13 @@ Greenplum Database stores and processes large amounts of data by distributing th
 
 The following topics describe the components that make up a Greenplum Database system and how they work together.
 
--   [About the Greenplum Coordinator](#arch_master)
+-   [About the Greenplum Coordinator](#arch_coordinator)
 -   [About the Greenplum Segments](#arch_segments)
 -   [About the Greenplum Interconnect](#arch_interconnect)
 -   [About ETL Hosts for Data Loading](#topic13)
 -   [About VMware Greenplum Performance Monitoring](#topic_e5t_whm_kbb)
 
-## <a id="arch_master"></a>About the Greenplum Coordinator 
+## <a id="arch_coordinator"></a>About the Greenplum Coordinator 
 
 The Greenplum Database coordinator is the entry to the Greenplum Database system, accepting client connections and SQL queries, and distributing work to the segment instances.
 

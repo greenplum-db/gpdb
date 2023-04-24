@@ -30,7 +30,7 @@ If the coordinator cannot connect to a segment instance, it marks that segment i
 
 If you do not have mirroring enabled, the system will automatically shut down if a segment instance becomes invalid. You must recover all failed segments before operations can continue.
 
-## <a id="master_mirroring"></a>About Coordinator Mirroring 
+## <a id="coordinator_mirroring"></a>About Coordinator Mirroring 
 
 You can also optionally deploy a backup or mirror of the coordinator instance on a separate host from the coordinator host. The backup coordinator instance \(the *standby coordinator*\) serves as a *warm standby* in the event that the primary coordinator host becomes non-operational. The standby coordinator is kept current by a transaction log replication process, which synchronizes the data between the primary and standby coordinator.
 
