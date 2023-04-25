@@ -215,7 +215,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p3 WHERE c > 10;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.829540.1.0" Name="foo_1_prt_p3_c_key" IsClustered="false" IndexType="B-tree" KeyColumns="2" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.829540.1.0" Name="foo_1_prt_p3_c_key" IsClustered="false" IndexType="B-tree" KeyColumns="2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>

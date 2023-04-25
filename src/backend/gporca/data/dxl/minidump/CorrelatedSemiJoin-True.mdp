@@ -51,12 +51,12 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
       <dxl:TraceFlags Value="102001,102002,102003,102024,102025,102115,102116,102120,102128,102144,103001,103014,103015,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Index Mdid="0.29191877.1.0" Name="customer_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.29191877.1.0" Name="customer_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.29192019.1.0" Name="sale_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0,1,2" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12">
+      <dxl:Index Mdid="0.29192019.1.0" Name="sale_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0,1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.0.0.0"/>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
@@ -481,7 +481,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.29191973.1.0" Name="product_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.29191973.1.0" Name="product_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

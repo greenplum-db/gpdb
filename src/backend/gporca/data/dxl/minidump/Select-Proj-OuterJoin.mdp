@@ -329,12 +329,12 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.2690.1.0" Name="pg_proc_oid_index" IsClustered="false" KeyColumns="24" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30">
+      <dxl:Index Mdid="0.2690.1.0" Name="pg_proc_oid_index" IsClustered="false" KeyColumns="24" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2684.1.0" Name="pg_namespace_nspname_index" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.2684.1.0" Name="pg_namespace_nspname_index" IsClustered="false" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
@@ -507,14 +507,14 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.2691.1.0" Name="pg_proc_proname_args_nsp_index" IsClustered="false" KeyColumns="0,12,1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30">
+      <dxl:Index Mdid="0.2691.1.0" Name="pg_proc_proname_args_nsp_index" IsClustered="false" KeyColumns="0,12,1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
           <dxl:Opfamily Mdid="0.1991.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2685.1.0" Name="pg_namespace_oid_index" IsClustered="false" KeyColumns="4" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.2685.1.0" Name="pg_namespace_oid_index" IsClustered="false" KeyColumns="4" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1089.1.0"/>
         </dxl:Opfamilies>

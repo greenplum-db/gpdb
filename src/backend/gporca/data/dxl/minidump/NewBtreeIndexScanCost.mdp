@@ -1863,7 +1863,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.48922.1.0" Name="ssm_oip_cidr" IsClustered="false" IndexType="B-tree" KeyColumns="2" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15">
+      <dxl:Index Mdid="0.48922.1.0" Name="ssm_oip_cidr" IsClustered="false" IndexType="B-tree" KeyColumns="2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1974.1.0"/>
         </dxl:Opfamilies>
@@ -1894,7 +1894,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
           <dxl:Opfamily Mdid="0.3025.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.48950.1.0" Name="ssm_ria_ip_1_prt_1" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20">
+      <dxl:Index Mdid="0.48950.1.0" Name="ssm_ria_ip_1_prt_1" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1974.1.0"/>
         </dxl:Opfamilies>

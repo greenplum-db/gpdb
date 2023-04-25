@@ -890,7 +890,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:MDCast Mdid="3.25.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.25.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
-      <dxl:Index Mdid="0.525049.1.0" Name="store_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35">
+      <dxl:Index Mdid="0.525049.1.0" Name="store_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -1752,7 +1752,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
           <dxl:UpperBound Closed="true" TypeMdid="0.1042.1.0" Value="AAAADjk5OSAgICAgICA=" LintValue="825230246"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.518353.1.0" Name="customer_address_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19">
+      <dxl:Index Mdid="0.518353.1.0" Name="customer_address_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

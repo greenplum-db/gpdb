@@ -239,7 +239,7 @@ explain select * from indexonao where a = 21;
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="99997"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.22227385.1.0" Name="idx_onao" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3">
+      <dxl:Index Mdid="0.22227385.1.0" Name="idx_onao" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

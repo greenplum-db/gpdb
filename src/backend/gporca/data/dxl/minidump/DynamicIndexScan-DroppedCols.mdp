@@ -332,7 +332,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Index Mdid="0.32962.1.0" Name="idx" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="3" IncludedColumns="1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.32962.1.0" Name="idx" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="3" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
