@@ -5153,25 +5153,25 @@ NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related
   4 | BobBrown   | 135.79
 (4 rows)
 
-SELECT errmsg, rawdata FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
-                                errmsg                                 | rawdata 
------------------------------------------------------------------------+---------
- expected line size from the formatting string is 22, actual size is 0 | 
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+                                errmsg                                 | rawdata | rawbytes 
+-----------------------------------------------------------------------+---------+----------
+ expected line size from the formatting string is 22, actual size is 0 |         | \x
 (1 row)
 
 select name::json from ext_fixed_width_table;
 ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
 DETAIL:  Last error was: expected line size from the formatting string is 22, actual size is 0
 CONTEXT:  External table ext_fixed_width_table
-SELECT errmsg, rawdata FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
-                                errmsg                                 |        rawdata         
------------------------------------------------------------------------+------------------------
- expected line size from the formatting string is 22, actual size is 0 | 
- invalid input syntax for type json                                    | 001JohnDoe     0123.45
- invalid input syntax for type json                                    | 002JaneSmith   0678.90
- invalid input syntax for type json                                    | 003AliceJohns  0246.80
- invalid input syntax for type json                                    | 004BobBrown    0135.79
- expected line size from the formatting string is 22, actual size is 0 | 
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+                                errmsg                                 | rawdata |                     rawbytes                     
+-----------------------------------------------------------------------+---------+--------------------------------------------------
+ expected line size from the formatting string is 22, actual size is 0 |         | \x
+ invalid input syntax for type json                                    |         | \x3030314a6f686e446f652020202020303132332e34350a
+ invalid input syntax for type json                                    |         | \x3030324a616e65536d697468202020303637382e39300a
+ invalid input syntax for type json                                    |         | \x303033416c6963654a6f686e732020303234362e38300a
+ invalid input syntax for type json                                    |         | \x303034426f6242726f776e20202020303133352e37390a
+ expected line size from the formatting string is 22, actual size is 0 |         | \x
 (6 rows)
 
 DROP EXTERNAL TABLE ext_fixed_width_table;

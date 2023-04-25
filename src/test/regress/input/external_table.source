@@ -3744,10 +3744,10 @@ LOG ERRORS SEGMENT REJECT LIMIT 5;
 
 SELECT * FROM ext_fixed_width_table;
 
-SELECT errmsg, rawdata FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
 
 select name::json from ext_fixed_width_table;
 
-SELECT errmsg, rawdata FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
 
 DROP EXTERNAL TABLE ext_fixed_width_table;

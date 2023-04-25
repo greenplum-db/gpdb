@@ -81,7 +81,6 @@ static void external_senddata(URL_FILE *extfile, CopyState pstate);
 static void external_scan_error_callback(void *arg);
 static Oid lookupCustomFormatter(List **options, bool iswritable);
 static void justifyDatabuf(StringInfo buf);
-static void copy_sinfo_from_string(CopyState pstate, char *src, int len);
 
 
 /* ----------------------------------------------------------------
@@ -753,18 +752,6 @@ external_insert(ExternalInsertDesc extInsertDesc, TupleTableSlot *slot)
 	pstate->fe_msgbuf->data[0] = '\0';
 }
 
-static void
-copy_sinfo_from_string(CopyState pstate, char *src, int len)
-{
-	/* remove the newline symbols  */
-	while ( len > 0 && (src[len - 1] == '\n' || src[len - 1] == '\r') )
-		len--;
-
-	if (len > 0)
-	{
-		appendBinaryStringInfo(&pstate->line_buf, src, len);
-	}
-}
 /*
  * external_insert_finish
  *
@@ -981,7 +968,9 @@ externalgettup_custom(FileScanDesc scan)
 				{
 					if (formatter->fmt_badrow_data)
 					{
-						copy_sinfo_from_string(pstate, formatter->fmt_badrow_data, formatter->fmt_badrow_len);
+						appendBinaryStringInfo(&pstate->line_buf, 
+									formatter->fmt_badrow_data, 
+									formatter->fmt_badrow_len);
 					}
 					
 					formatter->fmt_databuf.cursor += formatter->fmt_badrow_len;
@@ -1040,7 +1029,7 @@ externalgettup_custom(FileScanDesc scan)
 							 * So the start of last row is cursor minus row_size.
 							 */
 							char *src =  formatter->fmt_databuf.data + line_begin;
-							copy_sinfo_from_string(pstate, src, line_len);
+							appendBinaryStringInfo(&pstate->line_buf, src, line_len);
 						}
 
 						MemoryContextReset(formatter->fmt_perrow_ctx);
