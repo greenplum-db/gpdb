@@ -434,7 +434,7 @@ select * from gpfdist2_stop;
 --test multi-thread compression and transmission with bigger buffer start
 DROP EXTERNAL WEB TABLE IF EXISTS gpfdist2_start;
 CREATE EXTERNAL WEB TABLE gpfdist2_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data -m 1200000 --mthread 4 </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data -m 1200000 --multi_thread 4 </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 -- start_ignore

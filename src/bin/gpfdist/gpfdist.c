@@ -85,7 +85,7 @@ typedef struct block_t block_t;
 struct block_t
 {
 	blockhdr_t 	hdr;
-	int 		bot, cbot, top, ctop, lastsize;
+	int 		bot, cbot, top, ctop;
 	char*      	data;
 	char*		cdata;
 };
@@ -611,8 +611,8 @@ static void usage_error(const char* msg, int print_usage)
 					    "        -c file    : configuration file for transformations\n"
 #endif
 #ifdef USE_ZSTD
-					    "        --compress : open compression transmission\n"
-						"        --mthread num : the max number of working thread for compression transmission\n"
+						"        --compress : open compression transmission\n"
+						"        --multi_thread num : the max number of working thread for compression transmission\n"
 #endif
 						"        --version  : print version information\n"
 						"        -w timeout : timeout in seconds before close target file\n\n");
@@ -680,7 +680,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
 #ifdef USE_ZSTD
 	{"compress", 258, 0, "turn on compressed transmission"},
-	{"mthread", 259, 1, "turn on multi-thread and compressed transmission"},
+	{"multi_thread", 259, 1, "turn on multi-thread and compressed transmission"},
 #endif
 	{ 0 } };
 
@@ -1340,8 +1340,6 @@ int wait_for_thread_join(request_t *r)
 	pthread_join(r->thread_id, NULL);
 	r->is_running = 0;
 	r->thread_id = 0;
-	if (r->outblock.lastsize != r->send_size)
-		return -1;
 	return r->send_size;
 }
 
@@ -1398,7 +1396,6 @@ local_send_with_zstd(request_t *r)
 		}
 		r->is_running = 1;
 		send_size = r->outblock.top - r->outblock.bot;
-		r->outblock.lastsize = r->outblock.top - r->outblock.bot;
 	}
 	else
 #endif
@@ -1415,11 +1412,6 @@ void* send_compression_data (void *req)
 {
 	request_t *r = (request_t *)req;
 
-	if(send_proto_head(r) < 0)
-	{
-		r->send_size = -1;
-		goto return_block;
-	}
 	/* osize indicates the size to be compressed. But we don't use 
 	 * 'r->outblock.top - r->outblock.bot' to get osize since r->outblock.bot
 	 * is not a thread-safe variable. And osize is only used in the case where
@@ -1450,6 +1442,21 @@ void* send_compression_data (void *req)
 		buf = outblock->cdata + outblock->cbot;
 		r->send_size = 0;	/* This means that this transmission is for the data that isn't sent totally last time */
 	}
+
+	int left_hbytes = send_proto_head(r);
+	if (left_hbytes < 0) 
+	{
+		r->send_size = -1;
+		goto return_block;
+	}
+	else if (left_hbytes > 0) 
+	{
+		r->send_size = 0;
+		goto return_block;
+	}
+
+	gdebug(r, "A compressed buffer to be sent, segid=%d bot=%d top=%d len=%d", 
+				r->segid, outblock->cbot, outblock->ctop, res);
 
 	int send = local_send(r, buf, res);
 	if(send < 0)
@@ -1580,12 +1587,12 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	const int 	whole_rows = 1; /* gpfdist must not read data with partial rows */
 	struct fstream_filename_and_offset fos;
 
+	retblock->bot = retblock->top = 0;
+
 	if (retblock->cbot != retblock->ctop)
 		return 0;
 
 	session_t *session = r->session;
-
-	retblock->bot = retblock->top = 0;
 
 	if (session->is_error || 0 == session->fstream)
 	{
@@ -1645,11 +1652,11 @@ static void session_end(session_t* session, int error)
 /* finish the session - close the file */
 static void session_mark_end(request_t* req)
 {
-	gprintln(NULL, "session mark end. id = %ld", req->session->id);
+	gprintln(req, "session mark end. id = %ld", req->session->id);
 
 	if (req->session->fstream)
 	{
-		gprintln(NULL, "mark fstream to be closed");
+		gprintln(req, "mark fstream to be closed");
 		req->session_end = 1;
 	}
 }
@@ -2068,13 +2075,17 @@ static int send_proto_head(request_t *r)
 				return -1;
 			}
 
-			gdebug(r, "send header bytes %d .. %d (top %d)",
-				datablock->hdr.hbot, datablock->hdr.hbot + n, datablock->hdr.htop);
+			gdebug(r, "send header bytes to seg%d, %d .. %d (top %d)",
+				r->segid, datablock->hdr.hbot, datablock->hdr.hbot + n, datablock->hdr.htop);
 
 			datablock->hdr.hbot += n;
 			n = datablock->hdr.htop - datablock->hdr.hbot;
 			if (n > 0)
+			{
+				gdebug(r, "network chocked while sending head.");
 				return n; /* network chocked */
+			}
+				
 		}
 	}
 	return n;
@@ -2122,7 +2133,7 @@ static void do_write(int fd, short event, void* arg)
 				gfile_printf_then_putc_newline("ERROR: %s", ferror);
 				return;
 			}
-			if (!r->outblock.top)
+			if (!r->outblock.top && r->outblock.ctop == r->outblock.cbot)
 			{
 				request_end(r, 0, 0);
 				return;
@@ -2147,10 +2158,12 @@ static void do_write(int fd, short event, void* arg)
 			/*
 		 	 * If PROTO-1: first write out the block header (metadata).
 		 	 */
-			if (send_proto_head(r) < 0)
-			{
+			int left_hbytes = send_proto_head(r);
+			if (left_hbytes < 0)
 				return;
-			}
+			else if (left_hbytes > 0) 
+				break;
+			
 			n = local_send(r, datablock->data + datablock->bot, n);
 		}
 		if (n < 0)
@@ -5051,7 +5064,7 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
 	{
 		r->in.woffset = inbuf.pos;
 	}
-	gdebug(NULL, "decompress_zstd finished, input size = %d, output size = %d.", r->in.wbuftop, r->in.dbuftop);
+	gdebug(r, "decompress_zstd finished, input size = %d, output size = %d.", r->in.wbuftop, r->in.dbuftop);
 	return outSize;
 }
 /*
@@ -5110,7 +5123,7 @@ static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 	}
 	offset += output.pos;
 
-	gdebug(NULL, "compress_zstd finished, input size = %d, output size = %d.", buflen, offset);
+	gdebug(r, "compress_zstd finished, input size = %d, output size = %d.", buflen, offset);
 
 	return offset;
 }
