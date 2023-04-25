@@ -29,6 +29,7 @@ static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 static void check_large_objects(void);
 static void check_invalid_indexes(void);
 static void check_foreign_key_constraints_on_root_partition(void);
+static void check_distributed_on_duplicate_columns(void);
 static void check_views_with_unsupported_lag_lead_function(void);
 static void check_views_with_fabricated_anyarray_casts(void);
 static void check_views_with_fabricated_unknown_casts(void);
@@ -60,6 +61,7 @@ check_greenplum(void)
 	check_for_array_of_partition_table_types(&old_cluster);
 	check_large_objects();
 	check_invalid_indexes();
+	check_distributed_on_duplicate_columns();
 	check_views_with_unsupported_lag_lead_function();
 	check_views_with_fabricated_anyarray_casts();
 	check_views_with_fabricated_unknown_casts();
@@ -1517,4 +1519,89 @@ check_parent_partitions_with_seg_entries(void)
 	}
 	else
 		check_ok();
+}
+
+static void
+check_distributed_on_duplicate_columns(void)
+{
+	/*
+	 * Distribution on duplicate columns is already fixed in GPDB6+. Also, the
+	 * column attrnums in gp_distribution_policy does not exist on GPDB6+.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) >= 804)
+		return;
+
+	int			dbnum;
+	FILE	   *script = NULL;
+	bool		found = false;
+	char		output_path[MAXPGPATH];
+
+	prep_status("Checking for tables distributed on duplicated columns");
+
+	snprintf(output_path, sizeof(output_path), "duplicate_column_distribution.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		bool		db_used = false;
+		int			ntups;
+		int			rowno;
+		int			i_tablename,
+					i_attrnums;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+
+		res = executeQueryOrDie(conn,
+								"WITH subquery1 AS ("
+								"    SELECT localoid::regclass AS tablename, "
+								"           unnest(attrnums) AS attrnum "
+								"    FROM gp_distribution_policy dp "
+								"    GROUP BY localoid, attrnum "
+								"    HAVING count(*) > 1 "
+								"), subquery2 AS ( "
+								"    SELECT tablename, array_agg(attrnum ORDER BY attrnum) AS sorted_attrnums "
+								"    FROM subquery1 "
+								"    GROUP BY tablename "
+								"    ORDER BY tablename "
+								")"
+								"SELECT tablename, replace(array_to_string(sorted_attrnums, ', '), '{', '') AS attrnums "
+								"FROM subquery2;");
+
+		ntups = PQntuples(res);
+		i_tablename = PQfnumber(res, "tablename");
+		i_attrnums = PQfnumber(res, "attrnums");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("Could not open file \"%s\": %s\n",
+						 output_path, getErrorText());
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s: %s\n",
+					PQgetvalue(res, rowno, i_tablename),
+					PQgetvalue(res, rowno, i_attrnums));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		gp_fatal_log(
+				"| Your installation contains tables distributed on duplicated columns.\n"
+				"| Update the distribution policy of the tables so there are no duplicated\n"
+				"| columns and restart the upgrade. A list of the problem tables and its\n"
+				"| duplicated columns is in the file:\n"
+				"|     %s\n\n", output_path);
+	}
+	else
+		check_ok();
+
 }
