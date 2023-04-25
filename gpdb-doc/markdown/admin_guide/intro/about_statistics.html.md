@@ -208,7 +208,7 @@ histogram\_bounds
 :   An array of values that divide the column values into groups of approximately the same size. A histogram can be defined only if there is a `max()` aggregate function for the column. The number of groups in the histogram is the same as the `most_common_vals` array size.
 
 correlation
-:   Greenplum Database computes correlation statistics for both heap and AO/AOCO tables, but the Postgres Planner uses these statistics only for heap tables.
+:   Greenplum Database computes correlation statistics for both heap and AO/AOCO tables.
 
 most\_common\_elems
 :   An array that contains the most common element values.
@@ -243,7 +243,7 @@ Refer to the *Greenplum Database Management Utility Reference* for details of ru
 
 When the `ANALYZE` command is run on a partitioned table, it analyzes each child leaf partition table, one at a time. You can run `ANALYZE` on just new or changed partition tables to avoid analyzing partitions that have not changed.
 
-The `analyzedb` command-line utility skips unchanged partitions automatically. It also runs concurrent sessions so it can analyze several partitions concurrently. It runs five sessions by default, but the number of sessions can be set from 1 to 10 with the `-p` command-line option. Each time `analyzedb` runs, it saves state information for append-optimized tables and partitions in the `db_analyze` directory in the coordinator data directory. The next time it runs, `analyzedb` compares the current state of each table with the saved state and skips analyzing a table or partition if it is unchanged. Heap tables are always analyzed.
+The `analyzedb` command-line utility skips unchanged partitions automatically. It also runs concurrent sessions so it can analyze several partitions concurrently. It runs five sessions by default, but the number of sessions can be set from 1 to 10 with the `-p` command-line option. Each time `analyzedb` runs, it saves state information for append-optimized tables and partitions in the `db_analyze` directory in the coordinator data directory. The next time it runs, `analyzedb` compares the current state of each table with the saved state and skips analyzing a table or partition if it is unchanged.
 
 If GPORCA is enabled \(the default\), you also need to run `ANALYZE` or `ANALYZE ROOTPARTITION` on the root partition of a partitioned table \(not a leaf partition\) to refresh the root partition statistics. GPORCA requires statistics at the root level for partitioned tables. The Postgres Planner does not use these statistics.
 
