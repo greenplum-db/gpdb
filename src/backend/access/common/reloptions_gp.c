@@ -976,27 +976,6 @@ validate_and_adjust_options(StdRdOptions *result,
 		}
 
 		if (result->compresstype[0] &&
-			(pg_strcasecmp(result->compresstype, "quicklz") == 0))
-		{
-#ifndef HAVE_LIBQUICKLZ
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("QuickLZ library is not supported by this build"),
-					 errhint("Compile with --with-quicklz to use QuickLZ compression.")));
-#endif
-			if (result->compresslevel != 1)
-			{
-				if (validate)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("compresslevel=%d is out of range for quicklz (should be 1)",
-									result->compresslevel)));
-
-				result->compresslevel = setDefaultCompressionLevel(result->compresstype);
-			}
-		}
-
-		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "rle_type") == 0) &&
 			(result->compresslevel > 4))
 		{
