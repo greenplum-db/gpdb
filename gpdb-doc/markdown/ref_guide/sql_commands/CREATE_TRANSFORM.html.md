@@ -50,7 +50,7 @@ Use [DROP TRANSFORM](DROP_TRANSFORM.html) to remove transforms.
 To create a transform for type `hstore` and language `plpythonu`, first set up the type and the language:
 
 ``` sql
-CREATE TYPE hstore ...;
+CREATE EXTENSION IF NOT EXISTS hstore;
 
 CREATE EXTENSION plpythonu;
 ```
