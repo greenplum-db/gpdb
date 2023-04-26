@@ -10111,8 +10111,6 @@ XLogSaveBufferForHint(Buffer buffer, bool buffer_std)
 		rdata[1].next = NULL;
 
 		recptr = XLogInsert(RM_XLOG_ID, XLOG_FPI, rdata);
-
-		wait_to_avoid_large_repl_lag();
 	}
 
 	return recptr;
@@ -12669,10 +12667,17 @@ initialize_wal_bytes_written(void)
  * transactions starving concurrent transactions from commiting due to sync
  * rep. This interface provides a way for primary to avoid racing forward with
  * WAL generation and move at sustained speed with network and mirrors.
+ *
+ * NB: This function should never be called from inside a critical section,
+ * meaning caller should never have MyPgXact->delayChkpt set to true. Otherwise,
+ * if mirror is down, we will end up in a deadlock situation between the primary
+ * and the checkpointer process, because if MyPgXact->delayChkpt is set,
+ * checkpointer cannot proceed to unset WalSndCtl->sync_standbys_defined.
  */
 void
 wait_to_avoid_large_repl_lag(void)
 {
+	Assert(!MyPgXact->delayChkpt);
 	/* rep_lag_avoidance_threshold is defined in KB */
 	if (rep_lag_avoidance_threshold &&
 		wal_bytes_written > (rep_lag_avoidance_threshold * 1024))

@@ -1,19 +1,15 @@
 -- Test: SELECT or other read-only operations which set hint bits on pages,
 -- and in turn generate Full Page Images (FPI) WAL records should be throttled.
 -- We will only throttle when our transaction wal exceeds
--- wait_for_replication_threshold
--- For this test we will:
+-- wait_for_replication_threshold. While the backend is throttled waiting for
+-- synchronous replication, it should not block the CHECKPOINT process, and if
+-- the mirror is taken down, synchronous replication should be turned off and
+-- the backend should stop waiting for synchronous replication and proceed.
+
+-- Setup:
 -- 1. Set wait_for_replication_threshold to 1kB for quicker test
 -- 2. create two tables (one small and one large)
 -- 3. set gp_disable_tuple_hints=off so buffer will be immediately marked dirty on hint bit change
--- 4. Suspend walsender
--- 5. Perform a read-only operation (SELECT) which would now set the hint bits
---  For the small table this operation should finish,
---  but for large table the SELECT should be throttled
---  since it would generate a lot of WAL greater than wait_for_replication_threshold
--- 6. Confirm that the query is waiting on Syncrep
--- 7. Reset the walsender and the transaction should complete
---
 
 include: helpers/server_helpers.sql;
 
@@ -29,6 +25,15 @@ INSERT INTO select_throttle SELECT generate_series (1, 100000);
 -- Enable tuple hints so that buffer will be marked dirty upon a hint bit change
 -- (so that we don't have to wait for the tuple to age. See logic in markDirty)
 1U: SET gp_disable_tuple_hints=off;
+
+-- Test 1:
+-- 1. Suspend walsender
+-- 2. Perform a read-only operation (SELECT) which would now set the hint bits
+--  For the small table this operation should finish,
+--  but for large table the SELECT should be throttled
+--  since it would generate a lot of WAL greater than wait_for_replication_threshold
+-- 3. Confirm that the query is waiting on Syncrep
+-- 4. Reset the walsender and the transaction should complete
 
 -- flush the data to disk
 checkpoint;
@@ -53,8 +58,69 @@ SELECT gp_inject_fault_infinite('wal_sender_loop', 'reset', dbid) FROM gp_segmen
 1U<:
 
 SELECT wait_until_all_segments_synchronized();
-1U: RESET gp_disable_tuple_hints;
+
+-- Test 2:
+-- 1. Suspend walsender
+-- 2. Perform a read-only operation (SELECT) which would now set the hint bits
+--  For the large table the SELECT should be throttled
+--  since it would generate a lot of WAL greater than wait_for_replication_threshold
+-- 3. Confirm that the query is waiting on Syncrep
+-- 4. Perform CHECKPOINT and confirm that it does not block
+-- 5. Stop the mirror
+-- 6. Reset the walsender and the transaction should complete without waiting for syncrep
+
+-- Setup:
+-- set mirror down grace period to zero to instantly mark mirror down.
+-- the 1Uq and 1U pair will force a wait on the config reload.
+!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 2;
+!\retcode gpstop -u;
 1Uq:
+1U: show gp_fts_mark_mirror_down_grace_period;
+-- Enable tuple hints so that buffer will be marked dirty upon a hint bit change
+-- (so that we don't have to wait for the tuple to age. See logic in markDirty)
+1U: SET gp_disable_tuple_hints=off;
+Truncate select_throttle;
+INSERT INTO select_throttle SELECT generate_series (1, 100000);
+-- flush the data to disk
+checkpoint;
+-- Suspend walsender
+SELECT gp_inject_fault_infinite('wal_sender_loop', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+
+checkpoint;
+-- SELECT will set the hint bit on (the buffer will be marked dirty)
+-- This query should wait for Syncrep since its WAL size for hint bits is greater than wait_for_replication_threshold
+1U&: SELECT count(*) FROM select_throttle;
+
+-- check if the above query is waiting on SyncRep in pg_stat_activity
+SELECT is_query_waiting_for_syncrep(50, 'SELECT count(*) FROM select_throttle;');
+
+-- while SELECT is waiting for syncrep, it should not block a subsequent checkpoint
+CHECKPOINT;
+
+-- stop the mirror should turn off syncrep
+SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content=1 AND role = 'm';
+
+-- reset walsender and let it exit so that mirror stop can be detected
+SELECT gp_inject_fault_infinite('wal_sender_loop', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+
+-- perform fts probe scan and verify that mirror is down
+select wait_for_mirror_down(1::smallint, 30);
+select content, role, preferred_role, mode, status from gp_segment_configuration where content = 1;
+
+-- after mirror is stopped, the SELECT query should proceed without waiting for syncrep
+1U<:
+
+-- Cleanup
+1U: RESET gp_disable_tuple_hints;
+-- reset the mirror down grace period back to its default value.
+-- the 1Uq and 1U pair will force a wait on the config reload.
+!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
+!\retcode gpstop -u;
+1Uq:
+1U: show gp_fts_mark_mirror_down_grace_period;
 
 ALTER SYSTEM RESET wait_for_replication_threshold;
 SELECT pg_reload_conf();
+
+!\retcode gprecoverseg -av;
+SELECT wait_until_all_segments_synchronized();

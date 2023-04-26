@@ -1,19 +1,15 @@
 -- Test: SELECT or other read-only operations which set hint bits on pages,
 -- and in turn generate Full Page Images (FPI) WAL records should be throttled.
 -- We will only throttle when our transaction wal exceeds
--- wait_for_replication_threshold
--- For this test we will:
+-- wait_for_replication_threshold. While the backend is throttled waiting for
+-- synchronous replication, it should not block the CHECKPOINT process, and if
+-- the mirror is taken down, synchronous replication should be turned off and
+-- the backend should stop waiting for synchronous replication and proceed.
+
+-- Setup:
 -- 1. Set wait_for_replication_threshold to 1kB for quicker test
 -- 2. create two tables (one small and one large)
 -- 3. set gp_disable_tuple_hints=off so buffer will be immediately marked dirty on hint bit change
--- 4. Suspend walsender
--- 5. Perform a read-only operation (SELECT) which would now set the hint bits
---  For the small table this operation should finish,
---  but for large table the SELECT should be throttled
---  since it would generate a lot of WAL greater than wait_for_replication_threshold
--- 6. Confirm that the query is waiting on Syncrep
--- 7. Reset the walsender and the transaction should complete
---
 
 include: helpers/server_helpers.sql;
 CREATE
@@ -40,6 +36,15 @@ INSERT 100000
 -- (so that we don't have to wait for the tuple to age. See logic in markDirty)
 1U: SET gp_disable_tuple_hints=off;
 SET
+
+-- Test 1:
+-- 1. Suspend walsender
+-- 2. Perform a read-only operation (SELECT) which would now set the hint bits
+--  For the small table this operation should finish,
+--  but for large table the SELECT should be throttled
+--  since it would generate a lot of WAL greater than wait_for_replication_threshold
+-- 3. Confirm that the query is waiting on Syncrep
+-- 4. Reset the walsender and the transaction should complete
 
 -- flush the data to disk
 checkpoint;
@@ -90,9 +95,146 @@ SELECT wait_until_all_segments_synchronized();
 --------------------------------------
  OK                                   
 (1 row)
+
+-- Test 2:
+-- 1. Suspend walsender
+-- 2. Perform a read-only operation (SELECT) which would now set the hint bits
+--  For the large table the SELECT should be throttled
+--  since it would generate a lot of WAL greater than wait_for_replication_threshold
+-- 3. Confirm that the query is waiting on Syncrep
+-- 4. Perform CHECKPOINT and confirm that it does not block
+-- 5. Stop the mirror
+-- 6. Reset the walsender and the transaction should complete without waiting for syncrep
+
+-- Setup:
+-- set mirror down grace period to zero to instantly mark mirror down.
+-- the 1Uq and 1U pair will force a wait on the config reload.
+!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 2;
+-- start_ignore
+20230428:13:32:51:1966993 gpconfig:station6:pivotal-[INFO]:-completed successfully with parameters '-c gp_fts_mark_mirror_down_grace_period -v 0'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20230428:13:32:51:1967400 gpstop:station6:pivotal-[INFO]:-Starting gpstop with args: -u
+20230428:13:32:51:1967400 gpstop:station6:pivotal-[INFO]:-Gathering information and validating the environment...
+20230428:13:32:51:1967400 gpstop:station6:pivotal-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230428:13:32:51:1967400 gpstop:station6:pivotal-[INFO]:-Obtaining Segment details from coordinator...
+20230428:13:32:51:1967400 gpstop:station6:pivotal-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.1+dev.82.g0281df93bb6 build dev'
+20230428:13:32:51:1967400 gpstop:station6:pivotal-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+1Uq: ... <quitting>
+1U: show gp_fts_mark_mirror_down_grace_period;
+ gp_fts_mark_mirror_down_grace_period 
+--------------------------------------
+ 2s                                   
+(1 row)
+-- Enable tuple hints so that buffer will be marked dirty upon a hint bit change
+-- (so that we don't have to wait for the tuple to age. See logic in markDirty)
+1U: SET gp_disable_tuple_hints=off;
+SET
+Truncate select_throttle;
+TRUNCATE
+INSERT INTO select_throttle SELECT generate_series (1, 100000);
+INSERT 100000
+-- flush the data to disk
+checkpoint;
+CHECKPOINT
+-- Suspend walsender
+SELECT gp_inject_fault_infinite('wal_sender_loop', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+checkpoint;
+CHECKPOINT
+-- SELECT will set the hint bit on (the buffer will be marked dirty)
+-- This query should wait for Syncrep since its WAL size for hint bits is greater than wait_for_replication_threshold
+1U&: SELECT count(*) FROM select_throttle;  <waiting ...>
+
+-- check if the above query is waiting on SyncRep in pg_stat_activity
+SELECT is_query_waiting_for_syncrep(50, 'SELECT count(*) FROM select_throttle;');
+ is_query_waiting_for_syncrep 
+------------------------------
+ t                            
+(1 row)
+
+-- while SELECT is waiting for syncrep, it should not block a subsequent checkpoint
+CHECKPOINT;
+CHECKPOINT
+
+-- stop the mirror should turn off syncrep
+SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content=1 AND role = 'm';
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- reset walsender and let it exit so that mirror stop can be detected
+SELECT gp_inject_fault_infinite('wal_sender_loop', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- perform fts probe scan and verify that mirror is down
+select wait_for_mirror_down(1::smallint, 30);
+ wait_for_mirror_down 
+----------------------
+ t                    
+(1 row)
+select content, role, preferred_role, mode, status from gp_segment_configuration where content = 1;
+ content | role | preferred_role | mode | status 
+---------+------+----------------+------+--------
+ 1       | p    | p              | n    | u      
+ 1       | m    | m              | n    | d      
+(2 rows)
+
+-- after mirror is stopped, the SELECT query should proceed without waiting for syncrep
+1U<:  <... completed>
+ count 
+-------
+ 33327 
+(1 row)
+
+-- Cleanup
 1U: RESET gp_disable_tuple_hints;
 RESET
+-- reset the mirror down grace period back to its default value.
+-- the 1Uq and 1U pair will force a wait on the config reload.
+!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
+-- start_ignore
+20230428:13:32:53:1967437 gpconfig:station6:pivotal-[INFO]:-completed successfully with parameters '-r gp_fts_mark_mirror_down_grace_period'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Starting gpstop with args: -u
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Gathering information and validating the environment...
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Obtaining Segment details from coordinator...
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.1+dev.82.g0281df93bb6 build dev'
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Signalling all postmaster processes to reload
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:---------------------------------------------
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Some segment postmasters were not reloaded
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:---------------------------------------------
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-   Host       Datadir                                                                          Port   Status
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-   station6   /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1   7006   d
+20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:---------------------------------------------
+
+-- end_ignore
+(exited with code 1)
 1Uq: ... <quitting>
+1U: show gp_fts_mark_mirror_down_grace_period;
+ gp_fts_mark_mirror_down_grace_period 
+--------------------------------------
+ 30s                                  
+(1 row)
 
 ALTER SYSTEM RESET wait_for_replication_threshold;
 ALTER
@@ -100,4 +242,532 @@ SELECT pg_reload_conf();
  pg_reload_conf 
 ----------------
  t              
+(1 row)
+
+!\retcode gprecoverseg -av;
+-- start_ignore
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[INFO]:-Starting gprecoverseg with args: -av
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool() initialized with 16 workers
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Obtaining coordinator's port from coordinator data directory
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Read from postgresql.conf port=7000
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Read from postgresql.conf max_connections=150
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: $GPHOME/bin/postgres --gp-version
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.1+dev.82.g0281df93bb6 build dev'
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Connecting to db template1 on host localhost
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 12.12 (Greenplum Database 7.0.0-beta.1+dev.82.g0281df93bb6 build dev) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0, 64-bit compiled on Apr 27 2023 17:48:22 (with assert checking) Bhuvnesh C.'
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[INFO]:-Obtaining Segment details from coordinator...
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Connecting to db template1 on host localhost
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Validating configuration...
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool() initialized with 1 workers
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: ssh station6 'echo station6'
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got cmd: ssh station6 'echo station6'
+20230428:13:32:53:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: ssh station6 'echo station6'
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] finished cmd: check station6 is up cmdStr='ssh station6 'echo station6''  had result: cmd had rc=0 completed=True halted=False
+  stdout='station6
+'
+  stderr=''
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool haltWork()
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] haltWork
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got a halt cmd
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Connecting to db template1 on host localhost
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-No basebackup running
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Checking for running instances of pg_rewind with host station6 and port 7003 as source server
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Connecting to db template1 on host station6
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool() initialized with 1 workers
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got cmd: $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] finished cmd: run pg_controldata cmdStr='ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 station6 ". /usr/local/gpdb/greenplum_path.sh; $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1"'  had result: cmd had rc=0 completed=True halted=False
+  stdout='pg_control version number:            12010700
+Catalog version number:               302304041
+Database system identifier:           7227176750494621446
+Database cluster state:               in production
+pg_control last modified:             Fri 28 Apr 2023 01:32:52 PM PDT
+Latest checkpoint location:           0/1D0EC0A8
+Latest checkpoint's REDO location:    0/1D0EC070
+Latest checkpoint's REDO WAL file:    000000010000000000000007
+Latest checkpoint's TimeLineID:       1
+Latest checkpoint's PrevTimeLineID:   1
+Latest checkpoint's full_page_writes: on
+Latest checkpoint's NextXID:          0:1979
+Latest checkpoint's NextGxid:         1678
+Latest checkpoint's NextOID:          24623
+Latest checkpoint's NextRelfilenode:  32834
+Latest checkpoint's NextMultiXactId:  1
+Latest checkpoint's NextMultiOffset:  0
+Latest checkpoint's oldestXID:        531
+Latest checkpoint's oldestXID's DB:   1
+Latest checkpoint's oldestActiveXID:  1979
+Latest checkpoint's oldestMultiXid:   1
+Latest checkpoint's oldestMulti's DB: 1
+Latest checkpoint's oldestCommitTsXid:0
+Latest checkpoint's newestCommitTsXid:0
+Time of latest checkpoint:            Fri 28 Apr 2023 01:32:52 PM PDT
+Fake LSN counter for unlogged rels:   0/3E8
+Minimum recovery ending location:     0/0
+Min recovery ending loc's timeline:   0
+Backup start location:                0/0
+Backup end location:                  0/0
+End-of-backup record required:        no
+wal_level setting:                    replica
+wal_log_hints setting:                off
+max_connections setting:              750
+max_worker_processes setting:         12
+max_wal_senders setting:              10
+max_prepared_xacts setting:           250
+max_locks_per_xact setting:           128
+track_commit_timestamp setting:       off
+Maximum data alignment:               8
+Database block size:                  32768
+Blocks per segment of large relation: 32768
+WAL block size:                       32768
+Bytes per WAL segment:                67108864
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        8140
+Size of a large-object chunk:         8192
+Date/time type storage:               64-bit integers
+Float4 argument passing:              by value
+Float8 argument passing:              by value
+Data page checksum version:           1
+Mock authentication nonce:            e3a5af22bfbe2ac44c969f4724f7c7a50599226317759207240cd019584d55e6
+'
+  stderr=''
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got cmd: $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] finished cmd: run pg_controldata cmdStr='ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 station6 ". /usr/local/gpdb/greenplum_path.sh; $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1"'  had result: cmd had rc=0 completed=True halted=False
+  stdout='pg_control version number:            12010700
+Catalog version number:               302304041
+Database system identifier:           7227176750494621446
+Database cluster state:               in archive recovery
+pg_control last modified:             Fri 28 Apr 2023 01:32:42 PM PDT
+Latest checkpoint location:           0/15B48EC0
+Latest checkpoint's REDO location:    0/15B48EC0
+Latest checkpoint's REDO WAL file:    000000010000000000000005
+Latest checkpoint's TimeLineID:       1
+Latest checkpoint's PrevTimeLineID:   1
+Latest checkpoint's full_page_writes: on
+Latest checkpoint's NextXID:          0:1977
+Latest checkpoint's NextGxid:         968
+Latest checkpoint's NextOID:          24623
+Latest checkpoint's NextRelfilenode:  24642
+Latest checkpoint's NextMultiXactId:  1
+Latest checkpoint's NextMultiOffset:  0
+Latest checkpoint's oldestXID:        531
+Latest checkpoint's oldestXID's DB:   1
+Latest checkpoint's oldestActiveXID:  0
+Latest checkpoint's oldestMultiXid:   1
+Latest checkpoint's oldestMulti's DB: 1
+Latest checkpoint's oldestCommitTsXid:0
+Latest checkpoint's newestCommitTsXid:0
+Time of latest checkpoint:            Fri 28 Apr 2023 01:07:42 PM PDT
+Fake LSN counter for unlogged rels:   0/3E8
+Minimum recovery ending location:     0/1CEDCCC8
+Min recovery ending loc's timeline:   1
+Backup start location:                0/0
+Backup end location:                  0/0
+End-of-backup record required:        no
+wal_level setting:                    replica
+wal_log_hints setting:                off
+max_connections setting:              750
+max_worker_processes setting:         12
+max_wal_senders setting:              10
+max_prepared_xacts setting:           250
+max_locks_per_xact setting:           128
+track_commit_timestamp setting:       off
+Maximum data alignment:               8
+Database block size:                  32768
+Blocks per segment of large relation: 32768
+WAL block size:                       32768
+Bytes per WAL segment:                67108864
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        8140
+Size of a large-object chunk:         8192
+Date/time type storage:               64-bit integers
+Float4 argument passing:              by value
+Float8 argument passing:              by value
+Data page checksum version:           1
+Mock authentication nonce:            e3a5af22bfbe2ac44c969f4724f7c7a50599226317759207240cd019584d55e6
+'
+  stderr=''
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool haltWork()
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] haltWork
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got a halt cmd
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-Successfully finished pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1 for dbid 3:
+stdout: pg_control version number:            12010700
+Catalog version number:               302304041
+Database system identifier:           7227176750494621446
+Database cluster state:               in production
+pg_control last modified:             Fri 28 Apr 2023 01:32:52 PM PDT
+Latest checkpoint location:           0/1D0EC0A8
+Latest checkpoint's REDO location:    0/1D0EC070
+Latest checkpoint's REDO WAL file:    000000010000000000000007
+Latest checkpoint's TimeLineID:       1
+Latest checkpoint's PrevTimeLineID:   1
+Latest checkpoint's full_page_writes: on
+Latest checkpoint's NextXID:          0:1979
+Latest checkpoint's NextGxid:         1678
+Latest checkpoint's NextOID:          24623
+Latest checkpoint's NextRelfilenode:  32834
+Latest checkpoint's NextMultiXactId:  1
+Latest checkpoint's NextMultiOffset:  0
+Latest checkpoint's oldestXID:        531
+Latest checkpoint's oldestXID's DB:   1
+Latest checkpoint's oldestActiveXID:  1979
+Latest checkpoint's oldestMultiXid:   1
+Latest checkpoint's oldestMulti's DB: 1
+Latest checkpoint's oldestCommitTsXid:0
+Latest checkpoint's newestCommitTsXid:0
+Time of latest checkpoint:            Fri 28 Apr 2023 01:32:52 PM PDT
+Fake LSN counter for unlogged rels:   0/3E8
+Minimum recovery ending location:     0/0
+Min recovery ending loc's timeline:   0
+Backup start location:                0/0
+Backup end location:                  0/0
+End-of-backup record required:        no
+wal_level setting:                    replica
+wal_log_hints setting:                off
+max_connections setting:              750
+max_worker_processes setting:         12
+max_wal_senders setting:              10
+max_prepared_xacts setting:           250
+max_locks_per_xact setting:           128
+track_commit_timestamp setting:       off
+Maximum data alignment:               8
+Database block size:                  32768
+Blocks per segment of large relation: 32768
+WAL block size:                       32768
+Bytes per WAL segment:                67108864
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        8140
+Size of a large-object chunk:         8192
+Date/time type storage:               64-bit integers
+Float4 argument passing:              by value
+Float8 argument passing:              by value
+Data page checksum version:           1
+Mock authentication nonce:            e3a5af22bfbe2ac44c969f4724f7c7a50599226317759207240cd019584d55e6
+
+stderr: 
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-Successfully finished pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1 for dbid 6:
+stdout: pg_control version number:            12010700
+Catalog version number:               302304041
+Database system identifier:           7227176750494621446
+Database cluster state:               in archive recovery
+pg_control last modified:             Fri 28 Apr 2023 01:32:42 PM PDT
+Latest checkpoint location:           0/15B48EC0
+Latest checkpoint's REDO location:    0/15B48EC0
+Latest checkpoint's REDO WAL file:    000000010000000000000005
+Latest checkpoint's TimeLineID:       1
+Latest checkpoint's PrevTimeLineID:   1
+Latest checkpoint's full_page_writes: on
+Latest checkpoint's NextXID:          0:1977
+Latest checkpoint's NextGxid:         968
+Latest checkpoint's NextOID:          24623
+Latest checkpoint's NextRelfilenode:  24642
+Latest checkpoint's NextMultiXactId:  1
+Latest checkpoint's NextMultiOffset:  0
+Latest checkpoint's oldestXID:        531
+Latest checkpoint's oldestXID's DB:   1
+Latest checkpoint's oldestActiveXID:  0
+Latest checkpoint's oldestMultiXid:   1
+Latest checkpoint's oldestMulti's DB: 1
+Latest checkpoint's oldestCommitTsXid:0
+Latest checkpoint's newestCommitTsXid:0
+Time of latest checkpoint:            Fri 28 Apr 2023 01:07:42 PM PDT
+Fake LSN counter for unlogged rels:   0/3E8
+Minimum recovery ending location:     0/1CEDCCC8
+Min recovery ending loc's timeline:   1
+Backup start location:                0/0
+Backup end location:                  0/0
+End-of-backup record required:        no
+wal_level setting:                    replica
+wal_log_hints setting:                off
+max_connections setting:              750
+max_worker_processes setting:         12
+max_wal_senders setting:              10
+max_prepared_xacts setting:           250
+max_locks_per_xact setting:           128
+track_commit_timestamp setting:       off
+Maximum data alignment:               8
+Database block size:                  32768
+Blocks per segment of large relation: 32768
+WAL block size:                       32768
+Bytes per WAL segment:                67108864
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        8140
+Size of a large-object chunk:         8192
+Date/time type storage:               64-bit integers
+Float4 argument passing:              by value
+Float8 argument passing:              by value
+Data page checksum version:           1
+Mock authentication nonce:            e3a5af22bfbe2ac44c969f4724f7c7a50599226317759207240cd019584d55e6
+
+stderr: 
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: $GPHOME/bin/pg_controldata /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-Greenplum instance recovery parameters
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-Recovery type              = Standard
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-Recovery 1 of 1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Synchronization mode                 = Incremental
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance host                 = station6
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance address              = station6
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance directory            = /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Failed instance port                 = 7006
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance host        = station6
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance address     = station6
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance directory   = /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Source instance port        = 7003
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-   Recovery Target                      = in-place
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:----------------------------------------------------------
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[INFO]:-Starting to create new pg_hba.conf on primary segments
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool() initialized with 1 workers
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: $GPHOME/sbin/seg_update_pg_hba.py --data-dir /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1 --entries '
+host replication pivotal samehost trust
+host all pivotal 10.0.0.234/32 trust
+host all pivotal 172.17.0.1/32 trust
+host all pivotal 10.16.119.186/32 trust
+host all pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host all pivotal 2601:647:4800:c740::b8fa/128 trust
+host all pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host all pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host all pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host all pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host all pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host all pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host all pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust
+host replication pivotal 10.0.0.234/32 trust
+host replication pivotal 172.17.0.1/32 trust
+host replication pivotal 10.16.119.186/32 trust
+host replication pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host replication pivotal 2601:647:4800:c740::b8fa/128 trust
+host replication pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host replication pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host replication pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host replication pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host replication pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host replication pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host replication pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust'
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got cmd: $GPHOME/sbin/seg_update_pg_hba.py --data-dir /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1 --entries '
+host replication pivotal samehost trust
+host all pivotal 10.0.0.234/32 trust
+host all pivotal 172.17.0.1/32 trust
+host all pivotal 10.16.119.186/32 trust
+host all pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host all pivotal 2601:647:4800:c740::b8fa/128 trust
+host all pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host all pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host all pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host all pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host all pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host all pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host all pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust
+host replication pivotal 10.0.0.234/32 trust
+host replication pivotal 172.17.0.1/32 trust
+host replication pivotal 10.16.119.186/32 trust
+host replication pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host replication pivotal 2601:647:4800:c740::b8fa/128 trust
+host replication pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host replication pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host replication pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host replication pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host replication pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host replication pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host replication pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust'
+20230428:13:32:54:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: $GPHOME/sbin/seg_update_pg_hba.py --data-dir /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1 --entries '
+host replication pivotal samehost trust
+host all pivotal 10.0.0.234/32 trust
+host all pivotal 172.17.0.1/32 trust
+host all pivotal 10.16.119.186/32 trust
+host all pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host all pivotal 2601:647:4800:c740::b8fa/128 trust
+host all pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host all pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host all pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host all pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host all pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host all pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host all pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust
+host replication pivotal 10.0.0.234/32 trust
+host replication pivotal 172.17.0.1/32 trust
+host replication pivotal 10.16.119.186/32 trust
+host replication pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host replication pivotal 2601:647:4800:c740::b8fa/128 trust
+host replication pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host replication pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host replication pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host replication pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host replication pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host replication pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host replication pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust'
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] finished cmd: Update pg_hba.conf cmdStr='ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 station6 ". /usr/local/gpdb/greenplum_path.sh; $GPHOME/sbin/seg_update_pg_hba.py --data-dir /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1 --entries '
+host replication pivotal samehost trust
+host all pivotal 10.0.0.234/32 trust
+host all pivotal 172.17.0.1/32 trust
+host all pivotal 10.16.119.186/32 trust
+host all pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host all pivotal 2601:647:4800:c740::b8fa/128 trust
+host all pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host all pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host all pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host all pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host all pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host all pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host all pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust
+host replication pivotal 10.0.0.234/32 trust
+host replication pivotal 172.17.0.1/32 trust
+host replication pivotal 10.16.119.186/32 trust
+host replication pivotal 2601:647:4800:c740:49b3:5dc9:f206:1c27/128 trust
+host replication pivotal 2601:647:4800:c740::b8fa/128 trust
+host replication pivotal 2601:647:4800:c740:21bb:8d13:b3c2:16d6/128 trust
+host replication pivotal 2601:647:4800:c740:f9d1:a4e5:bdbb:67cb/128 trust
+host replication pivotal 2601:647:4800:c740:dc25:37de:75f8:efdf/128 trust
+host replication pivotal 2601:647:4800:c740:3259:5e67:ae0d:643f/128 trust
+host replication pivotal 2601:647:4800:c740:7cd8:f44e:3889:509e/128 trust
+host replication pivotal 2601:647:4800:c740:40d4:7879:8a:dc04/128 trust
+host replication pivotal 2601:647:4800:c740:c21a:83b2:8a4a:33bd/128 trust'"'  had result: cmd had rc=0 completed=True halted=False
+  stdout=''
+  stderr=''
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool haltWork()
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] haltWork
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got a halt cmd
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[INFO]:-Successfully modified pg_hba.conf on primary segments to allow replication connections
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[INFO]:-1 segment(s) to recover
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[INFO]:-Ensuring 1 failed segment(s) are stopped
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: python -c 'import os; print(os.path.realpath("/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1"))'
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: head -1 /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/postmaster.pid
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Skipping to stop segment /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1 on host station6 since pid could not be found
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[INFO]:-Setting up the required segments for recovery
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: $GPHOME/sbin/gpsegsetuprecovery.py -c '[{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got cmd: $GPHOME/sbin/gpsegsetuprecovery.py -c '[{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: $GPHOME/sbin/gpsegsetuprecovery.py -c '[{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] finished cmd: Run validation checks and setup data directories for recovery cmdStr='ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 station6 ". /usr/local/gpdb/greenplum_path.sh; $GPHOME/sbin/gpsegsetuprecovery.py -c '[{\"target_datadir\": \"/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1\", \"target_port\": 7006, \"target_segment_dbid\": 6, \"source_hostname\": \"station6\", \"source_port\": 7003, \"is_full_recovery\": false, \"progress_file\": \"/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out\"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite"'  had result: cmd had rc=0 completed=True halted=False
+  stdout='20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[INFO]:-Starting recovery with args: -c [{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}] -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-WorkerPool() initialized with 1 workers
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: 
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-[worker0] got cmd: 
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-Do CHECKPOINT on station6 (port: 7003) before running pg_rewind.
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-Connecting to db template1 on host station6
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-Running Command: rm -f /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/postmaster.pid
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-[worker0] finished cmd: Setup for pg_rewind cmdStr=''  had result: cmd had rc=0 completed=True halted=False
+  stdout=''
+  stderr=''
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-WorkerPool haltWork()
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-[worker0] haltWork
+20230428:13:32:55:1968258 gpsegsetuprecovery.py:station6:pivotal-[DEBUG]:-[worker0] got a halt cmd
+'
+  stderr=''
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[INFO]:-Updating configuration for mirrors
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Validating configuration changes...
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Connecting to db template1 on host localhost
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-mirror_to_remove:          0 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-primary_to_remove:         0 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-primary_to_add:            0 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-mirror_to_add:             0 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-initial_segment_to_update: 0 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-mirror_to_remove_and_add:  0 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_to_update:         0 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         8 segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         1|-1|p|p|n|u|station6|station6|7000|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         8|-1|m|m|s|u|station6|station6|7001|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/standby
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         2|0|p|p|s|u|station6|station6|7002|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         5|0|m|m|s|u|station6|station6|7005|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         3|1|p|p|n|u|station6|station6|7003|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast2/demoDataDir1
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         6|1|m|m|n|d|station6|station6|7006|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         4|2|p|p|s|u|station6|station6|7004|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast3/demoDataDir2
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-segment_unchanged:         7|2|m|m|s|u|station6|station6|7007|/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror3/demoDataDir2
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Committing configuration table changes
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Generating configuration backout scripts
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[INFO]:-Initiating segment recovery. Upon completion, will start the successfully recovered segments
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/log/gp_era - read_gp_era
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-parse: # Greenplum Database era.
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-parse: # Do not change the contents of this file.
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-parse: era = 84f970d55cff544c_230428131001
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-match era: 84f970d55cff544c_230428131001
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[INFO]:-era is 84f970d55cff544c_230428131001
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: $GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite --era=84f970d55cff544c_230428131001
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker1] got cmd: $GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite --era=84f970d55cff544c_230428131001
+20230428:13:32:55:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: $GPHOME/sbin/gpsegrecovery.py -c '[{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite --era=84f970d55cff544c_230428131001
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker1] finished cmd: Recover segments cmdStr='ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 station6 ". /usr/local/gpdb/greenplum_path.sh; $GPHOME/sbin/gpsegrecovery.py -c '[{\"target_datadir\": \"/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1\", \"target_port\": 7006, \"target_segment_dbid\": 6, \"source_hostname\": \"station6\", \"source_port\": 7003, \"is_full_recovery\": false, \"progress_file\": \"/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out\"}]' -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite --era=84f970d55cff544c_230428131001"'  had result: cmd had rc=0 completed=True halted=False
+  stdout='20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[INFO]:-Starting recovery with args: -c [{"target_datadir": "/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1", "target_port": 7006, "target_segment_dbid": 6, "source_hostname": "station6", "source_port": 7003, "is_full_recovery": false, "progress_file": "/home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"}] -l /home/pivotal/gpAdminLogs -v -b 64 --force-overwrite --era=84f970d55cff544c_230428131001
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-WorkerPool() initialized with 1 workers
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: 
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-[worker0] got cmd: 
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[INFO]:-Running pg_rewind with progress output temporarily in /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-Running Command: [ -f /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/standby.signal ] || PGOPTIONS="-c gp_role=utility" $GPHOME/bin/pg_rewind --write-recovery-conf --slot="internal_wal_replication_slot" --source-server="host=station6 port=7003 dbname=template1 application_name=__gprecoverseg_pg_rewind__" --target-pgdata=/home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1 --progress > /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out 2>&1
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[INFO]:-Successfully ran pg_rewind for dbid: 6
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[INFO]:-Updating /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/postgresql.conf
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-Running Command: perl -p -i.bak -e 's/^port[ ]*=[ ]*\d+/port=7006/' /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/postgresql.conf
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[INFO]:-SegmentStart pg_ctl cmd is env GPSESSID=0000000000 GPERA=84f970d55cff544c_230428131001 $GPHOME/bin/pg_ctl -D /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1 -l /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/log/startup.log -w -t 600 -o " -c gp_role=utility " start
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[INFO]:-Starting new segment with dbid 6: cmdStr='env GPSESSID=0000000000 GPERA=84f970d55cff544c_230428131001 $GPHOME/bin/pg_ctl -D /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1 -l /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/log/startup.log -w -t 600 -o " -c gp_role=utility " start 2>&1'
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-Running Command: env GPSESSID=0000000000 GPERA=84f970d55cff544c_230428131001 $GPHOME/bin/pg_ctl -D /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1 -l /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1/log/startup.log -w -t 600 -o " -c gp_role=utility " start 2>&1
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-[worker0] finished cmd: Run pg_rewind cmdStr=''  had result: cmd had rc=0 completed=True halted=False
+  stdout=''
+  stderr=''
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-WorkerPool haltWork()
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-[worker0] haltWork
+20230428:13:32:56:1968306 gpsegrecovery.py:station6:pivotal-[DEBUG]:-[worker0] got a halt cmd
+'
+  stderr=''
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: set -o pipefail; touch -a /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out; tail -1 /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out | tr '\r' '\n' | tail -1
+station6 (dbid 6): skipping pg_rewind on mirror as standby.signal is present
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Adding cmd to work_queue: rm -f /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker2] got cmd: rm -f /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Running Command: rm -f /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker2] finished cmd: remove file cmdStr='ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 station6 ". /usr/local/gpdb/greenplum_path.sh; rm -f /home/pivotal/gpAdminLogs/pg_rewind.20230428_133255.dbid6.out"'  had result: cmd had rc=0 completed=True halted=False
+  stdout=''
+  stderr=''
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[INFO]:-Triggering FTS probe
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-Connecting to db template1 on host localhost
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[INFO]:-********************************
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[INFO]:-Segments successfully recovered.
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[INFO]:-********************************
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[INFO]:-Recovered mirror segments need to sync WAL with primary segments.
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[INFO]:-Use 'gpstate -e' to check progress of WAL sync remaining bytes
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-WorkerPool haltWork()
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker1] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker2] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker3] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker4] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker5] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker6] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker7] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker6] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker3] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker8] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker10] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker8] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker5] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker7] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker9] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker4] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker9] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker11] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker10] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker12] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker11] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker13] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker12] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker14] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker13] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker15] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker14] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker0] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker15] haltWork
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker1] got a halt cmd
+20230428:13:32:56:1967876 gprecoverseg:station6:pivotal-[DEBUG]:-[worker2] got a halt cmd
+
+-- end_ignore
+(exited with code 0)
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
 (1 row)

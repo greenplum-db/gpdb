@@ -31,3 +31,7 @@ CREATE
 
 CREATE OR REPLACE FUNCTION is_query_waiting_for_syncrep(iterations int, check_query text) RETURNS bool AS $$ for i in range(iterations): results = plpy.execute("SELECT * FROM\ (SELECT gp_execution_segment() AS gp_segment_id, query, waiting_reason\ FROM gp_dist_random('pg_stat_activity')) s\ WHERE gp_segment_id = 1 AND\ query = '%s' AND\ waiting_reason = 'replication'" % check_query ) if results: return True return False $$ LANGUAGE plpythonu VOLATILE;
 CREATE
+
+-- Helper function that ensures mirror of the specified contentid is down.
+create or replace function wait_for_mirror_down(contentid smallint, timeout_sec integer) returns bool as $$ declare i int; /* in func */ begin /* in func */ i := 0; /* in func */ loop /* in func */ perform gp_request_fts_probe_scan(); /* in func */ if (select count(1) from gp_segment_configuration where role='m' and content=$1 and status='d') = 1 then /* in func */ return true; /* in func */ end if; /* in func */ if i >= 2 * $2 then /* in func */ return false; /* in func */ end if; /* in func */ perform pg_sleep(0.5); /* in func */ i = i + 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
+CREATE
