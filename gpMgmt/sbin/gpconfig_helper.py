@@ -86,26 +86,26 @@ def comment_parameter(filename, name):
             potential_match = line.split("=", 1)[0]
             if potential_match.strip() == name:
                 outfile.write('#')
+                new_lines = new_lines + 1
             outfile.write(line)
-            new_lines = new_lines + 1
 
-    if new_lines == len(lines):
+    # If there are matching parameters, replace the conf file with the tempfile,
+    # else just remove the tempfile.
+    if new_lines > 0:
         os.rename(os.path.abspath(temp_conf_path), filename)
+    else:
+        os.unlink(os.path.abspath(temp_conf_path))
 
 
 def add_parameter(filename, name, value):
     lines, temp_conf_path = _read_from_file_and_get_empty_tempfile(filename)
 
-    new_lines = 0
     with open(os.path.abspath(temp_conf_path), 'w') as outfile:
         for line in lines:
             outfile.write(line)
-            new_lines = new_lines + 1
         outfile.write(name + '=' + value + os.linesep)
-        new_lines = new_lines + 1
 
-    if new_lines == len(lines) + 1:
-        os.rename(os.path.abspath(temp_conf_path), filename)
+    os.rename(os.path.abspath(temp_conf_path), filename)
 
 
 # NOTE: though apparently not documented, postgresQL returns the last valid value
