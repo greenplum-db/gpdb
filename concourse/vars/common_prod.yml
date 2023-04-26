@@ -28,8 +28,8 @@ rc-build-type: debug
 rc-build-type-gcs: ".debug"
 reduced-frequency-trigger-start-rhel8: 0:00 AM
 reduced-frequency-trigger-stop-rhel8: 0:59 AM
-reduced-frequency-trigger-start-ubuntu18.04: 2:00 AM
-reduced-frequency-trigger-stop-ubuntu18.04: 2:59 AM
+reduced-frequency-trigger-start-ubuntu20.04: 2:00 AM
+reduced-frequency-trigger-stop-ubuntu20.04: 2:59 AM
 reduced-frequency-trigger-start-centos7: 4:00 AM
 reduced-frequency-trigger-stop-centos7: 4:59 AM
 reduced-frequency-trigger-start-centos6: 6:00 AM

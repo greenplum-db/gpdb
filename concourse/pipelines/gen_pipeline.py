@@ -101,7 +101,7 @@ def create_pipeline(args, git_remote, git_branch):
         "centos6" : "centos",
         "centos7" : "centos",
         "rhel8" : "rhel",
-        "ubuntu18.04" : "ubuntu",
+        "ubuntu20.04" : "ubuntu",
         "rocky8" : "rocky",
         "oel8" : "oel",
         "oel7" : "oel"
@@ -110,7 +110,7 @@ def create_pipeline(args, git_remote, git_branch):
         "centos6" : "centos",
         "centos7" : "centos",
         "rhel8" : "centos",
-        "ubuntu18.04" : "ubuntu",
+        "ubuntu20.04" : "ubuntu",
         "rocky8" : "centos",
         "oel8" : "centos",
         "oel7" : "centos"
@@ -119,7 +119,7 @@ def create_pipeline(args, git_remote, git_branch):
         "centos6" : "rhel6",
         "centos7" : "rhel7",
         "rhel8" : "rhel8",
-        "ubuntu18.04" : "ubuntu18.04",
+        "ubuntu20.04" : "ubuntu20.04",
         "rocky8" : "rhel8",
         "oel8" : "rhel8",
         "oel7" : "oel7"
@@ -128,7 +128,7 @@ def create_pipeline(args, git_remote, git_branch):
         "centos6" : "rhel6",
         "centos7" : "rhel7",
         "rhel8" : "rhel8",
-        "ubuntu18.04" : "ubuntu18.04",
+        "ubuntu20.04" : "ubuntu20.04",
         "rocky8" : "rocky8",
         "oel8" : "oel8",
         "oel7" : "oel7"
@@ -137,7 +137,7 @@ def create_pipeline(args, git_remote, git_branch):
         "centos6": "centos6",
         "centos7": "centos7",
         "rhel8": "rocky8",
-        "ubuntu18.04": "ubuntu18.04",
+        "ubuntu20.04": "ubuntu20.04",
         "rocky8": "rocky8",
         "oel8": "rocky8",
         "oel7": "oel7"
@@ -279,7 +279,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['centos6', 'centos7', 'rhel8','ubuntu18.04', 'rocky8', 'oel8', 'oel7'],
+        choices=['centos6', 'centos7', 'rhel8','ubuntu20.04', 'rocky8', 'oel8', 'oel7'],
         help='OS value to support'
     )
 

@@ -226,12 +226,12 @@ groups:
   - icw_planner_icproxy_[[ os_type ]]
   - icw_planner_ictcp_[[ os_type ]]
   - icw_mirrorless_[[ os_type ]]
-  {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+  {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
   - scram-sha-256_abi_test_server_[[ os_type ]]
   - scram-sha-256_abi_test_clients_[[ os_type ]]
   {% endif %}
-  # Not support enable fips on ubuntu18.04
-  {% if os_type != "ubuntu18.04" %}
+  # Not support enable fips on ubuntu20.04
+  {% if os_type != "ubuntu20.04" %}
   - fips_[[ os_type ]]
   {% endif %}
   - unit_tests_gporca_[[ os_type ]]
@@ -281,7 +281,7 @@ groups:
 {% endif %}
 
 {% if not directed_release %}
-  {% if os_type != "ubuntu18.04" %}
+  {% if os_type != "ubuntu20.04" %}
   - Build_Release_Candidate_RPMs
   {% endif %}
 {% endif %}
@@ -321,12 +321,12 @@ groups:
   - icw_planner_icproxy_[[ os_type ]]
   - icw_planner_ictcp_[[ os_type ]]
   - icw_mirrorless_[[ os_type ]]
-  {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+  {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
   - scram-sha-256_abi_test_server_[[ os_type ]]
   - scram-sha-256_abi_test_clients_[[ os_type ]]
   {% endif %}
-  # Not support enable fips on ubuntu18.04
-  {% if os_type != "ubuntu18.04" %}
+  # Not support enable fips on ubuntu20.04
+  {% if os_type != "ubuntu20.04" %}
   - fips_[[ os_type ]]
   {% endif %}
   - unit_tests_gporca_[[ os_type ]]
@@ -465,7 +465,7 @@ resources:
     - gpdb-doc/*
     - README*
 
-{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
 - name: gpdb_src_without_scram-sha-256
   type: git
   source:
@@ -509,7 +509,7 @@ resources:
     {% endif %}
   {%endif%}
 
-{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
 - name: gpdb6-[[ os_type ]]-build-without-python3
   type: registry-image
   source:
@@ -563,7 +563,7 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_clients/bin_gpdb_clients.tar.gz
 
-{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
 - name: bin_gpdb_[[ os_type ]]_without_scram-sha-256
   type: gcs
   source:
@@ -666,7 +666,7 @@ resources:
 {% endif %}
 
 {% if "Release" in test_sections or build_test_rc_rpm %}
-{% if os_type != "ubuntu18.04" and os_type != "rhel8" and os_type != "oel8" %}
+{% if os_type != "ubuntu20.04" and os_type != "rhel8" and os_type != "oel8" %}
 - name: gpdb_rpm_installer_[[ os_type ]]
   type: gcs
   source:
@@ -810,7 +810,7 @@ resources:
     tag_filter: ((madlib-ci-tag-filter))
     uri: ((madlib-ci-git-remote))
     private_key: ((madlib-ci-git-key))
-{% if os_type == "ubuntu18.04" %}
+{% if os_type == "ubuntu20.04" %}
 - name: madlib_master_deb
   type: gcs
   source:
@@ -943,7 +943,7 @@ jobs:
           {% endif %}
         trigger: true
       - get: gpdb6-[[ compile_platform ]]-build
-      {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+      {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
       - get: gpdb_src_without_scram-sha-256
       - get: gpdb6-[[ os_type ]]-build-without-python3
       {% endif %}
@@ -962,7 +962,7 @@ jobs:
       - put: bin_gpdb_clients
         params:
           file: gpdb_artifacts/bin_gpdb_clients.tar.gz
-{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
   - task: compile_gpdb_without_scram-sha-256
     image: gpdb6-[[ os_type ]]-build-without-python3
     file: gpdb_src_without_scram-sha-256/concourse/tasks/compile_gpdb.yml
@@ -992,8 +992,8 @@ jobs:
       - get: gpdb_package
         resource: previous_gpdb
         params:
-          {% if os_type == "ubuntu18.04" %}
-          globs: [greenplum-db-6*-[[ dist ]]-amd64.deb]
+          {% if os_type == "ubuntu20.04" %}
+          globs: [greenplum-db-6*-ubuntu18.04-amd64.deb]
           {% elif os_type == "rocky8" %}
           globs: [greenplum-db-6*-rhel8-x86_64.rpm]
           {% elif os_type == "oel8" %}
@@ -1258,7 +1258,7 @@ jobs:
         skip_download: 'true'
       passed: [Publish Server Builds]
     {% endif %}
-    {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+    {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
     - get: bin_gpdb_[[ os_type ]]_without_scram-sha-256
       params:
         skip_download: 'true'
@@ -1324,7 +1324,7 @@ jobs:
       params:
         skip_download: 'true'
       passed: [ gate_compile_end ]
-    {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+    {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
     - get: bin_gpdb_[[ os_type ]]_without_scram-sha-256
       params:
         skip_download: 'true'
@@ -1584,7 +1584,7 @@ jobs:
         TEST_OS: [[ test_os ]]
         CONFIGURE_FLAGS: ((configure_flags))
 
-{% if os_type != "ubuntu18.04" %}
+{% if os_type != "ubuntu20.04" %}
 - name: fips_[[ os_type ]]
   plan:
   - in_parallel:
@@ -1658,7 +1658,7 @@ jobs:
     <<: *set_failed
 {% endif %}
 
-{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+{% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
 - name: scram-sha-256_abi_test_server_[[ os_type ]]
   plan:
     - in_parallel:
@@ -1858,11 +1858,11 @@ jobs:
         - icw_planner_icproxy_[[ os_type ]]
         - icw_planner_ictcp_[[ os_type ]]
         - icw_mirrorless_[[ os_type ]]
-        {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+        {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
         - scram-sha-256_abi_test_clients_[[ os_type ]]
         {% endif %}
-        # Not support enable fips on ubuntu18.04
-        {% if os_type != "ubuntu18.04" %}
+        # Not support enable fips on ubuntu20.04
+        {% if os_type != "ubuntu20.04" %}
         - fips_[[ os_type ]]
         {% endif %}
         - unit_tests_gporca_[[ os_type ]]
@@ -1880,12 +1880,12 @@ jobs:
         - icw_planner_icproxy_[[ os_type ]]
         - icw_planner_ictcp_[[ os_type ]]
         - icw_mirrorless_[[ os_type ]]
-        {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" or os_type == "ubuntu18.04" %}
+        {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
         - scram-sha-256_abi_test_server_[[ os_type ]]
         - scram-sha-256_abi_test_clients_[[ os_type ]]
         {% endif %}
-        # Not support enable fips on ubuntu18.04
-        {% if os_type != "ubuntu18.04" %}
+        # Not support enable fips on ubuntu20.04
+        {% if os_type != "ubuntu20.04" %}
         - fips_[[ os_type ]]
         {% endif %}
         - unit_tests_gporca_[[ os_type ]]
@@ -2322,7 +2322,7 @@ jobs:
         passed:
         - gate_compile_end
 
-{% if os_type == "ubuntu18.04" %}
+{% if os_type == "ubuntu20.04" %}
 - name: madlib_build_gppkg_[[ os_type ]]
   plan:
   - in_parallel:
@@ -2404,7 +2404,7 @@ jobs:
       - get: bin_gpdb
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
-      {% if os_type == "ubuntu18.04" %}
+      {% if os_type == "ubuntu20.04" %}
       - get: madlib_src
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: cmake_tar
@@ -2418,7 +2418,7 @@ jobs:
       {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
   - task: MADlib_Test
-    {% if os_type == "ubuntu18.04" %}
+    {% if os_type == "ubuntu20.04" %}
     file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
     image: gpdb6-[[ os_type ]]-test
     params:
@@ -2448,7 +2448,7 @@ jobs:
       - get: bin_gpdb
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: gpdb6-[[ os_type ]]-test
-      {% if os_type == "ubuntu18.04" %}
+      {% if os_type == "ubuntu20.04" %}
       - get: madlib_src
         passed: [madlib_build_gppkg_[[ os_type ]]]
       - get: cmake_tar
@@ -2462,7 +2462,7 @@ jobs:
       {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
   - task: MADlib_Test
-    {% if os_type == "ubuntu18.04" %}
+    {% if os_type == "ubuntu20.04" %}
     file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
     image: gpdb6-[[ os_type ]]-test
     params:
@@ -2665,7 +2665,7 @@ jobs:
 {% endif %}
 
 {% if not directed_release %}
-{% if os_type != "ubuntu18.04" %}
+{% if os_type != "ubuntu20.04" %}
 - name: Build_Release_Candidate_RPMs
   plan:
   - in_parallel:
