@@ -969,7 +969,6 @@ drop table if exists bar_List_PT2;
 
 -- check motion is added to inner relation when performing a NL Left Outer Join
 -- between relations which are distributed on columns of different data types
--- and the join condition contains the distribution key of outer relation
 create table foo_nestloop (a varchar(5),b varchar(5)) distributed by (a);
 create table bar_nestloop (p char(5),q char(5)) distributed by (p);
 insert into foo_nestloop values ('1 ','1 '),('2  ','2  '),('3   ','3   ');
@@ -977,42 +976,22 @@ insert into bar_nestloop values ('1 ','1 '),('2  ','2  '),('3   ','3   ');
 set optimizer_enable_hashjoin to off;
 set enable_hashjoin to off;
 set enable_nestloop to on;
--- When the opfamily of outer relation column and the inner relation column
--- are different and the inner relation column datatype is not binary coercible
--- to outer relation column data type, the inner relation is broadcasted
 explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
 select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p order by foo_nestloop.a;
 explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.q;
 select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.q order by foo_nestloop.a;
 explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q;
 select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
--- When the opfamily of outer relation column and the inner relation column
--- are different and inner relation column datatype is binary coercible to
--- outer relation column data type, the inner relation is redistributed
-explain select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p=foo_nestloop.a;
-select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p=foo_nestloop.a order by bar_nestloop.p;
-explain select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p=foo_nestloop.b;
-select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p=foo_nestloop.b order by bar_nestloop.p;
-explain select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p=foo_nestloop.a and bar_nestloop.q=foo_nestloop.b;
-select bar_nestloop.* from bar_nestloop left join foo_nestloop on bar_nestloop.p=foo_nestloop.a and bar_nestloop.q=foo_nestloop.b order by bar_nestloop.p;
--- check motion is added while performing a NL Inner Join
+-- check motion is added when performing a NL Inner Join
 -- between relations which are distributed on columns of different data types
 explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
 select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p order by foo_nestloop.a;
 explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q;
 select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q order by foo_nestloop.a;
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.p;
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.p order by foo_nestloop.a;
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.q;
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
 explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a;
 select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a order by bar_nestloop.p;
 explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b;
 select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b order by bar_nestloop.p;
-explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.a;
-select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.a order by bar_nestloop.p;
-explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.b;
-select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.q=foo_nestloop.b order by bar_nestloop.p;
 explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q;
 select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
 drop table foo_nestloop;

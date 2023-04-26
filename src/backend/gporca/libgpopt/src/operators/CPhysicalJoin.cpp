@@ -347,8 +347,6 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 						CUtils::FScalarIdent(pexprMatching));
 			if (fSuccess)
 			{
-				BOOL inner_hash_func_present_outer_opfamily = true;
-
 				IMDId *pmdid_type_inner =
 					CScalar::PopConvert(pexprMatching->Pop())->MdidType();
 
@@ -365,22 +363,7 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 					md_accessor->RetrieveType(pmdid_type_outer)
 						->GetDistrOpfamilyMdid();
 
-				// If the outer relation column opfamily is different from the inner relation
-				// column opfamily and if the inner relation column datatype is binary coercible
-				// to outer relation column datatype,then hashing of the inner column datatype is
-				// possible by a hash function present in the opfamily of the outer relation
-				// column.This approach is mentioned in "cdb_hashproc_in_opfamily" method.If
-				// inner_hash_func_present_outer_opfamily is true for all the columns then a
-				// matching hashed distribution request will be returned to caller else returning
-				// nullptr
-				if (!mdid_opfamily_outer->Equals(mdid_opfamily_inner) &&
-					!CMDAccessorUtils::FBinaryCoercible(
-						md_accessor, pmdid_type_inner, pmdid_type_outer))
-				{
-					inner_hash_func_present_outer_opfamily = false;
-				}
-
-				if (inner_hash_func_present_outer_opfamily &&
+				if (mdid_opfamily_outer->Equals(mdid_opfamily_inner) &&
 					md_accessor->RetrieveType(pmdid_type_inner)->IsHashable())
 				{
 					pexprMatching->AddRef();
@@ -397,16 +380,10 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 		if (fSuccess)
 		{
 			GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
-			IMdIdArray *opfamilies = pdshashed->Opfamilies();
-			if (nullptr != opfamilies)
-			{
-				opfamilies->AddRef();
-			}
 			// create a matching hashed distribution request
 			BOOL fNullsColocated = pdshashed->FNullsColocated();
-			CDistributionSpecHashed *pdshashedEquiv =
-				GPOS_NEW(mp) CDistributionSpecHashed(
-					pdrgpexprMatching, fNullsColocated, opfamilies);
+			CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp)
+				CDistributionSpecHashed(pdrgpexprMatching, fNullsColocated);
 			pdshashedEquiv->ComputeEquivHashExprs(mp, exprhdl);
 			return GPOS_NEW(mp) CEnfdDistribution(pdshashedEquiv, dmatch);
 		}
