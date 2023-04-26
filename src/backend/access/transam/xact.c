@@ -2326,6 +2326,19 @@ SetSharedTransactionId_reader(FullTransactionId xid, CommandId cid, DtxContext d
 static void
 StartTransaction(void)
 {
+	/*
+	 * Try to acquire TransactionStartLock in LW_SHARED mode and release immediately. 
+	 * If another process acquires the TransactionStartLock in LW_EXCLUSIVE mode, 
+	 * all sessions that want to start a distributed transaction will be blocked. 
+	 * In a CDC scenario, we need these operations to generate a situation where 
+	 * no distributed transactions are running on the master.
+	*/
+	if (unlikely(XLogLogicalInfoActive()) && Gp_role == GP_ROLE_DISPATCH)
+	{
+		LWLockAcquire(TransactionStartLock, LW_SHARED);
+		LWLockRelease(TransactionStartLock);
+	}
+
 	TransactionState s;
 	VirtualTransactionId vxid;
 
