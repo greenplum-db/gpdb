@@ -511,13 +511,13 @@ class RemoteExecutionContext(LocalExecutionContext):
             self.__retry(cmd)
         pass
 
-    def __retry(self, cmd, count=0):
+    def __retry(self, cmd, count=0, pickled=False):
         if count == SSH_MAX_RETRY:
             return
         time.sleep(SSH_RETRY_DELAY)
         LocalExecutionContext.execute(self, cmd, pickled=pickled)
         if (cmd.get_results().stderr.startswith('ssh_exchange_identification: Connection closed by remote host')):
-            self.__retry(cmd, count + 1)
+            self.__retry(cmd, count + 1, pickled=pickled)
 
 class Command(object):
     """ TODO:
