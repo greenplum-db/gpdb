@@ -255,6 +255,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | threadpoolctl | Python helpers to limit the number of threads used in the threadpool-backed of common native libraries used for scientific computing and data science |
 | toolz | List processing tools and functional utilities |
 | tqdm | Fast, extensible progress meter |
+| transformers | State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow |
 | tslearn | A machine learning toolkit dedicated to time-series data |
 | typer | Typer, build great CLIs. Easy to code. Based on Python type hints |
 | typing_extensions | Backported and Experimental Type Hints for Python 3.7+ |
@@ -268,7 +269,6 @@ The following table lists the modules that are provided in the Data Science Pack
 | xmltodict | Makes working with XML feel like you are working with JSON |
 | zc.lockfile | Basic inter-process locks |
 | zipp | Backport of pathlib-compatible object wrapper for zip files |
-| tensorflow-gpu | An open source software library for high performance numerical computation |
 | tensorflow | Numerical computation using data flow graphs |
 | keras | An implementation of the Keras API that uses TensorFlow as a backend |
 
