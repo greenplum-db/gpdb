@@ -602,14 +602,33 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage)
 				pg_strncasecmp(strval, SOPT_COMPTYPE, soptLen) == 0)
 			{
 				foundComptype = true;
-
 				/*
 				 * Record "none" as compresstype in reloptions if it was
 				 * explicitly specified in WITH clause.
+				 *
+				 * If "quicklz" was explicitly specified in WITH clause and
+				 * gp_quicklz_fallback=true, record "zstd" as compresstype
+				 * if available, else record AO_DEFAULT_USABLE_COMPRESSTYPE
 				 */
+				char* compresstype;
+
+				if (opts->compresstype[0])
+				{
+					if (gp_quicklz_fallback && pg_strcasecmp(opts->compresstype, "quicklz"))				
+#ifdef USE_ZSTD
+						compresstype = "zstd";
+#else
+						compresstype = AO_DEFAULT_USABLE_COMPRESSTYPE;
+#endif				
+					else
+						compresstype = opts->compresstype;
+				}
+				else
+					compresstype = "none";
+
 				d = CStringGetTextDatum(psprintf("%s=%s",
 												 SOPT_COMPTYPE,
-												 (opts->compresstype[0] ? opts->compresstype : "none")));
+												 compresstype));
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
@@ -897,9 +916,25 @@ validate_and_adjust_options(StdRdOptions *result,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("unknown compresstype \"%s\"",
 							comptype_opt->values.string_val)));
-		for (i = 0; i < strlen(comptype_opt->values.string_val); i++)
-			result->compresstype[i] = pg_tolower(comptype_opt->values.string_val[i]);
-		result->compresstype[i] = '\0';
+		/*
+		 * GPDB7 has dropped support for quicklz.
+		 * If compresstype passed the above validity check, we want to fallback to using
+		 * "zstd" as compresstype if available, else the default usable compresstype.
+		 */
+		if (pg_strcasecmp(comptype_opt->values.string_val, "quicklz") == 0)
+		{
+#ifdef USE_ZSTD
+			strncpy(result->compresstype, "zstd", sizeof("zstd"));
+#else
+			strncpy(result->compresstype, AO_DEFAULT_USABLE_COMPRESSTYPE, sizeof(AO_DEFAULT_USABLE_COMPRESSTYPE));
+#endif
+		}
+		else
+		{
+			for (i = 0; i < strlen(comptype_opt->values.string_val); i++)
+				result->compresstype[i] = pg_tolower(comptype_opt->values.string_val[i]);
+			result->compresstype[i] = '\0';
+		}
 	}
 
 	/* compression level */
@@ -1475,9 +1510,10 @@ List *
 transformStorageEncodingClause(List *aocoColumnEncoding, bool validate)
 {
 	ListCell   *lc;
-	DefElem	   *dl;
+	DefElem	   *dl = NULL;
+	int c = 0;
 
-	foreach(lc, aocoColumnEncoding)
+	foreach_with_count(lc, aocoColumnEncoding, c)
 	{
 		dl = (DefElem *) lfirst(lc);
 		if (pg_strncasecmp(dl->defname, SOPT_CHECKSUM, strlen(SOPT_CHECKSUM)) == 0)
@@ -1486,6 +1522,27 @@ transformStorageEncodingClause(List *aocoColumnEncoding, bool validate)
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("\"%s\" is not a column specific option",
 							SOPT_CHECKSUM)));
+		}
+		/* 
+		 * For compresstype, the value must be modified from the value passed
+		 * into the encoding clause if gp_quicklz_fallback is enabled and "quicklz"
+		 * is specified. The value will instead fallback to "zstd" if available, else
+		 * the default usable compresstype.
+		 */
+		if (pg_strncasecmp(dl->defname, SOPT_COMPTYPE, strlen(SOPT_COMPTYPE)) == 0
+				&& gp_quicklz_fallback)
+		{
+			char *name = defGetString(dl);
+			if (pg_strcasecmp(name, "quicklz") == 0)
+			{
+#ifdef USE_ZSTD
+				char *compresstype = "zstd";
+#else
+				char *compresstype = AO_DEFAULT_USABLE_COMPRESSTYPE;
+#endif
+				dl = makeDefElem("compresstype", (Node *) makeString(compresstype), -1);
+			}
+				list_nth_replace(aocoColumnEncoding, c, dl);
 		}
 	}
 

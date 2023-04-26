@@ -418,6 +418,9 @@ bool		gp_enable_segment_copy_checking = true;
  */
 char	   *gp_default_storage_options = NULL;
 
+/* Fall back to using zstd if quicklz compresstpye specified */
+bool		gp_quicklz_fallback = false;
+
 int			writable_external_table_bufsize = 64;
 
 bool		gp_external_enable_filter_pushdown = true;
@@ -2944,6 +2947,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL,
 		},
 		&gp_log_suboverflow_statement,
+		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"gp_quicklz_fallback", PGC_SUSET, APPENDONLY_TABLES,
+		 gettext_noop("Fallback to valid compression type if quicklz table compression is requested."),
+		 NULL,
+		},
+		&gp_quicklz_fallback,
 		false,
 		NULL, NULL, NULL
 	},

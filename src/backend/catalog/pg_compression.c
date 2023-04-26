@@ -508,9 +508,6 @@ compresstype_is_valid(char *comptype)
 	 * must change!
 	 */
 	static const char *const valid_comptypes[] = {
-#ifdef HAVE_LIBQUICKLZ
-			"quicklz",
-#endif
 #ifdef HAVE_LIBZ
 			"zlib",
 #endif
@@ -518,6 +515,13 @@ compresstype_is_valid(char *comptype)
 			"zstd",
 #endif
 			"rle_type", "none"};
+
+	/*
+	 * If gp_quicklz_fallback = true, we consider quicklz valid.
+	 * It will be coerced to a valid compresstype in validate_and_adjust_options
+	 */
+	if (pg_strcasecmp(comptype, "quicklz") == 0 && gp_quicklz_fallback)
+		return true;
 
 	for (int i = 0; i < ARRAY_SIZE(valid_comptypes); ++i)
 	{

@@ -589,6 +589,8 @@ extern char  *gp_auth_time_override_str;
 
 extern char  *gp_default_storage_options;
 
+extern bool gp_quicklz_fallback;
+
 /* copy GUC */
 extern bool gp_enable_segment_copy_checking;
 

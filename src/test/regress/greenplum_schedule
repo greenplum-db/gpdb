@@ -343,4 +343,7 @@ test: gp_log_mem_dispatch
 # test that distributing or hash partitioning by an enum field or expression is blocked
 test: enum_dist_part_ban
 
+# test compresstype fallback from quicklz when gp_quicklz_fallback=true
+test: quicklz_fallback
+
 # end of tests
