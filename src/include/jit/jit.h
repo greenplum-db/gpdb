@@ -90,6 +90,11 @@ extern double jit_above_cost;
 extern double jit_inline_above_cost;
 extern double jit_optimize_above_cost;
 
+/* Optimizer specific JIT GUCs */
+extern bool optimizer_jit;
+extern double optimizer_jit_above_cost;
+extern double optimizer_jit_inline_above_cost;
+extern double optimizer_jit_optimize_above_cost;
 
 extern void jit_reset_after_error(void);
 extern void jit_release_context(JitContext *context);

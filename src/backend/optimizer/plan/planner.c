@@ -291,6 +291,7 @@ static split_rollup_data *make_new_rollups_for_hash_grouping_set(PlannerInfo *ro
 																 grouping_sets_data *gd);
 
 static void compute_jit_flags(PlannedStmt* pstmt);
+static void compute_jit_flags_optimizer(PlannedStmt* pstmt);
 
 /*****************************************************************************
  *
@@ -382,7 +383,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		/* decide jit state */
 		if (result)
 		{
-			compute_jit_flags(result);
+                        compute_jit_flags_optimizer(result);
 		}
 
 		if (gp_log_optimization_time)
@@ -8596,10 +8597,16 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
 }
 
 /*
- * GPDB: This is moved from standard_planner(), so that it can be used by both
- * planner and ORCA. Please move any future code added to standard_planner() too.
+ * GPDB: This is moved from standard_planner().
+ * Please move any future code added to standard_planner() too.
  *
- * Decide JIT settings for the given plan and record them in PlannedStmt.jitFlags.
+ * Through this function we are setting the JIT flags based on the Planner costing.
+ * All the JIT costing GUCs used here like jit_above_cost have their values
+ * set based on the Planner costing model.
+ *
+ * We decide JIT settings for the given plan and record them in PlannedStmt.jitFlags.
+ *
+ *
  */
 static void compute_jit_flags(PlannedStmt* pstmt)
 {
@@ -8607,7 +8614,7 @@ static void compute_jit_flags(PlannedStmt* pstmt)
 
 	pstmt->jitFlags = PGJIT_NONE;
 
-	if (jit_enabled && jit_above_cost >= 0 &&
+        if (jit_enabled && jit_above_cost >= 0 &&
 		top_plan->total_cost > jit_above_cost)
 	{
 		pstmt->jitFlags |= PGJIT_PERFORM;
@@ -8630,4 +8637,46 @@ static void compute_jit_flags(PlannedStmt* pstmt)
 		if (jit_tuple_deforming)
 			pstmt->jitFlags |= PGJIT_DEFORM;
 	}
+}
+/*
+ * This function is used to set JIT flags for Optimizer based on the
+ * Optimizer specific costing GUCs.
+ *
+ * Since the costing model of ORCA and Planner are different
+ * (Planner cost usually higher), setting the JIT flags based on the
+ * common JIT costing GUCs could lead to false triggering of JIT.
+ *
+ * To prevent this situation, separate Costing GUCs are created
+ * for Optimizer and used here for setting the JIT flags.
+ */
+
+static void compute_jit_flags_optimizer(PlannedStmt* pstmt)
+{
+        Plan* top_plan = pstmt->planTree;
+
+        pstmt->jitFlags = PGJIT_NONE;
+
+        if (optimizer_jit && optimizer_jit_above_cost >= 0 &&
+        	top_plan->total_cost > optimizer_jit_above_cost)
+        {
+                pstmt->jitFlags |= PGJIT_PERFORM;
+
+                /*
+		 * Decide how much effort should be put into generating better code.
+                 */
+                if (optimizer_jit_optimize_above_cost >= 0 &&
+                    top_plan->total_cost > optimizer_jit_optimize_above_cost)
+                        pstmt->jitFlags |= PGJIT_OPT3;
+                if (optimizer_jit_inline_above_cost >= 0 &&
+                    top_plan->total_cost > optimizer_jit_inline_above_cost)
+                        pstmt->jitFlags |= PGJIT_INLINE;
+
+                /*
+		 * Decide which operations should be JITed.
+                 */
+                if (jit_expressions)
+                        pstmt->jitFlags |= PGJIT_EXPR;
+                if (jit_tuple_deforming)
+                        pstmt->jitFlags |= PGJIT_DEFORM;
+        }
 }

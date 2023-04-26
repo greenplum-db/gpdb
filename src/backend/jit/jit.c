@@ -43,6 +43,7 @@ double		jit_above_cost = 100000;
 double		jit_inline_above_cost = 500000;
 double		jit_optimize_above_cost = 500000;
 
+extern bool	optimizer;
 static JitProviderCallbacks provider;
 static bool provider_successfully_loaded = false;
 static bool provider_failed_loading = false;
@@ -58,7 +59,9 @@ static bool file_exists(const char *name);
 Datum
 pg_jit_available(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_BOOL(provider_init());
+        if (((optimizer && optimizer_jit) || (!optimizer && jit_enabled)) && provider_init())
+                PG_RETURN_BOOL(true);
+        else  PG_RETURN_BOOL(false);
 }
 
 
@@ -73,7 +76,7 @@ provider_init(void)
 	JitProviderInit init;
 
 	/* don't even try to load if not enabled */
-	if (!jit_enabled)
+        if (!optimizer_jit && !jit_enabled)
 		return false;
 
 	/*
