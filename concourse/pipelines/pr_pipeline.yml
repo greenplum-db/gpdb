@@ -60,18 +60,21 @@ jobs:
 
   - put: gpdb_pr
     params:
+      base_context: compile_and_test_gpdb
       path: gpdb_pr
       status: pending
   - # "do" the remaining steps with these hooks:
     on_failure:
       put: gpdb_pr
       params:
+        base_context: compile_and_test_gpdb
         path: gpdb_pr
         status: failure
     on_success:
       put: report_pr_success
       resource: gpdb_pr
       params:
+        base_context: compile_and_test_gpdb
         path: gpdb_pr
         status: success
     do:
@@ -132,3 +135,87 @@ jobs:
         input_mapping:
           gpdb_src: gpdb_pr
         timeout: 1h
+
+- name: compile_and_test_gpdb_without_assert
+  public: true
+  max_in_flight: 10
+  plan:
+  - in_parallel:
+    - get: gpdb_pr
+      trigger: true
+      version: every
+    - get: postgres_for_fdw
+      params:
+        unpack: true
+    - get: gpdb6-rocky8-build
+    - get: gpdb6-rocky8-test
+
+  - put: gpdb_pr
+    params:
+      base_context: compile_and_test_gpdb_without_assert
+      path: gpdb_pr
+      status: pending
+  - # "do" the remaining steps with these hooks:
+    on_failure:
+      put: gpdb_pr
+      params:
+        base_context: compile_and_test_gpdb_without_assert
+        path: gpdb_pr
+        status: failure
+    on_success:
+      put: report_pr_success
+      resource: gpdb_pr
+      params:
+        base_context: compile_and_test_gpdb_without_assert
+        path: gpdb_pr
+        status: success
+    do:
+    - task: init gpdb_src  # Fetch tags and submodules, because the PR resource doesn't.
+      image: gpdb6-rocky8-build
+      config:
+        platform: linux
+        run:
+          path: bash
+          args:
+          - -c
+          - |
+            git clone gpdb_pr gpdb_src &&
+            cd gpdb_src &&
+            git fetch https://github.com/greenplum-db/gpdb.git --tags &&
+            git submodule update --init --recursive
+        inputs: [{ name: gpdb_pr }]
+        outputs: [{ name: gpdb_src }]
+    - task: compile_gpdb_rocky8
+      file: gpdb_pr/concourse/tasks/compile_gpdb.yml
+      image: gpdb6-rocky8-build
+      params:
+        CONFIGURE_FLAGS: "--disable-cassert --enable-debug-extensions"
+        BLD_TARGETS: "clients loaders"
+      timeout: 30m
+
+    - in_parallel:
+      - task: icw_planner_rocky8
+        tags: [icw-worker]
+        file: gpdb_pr/concourse/tasks/ic_gpdb.yml
+        image: gpdb6-rocky8-test
+        input_mapping:
+          gpdb_src: gpdb_pr
+          bin_gpdb: gpdb_artifacts
+        params:
+          MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+          TEST_OS: centos
+          CONFIGURE_FLAGS: "--disable-cassert"
+        timeout: 3h
+
+      - task: icw_gporca_rocky8
+        tags: [icw-worker]
+        file: gpdb_pr/concourse/tasks/ic_gpdb.yml
+        image: gpdb6-rocky8-test
+        input_mapping:
+          gpdb_src: gpdb_pr
+          bin_gpdb: gpdb_artifacts
+        params:
+          MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+          TEST_OS: centos
+          CONFIGURE_FLAGS: "--disable-cassert"
+        timeout: 5h
