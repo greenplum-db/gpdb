@@ -123,6 +123,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | arviz | Exploratory analysis of Bayesian models |
 | astor | Read/rewrite/write Python ASTs |
 | astunparse | An AST unparser for Python |
+| autocommand | A library to create a command-line program from a function |
 | autograd | Efficiently computes derivatives of numpy code |
 | autograd-gamma | autograd compatible approximations to the derivatives of the Gamma-family of functions |
 | backports.csv | Backport of Python 3 csv module |
@@ -137,16 +138,25 @@ The following table lists the modules that are provided in the Data Science Pack
 | cheroot | Highly-optimized, pure-python HTTP server |
 | CherryPy | Object-Oriented HTTP framework |
 | click | Composable command line interface toolkit |
+| cmdstanpy | Python interface to CmdStan |
+| colorama | Cross-platform colored terminal text |
+| colorlog | Add colours to the output of Python's logging module |
 | convertdate | Converts between Gregorian dates and other calendar systems |
 | cryptography | A set of functions useful in cryptography and linear algebra |
+| csscompressor | A python port of YUI CSS Compressor |
 | cycler | Composable style cycles |
 | cymem | Manage calls to calloc/free through Cython |
 | Cython | The Cython compiler for writing C extensions for the Python language |
 | deprecat | Python @deprecat decorator to deprecate old python classes, functions or methods |
 | dill | serialize all of python |
+| easydev | Common utilities to ease the development of Python packages |
+| ephem | Compute positions of the planets and stars |
+| fangfrisch | Update and verify unofficial Clam Anti-Virus signatures |
 | fastprogress | A nested progress with plotting options for fastai |
 | feedparser | Universal feed parser, handles RSS 0.9x, RSS 1.0, RSS 2.0, CDF, Atom 0.3, and Atom 1.0 feeds |
 | filelock | A platform independent file lock |
+| Flask | A simple framework for building complex web applications |
+| Flask-Script | Scripting support for Flask |
 | flatbuffers | The FlatBuffers serialization format for Python |
 | fonttools | Tools to manipulate font files |
 | formulaic | An implementation of Wilkinson formulas |
@@ -166,12 +176,16 @@ The following table lists the modules that are provided in the Data Science Pack
 | holidays | Generate and work with holidays in Python |
 | idna | Internationalized Domain Names in Applications (IDNA) |
 | importlib-metadata | Read metadata from Python packages |
+| inflect | Correctly generate plurals, singular nouns, ordinals, indefinite articles; convert numbers to words |
 | interface-meta | Provides a convenient way to expose an extensible API with enforced method signatures and consistent documentation |
+| itsdangerous | Safely pass data to untrusted environments and back |
 | jaraco.classes | Utility functions for Python class constructs |
 | jaraco.collections | Collection objects similar to those in stdlib by jaraco |
 | jaraco.context | Context managers by jaraco |
 | jaraco.functools | Functools like those found in stdlib |
 | jaraco.text | Module for text manipulation |
+| javaobj-py3 | Module for serializing and de-serializing Java objects |
+| jedi | An autocompletion tool for Python that can be used for text editors |
 | Jinja2 | A very fast and expressive template engine |
 | joblib | Lightweight pipelining with Python functions |
 | keras | Deep learning for humans |
@@ -182,6 +196,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | libclang | Clang Python Bindings, mirrored from the official LLVM repo |
 | lifelines | Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression |
 | llvmlite | lightweight wrapper around basic LLVM functionality |
+| LunarCalendar | A lunar calendar converter, including a number of lunar and solar holidays, mainly from China |
 | lxml | Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API |
 | Markdown | Python implementation of Markdown |
 | MarkupSafe | Safely add untrusted strings to HTML/XML markup |
@@ -199,29 +214,35 @@ The following table lists the modules that are provided in the Data Science Pack
 | opt-einsum | Optimizing numpys einsum function |
 | packaging | Core utilities for Python packages |
 | pandas | Data analysis |
+| parso | A Python parser that supports error recovery and round-trip parsing for different Python versions |
 | pathy | pathlib.Path subclasses for local and cloud bucket storage |
 | patsy | Package for describing statistical models and for building design matrices |
 | Pattern | Web mining module for Python |
 | pdfminer.six | PDF parser and analyzer |
+| pexpect | Pexpect allows easy control of interactive console applications |
 | Pillow | Python Imaging Library |
+| pluggy | plugin and hook calling mechanisms for python |
 | pmdarima | Python's forecast::auto.arima equivalent |
 | portend | TCP port monitoring and discovery |
 | preshed | Cython hash table that trusts the keys are pre-hashed |
 | prophet | Automatic Forecasting Procedure |
 | protobuf | Protocol buffers |
 | psycopg2 | PostgreSQL database adapter for Python |
-| psycopg2-binary | psycopg2 - Python-PostgreSQL Database Adapter |
+| ptyprocess | Run a subprocess in a pseudo terminal |
 | pyasn1 | ASN.1 types and codecs |
 | pyasn1-modules | pyasn1-modules |
 | pycparser | C parser in Python |
 | pydantic | Data validation and settings management using python type hints |
+| PyGreSQL | Python PostgreSQL Interfaces |
 | pyLDAvis | Interactive topic model visualization |
 | pymc3 | Statistical modeling and probabilistic machine learning |
 | PyMeeus | Python implementation of Jean Meeus astronomical routines |
 | pyparsing | Python parsing |
 | python-dateutil | Extensions to the standard Python datetime module |
 | python-docx | Create and update Microsoft Word .docx files |
-| PyTorch | Tensors and Dynamic neural networks in Python with strong GPU acceleration |
+| python-jsonrpc-server | JSON RPC 2.0 server library |
+| pythong-language-server | Language Server for Hoon |
+| python-slugify | A Python slugify application that also handles Unicode |
 | pytz | World timezone definitions, modern and historical |
 | regex | Alternative regular expression module, to replace re |
 | requests | HTTP library |
@@ -230,7 +251,10 @@ The following table lists the modules that are provided in the Data Science Pack
 | scikit-learn | Machine learning data mining and analysis |
 | scipy | Scientific computing |
 | semver | Python helper for Semantic Versioning |
+| setuptools-git | Setuptools revision control system plugin for Git |
 | sgmllib3k | Py3k port of sgmllib |
+| shortuuid | A generator library for concise, unambiguous and URL-safe UUIDs |
+| SimpleWebSocketServer | A Simple Websocket Server written in Python |
 | six | Python 2 and 3 compatibility library |
 | sklearn | A set of python modules for machine learning and data mining |
 | smart-open | Utilities for streaming large files \(S3, HDFS, gzip, bz2, and so forth\) |
@@ -248,16 +272,20 @@ The following table lists the modules that are provided in the Data Science Pack
 | tensorboard-plugin-wit | What-If Tool TensorBoard plugin |
 | tensorflow | Numerical computation using data flow graphs |
 | tensorflow-estimator | What-If Tool TensorBoard plugin |
+| tensorflow-gpu | An open source software library for high performance numerical computation |
 | tensorflow-io-gcs-filesystem | TensorFlow IO |
 | termcolor | simple termcolor wrapper |
+| text-unidecode | The most basic Text::Unidecode port |
 | Theano-PyMC | Theano-PyMC |
 | thinc | Practical Machine Learning for NLP |
 | threadpoolctl | Python helpers to limit the number of threads used in the threadpool-backed of common native libraries used for scientific computing and data science |
 | toolz | List processing tools and functional utilities |
+| torch | Tensors and Dynamic neural networks in Python with strong GPU acceleration |
 | tqdm | Fast, extensible progress meter |
 | tslearn | A machine learning toolkit dedicated to time-series data |
 | typer | Typer, build great CLIs. Easy to code. Based on Python type hints |
 | typing_extensions | Backported and Experimental Type Hints for Python 3.7+ |
+| ujson | Ultra fast JSON encoder and decoder for Python |
 | urllib3 | HTTP library with thread-safe connection pooling, file post, and more |
 | wasabi | Lightweight console printing and formatting toolkit |
 | Werkzeug | Comprehensive WSGI web application library |
@@ -268,9 +296,6 @@ The following table lists the modules that are provided in the Data Science Pack
 | xmltodict | Makes working with XML feel like you are working with JSON |
 | zc.lockfile | Basic inter-process locks |
 | zipp | Backport of pathlib-compatible object wrapper for zip files |
-| tensorflow-gpu | An open source software library for high performance numerical computation |
-| tensorflow | Numerical computation using data flow graphs |
-| keras | An implementation of the Keras API that uses TensorFlow as a backend |
 
 ## <a id="topic_instpdsm"></a>Installing a Data Science Package for Python 
 
