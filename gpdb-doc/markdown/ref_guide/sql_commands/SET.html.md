@@ -22,8 +22,6 @@ The effects of `SET` or `SET LOCAL` are also canceled by rolling back to a savep
 
 If `SET LOCAL` is used within a function that includes a `SET` option for the same configuration parameter \(see [CREATE FUNCTION](CREATE_FUNCTION.html)\), the effects of the `SET LOCAL` command disappear at function exit; the value in effect when the function was called is restored anyway. This allows `SET LOCAL` to be used for dynamic or repeated changes of a parameter within a function, while retaining the convenience of using the `SET` option to save and restore the caller's value. Note that a regular `SET` command overrides any surrounding function's `SET` option; its effects persist unless rolled back.
 
-XXX If you create a cursor with the `DECLARE` command in a transaction, you cannot use the `SET` command in the transaction until you close the cursor with the `CLOSE` command.
-
 See [Server Configuration Parameters](../config_params/guc_config.html) for information about server parameters.
 
 ## <a id="section4"></a>Parameters 
