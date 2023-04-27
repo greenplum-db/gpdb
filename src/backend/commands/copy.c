@@ -2593,6 +2593,9 @@ BeginCopyTo(ParseState *pstate,
 					   options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
+	if (cstate->on_segment)
+		progress_vals[0] = PROGRESS_COPY_COMMAND_TO_ON_SEGMENT;
+
 	/* Determine the mode */
 	if (Gp_role == GP_ROLE_DISPATCH && !cstate->on_segment &&
 		cstate->rel && cstate->rel->rd_cdbpolicy)
@@ -4932,6 +4935,9 @@ BeginCopyFrom(ParseState *pstate,
 
 	cstate = BeginCopy(pstate, true, rel, NULL, InvalidOid, attnamelist, options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
+
+	if (cstate->on_segment)
+		progress_vals[0] = PROGRESS_COPY_COMMAND_FROM_ON_SEGMENT;
 
 	/*
 	 * Determine the mode

@@ -1517,6 +1517,8 @@ CREATE VIEW pg_stat_progress_copy AS
         S.relid AS relid,
         CASE S.param5 WHEN 1 THEN 'COPY FROM'
                       WHEN 2 THEN 'COPY TO'
+                      WHEN 3 THEN 'COPY FROM ON SEGMENT'
+                      WHEN 4 THEN 'COPY TO ON SEGMENT'
                       END AS command,
         CASE S.param6 WHEN 1 THEN 'FILE'
                       WHEN 2 THEN 'PROGRAM'
