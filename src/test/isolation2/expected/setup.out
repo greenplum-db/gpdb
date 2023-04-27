@@ -110,7 +110,8 @@ CREATE
 --
 -- usage: `select pg_basebackup('somehost', 12345, 'some_slot_name', '/some/destination/data/directory')`
 --
-create or replace function pg_basebackup(host text, dbid int, port int, create_slot boolean, slotname text, datadir text, force_overwrite boolean, xlog_method text) returns text as $$ import subprocess import os cmd = 'pg_basebackup --no-sync --checkpoint=fast -h %s -p %d -R -D %s --target-gp-dbid %d' % (host, port, datadir, dbid) 
+create or replace function pg_basebackup(host text, dbid int, port int, create_slot boolean, slotname text, datadir text, force_overwrite boolean, xlog_method text, progress boolean DEFAULT false) returns text as $$ import subprocess import os cmd = 'pg_basebackup --no-sync --checkpoint=fast -h %s -p %d -R -D %s --target-gp-dbid %d' % (host, port, datadir, dbid) 
+if progress: cmd += ' --progress' 
 if create_slot: cmd += ' --create-slot' 
 if slotname is not None: cmd += ' --slot %s' % (slotname) 
 if force_overwrite: cmd += ' --force-overwrite' 

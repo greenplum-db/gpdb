@@ -150,3 +150,14 @@ FROM gp_stat_progress_copy gspc
     LEFT JOIN gp_stat_progress_copy gspc1 ON gspc.pid = gspc1.pid AND gspc1.gp_segment_id = -1
     LEFT JOIN gp_stat_progress_copy gspc2 ON gspc.pid = gspc2.pid AND gspc2.gp_segment_id = 0
 GROUP BY gspc.datid, gspc.datname, gspc.relid, gspc.command, ac.sess_id, d.policytype, d.numsegments;
+
+CREATE OR REPLACE VIEW gp_stat_progress_basebackup_summary AS
+SELECT
+    coalesce((select pid from gp_stat_progress_basebackup limit 1), NULL) as pid,
+    a.phase,
+    sum(a.backup_total) as backup_total,
+    sum(a.backup_streamed) as backup_streamed,
+    avg(a.tablespaces_total) as tablespaces_total,
+    avg(a.tablespaces_streamed) as tablespaces_streamed
+FROM gp_stat_progress_basebackup a
+GROUP BY a.phase;

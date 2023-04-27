@@ -480,6 +480,7 @@ perform_base_backup(basebackup_options *opt)
 			tblspc_streamed++;
 			pgstat_progress_update_param(PROGRESS_BASEBACKUP_TBLSPC_STREAMED,
 										 tblspc_streamed);
+			SIMPLE_FAULT_INJECTOR("basebackup_progress_tablespace_streamed");
 		}
 
 		pgstat_progress_update_param(PROGRESS_BASEBACKUP_PHASE,
@@ -752,6 +753,7 @@ perform_base_backup(basebackup_options *opt)
 				 errmsg("checksum verification failure during base backup")));
 	}
 
+	SIMPLE_FAULT_INJECTOR("basebackup_progress_end");
 	pgstat_progress_end_command();
 }
 
