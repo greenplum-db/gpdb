@@ -1596,6 +1596,7 @@ acquire_sample_rows(Relation onerel, int elevel,
 
 		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
 									 ++blksdone);
+		SIMPLE_FAULT_INJECTOR("analyze_block");
 	}
 
 	ExecDropSingleTupleTableSlot(slot);

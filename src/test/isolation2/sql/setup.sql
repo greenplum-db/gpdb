@@ -440,3 +440,24 @@ begin /* in func */
     end loop; /* in func */
 end; /* in func */
 $$ language plpgsql;
+
+-- Helper function that ensures stats collector receives stat from the latest operation.
+create or replace function wait_until_vacuum_count_change_to(relid oid, stat_val_expected bigint)
+    returns text as $$
+declare
+    stat_val int; /* in func */
+    i int; /* in func */
+begin
+    i := 0; /* in func */
+    while i < 1200 loop
+            select pg_stat_get_vacuum_count(relid) into stat_val; /* in func */
+            if stat_val = stat_val_expected then /* in func */
+                return 'OK'; /* in func */
+            end if; /* in func */
+            perform pg_sleep(0.1); /* in func */
+            perform pg_stat_clear_snapshot(); /* in func */
+            i := i + 1; /* in func */
+        end loop; /* in func */
+    return 'Fail'; /* in func */
+end; /* in func */
+$$ language plpgsql;

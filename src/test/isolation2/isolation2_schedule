@@ -244,6 +244,7 @@ test: idle_gang_cleaner
 # test idle_in_transaction_session_timeout
 
 test: ao_index_build_progress
+test: analyze_progress
 
 test: segwalrep/die_commit_pending_replication
 
