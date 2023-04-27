@@ -634,16 +634,16 @@ def get_add_standby_sql(hostname, address, datadir, port=None):
     """Returns the SQL for adding a standby coordinator."""
 
     if port is not None:
-        return "select gp_add_master_standby('%s', '%s', '%s', %d)" % (hostname, address, datadir, port)
+        return "select gp_add_coordinator_standby('%s', '%s', '%s', %d)" % (hostname, address, datadir, port)
     else:
-        return "select gp_add_master_standby('%s', '%s', '%s')" % (hostname, address, datadir)
+        return "select gp_add_coordinator_standby('%s', '%s', '%s')" % (hostname, address, datadir)
 
 
 #-------------------------------------------------------------------------
 def get_remove_standby_sql():
     """Returns the SQL for removing a standby coordinator."""
 
-    sql = "select gp_remove_master_standby()"
+    sql = "select gp_remove_coordinator_standby()"
     return sql
 
 

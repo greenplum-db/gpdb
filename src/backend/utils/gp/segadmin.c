@@ -608,7 +608,7 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
 /*
  * Add a coordinator standby.
  *
- * gp_add_master_standby(hostname, address, [port])
+ * gp_add_coordinator_standby(hostname, address, [port])
  *
  * Args:
  *  hostname - as above
@@ -619,16 +619,16 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
  *  dbid of the new standby
  */
 Datum
-gp_add_master_standby_port(PG_FUNCTION_ARGS)
+gp_add_coordinator_standby_port(PG_FUNCTION_ARGS)
 {
-	return gp_add_master_standby(fcinfo);
+	return gp_add_coordinator_standby(fcinfo);
 }
 
 Datum
-gp_add_master_standby(PG_FUNCTION_ARGS)
+gp_add_coordinator_standby(PG_FUNCTION_ARGS)
 {
 	int			maxdbid;
-	int16		master_dbid;
+	int16		coordinator_dbid;
 	Relation	gprel;
 	GpSegConfigEntry	*config;
 
@@ -640,11 +640,11 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 		elog(ERROR, "datadir cannot be NULL");
 
 	mirroring_sanity_check(COORDINATOR_ONLY | UTILITY_MODE,
-						   "gp_add_master_standby");
+						   "gp_add_coordinator_standby");
 
 	/* Check if the system is ok */
 	if (standby_exists())
-		elog(ERROR, "only a single master standby may be defined");
+		elog(ERROR, "only a single coordinator standby may be defined");
 
 	/* Lock exclusively to avoid concurrent changes */
 	gprel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
@@ -655,11 +655,11 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 	 * Don't reference GpIdentity.dbid, as it is legitimate to set -1 for -b
 	 * option in utility mode.  Content ID = -1 AND role =
 	 * GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY is the definition of primary
-	 * master.
+	 * coordinator.
 	 */
-	master_dbid = contentid_get_dbid(COORDINATOR_CONTENT_ID,
+	coordinator_dbid = contentid_get_dbid(COORDINATOR_CONTENT_ID,
 									 GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, false);
-	config = get_segconfig(master_dbid);
+	config = get_segconfig(coordinator_dbid);
 
 	config->dbid = maxdbid + 1;
 	config->role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
@@ -685,23 +685,23 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 }
 
 /*
- * Remove the master standby.
+ * Remove the coordinator standby.
  *
- * gp_remove_master_standby()
+ * gp_remove_coordinator_standby()
  *
  * Returns:
  *  true upon success otherwise false
  */
 Datum
-gp_remove_master_standby(PG_FUNCTION_ARGS)
+gp_remove_coordinator_standby(PG_FUNCTION_ARGS)
 {
 	int16		dbid = coordinator_standby_dbid();
 
 	mirroring_sanity_check(SUPERUSER | COORDINATOR_ONLY | UTILITY_MODE,
-						   "gp_remove_master_standby");
+						   "gp_remove_coordinator_standby");
 
 	if (!dbid)
-		elog(ERROR, "no master standby defined");
+		elog(ERROR, "no coordinator standby defined");
 
 	remove_segment(GpIdentity.dbid, dbid);
 
@@ -709,7 +709,7 @@ gp_remove_master_standby(PG_FUNCTION_ARGS)
 }
 
 static void
-segment_config_activate_standby(int16 standby_dbid, int16 master_dbid)
+segment_config_activate_standby(int16 standby_dbid, int16 coordinator_dbid)
 {
 	/* we use AccessExclusiveLock to prevent races */
 	Relation	rel = table_open(GpSegmentConfigRelationId, AccessExclusiveLock);
@@ -718,11 +718,11 @@ segment_config_activate_standby(int16 standby_dbid, int16 master_dbid)
 	SysScanDesc sscan;
 	int			numDel = 0;
 
-	/* first, delete the old master */
+	/* first, delete the old coordinator */
 	ScanKeyInit(&scankey,
 				Anum_gp_segment_configuration_dbid,
 				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum(master_dbid));
+				Int16GetDatum(coordinator_dbid));
 	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
 							   NULL, 1, &scankey);
 	while ((tuple = systable_getnext(sscan)) != NULL)
@@ -733,7 +733,7 @@ segment_config_activate_standby(int16 standby_dbid, int16 master_dbid)
 	systable_endscan(sscan);
 
 	if (0 == numDel)
-		elog(ERROR, "cannot find old master, dbid %i", master_dbid);
+		elog(ERROR, "cannot find old coordinator, dbid %i", coordinator_dbid);
 
 	/* now, set out rows for old standby. */
 	ScanKeyInit(&scankey,
@@ -764,9 +764,9 @@ segment_config_activate_standby(int16 standby_dbid, int16 master_dbid)
  * Update gp_segment_configuration to activate a standby.
  */
 static void
-catalog_activate_standby(int16 standby_dbid, int16 master_dbid)
+catalog_activate_standby(int16 standby_dbid, int16 coordinator_dbid)
 {
-	segment_config_activate_standby(standby_dbid, master_dbid);
+	segment_config_activate_standby(standby_dbid, coordinator_dbid);
 }
 
 /*
@@ -779,9 +779,9 @@ bool
 gp_activate_standby(void)
 {
 	int16		standby_dbid = GpIdentity.dbid;
-	int16		master_dbid;
+	int16		coordinator_dbid;
 
-	master_dbid = contentid_get_dbid(COORDINATOR_CONTENT_ID, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, true);
+	coordinator_dbid = contentid_get_dbid(COORDINATOR_CONTENT_ID, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, true);
 
 	/*
 	 * This call comes from Startup process post checking state in pg_control
@@ -791,7 +791,7 @@ gp_activate_standby(void)
 	 * for StartUp Process, to cover for case of crash after updating the
 	 * catalogs during promote.
 	 */
-	if (am_startup && (master_dbid == standby_dbid))
+	if (am_startup && (coordinator_dbid == standby_dbid))
 	{
 		/*
 		 * Job is already done, nothing needs to be done. We mostly crashed
@@ -803,7 +803,7 @@ gp_activate_standby(void)
 	mirroring_sanity_check(SUPERUSER | UTILITY_MODE | STANDBY_ONLY,
 						   PG_FUNCNAME_MACRO);
 
-	catalog_activate_standby(standby_dbid, master_dbid);
+	catalog_activate_standby(standby_dbid, coordinator_dbid);
 
 	/* done */
 	return true;
@@ -815,7 +815,7 @@ gp_request_fts_probe_scan(PG_FUNCTION_ARGS)
 	if (Gp_role != GP_ROLE_DISPATCH)
 	{
 		ereport(ERROR,
-				(errmsg("this function can only be called by master (without utility mode)")));
+				(errmsg("this function can only be called by coordinator (without utility mode)")));
 		PG_RETURN_BOOL(false);
 	}
 
