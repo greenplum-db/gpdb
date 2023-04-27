@@ -40,3 +40,4 @@ SELECT gp_inject_fault('analyze_block', 'reset', dbid) FROM gp_segment_configura
 
 -- teardown
 DROP TABLE t_analyze_repl;
+

@@ -3235,6 +3235,10 @@ CopyTo(CopyState cstate)
 						*/
 						pgstat_progress_update_param(PROGRESS_COPY_TUPLES_PROCESSED,
 													 ++processed);
+#ifdef FAULT_INJECTOR
+						if (processed == 2)
+							SIMPLE_FAULT_INJECTOR("copy_processed_two_tuples");
+#endif
 					}
 					ExecDropSingleTupleTableSlot(slot);
 					table_endscan(scandesc);
@@ -4756,6 +4760,10 @@ CopyFrom(CopyState cstate)
 			 */
 			pgstat_progress_update_param(PROGRESS_COPY_TUPLES_PROCESSED,
 										 ++processed);
+#ifdef FAULT_INJECTOR
+			if (processed == 2)
+				SIMPLE_FAULT_INJECTOR("copy_processed_two_tuples");
+#endif
 			if (cstate->cdbsreh)
 				cstate->cdbsreh->processed++;
 		}
