@@ -44,7 +44,6 @@ test: shared_scan
 test: spi_processed64bit
 test: python_processed64bit
 test: gp_tablespace_with_faults
-test: gp_check_files
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
 
@@ -302,5 +301,8 @@ test: create_extension_fail
 
 # check syslogger (since GP syslogger code is divergent from upstream)
 test: syslogger_gp
+
+# run this at the end of the schedule for more chance to catch abnormalies
+test: gp_check_files
 
 # end of tests

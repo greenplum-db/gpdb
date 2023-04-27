@@ -31,16 +31,19 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid 
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname
              FROM pg_appendonly a 
              JOIN pg_class tc ON a.relid = tc.oid 
-             JOIN pg_class sc ON a.segrelid = sc.oid 
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE tc.relstorage = 'a' 
   LOOP
-    table_name := rec.segrel;
+    table_name := rec.relname;
     -- Fetch and return each row from the aoseg table
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT segno FROM pg_aoseg.%I', table_name);
+      OPEN cur FOR EXECUTE format('SELECT segno '
+                                  'FROM gp_toolkit.__gp_aoseg(''%I.%I'') '
+                                  'WHERE eof > 0',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
@@ -54,7 +57,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aoseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -89,19 +92,19 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aocoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname
              FROM pg_appendonly a
              JOIN pg_class tc ON a.relid = tc.oid
-             JOIN pg_class sc ON a.segrelid = sc.oid
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE tc.relstorage = 'c'
   LOOP
-    table_name := rec.segrel;
+    table_name := rec.relname;
     -- Fetch and return each extended segno corresponding to attnum and segno in the aocoseg table
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT ((a.attnum - 1) * 128 + s.segno) as segno '
-                                  'FROM (SELECT * FROM pg_attribute_encoding '
-                                  'WHERE attrelid = %s) a CROSS JOIN pg_aoseg.%I s', 
-                                   rec.tableoid, table_name);
+      OPEN cur FOR EXECUTE format('SELECT physical_segno as segno '
+                                  'FROM gp_toolkit.__gp_aocsseg(''%I.%I'') '
+                                  'WHERE eof > 0',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
@@ -115,7 +118,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aocoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aocsseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -251,7 +254,9 @@ WHERE f2.tablespace IS NULL
     SELECT 1 FROM pg_class c 
     WHERE c.relfilenode::text = split_part(f1.filename, '.', 1) 
         AND c.relstorage = 'h'
-  );
+  )
+  -- If the base file exists, do not count the extension files
+  AND substring(f1.filename from '[0-9]+') IN (SELECT filename FROM __check_orphaned_files);
 
 GRANT SELECT ON __check_orphaned_files_ext TO public;
 
