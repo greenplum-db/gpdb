@@ -171,7 +171,3 @@
 		"wal_sender_timeout",
 		"work_mem",
 		"zero_damaged_pages",
-		"optimizer_jit",
-		"optimizer_jit_above_cost",
-		"optimizer_jit_inline_above_cost",
-		"optimizer_jit_optimize_above_cost",

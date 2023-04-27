@@ -290,7 +290,7 @@ static split_rollup_data *make_new_rollups_for_hash_grouping_set(PlannerInfo *ro
 																 Path *path,
 																 grouping_sets_data *gd);
 
-static void compute_jit_flags(PlannedStmt* pstmt, bool optimizer_planner);
+static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca);
 
 /*****************************************************************************
  *
@@ -382,11 +382,11 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		/* decide jit state */
 		if (result)
 		{
-                        /*
-                         * True in the following call means we are
-                         * setting Jit flags for Optimizer
-                         */
-                        compute_jit_flags(result, true /* optimizer_planner */);
+			/*
+			 * True in the following call means we are
+			 * setting Jit flags for Optimizer
+			 */
+			compute_jit_flags(result, true /* use_gporca */);
 		}
 
 		if (gp_log_optimization_time)
@@ -757,8 +757,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->stmt_len = parse->stmt_len;
 
 	/* GPDB: JIT flags are set in wrapper function */
-        /* False in the following call means we are setting Jit flags for planner  */
-        compute_jit_flags(result,false /* optimizer_planner */);
+	/* False in the following call means we are setting Jit flags for planner  */
+	compute_jit_flags(result,false /* use_gporca */);
 
 	if (glob->partition_directory != NULL)
 		DestroyPartitionDirectory(glob->partition_directory);
@@ -8614,65 +8614,65 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
  * for Optimizer and used here for setting the JIT flags.
  *
  */
-static void compute_jit_flags(PlannedStmt* pstmt, bool optimizer_planner)
+static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
 {
-        Plan* top_plan = pstmt->planTree;
-        pstmt->jitFlags = PGJIT_NONE;
+	Plan* top_plan = pstmt->planTree;
+	pstmt->jitFlags = PGJIT_NONE;
 
-        /*
-         * Common variable to hold value for optimizer or planner
-         * based on function call
-         */
+	/*
+	 * Common variables to hold values for optimizer or planner
+	 * based on function call.
+	 */
+	bool jit_on;
+	double above_cost;
+	double inline_above_cost;
+	double optimize_above_cost;
 
-        bool optimizer_planner_jit;
-        double optimizer_planner_jit_above_cost;
-        double optimizer_planner_jit_inline_above_cost;
-        double optimizer_planner_jit_optimize_above_cost;
+	if (use_gporca)
+	{
 
-        if (optimizer_planner == true)
-        {
-                /*
-                 * True means, we have to set values for Optimizer
-                 */
-                optimizer_planner_jit = optimizer_jit;
-                optimizer_planner_jit_above_cost = optimizer_jit_above_cost;
-                optimizer_planner_jit_inline_above_cost = optimizer_jit_inline_above_cost;
-                optimizer_planner_jit_optimize_above_cost = optimizer_jit_optimize_above_cost;
-        }
-        else
-        {
-                /*
-                 * False means, we have to set values for Planner
-                 */
-                optimizer_planner_jit = jit_enabled;
-                optimizer_planner_jit_above_cost = jit_above_cost;
-                optimizer_planner_jit_inline_above_cost = jit_inline_above_cost;
-                optimizer_planner_jit_optimize_above_cost = jit_optimize_above_cost;
+		/*
+		 * True means, we have to set values for ORCA
+		 */
+		jit_on = optimizer_jit;
+		above_cost = optimizer_jit_above_cost;
+		inline_above_cost = optimizer_jit_inline_above_cost;
+		optimize_above_cost = optimizer_jit_optimize_above_cost;
+	}
+	else
+	{
 
-        }
+		/*
+		 * False means, we have to set values for Planner
+		 */
+		jit_on = jit_enabled;
+		above_cost = jit_above_cost;
+		inline_above_cost = jit_inline_above_cost;
+		optimize_above_cost = jit_optimize_above_cost;
 
-        if (optimizer_planner_jit && optimizer_planner_jit_above_cost >= 0 &&
-            top_plan->total_cost > optimizer_planner_jit_above_cost)
-        {
-                pstmt->jitFlags |= PGJIT_PERFORM;
+	}
 
-                /*
+	if (jit_on && above_cost >= 0 &&
+		top_plan->total_cost > above_cost)
+	{
+		pstmt->jitFlags |= PGJIT_PERFORM;
+
+		/*
 		 * Decide how much effort should be put into generating better code.
-                 */
-                if (optimizer_planner_jit_optimize_above_cost >= 0 &&
-                    top_plan->total_cost > optimizer_planner_jit_optimize_above_cost)
-                        pstmt->jitFlags |= PGJIT_OPT3;
-                if (optimizer_planner_jit_inline_above_cost >= 0 &&
-                    top_plan->total_cost > optimizer_planner_jit_inline_above_cost)
-                        pstmt->jitFlags |= PGJIT_INLINE;
+		 */
+		if (optimize_above_cost >= 0 &&
+			top_plan->total_cost > optimize_above_cost)
+			pstmt->jitFlags |= PGJIT_OPT3;
+		if (inline_above_cost >= 0 &&
+			top_plan->total_cost > inline_above_cost)
+			pstmt->jitFlags |= PGJIT_INLINE;
 
-                /*
+		/*
 		 * Decide which operations should be JITed.
-                 */
-                if (jit_expressions)
-                        pstmt->jitFlags |= PGJIT_EXPR;
-                if (jit_tuple_deforming)
-                        pstmt->jitFlags |= PGJIT_DEFORM;
-        }
-
+		 */
+		if (jit_expressions)
+			pstmt->jitFlags |= PGJIT_EXPR;
+		if (jit_tuple_deforming)
+			pstmt->jitFlags |= PGJIT_DEFORM;
+	}
 }

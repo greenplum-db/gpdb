@@ -2966,17 +2966,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
-        {
-            {"optimizer_jit", PGC_USERSET, QUERY_TUNING_OTHER,
-                gettext_noop("Allow Optimizer based JIT compilation."),
-                NULL,
-                GUC_EXPLAIN
-
-            },
-            &optimizer_jit,
-            false,
-            NULL, NULL, NULL
-        },
+	{
+		{"optimizer_jit", PGC_USERSET, QUERY_TUNING_OTHER,
+		 gettext_noop("Allow Optimizer based JIT compilation."),
+		 NULL,
+		 GUC_EXPLAIN
+		},
+		&optimizer_jit,
+		false,
+		NULL, NULL, NULL
+	},
 	{
 		{"gp_quicklz_fallback", PGC_SUSET, APPENDONLY_TABLES,
 		 gettext_noop("Fallback to valid compression type if quicklz table compression is requested."),
@@ -4350,36 +4349,36 @@ struct config_real ConfigureNamesReal_gp[] =
 		1.0, 0.0, DBL_MAX,
 		NULL, NULL, NULL
 	},
-        {
-            {"optimizer_jit_above_cost",PGC_USERSET, QUERY_TUNING_COST,
-             gettext_noop("Perform JIT compilation if query is more expensive."),
-             gettext_noop("-1 disables JIT compilation."),
-             GUC_EXPLAIN
-            },
-            &optimizer_jit_above_cost,
-            1000000, -1, DBL_MAX,
-            NULL, NULL, NULL
-        },
-        {
-            {"optimizer_jit_optimize_above_cost",PGC_USERSET, QUERY_TUNING_COST,
-             gettext_noop("Optimize JITed functions if query is more expensive."),
-             gettext_noop("-1 disables JIT optimization."),
-             GUC_EXPLAIN
-            },
-            &optimizer_jit_optimize_above_cost,
-            5000000, -1, DBL_MAX,
-            NULL, NULL, NULL
-        },
-        {
-            {"optimizer_jit_inline_above_cost",PGC_USERSET, QUERY_TUNING_COST,
-             gettext_noop("Perform JIT inlining if query is more expensive."),
-             gettext_noop("-1 disables inlining."),
-             GUC_EXPLAIN
-            },
-            &optimizer_jit_inline_above_cost,
-            5000000, -1, DBL_MAX,
-            NULL, NULL, NULL
-        },
+	{
+		{"optimizer_jit_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Perform JIT compilation if query is more expensive."),
+			gettext_noop("-1 disables JIT compilation."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_above_cost,
+		1000000, -1, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_optimize_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Optimize JITed functions if query is more expensive."),
+			gettext_noop("-1 disables JIT optimization."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_optimize_above_cost,
+		5000000, -1, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_inline_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Perform JIT inlining if query is more expensive."),
+			gettext_noop("-1 disables inlining."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_inline_above_cost,
+		5000000, -1, DBL_MAX,
+		NULL, NULL, NULL
+	},
 
 	/* End-of-list marker */
 	{

@@ -59,9 +59,9 @@ static bool file_exists(const char *name);
 Datum
 pg_jit_available(PG_FUNCTION_ARGS)
 {
-        if (((optimizer && optimizer_jit) || (!optimizer && jit_enabled)) && provider_init())
-                PG_RETURN_BOOL(true);
-        else  PG_RETURN_BOOL(false);
+	if (((optimizer && optimizer_jit) || (!optimizer && jit_enabled)) && provider_init())
+		PG_RETURN_BOOL(true);
+	else	PG_RETURN_BOOL(false);
 }
 
 
@@ -76,7 +76,7 @@ provider_init(void)
 	JitProviderInit init;
 
 	/* don't even try to load if not enabled */
-        if (!optimizer_jit && !jit_enabled)
+	if (!optimizer_jit && !jit_enabled)
 		return false;
 
 	/*
