@@ -915,7 +915,7 @@ static const unit_conversion time_unit_conversion_table[] =
  *	  variable_is_guc_list_quote() in src/bin/pg_dump/dumputils.c.
  *
  * 8. In gpdb, the guc is force explicit declare whether it needs to sync value
- * 	  between master and primary. Add guc name into either sync_guc_names_array
+ * 	  between coordinator and primary. Add guc name into either sync_guc_names_array
  * 	  or unsync_guc_names_array.
  */
 

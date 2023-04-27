@@ -298,7 +298,7 @@ GUC Synchronization
 -------------------
 
 Due to distributed character of gpdb, each GUC needs to declare whether
-it needs to sync value between master and primaries. If you want to
+it needs to sync value between coordinator and primaries. If you want to
 introduce a new GUC in guc.c or guc_gp.c, the GUC's name must be populated
 into either sync_guc_name.h or unsync_guc_name.h. If not, gpdb will raise an
 ERROR in run-time.
@@ -307,4 +307,4 @@ bit into the GUC flag. Otherwise, system will default add GUC_GPDB_NO_SYNC
 flag bit for it as it can not synchronize in cluster.
 
 A GUC ought to be synchronized only if the scope is whole cluster as well as
-the value must be same between master and primaries.
+the value must be same between coordinator and primaries.

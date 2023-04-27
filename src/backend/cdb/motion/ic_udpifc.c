@@ -3833,7 +3833,7 @@ receiveChunksUDPIFCLoop(ChunkTransportState *pTransportStates, ChunkTransportSta
 		}
 
 		/*
-		 * 1. NIC on master (and thus the QD connection) may become bad, check
+		 * 1. NIC on coordinator (and thus the QD connection) may become bad, check
 		 * it. 2. Postmaster may become invalid, check it
 		 */
 		if ((retries & 0x3f) == 0)
@@ -5378,7 +5378,7 @@ checkExceptions(ChunkTransportState *transportStates,
 	}
 
 	/*
-	 * 1. NIC on master (and thus the QD connection) may become bad, check it.
+	 * 1. NIC on coordinator (and thus the QD connection) may become bad, check it.
 	 * 2. Postmaster may become invalid, check it
 	 *
 	 * We check modulo 2 to correlate with the deadlock check above at the

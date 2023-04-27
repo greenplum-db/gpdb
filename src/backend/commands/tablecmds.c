@@ -726,7 +726,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		tablespaceId = get_rel_tablespace(linitial_oid(inheritOids));
 
 		/* 
-		 * MPP-8238 : inconsistent tablespaces between segments and master 
+		 * MPP-8238 : inconsistent tablespaces between segments and coordinator 
 		 */
 		stmt->tablespacename = get_tablespace_name(tablespaceId);
 	}
@@ -13844,7 +13844,7 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)
 			/*
 			 * Currently, GPDB doesn't support alter type on primary key and unique
 			 * constraint column. Because it requires drop - recreate logic.
-			 * The drop currently only performs on master which lead error when
+			 * The drop currently only performs on coordinator which lead error when
 			 * recreating index (since recreate index will dispatch to segments and
 			 * there still old constraint index exists)
 			 * Related issue: https://github.com/greenplum-db/gpdb/issues/10561.
@@ -18086,7 +18086,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			GpPolicyReplace(RelationGetRelid(rel), policy);
 
 		/*
-		 * Set to random distribution on master with no reorganisation.
+		 * Set to random distribution on coordinator with no reorganisation.
 		 * Or this is a partitioned table, with no data.
 		 */
 		if (cmd->backendId == 0)

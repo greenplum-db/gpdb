@@ -286,8 +286,8 @@ ExecuteQuery(ExecuteStmt *stmt, IntoClause *intoClause,
 	 * DISTRIBUTED BY clause of the target table. For example, if the table is
 	 * distributed by 'column1', then the rows to insert must be moved to the
 	 * correct nodes, determined by 'column1'. That's a very different plan
-	 * than what you get if you run the plain SELECT from the master; in that
-	 * case all the output rows will be fetched into the master. Because of
+	 * than what you get if you run the plain SELECT from the coordinator; in that
+	 * case all the output rows will be fetched into the coordinator. Because of
 	 * that, we also have to pass the into-clause to
 	 * RevalidateCachedPlanWithParams. (MPP-8135)
 	 */

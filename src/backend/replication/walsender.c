@@ -2979,7 +2979,7 @@ XLogSendPhysical(void)
 
 	elogif(debug_walrepl_snd, LOG,
 			"walsnd xlogsend -- "
-			"Latest xlog flush location on master (SendRqstPtr) = %X/%X, "
+			"Latest xlog flush location on coordinator (SendRqstPtr) = %X/%X, "
 			"Start xLog read location(startptr) = %X/%X, "
 			"Actual read end xLog location (endptr) = %X/%X, "
 			"Bytes Read = %d, "

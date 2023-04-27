@@ -68,7 +68,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	else
 	{
 		CdbComponentDatabaseInfo *qdinfo =
-				cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+				cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID);
 
 		pg_ltoa(qdinfo->config->port, result);
 		extvar->GP_MASTER_PORT = result;

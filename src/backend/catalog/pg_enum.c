@@ -105,7 +105,7 @@ EnumValuesCreate(Oid enumTypeOid, List *vals)
 		do
 		{
 			/*
-			 * In QE node, however, use the OIDs assigned by the master (they are delivered
+			 * In QE node, however, use the OIDs assigned by the coordinator (they are delivered
 			 * out-of-band, see oid_dispatch.c.
 			 */
 			if (Gp_role == GP_ROLE_EXECUTE)

@@ -136,7 +136,7 @@ typedef enum CdbLocusType
  *   a valid numsegments in Null locus, this value will be kept when remade
  *   it to other locus types, and it becomes meaningful after that;
  * - Entry: numsegments in Entry locus specify the candidate segments to put
- *   the Entry node on, it's master and all the primary segments in current
+ *   the Entry node on, it's coordinator and all the primary segments in current
  *   implementation;
  * - SingleQE: numsegments in SingleQE locus specify the candidate segments
  *   to put the SingleQE node on, although SingleQE is always executed on one

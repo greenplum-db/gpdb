@@ -1632,8 +1632,8 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 		 * prepare was never performed on this segment hence gxact doesn't
 		 * exists or it was performed but failed to respond back to QD. So,
 		 * only for commit-prepared validate if it made to mirror before
-		 * returning success to master. For abort can't detect between those 2
-		 * cases, hence may unnecessarily wait for mirror sync for
+		 * returning success to coordinator. For abort can't detect between
+		 * those 2 cases, hence may unnecessarily wait for mirror sync for
 		 * abort-prepared if prepare had failed. Missing to send
 		 * abort-prepared to mirror doesn't result in inconsistent
 		 * result. Though yes can potentially have dangling prepared

@@ -477,8 +477,8 @@ IsSharedRelation(Oid relationId)
 }
 
 /*
- * OIDs for catalog object are normally allocated in the master, and
- * executor nodes should just use the OIDs passed by the master. But
+ * OIDs for catalog object are normally allocated in the coordinator, and
+ * executor nodes should just use the OIDs passed by the coordinator. But
  * there are some exceptions.
  */
 static bool
@@ -490,10 +490,10 @@ RelationNeedsSynchronizedOIDs(Relation relation)
 		{
 			/*
 			 * pg_largeobject is more like a user table, and has
-			 * different contents in each segment and master.
+			 * different contents in each segment and coordinator.
 			 *
 			 * Large objects don't work very consistently in GPDB. They are not
-			 * distributed in the segments, but rather stored in the master node.
+			 * distributed in the segments, but rather stored in the coordinator node.
 			 * Or actually, it depends on which node the lo_create() function
 			 * happens to run, which isn't very deterministic.
 			 */
@@ -505,7 +505,7 @@ RelationNeedsSynchronizedOIDs(Relation relation)
 			 * We don't currently synchronize the OIDs of these catalogs.
 			 * It's a bit sketchy that we don't, but we get away with it
 			 * because these OIDs don't appear in any of the Node structs
-			 * that are dispatched from master to segments. (Except for the
+			 * that are dispatched from coordinator to segments. (Except for the
 			 * OIDs, the contents of these tables should be in sync.)
 			 */
 			case RewriteRelationId:
@@ -605,8 +605,8 @@ GetNewOidWithIndex(Relation relation, Oid indexId, AttrNumber oidcolumn)
 	} while (collides);
 
 	/*
-	 * Most catalog objects need to have the same OID in the master and all
-	 * segments. When creating a new object, the master should allocate the
+	 * Most catalog objects need to have the same OID in the coordinator and all
+	 * segments. When creating a new object, the coordinator should allocate the
 	 * OID and tell the segments to use the same, so segments should have no
 	 * need to ever allocate OIDs on their own. Therefore, give a WARNING if
 	 * GetNewOid() is called in a segment. (There are a few exceptions, see

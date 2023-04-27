@@ -244,8 +244,8 @@ typedef enum
 
 /* GPDB speific */
 #define GUC_DISALLOW_USER_SET  0x00200000 /* Do not allow this GUC to be set by the user */
-#define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between master and primary */
-#define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between master and primary */
+#define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between coordinator and primary */
+#define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between coordinator and primary */
 
 /* GUC lists for gp_guc_list_init().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;

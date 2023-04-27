@@ -151,9 +151,9 @@ extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 									const char *buf,
 									int len);
 
-extern bool ShouldAssignResGroupOnMaster(void);
+extern bool ShouldAssignResGroupOnCoordinator(void);
 extern bool ShouldUnassignResGroup(void);
-extern void AssignResGroupOnMaster(void);
+extern void AssignResGroupOnCoordinator(void);
 extern void UnassignResGroup(bool releaseSlot);
 extern void SwitchResGroupOnSegment(const char *buf, int len);
 

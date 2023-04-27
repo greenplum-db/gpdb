@@ -2221,7 +2221,7 @@ check_execute_on_functions_walker(Node *node,
 			if (context->exec_location != PROEXECLOCATION_ANY)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot mix EXECUTE ON MASTER and EXECUTE ON ALL SEGMENTS functions in same query level")));
+						 errmsg("cannot mix EXECUTE ON COORDINATOR and EXECUTE ON ALL SEGMENTS functions in same query level")));
 			context->exec_location = exec_location;
 		}
 		/* fall through to check args */

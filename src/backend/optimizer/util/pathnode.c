@@ -2875,19 +2875,19 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						break;
 					case PROEXECLOCATION_COORDINATOR:
 						/*
-						 * This function forces the execution to master.
+						 * This function forces the execution to coordinator.
 						 */
 						if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 						{
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+									 (errmsg("cannot mix EXECUTE ON COORDINATOR and ALL SEGMENTS functions in same function scan"))));
 						}
 						exec_location = PROEXECLOCATION_COORDINATOR;
 						break;
 					case PROEXECLOCATION_INITPLAN:
 						/*
-						 * This function forces the execution to master.
+						 * This function forces the execution to coordinator.
 						 */
 						if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 						{
@@ -2905,7 +2905,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						{
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+									 (errmsg("cannot mix EXECUTE ON COORDINATOR and ALL SEGMENTS functions in same function scan"))));
 						}
 						exec_location = PROEXECLOCATION_ALL_SEGMENTS;
 						break;
@@ -2933,7 +2933,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 				 * If all the functions are ON ANY, we presumably could execute
 				 * the function scan anywhere. However, historically, before the
 				 * EXECUTE ON syntax was introduced, we always executed
-				 * non-IMMUTABLE functions on the master. Keep that behavior
+				 * non-IMMUTABLE functions on the coordinator. Keep that behavior
 				 * for backwards compatibility.
 				 */
 				if (contain_outer_params)
@@ -2945,7 +2945,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 				break;
 			case PROEXECLOCATION_COORDINATOR:
 				if (contain_outer_params)
-					elog(ERROR, "cannot execute EXECUTE ON MASTER function in a subquery with arguments from outer query");
+					elog(ERROR, "cannot execute EXECUTE ON COORDINATOR function in a subquery with arguments from outer query");
 				CdbPathLocus_MakeEntry(&pathnode->locus);
 				break;
 			case PROEXECLOCATION_INITPLAN:
@@ -5364,7 +5364,7 @@ adjust_modifytable_subpaths(PlannerInfo *root, CmdType operation,
 		}
 		else if (targetPolicyType == POLICYTYPE_ENTRY)
 		{
-			/* Master-only table */
+			/* Coordinator-only table */
 			all_subplans_replicated = false;
 		}
 		else if (targetPolicyType == POLICYTYPE_REPLICATED)

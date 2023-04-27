@@ -488,7 +488,7 @@ generate_recursion_path(SetOperationStmt *setOp, PlannerInfo *root,
 	 * SegmentGeneral, the result of the join may end up having a different
 	 * locus.
 	 *
-	 * GPDB_96_MERGE_FIXME: On master, before the merge, more complicated
+	 * GPDB_96_MERGE_FIXME: On coordinator, before the merge, more complicated
 	 * logic was added in commit ad6a6067d9 to make the loci on the WorkTableScan
 	 * and the RecursiveUnion correct. That was largely reverted as part of the
 	 * merge, and things seem to be working with this much simpler thing, but

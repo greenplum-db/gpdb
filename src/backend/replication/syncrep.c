@@ -153,7 +153,7 @@ static bool SyncRepQueueIsOrderedByLSN(int mode);
  * syncrep.c and walsender.c be replaced by synchronous_standby_names GUC. All
  * the places in syncrep.c and walsender.c having conditionals for
  * IS_QUERY_DISPATCHER should be removed and we should try to use proper GUC
- * mechanism to force sync nature for master-standby as well. Though that goal
+ * mechanism to force sync nature for coordinator-standby as well. Though that goal
  * is hard to accomplish without implementing coordinator-standby
  * autofailover.
  */
@@ -509,7 +509,7 @@ SyncRepInitConfig(void)
 	priority = SyncRepGetStandbyPriority();
 
 	/*
-	 * Greenplum: master/standby replication is considered synchronous even
+	 * Greenplum: primary/standby replication is considered synchronous even
 	 * when synchronous_standby_names GUC is not set.
 	 */
 	if (IS_QUERY_DISPATCHER() && MyWalSnd->is_for_gp_walreceiver)

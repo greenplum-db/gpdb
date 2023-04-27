@@ -33,7 +33,7 @@ gp_segment_config_has_mirrors()
 	ScanKeyInit(&scankey[0],
 				Anum_gp_segment_configuration_content,
 				BTEqualStrategyNumber, F_INT2NE,
-				Int16GetDatum(MASTER_CONTENT_ID));
+				Int16GetDatum(COORDINATOR_CONTENT_ID));
 	ScanKeyInit(&scankey[1],
 				Anum_gp_segment_configuration_role,
 				BTEqualStrategyNumber, F_CHAREQ,

@@ -33,7 +33,7 @@
 #include "utils/fmgroids.h"
 #include "utils/rel.h"
 
-#define MASTER_ONLY 0x1
+#define COORDINATOR_ONLY 0x1
 #define UTILITY_MODE 0x2
 #define SUPERUSER 0x4
 #define READ_ONLY 0x8
@@ -65,23 +65,23 @@ segment_has_mirror(int16 contentid)
 
 /*
  * As the function name says, test whether a given dbid is the dbid of the
- * standby master.
+ * standby coordinator.
  */
 static bool
-dbid_is_master_standby(int16 dbid)
+dbid_is_coordinator_standby(int16 dbid)
 {
-	int16		standbydbid = content_get_mirror_dbid(MASTER_CONTENT_ID);
+	int16		standbydbid = content_get_mirror_dbid(COORDINATOR_CONTENT_ID);
 
 	return (standbydbid == dbid);
 }
 
 /*
- * Tell the caller whether a standby master is defined in the system.
+ * Tell the caller whether a standby coordinator is defined in the system.
  */
 static bool
 standby_exists()
 {
-	return segment_has_mirror(MASTER_CONTENT_ID);
+	return segment_has_mirror(COORDINATOR_CONTENT_ID);
 }
 
 /*
@@ -195,13 +195,13 @@ get_maxcontentid()
 static void
 mirroring_sanity_check(int flags, const char *func)
 {
-	if ((flags & MASTER_ONLY) == MASTER_ONLY)
+	if ((flags & COORDINATOR_ONLY) == COORDINATOR_ONLY)
 	{
 		if (GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE)
 			elog(ERROR, "%s requires valid GpIdentity dbid", func);
 
 		if (!IS_QUERY_DISPATCHER())
-			elog(ERROR, "%s must be run on the master", func);
+			elog(ERROR, "%s must be run on the coordinator", func);
 	}
 
 	if ((flags & UTILITY_MODE) == UTILITY_MODE)
@@ -228,7 +228,7 @@ mirroring_sanity_check(int flags, const char *func)
 			elog(ERROR, "%s requires valid GpIdentity dbid", func);
 
 		if (IS_QUERY_DISPATCHER())
-			elog(ERROR, "%s cannot be run on the master", func);
+			elog(ERROR, "%s cannot be run on the coordinator", func);
 	}
 
 	if ((flags & STANDBY_ONLY) == STANDBY_ONLY)
@@ -236,8 +236,8 @@ mirroring_sanity_check(int flags, const char *func)
 		if (GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE)
 			elog(ERROR, "%s requires valid GpIdentity dbid", func);
 
-		if (!dbid_is_master_standby(GpIdentity.dbid))
-			elog(ERROR, "%s can only be run on the standby master", func);
+		if (!dbid_is_coordinator_standby(GpIdentity.dbid))
+			elog(ERROR, "%s can only be run on the standby coordinator", func);
 	}
 }
 
@@ -281,7 +281,7 @@ add_segment_config(GpSegConfigEntry *i)
 }
 
 /*
- * Master function for adding a new segment
+ * Coordinator function for adding a new segment
  */
 static void
 add_segment_config_entry(GpSegConfigEntry *i)
@@ -360,7 +360,7 @@ add_segment(GpSegConfigEntry *new_segment_information)
 }
 
 /*
- * Tell the master about a new primary segment.
+ * Tell the coordinator about a new primary segment.
  *
  * gp_add_segment_primary(hostname, address, port)
  *
@@ -395,7 +395,7 @@ gp_add_segment_primary(PG_FUNCTION_ARGS)
 		elog(ERROR, "datadir cannot be NULL");
 	new.datadir = TextDatumGetCString(PG_GETARG_DATUM(3));
 
-	mirroring_sanity_check(MASTER_ONLY | SUPERUSER, "gp_add_segment_primary");
+	mirroring_sanity_check(COORDINATOR_ONLY | SUPERUSER, "gp_add_segment_primary");
 
 	new.segindex = get_maxcontentid() + 1;
 	new.dbid = get_availableDbId();
@@ -463,7 +463,7 @@ gp_add_segment(PG_FUNCTION_ARGS)
 		elog(ERROR, "datadir cannot be NULL");
 	new.datadir = TextDatumGetCString(PG_GETARG_DATUM(9));
 
-	mirroring_sanity_check(MASTER_ONLY | SUPERUSER, "gp_add_segment");
+	mirroring_sanity_check(COORDINATOR_ONLY | SUPERUSER, "gp_add_segment");
 
 	new.mode = GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC;
 	elog(NOTICE, "mode is changed to GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC under walrep.");
@@ -474,7 +474,7 @@ gp_add_segment(PG_FUNCTION_ARGS)
 }
 
 /*
- * Master function to remove a segment from all catalogs
+ * Coordinator function to remove a segment from all catalogs
  */
 static void
 remove_segment(int16 pridbid, int16 mirdbid)
@@ -486,7 +486,7 @@ remove_segment(int16 pridbid, int16 mirdbid)
 }
 
 /*
- * Remove knowledge of a segment from the master.
+ * Remove knowledge of a segment from the coordinator.
  *
  * gp_remove_segment(dbid)
  *
@@ -506,7 +506,7 @@ gp_remove_segment(PG_FUNCTION_ARGS)
 
 	dbid = PG_GETARG_INT16(0);
 
-	mirroring_sanity_check(MASTER_ONLY | SUPERUSER | UTILITY_MODE,
+	mirroring_sanity_check(COORDINATOR_ONLY | SUPERUSER | UTILITY_MODE,
 						   "gp_remove_segment");
 	remove_segment(dbid, dbid);
 
@@ -543,7 +543,7 @@ gp_add_segment_mirror(PG_FUNCTION_ARGS)
 		elog(ERROR, "datadir cannot be NULL");
 	new.datadir = TextDatumGetCString(PG_GETARG_DATUM(4));
 	
-	mirroring_sanity_check(MASTER_ONLY | SUPERUSER, "gp_add_segment_mirror");
+	mirroring_sanity_check(COORDINATOR_ONLY | SUPERUSER, "gp_add_segment_mirror");
 
 	new.dbid = get_availableDbId();
 	new.mode = GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC;
@@ -579,7 +579,7 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
 		elog(ERROR, "dbid cannot be NULL");
 	contentid = PG_GETARG_INT16(0);
 
-	mirroring_sanity_check(MASTER_ONLY | SUPERUSER, "gp_remove_segment_mirror");
+	mirroring_sanity_check(COORDINATOR_ONLY | SUPERUSER, "gp_remove_segment_mirror");
 
 	/* avoid races */
 	rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
@@ -606,7 +606,7 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
 }
 
 /*
- * Add a master standby.
+ * Add a coordinator standby.
  *
  * gp_add_master_standby(hostname, address, [port])
  *
@@ -639,7 +639,7 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 	if (PG_ARGISNULL(2))
 		elog(ERROR, "datadir cannot be NULL");
 
-	mirroring_sanity_check(MASTER_ONLY | UTILITY_MODE,
+	mirroring_sanity_check(COORDINATOR_ONLY | UTILITY_MODE,
 						   "gp_add_master_standby");
 
 	/* Check if the system is ok */
@@ -657,7 +657,7 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 	 * GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY is the definition of primary
 	 * master.
 	 */
-	master_dbid = contentid_get_dbid(MASTER_CONTENT_ID,
+	master_dbid = contentid_get_dbid(COORDINATOR_CONTENT_ID,
 									 GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, false);
 	config = get_segconfig(master_dbid);
 
@@ -695,9 +695,9 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 Datum
 gp_remove_master_standby(PG_FUNCTION_ARGS)
 {
-	int16		dbid = master_standby_dbid();
+	int16		dbid = coordinator_standby_dbid();
 
-	mirroring_sanity_check(SUPERUSER | MASTER_ONLY | UTILITY_MODE,
+	mirroring_sanity_check(SUPERUSER | COORDINATOR_ONLY | UTILITY_MODE,
 						   "gp_remove_master_standby");
 
 	if (!dbid)
@@ -781,7 +781,7 @@ gp_activate_standby(void)
 	int16		standby_dbid = GpIdentity.dbid;
 	int16		master_dbid;
 
-	master_dbid = contentid_get_dbid(MASTER_CONTENT_ID, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, true);
+	master_dbid = contentid_get_dbid(COORDINATOR_CONTENT_ID, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, true);
 
 	/*
 	 * This call comes from Startup process post checking state in pg_control

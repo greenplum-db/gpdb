@@ -120,7 +120,7 @@ struct ResGroupProcData
  * Per slot resource group information.
  *
  * Resource group have 'concurrency' number of slots.
- * Each transaction acquires a slot on master before running.
+ * Each transaction acquires a slot on coordinator before running.
  * The information shared by QE processes on each segments are stored
  * in this structure.
  */
@@ -157,7 +157,7 @@ struct ResGroupData
 
 struct ResGroupControl
 {
-	int 			segmentsOnMaster;
+	int 			segmentsOnCoordinator;
 
 	ResGroupSlotData	*slots;		/* slot pool shared by all resource groups */
 	ResGroupSlotData	*freeSlot;	/* head of the free list */
@@ -469,17 +469,17 @@ InitResGroups(void)
 	on_shmem_exit(AtProcExit_ResGroup, 0);
 
 	/*
-	 * On master and segments, the first backend does the initialization.
+	 * On coordinator and segments, the first backend does the initialization.
 	 */
 	if (pResGroupControl->loaded)
 		return;
 
-	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnMaster == 0)
+	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnCoordinator == 0)
 	{
 		Assert(IS_QUERY_DISPATCHER());
-		qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
-		pResGroupControl->segmentsOnMaster = qdinfo->hostPrimaryCount;
-		Assert(pResGroupControl->segmentsOnMaster > 0);
+		qdinfo = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID); 
+		pResGroupControl->segmentsOnCoordinator = qdinfo->hostPrimaryCount;
+		Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	}
 
 	/*
@@ -950,7 +950,7 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 int
 ResGroupGetHostPrimaryCount()
 {
-	return (Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnMaster);
+	return (Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnCoordinator);
 }
 
 /*
@@ -1196,7 +1196,7 @@ decideResGroup(ResGroupInfo *pGroupInfo)
 	Oid				 groupId;
 
 	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+	Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* always find out the up-to-date resgroup id */
@@ -1399,7 +1399,7 @@ groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot, bool isMoveQuery)
 	groupPutSlot(group, slot);
 
 	/*
-	 * We should wake up other pending queries on master nodes.
+	 * We should wake up other pending queries on coordinator nodes.
 	 */
 	if (IS_QUERY_DISPATCHER())
 		/*
@@ -1494,10 +1494,10 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 }
 
 /*
- * Check whether resource group should be assigned on master.
+ * Check whether resource group should be assigned on coordinator.
  */
 bool
-ShouldAssignResGroupOnMaster(void)
+ShouldAssignResGroupOnCoordinator(void)
 {
 	/*
 	 * Bypass resource group when it's waiting for a resource group slot. e.g.
@@ -1517,7 +1517,7 @@ ShouldAssignResGroupOnMaster(void)
 
 /*
  * Check whether resource group should be un-assigned.
- * This will be called on both master and segments.
+ * This will be called on both coordinator and segments.
  */
 bool
 ShouldUnassignResGroup(void)
@@ -1528,13 +1528,13 @@ ShouldUnassignResGroup(void)
 }
 
 /*
- * On master, QD is assigned to a resource group at the beginning of a transaction.
+ * On coordinator, QD is assigned to a resource group at the beginning of a transaction.
  * It will first acquire a slot from the resource group, and then, it will get the
  * current capability snapshot, update the memory usage information, and add to
  * the corresponding cgroup.
  */
 void
-AssignResGroupOnMaster(void)
+AssignResGroupOnCoordinator(void)
 {
 	ResGroupSlotData	*slot;
 	ResGroupInfo		groupInfo;
@@ -1595,7 +1595,7 @@ AssignResGroupOnMaster(void)
 		self->caps = slot->caps;
 
 		/* Don't error out before this line in this function */
-		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_master");
+		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_coordinator");
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
@@ -2710,7 +2710,7 @@ ResGroupDumpInfo(StringInfo str)
 
 	appendStringInfo(str, "{\"segid\":%d,", GpIdentity.segindex);
 	/* dump fields in pResGroupControl. */
-	appendStringInfo(str, "\"segmentsOnMaster\":%d,", pResGroupControl->segmentsOnMaster);
+	appendStringInfo(str, "\"segmentsOnCoordinator\":%d,", pResGroupControl->segmentsOnCoordinator);
 	appendStringInfo(str, "\"loaded\":%s,", pResGroupControl->loaded ? "true" : "false");
 	
 	/* dump each group */
@@ -3296,7 +3296,7 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 	char *cmd;
 
 	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+	Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	LWLockAcquire(ResGroupLock, LW_SHARED);

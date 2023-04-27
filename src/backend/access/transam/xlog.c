@@ -6263,7 +6263,7 @@ SetCurrentChunkStartTime(TimestampTz xtime)
  * Process passed checkpoint record either during normal recovery or
  * in standby mode.
  *
- * If in standby mode, master mirroring information stored by the checkpoint
+ * If in standby mode, primary mirroring information stored by the checkpoint
  * record is processed as well.
  */
 static void
@@ -8154,7 +8154,7 @@ StartupXLOG(void)
 
 	/*
 	 * If we are a standby with contentid -1 and undergoing promotion,
-	 * update ourselves as the new master in catalog.  This does not
+	 * update ourselves as the new coordinator in catalog.  This does not
 	 * apply to a mirror (standby of a GPDB segment) because it is
 	 * managed by FTS.
 	 */

@@ -63,7 +63,7 @@
 					# (change requires restart)
 
 #port = 5432				# sets the database listener port for
-      					# a Greenplum instance. The master and
+      					# a Greenplum instance. The coordinator and
 					# each segment has its own port number.
 # note: Port numbers for the Greenplum system must also be changed in the
 # gp_configuration catalog. See the Greenplum Database Administrator Guide

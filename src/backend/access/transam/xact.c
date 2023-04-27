@@ -2682,21 +2682,21 @@ StartTransaction(void)
 	/*
 	 * Acquire a resource group slot.
 	 *
-	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned.
+	 * Slot is successfully acquired when AssignResGroupOnCoordinator() is returned.
 	 * This slot will be released when the transaction is committed or aborted.
 	 *
-	 * Note that AssignResGroupOnMaster() can throw a PG exception. Since we
+	 * Note that AssignResGroupOnCoordinator() can throw a PG exception. Since we
 	 * have set the transaction state to TRANS_INPROGRESS by this point, any
 	 * exceptions thrown will trigger AbortTransaction() and free the slot.
 	 *
 	 * It's important that we acquire the resource group *after* starting the
 	 * transaction (i.e. setting up the per-transaction memory context).
 	 * As part of determining the resource group that the transaction should be
-	 * assigned to, AssignResGroupOnMaster() accesses pg_authid, and a
+	 * assigned to, AssignResGroupOnCoordinator() accesses pg_authid, and a
 	 * transaction should be in progress when it does so.
 	 */
-	if (ShouldAssignResGroupOnMaster())
-		AssignResGroupOnMaster();
+	if (ShouldAssignResGroupOnCoordinator())
+		AssignResGroupOnCoordinator();
 
 	initialize_wal_bytes_written();
 	ShowTransactionState("StartTransaction");
@@ -2883,7 +2883,7 @@ CommitTransaction(void)
 	 * signals (which may attempt to abort our now partially-completed
 	 * transaction) until we've notified the QEs.
 	 *
-	 * And, that we have not master released locks, yet, too.
+	 * And, that we have not coordinator released locks, yet, too.
 	 *
 	 * Note:  do this BEFORE clearing the resource owner, as the dispatch
 	 * routines might want to use them.  Plus, we want AtCommit_Memory to

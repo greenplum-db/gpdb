@@ -917,12 +917,20 @@ CREATE VIEW pg_stat_replication AS
         JOIN pg_stat_get_wal_senders() AS W ON (S.pid = W.pid)
         LEFT JOIN pg_authid AS U ON (S.usesysid = U.oid);
 
+CREATE FUNCTION gp_stat_get_coordinator_replication() RETURNS SETOF RECORD AS
+$$
+    SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
+    FROM pg_catalog.pg_stat_replication
+$$
+LANGUAGE SQL EXECUTE ON COORDINATOR;
+
+-- keep for backwards compatibility. prefer *coordinator* function
 CREATE FUNCTION gp_stat_get_master_replication() RETURNS SETOF RECORD AS
 $$
     SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
     FROM pg_catalog.pg_stat_replication
 $$
-LANGUAGE SQL EXECUTE ON MASTER;
+LANGUAGE SQL EXECUTE ON COORDINATOR;
 
 CREATE FUNCTION gp_stat_get_segment_replication() RETURNS SETOF RECORD AS
 $$
@@ -940,7 +948,7 @@ LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
 -- This view has an additional column than pg_stat_replication so cannot be generated using system_views_gp.in
 CREATE VIEW gp_stat_replication AS
     SELECT *, pg_catalog.gp_replication_error() AS sync_error
-    FROM pg_catalog.gp_stat_get_master_replication() AS R
+    FROM pg_catalog.gp_stat_get_coordinator_replication() AS R
     (gp_segment_id integer, pid integer, usesysid oid,
      usename name, application_name text, client_addr inet, client_hostname text,
      client_port integer, backend_start timestamptz, backend_xmin xid, state text,

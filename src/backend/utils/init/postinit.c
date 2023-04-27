@@ -925,7 +925,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * In Greenplum, there is a concept of restricted mode where
 	 * superuser_reserved_connections is set equal to max_connections making
 	 * it so only superusers can connect. Changes made in restricted mode need
-	 * to be replicated to the standby master. We currently only support one
+	 * to be replicated to the standby primary. We currently only support one
 	 * walsender anyways so we should allow the connection to happen. This may
 	 * need to be reviewed later when we start supporting multiple mirrors.
 	 */

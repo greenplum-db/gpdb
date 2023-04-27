@@ -3602,7 +3602,7 @@ RelationBuildLocalRelation(const char *relname,
 	 * places.  For a mapped relation, we set relfilenode to zero and rely on
 	 * RelationInitPhysicalAddr to consult the map.
 	 *
-	 * In GPDB, the table's logical OID is allocated in the master, and might
+	 * In GPDB, the table's logical OID is allocated in the coordinator, and might
 	 * already be in use as a relfilenode of an existing relation in a segment.
 	 *
 	 * In binary upgrade mode, however, use the OID also as the relfilenode.

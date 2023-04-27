@@ -41,15 +41,15 @@ where logseverity='ERROR' and logmessage like '%"creat"%' order by logtime desc 
 select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
 where logseverity='LOG' and logmessage like '%exception was encountered%'
 order by logtime desc limit 2;
- logseverity |                                       logmessage                                        | logdebug 
--------------+-----------------------------------------------------------------------------------------+----------
- LOG         | statement: select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext+| 
-             | where logseverity='LOG' and logmessage like '%exception was encountered%'              +| 
-             | order by logtime desc limit 2;                                                          | 
- LOG         | statement: select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext+| 
-             | where logseverity='LOG' and logmessage like '%exception was encountered%'              +| 
-             | and logmessage not like '%__gp_log_master_ext%'                                        +| 
-             | order by logtime desc limit 1;                                                          | 
+ logseverity |                                          logmessage                                          | logdebug 
+-------------+----------------------------------------------------------------------------------------------+----------
+ LOG         | statement: select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_coordinator_ext+| 
+             | where logseverity='LOG' and logmessage like '%exception was encountered%'                   +| 
+             | order by logtime desc limit 2;                                                               | 
+ LOG         | statement: select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_coordinator_ext+| 
+             | where logseverity='LOG' and logmessage like '%exception was encountered%'                   +| 
+             | and logmessage not like '%__gp_log_coordinator_ext%'                                        +| 
+             | order by logtime desc limit 1;                                                               | 
 (2 rows)
 
 set log_min_error_statement = error;

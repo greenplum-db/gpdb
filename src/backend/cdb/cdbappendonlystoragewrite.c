@@ -270,7 +270,7 @@ AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrit
 	 * in possible standby server. Not strictly necessarily, because a 0-length
 	 * segfile and a non-existent segfile are treated the same. But the
 	 * gp_replica_check tool, to compare primary and mirror, will complain if
-	 * a file exists in master but not in mirror, even if it's empty.
+	 * a file exists in primary but not in mirror, even if it's empty.
 	 */
 	if (storageWrite->needsWAL)
 		xlog_ao_insert(relFileNode->node, segmentFileNum, 0, NULL, 0);

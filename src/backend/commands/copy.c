@@ -4314,7 +4314,7 @@ CopyFrom(CopyState cstate)
 		cdbCopyStart(cdbCopy, glob_copystmt, cstate->file_encoding);
 
 		/*
-		 * Skip header processing if dummy file get from master for COPY FROM ON
+		 * Skip header processing if dummy file get from coordinator for COPY FROM ON
 		 * SEGMENT
 		 */
 		if (!cstate->on_segment)
@@ -4633,7 +4633,7 @@ CopyFrom(CopyState cstate)
 		{
 			/*
 			 * If the tuple was dispatched to segments, do not execute trigger
-			 * on master.
+			 * on coordinator.
 			 */
 			if (!skip_tuple && !ExecBRInsertTriggers(estate, resultRelInfo, myslot))
 				skip_tuple = true;	/* "do nothing" */
@@ -4823,7 +4823,7 @@ CopyFrom(CopyState cstate)
 			 * If error log has been requested, then we send the row to the segment
 			 * so that it can be written in the error log file. The segment process
 			 * counts it again as a rejected row. So we ignore the reject count
-			 * from the master and only consider the reject count from segments.
+			 * from the coordinator and only consider the reject count from segments.
 			 */
 			if (IS_LOG_TO_FILE(cstate->cdbsreh->logerrors))
 				total_rejected_from_qd = 0;

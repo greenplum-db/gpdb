@@ -4149,7 +4149,7 @@ InitTempTableNamespace(void)
 	 * it. (We assume there is no need to clean it out if it does exist, since
 	 * dropping a parent table should make its toast table go away.)
 	 * (in GPDB, though, we drop and recreate it anyway, to make sure it has
-	 * the same OID on master and segments.)
+	 * the same OID on coordinator and segments.)
 	 */
 	snprintf(namespaceName, sizeof(namespaceName),
 			 "pg_toast_temp_%s%d", session_infix, session_suffix);

@@ -10,7 +10,7 @@
  * Endpoints may exist on the coordinator or segments, depending on the query
  * of the PARALLEL RETRIEVE CURSOR:
  * (1) An endpoint is on QD only if the query of the parallel cursor needs to
- *     be finally gathered by the master. e.g.:
+ *     be finally gathered by the coordinator. e.g.:
  *     > DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM T1 ORDER BY C1;
  * (2) The endpoints are on specific segments node if the direct dispatch happens.
  *	   e.g.:
