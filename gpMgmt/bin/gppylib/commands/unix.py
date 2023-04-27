@@ -482,11 +482,14 @@ def canonicalize(addr):
 
 class Rsync(Command):
     def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False, ctxt=LOCAL,
-                 remoteHost=None):
+                 remoteHost=None, additionalRsyncArgs=None):
         cmdStr = findCmdInPath('rsync') + " "
 
         if recursive:
             cmdStr = cmdStr + "-r "
+
+        if additionalRsyncArgs:
+            cmdStr += " ".join(additionalRsyncArgs) + " "
 
         if srcHost:
             cmdStr = cmdStr + canonicalize(srcHost) + ":"
@@ -496,6 +499,16 @@ class Rsync(Command):
             cmdStr = cmdStr + canonicalize(dstHost) + ":"
         cmdStr = cmdStr + dstFile
 
+        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
+
+
+class RsyncFromFileList(Command):
+    def __init__(self, name, sync_list_file, local_base_dir, remote_basedir, dstHost=None, ctxt=LOCAL,
+                 remoteHost=None):
+        cmdStr = findCmdInPath('rsync') + " "
+        cmdStr += "--files-from=" + sync_list_file  + " " + local_base_dir + "/ "
+        if dstHost:
+            cmdStr += canonicalize(dstHost) + ":" + remote_basedir + "/"
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 # -------------create tar------------------

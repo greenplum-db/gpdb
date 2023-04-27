@@ -18,6 +18,7 @@ try:
     from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts, update_unreachable_flag_for_segments
     from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, restore_pg_hba_on_segment
     from gppylib.operations.update_pg_hba_on_segments import update_pg_hba_on_segments_for_standby
+    from gppylib.operations.package import SyncPackages
     from gppylib.commands.pg import PgBaseBackup
 except ImportError as e:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
@@ -388,7 +389,12 @@ def create_standby(options):
         # The design decision here is to squash any exceptions resulting from the 
         # synchronization of packages. We should *not* disturb the user's attempts 
         # initialize a standby.
-        logger.warning("Currently, gpinitstandby doesn't support syncing Greenplum Database extensions")
+        try:
+            logger.info('Syncing Greenplum Database extensions to standby')
+            SyncPackages(options.standby_host).run()
+        except Exception as e:
+            logger.warning('Syncing of Greenplum Database extensions has failed.')
+            logger.warning('Please run gppkg --clean after successful standby initialization.')
 
         # Disable Ctrl-C
         signal.signal(signal.SIGINT,signal.SIG_IGN)
