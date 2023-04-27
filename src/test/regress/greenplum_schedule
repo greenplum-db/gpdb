@@ -158,9 +158,10 @@ test: instr_in_shmem_verify
 # hold locks.
 test: partition_locking
 test: vacuum_gp
-# background analyze may affect pgstat
+# background analyze may affect pgstat and gp_covering_index
 test: pg_stat
 test: bfv_partition qp_misc_rio
+test: gp_covering_index
 test: pgstat_qd_tabstat
 # dispatch should always run seperately from other cases.
 test: dispatch
