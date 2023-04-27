@@ -79,6 +79,8 @@ select * from check_env;
  GPHOME=/Users/@curusername@/greenplum-db-devel
  GPROOT=/Users/@curusername@
  GP_CID=0
+ GP_COORDINATOR_HOST=127.0.0.1
+ GP_COORDINATOR_PORT=5432
  GP_DATABASE=regression
  GP_DATE=20110816
  GP_HADOOP_CONN_JARDIR=lib//hadoop

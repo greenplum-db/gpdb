@@ -46,6 +46,8 @@ typedef struct URL_FILE
 
 typedef struct extvar_t
 {
+	char* GP_COORDINATOR_HOST;
+	char* GP_COORDINATOR_PORT;
 	char* GP_MASTER_HOST;
 	char* GP_MASTER_PORT;
 	char* GP_DATABASE;
