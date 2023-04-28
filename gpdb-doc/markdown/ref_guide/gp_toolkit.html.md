@@ -549,7 +549,7 @@ For each resource group that you assign to an external component, the `memory_us
 
 ### <a id="perhost"></a>gp\_resgroup\_status\_per\_host 
 
-The [gp\_resgroup\_status\_per\_host](system_catalogs/gp_resgroup_status_per_host.html) view displays the real-time CPU and memory usage \(MBs\) for each resource group on a per-host basis. The view also displays available and granted group fixed and shared memory for each resource group on a host.
+The [gp\_resgroup\_status\_per\_host](system_catalogs/catalog_ref-views.html#gp_resgroup_status_per_host) view displays the real-time CPU and memory usage \(MBs\) for each resource group on a per-host basis. The view also displays available and granted group fixed and shared memory for each resource group on a host.
 
 |Column|Description|
 |------|-----------|

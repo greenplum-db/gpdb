@@ -309,7 +309,7 @@ The following limitations can result in a query plan that shows a non-selective 
 
 ## <a id="topic76"></a>Viewing Your Partition Design 
 
-You can look up information about your partition design using the *[pg\_partitions](../../ref_guide/system_catalogs/pg_partitions.html)* system view. For example, to see the partition design of the *sales* table:
+You can look up information about your partition design using the *[pg\_partitions](../../ref_guide/system_catalogs/catalog_ref-views.html#pg_partitions)* system view. For example, to see the partition design of the *sales* table:
 
 ```
 SELECT partitionboundary, partitiontablename, partitionname, 
@@ -337,7 +337,7 @@ To maintain a partitioned table, use the `ALTER TABLE` command against the top-l
 -   [Modifying a Subpartition Template](#topic85)
 -   [Exchanging a Leaf Child Partition with an External Table](#topic_yhz_gpn_qs)
 
-> **Important** When defining and altering partition designs, use the given partition name, not the table object name. The given partition name is the `partitionname` column value in the *[pg\_partitions](../../ref_guide/system_catalogs/pg_partitions.html)* system view. Although you can query and load any table \(including partitioned tables\) directly using SQL commands, you can only modify the structure of a partitioned table using the `ALTER TABLE...PARTITION` clauses.
+> **Important** When defining and altering partition designs, use the given partition name, not the table object name. The given partition name is the `partitionname` column value in the *[pg\_partitions](../../ref_guide/system_catalogs/catalog_ref-views.html#pg_partitions)* system view. Although you can query and load any table \(including partitioned tables\) directly using SQL commands, you can only modify the structure of a partitioned table using the `ALTER TABLE...PARTITION` clauses.
 
 Partitions are not required to have names. If a partition does not have a name, use one of the following expressions to specify a partition: `PARTITION FOR (value)` or `PARTITION FOR (RANK(number))`.
 

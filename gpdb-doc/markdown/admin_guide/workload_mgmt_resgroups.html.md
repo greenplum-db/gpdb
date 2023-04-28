@@ -521,7 +521,7 @@ Monitoring the status of your resource groups and queries may involve the follow
 
 ### <a id="topic221"></a>Viewing Resource Group Limits 
 
-The [gp\_resgroup\_config](../ref_guide/system_catalogs/gp_resgroup_config.html) `gp_toolkit` system view displays the current limits for a resource group. To view the limits of all resource groups:
+The [gp\_resgroup\_config](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resgroup_config) `gp_toolkit` system view displays the current limits for a resource group. To view the limits of all resource groups:
 
 ```
 =# SELECT * FROM gp_toolkit.gp_resgroup_config;
@@ -558,7 +558,7 @@ To view the resource group-to-role assignments, perform the following query on t
 
 ### <a id="topic252525"></a>Viewing a Resource Group's Running and Pending Queries 
 
-To view a resource group's running queries, pending queries, and how long the pending queries have been queued, examine the [pg\_stat\_activity](../ref_guide/system_catalogs/pg_stat_activity.html) system catalog table:
+To view a resource group's running queries, pending queries, and how long the pending queries have been queued, examine the [pg\_stat\_activity](../ref_guide/system_catalogs/catalog_ref-views.html#pg_stat_activity) system catalog table:
 
 ```
 =# SELECT query, waiting, rsgname, rsgqueueduration 

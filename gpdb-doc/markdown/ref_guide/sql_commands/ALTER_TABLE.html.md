@@ -416,7 +416,7 @@ SPLIT PARTITION
 :   **INTO** - Allows you to specify names for the two new partitions created by the split.
 
 partition\_name
-:   The given name of a partition. The given partition name is the `partitionname` column value in the *[pg\_partitions](../system_catalogs/pg_partitions.html)* system view.
+:   The given name of a partition. The given partition name is the `partitionname` column value in the *[pg\_partitions](../system_catalogs/catalog_ref-views.html#pg_partitions)* system view.
 
 FOR \(RANK\(number\)\)
 :   For range partitions, the rank of the partition in the range.
@@ -458,7 +458,7 @@ The `USING` option of `SET DATA TYPE` can actually specify any expression involv
 
 If a table is partitioned or has any descendant tables, it is not permitted to add, rename, or change the type of a column, or rename an inherited constraint in the parent table without doing the same to the descendants. This ensures that the descendants always have columns matching the parent.
 
-To see the structure of a partitioned table, you can use the view [pg\_partitions](../system_catalogs/pg_partitions.html). This view can help identify the particular partitions you may want to alter.
+To see the structure of a partitioned table, you can use the view [pg\_partitions](../system_catalogs/catalog_ref-views.html#pg_partitions). This view can help identify the particular partitions you may want to alter.
 
 A recursive `DROP COLUMN` operation will remove a descendant table's column only if the descendant does not inherit that column from any other parents and never had an independent definition of the column. A nonrecursive `DROP COLUMN` \(`ALTER TABLE ONLY ... DROP COLUMN`\) never removes any descendant columns, but instead marks them as independently defined rather than inherited.
 
