@@ -7,6 +7,8 @@ import shutil
 import sys
 import tarfile
 import re
+import random
+import string
 
 try:
     from gppylib import gplog
@@ -59,6 +61,9 @@ def get_package_file_list(gppkg_package_name):
     filelist.append("usr/local/gppkg/" + gppkg_package_name + GPPKG_METADATA_EXTENSION)
     return filelist
 
+def random_str(N):
+    return ''.join([random.choice(string.ascii_letters) for _ in range(N)])
+
 class SyncPackages(Operation):
     """
     Synchronizes packages from coordinator to a remote host
@@ -94,7 +99,7 @@ class SyncPackages(Operation):
             for package in install_package_set:
                 logger.debug('Copying {} to {}'.format(package, self.host))
                 file_list = get_package_file_list(package)
-                sync_list_file = os.path.join(GPHOME, "{}.synclist".format(package))
+                sync_list_file = os.path.join(GPHOME, "/tmp/gpdb.{}.{}.synclist".format(package, random_str(4)))
                 with open(sync_list_file, 'wt') as f:
                     for file_ in file_list:
                         f.write(file_ + "\n")
@@ -112,7 +117,7 @@ class SyncPackages(Operation):
                 'The following packages will be uninstalled on {}: {}'.format(self.host, ', '.join(sorted(uninstall_package_set))))
             for package in uninstall_package_set:
                 remote_package_metadata = "{}/{}.ini".format(GPPKG_METADATA_DIR, package)
-                remove_package_metadata = os.path.join(GPHOME, "{}.remove.ini".format(package))
+                remove_package_metadata = os.path.join(GPHOME, "/tmp/gpdb.{}.{}.remove.ini".format(package, random_str(4)))
                 Rsync(name='Syncing {} to localhost'.format(package),
                       srcFile=remote_package_metadata,
                       dstFile=remove_package_metadata,
