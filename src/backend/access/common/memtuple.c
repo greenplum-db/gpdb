@@ -75,14 +75,10 @@ void destroy_memtuple_binding(MemTupleBinding *pbind)
 
 	if(pbind->bind.null_saves)
 		pfree(pbind->bind.null_saves);
-	if(pbind->bind.null_saves_aligned)
-		pfree(pbind->bind.null_saves_aligned);
 	if(pbind->bind.bindings)
 		pfree(pbind->bind.bindings);
 	if(pbind->large_bind.null_saves)
 		pfree(pbind->large_bind.null_saves);
-	if(pbind->large_bind.null_saves_aligned)
-		pfree(pbind->large_bind.null_saves_aligned);
 	if(pbind->large_bind.bindings)
 		pfree(pbind->large_bind.bindings);
 	pfree(pbind);
@@ -209,9 +205,6 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 
 	/* alloc null save entries.  Zero it */
 	colbind->null_saves = (short *) palloc0(sizeof(short) * null_save_entries);
-	colbind->null_saves_aligned = (short *) palloc0(sizeof(short) * null_save_entries);
-	colbind->has_null_saves_alignment_mismatch = false;
-	colbind->has_dropped_attr_alignment_mismatch = false;
 
 	/* alloc bindings, no need to zero because we will fill them out  */
 	colbind->bindings = (MemTupleAttrBinding *) palloc(sizeof(MemTupleAttrBinding) * tupdesc->natts);
@@ -244,18 +237,10 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 			{
 				bind->offset = att_align_nominal(cur_offset, attr->attalign);
 				bind->len = attr->attlen;
-				add_null_save(colbind->null_saves, physical_col, attr->attlen);
 				if (physical_col)
 				{
 					/* Set the aligned length of the previous binding according to current alignment. */
-					if (add_null_save_aligned(previous_bind, colbind->null_saves_aligned, physical_col - 1, 'd'))
-					{
-						colbind->has_null_saves_alignment_mismatch = true;
-						if (attr->attisdropped)
-						{
-							colbind->has_dropped_attr_alignment_mismatch = true;
-						}
-					}
+					add_null_save_aligned(previous_bind, colbind->null_saves, physical_col - 1, 'd');
 				}
 
 				bind->flag = attr->attbyval ? MTB_ByVal_Native : MTB_ByVal_Ptr;
@@ -273,18 +258,10 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 			{
 				bind->offset = att_align_nominal(cur_offset, 'i'); 
 				bind->len = attr->attlen > 0 ? attr->attlen : 4; 
-				add_null_save(colbind->null_saves, physical_col, bind->len);
 				if (physical_col)
 				{
 					/* Set the aligned length of the previous binding according to current alignment. */
-					if (add_null_save_aligned(previous_bind, colbind->null_saves_aligned, physical_col - 1, 'i'))
-					{
-						colbind->has_null_saves_alignment_mismatch = true;
-						if (attr->attisdropped)
-						{
-							colbind->has_dropped_attr_alignment_mismatch = true;
-						}
-					}
+					add_null_save_aligned(previous_bind, colbind->null_saves, physical_col - 1, 'i');
 				}
 
 				if(attr->attlen > 0)
@@ -311,18 +288,10 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 			{
 				bind->offset = att_align_nominal(cur_offset, 's');
 				bind->len = attr->attlen > 0 ? attr->attlen : 2; 
-				add_null_save(colbind->null_saves, physical_col, bind->len);
 				if (physical_col)
 				{
 					/* Set the aligned length of the previous binding according to current alignment. */
-					if (add_null_save_aligned(previous_bind, colbind->null_saves_aligned, physical_col - 1, 's'))
-					{
-						colbind->has_null_saves_alignment_mismatch = true;
-						if (attr->attisdropped)
-						{
-							colbind->has_dropped_attr_alignment_mismatch = true;
-						}
-					}
+					add_null_save_aligned(previous_bind, colbind->null_saves, physical_col - 1, 's');
 				}
 				
 				if(attr->attlen > 0)
@@ -357,18 +326,10 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 				bind->len = attr->attlen;
 #endif
 
-				add_null_save(colbind->null_saves, physical_col, 1);
 				if (physical_col)
 				{
 					/* Set the aligned length of the previous binding according to current alignment. */
-					if (add_null_save_aligned(previous_bind, colbind->null_saves_aligned, physical_col - 1, 'c'))
-					{
-						colbind->has_null_saves_alignment_mismatch = true;
-						if (attr->attisdropped)
-						{
-							colbind->has_dropped_attr_alignment_mismatch = true;
-						}
-					}
+					add_null_save_aligned(previous_bind, colbind->null_saves, physical_col - 1, 'c');
 				}
 
 				if(attr->attlen > 0 && attr->attbyval)
@@ -389,13 +350,7 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 	if (physical_col)
 	{
 		/* No extra alignment required for the last binding */
-		add_null_save_aligned(previous_bind, colbind->null_saves_aligned, physical_col - 1, 'c');
-	}
-
-	if (!colbind->has_null_saves_alignment_mismatch)
-	{
-		pfree(colbind->null_saves);
-		colbind->null_saves = NULL;
+		add_null_save_aligned(previous_bind, colbind->null_saves, physical_col - 1, 'c');
 	}
 
 #ifdef USE_DEBUG_ASSERT
@@ -596,7 +551,7 @@ static inline char* memtuple_get_attr_data_ptr(char *start, MemTupleAttrBinding 
 	return start + (*(uint32 *) memtuple_get_attr_ptr(start, bind, null_saves, nullp));
 }
 
-static inline unsigned char *memtuple_get_nullp(MemTuple mtup, MemTupleBinding *pbind)
+static inline unsigned char *memtuple_get_nullp(MemTuple mtup)
 {
 	return mtup->PRIVATE_mt_bits;
 }
@@ -672,7 +627,7 @@ memtuple_form_to(MemTupleBinding *pbind,
 		memtuple_set_islarge(mtup);
 
 	if(hasnull)
-		nullp = memtuple_get_nullp(mtup, pbind);
+		nullp = memtuple_get_nullp(mtup);
 
 	start = (char *) mtup;
 	varlen_start = ((char *) mtup) + colbind->var_start - null_save_len;
@@ -722,7 +677,7 @@ memtuple_form_to(MemTupleBinding *pbind,
 
 		Assert(bind->offset != 0);
 
-		short *null_saves = colbind->null_saves_aligned;
+		short *null_saves = colbind->null_saves;
 		Assert(null_saves);
 
 		/* Not null */
@@ -845,10 +800,10 @@ memtuple_form_to(MemTupleBinding *pbind,
 	return mtup;
 }
 
-static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull, bool use_null_saves_aligned)
+static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull)
 {
 	bool hasnull = memtuple_get_hasnull(mtup);
-	unsigned char *nullp = hasnull ? memtuple_get_nullp(mtup, pbind) : NULL; 
+	unsigned char *nullp = hasnull ? memtuple_get_nullp(mtup) : NULL; 
 	char *start = (char *) mtup + (hasnull ? pbind->null_bitmap_extra_size : 0);
 
 	Datum ret;
@@ -873,7 +828,7 @@ static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind
 		return 0;
 	}
 
-	short *null_saves = (use_null_saves_aligned ? colbind->null_saves_aligned : colbind->null_saves);
+	short *null_saves = colbind->null_saves;
 	Assert(null_saves);
 
 	ret = fetchatt(TupleDescAttr(pbind->tupdesc, attnum), memtuple_get_attr_data_ptr(start, attrbind, null_saves, nullp));
@@ -883,19 +838,19 @@ static Datum memtuple_getattr_by_alignment(MemTuple mtup, MemTupleBinding *pbind
 
 Datum memtuple_getattr(MemTuple mtup, MemTupleBinding *pbind, int attnum, bool *isnull)
 {
-	return memtuple_getattr_by_alignment(mtup, pbind, attnum, isnull, true /* aligned */);
+	return memtuple_getattr_by_alignment(mtup, pbind, attnum, isnull);
 }
 
-static void memtuple_get_values(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull, bool use_null_saves_aligned)
+static void memtuple_get_values(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull)
 {
 	int i;
 	for(i=0; i<pbind->tupdesc->natts; ++i)
-		datum[i] = memtuple_getattr_by_alignment(mtup, pbind, i+1, &isnull[i], use_null_saves_aligned);
+		datum[i] = memtuple_getattr_by_alignment(mtup, pbind, i+1, &isnull[i]);
 }
 
 void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull)
 {
-	memtuple_get_values(mtup, pbind, datum, isnull, true /* aligned */);
+	memtuple_get_values(mtup, pbind, datum, isnull);
 }
 
 bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)

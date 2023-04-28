@@ -39,10 +39,7 @@ typedef struct MemTupleBindingCols
 {
 	uint32 var_start; 	/* varlen fields start */
 	MemTupleAttrBinding *bindings; /* bindings for attrs (cols) */
-	short *null_saves;				/* saved space from each attribute when null */
-	short *null_saves_aligned;		/* saved space from each attribute when null - uses aligned length */
-	bool has_null_saves_alignment_mismatch;		/* true if one or more attributes has mismatching alignment and length  */
-	bool has_dropped_attr_alignment_mismatch;	/* true if one or more dropped attributes has mismatching alignment and length */
+	short *null_saves;		/* saved space from each attribute when null - uses aligned length */
 } MemTupleBindingCols;
 
 typedef struct MemTupleBinding
@@ -79,11 +76,6 @@ static inline bool is_len_memtuplen(uint32 len)
 static inline bool memtuple_lead_bit_set(MemTuple tup)
 {
 	return (tup->PRIVATE_mt_len & MEMTUP_LEAD_BIT) != 0;
-}
-static inline uint32 memtuple_size_from_uint32(uint32 len)
-{
-	Assert ((len & MEMTUP_LEAD_BIT) != 0);
-	return len & MEMTUP_LEN_MASK;
 }
 static inline uint32 memtuple_get_size(MemTuple mtup)
 {
