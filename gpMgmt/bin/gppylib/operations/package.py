@@ -46,6 +46,19 @@ GPPKG_METADATA_DIR = os.path.join(GPHOME, "usr/local/gppkg")
 GPPKG_METADATA_EXTENSION = ".ini"
 GPPKG_METADATA_FILELINE_PATTERM = re.compile(r""".*permission.*type.*size.*sha1.*md5""")
 
+def get_package_file_list(gppkg_package_name):
+    filelist = []
+    gppkg_metadata_file = "{}/{}{}".format(GPPKG_METADATA_DIR, gppkg_package_name, GPPKG_METADATA_EXTENSION)
+    with open(gppkg_metadata_file, "rb") as f:
+        for linenum, line in enumerate(f):
+            if linenum == 0 and line != b'version=v1\n':
+                raise Exception("Unexpect version of package's metadata of gppkg: '{}'".format(gppkg_package_name))
+            line = line.decode('utf-8')
+            if GPPKG_METADATA_FILELINE_PATTERM.match(line):
+                filelist.append(line.split("=")[0])
+    filelist.append("usr/local/gppkg/" + gppkg_package_name + GPPKG_METADATA_EXTENSION)
+    return filelist
+
 class SyncPackages(Operation):
     """
     Synchronizes packages from coordinator to a remote host
@@ -53,15 +66,6 @@ class SyncPackages(Operation):
     """
     def __init__(self, host):
         self.host = host
-
-    def get_package_file_list(self, gppkg_package_name):
-        filelist = []
-        with open("{}/{}{}".format(GPPKG_METADATA_DIR, gppkg_package_name, GPPKG_METADATA_EXTENSION), "rt") as f:
-            for line in f:
-                if GPPKG_METADATA_FILELINE_PATTERM.match(line):
-                    filelist.append(line.split("=")[0])
-        filelist.append("usr/local/gppkg/" + gppkg_package_name + GPPKG_METADATA_EXTENSION)
-        return filelist
 
     def execute(self):
         if not CheckDir(GPPKG_METADATA_DIR).run():
@@ -89,7 +93,7 @@ class SyncPackages(Operation):
                 'The following packages will be installed on {}: {}'.format(self.host, ', '.join(sorted(install_package_set))))
             for package in install_package_set:
                 logger.debug('Copying {} to {}'.format(package, self.host))
-                file_list = self.get_package_file_list(package)
+                file_list = get_package_file_list(package)
                 sync_list_file = os.path.join(GPHOME, "{}.synclist".format(package))
                 with open(sync_list_file, 'wt') as f:
                     for file_ in file_list:
@@ -113,7 +117,7 @@ class SyncPackages(Operation):
                       srcFile=remote_package_metadata,
                       dstFile=remove_package_metadata,
                       srcHost=self.host).run(validateAfter=True)
-                remove_list = self.get_package_file_list(package)
+                remove_list = get_package_file_list(package)
                 for file_ in remove_list:
                     RemoveRemoteFile(os.path.join(GPHOME, file_), self.host).run()
                 RemoveFile(remove_package_metadata).run()

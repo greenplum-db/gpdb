@@ -482,14 +482,11 @@ def canonicalize(addr):
 
 class Rsync(Command):
     def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False, ctxt=LOCAL,
-                 remoteHost=None, additionalRsyncArgs=None):
+                 remoteHost=None):
         cmdStr = findCmdInPath('rsync') + " "
 
         if recursive:
             cmdStr = cmdStr + "-r "
-
-        if additionalRsyncArgs:
-            cmdStr += " ".join(additionalRsyncArgs) + " "
 
         if srcHost:
             cmdStr = cmdStr + canonicalize(srcHost) + ":"
