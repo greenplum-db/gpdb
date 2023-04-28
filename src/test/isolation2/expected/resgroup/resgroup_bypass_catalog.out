@@ -68,9 +68,41 @@ COMMIT
  1        
 (2 rows)
 
+-- test for Github Issue 15416
+-- following SQLs should not throw "unrecognized node type" error.
+create table t_15416(s int);
+CREATE
+-- test for T_GroupingFunc
+select count(), grouping(s) from t_15416 group by s;
+ count | grouping 
+-------+----------
+(0 rows)
+-- test for T_GroupingClause
+select 1 from pg_catalog.pg_class group by rollup(1);
+ ?column? 
+----------
+ 1        
+          
+(2 rows)
+-- test for T_TableValueExpr
+-- don't want spend time on create a UDF below, the below SQL
+-- should not throw  "unrecognized node type" error, this is the test point.
+select count(1) from anytable_out( table(select * from t_15416 scatter by s) );
+ERROR:  cannot display a value of type anytable  (seg0 slice1 127.0.1.1:6002 pid=1922087)
+-- test for T_GroupId
+select group_id() from t_15416;
+ ?column? 
+----------
+(0 rows)
+
 -- cleanup
 -- start_ignore
 DROP ROLE role_test_catalog;
+DROP
 DROP RESOURCE GROUP rg_test_catalog;
-DROP FUNCTION rg_test_udf;
+DROP
+DROP FUNCTION rg_test_udf();
+DROP
+DROP TABLE t_15416;
+DROP
 -- end_ignore

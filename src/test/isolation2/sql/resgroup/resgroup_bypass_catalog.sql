@@ -38,9 +38,24 @@ RETURNS integer AS $$ SELECT 1; $$ LANGUAGE SQL;
 5: COMMIT;
 6<:
 
+-- test for Github Issue 15416
+-- following SQLs should not throw "unrecognized node type" error.
+create table t_15416(s int);
+-- test for T_GroupingFunc
+select count(), grouping(s) from t_15416 group by s;
+-- test for T_GroupingClause
+select 1 from pg_catalog.pg_class group by rollup(1);
+-- test for T_TableValueExpr
+-- don't want spend time on create a UDF below, the below SQL
+-- should not throw  "unrecognized node type" error, this is the test point.
+select count(1) from anytable_out( table(select * from t_15416 scatter by s) );
+-- test for T_GroupId
+select group_id() from t_15416;
+
 -- cleanup
 -- start_ignore
 DROP ROLE role_test_catalog;
 DROP RESOURCE GROUP rg_test_catalog;
-DROP FUNCTION rg_test_udf;
+DROP FUNCTION rg_test_udf();
+DROP TABLE t_15416;
 -- end_ignore

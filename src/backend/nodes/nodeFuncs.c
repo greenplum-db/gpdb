@@ -3583,6 +3583,14 @@ raw_expression_tree_walker(Node *node,
 			return walker(((WithClause *) node)->ctes, context);
 		case T_CommonTableExpr:
 			return walker(((CommonTableExpr *) node)->ctequery, context);
+		case T_GroupingFunc:
+			return walker(((GroupingFunc *) node)->args, context);
+		case T_GroupingClause:
+			return walker(((GroupingClause *) node)->groupsets, context);
+		case T_GroupId:
+			break;
+		case T_TableValueExpr:
+			return walker(((TableValueExpr *) node)->subquery, context);
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(node));
