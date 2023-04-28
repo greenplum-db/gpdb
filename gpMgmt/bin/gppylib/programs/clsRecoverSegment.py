@@ -144,7 +144,7 @@ class GpRecoverSegmentProgram:
                 operation.get_ret()
         except:
             self.logger.exception('Syncing of Greenplum Database extensions has failed.')
-            self.logger.warning('Please run gppkg --clean after successful segment recovery.')
+            self.logger.warning('Please run `gppkg install --force <package>` to re-install gppkg packages after successful segment recovery.')
 
     def displayRecovery(self, mirrorBuilder, gpArray):
         self.logger.info('Greenplum instance recovery parameters')
