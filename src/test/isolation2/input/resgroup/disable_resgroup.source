@@ -6,6 +6,7 @@
 -- start_ignore
 ! gpconfig -r gp_resource_manager;
 ! gpconfig -r gp_resource_group_memory_limit;
+! gpconfig -r gp_resource_group_bypass_catalog_query;
 ! gpstop -rai;
 -- end_ignore
 

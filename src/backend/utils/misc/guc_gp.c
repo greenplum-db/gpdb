@@ -3101,7 +3101,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&gp_resource_group_bypass_catalog_query,
-		true, NULL, NULL
+		false, NULL, NULL
 	},
 
 	{

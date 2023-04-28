@@ -46,6 +46,7 @@ $$;
 -- start_ignore
 ! gpconfig -c gp_resource_manager -v group;
 ! gpconfig -c gp_resource_group_cpu_limit -v 0.9;
+! gpconfig -c gp_resource_group_bypass_catalog_query -v on;
 ! gpconfig -c max_connections -v 250 -m 25;
 ! gpconfig -c runaway_detector_activation_percent -v 100;
 ! gpstop -rai;
