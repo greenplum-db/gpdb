@@ -277,7 +277,7 @@ The `gp_transaction_log` view contains status information about transactions loc
 |`transaction`|xid| |The local transaction ID.|
 |`status`|text| |The status of the local transaction \(Committed or Aborted\).|
 
-## <a id="gpexpand.expansion_progress"></a>gpexpand.expansion_progress
+## <a id="gpexpandexpansion_progress"></a>gpexpand.expansion_progress
 
 The `gpexpand.expansion_progress` view contains information about the status of a system expansion operation. The view provides calculations of the estimated rate of table redistribution and estimated time to completion.
 
