@@ -1,73 +1,5 @@
 # System Views 
 
-
-Mware Greenplum 7 Beta.3 introduces these changes:
-
-- Altering a column type for AO/CO tables requires only rewriting the column files for the specified column instead of the whole table.
-- The output of `EXPLAIN ANALYZE VERBOSE` now displays further information about JIT compilation.
-- Index-only scans are now enabled for append-optimized tables to improve performance.
-- The command `pg_dump` includes options to include or exclude leaf tables of partitioned tables.
-- The server configuration parameter `vacuum_cost_page_miss` has a new default value of 2.
-- New function and views `gp_toolkit.get_column_size(oid)`, `gp_toolkit.gp_column_size`, and `gp_toolkit.gp_column_size_summary`, that you can use to view column size and compression ratio for a given AO/AOCO table.
-- Greenplum Database now includes the following autovacuum server configuration parameters: [autovacuum_freeze_max_age](/oss/ref_guide/config_params/guc-list.html#autovacuum_freeze_max_age), [autovacuum_vacuum_cost_delay](/oss/ref_guide/config_params/guc-list.html#autovacuum_vacuum_cost_delay), [autovacuum_vacuum_scale_factor](/oss/ref_guide/config_params/guc-list.html#autovacuum_vacuum_scale_factor) and [autovacuum_vacuum_threshold](/oss/ref_guide/config_params/guc-list.html#autovacuum_vacuum_threshold).
-- `pg_stat_*` and `pg_statio_*` system views  now provide information for append-optimized tables and their auxiliary tables.
-- Greenplum Database now includes the following new `gp_` system views:
-
-  - gp_backend_memory_contexts
-  - gp_config
-  - gp_cursors
-  - gp_file_settings
-  - gp_replication_origin_status
-  - gp_replication_slots
-  - gp_settings
-  - gp_stat_activity
-  - gp_stat_all_indexes
-  - gp_stat_all_tables
-  - gp_stat_archiver
-  - gp_stat_bgwriter
-  - gp_stat_database
-  - gp_stat_database_conflicts
-  - gp_stat_gssapi
-  - gp_stat_operations
-  - gp_stat_progress_analyze
-  - gp_stat_progress_basebackup
-  - gp_stat_progress_cluster
-  - gp_stat_progress_copy
-  - gp_stat_progress_create_index
-  - gp_stat_progress_vacuum
-  - gp_stat_slru
-  - gp_stat_ssl
-  - gp_stat_subscription
-  - gp_stat_sys_indexes
-  - gp_stat_sys_tables
-  - gp_stat_user_functions
-  - gp_stat_user_indexes
-  - gp_stat_user_tables
-  - gp_stat_wal
-  - gp_stat_wal_receiver
-  - gp_stat_xact_all_tables
-  - gp_stat_xact_sys_tables
-  - gp_stat_xact_user_functions
-  - gp_stat_xact_user_tables
-  - gp_statio_all_indexes
-  - gp_statio_all_sequences
-  - gp_statio_all_tables
-  - gp_statio_sys_indexes
-  - gp_statio_sys_sequences
-  - gp_statio_sys_tables
-  - gp_statio_user_indexes
-  - gp_statio_user_sequences
-  - gp_statio_user_tables
-  - gp_stats
-  - gp_stats_ext
-
- Each is a cluster-wide view that displays from every primary segment the information reported by its corresponding `pg_` system view. For example, the new `gp_stat_bgwriter` view is a cluster-wide view that displays the `pg_stat_bgwriter` information from every primary segment. Each new `gp_` system view has identical columns to its corresponding `pg_` system view plus this additional column:
-
-    |column|type|references|description|
-    |------|----|----------|-----------|
-    |`gp_segment_id`|integer|Unique identifier of a segment (or coordinator) instance.|
-
-
 Greenplum Database provides the following system views.
 
 -   [gp_distributed_log](#gp_distributed_log)
@@ -83,18 +15,42 @@ Greenplum Database provides the following system views.
 -   [gp_transaction_log](#gp_transaction_log)
 -   [gpexpand.expansion_progress](#gpexpandexpansion_progress)
 -   [gp_stat_activity](#gp_stat_activity)
--   [gp_st_all_indexes](#gp_stat_all_indexes)
--   [gp_stat_all_tables](#gp_stat_all_tables)
--   [gp_stat_archiver](#gp_stat_archiver)
--   [gp_stat_bgwriter](#gp_stat_bgwriter)
--   [gp_stat_database](#gp_stat_database)
--   [gp_stat_database_conflicts](#gp_stat_database_conflicts)
--   [gp_stat_gssapi](#gp_stat_gssapi)
--   [gp_stat_operations](#gp_stat_operations)
+-   gp_st_all_indexes
+-   gp_stat_all_tables
+-   gp_stat_archiver
+-   gp_stat_bgwriter
+-   gp_stat_database
+-   gp_stat_database_conflicts
+-   gp_stat_gssapi
+-   gp_stat_operations
 -   [gp_stat_replication](#gp_stat_replication)
--   [gp_stat_resqueues](#gp_stat_resqueues)
--   [gp_stat_slru](#gp_stat_slru)
--   [gp_stat_ssl](#gp_stat_ssl)
+-   gp_stat_resqueues
+-   gp_stat_slru
+-   gp_stat_ssl
+-   gp_stat_subscription
+-   gp_stat_sys_indexes
+-   gp_stat_sys_tablest
+-   gp_stat_user_functions
+-   gp_stat_user_indexes
+-   gp_stat_user_tables
+-   gp_stat_wal_receiver
+-   gp_stat_xact_all_tables
+-   gp_stat_xact_sys_tables
+-   gp_stat_xact_user_functions
+-   gp_stat_xact_user_tables
+-   gp_stat_wal
+-   gp_stat_writer
+-   gp_statio_all_indexes
+-   gp_statio_all_sequences
+-   gp_statio_all_tables
+-   gp_statio_sys_indexes
+-   gp_statio_sys_sequences
+-   gp_statio_sys_tables
+-   gp_statio_user_indexes
+-   gp_statio_user_sequences
+-   gp_statio_user_tables
+-   gp-stats
+-   gp_stats_ext
 -   [pg_backend_memory_contexts](#pg_backend_memory_contexts)
 -   [pg_cursors](#pg_cursors)
 -   [pg_matviews](#pg_matviews)
@@ -120,7 +76,7 @@ For more information about the standard system views supported in PostgreSQL and
 -   [Statistics Collector Views](https://www.postgresql.org/docs/12/monitoring-stats.html#MONITORING-STATS-VIEWS)
 -   [The Information Schema](https://www.postgresql.org/docs/12/information-schema.html)
 
-## gp_distributed_log
+## <a id="gp_distributed_log"></a>gp_distributed_log 
 
 The `gp_distributed_log` view contains status information about distributed transactions and their associated local transactions. A distributed transaction is a transaction that involves modifying data on the segment instances. Greenplum's distributed transaction manager ensures that the segments stay in synch. This view allows you to see the status of distributed transactions.
 
@@ -133,7 +89,6 @@ The `gp_distributed_log` view contains status information about distributed tran
 |`status`|text| |The status of the distributed transaction \(Committed or Aborted\).|
 |`local_transaction`|xid| |The local transaction ID.|
 
-
 ## gp_distributed_xacts
 
 The `gp_distributed_xacts` view contains information about Greenplum Database distributed transactions. A distributed transaction is a transaction that involves modifying data on the segment instances. Greenplum's distributed transaction manager ensures that the segments stay in synch. This view allows you to see the currently active sessions and their associated distributed transactions.
@@ -145,8 +100,6 @@ The `gp_distributed_xacts` view contains information about Greenplum Database di
 |`state`|text| |The current state of this session with regards to distributed transactions.|
 |`gp_session_id`|int| |The ID number of the Greenplum Database session associated with this transaction.|
 |`xmin_distributed _snapshot`|xid| |The minimum distributed transaction number found among all open transactions when this transaction was started. It is used for MVCC distributed snapshot purposes.|
-
-
 
 ## gp_endpoints
 
@@ -510,62 +463,16 @@ The `gp_stat_activity` view is a cluster-wide view that displays the [`pg_stat_a
                 <p>Type of current backend. Possible types are <code class="literal">autovacuum launcher</code>, <code class="literal">autovacuum worker</code>, <code class="literal">logical replication launcher</code>, <code class="literal">logical replication worker</code>, <code class="literal">parallel worker</code>, <code class="literal">background writer</code>, <code class="literal">client backend</code>, <code class="literal">checkpointer</code>, <code class="literal">archiver</code>, <code class="literal">startup</code>, <code class="literal">walreceiver</code>, <code class="literal">walsender</code> and <code class="literal">walwriter</code>. In addition, background workers registered by extensions may have additional types.</p>
               </td>
             </tr>
+            <tr>
+              <td class="catalog_table_entry">
+                <p class="column_definition"><code class="structfield">gp_segment_id</code> <code class="type">bigint</code></p>
+                <p>Unique identifier of a segment (or coordinator) instance.</p>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
     </div>
-
-
-It is identical to the `pg_stat_activity` view, except that it includes this additional column: 
-
-column|type|references|description|
-|------|----|----------|-----------|
-|`gp_segment_id`|integer|Unique identifier of a segment (or coordinator) instance.|
-
-## gp_stat_all_indexes
-
-The `gp_stat_all_indexes` view is a cluster-wide view that displays the [`pg_stat_all_indexes`](#pg_stat_all_indexes) information from every primary segment. It is identical to the `pg_stat_all_indexes` view, except that it includes this additional column: 
-
-column|type|references|description|
-|------|----|----------|-----------|
-|`gp_segment_id`|integer|Unique identifier of a segment (or coordinator) instance.|
-
-## gp_stat_all_tables
-
-The `gp_stat_all_tables` view is a cluster-wide view that displays the [`pg_stat_all_tables`](#pg_stat_all_tables) information from every primary segment. It is identical to the `pg_stat_all_tables` view, except that it includes this additional column: 
-
-column|type|references|description|
-|------|----|----------|-----------|
-|`gp_segment_id`|integer|Unique identifier of a segment (or coordinator) instance.|
-
-## gp_stat_archiver
-
-The `gp_stat_archiver` view is a cluster-wide view that displays the `pg_stat_archiver` information from every primary segment. It is identical to the `pg_stat_archiver` view, except that it includes this additional column: 
-
-column|type|references|description|
-|------|----|----------|-----------|
-|`gp_segment_id`|integer|Unique identifier of a segment (or coordinator) instance.|
-
-## gp_stat_bgwriter
-
-The `gp_stat_bgwriter` view is a cluster-wide view that displays the `pg_stat_bgwriter` information from every primary segment. It is identical to the `pg_stat_bgwriter` view, except that it includes this additional column: 
-
-column|type|references|description|
-|------|----|----------|-----------|
-|`gp_segment_id`|integer|Unique identifier of a segment (or coordinator) instance.|
-
-
-## gp_stat_database
-
-
-## gp_stat_database_conflicts
-
-
-## gp_stat_gssapi
-
-
-## gp_stat_operations
-
 
 ## gp_stat_replication 
 
@@ -591,90 +498,6 @@ The `gp_stat_replication` view contains replication statistics of the `walsender
 |`sync_priority`|integer| |Priority. The value is `1`.|
 |`sync_state`|text| |`walsender`synchronization state. The value is `sync`.|
 |`sync_error`|text| |`walsender` synchronization error. `none` if no error.|
-
-
-## gp_stat_resqueue
-
-## gp_stat_slru
-
-
-## gp_stat_ssl
-
-
-## gp_stat_subscription
-
-
-## gp_stat_sys_indexes
-
-
-## gp_stat_sys_tables
-
-
-## gp_stat_user_functions
-
-
-## gp_stat_user_indexes
-
-
-## gp_stat_user_tables
-
-
-## gp_stat_wal_receiver
-
-
-## gp_stat_xact_all_tables
-
-
-## gp_stat_xact_sys_tables
-
-
-## gp_stat_xact_user_functions
-
-
-## gp_stat_xact_user_tables
-
-
-## gp_stat_wal
-
-
-## gp_stat_writer
-
-
-
-
-## gp_statio_all_indexes
-
-
-## gp_statio_all_sequences
-
-
-## gp_statio_all_tables
-
-
-## gp_statio_sys_indexes
-
-
-## gp_statio_sys_sequences
-
-
-## gp_statio_sys_tables
-
-
-## gp_statio_user_indexes
-
-
-## gp_statio_user_sequences
-
-
-## gp_statio_user_tables
-
-
-
-## gp-stats
-
-
-## gp_stats_ext
-
 
 ## pg_backend_memory_contexts
 
@@ -829,7 +652,6 @@ The maximum length of the query text string stored in the column `query` can be 
 |`rsgid`|oid|pg\_resgroup.oid|Resource group OID or `0`.<br/><br/>See [Note](#rsg_note).|
 |`rsgname`|text|pg\_resgroup.rsgname|Resource group name or `unknown`.<br/><br/>See [Note](#rsg_note).|
 
-
 ## pg_stat_all_indexes
 
 The `pg_stat_all_indexes` view shows one row for each index in the current database that displays statistics about accesses to that specific index.
@@ -846,7 +668,6 @@ The `pg_stat_user_indexes` and `pg_stat_sys_indexes` views contain the same info
 |`idx_scan`|bigint|Total number of index scans initiated on this index from all segment instances|
 |`idx_tup_read`|bigint|Number of index entries returned by scans on this index|
 |`idx_tup_fetch`|bigint|Number of live table rows fetched by simple index scans using this index|
-
 
 ## pg_stat_all_tables
 
@@ -917,15 +738,6 @@ The `pg_stat_resqueues` view allows administrators to view metrics about a resou
 |`elapsed_exec`|bigint| |Total elapsed execution time for statements submitted through this resource queue.|
 |`elapsed_wait`|bigint| |Total elapsed time that statements submitted through this resource queue had to wait before they were run.|
 
-
-For more information about the standard system views supported in PostgreSQL and Greenplum Database, see the following sections of the PostgreSQL documentation:
-
--   [System Views](https://www.postgresql.org/docs/12/views-overview.html)
--   [Statistics Collector Views](https://www.postgresql.org/docs/12/monitoring-stats.html#MONITORING-STATS-VIEWS)
--   [The Information Schema](https://www.postgresql.org/docs/12/information-schema.html)
-
-
-
 ## pg_stat_slru
 
 Greenplum Database accesses certain on-disk information via SLRU (simple least-recently-used) caches. The `pg_stat_slru` view contains one row for each tracked SLRU cache, showing statistics about access to cached pages.
@@ -941,7 +753,6 @@ Greenplum Database accesses certain on-disk information via SLRU (simple least-r
 |`flushes`|bigint| |Number of flushes of dirty data for this SLRU.|
 |`truncates`|bigint| |Number of truncates for this SLRU.|
 |`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
-
 
 ## pg_stat_wal
 
@@ -1007,21 +818,5 @@ The `pg_stats` view provides access to the information stored in the `pg_statist
 |`most_common_base_freqs`|real[]| |A list of the base frequencies of the most common combinations, i.e., product of per-value frequencies. \(Null when `most_common_vals` is.\)|
 
 The maximum number of entries in the array fields can be controlled on a column-by-column basis using the `ALTER TABLE SET STATISTICS` command, or globally by setting the [default\_statistics\_target](../config_params/guc-list.html#default_statistics_target) run-time configuration parameter.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 **Parent topic:** [System Catalogs](../system_catalogs/catalog_ref.html)
