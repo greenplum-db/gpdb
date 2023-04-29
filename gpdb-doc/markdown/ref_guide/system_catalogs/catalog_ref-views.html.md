@@ -89,7 +89,7 @@ The `gp_distributed_log` view contains status information about distributed tran
 |`status`|text| |The status of the distributed transaction \(Committed or Aborted\).|
 |`local_transaction`|xid| |The local transaction ID.|
 
-## gp_distributed_xacts
+## <a id="gp_distributed_xacts"></a>gp_distributed_xacts 
 
 The `gp_distributed_xacts` view contains information about Greenplum Database distributed transactions. A distributed transaction is a transaction that involves modifying data on the segment instances. Greenplum's distributed transaction manager ensures that the segments stay in synch. This view allows you to see the currently active sessions and their associated distributed transactions.
 
@@ -101,7 +101,7 @@ The `gp_distributed_xacts` view contains information about Greenplum Database di
 |`gp_session_id`|int| |The ID number of the Greenplum Database session associated with this transaction.|
 |`xmin_distributed _snapshot`|xid| |The minimum distributed transaction number found among all open transactions when this transaction was started. It is used for MVCC distributed snapshot purposes.|
 
-## gp_endpoints
+## <a id="gp_endpoints"></a>gp_endpoints 
 
 The `gp_endpoints` view lists the endpoints created for all active parallel retrieve cursors declared by the current session user in the current database. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints created for all parallel retrieve cursors declared by all users in the current database.
 
@@ -119,7 +119,7 @@ Endpoints exist only for the duration of the transaction that defines the parall
 |state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
-## gp_pgdatabase
+## <a id="gp_pgdatabase"></a>gp_pgdatabase
 
 The `gp_pgdatabase` view displays the status of Greenplum segment instances and whether they are acting as the mirror or the primary. The Greenplum fault detection and recovery utilities use this view internally to identify failed segments.
 
@@ -131,7 +131,7 @@ The `gp_pgdatabase` view displays the status of Greenplum segment instances and 
 |`valid`|boolean|gp\_segment\_configuration.mode|Whether or not this instance is up and the mode is either *s* (synchronized) or *n* (not in sync).|
 |`definedprimary`|boolean|gp\_segment\_ configuration.preferred\_role|Whether or not this instance was defined as the primary \(as opposed to the mirror\) at the time the system was initialized.|
 
-## gp_resgroup_config
+## <a id="gp_resgroup_config"></a>gp_resgroup_config
 
 The `gp_toolkit.gp_resgroup_config` view allows administrators to see the current CPU, memory, and concurrency limits for a resource group.
 
@@ -149,8 +149,7 @@ The `gp_toolkit.gp_resgroup_config` view allows administrators to see the curren
 |`memory_auditor`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 6|The memory auditor in use for the resource group.|
 |`cpuset`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 7|The CPU cores reserved for the resource group, or -1.|
 
-
-## gp_resgroup_status
+## <a id="gp_resgroup_status"></a>gp_resgroup_status
 
 The `gp_toolkit.gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.
 
@@ -190,7 +189,7 @@ For each resource group that you assign to an external component, the `memory_us
 "1":{"used":11, "limit_granted":15}
 ```
 
-## gp_resgroup_status_per_host
+## <a id="gp_resgroup_status_per_host"></a>gp_resgroup_status_per_host
 
 The `gp_toolkit.gp_resgroup_status_per_host` view allows administrators to see current memory and CPU usage and allocation for each resource group on a per-host basis.
 
@@ -211,7 +210,7 @@ Memory amounts are specified in MBs.
 |`memory_shared_used`|integer| |The group shared memory used by the resource group on the host. If any global shared memory is used by the resource group, this amount is included in the total as well.|
 |`memory_shared_available`|integer| |The amount of group shared memory available to the resource group on the host. Resource group global shared memory is not included in this total.|
 
-## gp_resqueue_status
+## <a id="gp_resqueue_status"></a>gp_resqueue_status
 
 The `gp_toolkit.gp_resqueue_status` view allows administrators to see status and activity for a resource queue. It shows how many queries are waiting to run and how many queries are currently active in the system from a particular resource queue.
 
@@ -230,7 +229,7 @@ The `gp_toolkit.gp_resqueue_status` view allows administrators to see status and
 |`rsqwaiters`|integer|gp\_toolkit.gp\_resqueue\_ rsqwaiter|The number of statements currently waiting in the resource queue.|
 |`rsqholders`|integer|gp\_toolkit.gp\_resqueue\_ rsqholders|The number of statements currently running on the system from this resource queue.|
 
-## gp_segment_endpoints
+## <a id="gp_segment_endpoints"></a>gp_segment_endpoints
 
 The `gp_segment_endpoints` view lists the endpoints created in the QE for all active parallel retrieve cursors declared by the current session user. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints on the QE created for all parallel retrieve cursors declared by all users.
 
@@ -249,7 +248,7 @@ Endpoints exist only for the duration of the transaction that defines the parall
 |endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 |cursorname|text| |The name of the parallel retrieve cursor.|
 
-## gp_session_endpoints
+## <a id="gp_session_endpoints"></a>gp_session_endpoints
 
 The `gp_session_endpoints` view lists the endpoints created for all active parallel retrieve cursors declared by the current session user in the current session.
 
@@ -267,7 +266,7 @@ Endpoints exist only for the duration of the transaction that defines the parall
 |state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
-## gp_transaction_log
+## <a id="gp_transaction_log"></a>gp_transaction_log
 
 The `gp_transaction_log` view contains status information about transactions local to a particular segment. This view allows you to see the status of local transactions.
 
@@ -278,7 +277,7 @@ The `gp_transaction_log` view contains status information about transactions loc
 |`transaction`|xid| |The local transaction ID.|
 |`status`|text| |The status of the local transaction \(Committed or Aborted\).|
 
-## gpexpand.expansion_progress
+## <a id="gpexpand.expansion_progress"></a>gpexpand.expansion_progress
 
 The `gpexpand.expansion_progress` view contains information about the status of a system expansion operation. The view provides calculations of the estimated rate of table redistribution and estimated time to completion.
 
@@ -289,7 +288,7 @@ Status for specific tables involved in the expansion is stored in [gpexpand.stat
 |`name`|text| |Name for the data field provided. Includes:<br/><br/>Bytes Left<br/><br/>Bytes Done<br/><br/>Estimated Expansion Rate<br/><br/>Estimated Time to Completion<br/><br/>Tables Expanded<br/><br/>Tables Left|
 |`value`|text| |The value for the progress data. For example: `Estimated Expansion Rate - 9.75667095996092 MB/s`|
 
-## gp_stat_activity
+## <a id="gp_stat_activity"></a>gp_stat_activity
 
 The `gp_stat_activity` view is a cluster-wide view that displays the [`pg_stat_activity` ](#pg_stat_activity) information from every primary segment. 
 
@@ -474,7 +473,7 @@ The `gp_stat_activity` view is a cluster-wide view that displays the [`pg_stat_a
       </div>
     </div>
 
-## gp_stat_replication 
+## <a id="gp_stat_replication"></a>gp_stat_replication
 
 The `gp_stat_replication` view contains replication statistics of the `walsender` process that is used for Greenplum Database Write-Ahead Logging \(WAL\) replication when coordinator or segment mirroring is enabled.
 
@@ -499,7 +498,7 @@ The `gp_stat_replication` view contains replication statistics of the `walsender
 |`sync_state`|text| |`walsender`synchronization state. The value is `sync`.|
 |`sync_error`|text| |`walsender` synchronization error. `none` if no error.|
 
-## pg_backend_memory_contexts
+## <a id="pg_backend_memory_contexts"></a>pg_backend_memory_contexts
 
 The `pg_backend_memory_contexts` system view displays all of the memory contexts in use by the server process attached to the current session.
 
@@ -517,7 +516,7 @@ The `pg_backend_memory_contexts` system view displays all of the memory contexts
 |`free_chunks`|int8| The total number of free chunks.|
 |`used_bytes`|int8| Used space in bytes.|
 
-## pg_cursors
+## <a id="pg_cursors"></a>pg_cursors
 
 The `pg_cursors` view lists the currently available cursors. Cursors can be defined in one of the following ways:
 
@@ -542,7 +541,7 @@ Cursors exist only for the duration of the transaction that defines them, unless
 |`creation_time`|timestamptz| |The time at which the cursor was declared.|
 |`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
 
-## pg_matviews
+## <a id="pg_matviews"></a>pg_matviews
 
 The view `pg_matviews` provides access to information about each materialized view in the database.
 
@@ -556,7 +555,7 @@ The view `pg_matviews` provides access to information about each materialized vi
 |`ispopulated`|boolean||True if the materialized view is currently populated|
 |`definition`|text||Materialized view definition \(a reconstructed `SELECT` command\)|
 
-## pg_max_external_files
+## <a id="pg_max_external_files"></a>pg_max_external_files
 
 The `pg_max_external_files` view shows the maximum number of external table files allowed per segment host when using the external table `file` protocol.
 
@@ -565,7 +564,7 @@ The `pg_max_external_files` view shows the maximum number of external table file
 |`hostname`|name| |The host name used to access a particular segment instance on a segment host.|
 |`maxfiles`|bigint| |Number of primary segment instances on the host.|
 
-## pg_partitions
+## <a id="pg_partitions"></a>pg_partitions
 
 The `pg_partitions` system view is used to show the structure of a partitioned table.
 
@@ -593,7 +592,7 @@ The `pg_partitions` system view is used to show the structure of a partitioned t
 |`parenttablespace`|text| |The tablespace of the parent table one level up from this partition.|
 |`partitiontablespace`|text| |The tablespace of this partition.|
 
-## pg_policies
+## <a id="pg_policies"></a>pg_policies
 
 The `pg_policies` view provides access to information about each row-level security policy in the database.
 
@@ -610,7 +609,7 @@ The `pg_policies` view provides access to information about each row-level secur
 
 > **Note**  Policies stored in `pg_policy` are applied only when `pg_class.relrowsecurity` is set for their table.
 
-## pg_resqueue_attributes
+## <a id="pg_resqueue_attributes"></a>pg_resqueue_attributes
 
 > **Note** The `pg_resqueue_attributes` view is valid only when resource queue-based resource management is active.
 
@@ -623,7 +622,7 @@ The `pg_resqueue_attributes` view allows administrators to see the attributes se
 |`resetting`|text| |The current value of a resource queue attribute.|
 |`restypid`|integer| |System assigned resource type id.|
 
-## pg_stat_activity
+## <a id="pg_stat_activity"></a>pg_stat_activity
 
 The `pg_stat_activity` view shows one row per server process with details about the associated user session and query. The columns that report data on the current query are available unless the parameter `stats_command_string` has been turned off. Furthermore, these columns are only visible if the user examining the view is a superuser or the same as the user owning the process being reported on.
 
@@ -652,7 +651,7 @@ The maximum length of the query text string stored in the column `query` can be 
 |`rsgid`|oid|pg\_resgroup.oid|Resource group OID or `0`.<br/><br/>See [Note](#rsg_note).|
 |`rsgname`|text|pg\_resgroup.rsgname|Resource group name or `unknown`.<br/><br/>See [Note](#rsg_note).|
 
-## pg_stat_all_indexes
+## <a id="pg_stat_all_indexes"></a>pg_stat_all_indexes
 
 The `pg_stat_all_indexes` view shows one row for each index in the current database that displays statistics about accesses to that specific index.
 
@@ -669,7 +668,7 @@ The `pg_stat_user_indexes` and `pg_stat_sys_indexes` views contain the same info
 |`idx_tup_read`|bigint|Number of index entries returned by scans on this index|
 |`idx_tup_fetch`|bigint|Number of live table rows fetched by simple index scans using this index|
 
-## pg_stat_all_tables
+## <a id="pg_stat_all_tables"></a>pg_stat_all_tables
 
 The `pg_stat_all_tables` view shows one row for each table in the current database \(including TOAST tables\) to display statistics about accesses to that specific table.
 
@@ -700,7 +699,7 @@ The `pg_stat_user_tables` and `pg_stat_sys_table` views contain the same informa
 |`analyze_count`|bigint|Number of times this table has been manually analyzed|
 |`autoanalyze_count`|bigint|Number of times this table has been analyzed by the autovacuum daemon|
 
-## pg_stat_replication 
+## <a id="pg_stat_replication"></a>pg_stat_replication
 
 The `pg_stat_replication` view contains metadata of the `walsender` process that is used for Greenplum Database coordinator mirroring.
 
@@ -723,7 +722,7 @@ The `pg_stat_replication` view contains metadata of the `walsender` process that
 |`sync_priority`|text| |Priority. the value is `1`.|
 |`sync_state`|text| |WAL sender synchronization state. The value is `sync`.|
 
-## pg_stat_resqueues
+## <a id="pg_stat_resqueues"></a>pg_stat_resqueues
 
 > **Note** The `pg_stat_resqueues` view is valid only when resource queue-based resource management is active.
 
@@ -738,7 +737,7 @@ The `pg_stat_resqueues` view allows administrators to view metrics about a resou
 |`elapsed_exec`|bigint| |Total elapsed execution time for statements submitted through this resource queue.|
 |`elapsed_wait`|bigint| |Total elapsed time that statements submitted through this resource queue had to wait before they were run.|
 
-## pg_stat_slru
+## <a id="pg_stat_slru"></a>pg_stat_slru
 
 Greenplum Database accesses certain on-disk information via SLRU (simple least-recently-used) caches. The `pg_stat_slru` view contains one row for each tracked SLRU cache, showing statistics about access to cached pages.
 
@@ -754,7 +753,7 @@ Greenplum Database accesses certain on-disk information via SLRU (simple least-r
 |`truncates`|bigint| |Number of truncates for this SLRU.|
 |`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
-## pg_stat_wal
+## <a id="pg_stat_wal"></a>pg_stat_wal
 
 The `pg_stat_wal` view shows data about the WAL activity of the cluster. It contains always a single row.
 
@@ -770,7 +769,7 @@ The `pg_stat_wal` view shows data about the WAL activity of the cluster. It cont
 |`wal_sync_time`|double precision| |Total amount of time spent syncing WAL files to disk, in milliseconds (if `track_wal_io_timing` is enabled, otherwise zero).|
 |`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
-## pg_stats
+## <a id="pg_stats"></a>pg_stats
 
 The `pg_stats` view provides access to the information stored in the `pg_statistic` catalog. This view allows access only to rows of `pg_statistic` that correspond to tables the user has permission to read, and therefore it is safe to allow public read access to this view.
 
@@ -795,7 +794,7 @@ The `pg_stats` view provides access to the information stored in the `pg_statist
 
 The maximum number of entries in the array fields can be controlled on a column-by-column basis using the `ALTER TABLE SET STATISTICS` command, or globally by setting the [default\_statistics\_target](../config_params/guc-list.html#default_statistics_target) run-time configuration parameter.
 
-## pg_stats_ext
+## <a id="pg_stats_ext"></a>pg_stats_ext
 
 The `pg_stats` view provides access to the information stored in the `pg_statistic_ext` and `pg_statistic_ext_data` catalog tables. This view allows access only to rows of `pg_statistic_ext` and `pg_statistic_ext_data` that correspond to tables the user has permission to read, and therefore it is safe to allow public read access to this view.
 
