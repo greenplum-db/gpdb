@@ -1,4 +1,4 @@
-# storage_rca_collector 
+# gpsupport storage_rca_collector 
 
 This tool collects storage-related table data and generates an output file which can be provided to VMware Customer Support for diagnosis of storage-related errors or system failures.
 
@@ -50,31 +50,31 @@ The tool also collects the following information:
 Collect storage root cause analysis artifacts only for coordinator, database `postgres`, and table `test_table`:
 
 ```
-gpmt storage_rca_collector -db postgres -t test_table
+gpsupport storage_rca_collector -db postgres -t test_table
 ```
 
 Collect storage root cause analysis artifacts for primary segment with contentid [0,1], database `postgres`, and table `test_table`:
 
 ```
-gpmt storage_rca_collector -db postgres -c 0,1 -t test_table
+gpsupport storage_rca_collector -db postgres -c 0,1 -t test_table
 ```
 
 Collect storage root cause analysis artifacts for primary segment with contentid [0,1], database `postgres`, and table `test_table`, with prompt deactivated:
 
 ```
-gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -a
+gpsupport storage_rca_collector -db postgres -c 0,1 -t test_table -a
 ```
 
 Collect storage rca artifacts for primary segment with contentid [0,1], database `postgres`, and table `test_table` and also collect transaction logs:
 
 ```
-gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -transLog
+gpsupport storage_rca_collector -db postgres -c 0,1 -t test_table -transLog
 ```
 
 Collect storage rca artifacts for primary segment with contentid [0,1], database `postgres` and table `test_table` and output to a specified directory location.
 
 ```
-gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -dir <dir>
+gpsupport storage_rca_collector -db postgres -c 0,1 -t test_table -dir <dir>
 ```
 
 > **Note** Output files follow the naming convention \<database name>\_\<dbid>\_\<artifact name>.

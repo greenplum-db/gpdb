@@ -1,11 +1,11 @@
-# gpmt gp_log_collector 
+# gpsupport gp_log_collector 
 
 This tool collects Greenplum and system log files, along with the relevant configuration parameters, and generates a file which can be provided to VMware Customer Support for diagnosis of errors or system failures.
 
 ## <a id="usage"></a>Usage 
 
 ```
-gpmt gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <host1, host2,...>]
+gpsupport gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <host1, host2,...>]
 [ -start <YYYY-MM-DD> ] [ -end <YYYY-MM-DD> ]
 [ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-coordinator] [-with-gpbackup] [-with-gptext] [-with-gptext-only] [-with-gpcc] [-with-gpss] [-gpss_logdir <gpss_log_directory>] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
 ```
@@ -48,7 +48,7 @@ gpmt gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <h
 -with-gpbackup 
 :   Beginning with Greenplum 6.22, this option enables you to collect logs related to backup and restore. 
 
-With this option, `gpmt` collects these log files from `$GPADMIN_HOME/gpAdminLogs`:
+With this option, `gpsupport` collects these log files from `$GPADMIN_HOME/gpAdminLogs`:
 
 - `gpbackup_.log`
 - `gpbackup_helper_.log`
@@ -82,7 +82,7 @@ Also, the `pg_log` file is collected from the coordinator and segment hosts.
 - The output of the `gppkg -q --all` command
 
 -with-gpss 
-:  Collect log files related to Greenplum Streaming Server. If you do not specify a directory with the `-gpsslogdir` option, gpmt collects logs from the `gpAdminLogs` directory. Log files are of the format `gpss_<date>.log`.
+:  Collect log files related to Greenplum Streaming Server. If you do not specify a directory with the `-gpsslogdir` option, gpsupport collects logs from the `gpAdminLogs` directory. Log files are of the format `gpss_<date>.log`.
 
 -with-pxf
 :   Collect all PXF logs along with Greenplum logs.
@@ -115,24 +115,24 @@ The tool also collects the following information:
 Collect Greenplum coordinator and segment logs listed in a hostfile from today:
 
 ```
-gpmt gp_log_collector -hostfile ~/gpconfig/hostfile
+gpsupport gp_log_collector -hostfile ~/gpconfig/hostfile
 ```
 
 Collect logs for any segments marked down from 21-03-2016 until today:
 
 ```
-gpmt gp_log_collector -failed-segs -start 2016-03-21
+gpsupport gp_log_collector -failed-segs -start 2016-03-21
 ```
 
 Collect logs from host `sdw2.gpdb.local` between 2016-03-21 and 2016-03-23:
 
 ```
-gpmt gp_log_collector -failed-segs -start 2016-03-21 -end 2016-03-21
+gpsupport gp_log_collector -failed-segs -start 2016-03-21 -end 2016-03-21
 ```
 
 Collect only GPText logs for all segments, without any Greenplum logs:
 
 ```
-gpmt gp_log_collector -with-gptext-only
+gpsupport gp_log_collector -with-gptext-only
 ```
 
