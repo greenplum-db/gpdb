@@ -71,7 +71,7 @@ Use [DROP DATABASE](DROP_DATABASE.HTML) to remove a database.
 
 The program [createdb](../../utility_guide/ref/createdb.html) is a wrapper program around this command, provided for convenience.
 
-Database-level configuration parameters \(set via [ALTER DATABASE](\)ALTER_DATABASE.html) and database-level permissions \(set via [GRANT](GRANT.html)\) are not copied from the template database.
+Database-level configuration parameters \(set via [ALTER DATABASE](ALTER_DATABASE.html) and database-level permissions \(set via [GRANT](GRANT.html)\) are not copied from the template database.
 
 Although it is possible to copy a database other than `template1` by specifying its name as the template, this is not \(yet\) intended as a general-purpose `“COPY DATABASE”` facility. The principal limitation is that no other sessions can be connected to the template database while it is being copied. `CREATE DATABASE` will fail if any other connection exists when it starts; otherwise, new connections to the template database are locked out until `CREATE DATABASE` completes.
 
