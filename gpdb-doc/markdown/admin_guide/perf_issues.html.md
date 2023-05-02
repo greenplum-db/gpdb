@@ -48,11 +48,9 @@ See [Query Profiling](query/topics/query-profiling.html) for more information ab
 
 ### <a id="topic7"></a>Tuning Statistics Collection 
 
-The following configuration parameters control the amount of data sampled for statistics collection:
+The [default_statistics_target](../ref_guide/config_params/guc-list.html#default_statistics_target) server configuration parameter controls the amount of data sampled for statistics collection.
 
--   `default_statistics_target`
-
-These parameters control statistics sampling at the system level. It is better to sample only increased statistics for columns used most frequently in query predicates. You can adjust statistics for a particular column using the command:
+This parameter controls statistics sampling at the system level. It is better to sample only increased statistics for columns used most frequently in query predicates. You can adjust statistics for a particular column using the command:
 
 `ALTER TABLE...SET STATISTICS`
 
@@ -60,10 +58,11 @@ For example:
 
 ```
 ALTER TABLE sales ALTER COLUMN region SET STATISTICS 50;
-
 ```
 
 This is equivalent to changing `default_statistics_target` for a particular column. Subsequent `ANALYZE` operations will then gather more statistics data for that column and produce better query plans as a result.
+
+Refer to [Configuring the Statistics Target](../best_practices/analyze.html) for more information on configuring the statistics target.
 
 ## <a id="topic8"></a>Optimizing Data Distribution 
 

@@ -32,13 +32,43 @@ Run `ANALYZE`:
 
 `ANALYZE` requires only a read lock on the table, so it may be run in parallel with other database activity, but do not run `ANALYZE` while performing loads, `INSERT`, `UPDATE`, `DELETE`, and `CREATE INDEX` operations.
 
-## <a id="conauto"></a>Configuring Automatic Statistics Collection 
+Analyzing a severely bloated table can generate poor statistics if the sample contains empty pages, so it is good practice to vacuum a bloated table before analyzing it.
 
-The `gp_autostats_mode` configuration parameter, together with the `gp_autostats_on_change_threshold` parameter, determines when an automatic analyze operation is triggered. When automatic statistics collection is triggered, the planner adds an `ANALYZE` step to the query.
+## <a id="statcfg"></a>Configuring Statistics
 
-By default, `gp_autostats_mode` is `on_no_stats`, which triggers statistics collection for `CREATE TABLE AS SELECT`, `INSERT`, or `COPY` operations invoked by the table owner on any table that has no existing statistics.
+### <a id="stattarg"></a>Configuring the Statistics Target
 
-Setting `gp_autostats_mode` to `on_change` triggers statistics collection only when the number of rows affected exceeds the threshold defined by `gp_autostats_on_change_threshold`, which has a default value of 2147483647. The following operations invoked on a table by its owner can trigger automatic statistics collection with `on_change`: `CREATE TABLE AS SELECT`, `UPDATE`, `DELETE`, `INSERT`, and `COPY`.
+The statistics target is the size of the `most_common_vals`, `most_common_freqs`, and `histogram_bounds` arrays for an individual column. This size is governed by the [default_statistics_target](../ref_guide/config_params/guc-list.html#default_statistics_target) server configuration parameter, and the default is 100.
+
+You can also set the statistics target for individual columns using the `ALTER TABLE` command. For example, some queries can be improved by increasing the target for certain columns, especially columns that have irregular distributions. You can set the target to zero for columns that never contribute to query optimization. When the target is 0, `ANALYZE` ignores the column.
+
+The statistics target for a column can be set in the range 0 to 1000; set it to -1 to revert to using the system default statistics target.
+
+In general, larger target values increase the `ANALYZE` time, but may improve the quality of the Postgres Planner estimates.
+
+Setting the statistics target on a parent partition table affects the child partitions. If you set statistics to 0 on some columns on the parent table, the statistics for the same columns are set to 0 for all children partitions. However, if you later add or exchange another child partition, the new child partition will use either the default statistics target or, in the case of an exchange, the previous statistics target. Therefore, if you add or exchange child partitions, you should set the statistics targets on the new child table.
+
+### <a id="conauto"></a>Configuring Automatic Statistics Collection 
+
+Automatic statistics collection is governed by these server configuration parameters:
+
+|Configuration Parameter|Description|
+|--------------------|-----------|
+| [gp_autostats_allow_nonowner](../ref_guide/config_params/guc-list.html#gp_autostats_allow_nonowner) | Determines whether or not to allow Greenplum Database to trigger automatic statistics collection when a table is modified by a non-owner. |
+| [gp_autostats_mode](../ref_guide/config_params/guc-list.html#gp_autostats_mode) | Specifies the mode for triggering automatic statistics collection. |
+| [gp_autostats_mode_in_functions](../ref_guide/config_params/guc-list.html#gp_autostats_mode_in_functions) | Specifies the mode for triggering automatic statistics collection with `ANALYZE` for statements in procedural language functions. |
+| [gp_autostats_on_change_threshold](../ref_guide/config_params/guc-list.html#gp_autostats_on_change_threshold) | Specifies the threshold for automatic statistics collection when `gp_autostats_mode` is set to `on_change`. |
+| [log_autostats](../ref_guide/config_params/guc-list.html#log_autostats)  | Logs information about `ANALYZE` operations that Greenplum Database automatically initiated. |
+
+The `gp_autostats_mode` configuration parameter, together with the `gp_autostats_on_change_threshold` parameter, determines when an automatic analyze operation is triggered. When automatic statistics collection is triggered, the planner adds an `ANALYZE` step to the query. Possible `gp_autostats_mode`s are:
+
+-   `none` - Deactivate automatic statistics collection. *This is the default.*
+-   `on_no_stats` - Trigger an analyze operation for a table with no existing statistics when any of the commands `CREATE TABLE AS SELECT`, `INSERT`, or `COPY` are run on the table by the table owner.
+-   `on_change` - Trigger an analyze operation when any of the commands `CREATE TABLE AS SELECT`, `UPDATE`, `DELETE`, `INSERT`, or `COPY` are run on the table by the table owner, and the number of rows affected exceeds the threshold defined by the `gp_autostats_on_change_threshold` configuration parameter, which has a default value of 2147483647.
+
+The automatic statistics collection mode is set separately for commands that occur within a procedural language function, and is governed by the `gp_autostats_mode_in_functions` server configuration parameter which is set to `none` by default.
+
+With the `on_change` mode, `ANALYZE` is triggered only if the number of rows affected exceeds the threshold defined by the `gp_autostats_on_change_threshold` configuration parameter. The default value for this parameter is a very high value, 2147483647, which effectively deactivates automatic statistics collection; you must set the threshold to a lower number to enable it. The `on_change` mode could trigger large, unexpected analyze operations that could disrupt the system, so it is not recommended to set it globally. It could be useful in a session, for example to automatically analyze a table following a load.
 
 Setting the `gp_autostats_allow_nonowner` server configuration parameter to `true` also instructs Greenplum Database to trigger automatic statistics collection on a table when:
 
@@ -48,6 +78,8 @@ Setting the `gp_autostats_allow_nonowner` server configuration parameter to `tru
 Setting `gp_autostats_mode` to `none` deactivates automatics statistics collection.
 
 For partitioned tables, automatic statistics collection is not triggered if data is inserted from the top-level parent table of a partitioned table. But automatic statistics collection *is* triggered if data is inserted directly in a leaf table \(where the data is stored\) of the partitioned table.
+
+Finally, you can use the `log_autostats` configuration parameter to enable the logging of automatic statistics collection operations.
 
 **Parent topic:** [System Monitoring and Maintenance](maintenance.html)
 

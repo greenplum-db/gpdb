@@ -20,7 +20,6 @@ If a schema name is given \(for example, `CREATE STATISTICS myschema.mystat ...`
 ## <a id="section4"></a>Parameters 
 
 IF NOT EXISTS
-
 :   Do not throw an error if a statistics object with the same name already exists. Greenplum Database issues a notice in this case. Note that only the name of the statistics object is considered here, not the details of its definition.
 
 statistics\_name
