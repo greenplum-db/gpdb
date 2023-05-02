@@ -686,11 +686,9 @@ gpconfig -s 'gp_default_storage_options'
 
 |Value Range|Default|Set Classifications<sup>1</sup>|
 |-----------|-------|---------------------|
-|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|coordinator, session, reload|
+|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|coordinator, session, reload|
 
 > **Note** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
-
-> **Note** <sup>2</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
 ## <a id="gp_dispatch_keepalives_count"></a>gp\_dispatch\_keepalives\_count 
 
@@ -1223,6 +1221,15 @@ The default value is `false`, Greenplum Database does not display the additional
 |-----------|-------|-------------------|
 |Boolean|false|coordinator, session, reload|
 
+## <a id="gp_quickz_fallback"></a>gp\_quickz\_fallback
+
+Determines how Greenplum Database handles legacy SQL that specifies a compression type of QuickLZ, which is not supported in Greenplum Database 7 and later. When set to `true`, if legacy SQL specifies a compression type of QuickLZ, Greenplum Database will apply a compression type of zstd. When set to `false` -- the default -- specifying a compression type of QuickLZ will result in an error.
+
+When a user starts a session with Greenplum Database and issues a query, the system creates groups or 'gangs' of worker processes on each segment to do the work. `gp_print_create_gang_time` controls the display of additional information about gang creation, including gang reuse status and the shortest and longest connection establishment time to the segment.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_recursive_cte"></a>gp\_recursive\_cte 
 

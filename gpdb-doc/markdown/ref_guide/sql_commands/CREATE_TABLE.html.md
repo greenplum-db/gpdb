@@ -116,7 +116,7 @@ and index_parameters in `UNIQUE` and `PRIMARY KEY` constraints are:
 and storage_directive for a column is:
 
 ```
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
     [compresslevel={0-9}]
     [blocksize={8192-2097152} ]
 ```
@@ -128,7 +128,7 @@ and `storage_parameter` for a table or partition is:
    blocksize={8192-2097152}
    orientation={COLUMN|ROW}
    checksum={TRUE|FALSE}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
    analyze_hll_non_part_table={TRUE|FALSE}
@@ -471,18 +471,16 @@ checksum
 : This option is valid only for append-optimized tables \(`appendoptimized=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is cancelled. If you set the value to `FALSE` to deactivate checksum validation, checking the table data for on-disk corruption will not be performed.
 
 compresstype
-: Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ` <sup>1</sup> to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed and a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
+: Set to `ZLIB` \(the default\), `ZSTD`, or `RLE_TYPE` to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed and a good compression ratio, tunable with the `compresslevel` option. zlib is provided for backward compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
 
-<sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
-
-:    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
+:    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd or zlib compression algorithms when the same data value occurs in many consecutive rows.
 
 :    For columns of type `BIGINT`, `INTEGER`, `DATE`, `TIME`, or `TIMESTAMP`, delta compression is also applied if the `compresstype` option is set to `RLE_TYPE` compression. The delta compression algorithm is based on the delta between column values in consecutive rows and is designed to improve compression when data is loaded in sorted order or the compression is applied to column data that is in sorted order.
 
 :    For information about using table compression, see [Choosing the Table Storage Model](../../admin_guide/ddl/ddl-storage.html#topic1) in the *Greenplum Database Administrator Guide*.
 
 compresslevel
-: For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only be set to 1. If not declared, the default is 1. For `RLE_TYPE`, the compression level can be an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\).
+: For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. If not declared, the default is 1. For `RLE_TYPE`, the compression level can be an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\).
 
 :   The `compresslevel` option is valid only if `appendoptimized=TRUE`.
 

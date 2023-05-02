@@ -457,6 +457,7 @@ The following parameters provide compatibility with older PostgreSQL and Greenpl
 - [array_nulls](guc-list.html#array_nulls)
 - [backslash_quote](guc-list.html#backslash_quote)
 - [escape_string_warning](guc-list.html#escape_string_warning)
+- [gp_quicklz_fallback](guc-list.html#gp_quickz_fallback)
 - [quote_all_identifiers](guc-list.html#quote_all_identifiers)
 - [regex_flavor](guc-list.html#regex_flavor)
 - [standard_conforming_strings](guc-list.html#standard_conforming_strings)
