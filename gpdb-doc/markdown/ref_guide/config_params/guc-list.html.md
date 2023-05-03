@@ -676,6 +676,10 @@ gpconfig -s 'gp_default_storage_options'
 
 > **Note** <sup>2</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
+>**Note**
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
+
 ## <a id="gp_dispatch_keepalives_count"></a>gp\_dispatch\_keepalives\_count 
 
 Maximum number of TCP keepalive retransmits from a Greenplum Query Dispatcher to its Query Executors. It controls the number of consecutive keepalive retransmits that can be lost before a connection between a Query Dispatcher and a Query Executor is considered dead.

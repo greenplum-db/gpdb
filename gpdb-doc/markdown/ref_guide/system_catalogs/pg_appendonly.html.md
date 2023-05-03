@@ -22,5 +22,8 @@ The `pg_appendonly` table contains information about the storage options and oth
 
 > **Note** <sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
+>**Note**
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

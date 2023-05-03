@@ -30,6 +30,10 @@ where storage\_parameter is:
    [oids=FALSE]
 ```
 
+>**Note**
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
+
 ## <a id="section3"></a>Description 
 
 `CREATE TABLE AS` creates a table and fills it with data computed by a [SELECT](SELECT.html) command. The table columns have the names and data types associated with the output columns of the `SELECT`, however you can override the column names by giving an explicit list of new column names.
@@ -63,6 +67,10 @@ WITH \( storage\_parameter=value \)
 :   **orientation** — Set to `column` for column-oriented storage, or `row` \(the default\) for row-oriented storage. This option is only valid if `appendoptimized=TRUE`. Heap-storage tables can only be row-oriented.
 
 :   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is valid only if `appendoptimized=TRUE`.
+
+    >**Note**
+    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
 
     > **Note** <sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 

@@ -129,6 +129,9 @@ and storage\_parameter for the table is:
    [oids=FALSE]
 ```
 
+>**Note**
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
 and key\_action is:
 
 ```
@@ -205,6 +208,9 @@ where storage\_parameter for a partition is:
    fillfactor={10-100}
    [oids=FALSE]
 ```
+
+>**Note**
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
 
 ## <a id="section3"></a>Description 
 
@@ -367,6 +373,10 @@ WITH \( storage\_parameter=value \)
 :   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`1 to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
 
     > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
+
+    >**Note**
+    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
 
     The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
 

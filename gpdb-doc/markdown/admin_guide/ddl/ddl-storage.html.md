@@ -97,6 +97,9 @@ There are two types of in-database compression available in the Greenplum Databa
 -   Table-level compression is applied to an entire table.
 -   Column-level compression is applied to a specific column. You can apply different column-level compression algorithms to different columns.
 
+>**Note**: 
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
 The following table summarizes the available compression algorithms.
 
 |Table Orientation|Available Compression Types|Supported Algorithms|

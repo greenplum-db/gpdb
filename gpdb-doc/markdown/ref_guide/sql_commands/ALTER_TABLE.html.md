@@ -155,6 +155,9 @@ where storage\_parameter is:
    [oids=FALSE]
 ```
 
+>**Note**
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+
 ## <a id="section3"></a>Description 
 
 `ALTER TABLE` changes the definition of an existing table. There are several subforms:
