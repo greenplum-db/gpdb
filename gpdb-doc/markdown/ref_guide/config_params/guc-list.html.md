@@ -1225,8 +1225,6 @@ The default value is `false`, Greenplum Database does not display the additional
 
 Determines how Greenplum Database handles legacy SQL that specifies a compression type of QuickLZ, which is not supported in Greenplum Database 7 and later. When set to `true`, if legacy SQL specifies a compression type of QuickLZ, Greenplum Database will apply a compression type of zstd. When set to `false` -- the default -- specifying a compression type of QuickLZ will result in an error.
 
-When a user starts a session with Greenplum Database and issues a query, the system creates groups or 'gangs' of worker processes on each segment to do the work. `gp_print_create_gang_time` controls the display of additional information about gang creation, including gang reuse status and the shortest and longest connection establishment time to the segment.
-
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|off|coordinator, session, reload|
