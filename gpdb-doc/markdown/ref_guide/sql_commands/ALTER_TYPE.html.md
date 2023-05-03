@@ -33,7 +33,7 @@ where storage\_directive is:
 ```
 
 >**Note**
->Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 
 ## <a id="section3"></a>Description 
@@ -102,7 +102,7 @@ storage\_directive
     > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
     >**Note**
-    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 
 :   **COMPRESSLEVEL** — For Zstd compression, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. The QuickLZ compression level can only be set to 1. For `RLE_TYPE`, the compression level can be set to an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\). The default compression level is 1.

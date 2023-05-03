@@ -130,7 +130,7 @@ and storage\_parameter for the table is:
 ```
 
 >**Note**
->Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 and key\_action is:
 
@@ -210,7 +210,7 @@ where storage\_parameter for a partition is:
 ```
 
 >**Note**
->Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 ## <a id="section3"></a>Description 
 
@@ -375,7 +375,7 @@ WITH \( storage\_parameter=value \)
     > **Note** 1QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
     >**Note**
-    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 
     The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.

@@ -156,7 +156,7 @@ where storage\_parameter is:
 ```
 
 >**Note**
->Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 ## <a id="section3"></a>Description 
 

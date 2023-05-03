@@ -677,7 +677,7 @@ gpconfig -s 'gp_default_storage_options'
 > **Note** <sup>2</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
 >**Note**
->Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+>Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 
 ## <a id="gp_dispatch_keepalives_count"></a>gp\_dispatch\_keepalives\_count 

@@ -197,7 +197,7 @@ compression\_type
     > **Note** <sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
     >**Note**
-    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum Database.
+    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 
 compression\_level
