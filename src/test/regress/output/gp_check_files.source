@@ -7,6 +7,8 @@
 -- m/aovisimap_\d+/
 -- s/aovisimap_\d+/aovisimap_xxx/g
 -- end_matchsubs
+-- start from a clean state
+checkpoint;
 -- we'll use a specific tablespace to test
 CREATE TABLESPACE checkfile_ts LOCATION '@testtablespace@';
 set default_tablespace = checkfile_ts;

@@ -52,7 +52,6 @@ test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_
 test: spi_processed64bit
 test: gp_lock
 test: gp_tablespace_with_faults
-test: gp_check_files
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
 
@@ -346,5 +345,8 @@ test: enum_dist_part_ban
 
 # test compresstype fallback from quicklz when gp_quicklz_fallback=true
 test: quicklz_fallback
+
+# run this at the end of the schedule for more chance to catch abnormalities
+test: gp_check_files
 
 # end of tests
