@@ -2352,6 +2352,10 @@ GRANT SELECT ON gp_toolkit.__get_expect_files TO public;
 --        the extended data files for AO/CO tables.
 --        But ignore those w/ eof=0. They might be created just for
 --        modcount whereas no data has ever been inserted to the seg.
+--        Or, they could be created when a seg has only aborted rows.
+--        In both cases, we can ignore these segs, because no matter
+--        whether the data files exist or not, the rest of the system
+--        can handle them gracefully.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_toolkit.__get_expect_files_ext AS
@@ -2382,46 +2386,21 @@ GRANT SELECT ON gp_toolkit.__get_expect_files_ext TO public;
 --        gp_toolkit.__check_orphaned_files
 --
 -- @doc:
---        Check orphaned data files on default and user tablespaces,
---        not including extended files.
+--        Check orphaned data files on default and user tablespaces.
+--        A file is considered orphaned if its main relfilenode is not expected
+--        to exist. For example, '12345.1' is an orphaned file if there is no
+--        table has relfilenode=12345, but not otherwise.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_toolkit.__check_orphaned_files AS
 SELECT f1.tablespace, f1.filename
 from gp_toolkit.__get_exist_files f1
 LEFT JOIN gp_toolkit.__get_expect_files f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
+ON f1.tablespace = f2.tablespace AND substring(f1.filename from '[0-9]+') = f2.filename
 WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+';
+  AND f1.filename SIMILAR TO '[0-9]+(\.)?(\_)?%';
 
 GRANT SELECT ON gp_toolkit.__check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        gp_toolkit.__check_orphaned_files_ext
---
--- @doc:
---        Check orphaned data files on default and user tablespaces,
---        including extended files.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW gp_toolkit.__check_orphaned_files_ext AS
-SELECT f1.tablespace, f1.filename
-FROM gp_toolkit.__get_exist_files f1
-LEFT JOIN gp_toolkit.__get_expect_files_ext f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
-WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+(\.[0-9]+)?'
-  AND NOT EXISTS (
-    -- XXX: not supporting heap for now, do not count them
-    SELECT 1 FROM pg_class c 
-    JOIN pg_am a 
-    ON c.relam = a.oid 
-    WHERE c.relfilenode::text = split_part(f1.filename, '.', 1) 
-        AND a.amname = 'heap'
-  );
-
-GRANT SELECT ON gp_toolkit.__check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -2478,24 +2457,6 @@ SELECT -1 AS gp_segment_id, *
 FROM gp_toolkit.__check_orphaned_files;
 
 GRANT SELECT ON gp_toolkit.gp_check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        gp_toolkit.gp_check_orphaned_files_ext
---
--- @doc:
---        User-facing view of gp_toolkit.__check_orphaned_files_ext.
---        Gather results from coordinator and all segments.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW gp_toolkit.gp_check_orphaned_files_ext AS 
-SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
-FROM gp_dist_random('gp_toolkit.__check_orphaned_files_ext')
-UNION ALL 
-SELECT -1 AS gp_segment_id, *
-FROM gp_toolkit.__check_orphaned_files; -- not checking ext on coordinator
-
-GRANT SELECT ON gp_toolkit.gp_check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
