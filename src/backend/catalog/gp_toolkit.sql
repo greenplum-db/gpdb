@@ -2173,6 +2173,7 @@ GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AO segment file numbers for each ao_row table
@@ -2180,7 +2181,7 @@ GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION gp_toolkit.__get_ao_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -2189,22 +2190,25 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid 
-             FROM pg_appendonly a 
-             JOIN pg_class tc ON a.relid = tc.oid 
-             JOIN pg_am am ON tc.relam = am.oid 
-             JOIN pg_class sc ON a.segrelid = sc.oid 
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname 
+             FROM pg_appendonly a
+             JOIN pg_class tc ON a.relid = tc.oid
+             JOIN pg_am am ON tc.relam = am.oid
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE amname = 'ao_row' 
   LOOP
-    table_name := rec.segrel;
-    -- Fetch and return each row from the aoseg table
+    table_name := rec.relname;
+    -- Fetch and return each row from the aoseg table.
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT segno FROM pg_aoseg.%I', table_name);
+      OPEN cur FOR EXECUTE format('SELECT segno, eof '
+                                  'FROM gp_toolkit.__gp_aoseg(''%I.%I'') ',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -2213,7 +2217,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aoseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -2232,6 +2236,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__get_ao_segno_list() TO public;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AOCO segment file numbers for each ao_column table
@@ -2239,7 +2244,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__get_ao_segno_list() TO public;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION gp_toolkit.__get_aoco_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -2248,25 +2253,25 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aocoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname
              FROM pg_appendonly a
              JOIN pg_class tc ON a.relid = tc.oid
              JOIN pg_am am ON tc.relam = am.oid
-             JOIN pg_class sc ON a.segrelid = sc.oid
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE amname = 'ao_column'
   LOOP
-    table_name := rec.segrel;
-    -- Fetch and return each extended segno corresponding to filenum and segno in the aocoseg table
+    table_name := rec.relname;
+    -- Fetch and return each extended segno corresponding to filenum and segno in the aocoseg table.
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT ((a.filenum - 1) * 128 + s.segno) as segno '
-                                  'FROM (SELECT * FROM pg_attribute_encoding '
-                                  'WHERE attrelid = %s) a CROSS JOIN pg_aoseg.%I s', 
-                                   rec.tableoid, table_name);
+      OPEN cur FOR EXECUTE format('SELECT physical_segno as segno, eof '
+                                  'FROM gp_toolkit.__gp_aocsseg(''%I.%I'') ',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -2275,7 +2280,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aocoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aocsseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -2345,6 +2350,8 @@ GRANT SELECT ON gp_toolkit.__get_expect_files TO public;
 --        Retrieve a list of expected data files in the database,
 --        using the knowledge from catalogs. This includes all
 --        the extended data files for AO/CO tables.
+--        But ignore those w/ eof=0. They might be created just for
+--        modcount whereas no data has ever been inserted to the seg.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_toolkit.__get_expect_files_ext AS
@@ -2358,13 +2365,15 @@ SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
 FROM gp_toolkit.__get_ao_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
 LEFT JOIN pg_am a ON c.relam = a.oid
+WHERE s.eof > 0
 UNION
 -- CO extended files
 SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
        format(c.relfilenode::text || '.' || s.segno::text) AS filename
 FROM gp_toolkit.__get_aoco_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
-LEFT JOIN pg_am a ON c.relam = a.oid;
+LEFT JOIN pg_am a ON c.relam = a.oid
+WHERE s.eof > 0;
 
 GRANT SELECT ON gp_toolkit.__get_expect_files_ext TO public;
 
