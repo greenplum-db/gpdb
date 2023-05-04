@@ -757,8 +757,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->stmt_len = parse->stmt_len;
 
 	/* GPDB: JIT flags are set in wrapper function */
-	/* False in the following call means we are setting Jit flags for planner  */
-	compute_jit_flags(result,false /* use_gporca */);
+	/* False in the following call means that we are setting Jit flags for planner */
+	compute_jit_flags(result, false /* use_gporca */);
 
 	if (glob->partition_directory != NULL)
 		DestroyPartitionDirectory(glob->partition_directory);
