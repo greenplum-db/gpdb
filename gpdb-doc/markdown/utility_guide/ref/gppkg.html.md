@@ -43,7 +43,7 @@ remove <package-name>
 ## <a id="options"></a>Options 
 
 -r-tempdir <dir-name>
-:  Use with `gppkg install`. Specifies 
+:  Use with `gppkg install`. Specifies a custom a temp directory for package installation to prevent running out of disk space.
 
 --version
 :   Displays the version of this utility.
