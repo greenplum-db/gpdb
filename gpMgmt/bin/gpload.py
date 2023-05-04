@@ -777,7 +777,7 @@ def bytestr(size, precision=1):
         if size >= factor:
             break
 
-    float_string_split = "size/float(factor)".split('.')
+    float_string_split = repr(size/float(factor)).split('.')
     integer_part = float_string_split[0]
     decimal_part = float_string_split[1]
     if int(decimal_part[0:precision]):
