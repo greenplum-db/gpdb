@@ -228,6 +228,11 @@ sub check_history_files
 	# switches, promote the existing standby first.  Then create a second
 	# standby based on the primary, using its archives.  Finally, the second
 	# standby is promoted.
+
+	# Wait until the history file has been stored on the archives of the
+	# primary once the promotion of the standby completes.  This ensures that
+	# the second standby created below will be able to restore this file,
+	# creating a RECOVERYHISTORY.
 	my $primary_archive = $node_master->archive_dir;
 	$caughtup_query =
 	  "SELECT size IS NOT NULL FROM pg_stat_file('$primary_archive/00000002.history')";
