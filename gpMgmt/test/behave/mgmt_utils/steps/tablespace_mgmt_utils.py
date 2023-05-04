@@ -197,7 +197,6 @@ def impl(context):
 def impl(context):
     context.tablespaces["myspace"].verify()
 
-
 @then('the tablespace is valid after gpexpand')
 def impl(context):
     for _, tbs in list(context.tablespaces.items()):
