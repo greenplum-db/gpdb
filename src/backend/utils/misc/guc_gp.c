@@ -2820,7 +2820,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"gp_allow_date_field_width_5digits", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
-			gettext_noop("Allow parsing input date field with exactly continous 5 digits in non-standard YYYMMDD timeformat (follow pg12+ behave)"),
+			gettext_noop("Allow parsing input date field with exactly continuous 5 digits in non-standard YYYMMDD timeformat (follow pg12+ behave)"),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},

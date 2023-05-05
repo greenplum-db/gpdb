@@ -5206,7 +5206,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				{
 					ereport(NOTICE,
 							(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-							 errmsg("skipped, table \"%s\" has already been expanded partiton prepare",
+							 errmsg("skipped, table \"%s\" has already been expanded partition prepare",
 									RelationGetRelationName(rel))));
 					pass = AT_PASS_MISC;	/* We do nothing here */
 					break;
