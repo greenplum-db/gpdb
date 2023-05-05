@@ -291,7 +291,7 @@ $ sudo yum install tk
 4.  Use the `gppkg` command to install the package. For example:
 
     ```
-    $ gppkg -i DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg
+    $ gppkg install DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg
     ```
 
     `gppkg` installs the Data Science Package for Python modules on all nodes in your Greenplum Database cluster. The command also updates the `PYTHONPATH`, `PATH`, and `LD_LIBRARY_PATH` environment variables in your `greenplum_path.sh` file.
@@ -323,9 +323,9 @@ Use the `gppkg` utility to uninstall a Data Science Package for Python. You must
 To determine your Data Science Package for Python version number and remove this package:
 
 ```
-$ gppkg -q --all | grep DataSciencePython
+$ gppkg query | grep DataSciencePython
 DataSciencePython-<version>
-$ gppkg -r DataSciencePython-<version>
+$ gppkg remove DataSciencePython-<version>
 ```
 
 The command removes the Data Science Package for Python modules from your Greenplum Database cluster. It also updates the `PYTHONPATH`, `PATH`, and `LD_LIBRARY_PATH` environment variables in your `greenplum_path.sh` file to their pre-installation values.

@@ -136,7 +136,7 @@ Before you install the PL/Java extension, make sure that your Greenplum database
 2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Java** software.
 3.  Install the software extension package by running the `gppkg` command. This example installs the PL/Java extension package on a Linux system:
     ```
-    $ gppkg -i pljava-1.4.3-gp5-rhel<osversion>_x86_64.gppkg
+    $ gppkg install pljava-1.4.3-gp5-rhel<osversion>_x86_64.gppkg
     ```
 
 4.  Ensure that the environment variables `JAVA_HOME` and `LD_LIBRARY_PATH` are set properly in `$GPHOME/greenplum_path.sh` on all Greenplum Database hosts.
@@ -240,13 +240,13 @@ If no databases have PL/Java as a registered language, remove the Java JAR files
     ```
 
 2.  Remove the JAR files from the directories where they were installed on all Greenplum Database hosts. For information about JAR file installation directories, see [Enabling PL/Java and Installing JAR Files](#topic6).
-3.  Use the Greenplum `gppkg` utility with the `-r` option to uninstall the PL/Java extension. This example uninstalls the PL/Java extension on a Linux system:
+3.  Use the Greenplum `gppkg` utility with the `remove` option to uninstall the PL/Java extension. This example uninstalls the PL/Java extension on a Linux system:
 
     ```
-    $ gppkg -r pljava-1.4.3
+    $ gppkg remove pljava-1.4.3
     ```
 
-    You can run the `gppkg` utility with the options `-q --all` to list the installed extensions and their versions.
+    You can run the `gppkg` utility with the options `query` to list the installed extensions and their versions.
 
 4.  Remove any updates you made to `greenplum_path.sh` for PL/Java.
 5.  Reload `greenplum_path.sh` and restart the database
