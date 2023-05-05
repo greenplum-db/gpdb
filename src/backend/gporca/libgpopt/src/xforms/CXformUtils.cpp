@@ -1935,9 +1935,8 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 		 altindtype !=
 			 pmdindex
 				 ->IndexType()) ||	// otherwise make sure the index matches the given type(s)
-		0 == pcrsScalar->Size() ||	// no columns to match index against
-		(emdindtype != IMDIndex::EmdindBitmap &&
-		 possible_ao_table))  // only bitmap scans are supported on AO tables
+		0 == pcrsScalar->Size()	 // no columns to match index against
+	)
 	{
 		return false;
 	}

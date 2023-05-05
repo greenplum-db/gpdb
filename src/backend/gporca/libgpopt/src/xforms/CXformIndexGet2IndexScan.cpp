@@ -52,9 +52,9 @@ CXformIndexGet2IndexScan::Exfp(CExpressionHandle &exprhdl) const
 							 ptabdesc->RetrieveRelStorageType() ==
 								 IMDRelation::ErelstorageMixedPartitioned;
 
-	if (pindexdesc->IndexType() == IMDIndex::EmdindBtree && possible_ao_table)
+	if (pindexdesc->IndexType() != IMDIndex::EmdindBitmap && possible_ao_table)
 	{
-		// we don't support btree index scans on AO tables
+		// we only support index scan type bitmap on AO tables
 		return CXform::ExfpNone;
 	}
 
