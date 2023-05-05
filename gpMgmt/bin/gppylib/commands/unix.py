@@ -35,6 +35,7 @@ GPHOME = os.environ.get('GPHOME', None)
 # ---------------command path--------------------
 CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
            '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
+CMDPATH = CMDPATH + os.environ['PATH'].split(os.pathsep)
 
 if GPHOME:
     CMDPATH.append(GPHOME)
