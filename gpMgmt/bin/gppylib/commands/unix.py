@@ -36,6 +36,8 @@ GPHOME = os.environ.get('GPHOME', None)
 CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
            '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
 CMDPATH = CMDPATH + os.environ['PATH'].split(os.pathsep)
+# remove duplicate paths
+CMDPATH = list(set(CMDPATH))
 
 if GPHOME:
     CMDPATH.append(GPHOME)
