@@ -192,12 +192,9 @@ collatable
 :   True if this type's operations can use collation information. The default is false.
 
 compression\_type
-:   Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used in columns of this type.
+:   Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`to specify the type of compression used in columns of this type.
 
-    > **Note** <sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
-
-    >**Note**
-    >Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
+    > **Note** QuickLZ compression is available only in the commercial release of VMware Greenplum. Support for the QuickLZ compression algorithm is deprecated and will be removed in the next major release of VMware Greenplum.
 
 
 compression\_level
