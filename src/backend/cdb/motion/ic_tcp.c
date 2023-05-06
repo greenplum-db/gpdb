@@ -1719,6 +1719,7 @@ SetupTCPInterconnect(EState *estate)
 		 * are left over -- better to just process them here.
 		 */
 		cell = list_head(interconnect_context->incompleteConns);
+		List * incompleteConnsNeedDeleted = NIL;
 		while (n > 0 && cell != NULL)
 		{
 			conn = (MotionConn *) lfirst(cell);
@@ -1739,18 +1740,25 @@ SetupTCPInterconnect(EState *estate)
 					 * (and has been dropped), or we've added it to the
 					 * appropriate hash table)
 					 */
-					interconnect_context->incompleteConns = list_delete_ptr(interconnect_context->incompleteConns, conn);
+					incompleteConnsNeedDeleted = lappend(incompleteConnsNeedDeleted, conn);
 
 					/* is the connection ready ? */
 					if (conn->sockfd != -1)
 						incoming_count++;
-
-					if (conn->pBuff)
-						pfree(conn->pBuff);
-					/* Free temporary MotionConn storage. */
-					pfree(conn);
 				}
 			}
+		}
+		
+		foreach(cell, incompleteConnsNeedDeleted)
+		{
+			conn = (MotionConn *) lfirst(cell);
+			interconnect_context->incompleteConns = list_delete_ptr(interconnect_context->incompleteConns, conn);
+			if (conn->pBuff)
+				pfree(conn->pBuff);
+			
+			/* Free temporary MotionConn storage. */
+			pfree(conn);
+			incompleteConnsNeedDeleted = foreach_delete_current(incompleteConnsNeedDeleted, cell);
 		}
 
 		/*
