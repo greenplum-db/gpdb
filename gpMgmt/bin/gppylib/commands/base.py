@@ -34,6 +34,8 @@ logger = gplog.get_default_logger()
 
 GPHOME = os.environ.get('GPHOME')
 
+CMD_CACHE = {}
+
 # Maximum retries if sshd rejects the connection due to too many
 # unauthenticated connections.
 SSH_MAX_RETRY = 10
@@ -452,7 +454,7 @@ class LocalExecutionContext(ExecutionContext):
         # executable='/bin/bash' is to ensure the shell is bash.  bash isn't the
         # actual command executed, but the shell that command string runs under.
         self.proc = gpsubprocess.Popen(cmd.cmdStr, env=None, shell=True,
-                                       executable='/bin/bash',
+                                       executable=findCmdInPath("bash"),
                                        stdin=subprocess.PIPE,
                                        stderr=subprocess.PIPE,
                                        stdout=subprocess.PIPE, close_fds=True)
@@ -629,6 +631,43 @@ class SQLCommand(Command):
         # if self.conn is not set we cannot cancel.
         if self.cancel_conn:
             DB(self.cancel_conn).cancel()
+
+
+class CommandNotFoundException(Exception):
+    def __init__(self, cmd, paths):
+        self.cmd = cmd
+        self.paths = paths
+
+    def __str__(self):
+        return "Could not locate command: '%s' in this set of paths: %s" % (self.cmd, repr(self.paths))
+
+
+def findCmdInPath(cmd):
+    global CMD_CACHE
+
+    # ---------------command path--------------------
+    CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
+               '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
+    CMDPATH = CMDPATH + os.environ['PATH'].split(os.pathsep)
+    # remove duplicate paths
+    CMDPATH = list(set(CMDPATH))
+
+    if GPHOME:
+        CMDPATH.append(GPHOME)
+
+
+    if cmd not in CMD_CACHE:
+        for p in CMDPATH:
+            f = os.path.join(p, cmd)
+            if os.path.exists(f):
+                CMD_CACHE[cmd] = f
+                return f
+
+        logger.critical('Command %s not found' % cmd)
+        search_path = CMDPATH[:]
+        raise CommandNotFoundException(cmd, search_path)
+    else:
+        return CMD_CACHE[cmd]
 
 
 def run_remote_commands(name, commands):

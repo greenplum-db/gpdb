@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+        #!/usr/bin/env python3
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
 #
@@ -29,47 +29,6 @@ OPENBSD = "openbsd"
 platform_list = [LINUX, DARWIN, FREEBSD, OPENBSD]
 
 curr_platform = platform.uname()[0].lower()
-
-GPHOME = os.environ.get('GPHOME', None)
-
-# ---------------command path--------------------
-CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
-           '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
-CMDPATH = CMDPATH + os.environ['PATH'].split(os.pathsep)
-# remove duplicate paths
-CMDPATH = list(set(CMDPATH))
-
-if GPHOME:
-    CMDPATH.append(GPHOME)
-
-CMD_CACHE = {}
-
-
-# ----------------------------------
-class CommandNotFoundException(Exception):
-    def __init__(self, cmd, paths):
-        self.cmd = cmd
-        self.paths = paths
-
-    def __str__(self):
-        return "Could not locate command: '%s' in this set of paths: %s" % (self.cmd, repr(self.paths))
-
-
-def findCmdInPath(cmd):
-    global CMD_CACHE
-
-    if cmd not in CMD_CACHE:
-        for p in CMDPATH:
-            f = os.path.join(p, cmd)
-            if os.path.exists(f):
-                CMD_CACHE[cmd] = f
-                return f
-
-        logger.critical('Command %s not found' % cmd)
-        search_path = CMDPATH[:]
-        raise CommandNotFoundException(cmd, search_path)
-    else:
-        return CMD_CACHE[cmd]
 
 
 # For now we'll leave some generic functions outside of the Platform framework
