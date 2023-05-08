@@ -61,7 +61,7 @@ Before settling on a multi-level partitioning strategy, consider a single level 
 
 Greenplum Database 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, referred to as the *uniform* syntax. Version 7 also introduces support for PostgreSQL declarative partitioning syntax, the *flexible* syntax.
 
-The uniform syntax is appropriate for a homogenous partition table, where all partitions are at the same leaf level and have the same partition rule. The flexible syntax is less specialized and a bit easier to use, and recommended for new users.
+The uniform syntax is provided for backwards compatibility with previous Greenplum versions. It is appropriate for a homogenous partition table, where all partitions are at the same leaf level and have the same partition rule. *The flexible syntax is less specialized and a bit easier to use, and is recommended for new users.*
 
 The uniform and flexible partitioning syntaxes are alternatives, you choose the one that meets your needs.
 
