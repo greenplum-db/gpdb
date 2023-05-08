@@ -37,6 +37,7 @@
 #include "utils/lsyscache.h"
 #include "utils/timestamp.h"
 #include "utils/xml.h"
+#include "cdb/cdbvars.h"
 
 
 /* GUC parameters */
@@ -334,10 +335,16 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 											 (Node *) n->arg, NULL,
 											 n->location);
 
-				n->arg = (Expr *) transformExprRecurse(pstate, (Node *) n->arg);
+				NullTest *newn;
+				newn = makeNode(NullTest);
+
+				newn->arg = (Expr *) transformExprRecurse(pstate, (Node *) n->arg);
 				/* the argument can be any type, so don't coerce it */
-				n->argisrow = type_is_rowtype(exprType((Node *) n->arg));
-				result = expr;
+				newn->argisrow = type_is_rowtype(exprType((Node *) newn->arg));
+				newn->nulltesttype = n->nulltesttype;
+				newn->location = n->location;
+
+				result = (Node *) newn;
 				break;
 			}
 
