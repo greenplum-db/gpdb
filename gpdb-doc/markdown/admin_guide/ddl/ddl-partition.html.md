@@ -61,7 +61,7 @@ Before settling on a multi-level partitioning strategy, consider a single level 
 
 Greenplum Database 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, referred to as the *uniform* syntax. Version 7 also introduces support for PostgreSQL declarative partitioning syntax, the *flexible* syntax.
 
-The uniform syntax is appropriate for a homegenous partition table, where all partitions are at the same leaf level and have the same partition rule. The flexible syntax is less specialized and a bit easier to use.
+The uniform syntax is appropriate for a homogenous partition table, where all partitions are at the same leaf level and have the same partition rule. The flexible syntax is less specialized and a bit easier to use, and recommended for new users.
 
 The uniform and flexible partitioning syntaxes are alternatives, you choose the one that meets your needs.
 
@@ -78,9 +78,8 @@ The following table provides a feature comparison to help you choose the syntax 
 | Hash partitioning | Not supported. | Supported. |
 | Subpartition templating | Supported. The definitions of the parent and child tables are consistent by default. | Not supported. You ensure that the table definitions are consistent. |
 | Partition maintenance | You operate on a child table via the parent, requiring knowledge of the partition hierarchy. | You operate directly on the child table, no knowledge of the partition hierarchy is required. |
-| Recursion | Operations recurse to child partitions by default. | Operations are performed only on the specified table and do not recurse. |
 
-> **Important** After creation, you must operate on the partition table hierarchy using the `CREATE TABLE` and `ALTER TABLE` clauses identified for the syntax that you chose. Do not mix and match the uniform and flexible partitioning syntaxes for partition maintenance operations.
+> **Important** After creation, you operate on the partition table hierarchy using the `CREATE TABLE` and `ALTER TABLE` clauses identified for the syntax that you chose. VMware does not recommend mixing and matching the uniform and flexible partitioning syntaxes for partition maintenance operations.
 
 
 ## <a id="topic66"></a>Creating Partitioned Tables 
