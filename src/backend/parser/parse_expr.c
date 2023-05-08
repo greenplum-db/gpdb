@@ -37,7 +37,6 @@
 #include "utils/lsyscache.h"
 #include "utils/timestamp.h"
 #include "utils/xml.h"
-#include "cdb/cdbvars.h"
 
 
 /* GUC parameters */

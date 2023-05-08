@@ -3154,9 +3154,9 @@ reset role;
 drop role atown_r1;
 drop role atown_r2;
 
-CREATE TABLE IF NOT EXISTS unrecognized_node(c0 boolean NULL);
-ALTER TABLE unrecognized_node ALTER c0 SET DEFAULT (6>5) IS NULL;
-DROP TABLE unrecognized_node;
-CREATE TABLE IF NOT EXISTS unrecognized_node(c0 boolean);
-ALTER TABLE unrecognized_node ALTER c0 SET DEFAULT ((1.5::FLOAT) NOTNULL);
-DROP TABLE unrecognized_node;
+CREATE TABLE IF NOT EXISTS table_issue_15494(c0 boolean NULL);
+ALTER TABLE table_issue_15494 ALTER c0 SET DEFAULT (6>5) IS NULL;
+DROP TABLE table_issue_15494;
+CREATE TABLE IF NOT EXISTS table_issue_15494(c0 boolean);
+ALTER TABLE table_issue_15494 ALTER c0 SET DEFAULT ((1.5::FLOAT) NOTNULL);
+DROP TABLE table_issue_15494;
