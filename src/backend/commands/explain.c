@@ -3513,17 +3513,10 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 				sortMethod, spaceType, (long) agg->vsum);
 			if (es->verbose)
 			{
-				if (peakSpaceUsed)
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Peak Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
-									 peakSpaceUsed,
-									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
-									 agg->vcnt);
-				else
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
-									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
-									 agg->vcnt);
+				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+								 peakSpaceUsed ? peakSpaceUsed : (long) agg->vmax,
+								 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
+								 agg->vcnt);
 			}
 			appendStringInfo(es->str, "\n");
 		}
@@ -3534,10 +3527,8 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			ExplainPropertyText("Sort Space Type", spaceType, es);
 			if (es->verbose)
 			{
-				ExplainPropertyInteger("Sort Max Segment Memory", "kB", totalSpaceUsed ? totalSpaceUsed : agg->vmax, es);
+				ExplainPropertyInteger("Sort Max Segment Memory", "kB", peakSpaceUsed ? peakSpaceUsed : agg->vmax, es);
 				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed ? avgSpaceUsed : (agg->vsum / agg->vcnt), es);
-				if (peakSpaceUsed)
-					ExplainPropertyInteger("Sort Peak Segment Memory", "kB", peakSpaceUsed, es);
 				ExplainPropertyInteger("Sort Segments", NULL, agg->vcnt, es);
 			}
 		}
