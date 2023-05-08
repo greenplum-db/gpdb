@@ -28,7 +28,7 @@
         - [gpmemreport](./ref/gpmemreport.md)
         - [gpmemwatcher](./ref/gpmemwatcher.md)
         - [gpmovemirrors](./ref/gpmovemirrors.md)
-        - [gpmt](./ref/gpmt.md)
+        - [gpsupport](./ref/gpsupport.md)
         - [gppkg](./ref/gppkg.md)
         - [gprecoverseg](./ref/gprecoverseg.md)
         - [gpreload](./ref/gpreload.md)

@@ -1951,7 +1951,7 @@ class gpexpand:
                 operation.get_ret()
         except Exception:
             logger.exception('Syncing of Greenplum Database extensions has failed.')
-            logger.warning('Please run gppkg --clean after successful expansion.')
+            logger.warning('Please run `gppkg install --force <package>` to re-install gppkg packages after successful expansion.')
 
     def validate_heap_checksums(self):
         num_workers = min(len(self.gparray.get_hostlist()), MAX_PARALLEL_EXPANDS)

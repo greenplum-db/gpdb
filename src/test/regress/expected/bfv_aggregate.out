@@ -1811,6 +1811,109 @@ select 1, median(col1) from group_by_const group by 1;
         1 |  500.5
 (1 row)
 
+-- ORCA should pick singlestage-agg plan when multistage-agg guc is true
+-- and distribution type is universal/replicated
+set optimizer_force_multistage_agg to on;
+create table t1_replicated(a int, b int, c float, d float) distributed replicated;
+create table t2_replicated(a int, b int) distributed replicated;
+explain select distinct b from t1_replicated;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=867.50..867.50 rows=1000 width=4)
+   ->  HashAggregate  (cost=857.50..867.50 rows=1000 width=4)
+         Group Key: b
+         ->  Seq Scan on t1_replicated  (cost=0.00..706.00 rows=60600 width=4)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select sum(a), avg(b) from t1_replicated;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Aggregate  (cost=1009.00..1009.01 rows=1 width=40)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=706.00..706.00 rows=60600 width=8)
+         ->  Seq Scan on t1_replicated  (cost=0.00..706.00 rows=60600 width=8)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+explain select count(distinct b)  from t1_replicated group by a;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=5984.27..5984.27 rows=1000 width=12)
+   ->  GroupAggregate  (cost=5519.77..5984.27 rows=1000 width=12)
+         Group Key: a
+         ->  Sort  (cost=5519.77..5671.27 rows=60600 width=8)
+               Sort Key: a
+               ->  Seq Scan on t1_replicated  (cost=0.00..706.00 rows=60600 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select a, sum(mc) from (select a, b, max(c) mc from t1_replicated group by a,b) t group by a;
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=1322.00..1322.00 rows=1000 width=12)
+   ->  HashAggregate  (cost=1312.00..1322.00 rows=1000 width=12)
+         Group Key: t1_replicated.a
+         ->  HashAggregate  (cost=1160.50..1221.10 rows=6060 width=16)
+               Group Key: t1_replicated.a, t1_replicated.b
+               ->  Seq Scan on t1_replicated  (cost=0.00..706.00 rows=60600 width=16)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain SELECT t1.a, sum(c) from t1_replicated as t1 join t2_replicated as t2 on t1.a = t2.a group by t1.a;
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=733122.15..733122.15 rows=1000 width=12)
+   ->  HashAggregate  (cost=733112.15..733122.15 rows=1000 width=12)
+         Group Key: t1.a
+         ->  Hash Join  (cost=1463.50..707023.85 rows=5217660 width=12)
+               Hash Cond: (t2.a = t1.a)
+               ->  Seq Scan on t2_replicated t2  (cost=0.00..961.00 rows=86100 width=4)
+               ->  Hash  (cost=706.00..706.00 rows=60600 width=12)
+                     ->  Seq Scan on t1_replicated t1  (cost=0.00..706.00 rows=60600 width=12)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select count(a) from t1_replicated where c < (select sum(b) from t2_replicated);
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Aggregate  (cost=1059.50..1059.51 rows=1 width=8)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Aggregate  (cost=1176.25..1176.26 rows=1 width=8)
+           ->  Gather Motion 1:1  (slice3; segments: 1)  (cost=961.00..961.00 rows=86100 width=4)
+                 ->  Seq Scan on t2_replicated  (cost=0.00..961.00 rows=86100 width=4)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=1009.00..1009.00 rows=20200 width=4)
+         ->  Seq Scan on t1_replicated  (cost=0.00..1009.00 rows=20200 width=4)
+               Filter: (c < ($0)::double precision)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain SELECT DISTINCT g%10 FROM generate_series(0, 100) g;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ HashAggregate  (cost=1.52..2.78 rows=101 width=4)
+   Group Key: (g % 10)
+   ->  Function Scan on generate_series g  (cost=0.00..1.26 rows=101 width=4)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+explain select count(*) from generate_series(0, 100) g;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Aggregate  (cost=1.26..1.27 rows=1 width=8)
+   ->  Function Scan on generate_series g  (cost=0.00..1.01 rows=101 width=0)
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+explain select g%10 as c1, sum(g::numeric)as c2, count(*) as c3 from generate_series(1, 99) g group by g%10;
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ HashAggregate  (cost=2.23..3.72 rows=99 width=44)
+   Group Key: (g % 10)
+   ->  Function Scan on generate_series g  (cost=0.00..1.24 rows=99 width=8)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+reset optimizer_force_multistage_agg;
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

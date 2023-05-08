@@ -114,6 +114,7 @@
 #include "utils/metrics_utils.h"
 #include "utils/partcache.h"
 #include "utils/relcache.h"
+#include "utils/resgroup.h"
 #include "utils/ruleutils.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
@@ -726,7 +727,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		tablespaceId = get_rel_tablespace(linitial_oid(inheritOids));
 
 		/* 
-		 * MPP-8238 : inconsistent tablespaces between segments and master 
+		 * MPP-8238 : inconsistent tablespaces between segments and coordinator 
 		 */
 		stmt->tablespacename = get_tablespace_name(tablespaceId);
 	}
@@ -4477,7 +4478,7 @@ AlterTableInternal(Oid relid, List *cmds, bool recurse)
  * and does not travel through this section of code and cannot be combined with
  * any of the subcommands given here.
  *
- * Note that Hot Standby only knows about AccessExclusiveLocks on the master
+ * Note that Hot Standby only knows about AccessExclusiveLocks on the primary
  * so any changes that might affect SELECTs running on standbys need to use
  * AccessExclusiveLocks even if you think a lesser lock would do, unless you
  * have a solution for that also.
@@ -13844,7 +13845,7 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)
 			/*
 			 * Currently, GPDB doesn't support alter type on primary key and unique
 			 * constraint column. Because it requires drop - recreate logic.
-			 * The drop currently only performs on master which lead error when
+			 * The drop currently only performs on coordinator which lead error when
 			 * recreating index (since recreate index will dispatch to segments and
 			 * there still old constraint index exists)
 			 * Related issue: https://github.com/greenplum-db/gpdb/issues/10561.
@@ -17489,6 +17490,11 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		queryDesc->ddesc = makeNode(QueryDispatchDesc);
 		queryDesc->ddesc->useChangedAOOpts = false;
 
+		if (ShouldUnassignResGroup())
+		{
+			bool inFunction = already_under_executor_run() || utility_nested();
+			ShouldBypassQuery(queryDesc->plannedstmt, inFunction);
+		}
 		queryDesc->plannedstmt->query_mem =
 				ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
@@ -18023,6 +18029,11 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			if (query_info_collect_hook)
 				(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, queryDesc);
 
+			if (ShouldUnassignResGroup())
+			{
+				bool inFunction = already_under_executor_run() || utility_nested();
+				ShouldBypassQuery(queryDesc->plannedstmt, inFunction);
+			}
 			queryDesc->plannedstmt->query_mem =
 				ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
@@ -18086,7 +18097,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			GpPolicyReplace(RelationGetRelid(rel), policy);
 
 		/*
-		 * Set to random distribution on master with no reorganisation.
+		 * Set to random distribution on coordinator with no reorganisation.
 		 * Or this is a partitioned table, with no data.
 		 */
 		if (cmd->backendId == 0)

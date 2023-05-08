@@ -1462,7 +1462,7 @@ vac_update_relstats(Relation relation,
 
 	/*
 	 * In GPDB, all the data is stored in the segments, and the
-	 * relpages/reltuples in the master reflect the sum of the values in
+	 * relpages/reltuples in the coordinator reflect the sum of the values in
 	 * all the segments. In VACUUM, don't overwrite relpages/reltuples with
 	 * the values we counted in the QD node itself. We will dispatch the
 	 * VACUUM to the segments after processing the QD node, and we will
@@ -1821,7 +1821,7 @@ vac_update_datfrozenxid(void)
 	/* chicken out if bogus data found */
 	if (bogus)
 	{
-		LockDatabaseFrozenIds(ExclusiveLock);
+		UnLockDatabaseFrozenIds(ExclusiveLock);
 		return;
 	}
 

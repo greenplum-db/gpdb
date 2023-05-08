@@ -157,7 +157,7 @@ typedef struct Query
 	bool		hasTargetSRFs;	/* has set-returning functions in tlist */
 	bool		hasSubLinks;	/* has subquery SubLink */
 	bool        hasDynamicFunctions; /* has functions with unstable return types */
-	bool		hasFuncsWithExecRestrictions; /* has functions with EXECUTE ON MASTER or ALL SEGMENTS */
+	bool		hasFuncsWithExecRestrictions; /* has functions with EXECUTE ON COORDINATOR or ALL SEGMENTS */
 	bool		hasDistinctOn;	/* distinctClause is from DISTINCT ON */
 	bool		hasRecursive;	/* WITH RECURSIVE was specified */
 	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH */
@@ -3800,7 +3800,7 @@ typedef struct LockStmt
 	List	   *relations;		/* relations to lock */
 	int			mode;			/* lock mode */
 	bool		nowait;			/* no wait mode */
-	bool		coordinatoronly;		/* GPDB: lock only on master */
+	bool		coordinatoronly;		/* GPDB: lock only on coordinator */
 } LockStmt;
 
 /* ----------------------

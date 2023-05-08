@@ -418,6 +418,9 @@ bool		gp_enable_segment_copy_checking = true;
  */
 char	   *gp_default_storage_options = NULL;
 
+/* Fall back to using zstd if quicklz compresstpye specified */
+bool		gp_quicklz_fallback = false;
+
 int			writable_external_table_bufsize = 64;
 
 bool		gp_external_enable_filter_pushdown = true;
@@ -1549,7 +1552,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"debug_walrepl_snd", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print debug messages for WAL sender in WAL based replication (Master Mirroring)."),
+			gettext_noop("Print debug messages for WAL sender in WAL based replication (Coordinator Mirroring)."),
 			NULL,
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -1560,7 +1563,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"debug_walrepl_syncrep", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print debug messages for synchronous behavior in WAL based replication (Master Mirroring)."),
+			gettext_noop("Print debug messages for synchronous behavior in WAL based replication (Coordinator Mirroring)."),
 			NULL,
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -1571,7 +1574,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"debug_walrepl_rcv", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print debug messages for WAL receiver in WAL based replication (Master Mirroring)."),
+			gettext_noop("Print debug messages for WAL receiver in WAL based replication (Coordinator Mirroring)."),
 			NULL,
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -1582,7 +1585,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"debug_basebackup", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Print debug messages for basebackup mechanism (Master Mirroring)."),
+			gettext_noop("Print debug messages for basebackup mechanism (Coordinator Mirroring)."),
 			NULL,
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -2417,7 +2420,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 	{
 		{"optimizer_enable_gather_on_segment_for_dml", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable DML optimization by enforcing a non-master gather in the optimizer."),
+			gettext_noop("Enable DML optimization by enforcing a non-coordinator gather in the optimizer."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
@@ -2612,7 +2615,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	{
 		{"gp_reject_internal_tcp_connection", PGC_POSTMASTER,
 			DEVELOPER_OPTIONS,
-			gettext_noop("Permit internal TCP connections to the master."),
+			gettext_noop("Permit internal TCP connections to the coordinator."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -2944,6 +2947,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL,
 		},
 		&gp_log_suboverflow_statement,
+		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"gp_quicklz_fallback", PGC_SUSET, APPENDONLY_TABLES,
+		 gettext_noop("Fallback to valid compression type if quicklz table compression is requested."),
+		 NULL,
+		},
+		&gp_quicklz_fallback,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3489,7 +3501,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"gp_qd_port", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("Shows the Master Postmaster port."),
+			gettext_noop("Shows the Coordinator Postmaster port."),
 			gettext_noop("0 for a session's entry process (qDisp)"),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
@@ -4071,7 +4083,7 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"wait_for_replication_threshold", PGC_SIGHUP, REPLICATION_MASTER,
+		{"wait_for_replication_threshold", PGC_SIGHUP, REPLICATION_PRIMARY,
 			gettext_noop("Maximum amount of WAL written by a transaction prior to waiting for replication."),
 			gettext_noop("This is used just to prevent primary from racing too ahead "
 						 "and avoid huge replication lag. A value of 0 disables "

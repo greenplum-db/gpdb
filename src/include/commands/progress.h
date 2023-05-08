@@ -151,6 +151,9 @@
 /* Commands of COPY (as advertised via PROGRESS_COPY_COMMAND) */
 #define PROGRESS_COPY_COMMAND_FROM 1
 #define PROGRESS_COPY_COMMAND_TO 2
+/* GPDB specific */
+#define PROGRESS_COPY_COMMAND_FROM_ON_SEGMENT 3
+#define PROGRESS_COPY_COMMAND_TO_ON_SEGMENT 4
 
 /* Types of COPY commands (as advertised via PROGRESS_COPY_TYPE) */
 #define PROGRESS_COPY_TYPE_FILE 1

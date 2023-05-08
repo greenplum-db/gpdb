@@ -5,7 +5,7 @@ server to test if the gpfdist can work well.
 Now we just support gpfdist on a remote windows server.
 make installcheck_win can test gpfdist of windows.
 Need to export REMOTE_HOST, REMOTE_PORT, REMOTE_USER, REMOTE_KEY
-MASTER_DATA_DIRECTORY, PG_PORT before running these test cases.
+COORDINATOR_DATA_DIRECTORY, PG_PORT before running these test cases.
 
 The scripts of start_gpfdist_remote_win are used to start and stop gpfdist running on windows.
 

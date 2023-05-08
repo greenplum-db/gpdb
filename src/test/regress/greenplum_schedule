@@ -302,7 +302,8 @@ test: autovacuum-ao-aux
 test: gangsize gang_reuse
 
 # some utilities do not work while doing gpexpand, check them can print correct message
-test: run_utility_gpexpand_phase1
+## FIXME: We should enable this test after gppkg being integrated into gpdb.
+## test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
 test: create_extension_fail
@@ -342,5 +343,8 @@ test: gp_log_mem_dispatch
 
 # test that distributing or hash partitioning by an enum field or expression is blocked
 test: enum_dist_part_ban
+
+# test compresstype fallback from quicklz when gp_quicklz_fallback=true
+test: quicklz_fallback
 
 # end of tests

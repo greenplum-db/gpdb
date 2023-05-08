@@ -238,7 +238,7 @@ explain select count(distinct h) from testhstore;
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="17">
+    <dxl:Plan Id="0" SpaceSize="18">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="8"/>
@@ -248,7 +248,7 @@ explain select count(distinct h) from testhstore;
           <dxl:ProjElem ColId="8" Alias="count">
             <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="0" ColName="h" TypeMdid="0.32774.1.0"/>
+                <dxl:Ident ColId="0" ColName="h" TypeMdid="0.32774.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>

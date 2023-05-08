@@ -2426,7 +2426,7 @@ create_motion_path_for_upddel(PlannerInfo *root, Index rti, GpPolicy *policy,
 	}
 	else if (policyType == POLICYTYPE_ENTRY)
 	{
-		/* Master-only table */
+		/* Coordinator-only table */
 		CdbPathLocus_MakeEntry(&targetLocus);
 		subpath = cdbpath_create_motion_path(root, subpath, NIL, false, targetLocus);
 	}
@@ -2531,7 +2531,7 @@ create_split_update_path(PlannerInfo *root, Index rti, GpPolicy *policy, Path *s
 	}
 	else if (policyType == POLICYTYPE_ENTRY)
 	{
-		/* Master-only table */
+		/* Coordinator-only table */
 		CdbPathLocus_MakeEntry(&targetLocus);
 		subpath = cdbpath_create_motion_path(root, subpath, NIL, false, targetLocus);
 	}

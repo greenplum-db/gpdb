@@ -37,6 +37,14 @@ When enabled, Greenplum Database starts up the autovacuum daemon, which operates
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, system, restart|
 
+## <a id="autovacuum_freeze_max_age"></a>autovacuum_freeze_max_age
+
+Specifies the maximum age at which to automatically vacuum a table to prevent transaction ID wraparound. Note that the system will launch autovacuum processes to prevent wraparound even when `autovacuum=off`. The default value is 200 million transactions. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|100000 < integer < 2000000000|200000000|local, system, restart|
+
 ## <a id="autovacuum_naptime"></a>autovacuum\_naptime
 
 When `autovacuum=on` (the default), specifies the minimum delay between autovacuum runs. In each round, the daemon issues `VACUUM` and `ANALYZE` commands as needed for catalog (and possibly auxiliary) tables.
@@ -47,8 +55,33 @@ This parameter may be set only in the `postgresql.conf` file or on the server co
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - INT_MAX/1000 | 60 |coordinator, system, restart|
+|1 < integer < INT_MAX/1000 | 60 |coordinator, system, restart|
 
+## <a id="autovacuum_vacuum_cost_delay"></a>autovacuum_vacuum_cost_delay
+
+Specifies the cost delay value in milliseconds for automatic vacuum operations. If set to -1, the value of this parameter is the set by [`vacuum_cost_delay`](#vacuum_cost_delay).
+
+A value without units is taken to be milliseconds. The default is 2 milliseconds. This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| floating point < 100 | 2 |local, system, reload|
+
+## <a id="autovacuum_vacuum_scale_factor"></a>autovacuum_vacuum_scale_factor
+
+Specifies a fraction of the table size to add to [`autovacuum_vacuum_threshold`](#autovacuum_vacuum_threshold) when deciding whether to trigger a `VACUUM`. The default is 0.2 (20% of table size). This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| floating point (%) | 0.2 |local, system, reload|
+
+## <a id="autovacuum_vacuum_threshold"></a>autovacuum_vacuum_threshold
+
+Specifies the minimum number of updated or deleted tuples needed to trigger a `VACUUM` in any one table. The default is 50 tuples. This parameter can only be set in the postgresql.conf file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| 0 < integer < INT_MAX | 50 |local, system, reload|
 
 ## <a id="backslash_quote"></a>backslash\_quote 
 
@@ -686,11 +719,9 @@ gpconfig -s 'gp_default_storage_options'
 
 |Value Range|Default|Set Classifications<sup>1</sup>|
 |-----------|-------|---------------------|
-|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|coordinator, session, reload|
+|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|coordinator, session, reload|
 
 > **Note** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
-
-> **Note** <sup>2</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
 ## <a id="gp_dispatch_keepalives_count"></a>gp\_dispatch\_keepalives\_count 
 
@@ -768,7 +799,7 @@ When set to `on`, the Postgres Planner plans single row inserts so that they are
 
 ## <a id="gp_enable_global_deadlock_detector"></a>gp\_enable\_global\_deadlock\_detector 
 
-Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd)in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is deactivated.
+Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd) in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is deactivated.
 
 If the Global Deadlock Detector is deactivated \(the default\), Greenplum Database runs concurrent update and delete operations on a heap table serially.
 
@@ -1223,6 +1254,13 @@ The default value is `false`, Greenplum Database does not display the additional
 |-----------|-------|-------------------|
 |Boolean|false|coordinator, session, reload|
 
+## <a id="gp_quickz_fallback"></a>gp\_quickz\_fallback
+
+Determines how Greenplum Database handles legacy SQL that specifies a compression type of QuickLZ, which is not supported in Greenplum Database 7 and later. When set to `true`, if legacy SQL specifies a compression type of QuickLZ, Greenplum Database will apply a compression type of zstd. When set to `false` -- the default -- specifying a compression type of QuickLZ will result in an error.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_recursive_cte"></a>gp\_recursive\_cte 
 
@@ -3085,7 +3123,7 @@ Collects information about executing commands. Enables the collection of informa
 
 ## <a id="track_wal_io_timing"></a>track_wal_io_timing
 
-Enables timing of WAL I/O calls. This parameter is disabled by default, as it repeatedly queries the operating system for the current time, which may cause significant overhead on some platforms. The view [pg_stat_wal](../system_catalogs/pg_stat_wal.html) displays WAL I/O timing information. Only superusers and users with the appropriate `SET` privilege can change this setting.
+Enables timing of WAL I/O calls. This parameter is disabled by default, as it repeatedly queries the operating system for the current time, which may cause significant overhead on some platforms. The view [pg_stat_wal](../system_catalogs/catalog_ref-views.html#pg_stat_wal) displays WAL I/O timing information. Only superusers and users with the appropriate `SET` privilege can change this setting.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -3197,7 +3235,7 @@ The estimated cost for vacuuming a buffer that has to be read from disk. This re
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|10|local, session, reload|
+|integer \> 0|2|local, session, reload|
 
 ## <a id="vacuum_freeze_min_age"></a>vacuum\_freeze\_min\_age 
 

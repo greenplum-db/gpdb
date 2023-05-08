@@ -5,12 +5,12 @@
  *
  *
  * In Greenplum, it's important that most objects, like relations, functions,
- * operators, have the same OIDs in the master and all QE nodes.  Otherwise
- * query plans generated in the master will not work on the QE nodes, because
- * they use the master's OIDs to refer to objects.
+ * operators, have the same OIDs in the coordinator and all QE nodes.  Otherwise
+ * query plans generated in the coordinator will not work on the QE nodes, because
+ * they use the coordinator's OIDs to refer to objects.
  *
  * Whenever a CREATE statement, or any other command that creates new objects,
- * is dispatched, the master also needs to tell the QE servers which OIDs to
+ * is dispatched, the coordinator also needs to tell the QE servers which OIDs to
  * use for the new objects.  Before GPDB 5.0, that was done by modifying all
  * the structs representing DDL statements, like DefineStmt,
  * CreateOpClassStmt, and so forth, by adding a new OID field to them.
@@ -44,13 +44,13 @@
  * In a QE node, when we reach the same code as in the QD to create a new
  * object, the GetNewOrPreassignedOid() function is called again.  The
  * function looks into the 'preassigned_oids' list to see if we had received
- * an OID for to use for the named object from the master. Under normal
+ * an OID for to use for the named object from the coordinator. Under normal
  * circumstances, we should have pre-assigned OIDs for all objects created in
  * QEs, and the GetNewOrPreassignedOid() function will throw an error if we
  * don't.
  *
  * All in all, this provides a generic mechanism for DDL commands, to record
- * OIDs that are assigned for new objects in the master, transfer them to QE
+ * OIDs that are assigned for new objects in the coordinator, transfer them to QE
  * nodes when the DDL command is dispatched, and for the QE nodes to use the
  * same, pre-assigned, OIDs for the objects.
  *
@@ -299,7 +299,7 @@ AddPreassignedOids(List *l)
 		elog(ERROR, "AddPreassignedOids called during binary upgrade");
 
 	/*
-	 * In the master, the OID-assignment-list is usually included in the next
+	 * In the coordinator, the OID-assignment-list is usually included in the next
 	 * command that is dispatched, after an OID was assigned. In almost all
 	 * cases, the dispatched command is the same CREATE command for which the
 	 * oid was assigned. But I'm not sure if that's true for *all* commands,
@@ -1448,7 +1448,7 @@ AddPreassignedOidFromBinaryUpgrade(Oid oid, Oid catalog, char *objname,
 }
 
 /* ----------------------------------------------------------------
- * Functions for use in the master node.
+ * Functions for use in the coordinator node.
  * ----------------------------------------------------------------
  */
 

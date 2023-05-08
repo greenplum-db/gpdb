@@ -304,6 +304,46 @@ SELECT (gp_toolkit.__gp_aoblkdir('<table_name>')).*
 |file\_offset|The starting file offset of the rows covered by this block directory entry.|
 |row\_count|The count of rows covered by this block directory entry.|
 
+### <a id="topic_getcolumnsize"></a>get_column_size(oid)
+
+For a given AOCO table, this function returns the column size and compression ratio for all columns in the table.
+
+The input argument is the object identifier of a column-oriented append-optimized table.
+
+|Column|Description|
+|------|-----------|
+| segment | The segment id. |
+| attnum | The attribute number of the column. |
+| size | The size of the column in bytes. |
+| size_uncompressed | The size of the column in bytes if the column was not compressed. |
+| compression_ratio | The compression ratio. |
+
+### <a id="topic_viewcolumnsize"></a>gp_column_size
+
+This view gathers the column size and compression ratio for column-oriented append-optimized tables from all segments.
+
+|Column|Description|
+|------|-----------|
+| relname | The table name. | 
+| segment | The segment id. |
+| attnum | The attribute number of the column. |
+| attname | The column name. | 
+| size | The size of the column in bytes. |
+| size_uncompressed | The size of the column in bytes if the column was not compressed. |
+| compression_ratio | The compression ratio. |
+
+### <a id="topic_viewcolumnsizesummary"></a>gp_column_size_summary
+
+This view shows a summary of the `gp_column_size` view. It aggregates the column size and compression ratio for each column in each column-oriented append-optimized table from all segments.
+
+|Column|Description|
+|------|-----------|
+| relname | The table name. |
+| attnum | The attribute number of the column. |
+| size | The size of the column in bytes. |
+| size_uncompressed | The size of the column in bytes if the column were uncompressed. |
+| compression_ratio | The compression ratio. |
+
 ## <a id="topic16"></a>Viewing Greenplum Database Server Log Files 
 
 Each component of a Greenplum Database system \(coordinator, standby coordinator, primary segments, and mirror segments\) keeps its own server log files. The `gp_log_*` family of views allows you to issue SQL queries against the server log files to find particular entries of interest. The use of these views require superuser permissions.
@@ -549,7 +589,7 @@ For each resource group that you assign to an external component, the `memory_us
 
 ### <a id="perhost"></a>gp\_resgroup\_status\_per\_host 
 
-The [gp\_resgroup\_status\_per\_host](system_catalogs/gp_resgroup_status_per_host.html) view displays the real-time CPU and memory usage \(MBs\) for each resource group on a per-host basis. The view also displays available and granted group fixed and shared memory for each resource group on a host.
+The [gp\_resgroup\_status\_per\_host](system_catalogs/catalog_ref-views.html#gp_resgroup_status_per_host) view displays the real-time CPU and memory usage \(MBs\) for each resource group on a per-host basis. The view also displays available and granted group fixed and shared memory for each resource group on a host.
 
 |Column|Description|
 |------|-----------|

@@ -1109,8 +1109,8 @@ max_parallel_hazard_walker(Node *node, max_parallel_hazard_context *context)
 	 * We can't pass Params to workers at the moment either, so they are also
 	 * parallel-restricted, unless they are PARAM_EXTERN Params or are
 	 * PARAM_EXEC Params listed in safe_param_ids, meaning they could be
-	 * either generated within the worker or can be computed in master and
-	 * then their value can be passed to the worker.
+	 * either generated within workers or can be computed by the leader and
+	 * then their value can be passed to workers.
 	 */
 	else if (IsA(node, Param))
 	{
@@ -2221,7 +2221,7 @@ check_execute_on_functions_walker(Node *node,
 			if (context->exec_location != PROEXECLOCATION_ANY)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot mix EXECUTE ON MASTER and EXECUTE ON ALL SEGMENTS functions in same query level")));
+						 errmsg("cannot mix EXECUTE ON COORDINATOR and EXECUTE ON ALL SEGMENTS functions in same query level")));
 			context->exec_location = exec_location;
 		}
 		/* fall through to check args */

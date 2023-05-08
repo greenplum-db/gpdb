@@ -77,7 +77,8 @@ static CExpression *SubstituteConstantIdentifier(
 // eliminate self comparisons in the given expression
 CExpression *
 CExpressionPreprocessor::PexprEliminateSelfComparison(CMemoryPool *mp,
-													  CExpression *pexpr)
+													  CExpression *pexpr,
+													  CColRefSet *pcrsNotNull)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
@@ -86,7 +87,8 @@ CExpressionPreprocessor::PexprEliminateSelfComparison(CMemoryPool *mp,
 
 	if (CUtils::FScalarCmp(pexpr))
 	{
-		return CPredicateUtils::PexprEliminateSelfComparison(mp, pexpr);
+		return CPredicateUtils::PexprEliminateSelfComparison(mp, pexpr,
+															 pcrsNotNull);
 	}
 
 	// recursively process children
@@ -95,7 +97,7 @@ CExpressionPreprocessor::PexprEliminateSelfComparison(CMemoryPool *mp,
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CExpression *pexprChild =
-			PexprEliminateSelfComparison(mp, (*pexpr)[ul]);
+			PexprEliminateSelfComparison(mp, (*pexpr)[ul], pcrsNotNull);
 		pdrgpexprChildren->Append(pexprChild);
 	}
 
@@ -3384,8 +3386,8 @@ CExpressionPreprocessor::PexprPreprocess(
 	pexprJoinPruned->Release();
 
 	// (12) eliminate self comparisons
-	CExpression *pexprSelfCompEliminated =
-		PexprEliminateSelfComparison(mp, pexprInferredPreds);
+	CExpression *pexprSelfCompEliminated = PexprEliminateSelfComparison(
+		mp, pexprInferredPreds, pexprInferredPreds->DeriveNotNullColumns());
 	GPOS_CHECK_ABORT;
 	pexprInferredPreds->Release();
 

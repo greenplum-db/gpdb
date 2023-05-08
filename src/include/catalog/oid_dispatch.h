@@ -16,7 +16,7 @@
 #include "utils/relcache.h"
 #include "access/htup.h"
 
-/* Functions used in master */
+/* Functions used in coordinator */
 extern List *GetAssignedOidsForDispatch(void);
 
 /* Functions used in QE nodes */
@@ -113,7 +113,7 @@ extern void RememberPreassignedIndexNameForChildIndex(Oid parentIdxOid, Oid chil
 													  const char *idxname);
 
 
-/* Functions used in master and QE nodes */
+/* Functions used in coordinator and QE nodes */
 extern void PreserveOidAssignmentsOnCommit(void);
 extern void ClearOidAssignmentsOnCommit(void);
 extern List * SaveOidAssignments(void);

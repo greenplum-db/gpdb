@@ -265,7 +265,6 @@ YAML_LIBS		= @YAML_LIBS@
 with_zstd 		= @with_zstd@
 ZSTD_CFLAGS		= @ZSTD_CFLAGS@
 ZSTD_LIBS		= @ZSTD_LIBS@
-with_quicklz		= @with_quicklz@
 EVENT_LIBS		= @EVENT_LIBS@
 
 ##########################################################################

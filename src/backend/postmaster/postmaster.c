@@ -623,7 +623,7 @@ typedef struct
 	pg_time_t	first_syslogger_file_time;
 	bool		redirection_done;
 	bool		IsBinaryUpgrade;
-	bool		ConvertMasterDataDirToSegment;
+	bool		ConvertCoordinatorDataDirToSegment;
 	int			max_safe_fds;
 	int			MaxBackends;
 #ifdef WIN32
@@ -882,7 +882,7 @@ PostmasterMain(int argc, char *argv[])
 				 * utility mode, as changes will be destructive, and will assume that
 				 * the segment has never participated in a distributed
 				 * transaction.*/
-				ConvertMasterDataDirToSegment = true;
+				ConvertCoordinatorDataDirToSegment = true;
 				break;
 
 			case 'm':
@@ -6807,7 +6807,7 @@ save_backend_variables(BackendParameters *param, Port *port,
 
 	param->redirection_done = redirection_done;
 	param->IsBinaryUpgrade = IsBinaryUpgrade;
-	param->ConvertMasterDataDirToSegment = ConvertMasterDataDirToSegment;
+	param->ConvertCoordinatorDataDirToSegment = ConvertCoordinatorDataDirToSegment;
 	param->max_safe_fds = max_safe_fds;
 
 	param->MaxBackends = MaxBackends;
@@ -7043,7 +7043,7 @@ restore_backend_variables(BackendParameters *param, Port *port)
 
 	redirection_done = param->redirection_done;
 	IsBinaryUpgrade = param->IsBinaryUpgrade;
-	ConvertMasterDataDirToSegment = param->ConvertMasterDataDirToSegment;
+	ConvertCoordinatorDataDirToSegment = param->ConvertCoordinatorDataDirToSegment;
 	max_safe_fds = param->max_safe_fds;
 
 	MaxBackends = param->MaxBackends;

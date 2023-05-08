@@ -2471,7 +2471,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
       LANGUAGE C
       WITH (describe = ud_describe2);
 
-    -- Query table that only available on master (catalog tables)
+    -- Query table that only available on coordinator (catalog tables)
     select * from ud_project2(table(
         select dbid::int from gp_segment_configuration 
         where dbid < 3

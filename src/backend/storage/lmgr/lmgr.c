@@ -696,7 +696,7 @@ XactLockTableWait(TransactionId xid, Relation rel, ItemPointer ctid,
 	 * Concurrent update and delete will wait on segment when GDD is enabled (or
 	 * the corner case that utility mode delete|update in segment which does not hold
 	 * gxid), need to report the waited transactions to QD to make sure the they have
-	 * the same transaction order on the master.
+	 * the same transaction order on the coordinator.
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{

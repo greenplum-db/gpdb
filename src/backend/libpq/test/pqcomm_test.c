@@ -152,7 +152,7 @@ test__StreamConnection_set_SNDTIMEO_AF_INET(void **state)
 	Port *port = (Port *) calloc(1, sizeof(Port));
 	pgsocket server_fd = 1;
 
-	GpIdentity.segindex = MASTER_CONTENT_ID;
+	GpIdentity.segindex = COORDINATOR_CONTENT_ID;
 	gp_connection_send_timeout = SOCKET_TIMEOUT_SECONDS;
 	test_accept_socket = socket(AF_INET, SOCK_STREAM, 0 /* protocol */);
 
@@ -180,7 +180,7 @@ test__StreamConnection_set_SNDTIMEO_AF_UNIX(void **state)
 	Port *port = (Port *) calloc(1, sizeof(Port));
 	pgsocket server_fd = 1;
 
-	GpIdentity.segindex = MASTER_CONTENT_ID;
+	GpIdentity.segindex = COORDINATOR_CONTENT_ID;
 	gp_connection_send_timeout = SOCKET_TIMEOUT_SECONDS;
 	test_accept_socket = socket(AF_UNIX, SOCK_STREAM, 0 /* protocol */);
 
@@ -209,7 +209,7 @@ test__StreamConnection_set_SNDTIMEO_segment(void **state)
 	Port *port = (Port *) calloc(1, sizeof(Port));
 	pgsocket server_fd = 1;
 
-	/* Use another segindex than master, anything != MASTER_CONTENT_ID will do */
+	/* Use another segindex than coordinator, anything != COORDINATOR_CONTENT_ID will do */
 	GpIdentity.segindex = 1;
 	gp_connection_send_timeout = SOCKET_TIMEOUT_SECONDS;
 	test_accept_socket = socket(AF_INET, SOCK_STREAM, 0 /* protocol */);

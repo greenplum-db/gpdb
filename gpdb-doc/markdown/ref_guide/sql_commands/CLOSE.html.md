@@ -23,7 +23,7 @@ Every non-holdable open cursor is implicitly closed when a transaction is termin
 
 Greenplum Database does not have an explicit `OPEN` cursor statement. A cursor is considered open when it is declared. Use the `DECLARE` statement to declare \(and open\) a cursor.
 
-You can see all available cursors by querying the [pg\_cursors](../system_catalogs/pg_cursors.html) system view.
+You can see all available cursors by querying the [pg\_cursors](../system_catalogs/catalog_ref-views.html#pg_cursors) system view.
 
 If a cursor is closed after a savepoint which is later rolled back, the `CLOSE` is not rolled back; that is the cursor remains closed.
 

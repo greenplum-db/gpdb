@@ -327,10 +327,13 @@ $$ language plpgsql;
 --
 -- usage: `select pg_basebackup('somehost', 12345, 'some_slot_name', '/some/destination/data/directory')`
 --
-create or replace function pg_basebackup(host text, dbid int, port int, create_slot boolean, slotname text, datadir text, force_overwrite boolean, xlog_method text) returns text as $$
+create or replace function pg_basebackup(host text, dbid int, port int, create_slot boolean, slotname text, datadir text, force_overwrite boolean, xlog_method text, progress boolean DEFAULT false) returns text as $$
     import subprocess
     import os
     cmd = 'pg_basebackup --no-sync --checkpoint=fast -h %s -p %d -R -D %s --target-gp-dbid %d' % (host, port, datadir, dbid)
+
+    if progress:
+        cmd += ' --progress'
 
     if create_slot:
         cmd += ' --create-slot'
@@ -410,6 +413,47 @@ begin
     i := 0; /* in func */
     while i < 1200 loop
             select pg_stat_get_dead_tuples(relid) into stat_val; /* in func */
+            if stat_val = stat_val_expected then /* in func */
+                return 'OK'; /* in func */
+            end if; /* in func */
+            perform pg_sleep(0.1); /* in func */
+            perform pg_stat_clear_snapshot(); /* in func */
+            i := i + 1; /* in func */
+        end loop; /* in func */
+    return 'Fail'; /* in func */
+end; /* in func */
+$$ language plpgsql;
+
+-- Helper function that ensures mirror of the specified contentid is down.
+create or replace function wait_for_mirror_down(contentid smallint, timeout_sec integer) returns bool as
+$$
+declare i int; /* in func */
+begin /* in func */
+    i := 0; /* in func */
+    loop /* in func */
+        perform gp_request_fts_probe_scan(); /* in func */
+        if (select count(1) from gp_segment_configuration where role='m' and content=$1 and status='d') = 1 then /* in func */
+            return true; /* in func */
+        end if; /* in func */
+        if i >= 2 * $2 then /* in func */
+            return false; /* in func */
+        end if; /* in func */
+        perform pg_sleep(0.5); /* in func */
+        i = i + 1; /* in func */
+    end loop; /* in func */
+end; /* in func */
+$$ language plpgsql;
+
+-- Helper function that ensures stats collector receives stat from the latest operation.
+create or replace function wait_until_vacuum_count_change_to(relid oid, stat_val_expected bigint)
+    returns text as $$
+declare
+    stat_val int; /* in func */
+    i int; /* in func */
+begin
+    i := 0; /* in func */
+    while i < 1200 loop
+            select pg_stat_get_vacuum_count(relid) into stat_val; /* in func */
             if stat_val = stat_val_expected then /* in func */
                 return 'OK'; /* in func */
             end if; /* in func */

@@ -70,6 +70,7 @@ typedef struct ResGroupCaps
 	ResGroupCap		cpuHardQuotaLimit;
 	ResGroupCap		cpuSoftPriority;
 	ResGroupCap		memory_limit;
+	volatile ResGroupCap	min_cost;
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -151,9 +152,9 @@ extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 									const char *buf,
 									int len);
 
-extern bool ShouldAssignResGroupOnMaster(void);
+extern bool ShouldAssignResGroupOnCoordinator(void);
 extern bool ShouldUnassignResGroup(void);
-extern void AssignResGroupOnMaster(void);
+extern void AssignResGroupOnCoordinator(void);
 extern void UnassignResGroup(bool releaseSlot);
 extern void SwitchResGroupOnSegment(const char *buf, int len);
 
@@ -167,6 +168,7 @@ extern void ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 extern void ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
+extern void ShouldBypassQuery(PlannedStmt* stmt, bool inFunc);
 extern uint64 ResourceGroupGetQueryMemoryLimit(void);
 
 /*

@@ -280,7 +280,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 				int contentId = pg_atoi(defel->defname + strlen("content"), sizeof(int16), 0);
 
 				/*
-				 * The master validates the content ids are in [0, segCount)
+				 * The coordinator validates the content ids are in [0, segCount)
 				 * before dispatching. We can use primary segment count
 				 * because the number of primary segments can never shrink and
 				 * therefore should not have holes in the content id sequence.

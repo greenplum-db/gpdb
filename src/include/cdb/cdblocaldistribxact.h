@@ -24,7 +24,7 @@ typedef enum
 } LocalDistribXactState;
 
 /*
- * Local information in the database instance (master or segment) on
+ * Local information in the database instance (coordinator or segment) on
  * a distributed transaction.
  */
 typedef struct LocalDistribXactData

@@ -11171,15 +11171,26 @@
    prorettype => 'bool', proargtypes => 'text',
    prosrc => 'gp_truncate_persistent_error_log' },
 
-# Segment and master administration functions, see utils/gp/segadmin.c
+# Segment and coordinator administration functions, see utils/gp/segadmin.c
+{ oid => 7091, descr => 'Perform the catalog operations necessary for adding a new standby',
+   proname => 'gp_add_coordinator_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'int2', proargtypes => 'text text text', prosrc => 'gp_add_coordinator_standby' },
+
+{ oid => 7092, descr => 'Perform the catalog operations necessary for adding a new standby',
+   proname => 'gp_add_coordinator_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'int2', proargtypes => 'text text text int4', prosrc => 'gp_add_coordinator_standby_port' },
+
+{ oid => 7093, descr => 'Remove a coordinator standby from the system catalog',
+   proname => 'gp_remove_coordinator_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'bool', proargtypes => '', prosrc => 'gp_remove_coordinator_standby' },
+
+# kept for backwards compatibility.  prefer gp_*_coordinator_* functions
 { oid => 5046, descr => 'Perform the catalog operations necessary for adding a new standby',
-   proname => 'gp_add_master_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'int2', proargtypes => 'text text text', prosrc => 'gp_add_master_standby' },
+   proname => 'gp_add_master_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'int2', proargtypes => 'text text text', prosrc => 'gp_add_coordinator_standby' },
 
 { oid => 5038, descr => 'Perform the catalog operations necessary for adding a new standby',
-   proname => 'gp_add_master_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'int2', proargtypes => 'text text text int4', prosrc => 'gp_add_master_standby_port' },
+   proname => 'gp_add_master_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'int2', proargtypes => 'text text text int4', prosrc => 'gp_add_coordinator_standby_port' },
 
-{ oid => 5047, descr => 'Remove a master standby from the system catalog',
-   proname => 'gp_remove_master_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'bool', proargtypes => '', prosrc => 'gp_remove_master_standby' },
+{ oid => 5047, descr => 'Remove a coordinator standby from the system catalog',
+   proname => 'gp_remove_master_standby', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'bool', proargtypes => '', prosrc => 'gp_remove_coordinator_standby' },
+
 
 { oid => 5039, descr => 'Perform the catalog operations necessary for adding a new primary segment',
    proname => 'gp_add_segment_primary', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'int2', proargtypes => 'text text int4 text', prosrc => 'gp_add_segment_primary' },

@@ -145,7 +145,7 @@ where storage_directive is:
 
 ```
    blocksize={8192-2097152}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
    compresslevel={0-9}
 ``` 
 
@@ -153,7 +153,7 @@ where storage\_parameter when used with the `SET` command is:
 
 ```
    blocksize={8192-2097152}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
    checksum= {true | false }
@@ -166,7 +166,7 @@ where storage\_parameter when used with the `SET WITH` command is:
    appendoptimized={true | false }
    blocksize={8192-2097152}
    orientation={COLUMN|ROW}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
    checksum={true | false }

@@ -50,6 +50,7 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
+#include "utils/resgroup.h"
 #include "utils/rls.h"
 #include "utils/snapmgr.h"
 
@@ -443,6 +444,11 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 	}
 	else
 	{
+		if (ShouldUnassignResGroup())
+		{
+			bool inFunction = already_under_executor_run() || utility_nested();
+			ShouldBypassQuery(queryDesc->plannedstmt, inFunction);
+		}
 		queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 		/* call ExecutorStart to prepare the plan for execution */

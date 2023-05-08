@@ -344,7 +344,7 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
         </dxl:LogicalGroupBy>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2">
+    <dxl:Plan Id="0" SpaceSize="3">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000716" Rows="1.000000" Width="8"/>

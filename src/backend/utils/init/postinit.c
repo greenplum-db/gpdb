@@ -422,8 +422,12 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
 		 * ideally one should succeed and one fail.  Getting that to work
 		 * exactly seems more trouble than it is worth, however; instead we
 		 * just document that the connection limit is approximate.
+		 *
+		 * We do not want to do this for QEs since a single QD might initialise
+		 * many connections to each segment to execute a non-trivial plan and
+		 * the db connection limit does not map, semantically, to that idea.
 		 */
-		if (dbform->datconnlimit >= 0 &&
+		if (Gp_role == GP_ROLE_DISPATCH && dbform->datconnlimit >= 0 &&
 			!am_superuser &&
 			CountDBConnections(MyDatabaseId) > dbform->datconnlimit)
 			ereport(FATAL,
@@ -925,7 +929,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * In Greenplum, there is a concept of restricted mode where
 	 * superuser_reserved_connections is set equal to max_connections making
 	 * it so only superusers can connect. Changes made in restricted mode need
-	 * to be replicated to the standby master. We currently only support one
+	 * to be replicated to the standby primary. We currently only support one
 	 * walsender anyways so we should allow the connection to happen. This may
 	 * need to be reviewed later when we start supporting multiple mirrors.
 	 */

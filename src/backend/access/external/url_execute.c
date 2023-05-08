@@ -211,6 +211,8 @@ make_command(const char *cmd, extvar_t *ev)
 
 	initStringInfo(&buf);
 
+	make_export("GP_COORDINATOR_HOST", ev->GP_COORDINATOR_HOST, &buf);
+	make_export("GP_COORDINATOR_PORT", ev->GP_COORDINATOR_PORT, &buf);
 	make_export("GP_MASTER_HOST", ev->GP_MASTER_HOST, &buf);
 	make_export("GP_MASTER_PORT", ev->GP_MASTER_PORT, &buf);
 	make_export("GP_SEG_PG_CONF", ev->GP_SEG_PG_CONF, &buf);

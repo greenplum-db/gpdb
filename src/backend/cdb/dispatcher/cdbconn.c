@@ -169,7 +169,7 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	 *
 	 * For other QE connections, we set "hostaddr". "host" is not used.
 	 */
-	if (segdbDesc->segindex == MASTER_CONTENT_ID &&
+	if (segdbDesc->segindex == COORDINATOR_CONTENT_ID &&
 		IS_QUERY_DISPATCHER())
 	{
 		keywords[nkeywords] = "hostaddr";

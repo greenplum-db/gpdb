@@ -87,9 +87,9 @@ typedef struct FixedParallelState
 	Oid			temp_toast_namespace_id;
 	int			sec_context;
 	bool		is_superuser;
-	PGPROC	   *parallel_master_pgproc;
-	pid_t		parallel_master_pid;
-	BackendId	parallel_master_backend_id;
+	PGPROC	   *parallel_leader_pgproc;
+	pid_t		parallel_leader_pid;
+	BackendId	parallel_leader_backend_id;
 	TimestampTz xact_ts;
 	TimestampTz stmt_ts;
 	SerializableXactHandle serializable_xact_handle;
@@ -122,7 +122,7 @@ static FixedParallelState *MyFixedParallelState;
 static dlist_head pcxt_list = DLIST_STATIC_INIT(pcxt_list);
 
 /* Backend-local copy of data from FixedParallelState. */
-static pid_t ParallelMasterPid;
+static pid_t ParallelLeaderPid;
 
 /*
  * List of internal parallel worker entry points.  We need this for
@@ -317,9 +317,9 @@ InitializeParallelDSM(ParallelContext *pcxt)
 	GetUserIdAndSecContext(&fps->current_user_id, &fps->sec_context);
 	GetTempNamespaceState(&fps->temp_namespace_id,
 						  &fps->temp_toast_namespace_id);
-	fps->parallel_master_pgproc = MyProc;
-	fps->parallel_master_pid = MyProcPid;
-	fps->parallel_master_backend_id = MyBackendId;
+	fps->parallel_leader_pgproc = MyProc;
+	fps->parallel_leader_pid = MyProcPid;
+	fps->parallel_leader_backend_id = MyBackendId;
 	fps->xact_ts = GetCurrentTransactionStartTimestamp();
 	fps->stmt_ts = GetCurrentStatementStartTimestamp();
 	fps->serializable_xact_handle = ShareSerializableXact();
@@ -836,8 +836,8 @@ WaitForParallelWorkersToFinish(ParallelContext *pcxt)
  *
  * This function ensures that workers have been completely shutdown.  The
  * difference between WaitForParallelWorkersToFinish and this function is
- * that former just ensures that last message sent by worker backend is
- * received by master backend whereas this ensures the complete shutdown.
+ * that the former just ensures that last message sent by a worker backend is
+ * received by the leader backend whereas this ensures the complete shutdown.
  */
 static void
 WaitForParallelWorkersToExit(ParallelContext *pcxt)
@@ -1282,8 +1282,8 @@ ParallelWorkerMain(Datum main_arg)
 	MyFixedParallelState = fps;
 
 	/* Arrange to signal the leader if we exit. */
-	ParallelMasterPid = fps->parallel_master_pid;
-	ParallelMasterBackendId = fps->parallel_master_backend_id;
+	ParallelLeaderPid = fps->parallel_leader_pid;
+	ParallelLeaderBackendId = fps->parallel_leader_backend_id;
 	on_shmem_exit(ParallelWorkerShutdown, (Datum) 0);
 
 	/*
@@ -1298,8 +1298,8 @@ ParallelWorkerMain(Datum main_arg)
 	shm_mq_set_sender(mq, MyProc);
 	mqh = shm_mq_attach(mq, seg, NULL);
 	pq_redirect_to_shm_mq(seg, mqh);
-	pq_set_parallel_master(fps->parallel_master_pid,
-						   fps->parallel_master_backend_id);
+	pq_set_parallel_leader(fps->parallel_leader_pid,
+						   fps->parallel_leader_backend_id);
 
 	/*
 	 * Send a BackendKeyData message to the process that initiated parallelism
@@ -1327,8 +1327,8 @@ ParallelWorkerMain(Datum main_arg)
 	 * deadlock.  (If we can't join the lock group, the leader has gone away,
 	 * so just exit quietly.)
 	 */
-	if (!BecomeLockGroupMember(fps->parallel_master_pgproc,
-							   fps->parallel_master_pid))
+	if (!BecomeLockGroupMember(fps->parallel_leader_pgproc,
+							   fps->parallel_leader_pid))
 		return;
 
 	/*
@@ -1404,7 +1404,7 @@ ParallelWorkerMain(Datum main_arg)
 	asnapshot = RestoreSnapshot(asnapspace);
 	tsnapshot = tsnapspace ? RestoreSnapshot(tsnapspace) : asnapshot;
 	RestoreTransactionSnapshot(tsnapshot,
-							   fps->parallel_master_pgproc);
+							   fps->parallel_leader_pgproc);
 	PushActiveSnapshot(asnapshot);
 
 	/*
@@ -1496,9 +1496,9 @@ ParallelWorkerReportLastRecEnd(XLogRecPtr last_xlog_end)
 static void
 ParallelWorkerShutdown(int code, Datum arg)
 {
-	SendProcSignal(ParallelMasterPid,
+	SendProcSignal(ParallelLeaderPid,
 				   PROCSIG_PARALLEL_MESSAGE,
-				   ParallelMasterBackendId);
+				   ParallelLeaderBackendId);
 }
 
 /*

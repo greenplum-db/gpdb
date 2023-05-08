@@ -551,7 +551,7 @@ ic_proxy_server_main(void)
 	uv_signal_init(&ic_proxy_server_loop, &ic_proxy_server_signal_int);
 	uv_signal_start(&ic_proxy_server_signal_int, ic_proxy_server_on_signal, SIGINT);
 
-	/* on master */
+	/* on coordinator */
 	uv_signal_init(&ic_proxy_server_loop, &ic_proxy_server_signal_term);
 	uv_signal_start(&ic_proxy_server_signal_term, ic_proxy_server_on_signal, SIGTERM);
 

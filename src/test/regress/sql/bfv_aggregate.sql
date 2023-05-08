@@ -1469,6 +1469,27 @@ explain (costs off)
 select 1, median(col1) from group_by_const group by 1;
 select 1, median(col1) from group_by_const group by 1;
 
+-- ORCA should pick singlestage-agg plan when multistage-agg guc is true
+-- and distribution type is universal/replicated
+
+set optimizer_force_multistage_agg to on;
+
+create table t1_replicated(a int, b int, c float, d float) distributed replicated;
+create table t2_replicated(a int, b int) distributed replicated;
+
+explain select distinct b from t1_replicated;
+explain select sum(a), avg(b) from t1_replicated;
+explain select count(distinct b)  from t1_replicated group by a;
+explain select a, sum(mc) from (select a, b, max(c) mc from t1_replicated group by a,b) t group by a;
+explain SELECT t1.a, sum(c) from t1_replicated as t1 join t2_replicated as t2 on t1.a = t2.a group by t1.a;
+explain select count(a) from t1_replicated where c < (select sum(b) from t2_replicated);
+
+explain SELECT DISTINCT g%10 FROM generate_series(0, 100) g;
+explain select count(*) from generate_series(0, 100) g;
+explain select g%10 as c1, sum(g::numeric)as c2, count(*) as c3 from generate_series(1, 99) g group by g%10;
+
+reset optimizer_force_multistage_agg;
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

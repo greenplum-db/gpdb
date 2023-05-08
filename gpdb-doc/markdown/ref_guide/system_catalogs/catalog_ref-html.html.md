@@ -16,15 +16,15 @@ System catalog table and view definitions in alphabetical order.
 
 -   [gp\_configuration\_history](../system_catalogs/gp_configuration_history.html)  
 
--   [gp\_distributed\_log](../system_catalogs/gp_distributed_log.html)  
+-   [gp\_distributed\_log](../system_catalogs/catalog_ref-views.html#gp_distributed_log)  
 
--   [gp\_distributed\_xacts](../system_catalogs/gp_distributed_xacts.html)  
+-   [gp\_distributed\_xacts](../system_catalogs/catalog_ref-views.html#gp_distributed_xacts)  
 
 -   [gp\_distribution\_policy](../system_catalogs/gp_distribution_policy.html)  
 
--   [gpexpand.expansion\_progress](../system_catalogs/gpexpand_expansion_progress.html)  
+-   [gpexpand.expansion\_progress](../system_catalogs/catalog_ref-views.html#gpexpandexpansion_progress)  
 
--   [gp\_endpoints](../system_catalogs/gp_endpoints.html)  
+-   [gp\_endpoints](../system_catalogs/catalog_ref-views.html#gp_endpoints)  
 
 -   [gpexpand.status](../system_catalogs/gp_expansion_status.html)  
 
@@ -36,25 +36,25 @@ System catalog table and view definitions in alphabetical order.
 
 -   [gp\_partition\_template](../system_catalogs/gp_partition_template.html)  
 
--   [gp\_pgdatabase](../system_catalogs/gp_pgdatabase.html)  
+-   [gp\_pgdatabase](../system_catalogs/catalog_ref-views.html#gp_pgdatabase)  
 
--   [gp\_resgroup\_config](../system_catalogs/gp_resgroup_config.html)  
+-   [gp\_resgroup\_config](../system_catalogs/catalog_ref-views.html#gp_resgroup_config)  
 
--   [gp\_resgroup\_status](../system_catalogs/gp_resgroup_status.html)  
+-   [gp\_resgroup\_status](../system_catalogs/catalog_ref-views.html#gp_resgroup_status)  
 
--   [gp\_resgroup\_status\_per\_host](../system_catalogs/gp_resgroup_status_per_host.html)  
+-   [gp\_resgroup\_status\_per\_host](../system_catalogs/catalog_ref-views.html#gp_resgroup_status_per_host)  
 
--   [gp\_resqueue\_status](../system_catalogs/gp_resqueue_status.html)  
+-   [gp\_resqueue\_status](../system_catalogs/catalog_ref-views.html#gp_resqueue_status)  
 
 -   [gp\_segment\_configuration](../system_catalogs/gp_segment_configuration.html)  
 
--   [gp\_segment\_endpoints](../system_catalogs/gp_segment_endpoints.html)  
+-   [gp\_segment\_endpoints](../system_catalogs/catalog_ref-views.html#gp_segment_endpoints)  
 
--   [gp\_session\_endpoints](../system_catalogs/gp_session_endpoints.html)  
+-   [gp\_session\_endpoints](../system_catalogs/catalog_ref-views.html#gp_session_endpoints)  
 
--   [gp\_stat\_replication](../system_catalogs/gp_stat_replication.html)  
+-   [gp\_stat\_replication](../system_catalogs/catalog_ref-views.html#gp_stat_replication)
 
--   [gp\_transaction\_log](../system_catalogs/gp_transaction_log.html)  
+-   [gp\_transaction\_log](../system_catalogs/catalog_ref-views.html#gp_transaction_log)  
 
 -   [gp\_version\_at\_initdb](../system_catalogs/gp_version_at_initdb.html)  
 
@@ -81,7 +81,7 @@ System catalog table and view definitions in alphabetical order.
 -   [pg\_available\_extension\_versions](../system_catalogs/pg_available_extension_versions.html)  
 
 -   [pg\_available\_extensions](../system_catalogs/pg_available_extensions.html)  
--   [pg_backend_memory_contexts](../system_catalogs/pg_backend_memory_contexts.html)  
+-   [pg_backend_memory_contexts](../system_catalogs/catalog_ref-views.html#pg_backend_memory_contexts)  
 
 -   [pg\_cast](../system_catalogs/pg_cast.html)  
 
@@ -93,7 +93,7 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_conversion](../system_catalogs/pg_conversion.html)  
 
--   [pg\_cursors](../system_catalogs/pg_cursors.html)  
+-   [pg\_cursors](../system_catalogs/catalog_ref-views.html#pg_cursors)  
 
 -   [pg\_database](../system_catalogs/pg_database.html)  
 
@@ -125,9 +125,9 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_locks](../system_catalogs/pg_locks.html)  
 
--   [pg\_matviews](../system_catalogs/pg_matviews.html)  
+-   [pg\_matviews](../system_catalogs/catalog_ref-views.html#pg_matviews)  
 
--   [pg\_max\_external\_files](../system_catalogs/pg_max_external_files.html)  
+-   [pg\_max\_external\_files](../system_catalogs/catalog_ref-views.html#pg_max_external_files)  
 
 -   [pg\_namespace](../system_catalogs/pg_namespace.html)  
 
@@ -141,7 +141,7 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_pltemplate](../system_catalogs/pg_pltemplate.html)  
 
--   [pg\_policies](../system_catalogs/pg_policies.html)  
+-   [pg\_policies](../system_catalogs/catalog_ref-views.html#pg_policies)  
 
 -   [pg\_policy](../system_catalogs/pg_policy.html)  
 
@@ -157,7 +157,7 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_resqueue](../system_catalogs/pg_resqueue.html)  
 
--   [pg\_resqueue\_attributes](../system_catalogs/pg_resqueue_attributes.html)  
+-   [pg\_resqueue\_attributes](../system_catalogs/catalog_ref-views.html#pg_resqueue_attributes)  
 
 -   [pg\_resqueuecapability](../system_catalogs/pg_resqueuecapability.html)  
 
@@ -171,11 +171,11 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_shdescription](../system_catalogs/pg_shdescription.html)  
 
--   [pg\_stat\_activity](../system_catalogs/pg_stat_activity.html)  
+-   [pg\_stat\_activity](../system_catalogs/catalog_ref-views.html#pg_stat_activity)  
 
--   [pg\_stat\_all\_indexes](../system_catalogs/pg_stat_indexes.html)  
+-   [pg\_stat\_all\_indexes](../system_catalogs/catalog_ref-views.html#pg_stat_all_indexes)  
 
--   [pg\_stat\_all\_tables](../system_catalogs/pg_stat_tables.html)  
+-   [pg\_stat\_all\_tables](../system_catalogs/catalog_ref-views.html#pg_stat_all_tables)  
 
 -   [pg\_stat\_last\_operation](../system_catalogs/pg_stat_last_operation.html)  
 
@@ -183,9 +183,13 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_stat\_operations](../system_catalogs/pg_stat_operations.html)  
 
--   [pg\_stat\_replication](../system_catalogs/pg_stat_replication.html)  
+-   [pg\_stat\_replication](../system_catalogs/catalog_ref-views.html#pg_stat_replication)
 
--   [pg\_stat\_resqueues](../system_catalogs/pg_stats_resqueue.html)  
+-   [pg\_stat\_resqueues](../system_catalogs/catalog_ref-views.html#pg_stat_resqueues)  
+
+-   [pg_stat_slru](../system_catalogs/catalog_ref-views.html#pg_stat_slru)
+
+-   [pg_stat_wal](../system_catalogs/catalog_ref-views.html#pg_stat_wal)
 
 -   [pg\_statistic](../system_catalogs/pg_statistic.html)  
 
@@ -193,9 +197,9 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_statistic\_ext\_data](../system_catalogs/pg_statistic_ext_data.html)
 
--   [pg\_stats](../system_catalogs/pg_stats.html)
+-   [pg\_stats](../system_catalogs/catalog_ref-views.html#pg_stats)
 
--   [pg\_stats\_ext](../system_catalogs/pg_stats_ext.html)
+-   [pg\_stats\_ext](../system_catalogs/catalog_ref-views.html#gp_stats_ext)
 
 -   [pg\_tablespace](../system_catalogs/pg_tablespace.html)  
 

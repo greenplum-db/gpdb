@@ -267,13 +267,13 @@ int64 GetFastSequences(Oid objid, int64 objmod, int64 numSequences)
 	/*
 	 * gp_fastsequence table locking for AO inserts uses bottom up approach
 	 * meaning the locks are first acquired on the segments and later on the
-	 * master.
+	 * coordinator.
 	 * Hence, it is essential that we release the lock here to avoid
-	 * any form of master-segment resource deadlock. E.g. A transaction
+	 * any form of coordinator-segment resource deadlock. E.g. A transaction
 	 * trying to reindex gp_fastsequence has acquired a lock on it on the
-	 * master but is blocked on the segment as another transaction which
+	 * coordinator but is blocked on the segment as another transaction which
 	 * is an insert operation has acquired a lock first on segment and is
-	 * trying to acquire a lock on the Master. Deadlock!
+	 * trying to acquire a lock on the Coordinator. Deadlock!
 	 */
 	table_close(gp_fastsequence_rel, RowExclusiveLock);
 
@@ -338,13 +338,13 @@ int64 ReadLastSequence(Oid objid, int64 objmod)
 	/*
 	 * gp_fastsequence table locking for AO inserts uses bottom up approach
 	 * meaning the locks are first acquired on the segments and later on the
-	 * master.
+	 * coordinator.
 	 * Hence, it is essential that we release the lock here to avoid
-	 * any form of master-segment resource deadlock. E.g. A transaction
+	 * any form of coordinator-segment resource deadlock. E.g. A transaction
 	 * trying to reindex gp_fastsequence has acquired a lock on it on the
-	 * master but is blocked on the segment as another transaction which
+	 * coordinator but is blocked on the segment as another transaction which
 	 * is an insert operation has acquired a lock first on segment and is
-	 * trying to acquire a lock on the Master. Deadlock!
+	 * trying to acquire a lock on the Coordinator. Deadlock!
 	 */
 	heap_close(gp_fastsequence_rel, AccessShareLock);
 

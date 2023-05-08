@@ -595,7 +595,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="150">
+    <dxl:Plan Id="0" SpaceSize="449">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1356695750.944685" Rows="1.000000" Width="16"/>

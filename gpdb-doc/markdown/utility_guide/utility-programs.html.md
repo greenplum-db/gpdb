@@ -39,7 +39,7 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [gpmapreduce](ref/gpmapreduce.html)
 - [gpmapreduce.yaml](ref/gpmapreduce-yaml.html)
 - [gpmovemirrors](ref/gpmovemirrors.html)
-- [gpmt](ref/gpmt.html)
+- [gpsupport](ref/gpsupport.html)
 - [gppkg](ref/gppkg.html)
 - [gpcr](https://docs.vmware.com/en/VMware-Greenplum-Cluster-Recovery/1.0/greenplum-cluster-recovery/GUID-ref-gpcr.html)
 - [gprecoverseg](ref/gprecoverseg.html)

@@ -35,6 +35,9 @@ GPHOME = os.environ.get('GPHOME', None)
 # ---------------command path--------------------
 CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
            '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
+CMDPATH = CMDPATH + os.environ['PATH'].split(os.pathsep)
+# remove duplicate paths
+CMDPATH = list(set(CMDPATH))
 
 if GPHOME:
     CMDPATH.append(GPHOME)
@@ -496,6 +499,16 @@ class Rsync(Command):
             cmdStr = cmdStr + canonicalize(dstHost) + ":"
         cmdStr = cmdStr + dstFile
 
+        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
+
+
+class RsyncFromFileList(Command):
+    def __init__(self, name, sync_list_file, local_base_dir, remote_basedir, dstHost=None, ctxt=LOCAL,
+                 remoteHost=None):
+        cmdStr = findCmdInPath('rsync') + " "
+        cmdStr += "--files-from=" + sync_list_file  + " " + local_base_dir + "/ "
+        if dstHost:
+            cmdStr += canonicalize(dstHost) + ":" + remote_basedir + "/"
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 # -------------create tar------------------

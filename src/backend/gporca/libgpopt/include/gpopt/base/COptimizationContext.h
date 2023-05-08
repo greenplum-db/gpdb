@@ -108,9 +108,8 @@ private:
 	COptimizationContext() = default;
 
 	// check if Agg node should be optimized for the given context
-	static BOOL FOptimizeAgg(CMemoryPool *mp, CGroupExpression *pgexprParent,
-							 CGroupExpression *pgexprAgg,
-							 COptimizationContext *poc, ULONG ulSearchStages);
+	static BOOL FOptimizeAgg(CGroupExpression *pgexprParent,
+							 CGroupExpression *pgexprAgg);
 
 	// check if Sort node should be optimized for the given context
 	static BOOL FOptimizeSort(CMemoryPool *mp, CGroupExpression *pgexprParent,

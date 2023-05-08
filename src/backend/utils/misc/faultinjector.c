@@ -193,7 +193,7 @@ FaultInjector_ShmemSize(void)
  * Hash table contains fault injection that are set on the system waiting to be injected.
  * FaultInjector identifier is the key in the hash table.
  * Hash table in shared memory is initialized only on primary and mirror segment. 
- * It is not initialized on master host.
+ * It is not initialized on coordinator host.
  */
 void
 FaultInjector_ShmemInit(void)

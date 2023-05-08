@@ -267,7 +267,7 @@ select sum(a) from (select a, b*c, c||d from woo) as too;
         </dxl:LogicalProject>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2">
+    <dxl:Plan Id="0" SpaceSize="3">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000072" Rows="1.000000" Width="8"/>

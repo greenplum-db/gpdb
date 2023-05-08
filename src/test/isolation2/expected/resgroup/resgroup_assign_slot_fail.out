@@ -1,4 +1,4 @@
--- If the function AssignResGroupOnMaster() fails after getting a slot,
+-- If the function AssignResGroupOnCoordinator() fails after getting a slot,
 -- test the slot will be unassigned correctly.
 
 DROP ROLE IF EXISTS role_test;
@@ -19,19 +19,19 @@ BEGIN
 2: SET ROLE role_test;
 SET
 -- start_ignore
-SELECT gp_inject_fault('resgroup_assigned_on_master', 'reset', 1);
+SELECT gp_inject_fault('resgroup_assigned_on_coordinator', 'reset', 1);
  gp_inject_fault 
 -----------------
  Success:        
 (1 row)
-SELECT gp_inject_fault('resgroup_assigned_on_master', 'error', 1);
+SELECT gp_inject_fault('resgroup_assigned_on_coordinator', 'error', 1);
  gp_inject_fault 
 -----------------
  Success:        
 (1 row)
 -- end_ignore
 2: BEGIN;
-ERROR:  fault triggered, fault name:'resgroup_assigned_on_master' fault type:'error'
+ERROR:  fault triggered, fault name:'resgroup_assigned_on_coordinator' fault type:'error'
 2: BEGIN;
 BEGIN
 1: END;

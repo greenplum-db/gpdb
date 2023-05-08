@@ -451,7 +451,7 @@ Physical plan:
         </dxl:Union>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="168">
+    <dxl:Plan Id="0" SpaceSize="22212">
       <dxl:DMLInsert Columns="0,1" ActionCol="22" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1765376.357206" Rows="1.000000" Width="8"/>

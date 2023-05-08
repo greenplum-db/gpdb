@@ -210,7 +210,6 @@ The following table lists the modules that are provided in the Data Science Pack
 | prophet | Automatic Forecasting Procedure |
 | protobuf | Protocol buffers |
 | psycopg2 | PostgreSQL database adapter for Python |
-| psycopg2-binary | psycopg2 - Python-PostgreSQL Database Adapter |
 | pyasn1 | ASN.1 types and codecs |
 | pyasn1-modules | pyasn1-modules |
 | pycparser | C parser in Python |

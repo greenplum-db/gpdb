@@ -208,7 +208,7 @@ reset gp_autostats_mode;
 CREATE SEQUENCE s_serial START 100;
 VACUUM (ANALYZE, VERBOSE) s_serial;
 DROP SEQUENCE s_serial;
-VACUUM gp_toolkit.__gp_log_master_ext;
+VACUUM gp_toolkit.__gp_log_coordinator_ext;
 
 -- Vacuum related access control tests (Issue: https://github.com/greenplum-db/gpdb/issues/9001)
 -- Given a non-super-user role

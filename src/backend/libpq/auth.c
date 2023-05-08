@@ -534,8 +534,8 @@ retrieve_conn_authentication(Port *port)
 
 /*
  * Special client authentication for QD to QE connections. This is run at the
- * QE. This is non-trivial because a QE some times runs at the master (i.e., an
- * entry-DB for things like master only tables).
+ * QE. This is non-trivial because a QE some times runs at the coordinator (i.e., an
+ * entry-DB for things like coordinator only tables).
  */
 static int
 internal_client_authentication(Port *port)
@@ -543,10 +543,10 @@ internal_client_authentication(Port *port)
 	if (IS_QUERY_DISPATCHER())
 	{
 		/*
-		 * The entry-DB (or QE at the master) case.
+		 * The entry-DB (or QE at the coordinator) case.
 		 *
 		 * The goal here is to block network connection from out of
-		 * master to master db with magic bit packet.
+		 * coordinator to coordinator db with magic bit packet.
 		 * So, only when it comes from the same host, the connection
 		 * is authenticated, if this connection is TCP/UDP.
 		 *
@@ -562,7 +562,7 @@ internal_client_authentication(Port *port)
 			{
 				if (gp_reject_internal_tcp_conn)
 				{
-					elog(DEBUG1, "rejecting TCP connection to master using internal"
+					elog(DEBUG1, "rejecting TCP connection to coordinator using internal"
 						 "connection protocol, because the GUC gp_reject_internal_tcp_conn is true");
 					return false;
 				}
@@ -575,7 +575,7 @@ internal_client_authentication(Port *port)
 			}
 
 			/* Security violation? */
-			elog(LOG, "rejecting TCP connection to master using internal"
+			elog(LOG, "rejecting TCP connection to coordinator using internal"
 				 "connection protocol");
 			return false;
 		}
@@ -592,7 +592,7 @@ internal_client_authentication(Port *port)
 		else
 		{
 			/* Security violation? */
-			elog(LOG, "rejecting TCP connection to master using internal"
+			elog(LOG, "rejecting TCP connection to coordinator using internal"
 				 "connection protocol");
 			return false;
 		}

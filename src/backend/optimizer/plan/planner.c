@@ -349,15 +349,15 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	instr_time		endtime;
 
 	/*
-	 * Use ORCA only if it is enabled and we are in a master QD process.
+	 * Use ORCA only if it is enabled and we are in a coordinator QD process.
 	 *
 	 * ORCA excels in complex queries, most of which will access distributed
 	 * tables. We can't run such queries from the segments slices anyway because
 	 * they require dispatching a query within another - which is not allowed in
 	 * GPDB (see querytree_safe_for_qe()). Note that this restriction also
-	 * applies to non-QD master slices.  Furthermore, ORCA doesn't currently
+	 * applies to non-QD coordinator slices.  Furthermore, ORCA doesn't currently
 	 * support pl/<lang> statements (relevant when they are planned on the segments).
-	 * For these reasons, restrict to using ORCA on the master QD processes only.
+	 * For these reasons, restrict to using ORCA on the coordinator QD processes only.
 	 *
 	 * PARALLEL RETRIEVE CURSOR is not supported by ORCA yet.
 	 */

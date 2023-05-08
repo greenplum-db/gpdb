@@ -47,7 +47,7 @@ typedef struct GpSegConfigEntry
 	int16		segindex;		/* content indicator: -1 for entry database,
 								 * 0, ..., n-1 for segment database */
 
-	char		role;			/* primary, master, mirror, master-standby */
+	char		role;			/* primary, coordinator, mirror, coordinator-standby */
 	char		preferred_role; /* what role would we "like" to have this segment in ? */
 	char		mode;
 	char		status;
@@ -201,7 +201,7 @@ extern bool *makeRandomSegMap(int total_primaries, int total_to_skip);
  */
 extern char *getDnsAddress(char *name, int port, int elevel);
 
-extern int16 master_standby_dbid(void);
+extern int16 coordinator_standby_dbid(void);
 extern GpSegConfigEntry *dbid_get_dbinfo(int16 dbid);
 extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRole);
 

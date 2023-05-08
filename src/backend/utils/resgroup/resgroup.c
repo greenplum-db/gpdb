@@ -20,7 +20,9 @@
 #include "libpq-fe.h"
 #include "access/genam.h"
 #include "access/table.h"
+#include "access/xact.h"
 #include "tcop/tcopprot.h"
+#include "catalog/catalog.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resgroup.h"
 #include "catalog/pg_resgroupcapability.h"
@@ -120,7 +122,7 @@ struct ResGroupProcData
  * Per slot resource group information.
  *
  * Resource group have 'concurrency' number of slots.
- * Each transaction acquires a slot on master before running.
+ * Each transaction acquires a slot on coordinator before running.
  * The information shared by QE processes on each segments are stored
  * in this structure.
  */
@@ -157,7 +159,7 @@ struct ResGroupData
 
 struct ResGroupControl
 {
-	int 			segmentsOnMaster;
+	int 			segmentsOnCoordinator;
 
 	ResGroupSlotData	*slots;		/* slot pool shared by all resource groups */
 	ResGroupSlotData	*freeSlot;	/* head of the free list */
@@ -469,17 +471,17 @@ InitResGroups(void)
 	on_shmem_exit(AtProcExit_ResGroup, 0);
 
 	/*
-	 * On master and segments, the first backend does the initialization.
+	 * On coordinator and segments, the first backend does the initialization.
 	 */
 	if (pResGroupControl->loaded)
 		return;
 
-	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnMaster == 0)
+	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnCoordinator == 0)
 	{
 		Assert(IS_QUERY_DISPATCHER());
-		qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
-		pResGroupControl->segmentsOnMaster = qdinfo->hostPrimaryCount;
-		Assert(pResGroupControl->segmentsOnMaster > 0);
+		qdinfo = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID); 
+		pResGroupControl->segmentsOnCoordinator = qdinfo->hostPrimaryCount;
+		Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	}
 
 	/*
@@ -950,7 +952,7 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 int
 ResGroupGetHostPrimaryCount()
 {
-	return (Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnMaster);
+	return (Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnCoordinator);
 }
 
 /*
@@ -1196,7 +1198,7 @@ decideResGroup(ResGroupInfo *pGroupInfo)
 	Oid				 groupId;
 
 	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+	Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* always find out the up-to-date resgroup id */
@@ -1399,7 +1401,7 @@ groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot, bool isMoveQuery)
 	groupPutSlot(group, slot);
 
 	/*
-	 * We should wake up other pending queries on master nodes.
+	 * We should wake up other pending queries on coordinator nodes.
 	 */
 	if (IS_QUERY_DISPATCHER())
 		/*
@@ -1440,6 +1442,8 @@ SerializeResGroupInfo(StringInfo str)
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memory_limit);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
+	itmp = htonl(caps->min_cost);
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 
 	cpuset_len = strlen(caps->cpuset);
 	itmp = htonl(cpuset_len);
@@ -1478,7 +1482,8 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 	capsOut->cpuSoftPriority = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->memory_limit = ntohl(itmp);
-
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->min_cost = ntohl(itmp);
 
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	cpuset_len = ntohl(itmp);
@@ -1494,10 +1499,10 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 }
 
 /*
- * Check whether resource group should be assigned on master.
+ * Check whether resource group should be assigned on coordinator.
  */
 bool
-ShouldAssignResGroupOnMaster(void)
+ShouldAssignResGroupOnCoordinator(void)
 {
 	/*
 	 * Bypass resource group when it's waiting for a resource group slot. e.g.
@@ -1517,7 +1522,7 @@ ShouldAssignResGroupOnMaster(void)
 
 /*
  * Check whether resource group should be un-assigned.
- * This will be called on both master and segments.
+ * This will be called on both coordinator and segments.
  */
 bool
 ShouldUnassignResGroup(void)
@@ -1528,13 +1533,13 @@ ShouldUnassignResGroup(void)
 }
 
 /*
- * On master, QD is assigned to a resource group at the beginning of a transaction.
+ * On coordinator, QD is assigned to a resource group at the beginning of a transaction.
  * It will first acquire a slot from the resource group, and then, it will get the
  * current capability snapshot, update the memory usage information, and add to
  * the corresponding cgroup.
  */
 void
-AssignResGroupOnMaster(void)
+AssignResGroupOnCoordinator(void)
 {
 	ResGroupSlotData	*slot;
 	ResGroupInfo		groupInfo;
@@ -1595,7 +1600,7 @@ AssignResGroupOnMaster(void)
 		self->caps = slot->caps;
 
 		/* Don't error out before this line in this function */
-		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_master");
+		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_coordinator");
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
@@ -2710,7 +2715,7 @@ ResGroupDumpInfo(StringInfo str)
 
 	appendStringInfo(str, "{\"segid\":%d,", GpIdentity.segindex);
 	/* dump fields in pResGroupControl. */
-	appendStringInfo(str, "\"segmentsOnMaster\":%d,", pResGroupControl->segmentsOnMaster);
+	appendStringInfo(str, "\"segmentsOnCoordinator\":%d,", pResGroupControl->segmentsOnCoordinator);
 	appendStringInfo(str, "\"loaded\":%s,", pResGroupControl->loaded ? "true" : "false");
 	
 	/* dump each group */
@@ -3296,7 +3301,7 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 	char *cmd;
 
 	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+	Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	LWLockAcquire(ResGroupLock, LW_SHARED);
@@ -3364,6 +3369,95 @@ ResGroupGetGroupIdBySessionId(int sessionId)
 }
 
 /*
+ * traverse the flattened rangetable entries.
+ * It's hard to see whether the query contains UDF, traverse the whole plan
+ * is expensive, so it will be ignored even if there can have non-catalog
+ * query inside the UDF.
+ */
+static bool
+PurecatalogQuery(PlannedStmt* stmt)
+{
+	ListCell *rtable;
+
+	if (stmt->numSlices != 1)
+		return false;
+
+	foreach(rtable, stmt->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *)lfirst(rtable);
+
+		if (rte->rtekind != RTE_RELATION)
+			continue;
+		else
+		{
+			if (rte->relkind == RELKIND_MATVIEW)
+				return false;
+			else if (rte->relkind == RELKIND_VIEW)
+				continue;
+			else
+			{
+				if(!IsCatalogRelationOid(rte->relid))
+					return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+/*
+ * To decide whether we should bypass the query. If it's a pure-catalog query,
+ * unassign the query from resource group and bypass the query.
+ */
+void
+ShouldBypassQuery(PlannedStmt* stmt, bool inFunc)
+{
+	if (Gp_role != GP_ROLE_DISPATCH || bypassedGroup)
+		return;
+
+	/*
+	 * Don't need to consider the sql commands inside the UDF, they will also
+	 * be bypassed or use the same resgroup as the outer query.
+	 */
+	if (!IsInTransactionBlock(!inFunc))
+	{
+		List *rte_list = stmt->rtable;
+		bool haveRtable = true;
+		ResGroupCaps            *caps = &self->group->caps;
+		double planCost = stmt->planTree->total_cost;
+		int    min_cost = (int)pg_atomic_read_u32((pg_atomic_uint32 *)&caps->min_cost);
+
+		if (list_length(rte_list) == 1 && (lfirst_node(RangeTblEntry, rte_list->head)->rtekind == RTE_RESULT))
+			haveRtable = false;
+
+		/*
+		 * For some special case, like 'select UDF', don't bypass the query.
+		 *
+		 * when gp_resource_group_bypass_catalog_query is on, pure-catalog queries
+		 * will be unassigned from the resource group.
+		 * for quries with cost under the min_cost limit, unassign it from resource
+		 * group too.
+		 */
+		if (haveRtable && (planCost < min_cost || PurecatalogQuery(stmt)))
+		{
+			ResGroupInfo		groupInfo;
+
+			UnassignResGroup(true);
+			do {
+				decideResGroup(&groupInfo);
+			} while (!groupIncBypassedRef(&groupInfo));
+			bypassedGroup = groupInfo.group;
+			bypassedGroup->totalExecuted++;
+			pgstat_report_resgroup(bypassedGroup->groupId);
+			bypassedSlot.group = groupInfo.group;
+			bypassedSlot.groupId = groupInfo.groupId;
+			cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
+									   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+		}
+	}
+}
+
+/*
  * In resource group mode, how much memory should a query take in bytes.
  */
 uint64
@@ -3376,8 +3470,9 @@ ResourceGroupGetQueryMemoryLimit(void)
 
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 
+	/* for bypass query,use statement_mem as the query mem. */
 	if (bypassedGroup)
-		return 0;
+		return stateMem;
 
 	if (gp_resgroup_memory_query_fixed_mem > 0)
 		return (uint64) gp_resgroup_memory_query_fixed_mem * 1024L;

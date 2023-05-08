@@ -34,35 +34,11 @@ from test.behave_utils.cluster_expand import Gpexpand
 from test.behave_utils.gpexpand_dml import TestDML
 from gppylib.commands.base import Command, REMOTE
 from gppylib import pgconf
-from gppylib.operations.package import linux_distribution_id, linux_distribution_version
 from gppylib.commands.gp import get_coordinatordatadir
 
 coordinator_data_dir = gp.get_coordinatordatadir()
 if coordinator_data_dir is None:
     raise Exception('Please set COORDINATOR_DATA_DIRECTORY in environment')
-
-def show_all_installed(gphome):
-    x = linux_distribution_id(), linux_distribution_version()
-    name = x[0].lower()
-    if 'ubuntu' in name:
-        return "dpkg --get-selections --admindir=%s/share/packages/database/deb | awk '{print $1}'" % gphome
-    elif 'centos' in name or 'rhel' in name or 'rocky' in name or 'ol' in name:
-        return "rpm -qa --dbpath %s/share/packages/database" % gphome
-    else:
-        raise Exception('UNKNOWN platform: %s' % str(x))
-
-def remove_native_package_command(gphome, full_gppkg_name):
-    x = linux_distribution_id(), linux_distribution_version()
-    name = x[0].lower()
-    if 'ubuntu' in name:
-        return 'fakeroot dpkg --force-not-root --log=/dev/null --instdir=%s --admindir=%s/share/packages/database/deb -r %s' % (gphome, gphome, full_gppkg_name)
-    elif 'centos' in name or 'rhel' in name or 'rocky' in name or 'ol' in name:
-        return 'rpm -e %s --dbpath %s/share/packages/database' % (full_gppkg_name, gphome)
-    else:
-        raise Exception('UNKNOWN platform: %s' % str(x))
-
-def remove_gppkg_archive_command(gphome, gppkg_name):
-    return 'rm -f %s/share/packages/archive/%s.gppkg' % (gphome, gppkg_name)
 
 def create_local_demo_cluster(context, extra_config='', with_mirrors='true', with_standby='true', num_primaries=None):
     stop_database_if_started(context)
@@ -716,21 +692,6 @@ def impl(context, process_name):
     wait_process_command = "while ps ux | grep %s | grep -v grep; do sleep 0.1; done;" % process_name
     run_cmd(wait_process_command)
 
-
-@given('a user runs "{command}" with gphome "{gphome}"')
-@when('a user runs "{command}" with gphome "{gphome}"')
-@then('a user runs "{command}" with gphome "{gphome}"')
-def impl(context, command, gphome):
-    coordinatorhost = get_coordinator_hostname()[0][0]
-    cmd = Command(name='Remove archive gppkg',
-                  cmdStr=command,
-                  ctxt=REMOTE,
-                  remoteHost=coordinatorhost,
-                  gphome=gphome)
-    cmd.run()
-    context.ret_code = cmd.get_return_code()
-
-
 @given('the user runs command "{command}"')
 @when('the user runs command "{command}"')
 @then('the user runs command "{command}"')
@@ -881,27 +842,6 @@ def impl(context, msg):
             finally:
                 pass
     conn.close()
-
-
-@then('gprecoverseg should print existing pg_rewind warning for segment with content {contentids}')
-def impl(context, contentids):
-
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    segments_pairs = gparray.segmentPairs
-    content_ids = [int(i) for i in contentids.split(',')]
-
-    for segpair in segments_pairs:
-        primary = segpair.primaryDB
-        mirror = segpair.mirrorDB
-        if primary.content in content_ids:
-            msg = "Skipping incremental recovery of segment on host {} and port {} because it has an active pg_rewind " \
-                  "connection with segment on host {} and port {}".format(mirror.getSegmentHostName(), mirror.getSegmentPort(),
-                                                                          primary.getSegmentHostName(), primary.getSegmentPort())
-
-        try:
-            context.execute_steps(''' Then gprecoverseg should print "{}" to stdout'''.format(msg))
-        except:
-            raise Exception("Could not find expected warning message for content {} in stdout".format(primary.content))
 
 
 def lines_matching_both(in_str, str_1, str_2):
@@ -1682,6 +1622,21 @@ def impl(context, seg):
 
     cmd = Command(name="killbg pid", cmdStr='kill -9 %s' % context.bg_pid, remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
+
+
+@when('{process} is killed on mirror with content {contentids}')
+@then('{process} is killed on mirror with content {contentids}')
+def impl(context, process, contentids):
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    content_ids = [int(i) for i in contentids.split(',')]
+    hosts = set()
+    for seg in segments:
+        if seg.content in content_ids and seg.role == 'm':
+            hosts.add(seg.getSegmentHostName())
+
+    for host in hosts:
+        cmd = Command(name="kill process {}".format(process), cmdStr="pkill -9 {}".format(process), remoteHost=host, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
 
 
 @when('we generate the postmaster.pid file with the background pid on "{seg}" segment')
@@ -2503,27 +2458,6 @@ def impl(context):
     if os.path.exists(context.fake_timestamp_file):
         raise Exception("expected no file at: %s" % context.fake_timestamp_file)
 
-@then('"{gppkg_name}" gppkg files exist on all hosts')
-def impl(context, gppkg_name):
-    remote_gphome = os.environ.get('GPHOME')
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-
-    hostlist = get_all_hostnames_as_list(context, 'template1')
-
-    # We can assume the GPDB is installed at the same location for all hosts
-    command_list_all = show_all_installed(remote_gphome)
-
-    for hostname in set(hostlist):
-        cmd = Command(name='check if internal gppkg is installed',
-                      cmdStr=command_list_all,
-                      ctxt=REMOTE,
-                      remoteHost=hostname)
-        cmd.run(validateAfter=True)
-
-        if not gppkg_name in cmd.get_stdout():
-            raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
-
-
 @given('the user runs command "{command}" on all hosts without validation')
 @when('the user runs command "{command}" on all hosts without validation')
 @then('the user runs command "{command}" on all hosts without validation')
@@ -2536,81 +2470,6 @@ def impl(context, command):
                       ctxt=REMOTE,
                       remoteHost=hostname)
         cmd.run(validateAfter=False)
-
-@given('"{gppkg_name}" gppkg files do not exist on any hosts')
-@when('"{gppkg_name}" gppkg files do not exist on any hosts')
-@then('"{gppkg_name}" gppkg files do not exist on any hosts')
-def impl(context, gppkg_name):
-    remote_gphome = os.environ.get('GPHOME')
-    hostlist = get_all_hostnames_as_list(context, 'template1')
-
-    # We can assume the GPDB is installed at the same location for all hosts
-    command_list_all = show_all_installed(remote_gphome)
-
-    for hostname in set(hostlist):
-        cmd = Command(name='check if internal gppkg is installed',
-                      cmdStr=command_list_all,
-                      ctxt=REMOTE,
-                      remoteHost=hostname)
-        cmd.run(validateAfter=True)
-
-        if gppkg_name in cmd.get_stdout():
-            raise Exception( '"%s" gppkg is installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
-
-
-def _remove_gppkg_from_host(context, gppkg_name, is_coordinator_host):
-    remote_gphome = os.environ.get('GPHOME')
-
-    if is_coordinator_host:
-        hostname = get_coordinator_hostname()[0][0] # returns a list of list
-    else:
-        hostlist = get_segment_hostlist()
-        if not hostlist:
-            raise Exception("Current GPDB setup is not a multi-host cluster.")
-
-        # Let's just pick whatever is the first host in the list, it shouldn't
-        # matter which one we remove from
-        hostname = hostlist[0]
-
-    command_list_all = show_all_installed(remote_gphome)
-    cmd = Command(name='get all from the host',
-                  cmdStr=command_list_all,
-                  ctxt=REMOTE,
-                  remoteHost=hostname)
-    cmd.run(validateAfter=True)
-    installed_gppkgs = cmd.get_stdout_lines()
-    if not installed_gppkgs:
-        raise Exception("Found no packages installed")
-
-    full_gppkg_name = next((gppkg for gppkg in installed_gppkgs if gppkg_name in gppkg), None)
-    if not full_gppkg_name:
-        raise Exception("Found no matches for gppkg '%s'\n"
-                        "gppkgs installed:\n%s" % (gppkg_name, installed_gppkgs))
-
-    remove_command = remove_native_package_command(remote_gphome, full_gppkg_name)
-    cmd = Command(name='Cleanly remove from the remove host',
-                  cmdStr=remove_command,
-                  ctxt=REMOTE,
-                  remoteHost=hostname)
-    cmd.run(validateAfter=True)
-
-    remove_archive_gppkg = remove_gppkg_archive_command(remote_gphome, gppkg_name)
-    cmd = Command(name='Remove archive gppkg',
-                  cmdStr=remove_archive_gppkg,
-                  ctxt=REMOTE,
-                  remoteHost=hostname)
-    cmd.run(validateAfter=True)
-
-
-@when('gppkg "{gppkg_name}" is removed from a segment host')
-def impl(context, gppkg_name):
-    _remove_gppkg_from_host(context, gppkg_name, is_coordinator_host=False)
-
-
-@when('gppkg "{gppkg_name}" is removed from coordinator host')
-def impl(context, gppkg_name):
-    _remove_gppkg_from_host(context, gppkg_name, is_coordinator_host=True)
-
 
 @given('a gphome copy is created at {location} on all hosts')
 def impl(context, location):
