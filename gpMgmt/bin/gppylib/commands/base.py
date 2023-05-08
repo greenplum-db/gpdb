@@ -451,7 +451,7 @@ class LocalExecutionContext(ExecutionContext):
         for k in keys:
             cmd.cmdStr = "%s=%s && %s" % (k, cmd.propagate_env_map[k], cmd.cmdStr)
 
-        # executable='/bin/bash' is to ensure the shell is bash.  bash isn't the
+        # executable=(path of bash) is to ensure the shell is bash.  bash isn't the
         # actual command executed, but the shell that command string runs under.
         self.proc = gpsubprocess.Popen(cmd.cmdStr, env=None, shell=True,
                                        executable=findCmdInPath("bash"),
@@ -643,8 +643,6 @@ class CommandNotFoundException(Exception):
 
 
 def findCmdInPath(cmd):
-    global CMD_CACHE
-
     # ---------------command path--------------------
     CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
                '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
