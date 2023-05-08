@@ -162,7 +162,7 @@ test: event_trigger
 # this test also uses event triggers, so likewise run it by itself
 test: fast_default
 
-# loose over-eager constraint exclusion
+# loose over-eager constraint exclusion, please refer to issue 10287
 test: constraints_check
 
 # run stats by itself because its delay may be insufficient under heavy load
