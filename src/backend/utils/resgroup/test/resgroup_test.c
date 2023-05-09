@@ -348,6 +348,10 @@ test__shouldBypassQuery__with_only_catalog(void **state)
 {
 	MessageContext = NULL;
 
+	gp_resource_group_bypass_catalog_query = false;
+	assert_false(shouldBypassQuery("select * from pg_catalog.pg_rules"));
+
+	gp_resource_group_bypass_catalog_query = true;
 	assert_true(shouldBypassQuery("select * from pg_catalog.pg_rules"));
 }
 
@@ -383,5 +387,5 @@ main(int argc, char *argv[])
 											   ALLOCSET_DEFAULT_MINSIZE,
 											   ALLOCSET_DEFAULT_INITSIZE,
 											   ALLOCSET_DEFAULT_MAXSIZE);
-	run_tests(tests);
+	return run_tests(tests);
 }
