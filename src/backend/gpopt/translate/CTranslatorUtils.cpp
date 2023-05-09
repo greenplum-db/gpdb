@@ -1028,6 +1028,7 @@ CTranslatorUtils::GetColumnAttnosForGroupBy(
 		}
 		else
 		{
+			col_attnos_arr->Release();
 			col_attnos_arr = col_attnos_arr_current;
 		}
 	}
@@ -1186,6 +1187,7 @@ CTranslatorUtils::CreateGroupingSetsForCube(CMemoryPool *mp,
 			current_result->Union(bset);
 			bset->Release();
 			col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp, *current_result));
+			current_result->Release();
 		}
 	}
 	return col_attnos_arr;
