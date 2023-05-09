@@ -388,5 +388,6 @@ main(int argc, char *argv[])
 											   ALLOCSET_DEFAULT_MINSIZE,
 											   ALLOCSET_DEFAULT_INITSIZE,
 											   ALLOCSET_DEFAULT_MAXSIZE);
-	run_tests(tests);
+	if (run_tests(tests) != 0)
+		return 1;
 }
