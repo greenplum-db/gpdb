@@ -1256,7 +1256,7 @@ static struct config_bool ConfigureNamesBool[] =
 			NULL
 		},
 		&wal_compression,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 
