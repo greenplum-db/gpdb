@@ -334,7 +334,6 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 											 (Node *) n->arg, NULL,
 											 n->location);
 
-				/* please refer to https://github.com/greenplum-db/gpdb/issues/15494 */
 				NullTest *newn;
 				newn = makeNode(NullTest);
 
