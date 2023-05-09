@@ -2286,14 +2286,22 @@ CHistogram::AddDummyHistogramAndWidthInfo(
 		CColRef *col_ref = col_factory->LookupColRef(colid);
 		GPOS_ASSERT(NULL != col_ref);
 
-		CHistogram *histogram =
-			CHistogram::MakeDefaultHistogram(mp, col_ref, is_empty);
-		output_histograms->Insert(GPOS_NEW(mp) ULONG(colid), histogram);
+		if (NULL == output_histograms->Find(&colid))
+		{
+			CHistogram *histogram =
+				CHistogram::MakeDefaultHistogram(mp, col_ref, is_empty);
+			output_histograms->Insert(GPOS_NEW(mp) ULONG(colid), histogram);
+		}
 
-		CDouble width =
-			CStatisticsUtils::DefaultColumnWidth(col_ref->RetrieveType());
-		output_col_widths->Insert(GPOS_NEW(mp) ULONG(colid),
-								  GPOS_NEW(mp) CDouble(width));
+
+
+		if (NULL == output_col_widths->Find(&colid))
+		{
+			CDouble width =
+				CStatisticsUtils::DefaultColumnWidth(col_ref->RetrieveType());
+			output_col_widths->Insert(GPOS_NEW(mp) ULONG(colid),
+									  GPOS_NEW(mp) CDouble(width));
+		}
 	}
 }
 

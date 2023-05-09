@@ -896,6 +896,7 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 
 	if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 	{
+		CRefCount::SafeRelease(join_opfamilies);
 		join_opfamilies = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 

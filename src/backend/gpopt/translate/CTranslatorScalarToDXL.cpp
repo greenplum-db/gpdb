@@ -2105,6 +2105,7 @@ CTranslatorScalarToDXL::TranslateGenericDatumToDXL(CMemoryPool *mp,
 		// base_mdid is used for text related domain types
 		lint_value = ExtractLintValueFromDatum(md_type, is_null, bytes, length,
 											   base_mdid);
+		base_mdid->Release();
 	}
 
 	return CMDTypeGenericGPDB::CreateDXLDatumVal(

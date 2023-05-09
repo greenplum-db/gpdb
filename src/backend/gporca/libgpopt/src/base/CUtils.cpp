@@ -657,6 +657,7 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 		!IMDId::IsValid(pmdidCmpOp))
 	{
 		// cannot construct an ArrayCmp expression if any of these are invalid
+		pexprScalarChildren->Release();
 		return NULL;
 	}
 
