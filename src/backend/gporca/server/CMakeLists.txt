@@ -40,8 +40,8 @@ endfunction()
 # GPDB_12_MERGE_FIXME: casts on part column no longer supported!
 # CPartTableLossyCastTest
 
-# GPDB_12_MERGE_FIXME: re-add the following tests to CArrayCmpTest once the
-# duplicate predicate issue is fixed
+# ORCA_FEATURE_NOT_SUPPORTED: re-add the following tests to CArrayCmpTest once the
+# PexprConvert2In preprocessing step is enabled
 # IN-ArrayCmp
 # NOT-IN-ArrayCmp
 

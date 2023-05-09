@@ -14473,3 +14473,30 @@ explain insert into array_coerce_foo select * from array_coerce_bar;
 
 insert into array_coerce_foo select * from array_coerce_bar;
 ERROR:  value too long for type character varying(2)  (seg1 127.0.0.1:7003 pid=55908)
+-- These testcases will fallback to postgres when "PexprConvert2In" is enabled if
+-- underlying issues are not fixed
+create table baz (a int,b int);
+explain select baz.* from baz where
+baz.a=1 OR
+baz.b = 1 OR baz.b = 2 OR baz.b = 3 OR baz.b = 4 OR baz.b = 5 OR baz.b = 6 OR baz.b = 7 OR baz.b = 8 OR baz.b = 9 OR baz.b = 10 OR
+baz.b = 11 OR baz.b = 12 OR baz.b = 13 OR baz.b = 14 OR baz.b = 15 OR baz.b = 16 OR baz.b = 17 OR baz.b = 18 OR baz.b = 19 OR baz.b = 20;
+                                                                                                                            QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1851.62 rows=1790 width=8)
+   ->  Seq Scan on baz  (cost=0.00..1827.75 rows=597 width=8)
+         Filter: ((a = 1) OR (b = 1) OR (b = 2) OR (b = 3) OR (b = 4) OR (b = 5) OR (b = 6) OR (b = 7) OR (b = 8) OR (b = 9) OR (b = 10) OR (b = 11) OR (b = 12) OR (b = 13) OR (b = 14) OR (b = 15) OR (b = 16) OR (b = 17) OR (b = 18) OR (b = 19) OR (b = 20))
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+drop table baz;
+create table baz ( a varchar);
+explain select * from baz where baz.a::bpchar='b' or baz.a='c';
+                                   QUERY PLAN
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..299.41 rows=106 width=32)
+   ->  Seq Scan on baz  (cost=0.00..298.00 rows=35 width=32)
+         Filter: (((a)::bpchar = 'b'::bpchar) OR ((a)::text = 'c'::text))
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+drop table baz;
