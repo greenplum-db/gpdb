@@ -333,7 +333,8 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 					emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS",
 											 (Node *) n->arg, NULL,
 											 n->location);
-
+				
+				/* please refer to https://github.com/greenplum-db/gpdb/issues/15494 */
 				NullTest *newn;
 				newn = makeNode(NullTest);
 
