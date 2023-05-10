@@ -108,6 +108,7 @@ CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 1: SET ROLE TO role1_memory_test;
 1: SELECT hold_memory_by_percent(0.48 / 0.52);
 1q:
+SELECT pg_sleep(1);
 
 --	2b) on QEs
 1: SET ROLE TO role1_memory_test;
@@ -120,6 +121,7 @@ CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 1: SET ROLE TO role1_memory_test;
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.48 / 0.52)=0;
 1q:
+SELECT pg_sleep(1);
 
 DROP ROLE role1_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;

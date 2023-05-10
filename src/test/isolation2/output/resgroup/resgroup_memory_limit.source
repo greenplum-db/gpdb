@@ -191,6 +191,11 @@ ERROR:  Out of memory
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
+SELECT pg_sleep(1);
+ pg_sleep 
+----------
+          
+(1 row)
 
 --	2b) on QEs
 1: SET ROLE TO role1_memory_test;
@@ -223,6 +228,11 @@ ERROR:  Out of memory  (seg0 slice1 10.152.10.56:25432 pid=19269)
 DETAIL:  Resource group memory limit reached
 CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 1q: ... <quitting>
+SELECT pg_sleep(1);
+ pg_sleep 
+----------
+          
+(1 row)
 
 DROP ROLE role1_memory_test;
 DROP
