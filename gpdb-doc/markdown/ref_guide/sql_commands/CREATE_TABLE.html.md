@@ -423,7 +423,7 @@ PARTITION BY
 :   > **Note** Greenplum Database stores partitioned table data in the leaf child tables, the lowest-level tables in the hierarchy of child tables for use by the partitioned table.
 
 :   partition\_type
-:   Declares partition type: `LIST` \(list of values\), `RANGE` \(a numeric or date range\), or `HASH` (modulus and remainder, supported for flexible syntax only).
+:   Declares partition type: `LIST` \(list of values\), `RANGE` \(a numeric or date range\), or `HASH` (modulus and remainder, supported for modern syntax only).
 
 partition\_specification
 :   Declares the individual partitions to create. Each partition can be defined individually or, for range partitions, you can use the `EVERY` clause \(with a `START` and optional `END` clause\) to define an increment pattern to use to create the individual partitions.

@@ -24,7 +24,7 @@ Greenplum Database supports:
 -   *range partitioning*: division of data based on a numerical range, such as date or price.
 -   *list partitioning*: division of data based on a list of values, such as sales territory or product line.
 -   *hash partitioning*: division of data based on specifying a modulus and a remainder for each partition. (Each partition holds the rows for which the hash value of the partition key divided by the specified modulus produces the specified remainder.)
-    > **Note** Only the flexible partitioning syntax supports hash partitions.
+    > **Note** Only the modern partitioning syntax supports hash partitions.
 -   A combination of range and list types.
 
 ![Example Multi-level Partition Design](../graphics/partitions.jpg "Example Multi-level Partition Design")
@@ -59,13 +59,15 @@ Before settling on a multi-level partitioning strategy, consider a single level 
 
 ## <a id="choose"></a>Choosing the Partitioning Syntax
 
-Greenplum Database 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, referred to as the *uniform* syntax. Version 7 also introduces support for PostgreSQL declarative partitioning syntax, the *flexible* syntax.
+Greenplum Database 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, referred to as the *classic* syntax. Version 7 also introduces support for PostgreSQL declarative partitioning syntax, the *modern* syntax.
 
-The uniform syntax is provided for backwards compatibility with previous Greenplum versions. It is appropriate for a homogenous partition table, where all partitions are at the same leaf level and have the same partition rule. *The flexible syntax is less specialized and a bit easier to use, and is recommended for new users.*
+The classic syntax is provided for backwards compatibility with previous Greenplum versions. It is appropriate for a homogenous partition table, where all partitions are at the same leaf level and have the same partition rule.
 
-The uniform and flexible partitioning syntaxes are alternatives, you choose the one that meets your needs.
+> **Note** The modern syntax is less specialized and easier to use, and is recommended for new users and new partitioned table definitions.
 
-If you are familiar with the Greenplum 6 partitioning syntax or already have partitioned tables that were defined using this syntax, you may choose to continue using the uniform syntax. (Refer to [About Changes to Table Partitioning in Greenplum 7](about-part-changes.html) for more information about partitioning syntax and behavior changes introduced in version 7.)
+The classic and modern partitioning syntaxes are alternatives, you choose the one that meets your needs.
+
+If you are familiar with the Greenplum 6 partitioning syntax or already have partitioned tables that were defined using this syntax, you may choose to continue using the classic syntax. (Refer to [About Changes to Table Partitioning in Greenplum 7](about-part-changes.html) for more information about partitioning syntax and behavior changes introduced in version 7.)
 
 The following table provides a feature comparison to help you choose the syntax most appropriate for your data model:
 
@@ -79,7 +81,7 @@ The following table provides a feature comparison to help you choose the syntax 
 | Subpartition templating | Supported. The definitions of the parent and child tables are consistent by default. | Not supported. You ensure that the table definitions are consistent. |
 | Partition maintenance | You operate on a child table via the parent, requiring knowledge of the partition hierarchy. | You operate directly on the child table, no knowledge of the partition hierarchy is required. |
 
-> **Important** After creation, you operate on the partition table hierarchy using the `CREATE TABLE` and `ALTER TABLE` clauses identified for the syntax that you chose. VMware does not recommend mixing and matching the uniform and flexible partitioning syntaxes for partition maintenance operations.
+> **Important** After creation, you operate on the partition table hierarchy using the `CREATE TABLE` and `ALTER TABLE` clauses identified for the syntax that you chose. VMware does not recommend mixing and matching the classic and modern partitioning syntaxes for partition maintenance operations.
 
 
 ## <a id="topic66"></a>Creating Partitioned Tables 
@@ -172,7 +174,7 @@ For more information about default partitions, see [Adding a Default Partition](
 
 ### <a id="topic69h"></a>Defining Hash Table Partitions 
 
-> **Note** Only the flexible syntax supports hash partitions.
+> **Note** Only the modern syntax supports hash partitions.
 
 A hash partitioned table uses a hashable column as its partition key column. A hash partition only allows a single column as the partition key. For hash partitions, you must declare a partition specification for every partition \(modulus/remainder combination\) that you want to create. For example:
 
@@ -233,7 +235,7 @@ PARTITION BY RANGE (year)
 
 ### <a id="topic71"></a>Partitioning an Existing Table 
 
-With uniform partitioning syntax, tables can be partitioned only at creation. If you have a table that you want to partition, you must create a partitioned table, load the data from the original table into the new table, drop the original table, and rename the partitioned table with the original table's name. You must also re-grant any table permissions. For example:
+With classic partitioning syntax, tables can be partitioned only at creation. If you have a table that you want to partition, you must create a partitioned table, load the data from the original table into the new table, drop the original table, and rename the partitioned table with the original table's name. You must also re-grant any table permissions. For example:
 
 ```
 CREATE TABLE sales2 (LIKE sales) 
@@ -375,7 +377,7 @@ To maintain a partitioned table, use the `ALTER TABLE` command against the top-l
 -   [Modifying a Subpartition Template](#topic85)
 -   [Exchanging a Leaf Child Partition with an External Table](#topic_yhz_gpn_qs)
 
-> **Important** When defining and altering partition designs, use the given partition name, not the table object name. The given partition name is the `relid` column returned by the `pg_partition_tree()` function. Although you can query and load any table \(including partitioned tables\) directly using SQL commands, you can only modify the structure of a partitioned table that you create with uniform partitioning syntax using the `ALTER TABLE...PARTITION` clauses.
+> **Important** When defining and altering partition designs, use the given partition name, not the table object name. The given partition name is the `relid` column returned by the `pg_partition_tree()` function. Although you can query and load any table \(including partitioned tables\) directly using SQL commands, you can only modify the structure of a partitioned table that you create with classic partitioning syntax using the `ALTER TABLE...PARTITION` clauses.
 
 Partitions are not required to have names. If a partition does not have a name, use the following expression to identify a partition: `PARTITION FOR (value)`.
 
