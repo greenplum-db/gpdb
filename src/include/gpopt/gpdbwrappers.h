@@ -231,9 +231,6 @@ bool IsFuncNDVPreserving(Oid funcid);
 // stability property of given function
 char FuncStability(Oid funcid);
 
-// data access property of given function
-char FuncDataAccess(Oid funcid);
-
 // exec location property of given function
 char FuncExecLocation(Oid funcid);
 

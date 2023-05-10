@@ -1367,7 +1367,6 @@ void
 CTranslatorRelcacheToDXL::LookupFuncProps(
 	OID func_oid,
 	IMDFunction::EFuncStbl *stability,	// output: function stability
-	IMDFunction::EFuncDataAcc *access,	// output: function datya access
 	BOOL *is_strict,					// output: is function strict?
 	BOOL *is_ndv_preserving,			// output: preserves NDVs of inputs
 	BOOL *returns_set,					// output: does function return set?
@@ -1376,13 +1375,11 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 )
 {
 	GPOS_ASSERT(nullptr != stability);
-	GPOS_ASSERT(nullptr != access);
 	GPOS_ASSERT(nullptr != is_strict);
 	GPOS_ASSERT(nullptr != is_ndv_preserving);
 	GPOS_ASSERT(nullptr != returns_set);
 
 	*stability = GetFuncStability(gpdb::FuncStability(func_oid));
-	*access = GetEFuncDataAccess(gpdb::FuncDataAccess(func_oid));
 
 	if (gpdb::FuncExecLocation(func_oid) != PROEXECLOCATION_ANY)
 	{
@@ -1458,18 +1455,17 @@ CTranslatorRelcacheToDXL::RetrieveFunc(CMemoryPool *mp, IMDId *mdid)
 	}
 
 	IMDFunction::EFuncStbl stability = IMDFunction::EfsImmutable;
-	IMDFunction::EFuncDataAcc access = IMDFunction::EfdaNoSQL;
 	BOOL is_strict = true;
 	BOOL returns_set = true;
 	BOOL is_ndv_preserving = true;
 	BOOL is_allowed_for_PS = false;
-	LookupFuncProps(func_oid, &stability, &access, &is_strict,
-					&is_ndv_preserving, &returns_set, &is_allowed_for_PS);
+	LookupFuncProps(func_oid, &stability, &is_strict, &is_ndv_preserving,
+					&returns_set, &is_allowed_for_PS);
 
 	mdid->AddRef();
 	CMDFunctionGPDB *md_func = GPOS_NEW(mp) CMDFunctionGPDB(
 		mp, mdid, mdname, result_type_mdid, arg_type_mdids, returns_set,
-		stability, access, is_strict, is_ndv_preserving, is_allowed_for_PS);
+		stability, is_strict, is_ndv_preserving, is_allowed_for_PS);
 
 	return md_func;
 }
@@ -1672,43 +1668,6 @@ CTranslatorRelcacheToDXL::GetFuncStability(CHAR c)
 	}
 
 	return efuncstbl;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::GetEFuncDataAccess
-//
-//	@doc:
-//		Get function data access property from the GPDB character representation
-//
-//---------------------------------------------------------------------------
-CMDFunctionGPDB::EFuncDataAcc
-CTranslatorRelcacheToDXL::GetEFuncDataAccess(CHAR c)
-{
-	CMDFunctionGPDB::EFuncDataAcc access = CMDFunctionGPDB::EfdaSentinel;
-
-	switch (c)
-	{
-		case 'n':
-			access = CMDFunctionGPDB::EfdaNoSQL;
-			break;
-		case 'c':
-			access = CMDFunctionGPDB::EfdaContainsSQL;
-			break;
-		case 'r':
-			access = CMDFunctionGPDB::EfdaReadsSQLData;
-			break;
-		case 'm':
-			access = CMDFunctionGPDB::EfdaModifiesSQLData;
-			break;
-		case 's':
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("unknown data access"));
-		default:
-			GPOS_ASSERT(!"Invalid data access property");
-	}
-
-	return access;
 }
 
 //---------------------------------------------------------------------------

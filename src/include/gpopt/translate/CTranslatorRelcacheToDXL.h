@@ -87,9 +87,6 @@ private:
 		// function stability
 		IMDFunction::EFuncStbl m_stability;
 
-		// function data access
-		IMDFunction::EFuncDataAcc m_access;
-
 		// is function strict?
 		BOOL m_is_strict;
 
@@ -98,12 +95,10 @@ private:
 
 	public:
 		// ctor
-		SFuncProps(OID oid, IMDFunction::EFuncStbl stability,
-				   IMDFunction::EFuncDataAcc access, BOOL is_strict,
+		SFuncProps(OID oid, IMDFunction::EFuncStbl stability, BOOL is_strict,
 				   BOOL ReturnsSet)
 			: m_oid(oid),
 			  m_stability(stability),
-			  m_access(access),
 			  m_is_strict(is_strict),
 			  m_returns_set(ReturnsSet)
 		{
@@ -124,13 +119,6 @@ private:
 		GetStability() const
 		{
 			return m_stability;
-		}
-
-		// return data access property
-		IMDFunction::EFuncDataAcc
-		GetDataAccess() const
-		{
-			return m_access;
 		}
 
 		// is function strict?
@@ -156,7 +144,6 @@ private:
 	static void LookupFuncProps(
 		OID func_oid,
 		IMDFunction::EFuncStbl *stability,	// output: function stability
-		IMDFunction::EFuncDataAcc *access,	// output: function data access
 		BOOL *is_strict,					// output: is function strict?
 		BOOL *is_ndv_preserving,			// output: preserves NDVs of inputs
 		BOOL *ReturnsSet,					// output: does function return set?
@@ -172,9 +159,6 @@ private:
 
 	// get function stability property from the GPDB character representation
 	static CMDFunctionGPDB::EFuncStbl GetFuncStability(CHAR c);
-
-	// get function data access property from the GPDB character representation
-	static CMDFunctionGPDB::EFuncDataAcc GetEFuncDataAccess(CHAR c);
 
 	// get type of aggregate's intermediate result from the relcache
 	static IMDId *RetrieveAggIntermediateResultType(CMemoryPool *mp,

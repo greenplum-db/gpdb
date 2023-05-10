@@ -54,9 +54,6 @@ private:
 	// function stability
 	CMDFunctionGPDB::EFuncStbl m_func_stability;
 
-	// function data access
-	CMDFunctionGPDB::EFuncDataAcc m_func_data_access;
-
 	// function strictness (i.e. whether func returns NULL on NULL input)
 	BOOL m_is_strict;
 
@@ -81,10 +78,6 @@ private:
 
 	// parse function stability property from XML string
 	static CMDFunctionGPDB::EFuncStbl ParseFuncStability(const XMLCh *xml_val);
-
-	// parse function data access property from XML string
-	static CMDFunctionGPDB::EFuncDataAcc ParseFuncDataAccess(
-		const XMLCh *xml_val);
 
 public:
 	CParseHandlerMDGPDBFunc(const CParseHandlerMDGPDBFunc &) = delete;

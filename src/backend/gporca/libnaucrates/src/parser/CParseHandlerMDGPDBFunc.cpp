@@ -110,12 +110,6 @@ CParseHandlerMDGPDBFunc::StartElement(const XMLCh *const,  // element_uri,
 			attrs, EdxltokenGPDBFuncStability, EdxltokenGPDBFunc);
 
 		m_func_stability = ParseFuncStability(xmlszStbl);
-
-		// parse func data access property
-		const XMLCh *xmlszDataAcc = CDXLOperatorFactory::ExtractAttrValue(
-			attrs, EdxltokenGPDBFuncDataAccess, EdxltokenGPDBFunc);
-
-		m_func_data_access = ParseFuncDataAccess(xmlszDataAcc);
 	}
 	else if (0 == XMLString::compareString(
 					  CDXLTokens::XmlstrToken(EdxltokenGPDBFuncResultTypeId),
@@ -168,8 +162,8 @@ CParseHandlerMDGPDBFunc::EndElement(const XMLCh *const,	 // element_uri,
 
 		m_imd_obj = GPOS_NEW(m_mp) CMDFunctionGPDB(
 			m_mp, m_mdid, m_mdname, m_mdid_type_result, m_mdid_types_array,
-			m_returns_set, m_func_stability, m_func_data_access, m_is_strict,
-			m_is_ndv_preserving, m_is_allowed_for_PS);
+			m_returns_set, m_func_stability, m_is_strict, m_is_ndv_preserving,
+			m_is_allowed_for_PS);
 
 		// deactivate handler
 		m_parse_handler_mgr->DeactivateHandler();
@@ -223,52 +217,6 @@ CParseHandlerMDGPDBFunc::ParseFuncStability(const XMLCh *xml_val)
 		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFunc)->GetBuffer());
 
 	return CMDFunctionGPDB::EfsSentinel;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CParseHandlerMDGPDBFunc::ParseFuncDataAccess
-//
-//	@doc:
-//		Parses function data access property from XML string
-//
-//---------------------------------------------------------------------------
-CMDFunctionGPDB::EFuncDataAcc
-CParseHandlerMDGPDBFunc::ParseFuncDataAccess(const XMLCh *xml_val)
-{
-	if (0 == XMLString::compareString(
-				 CDXLTokens::XmlstrToken(EdxltokenGPDBFuncNoSQL), xml_val))
-	{
-		return CMDFunctionGPDB::EfdaNoSQL;
-	}
-
-	if (0 ==
-		XMLString::compareString(
-			CDXLTokens::XmlstrToken(EdxltokenGPDBFuncContainsSQL), xml_val))
-	{
-		return CMDFunctionGPDB::EfdaContainsSQL;
-	}
-
-	if (0 ==
-		XMLString::compareString(
-			CDXLTokens::XmlstrToken(EdxltokenGPDBFuncReadsSQLData), xml_val))
-	{
-		return CMDFunctionGPDB::EfdaReadsSQLData;
-	}
-
-	if (0 ==
-		XMLString::compareString(
-			CDXLTokens::XmlstrToken(EdxltokenGPDBFuncModifiesSQLData), xml_val))
-	{
-		return CMDFunctionGPDB::EfdaModifiesSQLData;
-	}
-
-	GPOS_RAISE(
-		gpdxl::ExmaDXL, gpdxl::ExmiDXLInvalidAttributeValue,
-		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncDataAccess)->GetBuffer(),
-		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFunc)->GetBuffer());
-
-	return CMDFunctionGPDB::EfdaSentinel;
 }
 
 // EOF
