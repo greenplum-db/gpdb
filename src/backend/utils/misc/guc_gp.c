@@ -414,7 +414,7 @@ bool		gp_reject_internal_tcp_conn = true;
 bool		gp_enable_segment_copy_checking = true;
 /*
  * Default storage options GUC.  Value is comma-separated name=value
- * pairs.  E.g. "appendonly=true,orientation=column"
+ * pairs.  E.g. "blocksize=32768,compresstype=none,checksum=true"
  */
 char	   *gp_default_storage_options = NULL;
 
