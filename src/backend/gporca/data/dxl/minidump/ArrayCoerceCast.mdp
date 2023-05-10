@@ -103,7 +103,7 @@
         <dxl:SumAgg Mdid="0.2111.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ArrayCoerceCast Mdid="3.1007.1.0;1022.1.0" Name="float8" CoercePathType="3" BinaryCoercible="false" SourceTypeId="0.1007.1.0" DestinationTypeId="0.1022.1.0" CastFuncId="0.316.1.0" IsExplicit="false" CoercionForm="2" Location="-1" SourceElemTypeId="0.23.1.0"/>

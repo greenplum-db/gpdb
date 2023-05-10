@@ -254,7 +254,7 @@
         <dxl:InverseOp Mdid="0.416.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:MDScalarComparison Mdid="4.20.1.0;23.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.20.1.0" RightType="0.23.1.0" OperatorMdid="0.416.1.0"/>
-      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.57354.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">

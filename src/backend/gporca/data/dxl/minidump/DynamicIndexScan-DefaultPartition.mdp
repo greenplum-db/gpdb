@@ -102,7 +102,7 @@
       <dxl:ColumnStatistics Mdid="1.274855.1.1.8" Name="tableoid" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.274855.1.1.1" Name="b" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.274855.1.1.0" Name="a" Width="8.000000"/>
-      <dxl:GPDBFunc Mdid="0.6086.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6086.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2249.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT">
@@ -180,7 +180,7 @@
           <dxl:Partition Mdid="6.275094005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.274855.1.1.5" Name="cmin" Width="4.000000"/>

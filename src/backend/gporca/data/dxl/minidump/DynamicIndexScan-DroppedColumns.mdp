@@ -606,10 +606,10 @@
       <dxl:ColumnStatistics Mdid="1.566955.1.1.8" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.566955.1.1.1" Name="user_id" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.566955.1.1.0" Name="timest" Width="8.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.566955.1.1" Name="testbug_char5" Rows="0.000000"/>

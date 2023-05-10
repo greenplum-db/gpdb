@@ -178,7 +178,7 @@
         <dxl:SumAgg Mdid="0.2114.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.1114.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBAgg Mdid="0.2114.1.0" Name="sum">
@@ -1400,7 +1400,7 @@
         <dxl:ResultType Mdid="0.1700.1.0"/>
         <dxl:OpFunc Mdid="0.1725.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.2021.1.0" Name="date_part" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.2021.1.0" Name="date_part" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.17027.1.1.3" Name="ctid" Width="6.000000"/>

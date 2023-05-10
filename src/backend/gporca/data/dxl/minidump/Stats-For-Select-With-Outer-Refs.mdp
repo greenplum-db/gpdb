@@ -193,10 +193,10 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.26.1.0" Value="10690"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:GPDBFunc Mdid="0.936.1.0" Name="substring" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.936.1.0" Name="substring" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.1716.1.0" Name="pg_get_expr" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1716.1.0" Name="pg_get_expr" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.2604.1.1.5" Name="oid" Width="8.000000"/>
@@ -291,7 +291,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.313.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.313.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.1249.1.1.17" Name="ctid" Width="6.000000"/>
@@ -432,7 +432,7 @@
         <dxl:Commutator Mdid="0.607.1.0"/>
         <dxl:InverseOp Mdid="0.608.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.1081.1.0" Name="format_type" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.1081.1.0" Name="format_type" ReturnsSet="false" Stability="Stable" IsStrict="false">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.2604.1.1.7" Name="cmin" Width="4.000000"/>

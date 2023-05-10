@@ -921,7 +921,7 @@ Select * from X where X.a < ANY (select a from P);
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.66.1.0" Name="int4lt" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.66.1.0" Name="int4lt" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.24719017.1.1" Name="x" Rows="11000.000000" EmptyRelation="false"/>

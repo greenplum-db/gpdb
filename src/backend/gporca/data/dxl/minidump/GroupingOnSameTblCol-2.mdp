@@ -2624,13 +2624,13 @@
           <dxl:Opfamily Mdid="0.3040.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.871.1.0" Name="upper" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.871.1.0" Name="upper" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.1114.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.748.1.0" Name="date" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.748.1.0" Name="date" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.1082.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.2372852.1.1.22" Name="state" Width="8.000000" NullFreq="0.241232" NdvRemain="30.000000" FreqRemain="0.245447">

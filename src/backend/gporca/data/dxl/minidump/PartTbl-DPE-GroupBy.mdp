@@ -62,7 +62,7 @@
         <dxl:Commutator Mdid="0.98.1.0"/>
         <dxl:InverseOp Mdid="0.531.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.112.1.0" Name="text" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.112.1.0" Name="text" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq">
@@ -121,7 +121,7 @@
       <dxl:ColumnStatistics Mdid="1.290141.1.1.6" Name="xmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.290415.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.290415.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000"/>
-      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -238,7 +238,7 @@
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
       <dxl:ColumnStatistics Mdid="1.290415.1.1.5" Name="xmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.290415.1.1.4" Name="ctid" Width="6.000000" NullFreq="0.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.290141.1.1.11" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000"/>

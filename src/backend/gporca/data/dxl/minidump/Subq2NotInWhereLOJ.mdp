@@ -76,7 +76,7 @@
           <dxl:Opfamily Mdid="0.3041.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.401.1.0" Name="text" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">
+      <dxl:GPDBFunc Mdid="0.401.1.0" Name="text" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -371,7 +371,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:GPDBFunc Mdid="0.669.1.0" Name="varchar" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">
+      <dxl:GPDBFunc Mdid="0.669.1.0" Name="varchar" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false">
         <dxl:ResultType Mdid="0.1043.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.368662.1.0.1" Name="att2" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -410,12 +410,12 @@
           <dxl:Opfamily Mdid="0.3035.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.877.1.0" Name="substr" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">
+      <dxl:GPDBFunc Mdid="0.877.1.0" Name="substr" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.368665.1.0.1" Name="desc3" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.368665.1.0.0" Name="id3" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:GPDBFunc Mdid="0.885.1.0" Name="btrim" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="true">
+      <dxl:GPDBFunc Mdid="0.885.1.0" Name="btrim" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
     </dxl:Metadata>

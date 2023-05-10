@@ -202,10 +202,10 @@
       <dxl:ColumnStatistics Mdid="1.254292.1.1.10" Name="l_shipdate" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.254292.1.1.3" Name="l_linenumber" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.254292.1.1.2" Name="l_suppkey" Width="8.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.254292.1.1.21" Name="tableoid" Width="4.000000"/>

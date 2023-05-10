@@ -61,7 +61,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.3539.1.0" Name="format" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.3539.1.0" Name="format" ReturnsSet="false" Stability="Stable" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.1009.1.0" Name="_text" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="false" Length="-1" PassByValue="false">
