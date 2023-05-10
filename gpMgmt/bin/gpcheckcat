@@ -1065,7 +1065,7 @@ def checkOwners():
     #    to pg_appendonly.
     db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     qry = '''
-    select distinct n.nspname, coalesce(r.relname, o.relname) as relname,
+    select distinct n.nspname, r.relname as relname,
                     a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
