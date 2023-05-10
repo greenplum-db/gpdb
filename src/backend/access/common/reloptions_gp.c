@@ -924,9 +924,9 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (pg_strcasecmp(comptype_opt->values.string_val, "quicklz") == 0)
 		{
 #ifdef USE_ZSTD
-			strncpy(result->compresstype, "zstd", sizeof("zstd"));
+			StrNCpy(result->compresstype, "zstd", NAMEDATALEN);
 #else
-			strncpy(result->compresstype, AO_DEFAULT_USABLE_COMPRESSTYPE, sizeof(AO_DEFAULT_USABLE_COMPRESSTYPE));
+			StrNCpy(result->compresstype, AO_DEFAULT_USABLE_COMPRESSTYPE, NAMEDATALEN);
 #endif
 		}
 		else
