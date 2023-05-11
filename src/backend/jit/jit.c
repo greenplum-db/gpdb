@@ -43,7 +43,6 @@ double		jit_above_cost = 100000;
 double		jit_inline_above_cost = 500000;
 double		jit_optimize_above_cost = 500000;
 
-extern bool	optimizer;
 static JitProviderCallbacks provider;
 static bool provider_successfully_loaded = false;
 static bool provider_failed_loading = false;
@@ -74,7 +73,7 @@ provider_init(void)
 	JitProviderInit init;
 
 	/* don't even try to load if not enabled */
-	if (!optimizer_jit && !jit_enabled)
+	if (!optimizer_jit_enabled && !jit_enabled)
 		return false;
 
 	/*

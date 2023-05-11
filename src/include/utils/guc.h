@@ -517,7 +517,7 @@ extern int	optimizer_plan_id;
 extern int	optimizer_samples_number;
 
 /* Optimizer Just In Time (JIT) compilation related GUCs*/
-extern  bool  optimizer_jit;
+extern  bool	optimizer_jit_enabled;
 extern  double  optimizer_jit_above_cost;
 extern  double  optimizer_jit_inline_above_cost;
 extern  double  optimizer_jit_optimize_above_cost;

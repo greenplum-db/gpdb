@@ -8610,7 +8610,7 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
  * (Planner cost usually higher), setting the JIT flags based on the
  * common JIT costing GUCs could lead to false triggering of JIT.
  *
- * To prevent this situation, separate Costing GUCs are created
+ * To prevent this situation, separate  costing GUCs are created
  * for Optimizer and used here for setting the JIT flags.
  *
  */
@@ -8634,7 +8634,7 @@ static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
 		/*
 		 * True means, we have to set values for ORCA
 		 */
-		jit_on = optimizer_jit;
+		jit_on = optimizer_jit_enabled;
 		above_cost = optimizer_jit_above_cost;
 		inline_above_cost = optimizer_jit_inline_above_cost;
 		optimize_above_cost = optimizer_jit_optimize_above_cost;
