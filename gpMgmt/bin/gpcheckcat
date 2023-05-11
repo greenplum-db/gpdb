@@ -1065,14 +1065,16 @@ def checkOwners():
     #    to pg_appendonly.
     db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     qry = '''
-    select distinct n.nspname, r.relname as relname,
+    select distinct n.nspname, coalesce(o.relname, c.relname) as relname,
                     a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
       left join pg_index i on (c.oid = i.indexrelid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.blkdirrelid or
-                                     i.indrelid = ao.blkdirrelid)
+                                     c.oid = ao.visimaprelid or
+                                     i.indrelid = ao.blkdirrelid or
+                                     i.indrelid = ao.visimaprelid)
       left join pg_class o on (o.oid = ao.relid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)
