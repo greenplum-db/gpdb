@@ -23,7 +23,7 @@ The following partitioning-related features are *new* in Greenplum 7:
 - `ALTER TABLE ONLY` syntax that directs Greenplum to apply the operation to the named table only (does not recurse the operation to child partition tables).
 
 
-## <a id="not"></a>What Hasn't Changed With Uniform Syntax?
+## <a id="not"></a>What Hasn't Changed With Classic Syntax?
 
 The following classic partitioning syntax and behaviors *have not* changed in Greenplum 7:
 

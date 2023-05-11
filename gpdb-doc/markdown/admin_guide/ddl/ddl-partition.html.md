@@ -71,7 +71,7 @@ If you are familiar with the Greenplum 6 partitioning syntax or already have par
 
 The following table provides a feature comparison to help you choose the syntax most appropriate for your data model:
 
-| Feature | Uniform Syntax | Flexible Syntax |
+| Feature | Classic Syntax | Modern Syntax |
 |----------|---------------|------------|
 | Heterogeneous partition hierarchy | Not supported. All leaf tables are at the same level. | Supported. Leaf tables are permitted at different levels. You can specify different partitioning rules for individual child tables, including different partition columns and different partitioning strategies. |
 | Expressions in partition key | Not supported. | Supported. |
