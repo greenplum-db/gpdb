@@ -66,7 +66,7 @@ SELECT * FROM env WHERE var in (
 CREATE OR REPLACE FUNCTION python_version() returns text as $$
 import sys
 return sys.version_info
-$$ language plpython3u NO SQL;
+$$ language plpython3u;
 
 SELECT python_version() FROM env GROUP BY python_version;
 
@@ -77,7 +77,7 @@ SELECT python_version() FROM env GROUP BY python_version;
 --
 CREATE OR REPLACE FUNCTION perl_version() returns text as $$
 return "Perl $]"
-$$ language plperlu NO SQL;
+$$ language plperlu;
 
 SELECT perl_version() FROM env GROUP BY perl_version;
 
@@ -90,13 +90,13 @@ SELECT perl_version() FROM env GROUP BY perl_version;
 CREATE OR REPLACE FUNCTION python_path() returns text as $$
 import sys
 return sys.path[0]
-$$ language plpython3u NO SQL;
+$$ language plpython3u;
 
 SELECT python_path() FROM env GROUP BY python_path;
 
 CREATE OR REPLACE FUNCTION perl_path() returns text as $$
 return join(':', @INC)
-$$ language plperlu NO SQL;
+$$ language plperlu;
 
 SELECT perl_path() FROM env GROUP BY perl_path;
 
@@ -112,7 +112,7 @@ p = subprocess.Popen(cmd, shell=True,
 r = p.communicate()
 header = "---------------------\n"
 return header + r[0].decode()
-$$ LANGUAGE plpython3u NO SQL;
+$$ LANGUAGE plpython3u;
 
 --
 -- Create a harness to run mapreduce jobs on the correct host/port
@@ -134,7 +134,7 @@ header = "---------------------"
 err = '\nSTDERR> '.join(('STDERR> ' + r[1].decode()).split('\n')).replace('\t', '   ')
 out = 'STDOUT>\n' + r[0].decode().replace('\t', ', ')
 return [header, err, out]
-$$ LANGUAGE plpython3u READS SQL DATA;
+$$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION mapreduce(file text, keys text) returns setof text as $$
 import subprocess
@@ -155,7 +155,7 @@ header = "---------------------"
 err = '\nSTDERR> '.join(('STDERR> ' + r[1].decode()).split('\n')).replace('\t', '   ')
 out = 'STDOUT>\n' + r[0].decode().replace('\t', ', ')
 return [header, err, out]
-$$ LANGUAGE plpython3u READS SQL DATA;
+$$ LANGUAGE plpython3u;
 
 --
 -- CHECK 1) make sure plperlu is really installed:
@@ -246,7 +246,7 @@ neighbors = list(map(int, s[i+1:].strip().strip("()").split(",")))
 neighbors.sort()
 ns = "(" + ",".join(map(str, neighbors)) + ")"
 return ", ".join([rank, ns])
-$$ LANGUAGE plpython3u NO SQL;
+$$ LANGUAGE plpython3u;
 -- The result of the following test case is related to the underlying hash algorithm
 -- because the intermediate result of computing is saved as table in gpdb and hash-distributed.
 -- If you change the underlying hash algorithm, please remember to verify the answer and change

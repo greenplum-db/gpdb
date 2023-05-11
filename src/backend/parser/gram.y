@@ -10473,18 +10473,30 @@ common_func_opt_item:
 			| NO SQL_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("none"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"NO SQL\" acts as no operation.")));
 				}
 			| CONTAINS SQL_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("contains"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"CONTAINS SQL DATA\" acts as no operation.")));
 				}
 			| READS SQL_P DATA_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("reads"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"READS SQL DATA\" acts as no operation.")));
 				}
 			| MODIFIES SQL_P DATA_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("modifies"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"MODIFIES SQL DATA\" acts as no operation.")));
 				}
 			| EXECUTE ON ANY
 				{

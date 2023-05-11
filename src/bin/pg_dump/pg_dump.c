@@ -12388,7 +12388,6 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 	char	   *proparallel;
 	char	   *lanname;
 	char	   *callbackfunc;
-	char	   *prodataaccess;
 	char	   *proexeclocation;
 	const char *rettypename;
 	int			nallargs;
@@ -12426,7 +12425,6 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 							"proconfig,\n"
 							"procost,\n"
 							"prorows,\n"
-							"prodataaccess,\n"
 							"pg_catalog.pg_get_function_arguments(p.oid) AS funcargs,\n"
 							"pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs,\n"
 							"pg_catalog.pg_get_function_result(p.oid) AS funcresult,\n"
@@ -12515,7 +12513,6 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 	proparallel = PQgetvalue(res, 0, PQfnumber(res, "proparallel"));
 	lanname = PQgetvalue(res, 0, PQfnumber(res, "lanname"));
 	callbackfunc = PQgetvalue(res, 0, PQfnumber(res, "callbackfunc"));
-	prodataaccess = PQgetvalue(res, 0, PQfnumber(res, "prodataaccess"));
 	proexeclocation = PQgetvalue(res, 0, PQfnumber(res, "proexeclocation"));
 
 	/*
@@ -12713,15 +12710,6 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 			fatal("unrecognized proparallel value for function \"%s\"",
 				  finfo->dobj.name);
 	}
-
-	if (prodataaccess[0] == PRODATAACCESS_NONE)
-		appendPQExpBuffer(q, " NO SQL");
-	else if (prodataaccess[0] == PRODATAACCESS_CONTAINS)
-		appendPQExpBuffer(q, " CONTAINS SQL");
-	else if (prodataaccess[0] == PRODATAACCESS_READS)
-		appendPQExpBuffer(q, " READS SQL DATA");
-	else if (prodataaccess[0] == PRODATAACCESS_MODIFIES)
-		appendPQExpBuffer(q, " MODIFIES SQL DATA");
 
 	if (proexeclocation[0] == PROEXECLOCATION_ANY)
 	{

@@ -91,6 +91,9 @@ m/^DEBUG:  probing availability of JIT provider/
 m/^DEBUG:  LLVMJIT detected CPU/
 m/^DEBUG:  time to inline:/
 
+# Ignore data access indicator notice.
+m/NOTICE:  specifying ".*" acts as no operation./
+
 -- end_matchignore
 
 -- start_matchsubs
