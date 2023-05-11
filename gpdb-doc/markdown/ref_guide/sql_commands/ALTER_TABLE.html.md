@@ -383,7 +383,7 @@ EXCHANGE \[DEFAULT\] PARTITION
 
 :   You cannot exchange a partition with a replicated table. Exchanging a partition with a partitioned table or a child partition of a partitioned table is not supported.
 
-:   **WITH** \| **WITHOUT VALIDATION** - No-op.
+:   **WITH** \| **WITHOUT VALIDATION** - No-op (always validate the data against the partition constraint).
 
 SET SUBPARTITION TEMPLATE
 :   Modifies the subpartition template for an existing partition. After a new subpartition template is set, all new partitions added will have the new subpartition design \(existing partitions are not modified\).
