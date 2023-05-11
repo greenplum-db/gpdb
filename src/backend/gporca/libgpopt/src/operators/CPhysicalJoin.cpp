@@ -17,7 +17,6 @@
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
-#include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CPhysicalInnerIndexNLJoin.h"
 #include "gpopt/operators/CPhysicalLeftOuterIndexNLJoin.h"
@@ -347,24 +346,24 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 						CUtils::FScalarIdent(pexprMatching));
 			if (fSuccess)
 			{
-				IMDId *pmdid_type_inner =
+				IMDId *pmdidTypeInner =
 					CScalar::PopConvert(pexprMatching->Pop())->MdidType();
 
-				IMDId *pmdid_type_outer =
+				IMDId *pmdidTypeOuter =
 					CScalar::PopConvert(pexpr->Pop())->MdidType();
 
-				CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+				CMDAccessor *mdAccessor = COptCtxt::PoctxtFromTLS()->Pmda();
 
-				IMDId *mdid_opfamily_inner =
-					md_accessor->RetrieveType(pmdid_type_inner)
+				IMDId *mdidOpfamilyInner =
+					mdAccessor->RetrieveType(pmdidTypeInner)
 						->GetDistrOpfamilyMdid();
 
-				IMDId *mdid_opfamily_outer =
-					md_accessor->RetrieveType(pmdid_type_outer)
+				IMDId *mdidOpfamilyOuter =
+					mdAccessor->RetrieveType(pmdidTypeOuter)
 						->GetDistrOpfamilyMdid();
 
-				if (mdid_opfamily_outer->Equals(mdid_opfamily_inner) &&
-					md_accessor->RetrieveType(pmdid_type_inner)->IsHashable())
+				if (mdidOpfamilyOuter->Equals(mdidOpfamilyInner) &&
+					mdAccessor->RetrieveType(pmdidTypeInner)->IsHashable())
 				{
 					pexprMatching->AddRef();
 					pdrgpexprMatching->Append(pexprMatching);
@@ -380,6 +379,7 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 		if (fSuccess)
 		{
 			GPOS_ASSERT(pdrgpexprMatching->Size() == pdrgpexprHashed->Size());
+
 			// create a matching hashed distribution request
 			BOOL fNullsColocated = pdshashed->FNullsColocated();
 			CDistributionSpecHashed *pdshashedEquiv = GPOS_NEW(mp)

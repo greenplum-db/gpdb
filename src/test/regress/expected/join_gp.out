@@ -2566,197 +2566,159 @@ drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
 -- check motion is added when performing a NL Left Outer Join between relations
 -- when the join condition columns belong to different opfamily
-create table foo_nestloop (a varchar(5),b varchar(5)) distributed by (a);
-create table bar_nestloop (p char(5),q char(5)) distributed by (p);
-insert into foo_nestloop values ('1 ','1 '),('2  ','2  '),('3   ','3   ');
-insert into bar_nestloop values ('1 ','1 '),('2  ','2  '),('3   ','3   ');
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
 set optimizer_enable_hashjoin to off;
 set enable_hashjoin to off;
 set enable_nestloop to on;
-explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2950086.38 rows=1755610 width=48)
-   ->  Nested Loop Left Join  (cost=0.00..2926678.25 rows=585203 width=48)
-         Join Filter: ((foo_nestloop.a)::bpchar = bar_nestloop.p)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
-               Hash Key: foo_nestloop.a
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=48)
-         ->  Materialize  (cost=0.00..243.50 rows=13967 width=24)
-               ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=24)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6170491.30 rows=3672360 width=48)
+   ->  Nested Loop Left Join  (cost=0.00..6121526.50 rows=1224120 width=48)
+         Join Filter: ((foo_varchar.a)::bpchar = bar_char.p)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+               Hash Key: foo_varchar.a
+               ->  Seq Scan on foo_varchar  (cost=0.00..236.00 rows=20200 width=24)
+         ->  Materialize  (cost=0.00..337.00 rows=20200 width=24)
+               ->  Seq Scan on bar_char  (cost=0.00..236.00 rows=20200 width=24)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p order by foo_nestloop.a;
-  a   |  b   
-------+------
- 1    | 1 
- 2    | 2  
- 3    | 3   
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p order by foo_varchar.a;
+  a   |   p   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
 (3 rows)
 
-explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.q;
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8789108.36 rows=1755610 width=48)
-   ->  Nested Loop Left Join  (cost=0.00..8765700.22 rows=585203 width=48)
-         Join Filter: ((foo_nestloop.a)::bpchar = bar_nestloop.q)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
-               Hash Key: foo_nestloop.a
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=48)
-         ->  Materialize  (cost=0.00..522.83 rows=13967 width=24)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..453.00 rows=13967 width=24)
-                     Hash Key: bar_nestloop.q
-                     ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=24)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..18078104.80 rows=3672360 width=48)
+   ->  Nested Loop Left Join  (cost=0.00..18029140.00 rows=1224120 width=48)
+         Join Filter: ((foo_varchar.a)::bpchar = random_dis_char.y)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+               Hash Key: foo_varchar.a
+               ->  Seq Scan on foo_varchar  (cost=0.00..236.00 rows=20200 width=24)
+         ->  Materialize  (cost=0.00..741.00 rows=20200 width=24)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+                     Hash Key: random_dis_char.y
+                     ->  Seq Scan on random_dis_char  (cost=0.00..236.00 rows=20200 width=24)
  Optimizer: Postgres query optimizer
 (11 rows)
 
-select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.q order by foo_nestloop.a;
-  a   |  b   
-------+------
- 1    | 1 
- 2    | 2  
- 3    | 3   
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y order by foo_varchar.a;
+  a   |   y   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
 (3 rows)
 
-explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q;
-                                                     QUERY PLAN                                                     
---------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3414906.36 rows=41900 width=48)
-   ->  Nested Loop Left Join  (cost=0.00..3414347.69 rows=13967 width=48)
-         Join Filter: (((foo_nestloop.a)::bpchar = bar_nestloop.p) AND ((foo_nestloop.b)::bpchar = bar_nestloop.q))
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
-               Hash Key: foo_nestloop.a
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=48)
-         ->  Materialize  (cost=0.00..243.50 rows=13967 width=48)
-               ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=48)
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..18077700.80 rows=3672360 width=48)
+   ->  Nested Loop Left Join  (cost=0.00..18028736.00 rows=1224120 width=48)
+         Join Filter: (bar_char.p = (random_dis_varchar.x)::bpchar)
+         ->  Seq Scan on bar_char  (cost=0.00..236.00 rows=20200 width=24)
+         ->  Materialize  (cost=0.00..741.00 rows=20200 width=24)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+                     Hash Key: random_dis_varchar.x
+                     ->  Seq Scan on random_dis_varchar  (cost=0.00..236.00 rows=20200 width=24)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
-  a   |  b   
-------+------
- 1    | 1 
- 2    | 2  
- 3    | 3   
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x order by bar_char.p;
+   p   |  x   
+-------+------
+ 1     | 1 
+ 2     | 2  
+ 3     | 3   
 (3 rows)
 
 -- check motion is added when performing a NL Inner Join between relations when
 -- the join condition columns belong to different opfamily
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2950086.38 rows=1755610 width=48)
-   ->  Nested Loop  (cost=0.00..2926678.25 rows=585203 width=48)
-         Join Filter: ((foo_nestloop.a)::bpchar = bar_nestloop.p)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
-               Hash Key: foo_nestloop.a
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=48)
-         ->  Materialize  (cost=0.00..243.50 rows=13967 width=24)
-               ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=24)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6170491.30 rows=3672360 width=48)
+   ->  Nested Loop  (cost=0.00..6121526.50 rows=1224120 width=48)
+         Join Filter: ((foo_varchar.a)::bpchar = bar_char.p)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+               Hash Key: foo_varchar.a
+               ->  Seq Scan on foo_varchar  (cost=0.00..236.00 rows=20200 width=24)
+         ->  Materialize  (cost=0.00..337.00 rows=20200 width=24)
+               ->  Seq Scan on bar_char  (cost=0.00..236.00 rows=20200 width=24)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p order by foo_nestloop.a;
-  a   |  b   
-------+------
- 1    | 1 
- 2    | 2  
- 3    | 3   
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p order by foo_varchar.a;
+  a   |   p   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
 (3 rows)
 
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q;
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..8789108.36 rows=1755610 width=48)
-   ->  Nested Loop  (cost=0.00..8765700.22 rows=585203 width=48)
-         Join Filter: ((foo_nestloop.a)::bpchar = bar_nestloop.q)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
-               Hash Key: foo_nestloop.a
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=48)
-         ->  Materialize  (cost=0.00..522.83 rows=13967 width=24)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..453.00 rows=13967 width=24)
-                     Hash Key: bar_nestloop.q
-                     ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=24)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..18078104.80 rows=3672360 width=48)
+   ->  Nested Loop  (cost=0.00..18029140.00 rows=1224120 width=48)
+         Join Filter: ((foo_varchar.a)::bpchar = random_dis_char.y)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+               Hash Key: foo_varchar.a
+               ->  Seq Scan on foo_varchar  (cost=0.00..236.00 rows=20200 width=24)
+         ->  Materialize  (cost=0.00..741.00 rows=20200 width=24)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+                     Hash Key: random_dis_char.y
+                     ->  Seq Scan on random_dis_char  (cost=0.00..236.00 rows=20200 width=24)
  Optimizer: Postgres query optimizer
 (11 rows)
 
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q order by foo_nestloop.a;
-  a   |  b   
-------+------
- 1    | 1 
- 2    | 2  
- 3    | 3   
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y order by foo_varchar.a;
+  a   |   y   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
 (3 rows)
 
-explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a;
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2950086.38 rows=1755610 width=48)
-   ->  Nested Loop  (cost=0.00..2926678.25 rows=585203 width=48)
-         Join Filter: (bar_nestloop.p = (foo_nestloop.a)::bpchar)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=24)
-               Hash Key: foo_nestloop.a
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=24)
-         ->  Materialize  (cost=0.00..243.50 rows=13967 width=48)
-               ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=48)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6170491.30 rows=3672360 width=48)
+   ->  Nested Loop  (cost=0.00..6121526.50 rows=1224120 width=48)
+         Join Filter: (bar_char.p = (random_dis_varchar.x)::bpchar)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..640.00 rows=20200 width=24)
+               Hash Key: random_dis_varchar.x
+               ->  Seq Scan on random_dis_varchar  (cost=0.00..236.00 rows=20200 width=24)
+         ->  Materialize  (cost=0.00..337.00 rows=20200 width=24)
+               ->  Seq Scan on bar_char  (cost=0.00..236.00 rows=20200 width=24)
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a order by bar_nestloop.p;
-   p   |   q   
--------+-------
- 1     | 1    
- 2     | 2    
- 3     | 3    
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x order by bar_char.p;
+   p   |  x   
+-------+------
+ 1     | 1 
+ 2     | 2  
+ 3     | 3   
 (3 rows)
 
-explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b;
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2950086.38 rows=1755610 width=48)
-   ->  Nested Loop  (cost=0.00..2926678.25 rows=585203 width=48)
-         Join Filter: (bar_nestloop.p = (foo_nestloop.b)::bpchar)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=24)
-               Hash Key: foo_nestloop.b
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=24)
-         ->  Materialize  (cost=0.00..243.50 rows=13967 width=48)
-               ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=48)
- Optimizer: Postgres query optimizer
-(9 rows)
-
-select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b order by bar_nestloop.p;
-   p   |   q   
--------+-------
- 1     | 1    
- 2     | 2    
- 3     | 3    
-(3 rows)
-
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q;
-                                                     QUERY PLAN                                                     
---------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3414371.10 rows=1756 width=48)
-   ->  Nested Loop  (cost=0.00..3414347.69 rows=585 width=48)
-         Join Filter: (((foo_nestloop.a)::bpchar = bar_nestloop.p) AND ((foo_nestloop.b)::bpchar = bar_nestloop.q))
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..453.00 rows=13967 width=48)
-               Hash Key: foo_nestloop.a
-               ->  Seq Scan on foo_nestloop  (cost=0.00..173.67 rows=13967 width=48)
-         ->  Materialize  (cost=0.00..243.50 rows=13967 width=48)
-               ->  Seq Scan on bar_nestloop  (cost=0.00..173.67 rows=13967 width=48)
- Optimizer: Postgres query optimizer
-(9 rows)
-
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
-  a   |  b   
-------+------
- 1    | 1 
- 2    | 2  
- 3    | 3   
-(3 rows)
-
-drop table foo_nestloop;
-drop table bar_nestloop;
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;

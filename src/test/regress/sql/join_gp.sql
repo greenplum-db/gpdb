@@ -967,35 +967,48 @@ drop table if exists bar_PT3;
 drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
 
+
 -- check motion is added when performing a NL Left Outer Join between relations
 -- when the join condition columns belong to different opfamily
-create table foo_nestloop (a varchar(5),b varchar(5)) distributed by (a);
-create table bar_nestloop (p char(5),q char(5)) distributed by (p);
-insert into foo_nestloop values ('1 ','1 '),('2  ','2  '),('3   ','3   ');
-insert into bar_nestloop values ('1 ','1 '),('2  ','2  '),('3   ','3   ');
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
+
 set optimizer_enable_hashjoin to off;
 set enable_hashjoin to off;
 set enable_nestloop to on;
-explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
-select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p order by foo_nestloop.a;
-explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.q;
-select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.q order by foo_nestloop.a;
-explain select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q;
-select foo_nestloop.* from foo_nestloop left join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
+
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p order by foo_varchar.a;
+
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y order by foo_varchar.a;
+
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x order by bar_char.p;
+
 -- check motion is added when performing a NL Inner Join between relations when
 -- the join condition columns belong to different opfamily
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p;
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p order by foo_nestloop.a;
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q;
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.q order by foo_nestloop.a;
-explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a;
-select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.a order by bar_nestloop.p;
-explain select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b;
-select bar_nestloop.* from bar_nestloop inner join foo_nestloop on bar_nestloop.p=foo_nestloop.b order by bar_nestloop.p;
-explain select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q;
-select foo_nestloop.* from foo_nestloop inner join bar_nestloop on foo_nestloop.a=bar_nestloop.p and foo_nestloop.b=bar_nestloop.q order by foo_nestloop.a;
-drop table foo_nestloop;
-drop table bar_nestloop;
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p order by foo_varchar.a;
+
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y order by foo_varchar.a;
+
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x order by bar_char.p;
+
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
+
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;
