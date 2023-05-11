@@ -344,6 +344,27 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 								   lockmode, NULL);
 	}
 
+	if (Gp_role == GP_ROLE_DISPATCH &&
+		!pstate->p_is_insert &&
+		pstate->p_target_relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+	{
+		List *all_childs = find_all_inheritors(RelationGetRelid(pstate->p_target_relation), NoLock, NULL);
+
+		ListCell *lc = NULL;
+		bool childLockUpgraded = false;
+		foreach(lc, all_childs)
+		{
+			Oid childoid = lfirst_oid(lc);
+
+			Relation rel = CdbTryOpenTable(childoid, lockmode, &childLockUpgraded);
+
+			/*
+			 * Drop the rel refcount, but keep the access lock till end of transaction
+			 */
+			table_close(rel, NoLock);
+		}
+	}
+
 	/*
 	 * Now build an RTE.
 	 */
