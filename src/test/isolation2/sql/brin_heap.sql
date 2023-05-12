@@ -49,4 +49,64 @@ FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended_heap_i_idx', 2),
                                   'brin_range_extended_heap_i_idx') ORDER BY blknum, attnum;
 
+
+-- Test build/summarize with aborted rows.
+
+CREATE TABLE brin_abort_heap(i int);
+CREATE INDEX ON brin_abort_heap USING brin(i) WITH (pages_per_range=1);
+BEGIN;
+-- Create 3 blocks all on 1 QE, in 1 aoseg: 2 blocks full, 1 block with 1 tuple.
+SELECT populate_pages('brin_abort_heap', 1, tid '(2, 0)');
+ABORT;
+
+-- Sanity: There is 1 revmap page and 1 data page, with 1 range (summarized).
+-- This first range being summarized highlights a difference with AO/CO tables.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_heap_i_idx', blkno)) FROM
+    generate_series(0, blocks('brin_abort_heap_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_heap_i_idx', 1))
+   WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2),
+                                  'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
+
+-- Summarize over the aborted rows.
+SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
+
+-- Sanity: There is 1 revmap page and 1 data page, with 3 ranges. The two new
+-- ranges have empty range tuples as a result of explicit summarization over
+-- aborted tuples.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_heap_i_idx', blkno)) FROM
+    generate_series(0, blocks('brin_abort_heap_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_heap_i_idx', 1))
+    WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2),
+                                  'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
+
+-- Now, add some committed rows.
+SELECT populate_pages('brin_abort_heap', 20, tid '(3, 0)');
+
+-- Summarize to include the committed rows.
+SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
+
+-- Sanity: There is 1 revmap page and 1 data page, with 4 ranges. The first range
+-- and the last two ranges (covering the committed rows) have non-empty tuples.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_heap_i_idx', blkno)) FROM
+    generate_series(0, blocks('brin_abort_heap_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_heap_i_idx', 1))
+    WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2),
+                                  'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
+
+-- Drop and re-create the index to test build.
+DROP INDEX brin_abort_heap_i_idx;
+CREATE INDEX ON brin_abort_heap USING brin(i) WITH (pages_per_range=1);
+
+-- Sanity: There is 1 revmap page and 1 data page, with 4 ranges. Only the last
+-- two ranges (covering the committed rows) have non-empty tuples.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_heap_i_idx', blkno)) FROM
+    generate_series(0, blocks('brin_abort_heap_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_heap_i_idx', 1))
+    WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2),
+                                  'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
+
 DROP EXTENSION pageinspect;

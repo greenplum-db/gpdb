@@ -320,4 +320,119 @@ CREATE INDEX ON brin_multi_@amname@ USING brin(i) WITH (pages_per_range=1);
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_multi_@amname@_i_idx', 2),
   'brin_multi_@amname@_i_idx') ORDER BY blknum, attnum;
 
+--------------------------------------------------------------------------------
+-- Test build/summarize with aborted rows.
+--------------------------------------------------------------------------------
+CREATE TABLE brin_abort_@amname@(i int) USING @amname@;
+CREATE INDEX ON brin_abort_@amname@ USING brin(i) WITH (pages_per_range=1);
+BEGIN;
+-- Create 3 blocks all on 1 QE, in 1 aoseg: 2 blocks full, 1 block with 1 tuple.
+SELECT populate_pages('brin_abort_@amname@', 1, tid '(33554434, 0)');
+ABORT;
+
+-- Sanity: There are no revmap or data pages created yet.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
+  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+
+-- Summarize over the aborted rows.
+SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
+
+-- Sanity: There is 1 revmap pages and 1 data page, containing 3 empty ranges.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
+  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_@amname@_i_idx', 1))
+    WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
+  'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
+
+-- Now, add some committed rows.
+SELECT populate_pages('brin_abort_@amname@', 20, tid '(33554435, 0)');
+
+-- Summarize to include the committed rows.
+SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
+
+-- Sanity: There is 1 revmap page and 1 data page, containing 2 empty ranges
+-- and 2 ranges over the committed rows.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
+  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_@amname@_i_idx', 1))
+  WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
+  'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
+
+-- Drop and re-create the index to test build.
+DROP INDEX brin_abort_@amname@_i_idx;
+CREATE INDEX ON brin_abort_@amname@ USING brin(i) WITH (pages_per_range=1);
+
+-- Sanity: There is 1 revmap page and 1 data page, containing 2 empty ranges
+-- and 2 ranges over the committed rows.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
+  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_@amname@_i_idx', 1))
+  WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
+  'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
+
+--------------------------------------------------------------------------------
+-- Test build/summarize with whole revmap page containing aborted ranges.
+--------------------------------------------------------------------------------
+CREATE TABLE brin_abort_fullpage_@amname@(i int) USING @amname@;
+CREATE INDEX ON brin_abort_fullpage_@amname@ USING brin(i) WITH (pages_per_range=1);
+
+-- Insert single row, so we have a gp_fastsequence entry to modify.
+BEGIN;
+INSERT INTO brin_abort_fullpage_@amname@ VALUES(1);
+ABORT;
+
+-- Simulate a revmap page full of aborted ranges by altering gp_fastsequence.
+-- This creates enough entries for 2 revmap pages (About 32768 integers fit in
+-- 1 logical heap block and REVMAP_PAGE_MAXITEMS=5454).
+1U: SET allow_system_table_mods TO ON;
+1U: UPDATE gp_fastsequence SET last_sequence = (32768 * 5454 + 1) WHERE
+  objid = (SELECT segrelid FROM pg_appendonly
+    WHERE relid='brin_abort_fullpage_@amname@'::regclass) and objmod = 1;
+
+-- Now insert a single committed row.
+INSERT INTO brin_abort_fullpage_@amname@ VALUES(20);
+
+SELECT brin_summarize_new_values('brin_abort_fullpage_@amname@_i_idx');
+
+-- Sanity: There are 2 revmap pages, and 3 data pages. The first 2 data pages
+-- contain nothing but empty ranges. The 3rd data page has a single non-empty
+-- range referencing the committed row.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_fullpage_@amname@_i_idx', blkno)) FROM
+  generate_series(0, blocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
+1U: SELECT brin_revmap_chain(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 0),
+  'brin_abort_fullpage_@amname@_i_idx', 1);
+1U: SELECT value, count(*) FROM brin_page_items(
+  get_raw_page('brin_abort_fullpage_@amname@_i_idx', 2), 'brin_abort_fullpage_@amname@_i_idx')
+  group by value;
+1U: SELECT value, count(*) FROM brin_page_items(
+  get_raw_page('brin_abort_fullpage_@amname@_i_idx', 3), 'brin_abort_fullpage_@amname@_i_idx')
+  group by value;
+1U: SELECT value, count(*) FROM brin_page_items(
+  get_raw_page('brin_abort_fullpage_@amname@_i_idx', 5), 'brin_abort_fullpage_@amname@_i_idx')
+  group by value;
+
+-- Drop and re-create the index to test build.
+DROP INDEX brin_abort_fullpage_@amname@_i_idx;
+CREATE INDEX ON brin_abort_fullpage_@amname@ USING brin(i) WITH (pages_per_range=1);
+
+-- Sanity: There are 2 revmap pages, and 3 data pages. The first 2 data pages
+-- contain nothing but empty ranges. The 3rd data page has a single non-empty
+-- range referencing the committed row.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_fullpage_@amname@_i_idx', blkno)) FROM
+  generate_series(0, blocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
+1U: SELECT brin_revmap_chain(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 0),
+  'brin_abort_fullpage_@amname@_i_idx', 1);
+1U: SELECT value, count(*) FROM brin_page_items(
+  get_raw_page('brin_abort_fullpage_@amname@_i_idx', 2), 'brin_abort_fullpage_@amname@_i_idx')
+  group by value;
+1U: SELECT value, count(*) FROM brin_page_items(
+  get_raw_page('brin_abort_fullpage_@amname@_i_idx', 3), 'brin_abort_fullpage_@amname@_i_idx')
+  group by value;
+1U: SELECT value, count(*) FROM brin_page_items(
+  get_raw_page('brin_abort_fullpage_@amname@_i_idx', 5), 'brin_abort_fullpage_@amname@_i_idx')
+  group by value;
+
 DROP EXTENSION pageinspect;
