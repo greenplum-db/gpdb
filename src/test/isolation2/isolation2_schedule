@@ -340,6 +340,9 @@ test: free_remapper_fatal
 
 test: spilling_hashagg
 
+# test for heap tables with concurrency for BRIN
+test: brin_heap
+
 # Intensive tests for BRIN
 test: uao/brin_chain_row
 test: uao/brin_chain_column

@@ -1392,10 +1392,10 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
 		BlockSequence 	blockSequence;
 		BlockNumber 	endblknum;
 
+		SIMPLE_FAULT_INJECTOR("summarize_last_partial_range");
+
 		table_relation_get_block_sequence(heapRel, heapBlk, &blockSequence);
 		endblknum = blockSequence.startblknum + blockSequence.nblocks;
-
-		SIMPLE_FAULT_INJECTOR("summarize_last_partial_range");
 
 		/*
 		 * If we're asked to scan what we believe to be the final range on the
@@ -1419,7 +1419,7 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
 			 * in the appendonly AMs. This is why we need to bail.
 			 */
 			brin_free_tuple(phtup);
-			UnlockReleaseBuffer(phbuf);
+			ReleaseBuffer(phbuf);
 			return;
 		}
 

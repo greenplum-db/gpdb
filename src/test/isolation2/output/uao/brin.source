@@ -386,30 +386,30 @@ SELECT brin_summarize_new_values('brin_ao_summarize_partial_@amname@_i_idx');
 -- Test cases with concurrency for BRIN indexes on AO/CO tables.
 --------------------------------------------------------------------------------
 
--- Ensure that we don't summarize the last partial range in case it was extended
--- by another transaction, while summarization was in flight.
+-- Case 1: Ensure that we can summarize the last partial range, even if there are
+-- concurrent inserts to it, while summarization was in flight.
 
-CREATE TABLE brin_range_extended_@amname@(i int) USING @amname@;
+CREATE TABLE brin_range_extended1_@amname@(i int) USING @amname@;
 CREATE
-CREATE INDEX ON brin_range_extended_@amname@ USING brin(i) WITH (pages_per_range=5);
+CREATE INDEX ON brin_range_extended1_@amname@ USING brin(i) WITH (pages_per_range=5);
 CREATE
 
--- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
-SELECT populate_pages('brin_range_extended_@amname@', 1, tid '(33554435, 0)');
+-- Insert 3 blocks of data on 1 QE, in 1 aoseg; 2 blocks full, 1 block with 1 tuple.
+SELECT populate_pages('brin_range_extended1_@amname@', 1, tid '(33554434, 0)');
  populate_pages 
 ----------------
                 
 (1 row)
 
 -- Set up to suspend execution when will attempt to summarize the final partial
--- range below: [33554432, 33554435].
+-- range below: [33554432, 33554434].
 SELECT gp_inject_fault('summarize_last_partial_range', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault 
 -----------------
  Success:        
 (1 row)
 
-1&: SELECT brin_summarize_new_values('brin_range_extended_@amname@_i_idx');  <waiting ...>
+1&: SELECT brin_summarize_new_values('brin_range_extended1_@amname@_i_idx');  <waiting ...>
 
 SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_wait_until_triggered_fault 
@@ -417,11 +417,48 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FR
  Success:                      
 (1 row)
 
--- Extend the last partial range by 1 block.
-SELECT populate_pages('brin_range_extended_@amname@', 1, tid '(33554436, 0)');
- populate_pages 
-----------------
-                
+-- Sanity: We should only have 1 (placeholder) tuple inserted (for the final
+-- partial range [33554432, 33554434]).
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended1_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended1_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2), 'brin_range_extended1_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value 
+------------+----------+--------+----------+----------+-------------+-------
+ 1          | 33554432 | 1      | t        | f        | t           |       
+(1 row)
+
+-- Insert a different value into seg1 concurrently.
+INSERT INTO brin_range_extended1_@amname@ VALUES(20);
+INSERT 1
+
+-- Sanity: The earlier placeholder tuple has been modified by the INSERT to
+-- contain only the value 20. The tuple is still a placeholder.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended1_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended1_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2), 'brin_range_extended1_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | {20 .. 20} 
 (1 row)
 
 SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -436,23 +473,160 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_se
  1                         
 (1 row)
 
--- Sanity: Summarize should only have summarized the first full range: [33554432, 33554436]
-1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended_@amname@_i_idx') - 1) blkno;
+-- Sanity: We should have the final partial range [33554432, 33554434] summarized
+-- with both existing tuples and the concurrently inserted tuple (since the
+-- concurrently insert did not extend the range). Also, the index tuple should
+-- no longer be a placeholder tuple.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended1_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
  blkno | brin_page_type 
 -------+----------------
  0     | meta           
  1     | revmap         
  2     | regular        
 (3 rows)
-1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended1_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
  pages 
 -------
  (2,1) 
 (1 row)
-1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended_@amname@_i_idx', 2), 'brin_range_extended_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2), 'brin_range_extended1_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value     
+------------+----------+--------+----------+----------+-------------+-----------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 20} 
+(1 row)
+
+-- Case 2: Ensure that we don't effectively summarize the last partial range in
+-- case it was extended by another transaction, while summarization was in flight.
+
+CREATE TABLE brin_range_extended2_@amname@(i int) USING @amname@;
+CREATE
+CREATE INDEX ON brin_range_extended2_@amname@ USING brin(i) WITH (pages_per_range=5);
+CREATE
+
+-- Insert 3 blocks of data on 1 QE, in 1 aoseg; 2 blocks full, 1 block with 1 tuple.
+SELECT populate_pages('brin_range_extended2_@amname@', 1, tid '(33554434, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
+-- Set up to suspend execution when will attempt to summarize the final partial
+-- range below: [33554432, 33554434].
+SELECT gp_inject_fault('summarize_last_partial_range', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1&: SELECT brin_summarize_new_values('brin_range_extended2_@amname@_i_idx');  <waiting ...>
+
+SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- Sanity: We should only have 1 (placeholder) tuple inserted (for the final
+-- partial range [33554432, 33554434]).
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value 
+------------+----------+--------+----------+----------+-------------+-------
+ 1          | 33554432 | 1      | t        | f        | t           |       
+(1 row)
+
+-- Extend the last partial range by 1 block.
+SELECT populate_pages('brin_range_extended2_@amname@', 20, tid '(33554435, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
+-- Sanity: The earlier placeholder tuple has been modified by the concurrent
+-- insert to contain only the value 20. The tuple is still a placeholder.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | {20 .. 20} 
+(1 row)
+
+SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ brin_summarize_new_values 
+---------------------------
+ 1                         
+(1 row)
+
+-- Sanity: There should be no change to the summary information since the range
+-- was concurrently extended and we had to bail out from the summarize call.
+-- Note: even though the summary doesn't take into account the value i = 1, this
+-- is safe as it is a placeholder.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | {20 .. 20} 
+(1 row)
+
+-- Another insert into the same QE and the same range should not change the fact
+-- that the summary tuple is a placeholder tuple.
+INSERT INTO brin_range_extended2_@amname@ VALUES(30);
+INSERT 1
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | {20 .. 30} 
 (1 row)
 
 DROP EXTENSION pageinspect;
