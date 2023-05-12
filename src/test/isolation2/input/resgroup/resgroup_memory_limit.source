@@ -108,6 +108,8 @@ CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 1: SET ROLE TO role1_memory_test;
 1: SELECT hold_memory_by_percent(0.48 / 0.52);
 1q:
+
+-- sleep a while to wait for processes both in master and segment nodes to exit
 SELECT pg_sleep(1);
 
 --	2b) on QEs
@@ -121,6 +123,8 @@ SELECT pg_sleep(1);
 1: SET ROLE TO role1_memory_test;
 1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(0.48 / 0.52)=0;
 1q:
+
+-- sleep a while to wait for processes both in master and segment nodes to exit
 SELECT pg_sleep(1);
 
 DROP ROLE role1_memory_test;
