@@ -41,7 +41,7 @@ CREATE INDEX ON brin_chain_@amname@ USING brin(i) WITH (pages_per_range=1);
 
 -- Sanity: Inspect the revmap chain information (limit to first 5 segments)
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_chain_@amname@_i_idx', blkno)) FROM
-	generate_series(0, blocks('brin_chain_@amname@_i_idx') - 1) blkno;
+	generate_series(0, nblocks('brin_chain_@amname@_i_idx') - 1) blkno;
 1U: SELECT firstrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
 1U: SELECT lastrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
 1U: SELECT lastrevmappagenums[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));

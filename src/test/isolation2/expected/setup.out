@@ -150,7 +150,7 @@ create or replace function wait_until_vacuum_count_change_to(relid oid, stat_val
 CREATE
 
 -- Helper function to get the number of blocks in a relation.
-CREATE OR REPLACE FUNCTION blocks(rel regclass) RETURNS int AS $$ /* in func */ BEGIN /* in func */ RETURN pg_relation_size(rel) / current_setting('block_size')::int; /* in func */ END; $$ /* in func */ LANGUAGE PLPGSQL;
+CREATE OR REPLACE FUNCTION nblocks(rel regclass) RETURNS int AS $$ /* in func */ BEGIN /* in func */ RETURN pg_relation_size(rel) / current_setting('block_size')::int; /* in func */ END; $$ /* in func */ LANGUAGE PLPGSQL;
 CREATE
 
 -- Helper function to populate logical heap pages in a certain block sequence.

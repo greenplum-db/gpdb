@@ -466,7 +466,7 @@ end; /* in func */
 $$ language plpgsql;
 
 -- Helper function to get the number of blocks in a relation.
-CREATE OR REPLACE FUNCTION blocks(rel regclass) RETURNS int AS $$ /* in func */
+CREATE OR REPLACE FUNCTION nblocks(rel regclass) RETURNS int AS $$ /* in func */
 BEGIN /* in func */
 RETURN pg_relation_size(rel) / current_setting('block_size')::int; /* in func */
 END; $$ /* in func */

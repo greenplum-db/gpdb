@@ -17,14 +17,14 @@ CREATE INDEX ON brin_ao_summarize_@amname@ USING brin(i) WITH (pages_per_range=1
 
 -- Sanity: There are no revmap/data pages as there is no data
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 
 -- There is no data, so nothing to summarize.
 SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 
 -- Sanity: Index contents should not have changed due to the no-op summarize.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 
 -- Drop the index
 DROP INDEX brin_ao_summarize_@amname@_i_idx;
@@ -37,7 +37,7 @@ CREATE INDEX ON brin_ao_summarize_@amname@ USING brin(i) WITH (pages_per_range=1
 
 -- Sanity: there should be 1 revmap page and 1 data page covering the 3 blocks.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
@@ -48,7 +48,7 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 
 -- Sanity: Index contents should not have changed due to the no-op summarize.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
@@ -70,7 +70,7 @@ SELECT populate_pages('brin_ao_summarize_@amname@', 20, tid '(33554436, 0)');
 -- Sanity: The 3rd block should have its summary updated and the last 2 blocks
 -- will be left unsummarized.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
@@ -90,7 +90,7 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 
 -- Sanity: All blocks should now have summary info.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
@@ -123,7 +123,7 @@ SELECT populate_pages('brin_ao_summarize_@amname@', 30, tid '(33554438, 0)');
 -- Sanity: The 5th block should have its summary updated and the last 2 blocks
 -- will be left unsummarized.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
@@ -160,7 +160,7 @@ SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum
 -- can expect entries from the 1st seg to be still there (including blank entries
 -- added for the 6th and 7th blocks)
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3))
@@ -184,7 +184,7 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 
 -- Sanity: Index contents should not have changed due to the no-op summarize.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3))
@@ -217,7 +217,7 @@ SELECT populate_pages('brin_ao_summarize_partial_@amname@', 1, tid '(33554435, 0
 -- in this case as revmap_get_blkno_ao() returns InvalidBlockNumber.
 -- This is contrary to heap behavior (where we return 1).
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_partial_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_partial_@amname@_i_idx') - 1) blkno;
 
 -- Sanity: Scan should return all blocks, as there is no summary info.
 SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
@@ -233,7 +233,7 @@ SELECT brin_summarize_new_values('brin_ao_summarize_partial_@amname@_i_idx');
 
 -- Sanity: Both ranges have been summarized.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_ao_summarize_partial_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_ao_summarize_partial_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', 2),
@@ -265,7 +265,7 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid)
 -- Sanity: We should only have 1 (placeholder) tuple inserted (for the final
 -- partial range [33554432, 33554434]).
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended1_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended1_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2),
@@ -277,7 +277,7 @@ INSERT INTO brin_range_extended1_@amname@ VALUES(20);
 -- Sanity: The earlier placeholder tuple has been modified by the INSERT to
 -- contain only the value 20. The tuple is still a placeholder.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended1_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended1_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2),
@@ -293,7 +293,7 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid)
 -- concurrently insert did not extend the range). Also, the index tuple should
 -- no longer be a placeholder tuple.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended1_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_range_extended1_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended1_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2),
@@ -331,7 +331,7 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid)
 -- Sanity: We should only have 1 (placeholder) tuple inserted (for the final
 -- partial range [33554432, 33554434]).
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2),
@@ -343,7 +343,7 @@ SELECT populate_pages('brin_range_extended2_@amname@', 20, tid '(33554435, 0)');
 -- Sanity: The earlier placeholder tuple has been modified by the concurrent
 -- insert to contain only the value 20. The tuple is still a placeholder.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2),
@@ -359,7 +359,7 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid)
 -- Note: even though the summary doesn't take into account the value i = 1, this
 -- is safe as it is a placeholder.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2),
@@ -369,7 +369,7 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid)
 -- that the summary tuple is a placeholder tuple.
 INSERT INTO brin_range_extended2_@amname@ VALUES(30);
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended2_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_range_extended2_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended2_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2),
@@ -394,7 +394,7 @@ CREATE INDEX ON brin_multi_@amname@ USING brin(i) WITH (pages_per_range=1);
 
 -- Sanity: All four blocks from the 2 seg files above should be summarized.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_multi_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_multi_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_multi_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_multi_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_multi_@amname@_i_idx', 2),
@@ -421,14 +421,14 @@ ABORT;
 
 -- Sanity: There are no revmap or data pages created yet.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_abort_@amname@_i_idx') - 1) blkno;
 
 -- Summarize over the aborted rows.
 SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
 
 -- Sanity: There is 1 revmap pages and 1 data page, containing 3 empty ranges.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_abort_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_@amname@_i_idx', 1))
     WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
@@ -453,7 +453,7 @@ SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
 -- Sanity: There is 1 revmap page and 1 data page, containing 2 empty ranges
 -- and 2 ranges over the committed rows.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_abort_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
@@ -476,7 +476,7 @@ CREATE INDEX ON brin_abort_@amname@ USING brin(i) WITH (pages_per_range=1);
 -- Sanity: There is 1 revmap page and 1 data page, containing 2 empty ranges
 -- and 2 ranges over the committed rows.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_abort_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_abort_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
@@ -520,7 +520,7 @@ SELECT brin_summarize_new_values('brin_abort_fullpage_@amname@_i_idx');
 -- contain nothing but empty ranges. The 3rd data page has a single non-empty
 -- range referencing the committed row.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_fullpage_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
 1U: SELECT brin_revmap_chain('brin_abort_fullpage_@amname@_i_idx', 1);
 1U: SELECT value, count(*) FROM brin_page_items(
   get_raw_page('brin_abort_fullpage_@amname@_i_idx', 2), 'brin_abort_fullpage_@amname@_i_idx')
@@ -550,7 +550,7 @@ CREATE INDEX ON brin_abort_fullpage_@amname@ USING brin(i) WITH (pages_per_range
 -- contain nothing but empty ranges. The 3rd data page has a single non-empty
 -- range referencing the committed row.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_fullpage_@amname@_i_idx', blkno)) FROM
-  generate_series(0, blocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
+  generate_series(0, nblocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
 1U: SELECT brin_revmap_chain('brin_abort_fullpage_@amname@_i_idx', 1);
 1U: SELECT value, count(*) FROM brin_page_items(
   get_raw_page('brin_abort_fullpage_@amname@_i_idx', 2), 'brin_abort_fullpage_@amname@_i_idx')
