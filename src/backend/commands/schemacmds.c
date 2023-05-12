@@ -128,7 +128,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString,
 	check_is_member_of_role(saved_uid, owner_uid);
 
 	/* Additional check to protect reserved schema names */
-	if (!allowSystemTableMods && IsReservedName(schemaName))
+	if (!allowSystemTableMods && (IsReservedName(schemaName) || IsReservedGpName(schemaName)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_RESERVED_NAME),
@@ -359,7 +359,7 @@ RenameSchema(const char *oldname, const char *newname)
 		aclcheck_error(aclresult, OBJECT_DATABASE,
 					   get_database_name(MyDatabaseId));
 
-	if (!allowSystemTableMods && IsReservedName(oldname))
+	if (!allowSystemTableMods && (IsReservedName(oldname) || IsReservedGpName(oldname)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
@@ -367,7 +367,7 @@ RenameSchema(const char *oldname, const char *newname)
 				 errdetail("Schema %s is reserved for system use.", oldname)));
 	}
 
-	if (!allowSystemTableMods && IsReservedName(newname))
+	if (!allowSystemTableMods && (IsReservedName(newname) || IsReservedGpName(newname)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_RESERVED_NAME),
@@ -438,7 +438,7 @@ AlterSchemaOwner(const char *name, Oid newOwnerId)
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
 				 errmsg("schema \"%s\" does not exist", name)));
 
-	if (!allowSystemTableMods && IsReservedName(name))
+	if (!allowSystemTableMods && (IsReservedName(name) || IsReservedGpName(name)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
