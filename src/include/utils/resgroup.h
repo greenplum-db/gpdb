@@ -95,6 +95,7 @@ extern double gp_resource_group_cpu_limit;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;
 extern bool gp_resource_group_bypass_catalog_query;
+extern bool gp_resource_group_bypass_direct_dispatch;
 
 /*
  * Non-GUC global variables.

@@ -1,8 +1,8 @@
 -- test memory limit
 -- start_ignore
+DROP TABLE IF EXISTS t_memory_limit;
 DROP ROLE IF EXISTS role_memory_test;
 DROP RESOURCE GROUP rg_memory_test;
-DROP TABLE t_memory_limit;
 -- end_ignore
 
 -- create a pl function to show the memory used by a process
@@ -56,38 +56,6 @@ SET
 (1 row)
 1: RESET gp_resgroup_memory_query_fixed_mem;
 RESET
-
--- pure-catalog query will be unassigned and bypassed and use statement_mem as query mem.
-1: EXPLAIN ANALYZE SELECT * FROM pg_class WHERE relname = 't_memory_limit';
- QUERY PLAN                                                                                                                            
----------------------------------------------------------------------------------------------------------------------------------------
- Index Scan using pg_class_relname_nsp_index on pg_class  (cost=0.15..8.17 rows=1 width=265) (actual time=0.006..0.007 rows=1 loops=1) 
-   Index Cond: (relname = 't_memory_limit'::name)                                                                                      
- Optimizer: Postgres query optimizer                                                                                                   
- Planning Time: 2.538 ms                                                                                                               
-   (slice0)    Executor memory: 41K bytes.                                                                                             
- Memory used:  128000kB                                                                                                                
- Execution Time: 0.270 ms                                                                                                              
-(7 rows)
-
--- session2: alter resource group's min_cost
-2: ALTER RESOURCE GROUP rg_memory_test SET min_cost 500;
-ALTER
-
--- for quries with cost under the min_cost limit, they will be unassigned and bypassed.
-1: EXPLAIN ANALYZE SELECT * FROM t_memory_limit where a = 1;
- QUERY PLAN                                                                                                              
--------------------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..436.53 rows=96 width=4) (actual time=0.399..0.399 rows=0 loops=1) 
-   ->  Seq Scan on t_memory_limit  (cost=0.00..435.25 rows=32 width=4) (actual time=0.000..0.006 rows=0 loops=1)         
-         Filter: (a = 1)                                                                                                 
- Optimizer: Postgres query optimizer                                                                                     
- Planning Time: 0.273 ms                                                                                                 
-   (slice0)    Executor memory: 36K bytes.                                                                               
-   (slice1)    Executor memory: 38K bytes (seg1).                                                                        
- Memory used:  128000kB                                                                                                  
- Execution Time: 0.647 ms                                                                                                
-(9 rows)
 
 1: RESET ROLE;
 RESET
