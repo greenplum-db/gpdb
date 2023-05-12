@@ -28,7 +28,6 @@
 #include "access/tableam.h"
 #include "access/xloginsert.h"
 #include "catalog/index.h"
-#include "catalog/gp_fastsequence.h"
 #include "catalog/pg_am.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -41,11 +40,8 @@
 #include "utils/rel.h"
 
 /* GPDB includes */
-#include "catalog/pg_appendonly.h"
-#include "executor/executor.h"
 #include "storage/procarray.h"
 #include "utils/faultinjector.h"
-#include "utils/snapshot.h"
 
 /*
  * We use a BrinBuildState during initial construction of a BRIN index.
