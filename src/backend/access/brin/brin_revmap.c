@@ -216,8 +216,7 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk,
 	ItemPointerData previptr;
 
 	/* normalize the heap block number to be the first page in the range */
-	heapBlk = (heapBlk / revmap->rm_pagesPerRange) * revmap->rm_pagesPerRange;
-
+	heapBlk = brin_range_start_blk(heapBlk, revmap->rm_isAo, revmap->rm_pagesPerRange);
 	/*
 	 * Compute the revmap page number we need.  If Invalid is returned (i.e.,
 	 * the revmap page hasn't been created yet), the requested page range is

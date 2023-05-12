@@ -183,7 +183,9 @@ brininsert(Relation idxRel, Datum *values, bool *nulls,
 	 * is the first block in the corresponding page range.
 	 */
 	origHeapBlk = ItemPointerGetBlockNumber(heaptid);
-	heapBlk = (origHeapBlk / pagesPerRange) * pagesPerRange;
+	heapBlk = brin_range_start_blk(origHeapBlk,
+								   RelationIsAppendOptimized(heapRel),
+								   pagesPerRange);
 
 	/*
 	 * GPDB: Due to the appendonly nature of AO/CO tables, we would always write
@@ -1571,7 +1573,9 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		/* should have to loop only once as there is only 1 sequence for heap */
 		Assert(numSequences == 1);
 
-		startBlk = (pageRange / pagesPerRange) * pagesPerRange;
+		startBlk = brin_range_start_blk(pageRange,
+										RelationIsAppendOptimized(heapRel),
+										pagesPerRange);
 		endBlk = Min(sequences[i].nblocks, startBlk + pagesPerRange);
 		if (startBlk > endBlk)
 		{
