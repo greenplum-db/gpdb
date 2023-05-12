@@ -18,7 +18,7 @@ For information about the utilities [gpinitsystem](../../../utility_guide/ref/gp
     Where `-s` specifies the standby coordinator host name.
 
 
-To switch operations to a standby coordinator, see [Recovering a Failed Coordinator](g-recovering-a-failed-master.html).
+To switch operations to a standby coordinator, see [Recovering a Failed Coordinator](g-recovering-a-failed-coordinator.html).
 
 ## <a id="tocheck"></a>To check the status of the coordinator mirroring process \(optional\) 
 

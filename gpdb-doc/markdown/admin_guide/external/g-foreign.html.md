@@ -22,7 +22,7 @@ Most PostgreSQL foreign-data wrappers should work with Greenplum Database. Howev
 
 Greenplum Database adds an `mpp_execute` option to FDW-related SQL commands. If the foreign-data wrapper supports it, you can specify `mpp_execute '<value>'` in the `OPTIONS` clause when you create the FDW, server, or foreign table to identify the Greenplum host from which the foreign-data wrapper reads or writes data. Valid `<value>`s are:
 
--   `master` \(the default\) - Read or write data from the coordinator host.
+-   `coordinator` \(the default\) - Read or write data from the coordinator host.
 -   `any` - Read data from either the coordinator host or any one segment, depending on which path costs less.
 -   `all segments` - Read or write data from all segments. If a foreign-data wrapper supports this value, for correct results it should have a policy that matches segments to data.
 

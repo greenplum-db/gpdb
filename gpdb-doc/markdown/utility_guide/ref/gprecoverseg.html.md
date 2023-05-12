@@ -5,7 +5,7 @@ Recovers a primary or mirror segment instance that has been marked as down \(if 
 ## <a id="section2"></a>Synopsis 
 
 ```
-gprecoverseg [[-p <new_recover_host>[,...]] | -i <recover_config_file>] [-d <master_data_directory>] 
+gprecoverseg [[-p <new_recover_host>[,...]] | -i <recover_config_file>] [-d <coordinator_data_directory>] 
              [-b <segment_batch_size>] [-B <batch_size>] [-F [-s]] [-a] [-q] 
 	      [--hba-hostnames <boolean>] 
              [--no-progress] [-l <logfile_directory>]

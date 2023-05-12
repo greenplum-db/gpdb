@@ -4,7 +4,7 @@ title: Restoring Coordinator Mirroring After a Recovery
 
 After you activate a standby coordinator for recovery, the standby coordinator becomes the primary coordinator. You can continue running that instance as the primary coordinator if it has the same capabilities and dependability as the original coordinator host.
 
-You must initialize a new standby coordinator to continue providing coordinator mirroring unless you have already done so while activating the prior standby coordinator. Run [gpinitstandby](../../../utility_guide/ref/gpinitstandby.html) on the active coordinator host to configure a new standby coordinator. See [Enabling Coordinator Mirroring](g-enabling-master-mirroring.html).
+You must initialize a new standby coordinator to continue providing coordinator mirroring unless you have already done so while activating the prior standby coordinator. Run [gpinitstandby](../../../utility_guide/ref/gpinitstandby.html) on the active coordinator host to configure a new standby coordinator. See [Enabling Coordinator Mirroring](g-enabling-coordinator-mirroring.html).
 
 You can restore the primary and standby coordinator instances on the original hosts. This process swaps the roles of the primary and standby coordinator hosts, and it should be performed only if you strongly prefer to run the coordinator instances on the same hosts they occupied prior to the recovery scenario.
 
@@ -12,7 +12,7 @@ You can restore the primary and standby coordinator instances on the original ho
 
 For information about the Greenplum Database utilities, see the *Greenplum Database Utility Guide*.
 
-**Parent topic:** [Recovering a Failed Coordinator](../../highavail/topics/g-recovering-a-failed-master.html)
+**Parent topic:** [Recovering a Failed Coordinator](../../highavail/topics/g-recovering-a-failed-coordinator.html)
 
 ## <a id="topic_us3_md4_npb"></a>To restore the coordinator mirroring after a recovery 
 

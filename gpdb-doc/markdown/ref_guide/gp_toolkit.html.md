@@ -350,7 +350,7 @@ Each component of a Greenplum Database system \(coordinator, standby coordinator
 
 -   [gp\_log\_command\_timings](#topic17)
 -   [gp\_log\_database](#topic18)
--   [gp\_log\_master\_concise](#topic19)
+-   [gp\_log\_coordinator\_concise](#topic19)
 -   [gp\_log\_system](#topic20)
 
 **Parent topic:** [The gp\_toolkit Administrative Schema](gp_toolkit.html)
@@ -407,7 +407,7 @@ This view uses an external table to read the server log files of the entire Gree
 |logline|The line in the log file in which this message is generated.|
 |logstack|Full text of the stack trace associated with this message.|
 
-### <a id="topic19"></a>gp\_log\_master\_concise 
+### <a id="topic19"></a>gp\_log\_coordinator\_concise 
 
 This view uses an external table to read a subset of the log fields from the coordinator log file. The use of this view requires superuser permissions.
 

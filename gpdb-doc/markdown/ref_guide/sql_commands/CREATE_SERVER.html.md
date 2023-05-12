@@ -7,7 +7,7 @@ Defines a new foreign server.
 ``` {#sql_command_synopsis}
 CREATE SERVER [ IF NOT EXISTS ] <server_name> [ TYPE '<server_type>' ] [ VERSION '<server_version>' ]
     FOREIGN DATA WRAPPER <fdw_name>
-    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ]
+    [ OPTIONS ( [ mpp_execute { 'coordinator' | 'any' | 'all segments' } [, ] ]
                 [ num_segments '<num>' [, ] ]
                 [ <option> '<value>' [, ... ]] ) ]
 ```
@@ -41,10 +41,10 @@ fdw\_name
 OPTIONS \( option 'value' \[, ... \] \)
 :   The options for the new foreign server. The options typically define the connection details of the server, but the actual names and values are dependent upon the server's foreign-data wrapper.
 
-mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
+mpp\_execute \{ 'coordinator' \| 'any' \| 'all segments' \}
 :   A Greenplum Database-specific option that identifies the host from which the foreign-data wrapper reads or writes data:
 
-    -   `master` \(the default\)—Read or write data from the coordinator host.
+    -   `coordinator` \(the default\)—Read or write data from the coordinator host.
     -   `any`—Read data from either the coordinator host or any one segment, depending on which path costs less.
     -   `all segments`—Read or write data from all segments. To support this option value, the foreign-data wrapper should have a policy that matches the segments to data.
 
