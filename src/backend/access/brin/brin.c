@@ -60,9 +60,9 @@ typedef struct BrinBuildState
 
 	/* GPDB specific state for AO/CO tables */
 
-	bool		bs_isAo;
+	bool         bs_isAO;
 	/* Number of tuples processed for current BlockSequence */
-	uint64 		bs_seq_reltuples;
+	uint64       bs_seq_reltuples;
 } BrinBuildState;
 
 /*
@@ -81,7 +81,7 @@ static BrinBuildState *
 initialize_brin_buildstate(Relation idxRel,
 						   BrinRevmap *revmap,
 						   BlockNumber pagesPerRange,
-						   bool isAo);
+						   bool isAO);
 static void terminate_brin_buildstate(BrinBuildState *state);
 static void brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 						  bool include_partial, double *numSummarized, double *numExisting);
@@ -709,7 +709,7 @@ brinbuildCallback(Relation index,
 	 * bringetbitmap() and brinsummarize().
 	 * We would also be able to get rid of BrinBuildState.bs_seq_reltuples.
 	 */
-	if (state->bs_isAo)
+	if (state->bs_isAO)
 	{
 		BlockNumber seqStartBlk = AOHeapBlockGet_startHeapBlock(thisblock);
 		if (state->bs_currRangeStart < seqStartBlk)
@@ -794,9 +794,9 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	BrinBuildState *state;
 	Buffer		meta;
 	BlockNumber pagesPerRange;
-	bool		isAo;
+	bool		isAO;
 
-	isAo = RelationIsAppendOptimized(heap);
+	isAO = RelationIsAppendOptimized(heap);
 	/*
 	 * We expect to be called exactly once for any index relation.
 	 */
@@ -825,7 +825,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 
 		xlrec.version = BRIN_CURRENT_VERSION;
 		xlrec.pagesPerRange = BrinGetPagesPerRange(index);
-		xlrec.isAo = isAo;
+		xlrec.isAO          = isAO;
 
 		XLogBeginInsert();
 		XLogRegisterData((char *) &xlrec, SizeOfBrinCreateIdx);
@@ -843,7 +843,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	 * Initialize our state, including the deformed tuple state.
 	 */
 	revmap = brinRevmapInitialize(index, &pagesPerRange, NULL);
-	state = initialize_brin_buildstate(index, revmap, pagesPerRange, isAo);
+	state = initialize_brin_buildstate(index, revmap, pagesPerRange, isAO);
 
 	/* GPDB: AO/CO tables: position iterator to start of sequence 0's chain. */
 	brinRevmapAOPositionAtStart(revmap, 0);
@@ -862,7 +862,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	 * as is done for heap. If we did, we would have to do so for all 128
 	 * possible block sequences, creating unnecessary bloat.
 	 */
-	if (!isAo || state->bs_seq_reltuples != 0)
+	if (!isAO || state->bs_seq_reltuples != 0)
 		form_and_insert_tuple(state);
 
 	/* release resources */
@@ -1309,7 +1309,7 @@ brinGetStats(Relation index, BrinStatsData *stats)
  */
 static BrinBuildState *
 initialize_brin_buildstate(Relation idxRel, BrinRevmap *revmap,
-						   BlockNumber pagesPerRange, bool isAo)
+						   BlockNumber pagesPerRange, bool isAO)
 {
 	BrinBuildState *state;
 
@@ -1325,7 +1325,7 @@ initialize_brin_buildstate(Relation idxRel, BrinRevmap *revmap,
 	state->bs_dtuple = brin_new_memtuple(state->bs_bdesc);
 
 	/* GPDB specific state for AO/CO tables */
-	state->bs_isAo = isAo;
+	state->bs_isAO          = isAO;
 	state->bs_seq_reltuples = 0;
 
 	brin_memtuple_initialize(state->bs_dtuple, state->bs_bdesc);

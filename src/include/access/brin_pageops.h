@@ -27,7 +27,7 @@ extern OffsetNumber brin_doinsert(Relation idxrel, BlockNumber pagesPerRange,
 
 extern void brin_page_init(Page page, uint16 type);
 extern void brin_metapage_init(Page page, BlockNumber pagesPerRange,
-							   uint16 version, bool isAo);
+							   uint16 version, bool isAO);
 
 extern bool brin_start_evacuating_page(Relation idxRel, Buffer buf);
 extern void brin_evacuate_page(Relation idxRel, BlockNumber pagesPerRange,

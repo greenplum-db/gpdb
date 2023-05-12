@@ -485,11 +485,11 @@ brin_page_init(Page page, uint16 type)
 
 /*
  * Initialize a new BRIN index's metapage.
- * GPDB: We have the additional argument 'isAo' which is true if the base table
+ * GPDB: We have the additional argument 'isAO' which is true if the base table
  * is append-optimized (false otherwise, like for heap tables).
  */
 void
-brin_metapage_init(Page page, BlockNumber pagesPerRange, uint16 version, bool isAo)
+brin_metapage_init(Page page, BlockNumber pagesPerRange, uint16 version, bool isAO)
 {
 	BrinMetaPageData *metadata;
 
@@ -500,7 +500,7 @@ brin_metapage_init(Page page, BlockNumber pagesPerRange, uint16 version, bool is
 	metadata->brinMagic = BRIN_META_MAGIC;
 	metadata->brinVersion = version;
 	metadata->pagesPerRange = pagesPerRange;
-	metadata->isAo = isAo;
+	metadata->isAO = isAO;
 
 	/*
 	 * Note we cheat here a little.  0 is not a valid revmap block number

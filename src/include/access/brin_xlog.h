@@ -52,9 +52,9 @@ typedef struct xl_brin_createidx
 {
 	BlockNumber pagesPerRange;
 	uint16		version;
-	bool 		isAo;
+	bool 		isAO;
 } xl_brin_createidx;
-#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, isAo) + sizeof(bool))
+#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, isAO) + sizeof(bool))
 
 /*
  * This is what we need to know about a BRIN tuple insert
@@ -123,7 +123,7 @@ typedef struct xl_brin_revmap_extend
 	 */
 	BlockNumber targetBlk;
 	/* GPDB AO/CO state */
-	bool			isAo;
+	bool 			isAO;
 	int         	blockSeq; 		/* block sequence */
 	LogicalPageNum 	targetPageNum; 	/* page number to assign targetBlk */
 } xl_brin_revmap_extend;

@@ -33,7 +33,7 @@ brin_xlog_createidx(XLogReaderState *record)
 	buf = XLogInitBufferForRedo(record, 0);
 	Assert(BufferIsValid(buf));
 	page = (Page) BufferGetPage(buf);
-	brin_metapage_init(page, xlrec->pagesPerRange, xlrec->version, xlrec->isAo);
+	brin_metapage_init(page, xlrec->pagesPerRange, xlrec->version, xlrec->isAO);
 	PageSetLSN(page, lsn);
 	MarkBufferDirty(buf);
 	UnlockReleaseBuffer(buf);
@@ -235,7 +235,7 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 		XLogRedoAction 	currLastRevmapBufAction =
 							  XLogReadBufferForRedo(record, 2, &currLastRevmapBuf);
 
-		Assert(xlrec->isAo);
+		Assert(xlrec->isAO);
 
 		if (currLastRevmapBufAction == BLK_NEEDS_REDO)
 		{
@@ -260,9 +260,9 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 		metapg = BufferGetPage(metabuf);
 		metadata = (BrinMetaPageData *) PageGetContents(metapg);
 
-		AssertImply(xlrec->isAo, metadata->isAo);
+		AssertImply(xlrec->isAO, metadata->isAO);
 
-		if (!metadata->isAo)
+		if (!metadata->isAO)
 		{
 			Assert(metadata->lastRevmapPage == xlrec->targetBlk - 1);
 			metadata->lastRevmapPage = xlrec->targetBlk;
@@ -310,7 +310,7 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 	brin_page_init(page, BRIN_PAGETYPE_REVMAP);
 
 	/* GPDB: Set the logical page number for AO/CO tables */
-	if (xlrec->isAo)
+	if (xlrec->isAO)
 		BrinLogicalPageNum(page) = xlrec->targetPageNum;
 
 	PageSetLSN(page, lsn);

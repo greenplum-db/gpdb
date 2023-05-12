@@ -386,8 +386,8 @@ brin_metapage_info(PG_FUNCTION_ARGS)
 	values[3] = Int64GetDatum(meta->lastRevmapPage);
 
 	/* GPDB specific fields */
-	values[4] = Int64GetDatum(meta->isAo);
-	if (!meta->isAo)
+	values[4] = Int64GetDatum(meta->isAO);
+	if (!meta->isAO)
 	{
 		nulls[5] = true;
 		nulls[6] = true;

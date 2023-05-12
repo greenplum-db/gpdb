@@ -67,9 +67,9 @@ extern void brinRevmapAOPositionAtEnd(BrinRevmap *revmap, int seqNum);
  * Note: We have to factor in BlockSequence limits when we do this calculation.
  */
 static inline BlockNumber
-brin_range_start_blk(BlockNumber heapBlk, bool isAo, BlockNumber pagesPerRange)
+brin_range_start_blk(BlockNumber heapBlk, bool isAO, BlockNumber pagesPerRange)
 {
-	BlockNumber seqStartBlk = isAo ? AOHeapBlockGet_startHeapBlock(heapBlk) : 0;
+	BlockNumber seqStartBlk = isAO ? AOHeapBlockGet_startHeapBlock(heapBlk) : 0;
 	BlockNumber rangeNum = ((heapBlk - seqStartBlk) / pagesPerRange);
 
 	return (rangeNum * pagesPerRange) + seqStartBlk;

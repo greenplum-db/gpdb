@@ -103,7 +103,7 @@ typedef struct BrinMetaPageData
 	BlockNumber lastRevmapPage;
 
 	/* GPDB section to handle AO/CO tables */
-	bool		isAo;
+	bool 		isAO;
 	AOChainInfo aoChainInfo[MAX_AOREL_CONCURRENCY];
 } BrinMetaPageData;
 

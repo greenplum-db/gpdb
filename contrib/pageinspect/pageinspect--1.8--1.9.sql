@@ -11,7 +11,7 @@ DROP FUNCTION brin_metapage_info(IN page bytea, OUT magic text,
 CREATE FUNCTION brin_metapage_info(IN page bytea, OUT magic text,
                                    OUT version integer, OUT pagesperrange integer, OUT lastrevmappage bigint,
                                    /* GPDB specific for AO/CO tables */
-                                   OUT isAo boolean,
+                                   OUT isAO boolean,
                                    OUT firstrevmappages bigint[],
                                    OUT lastrevmappages bigint[],
                                    OUT lastrevmappagenums bigint[])
