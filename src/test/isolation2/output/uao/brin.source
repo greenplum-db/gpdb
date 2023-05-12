@@ -629,5 +629,60 @@ INSERT 1
  1          | 33554432 | 1      | f        | f        | t           | {20 .. 30} 
 (1 row)
 
+--------------------------------------------------------------------------------
+-- Summarization with multiple block sequences (segfiles).
+--------------------------------------------------------------------------------
+
+CREATE TABLE brin_multi_@amname@(i int) USING @amname@;
+CREATE
+
+-- For each segment file (there are 2), populate 1 full block and 1 block with
+-- 1 tuple.
+1: BEGIN;
+BEGIN
+1: SELECT populate_pages('brin_multi_@amname@', 1, tid '(33554433, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+2: BEGIN;
+BEGIN
+2: SELECT populate_pages('brin_multi_@amname@', 20, tid '(67108865, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+
+CREATE INDEX ON brin_multi_@amname@ USING brin(i) WITH (pages_per_range=1);
+CREATE
+
+-- Sanity: All four blocks from the 2 seg files above should be summarized.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_multi_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_multi_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+ 3     | revmap         
+(4 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_multi_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+(2 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_multi_@amname@_i_idx', 2), 'brin_multi_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
+ 3          | 67108864 | 1      | f        | f        | f           | {20 .. 20} 
+ 4          | 67108865 | 1      | f        | f        | f           | {20 .. 20} 
+(4 rows)
+
 DROP EXTENSION pageinspect;
 DROP

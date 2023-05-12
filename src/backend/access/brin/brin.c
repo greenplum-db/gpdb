@@ -57,8 +57,12 @@ typedef struct BrinBuildState
 	BrinRevmap *bs_rmAccess;
 	BrinDesc   *bs_bdesc;
 	BrinMemTuple *bs_dtuple;
+
 	/* GPDB specific state for AO/CO tables */
+
 	bool		bs_isAo;
+	/* Number of tuples processed for current BlockSequence */
+	uint64 		bs_seq_reltuples;
 } BrinBuildState;
 
 /*
@@ -701,17 +705,36 @@ brinbuildCallback(Relation index,
 	 * XXX: We can move this out of brinbuildCallback() if we refactor
 	 * brinbuild() to loop over BlockSequences, much like we do in
 	 * bringetbitmap() and brinsummarize().
+	 * We would also be able to get rid of BrinBuildState.bs_seq_reltuples.
 	 */
 	if (state->bs_isAo)
 	{
 		BlockNumber seqStartBlk = AOHeapBlockGet_startHeapBlock(thisblock);
 		if (state->bs_currRangeStart < seqStartBlk)
 		{
+			/* We are starting a new block sequence */
+
+			/* process the final batch in the current block sequence (if any) */
+			if (state->bs_seq_reltuples > 0)
+				form_and_insert_tuple(state);
+
 			/* adjust the current block sequence */
 			int seqNum = AOSegmentGet_blockSequenceNum(thisblock);
 			brinRevmapAOPositionAtStart(state->bs_rmAccess, seqNum);
+
 			/* readjust the range lower bound */
 			state->bs_currRangeStart = seqStartBlk;
+
+			/* reset the bs_seq_reltuples counter for the new block sequence */
+			state->bs_seq_reltuples = 1;
+
+			/* re-initialize state for it */
+			brin_memtuple_initialize(state->bs_dtuple, state->bs_bdesc);
+		}
+		else
+		{
+			/* We are in the same block sequence */
+			state->bs_seq_reltuples++;
 		}
 	}
 
@@ -837,7 +860,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	 * as is done for heap. If we did, we would have to do so for all 128
 	 * possible block sequences, creating unnecessary bloat.
 	 */
-	if (!isAo || reltuples != 0)
+	if (!isAo || state->bs_seq_reltuples != 0)
 		form_and_insert_tuple(state);
 
 	/* release resources */
@@ -1301,6 +1324,7 @@ initialize_brin_buildstate(Relation idxRel, BrinRevmap *revmap,
 
 	/* GPDB specific state for AO/CO tables */
 	state->bs_isAo = isAo;
+	state->bs_seq_reltuples = 0;
 
 	brin_memtuple_initialize(state->bs_dtuple, state->bs_bdesc);
 
