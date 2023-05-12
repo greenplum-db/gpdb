@@ -4,6 +4,9 @@
 -- values or where the range is not covered by the revmap etc)
 CREATE EXTENSION pageinspect;
 
+-- Turn off sequential scans to force usage of BRIN indexes for scans.
+SET enable_seqscan TO off;
+
 --------------------------------------------------------------------------------
 -- Test BRIN summarization with INSERT, brin_summarize_new_values() and VACUUM
 --------------------------------------------------------------------------------
@@ -51,6 +54,15 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
   'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should return all 3 blocks in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Insert more so we have 5 blocks on 1 QE, in 1 aoseg: 4 blocks full, 1 block
 -- with 1 tuple.
 SELECT populate_pages('brin_ao_summarize_@amname@', 20, tid '(33554436, 0)');
@@ -64,6 +76,15 @@ SELECT populate_pages('brin_ao_summarize_@amname@', 20, tid '(33554436, 0)');
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
   'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should return all blocks in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Summarize the last 2 blocks.
 SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 
@@ -74,6 +95,26 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
   'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+
+-- Sanity: Scan should return only the first 3 blocks in the tidbitmap, now that
+-- we have summary info for all blocks.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- Sanity: Scan should return no blocks in the tidbitmap, if we use a
+-- conflicting predicate.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i > 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- Insert more so we have 7 blocks on 1 QE, in 1 aoseg: 6 blocks full, 1 page
 -- with 1 tuple.
@@ -89,6 +130,16 @@ SELECT populate_pages('brin_ao_summarize_@amname@', 30, tid '(33554438, 0)');
   'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
 
 DELETE FROM brin_ao_summarize_@amname@ WHERE i = 1;
+
+-- Sanity: Scan should return only the first 3 blocks and the last 2
+-- unsummarized blocks in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 VACUUM brin_ao_summarize_@amname@;
 
@@ -116,6 +167,16 @@ SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
   'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+
+-- Sanity: Scan should return only first 3 blocks corresponding to the vacuumed
+-- seg, as those ranges are left over from the vacuum.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- VACUUM should have already summarized this one logical heap block, so
 -- invoking summarization again will be a no-op.
@@ -157,6 +218,15 @@ SELECT populate_pages('brin_ao_summarize_partial_@amname@', 1, tid '(33554435, 0
 -- This is contrary to heap behavior (where we return 1).
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', blkno)) FROM
   generate_series(0, blocks('brin_ao_summarize_partial_@amname@_i_idx') - 1) blkno;
+
+-- Sanity: Scan should return all blocks, as there is no summary info.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_ao_summarize_partial_@amname@ WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- This will summarize both the first range and the last partial range.
 SELECT brin_summarize_new_values('brin_ao_summarize_partial_@amname@_i_idx');
@@ -228,6 +298,16 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid)
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2),
   'brin_range_extended1_@amname@_i_idx') ORDER BY blknum, attnum;
+
+-- Sanity: Scan should return all 3 blocks in the tidbitmap, even though the
+-- last block only contains the value from the predicate.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_range_extended1_@amname@ WHERE i = 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- Case 2: Ensure that we don't effectively summarize the last partial range in
 -- case it was extended by another transaction, while summarization was in flight.
@@ -320,6 +400,15 @@ CREATE INDEX ON brin_multi_@amname@ USING brin(i) WITH (pages_per_range=1);
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_multi_@amname@_i_idx', 2),
   'brin_multi_@amname@_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should return all 4 blocks across both segfiles in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_multi_@amname@ WHERE i >= 1 AND i <= 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 --------------------------------------------------------------------------------
 -- Test build/summarize with aborted rows.
 --------------------------------------------------------------------------------
@@ -345,6 +434,16 @@ SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
   'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should return no blocks in the tidbitmap, as the summary tuples
+-- present are all empty.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_@amname@ WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Now, add some committed rows.
 SELECT populate_pages('brin_abort_@amname@', 20, tid '(33554435, 0)');
 
@@ -360,6 +459,16 @@ SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
   'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should return only the 2 blocks corresponding to the committed
+-- rows.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_@amname@ WHERE i = 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Drop and re-create the index to test build.
 DROP INDEX brin_abort_@amname@_i_idx;
 CREATE INDEX ON brin_abort_@amname@ USING brin(i) WITH (pages_per_range=1);
@@ -372,6 +481,16 @@ CREATE INDEX ON brin_abort_@amname@ USING brin(i) WITH (pages_per_range=1);
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2),
   'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
+
+-- Sanity: Scan should return only the 2 blocks corresponding to the committed
+-- rows.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_@amname@ WHERE i = 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 --------------------------------------------------------------------------------
 -- Test build/summarize with whole revmap page containing aborted ranges.
@@ -414,6 +533,16 @@ SELECT brin_summarize_new_values('brin_abort_fullpage_@amname@_i_idx');
   get_raw_page('brin_abort_fullpage_@amname@_i_idx', 5), 'brin_abort_fullpage_@amname@_i_idx')
   group by value;
 
+-- Sanity: Scan should return only the 1 block in the tidbitmap, corresponding
+-- to the one committed tuple.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_fullpage_@amname@ WHERE i = 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Drop and re-create the index to test build.
 DROP INDEX brin_abort_fullpage_@amname@_i_idx;
 CREATE INDEX ON brin_abort_fullpage_@amname@ USING brin(i) WITH (pages_per_range=1);
@@ -435,4 +564,15 @@ CREATE INDEX ON brin_abort_fullpage_@amname@ USING brin(i) WITH (pages_per_range
   get_raw_page('brin_abort_fullpage_@amname@_i_idx', 5), 'brin_abort_fullpage_@amname@_i_idx')
   group by value;
 
+-- Sanity: Scan should return only the 1 block in the tidbitmap, corresponding
+-- to the one committed tuple.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_fullpage_@amname@ WHERE i = 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+RESET enable_seqscan;
 DROP EXTENSION pageinspect;

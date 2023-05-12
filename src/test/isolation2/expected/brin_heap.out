@@ -5,6 +5,10 @@
 CREATE EXTENSION pageinspect;
 CREATE
 
+-- Turn off sequential scans to force usage of BRIN indexes for scans.
+SET enable_seqscan TO off;
+SET
+
 -- Ensure that we can summarize the last partial range in case it was extended
 -- by another transaction, while summarization was in flight.
 
@@ -169,6 +173,30 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
  3          | 2      | 1      | t        | f        | f           |          
 (3 rows)
 
+-- Sanity: Scan should only return the 1st block and ignore the blocks for which
+-- we have the empty tuples, in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+SELECT count(*) FROM brin_abort_heap WHERE i = 1;
+ count 
+-------
+ 0     
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault                                                                                                                                                                                                              
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'brin_bitmap_page_added' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1' 
+ 
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
 -- Now, add some committed rows.
 SELECT populate_pages('brin_abort_heap', 20, tid '(3, 0)');
  populate_pages 
@@ -209,6 +237,29 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
  4          | 3      | 1      | f        | f        | f           | {20 .. 20} 
 (4 rows)
 
+-- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+SELECT count(*) FROM brin_abort_heap WHERE i = 20;
+ count 
+-------
+ 909   
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault                                                                                                                                                                                                              
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'brin_bitmap_page_added' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'2' 
+ 
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
 -- Drop and re-create the index to test build.
 DROP INDEX brin_abort_heap_i_idx;
 DROP
@@ -241,5 +292,30 @@ CREATE
  4          | 3      | 1      | f        | f        | f           | {20 .. 20} 
 (4 rows)
 
+-- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+SELECT count(*) FROM brin_abort_heap WHERE i = 20;
+ count 
+-------
+ 909   
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault                                                                                                                                                                                                              
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'brin_bitmap_page_added' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'2' 
+ 
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+RESET enable_seqscan;
+RESET
 DROP EXTENSION pageinspect;
 DROP

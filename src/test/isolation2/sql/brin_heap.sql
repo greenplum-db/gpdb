@@ -4,6 +4,9 @@
 -- values or where the range is not covered by the revmap etc)
 CREATE EXTENSION pageinspect;
 
+-- Turn off sequential scans to force usage of BRIN indexes for scans.
+SET enable_seqscan TO off;
+
 -- Ensure that we can summarize the last partial range in case it was extended
 -- by another transaction, while summarization was in flight.
 
@@ -81,6 +84,16 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2),
                                   'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should only return the 1st block and ignore the blocks for which
+-- we have the empty tuples, in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_heap WHERE i = 1;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Now, add some committed rows.
 SELECT populate_pages('brin_abort_heap', 20, tid '(3, 0)');
 
@@ -96,6 +109,15 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2),
                                   'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_heap WHERE i = 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
 -- Drop and re-create the index to test build.
 DROP INDEX brin_abort_heap_i_idx;
 CREATE INDEX ON brin_abort_heap USING brin(i) WITH (pages_per_range=1);
@@ -109,4 +131,14 @@ CREATE INDEX ON brin_abort_heap USING brin(i) WITH (pages_per_range=1);
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2),
                                   'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
 
+-- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT count(*) FROM brin_abort_heap WHERE i = 20;
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+RESET enable_seqscan;
 DROP EXTENSION pageinspect;
