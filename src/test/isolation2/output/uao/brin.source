@@ -1146,7 +1146,7 @@ SELECT brin_summarize_new_values('brin_abort_fullpage_@amname@_i_idx');
  4     | revmap         
  5     | regular        
 (6 rows)
-1U: SELECT brin_revmap_chain(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 0), 'brin_abort_fullpage_@amname@_i_idx', 1);
+1U: SELECT brin_revmap_chain('brin_abort_fullpage_@amname@_i_idx', 1);
  brin_revmap_chain 
 -------------------
  [1, 4]            
@@ -1210,7 +1210,7 @@ CREATE
  4     | revmap         
  5     | regular        
 (6 rows)
-1U: SELECT brin_revmap_chain(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 0), 'brin_abort_fullpage_@amname@_i_idx', 1);
+1U: SELECT brin_revmap_chain('brin_abort_fullpage_@amname@_i_idx', 1);
  brin_revmap_chain 
 -------------------
  [1, 4]            

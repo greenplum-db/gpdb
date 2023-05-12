@@ -21,7 +21,7 @@ LANGUAGE C STRICT PARALLEL SAFE;
 --
 -- brin_revmap_chain()
 --
-CREATE FUNCTION brin_revmap_chain(IN page bytea, IN indexrelid regclass, IN segno int)
+CREATE FUNCTION brin_revmap_chain(IN indexrelid regclass, IN segno int)
     RETURNS bigint[]
 AS 'MODULE_PATHNAME', 'brin_revmap_chain'
     LANGUAGE C STRICT PARALLEL SAFE;

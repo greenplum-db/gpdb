@@ -45,8 +45,7 @@ CREATE INDEX ON brin_chain_@amname@ USING brin(i) WITH (pages_per_range=1);
 1U: SELECT firstrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
 1U: SELECT lastrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
 1U: SELECT lastrevmappagenums[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
-1U: SELECT segnum, brin_revmap_chain(get_raw_page('brin_chain_@amname@_i_idx', 0),
-	'brin_chain_@amname@_i_idx', segnum) AS chain FROM generate_series(0, 3) segnum;
+1U: SELECT segnum, brin_revmap_chain('brin_chain_@amname@_i_idx', segnum) AS chain FROM generate_series(0, 3) segnum;
 
 -- Now test index retrieval. We should be able to:
 -- * Iterate through all segfiles.

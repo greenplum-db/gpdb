@@ -79,21 +79,21 @@ CREATE
  8     | revmap         
 (9 rows)
 1U: SELECT firstrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
- firstrevmappages                  
------------------------------------
- [1, 3, 4294967295, 8, 4294967295] 
+ firstrevmappages  
+-------------------
+ [1, 3, -1, 8, -1] 
 (1 row)
 1U: SELECT lastrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
- lastrevmappages                   
------------------------------------
- [1, 7, 4294967295, 8, 4294967295] 
+ lastrevmappages   
+-------------------
+ [1, 7, -1, 8, -1] 
 (1 row)
 1U: SELECT lastrevmappagenums[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
  lastrevmappagenums 
 --------------------
  [1, 2, 0, 1, 0]    
 (1 row)
-1U: SELECT segnum, brin_revmap_chain(get_raw_page('brin_chain_@amname@_i_idx', 0), 'brin_chain_@amname@_i_idx', segnum) AS chain FROM generate_series(0, 3) segnum;
+1U: SELECT segnum, brin_revmap_chain('brin_chain_@amname@_i_idx', segnum) AS chain FROM generate_series(0, 3) segnum;
  segnum | chain  
 --------+--------
  0      | [1]    

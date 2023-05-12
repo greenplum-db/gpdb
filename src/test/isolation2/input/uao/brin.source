@@ -521,8 +521,7 @@ SELECT brin_summarize_new_values('brin_abort_fullpage_@amname@_i_idx');
 -- range referencing the committed row.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_fullpage_@amname@_i_idx', blkno)) FROM
   generate_series(0, blocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
-1U: SELECT brin_revmap_chain(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 0),
-  'brin_abort_fullpage_@amname@_i_idx', 1);
+1U: SELECT brin_revmap_chain('brin_abort_fullpage_@amname@_i_idx', 1);
 1U: SELECT value, count(*) FROM brin_page_items(
   get_raw_page('brin_abort_fullpage_@amname@_i_idx', 2), 'brin_abort_fullpage_@amname@_i_idx')
   group by value;
@@ -552,8 +551,7 @@ CREATE INDEX ON brin_abort_fullpage_@amname@ USING brin(i) WITH (pages_per_range
 -- range referencing the committed row.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_abort_fullpage_@amname@_i_idx', blkno)) FROM
   generate_series(0, blocks('brin_abort_fullpage_@amname@_i_idx') - 1) blkno;
-1U: SELECT brin_revmap_chain(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 0),
-  'brin_abort_fullpage_@amname@_i_idx', 1);
+1U: SELECT brin_revmap_chain('brin_abort_fullpage_@amname@_i_idx', 1);
 1U: SELECT value, count(*) FROM brin_page_items(
   get_raw_page('brin_abort_fullpage_@amname@_i_idx', 2), 'brin_abort_fullpage_@amname@_i_idx')
   group by value;

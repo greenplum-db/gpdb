@@ -401,8 +401,13 @@ brin_metapage_info(PG_FUNCTION_ARGS)
 
 		for (int i = 0; i < MAX_AOREL_CONCURRENCY; i++)
 		{
-			firstrevmappages[i] = UInt32GetDatum(meta->aoChainInfo[i].firstPage);
-			lastrevmappages[i] = UInt32GetDatum(meta->aoChainInfo[i].lastPage);
+			/*
+			 * We project these with Int32Get, so we can represent
+			 * InvalidBlockNumber as (-1), for brevity.
+			 */
+			firstrevmappages[i] = Int32GetDatum(meta->aoChainInfo[i].firstPage);
+			lastrevmappages[i] = Int32GetDatum(meta->aoChainInfo[i].lastPage);
+
 			lastrevmappagenums[i] = UInt32GetDatum(meta->aoChainInfo[i].lastLogicalPageNum);
 		}
 
@@ -489,9 +494,9 @@ brin_revmap_data(PG_FUNCTION_ARGS)
 Datum
 brin_revmap_chain(PG_FUNCTION_ARGS)
 {
-	bytea 				*raw_page = PG_GETARG_BYTEA_P(0);
-	Oid 				indexRelid = PG_GETARG_OID(1);
-	int 				segno = PG_GETARG_UINT32(2);
+	Oid 				indexRelid = PG_GETARG_OID(0);
+	int 				segno = PG_GETARG_UINT32(1);
+	Buffer 				metabuf;
 	Page  				metapage;
 	BrinMetaPageData 	*meta;
 	ArrayBuildState 	*astate = NULL;
@@ -516,10 +521,11 @@ brin_revmap_chain(PG_FUNCTION_ARGS)
 					errmsg("\"%u\" is not a valid segno value (valid values are in [0,127])",
 						   segno)));
 
-	metapage = verify_brin_page(raw_page, BRIN_PAGETYPE_META, "metapage");
-
+	metabuf = ReadBuffer(indexRel, BRIN_METAPAGE_BLKNO);
+	metapage = BufferGetPage(metabuf);
 	if (PageIsNew(metapage))
 	{
+		ReleaseBuffer(metabuf);
 		index_close(indexRel, AccessShareLock);
 		PG_RETURN_NULL();
 	}
@@ -535,11 +541,11 @@ brin_revmap_chain(PG_FUNCTION_ARGS)
 								  INT8OID, CurrentMemoryContext);
 
 		curr = ReadBuffer(indexRel, currRevmapBlk);
-		LockBuffer(curr, BUFFER_LOCK_SHARE);
 		currRevmapBlk = BrinNextRevmapPage(BufferGetPage(curr));
-		UnlockReleaseBuffer(curr);
+		ReleaseBuffer(curr);
 	}
 
+	ReleaseBuffer(metabuf);
 	index_close(indexRel, AccessShareLock);
 
 	if (astate)
