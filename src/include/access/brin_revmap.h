@@ -30,12 +30,6 @@
 	((heapBlk / pagesPerRange) / REVMAP_PAGE_MAXITEMS)
 #define HEAPBLK_TO_REVMAP_INDEX(pagesPerRange, heapBlk) \
 	((heapBlk / pagesPerRange) % REVMAP_PAGE_MAXITEMS)
-#define HEAPBLK_TO_REVMAP_UPPER_BLK(pagesPerRange, heapBlk) \
-	(HEAPBLK_TO_REVMAP_BLK(pagesPerRange, heapBlk) / REVMAP_UPPER_PAGE_MAXITEMS)
-#define HEAPBLK_TO_REVMAP_UPPER_IDX(pagesPerRange, heapBlk) \
-	(HEAPBLK_TO_REVMAP_BLK(pagesPerRange, heapBlk) % REVMAP_UPPER_PAGE_MAXITEMS)
-#define REVMAP_UPPER_PAGE_TOTAL_NUM(pagesPerRange) \
-	(HEAPBLK_TO_REVMAP_UPPER_BLK(pagesPerRange, MaxBlockNumber) + 1)
 
 /* struct definition lives in brin_revmap.c */
 typedef struct BrinRevmap BrinRevmap;
@@ -55,7 +49,6 @@ extern BrinTuple *brinGetTupleForHeapBlock(BrinRevmap *revmap,
 										   Size *size, int mode, Snapshot snapshot);
 extern bool brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk);
 
-extern void brin_init_upper_pages(Relation index, BlockNumber pagesPerRange);
 extern BlockNumber heapBlockGetCurrentAosegStart(BlockNumber heapBlk);
 
 #endif							/* BRIN_REVMAP_H */

@@ -18,7 +18,7 @@ extern bool brin_doupdate(Relation idxrel, BlockNumber pagesPerRange,
 						  Buffer oldbuf, OffsetNumber oldoff,
 						  const BrinTuple *origtup, Size origsz,
 						  const BrinTuple *newtup, Size newsz,
-						  bool samepage, bool skipextend);
+						  bool samepage);
 extern bool brin_can_do_samepage_update(Buffer buffer, Size origsz,
 										Size newsz);
 extern OffsetNumber brin_doinsert(Relation idxrel, BlockNumber pagesPerRange,

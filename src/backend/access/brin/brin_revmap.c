@@ -51,10 +51,7 @@ static BlockNumber revmap_get_blkno(BrinRevmap *revmap,
 static Buffer revmap_get_buffer(BrinRevmap *revmap, BlockNumber heapBlk);
 static BlockNumber revmap_extend_and_get_blkno(BrinRevmap *revmap,
 											   BlockNumber heapBlk);
-static BlockNumber revmap_extend_and_get_blkno_ao(BrinRevmap *revmap,
-							BlockNumber heapBlk);
-static BlockNumber revmap_physical_extend(BrinRevmap *revmap);
-
+static void revmap_physical_extend(BrinRevmap *revmap);
 
 /*
  * Initialize an access object for a range map.  This must be freed by
@@ -110,10 +107,7 @@ brinRevmapExtend(BrinRevmap *revmap, BlockNumber heapBlk)
 {
 	BlockNumber mapBlk PG_USED_FOR_ASSERTS_ONLY;
 
-	if (revmap->rm_isAo)
-		mapBlk = revmap_extend_and_get_blkno_ao(revmap, heapBlk);
-	else
-		mapBlk = revmap_extend_and_get_blkno(revmap, heapBlk);
+	mapBlk = revmap_extend_and_get_blkno(revmap, heapBlk);
 
 	/* Ensure the buffer we got is in the expected range */
 	Assert(mapBlk != InvalidBlockNumber &&
@@ -459,30 +453,6 @@ revmap_get_blkno_heap(BrinRevmap *revmap, BlockNumber heapBlk)
 	return InvalidBlockNumber;
 }
 
-static BlockNumber
-revmap_get_blkno_ao(BrinRevmap *revmap, BlockNumber heapBlk)
-{
-	BlockNumber targetblk;
-	BlockNumber targetupperblk;
-	BlockNumber targetupperidx;
-	Buffer upperbuf;
-	RevmapUpperBlockContents *contents;
-	BlockNumber *blks;
-
-	targetupperblk = HEAPBLK_TO_REVMAP_UPPER_BLK(revmap->rm_pagesPerRange, heapBlk) + 1;
-	targetupperidx = HEAPBLK_TO_REVMAP_UPPER_IDX(revmap->rm_pagesPerRange, heapBlk);
-	upperbuf = ReadBuffer(revmap->rm_irel, targetupperblk);
-	contents = (RevmapUpperBlockContents*) PageGetContents(BufferGetPage(upperbuf));
-	blks = (BlockNumber*) contents->rm_blocks;
-	targetblk =  blks[targetupperidx];
-	ReleaseBuffer(upperbuf);
-
-	if (targetblk == 0)
-		return InvalidBlockNumber;
-
-	return targetblk;
-}
-
 /*
  * Given a heap block number, find the corresponding physical revmap block
  * number and return it.  If the revmap page hasn't been allocated yet, return
@@ -492,7 +462,7 @@ static BlockNumber
 revmap_get_blkno(BrinRevmap *revmap, BlockNumber heapBlk)
 {
 	if (revmap->rm_isAo)
-		return revmap_get_blkno_ao(revmap, heapBlk);
+		return -1;
 	else
 		return revmap_get_blkno_heap(revmap, heapBlk);
 }
@@ -559,75 +529,10 @@ revmap_extend_and_get_blkno(BrinRevmap *revmap, BlockNumber heapBlk)
 }
 
 /*
- * Given a heap block number, find the corresponding physical revmap block
- * number and return it. If the revmap page hasn't been allocated yet, extend
- * the revmap until it is.
- *
- * This is the function called in brin on ao/cs table.
- */
-static BlockNumber
-revmap_extend_and_get_blkno_ao(BrinRevmap *revmap, BlockNumber heapBlk)
-{
-	BlockNumber targetupperblk;
-	BlockNumber targetupperindex;
-	Buffer		upperbuffer;
-	RevmapUpperBlockContents *contents;
-	BlockNumber *blks;
-	BlockNumber oldBlk;
-	BlockNumber newBlk;
-
-	targetupperblk = HEAPBLK_TO_REVMAP_UPPER_BLK(revmap->rm_pagesPerRange, heapBlk) + 1;
-	targetupperindex = HEAPBLK_TO_REVMAP_UPPER_IDX(revmap->rm_pagesPerRange, heapBlk);
-	upperbuffer = ReadBuffer(revmap->rm_irel, targetupperblk);
-
-	LockBuffer(upperbuffer, BUFFER_LOCK_EXCLUSIVE);
-	contents = (RevmapUpperBlockContents*) PageGetContents(BufferGetPage(upperbuffer));
-	blks = (BlockNumber*) contents->rm_blocks;
-	oldBlk = blks[targetupperindex];
-	if (oldBlk == 0)
-	{
-		CHECK_FOR_INTERRUPTS();
-		newBlk = InvalidBlockNumber;
-		while (newBlk == InvalidBlockNumber)
-		{
-			newBlk = revmap_physical_extend(revmap);
-		}
-		Assert(newBlk > revmap->rm_lastRevmapPage);
-		revmap->rm_lastRevmapPage = newBlk;
-
-		blks[targetupperindex] = revmap->rm_lastRevmapPage;
-		MarkBufferDirty(upperbuffer);
-
-		if (RelationNeedsWAL(revmap->rm_irel))
-		{
-			xl_brin_revmap_extend_upper xlrec;
-			XLogRecPtr	recptr;
-
-			xlrec.heapBlk = heapBlk;
-			xlrec.pagesPerRange = revmap->rm_pagesPerRange;
-			xlrec.revmapBlk = revmap->rm_lastRevmapPage;
-			XLogBeginInsert();
-			XLogRegisterData((char *) &xlrec, SizeOfBrinRevmapExtendUpper);
-			XLogRegisterBuffer(0, upperbuffer, 0);
-			recptr = XLogInsert(RM_BRIN_ID, XLOG_BRIN_REVMAP_EXTEND_UPPER);
-			PageSetLSN(BufferGetPage(upperbuffer), recptr);
-		}
-
-		UnlockReleaseBuffer(upperbuffer);
-		return revmap->rm_lastRevmapPage;
-	}
-	else
-	{
-		UnlockReleaseBuffer(upperbuffer);
-		return oldBlk;
-	}
-}
-
-/*
  * Try to extend the revmap by one page.  This might not happen for a number of
  * reasons; caller is expected to retry until the expected outcome is obtained.
  */
-static BlockNumber
+static void
 revmap_physical_extend(BrinRevmap *revmap)
 {
 	Buffer		buf;
@@ -656,7 +561,7 @@ revmap_physical_extend(BrinRevmap *revmap)
 	{
 		revmap->rm_lastRevmapPage = metadata->lastRevmapPage;
 		LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
-		return InvalidBlockNumber;
+		return;
 	}
 	mapBlk = metadata->lastRevmapPage + 1;
 
@@ -685,7 +590,7 @@ revmap_physical_extend(BrinRevmap *revmap)
 				UnlockRelationForExtension(irel, ExclusiveLock);
 			LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
 			ReleaseBuffer(buf);
-			return InvalidBlockNumber;
+			return;
 		}
 		LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 		page = BufferGetPage(buf);
@@ -710,7 +615,7 @@ revmap_physical_extend(BrinRevmap *revmap)
 		brin_evacuate_page(irel, revmap->rm_pagesPerRange, revmap, buf);
 
 		/* have caller start over */
-		return InvalidBlockNumber;
+		return;
 	}
 
 	/*
@@ -760,64 +665,6 @@ revmap_physical_extend(BrinRevmap *revmap)
 	LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
 
 	UnlockReleaseBuffer(buf);
-
-	return mapBlk;
-}
-
-/*
- * When we build a brin in ao/aocs table, brin has a upper level. All the
- * blocks used in upper level will be initialized once.
- */
-void
-brin_init_upper_pages(Relation index, BlockNumber pagesPerRange)
-{
-	Buffer		buf;
-	Page 		page;
-	Buffer 		metaBuf;
-	Page		metaPage;
-	BrinMetaPageData *metadata;
-	int 		maxPage;
-
-	metaBuf = ReadBuffer(index, BRIN_METAPAGE_BLKNO);
-	LockBuffer(metaBuf, BUFFER_LOCK_EXCLUSIVE);
-	metaPage = BufferGetPage(metaBuf);
-
-	maxPage = REVMAP_UPPER_PAGE_TOTAL_NUM(pagesPerRange);
-	for (BlockNumber page_index = 1;
-		 page_index <= maxPage;
-		 ++page_index)
-	{
-		buf = ReadBuffer(index, P_NEW);
-		LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
-
-		brin_page_init(BufferGetPage(buf), BRIN_PAGETYPE_UPPER);
-
-		MarkBufferDirty(buf);
-
-		metadata = (BrinMetaPageData *) PageGetContents(metaPage);
-		metadata->lastRevmapPage = page_index;
-
-		if (RelationNeedsWAL(index))
-		{
-			xl_brin_createupperblk xlrec;
-			XLogRecPtr	recptr;
-
-			xlrec.targetBlk = page_index;
-			XLogBeginInsert();
-			XLogRegisterData((char *) &xlrec, SizeOfBrinCreateUpperBlk);
-			XLogRegisterBuffer(0, metaBuf, 0);
-			XLogRegisterBuffer(1, buf, REGBUF_WILL_INIT);
-			recptr = XLogInsert(RM_BRIN_ID, XLOG_BRIN_REVMAP_INIT_UPPER_BLK);
-
-			page = BufferGetPage(buf);
-			PageSetLSN(metaPage, recptr);
-			PageSetLSN(page, recptr);
-		}
-
-		UnlockReleaseBuffer(buf);
-	}
-
-	UnlockReleaseBuffer(metaBuf);
 }
 
 /*
