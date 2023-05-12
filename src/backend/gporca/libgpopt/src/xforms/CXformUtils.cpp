@@ -1772,6 +1772,15 @@ CXformUtils::PstrErrorMessage(CMemoryPool *mp, ULONG major, ULONG minor, ...)
 	return GPOS_NEW(mp) CWStringConst(mp, str.GetBuffer());
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CXformUtils::PcrsIndexKeysAndIncludes
+//
+//	@doc:
+//		Return the set of columns from the given array of columns which appear
+//		in the index key and included columns
+//
+//---------------------------------------------------------------------------
 CColRefSet *
 CXformUtils::PcrsIndexKeysAndIncludes(CMemoryPool *mp,
 									  CColRefArray *colref_array,
@@ -1817,23 +1826,6 @@ CXformUtils::PcrsIndexKeys(CMemoryPool *mp, CColRefArray *colref_array,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformUtils::PcrsIndexIncludedCols
-//
-//	@doc:
-//		Return the set of columns from the given array of columns which appear
-//		in the index included columns
-//
-//---------------------------------------------------------------------------
-CColRefSet *
-CXformUtils::PcrsIndexIncludedCols(CMemoryPool *mp, CColRefArray *colref_array,
-								   const IMDIndex *pmdindex,
-								   const IMDRelation *pmdrel)
-{
-	return PcrsIndexColumns(mp, colref_array, pmdindex, pmdrel, EicIncluded);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CXformUtils::PcrsIndexColumns
 //
 //	@doc:
@@ -1846,8 +1838,7 @@ CXformUtils::PcrsIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 							  const IMDIndex *pmdindex,
 							  const IMDRelation *pmdrel, EIndexCols eic)
 {
-	GPOS_ASSERT(EicKey == eic || EicIncluded == eic ||
-				EicKeyAndIncluded == eic);
+	GPOS_ASSERT(EicKey == eic || EicKeyAndIncluded == eic);
 	CColRefArray *pdrgpcrIndexColumns =
 		PdrgpcrIndexColumns(mp, colref_array, pmdindex, pmdrel, eic);
 	CColRefSet *pcrsCols = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrIndexColumns);
@@ -1871,50 +1862,33 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 								 const IMDIndex *pmdindex,
 								 const IMDRelation *pmdrel, EIndexCols eic)
 {
-	GPOS_ASSERT(EicKey == eic || EicIncluded == eic ||
-				EicKeyAndIncluded == eic);
+	GPOS_ASSERT(EicKey == eic || EicKeyAndIncluded == eic);
 
 	CColRefArray *pdrgpcrIndex = GPOS_NEW(mp) CColRefArray(mp);
 
-	ULONG length = pmdindex->Keys();
-	if (EicIncluded == eic)
+	// key columns
+	for (ULONG ul = 0; ul < pmdindex->Keys(); ul++)
 	{
-		length = pmdindex->IncludedCols();
-	}
+		ULONG ulPos = pmdindex->KeyAt(ul);
 
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		ULONG ulPos = gpos::ulong_max;
-		if (EicIncluded == eic)
-		{
-			ulPos = pmdindex->IncludedColAt(ul);
-		}
-		else
-		{
-			ulPos = pmdindex->KeyAt(ul);
-		}
 		ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
-
 		GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
 		GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
-
 		CColRef *colref = (*colref_array)[ulPosNonDropped];
 		pdrgpcrIndex->Append(colref);
 	}
 
-	if (EicKeyAndIncluded == eic)
+	// included columns
+	for (ULONG ul = 0;
+		 ul < (EicKeyAndIncluded == eic ? pmdindex->IncludedCols() : 0); ul++)
 	{
-		for (ULONG ul = 0; ul < pmdindex->IncludedCols(); ul++)
-		{
-			ULONG ulPos = pmdindex->IncludedColAt(ul);
-			ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
+		ULONG ulPos = pmdindex->IncludedColAt(ul);
 
-			GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
-			GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
-
-			CColRef *colref = (*colref_array)[ulPosNonDropped];
-			pdrgpcrIndex->Append(colref);
-		}
+		ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
+		GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
+		GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
+		CColRef *colref = (*colref_array)[ulPosNonDropped];
+		pdrgpcrIndex->Append(colref);
 	}
 
 	return pdrgpcrIndex;

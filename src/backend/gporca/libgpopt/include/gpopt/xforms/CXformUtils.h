@@ -70,7 +70,6 @@ private:
 	enum EIndexCols
 	{
 		EicKey,
-		EicIncluded,
 		EicKeyAndIncluded
 	};
 
@@ -382,6 +381,8 @@ public:
 										  const IMDIndex *pmdindex,
 										  const IMDRelation *pmdrel);
 
+	// return the set of key columns from the given array of columns which appear
+	// in the index key and included columns
 	static CColRefSet *PcrsIndexKeysAndIncludes(CMemoryPool *mp,
 												CColRefArray *colref_array,
 												const IMDIndex *pmdindex,
@@ -393,13 +394,6 @@ public:
 									 CColRefArray *colref_array,
 									 const IMDIndex *pmdindex,
 									 const IMDRelation *pmdrel);
-
-	// return the set of key columns from the given array of columns which appear
-	// in the index included columns
-	static CColRefSet *PcrsIndexIncludedCols(CMemoryPool *mp,
-											 CColRefArray *colref_array,
-											 const IMDIndex *pmdindex,
-											 const IMDRelation *pmdrel);
 
 	// check if an index is applicable given the required, output and scalar
 	// expression columns

@@ -4,6 +4,9 @@
 --          indexes in varying scenarios. Correctness is determined by the
 --          number of output rows from each query.
 --          Does the plan use index-scan, index-only-scan, or seq-scan?
+--
+-- N.B. "VACUUM ANALZE" is to update relallvisible used to determine cost of an
+--      index-only scan.
 
 -- start_matchsubs
 -- m/Memory: \d+kB/
@@ -11,22 +14,25 @@
 -- end_matchsubs
 
 set optimizer_trace_fallback=on;
+set enable_seqscan=off;
 
 
--- 0) Basic scenario
+-- Basic scenario
 CREATE TABLE test_basic_cover_index(a int, b int, c int);
 CREATE INDEX i_test_basic_index ON test_basic_cover_index(a) INCLUDE (b);
 INSERT INTO test_basic_cover_index SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_basic_cover_index;
 
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_basic_cover_index WHERE a>42 AND b>42;
 
 
--- 0) Test CTE with cover indexes
+-- Test CTE with cover indexes
 --
 -- Check that CTE over scan with cover index and cover index over cte both work
 -- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS
 (
@@ -35,6 +41,7 @@ WITH cte AS
 SELECT b FROM cte WHERE b%2=0;
 
 -- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS
 (
@@ -43,20 +50,22 @@ WITH cte AS
 SELECT b FROM cte WHERE a<42;
 
 
--- 0) Views over cover indexes
+-- Views over cover indexes
 CREATE VIEW view_test_cover_indexes_with_filter AS
 SELECT a, b FROM test_basic_cover_index WHERE a<42;
 CREATE VIEW view_test_cover_indexes_without_filter AS
 SELECT a, b FROM test_basic_cover_index;
 
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM view_test_cover_indexes_with_filter;
 
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM view_test_cover_indexes_without_filter WHERE a<42;
 
 
--- 1) Various Column Types
+-- Various Column Types
 --
 -- Use different column types to check that the scan associates the correct
 -- type to the correct column
@@ -65,12 +74,14 @@ INSERT INTO test_various_col_types SELECT i, 'texttype'||i, i FROM generate_seri
 CREATE INDEX i_test_various_col_types ON test_various_col_types(inttype) INCLUDE (texttype);
 VACUUM ANALYZE test_various_col_types;
 
+-- KEYS: [inttype] INCLUDED: [texttype]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT texttype FROM test_various_col_types WHERE inttype<42;
 
 DROP INDEX i_test_various_col_types;
 CREATE INDEX i_test_various_col_types ON test_various_col_types(decimaltype) INCLUDE (inttype);
 VACUUM ANALYZE test_various_col_types;
 
+-- KEYS: [decimaltype] INCLUDED: [inttype]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT decimaltype, inttype FROM test_various_col_types WHERE decimaltype<42;
 
 ALTER TABLE test_various_col_types ADD COLUMN boxtype box;
@@ -78,10 +89,11 @@ DROP INDEX i_test_various_col_types;
 CREATE INDEX i_test_various_col_types ON test_various_col_types(decimaltype) INCLUDE (boxtype);
 VACUUM ANALYZE test_various_col_types;
 
+-- KEYS: [decimaltype] INCLUDED: [boxtype]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT decimaltype, boxtype FROM test_various_col_types WHERE decimaltype<42;
 
 
--- 2) Test drop/add columns before and after creation of the index
+-- Test drop/add columns before and after creation of the index
 --
 -- Alter (add/drop) columns to check that the correct data is read from the
 -- physical scan.
@@ -94,17 +106,20 @@ CREATE INDEX i_test_add_drop_columns ON test_add_drop_columns(a, b) INCLUDE (c);
 ALTER TABLE test_add_drop_columns ADD COLUMN f int;
 VACUUM ANALYZE test_add_drop_columns;
 
+-- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_add_drop_columns WHERE a<42 AND b>42;
 
+-- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_add_drop_columns WHERE a<42 AND b>42 AND c>42;
 
+-- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c, d, e FROM test_add_drop_columns WHERE a<42 AND b>42 AND c>42 AND e IS NULL;
 
 
--- 3) Test various table types (e.g. AO/AOCO/replicated)
+-- Test various table types (e.g. AO/AOCO/replicated)
 --
 -- Check that different tables types (storage/distribution) leveage cover
 -- indexes correctly.
@@ -113,12 +128,16 @@ CREATE INDEX i_test_replicated ON test_replicated(a) INCLUDE (b);
 INSERT INTO test_replicated SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_replicated;
 
+-- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_replicated WHERE a<42 AND b>42;
 
+-- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b, c FROM test_replicated WHERE a<42 AND b>42;
 
+-- Expect Seq Scan because predicate "c" is not in KEYS
+-- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c FROM test_replicated WHERE c>42;
 
@@ -128,17 +147,20 @@ CREATE INDEX i_test_ao ON test_ao(a) INCLUDE (b);
 INSERT INTO test_ao SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_ao;
 
+-- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_ao WHERE a<42 AND b>42;
 
+-- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b, c FROM test_ao WHERE a<42 AND b>42;
 
+-- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c FROM test_ao WHERE c>42;
 
 
--- 4) Test select best covering index
+-- Test select best covering index
 --
 -- Check that the best cover index is chosen for a plan when multiple cover
 -- indexes are available.
@@ -152,21 +174,45 @@ CREATE INDEX i_test_select_best_cover_a_bc ON test_select_best_cover(a) INCLUDE 
 INSERT INTO test_select_best_cover SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_select_best_cover;
 
+-- KEYS: [a]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a, b] INCLUDED: []
+-- KEYS: [b]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a]    INCLUDED: [b, c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a FROM test_select_best_cover WHERE a>42;
 
+-- KEYS: [a]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a, b] INCLUDED: []
+-- KEYS: [b]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a]    INCLUDED: [b, c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover WHERE b>42;
 
+-- KEYS: [a]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a, b] INCLUDED: []
+-- KEYS: [b]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a]    INCLUDED: [b, c]
 -- ORCA_FEATURE_NOT_SUPPORTED: use i_test_select_best_cover_ab
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover WHERE a>42 AND b>42;
 
+-- KEYS: [a]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a, b] INCLUDED: []
+-- KEYS: [b]    INCLUDED: []
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [a]    INCLUDED: [b, c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover WHERE a>42 AND b>42 AND c>42;
 
 
--- 5) Test DML operations
+-- Test DML operations
 --
 -- Check that cover indexes can be used with DML operations
 CREATE TABLE test_dml_using_cover_index(a int, b int, c int);
@@ -174,11 +220,12 @@ CREATE INDEX i_test_dml_using_cover_index ON test_dml_using_cover_index(a) INCLU
 INSERT INTO test_dml_using_cover_index SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_dml_using_cover_index;
 
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 INSERT INTO test_dml_using_cover_index (SELECT a, a, a FROM test_dml_using_cover_index WHERE a>42);
 
 
--- 6) Test index scan over partition tables
+-- Test index scan over partition tables
 --
 -- Check that cover indexes can be used with partition tables. This includes
 -- scenario when root/leaf partitions have different underlying physical format
@@ -194,13 +241,17 @@ CREATE INDEX i_test_cover_index_scan_on_partition_table ON test_cover_index_on_p
 INSERT INTO test_cover_index_on_pt SELECT i+i, i%4 FROM generate_series(1, 10)i;
 VACUUM ANALYZE test_cover_index_on_pt;
 
+-- KEYS: [a]    INCLUDED: [b]
 -- ORCA_FEATURE_NOT_SUPPORTED: dynamic index only scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
 
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c FROM test_cover_index_on_pt WHERE a<10;
 
+-- Expect Seq Scan because predicate "b" is not in KEYS
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c FROM test_cover_index_on_pt WHERE b<10;
 
@@ -210,6 +261,7 @@ ALTER TABLE test_cover_index_on_pt EXCHANGE PARTITION FOR(2) WITH TABLE leaf_par
 INSERT INTO test_cover_index_on_pt VALUES (2, 2, 2);
 VACUUM ANALYZE test_cover_index_on_pt;
 
+-- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
 
@@ -223,7 +275,7 @@ EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
 
 
--- 7) Test various index types
+-- Test various index types
 --
 -- Check that different index types can be used with cover indexes.
 -- Note: brin, hash, and spgist do not suport included columns.
@@ -233,6 +285,7 @@ INSERT INTO test_index_types VALUES ('(1.0,1.0,3.0,3.0)', 3, 3);
 CREATE INDEX i_test_index_types ON test_index_types USING GIST (a) INCLUDE (b);
 VACUUM ANALYZE test_index_types;
 
+-- KEYS: [a]    INCLUDED: [b]
 -- ORCA_FEATURE_NOT_SUPPORTED: support index-only-scan on GIST indexes
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
@@ -246,12 +299,13 @@ CREATE INDEX i_test_partial_index ON test_partial_index(a) INCLUDE (b) WHERE a<4
 INSERT INTO test_partial_index SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_partial_index;
 
+-- KEYS: [a]    INCLUDED: [b]
 -- ORCA_FEATURE_NOT_SUPPORTED: support partial indexes
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_partial_index WHERE a>42 AND b>42;
 
 
--- 9) Test backward index scan
+-- Test backward index scan
 --
 -- Check that cover indexes may be used for backward index scan
 CREATE TABLE test_backward_index_scan(a int, b int, c int) DISTRIBUTED BY (a);
@@ -259,12 +313,13 @@ CREATE INDEX i_test_backward_index_scan ON test_backward_index_scan(a) INCLUDE (
 INSERT INTO test_backward_index_scan SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_backward_index_scan;
 
+-- KEYS: [a]    INCLUDED: [b]
 -- ORCA_FEATURE_NOT_SUPPORTED enable backward index scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_backward_index_scan WHERE a>42 AND b>42 ORDER BY a DESC;
 
 
--- 10) Test index expressions
+-- Test index expressions
 --
 -- Check that cover indexes may be used for index expressions
 CREATE OR REPLACE FUNCTION add_one(integer)
@@ -280,12 +335,13 @@ CREATE INDEX i_test_index_expression_scan ON test_index_expression_scan(a) INCLU
 INSERT INTO test_index_expression_scan SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_index_expression_scan;
 
+-- KEYS: [a]    INCLUDED: [b]
 -- ORCA_FEATURE_NOT_SUPPORTED enable index expression
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT add_one(b) FROM test_index_expression_scan WHERE add_one(a) < 42;
 
 
--- 11) Test combined indexes
+-- Test combined indexes
 --
 -- Check that combined indexes may be used.  (on OR conditions) https://www.postgresql.org/docs/current/indexes-bitmap-scans.html
 CREATE TABLE test_combined_index_scan(a int, b int, c int) DISTRIBUTED BY (a);
@@ -294,9 +350,12 @@ CREATE INDEX i_test_combined_index_scan_b ON test_combined_index_scan(b) INCLUDE
 INSERT INTO test_combined_index_scan SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_combined_index_scan;
 
+-- KEYS: [a]    INCLUDED: [b]
+-- KEYS: [b]    INCLUDED: [a]
 -- ORCA_FEATURE_NOT_SUPPORTED enable combined index
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_combined_index_scan WHERE a < 42 OR b < 42;
 
 
 reset optimizer_trace_fallback;
+reset enable_seqscan;
