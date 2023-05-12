@@ -20,7 +20,7 @@ END; /* in func */
 $$; /* in func */
 
 -- Set up to suspend execution when will attempt to summarize the final partial
--- range below: [33554435, 33554437].
+-- range below: [33554432, 33554435].
 SELECT gp_inject_fault('summarize_last_partial_range', 'suspend', dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
@@ -43,5 +43,5 @@ $$; /* in func */
 SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
--- Summarize should only have summarized the first full range: [33554432, 33554434]
+-- Summarize should only have summarized the first full range: [33554432, 33554436]
 1<:

@@ -13,7 +13,7 @@ CREATE
 -- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
 DO $$ /* in func */ DECLARE curtid tid; /* in func */ BEGIN /* in func */ LOOP /* in func */ INSERT INTO brin_range_extended_@amname@ VALUES (1) RETURNING ctid INTO curtid; /* in func */ EXIT WHEN curtid > tid '(33554435, 0)'; /* in func */ END LOOP; /* in func */ END; /* in func */ $$; /* in func */ 
 -- Set up to suspend execution when will attempt to summarize the final partial
--- range below: [33554435, 33554437].
+-- range below: [33554432, 33554435].
 SELECT gp_inject_fault('summarize_last_partial_range', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault 
 -----------------
@@ -36,7 +36,7 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_se
  Success:        
 (1 row)
 
--- Summarize should only have summarized the first full range: [33554432, 33554434]
+-- Summarize should only have summarized the first full range: [33554432, 33554436]
 1<:  <... completed>
  brin_summarize_new_values 
 ---------------------------
