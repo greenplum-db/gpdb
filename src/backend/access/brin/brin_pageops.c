@@ -477,11 +477,16 @@ brin_page_init(Page page, uint16 type)
 {
 	PageInit(page, BLCKSZ, sizeof(BrinSpecialSpace));
 
-	BrinPageType(page) = type;
+	BrinPageType(page)       = type;
+	/* GPDB: AO/CO tables: pageNum, nextRevmapPage is to be assigned later */
+	BrinLogicalPageNum(page) = InvalidLogicalPageNum;
+	BrinNextRevmapPage(page) = InvalidBlockNumber;
 }
 
 /*
  * Initialize a new BRIN index's metapage.
+ * GPDB: We have the additional argument 'isAo' which is true if the base table
+ * is append-optimized (false otherwise, like for heap tables).
  */
 void
 brin_metapage_init(Page page, BlockNumber pagesPerRange, uint16 version, bool isAo)
@@ -503,6 +508,14 @@ brin_metapage_init(Page page, BlockNumber pagesPerRange, uint16 version, bool is
 	 * revmap page to be created when the index is.
 	 */
 	metadata->lastRevmapPage = 0;
+
+	/* GPDB: AO table metadata initialization */
+	for (int i = 0; i < MAX_AOREL_CONCURRENCY; i++)
+	{
+		metadata->aoChainInfo[i].firstPage = InvalidBlockNumber;
+		metadata->aoChainInfo[i].lastPage = InvalidBlockNumber;
+		metadata->aoChainInfo[i].lastLogicalPageNum = InvalidLogicalPageNum;
+	}
 
 	/*
 	 * Set pd_lower just past the end of the metadata.  This is essential,

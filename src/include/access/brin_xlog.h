@@ -15,6 +15,7 @@
 #define BRIN_XLOG_H
 
 #include "access/xlogreader.h"
+#include "access/brin_page.h"
 #include "lib/stringinfo.h"
 #include "storage/bufpage.h"
 #include "storage/itemptr.h"
@@ -112,6 +113,7 @@ typedef struct xl_brin_samepage_update
  *
  * Backup block 0: metapage
  * Backup block 1: new revmap page
+ * Backup block 2: (AO/CO): last revmap page of current chain (if exists)
  */
 typedef struct xl_brin_revmap_extend
 {
@@ -120,9 +122,13 @@ typedef struct xl_brin_revmap_extend
 	 * backup block 1.
 	 */
 	BlockNumber targetBlk;
+	/* GPDB AO/CO state */
+	bool			isAo;
+	int         	blockSeq; 		/* block sequence */
+	LogicalPageNum 	targetPageNum; 	/* page number to assign targetBlk */
 } xl_brin_revmap_extend;
 
-#define SizeOfBrinRevmapExtend	(offsetof(xl_brin_revmap_extend, targetBlk) + \
+#define SizeOfBrinRevmapExtend	(offsetof(xl_brin_revmap_extend, targetPageNum) + \
 								 sizeof(BlockNumber))
 
 /*

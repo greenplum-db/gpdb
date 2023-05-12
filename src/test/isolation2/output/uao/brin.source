@@ -1,7 +1,390 @@
--- Test cases with concurrency for BRIN indexes on AO/CO tables.
+-- We rely on pageinspect to perform white-box testing for summarization.
+-- White-box tests are necessary to ensure that summarization is done
+-- successfully (to avoid cases where ranges have brin data tuples without
+-- values or where the range is not covered by the revmap etc)
+CREATE EXTENSION pageinspect;
+CREATE
 
--- Note: We use loops to populate logical heap pages in one aoseg. These logical
--- heap blocks can start at a large number. See AOSegmentGet_startHeapBlock(segno).
+--------------------------------------------------------------------------------
+-- Test BRIN summarization with INSERT, brin_summarize_new_values() and VACUUM
+--------------------------------------------------------------------------------
+
+-- Create an index on an empty table
+CREATE TABLE brin_ao_summarize_@amname@(i int) USING @amname@;
+CREATE
+CREATE INDEX ON brin_ao_summarize_@amname@ USING brin(i) WITH (pages_per_range=1);
+CREATE
+
+-- Sanity: There are no revmap/data pages as there is no data
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+(1 row)
+
+-- There is no data, so nothing to summarize.
+SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
+ brin_summarize_new_values 
+---------------------------
+ 0                         
+(1 row)
+
+-- Sanity: Index contents should not have changed due to the no-op summarize.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+(1 row)
+
+-- Drop the index
+DROP INDEX brin_ao_summarize_@amname@_i_idx;
+DROP
+
+-- Create 3 blocks all on 1 QE, in 1 aoseg: 2 blocks full, 1 block with 1 tuple.
+SELECT populate_pages('brin_ao_summarize_@amname@', 1, tid '(33554434, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
+-- Now re-create the index on the data inserted above.
+CREATE INDEX ON brin_ao_summarize_@amname@ USING brin(i) WITH (pages_per_range=1);
+CREATE
+
+-- Sanity: there should be 1 revmap page and 1 data page covering the 3 blocks.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+(3 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
+------------+----------+--------+----------+----------+-------------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1} 
+ 3          | 33554434 | 1      | f        | f        | f           | {1 .. 1} 
+(3 rows)
+
+-- There is nothing new to summarize - it was all done during the index build.
+SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
+ brin_summarize_new_values 
+---------------------------
+ 0                         
+(1 row)
+
+-- Sanity: Index contents should not have changed due to the no-op summarize.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+(3 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
+------------+----------+--------+----------+----------+-------------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1} 
+ 3          | 33554434 | 1      | f        | f        | f           | {1 .. 1} 
+(3 rows)
+
+-- Insert more so we have 5 blocks on 1 QE, in 1 aoseg: 4 blocks full, 1 block
+-- with 1 tuple.
+SELECT populate_pages('brin_ao_summarize_@amname@', 20, tid '(33554436, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
+-- Sanity: The 3rd block should have its summary updated and the last 2 blocks
+-- will be left unsummarized.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+(3 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value     
+------------+----------+--------+----------+----------+-------------+-----------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}  
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}  
+ 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20} 
+(3 rows)
+
+-- Summarize the last 2 blocks.
+SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
+ brin_summarize_new_values 
+---------------------------
+ 2                         
+(1 row)
+
+-- Sanity: All blocks should now have summary info.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+ (2,4) 
+ (2,5) 
+(5 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | {20 .. 20} 
+(5 rows)
+
+-- Insert more so we have 7 blocks on 1 QE, in 1 aoseg: 6 blocks full, 1 page
+-- with 1 tuple.
+SELECT populate_pages('brin_ao_summarize_@amname@', 30, tid '(33554438, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
+-- Sanity: The 5th block should have its summary updated and the last 2 blocks
+-- will be left unsummarized.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+ (2,4) 
+ (2,5) 
+(5 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | {20 .. 30} 
+(5 rows)
+
+DELETE FROM brin_ao_summarize_@amname@ WHERE i = 1;
+DELETE 657
+
+VACUUM brin_ao_summarize_@amname@;
+VACUUM
+
+-- A new INSERT would always map to the last range on the old segment and that
+-- range will be updated to hold the new value, as part of INSERT.
+INSERT INTO brin_ao_summarize_@amname@ VALUES(40);
+INSERT 1
+
+-- All the live tuples will have been moved to a single new logical heap block
+-- in seg2 (67108864). The 1 tuple INSERTed after the VACUUM should have gone to
+-- the last block in seg1 (33554438).
+SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum FROM brin_ao_summarize_@amname@;
+ blknum   
+----------
+ 33554438 
+ 67108864 
+(2 rows)
+
+-- Sanity: There should now be 2 revmap pages (1 new one for the new seg). Also,
+-- there will be a new index tuple mapping to that new seg and block number.
+-- Note: Since VACUUM summarizes all logical heap blocks (invokes summarization
+-- with BRIN_ALL_BLOCKRANGES), and doesn't clean up existing summary info, we
+-- can expect entries from the 1st seg to be still there (including blank entries
+-- added for the 6th and 7th blocks)
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+ 3     | revmap         
+(4 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+ (2,4) 
+ (2,5) 
+ (2,6) 
+ (2,7) 
+(7 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,8) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | {20 .. 30} 
+ 6          | 33554437 | 1      | t        | f        | f           |            
+ 7          | 33554438 | 1      | f        | f        | f           | {40 .. 40} 
+ 8          | 67108864 | 1      | f        | f        | f           | {20 .. 30} 
+(8 rows)
+
+-- VACUUM should have already summarized this one logical heap block, so
+-- invoking summarization again will be a no-op.
+SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
+ brin_summarize_new_values 
+---------------------------
+ 0                         
+(1 row)
+
+-- Sanity: Index contents should not have changed due to the no-op summarize.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+ 3     | revmap         
+(4 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+ (2,4) 
+ (2,5) 
+ (2,6) 
+ (2,7) 
+(7 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,8) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | {20 .. 30} 
+ 6          | 33554437 | 1      | t        | f        | f           |            
+ 7          | 33554438 | 1      | f        | f        | f           | {40 .. 40} 
+ 8          | 67108864 | 1      | f        | f        | f           | {20 .. 30} 
+(8 rows)
+
+--------------------------------------------------------------------------------
+-- Specific range summarization
+--------------------------------------------------------------------------------
+
+-- We don't allow specific range summarization for AO tables at the moment.
+SELECT brin_summarize_range('brin_ao_summarize_@amname@_i_idx', 1);
+ERROR:  cannot summarize specific page range for append-optimized tables  (seg1 slice1 10.0.0.202:7003 pid=886868)
+CONTEXT:  SQL function "brin_summarize_range" statement 1
+
+--------------------------------------------------------------------------------
+-- Test summarization of last partial range.
+--------------------------------------------------------------------------------
+
+CREATE TABLE brin_ao_summarize_partial_@amname@(i int) USING @amname@;
+CREATE
+CREATE INDEX ON brin_ao_summarize_partial_@amname@ USING brin(i) WITH (pages_per_range=3);
+CREATE
+
+-- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
+-- The 1st range [33554432, 33554434] is full and the last range [33554435, 33554437]
+-- is partially full with just 1 block: 33554435.
+SELECT populate_pages('brin_ao_summarize_partial_@amname@', 1, tid '(33554435, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
+-- Sanity: We expect no summary information to be present.
+-- Reason: For an empty AO table, when INSERTing into the 1st range, we don't
+-- summarize. brininsert() -> brinGetTupleForHeapBlock() actually returns NULL
+-- in this case as revmap_get_blkno_ao() returns InvalidBlockNumber.
+-- This is contrary to heap behavior (where we return 1).
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_partial_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+(1 row)
+
+-- This will summarize both the first range and the last partial range.
+SELECT brin_summarize_new_values('brin_ao_summarize_partial_@amname@_i_idx');
+ brin_summarize_new_values 
+---------------------------
+ 2                         
+(1 row)
+
+-- Sanity: Both ranges have been summarized.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_ao_summarize_partial_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+(2 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', 2), 'brin_ao_summarize_partial_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
+------------+----------+--------+----------+----------+-------------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+ 2          | 33554435 | 1      | f        | f        | f           | {1 .. 1} 
+(2 rows)
+
+--------------------------------------------------------------------------------
+-- Test cases with concurrency for BRIN indexes on AO/CO tables.
+--------------------------------------------------------------------------------
 
 -- Ensure that we don't summarize the last partial range in case it was extended
 -- by another transaction, while summarization was in flight.
@@ -10,8 +393,14 @@ CREATE TABLE brin_range_extended_@amname@(i int) USING @amname@;
 CREATE
 CREATE INDEX ON brin_range_extended_@amname@ USING brin(i) WITH (pages_per_range=5);
 CREATE
+
 -- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
-DO $$ /* in func */ DECLARE curtid tid; /* in func */ BEGIN /* in func */ LOOP /* in func */ INSERT INTO brin_range_extended_@amname@ VALUES (1) RETURNING ctid INTO curtid; /* in func */ EXIT WHEN curtid > tid '(33554435, 0)'; /* in func */ END LOOP; /* in func */ END; /* in func */ $$; /* in func */ 
+SELECT populate_pages('brin_range_extended_@amname@', 1, tid '(33554435, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
 -- Set up to suspend execution when will attempt to summarize the final partial
 -- range below: [33554432, 33554435].
 SELECT gp_inject_fault('summarize_last_partial_range', 'suspend', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -29,16 +418,42 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FR
 (1 row)
 
 -- Extend the last partial range by 1 block.
-DO $$ /* in func */ DECLARE curtid tid; /* in func */ BEGIN /* in func */ LOOP /* in func */ INSERT INTO brin_range_extended_@amname@ VALUES (1) RETURNING ctid INTO curtid; /* in func */ EXIT WHEN curtid > tid '(33554436, 0)'; /* in func */ END LOOP; /* in func */ END; /* in func */ $$; /* in func */ 
+SELECT populate_pages('brin_range_extended_@amname@', 1, tid '(33554436, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+
 SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault 
 -----------------
  Success:        
 (1 row)
 
--- Summarize should only have summarized the first full range: [33554432, 33554436]
 1<:  <... completed>
  brin_summarize_new_values 
 ---------------------------
  1                         
 (1 row)
+
+-- Sanity: Summarize should only have summarized the first full range: [33554432, 33554436]
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_range_extended_@amname@_i_idx', blkno)) FROM generate_series(0, blocks('brin_range_extended_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_range_extended_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended_@amname@_i_idx', 2), 'brin_range_extended_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
+------------+----------+--------+----------+----------+-------------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+(1 row)
+
+DROP EXTENSION pageinspect;
+DROP

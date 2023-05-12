@@ -31,6 +31,14 @@
 #define HEAPBLK_TO_REVMAP_INDEX(pagesPerRange, heapBlk) \
 	((heapBlk / pagesPerRange) % REVMAP_PAGE_MAXITEMS)
 
+/*
+ * GPDB: Similar to the above calculation, except we need to normalize the
+ * provided heapBlk, with the starting block of the block sequence it belongs
+ * to. Also, logical page numbers are 1-based.
+ */
+#define HEAPBLK_TO_REVMAP_PAGENUM_AO(pagesPerRange, heapBlk) \
+	(((heapBlk - AOHeapBlockGet_startHeapBlock(heapBlk)) / pagesPerRange) / REVMAP_PAGE_MAXITEMS + 1)
+
 /* struct definition lives in brin_revmap.c */
 typedef struct BrinRevmap BrinRevmap;
 
@@ -49,6 +57,21 @@ extern BrinTuple *brinGetTupleForHeapBlock(BrinRevmap *revmap,
 										   Size *size, int mode, Snapshot snapshot);
 extern bool brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk);
 
-extern BlockNumber heapBlockGetCurrentAosegStart(BlockNumber heapBlk);
+/* GPDB specific */
+extern void brinRevmapAOPositionAtStart(BrinRevmap *revmap, int seqNum);
+extern void brinRevmapAOPositionAtEnd(BrinRevmap *revmap, int seqNum);
 
+/*
+ * GPDB: Given a 'heapBlk', return the starting block number of the range in
+ * which 'heapBlk' lies.
+ * Note: We have to factor in BlockSequence limits when we do this calculation.
+ */
+static inline BlockNumber
+brin_range_start_blk(BlockNumber heapBlk, bool isAo, BlockNumber pagesPerRange)
+{
+	BlockNumber seqStartBlk = isAo ? AOHeapBlockGet_startHeapBlock(heapBlk) : 0;
+	BlockNumber rangeNum = ((heapBlk - seqStartBlk) / pagesPerRange);
+
+	return (rangeNum * pagesPerRange) + seqStartBlk;
+}
 #endif							/* BRIN_REVMAP_H */

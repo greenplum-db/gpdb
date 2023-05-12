@@ -339,3 +339,7 @@ test: uao/ao_unique_index_vacuum_column
 test: free_remapper_fatal
 
 test: spilling_hashagg
+
+# Intensive tests for BRIN
+test: uao/brin_chain_row
+test: uao/brin_chain_column

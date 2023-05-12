@@ -35,12 +35,19 @@
 
 struct BrinRevmap
 {
-	Relation	rm_irel;
+	Relation    rm_irel;
 	BlockNumber rm_pagesPerRange;
 	BlockNumber rm_lastRevmapPage;	/* cached from the metapage */
-	Buffer		rm_metaBuf;
-	Buffer		rm_currBuf;
-	bool		rm_isAo;
+	Buffer      rm_metaBuf;
+	Buffer      rm_currBuf;
+	bool 		rm_isAo;
+
+	/* GPDB: Cached state from metapage for AO/CO tables */
+	AOChainInfo 	rm_aoChainInfo[MAX_AOREL_CONCURRENCY];
+	/* GPDB: Revmap iterator state for AO/CO tables */
+	int         	rm_aoIterBlockSeqNum;
+	BlockNumber 	rm_aoIterRevmapPage;
+	LogicalPageNum 	rm_aoIterRevmapPageNum;
 };
 
 /* typedef appears in brin_revmap.h */
@@ -49,10 +56,12 @@ struct BrinRevmap
 static BlockNumber revmap_get_blkno(BrinRevmap *revmap,
 									BlockNumber heapBlk);
 static Buffer revmap_get_buffer(BrinRevmap *revmap, BlockNumber heapBlk);
+static BlockNumber revmap_extend_and_get_blkno_heap(BrinRevmap *revmap, BlockNumber heapBlk);
+static BlockNumber revmap_extend_and_get_blkno_ao(BrinRevmap *revmap, BlockNumber heapBlk);
 static BlockNumber revmap_extend_and_get_blkno(BrinRevmap *revmap,
 											   BlockNumber heapBlk);
-static void revmap_physical_extend(BrinRevmap *revmap);
-
+static void revmap_physical_extend(BrinRevmap *revmap, LogicalPageNum targetLogicalPageNum);
+static void set_ao_revmap_chain(BrinRevmap *revmap, BrinMetaPageData *metadata, int seqnum);
 /*
  * Initialize an access object for a range map.  This must be freed by
  * brinRevmapTerminate when caller is done with it.
@@ -78,7 +87,13 @@ brinRevmapInitialize(Relation idxrel, BlockNumber *pagesPerRange,
 	revmap->rm_lastRevmapPage = metadata->lastRevmapPage;
 	revmap->rm_metaBuf = meta;
 	revmap->rm_currBuf = InvalidBuffer;
+
+	/* GPDB AO/CO specific initialization (barring iterator state) */
 	revmap->rm_isAo = metadata->isAo;
+	memcpy(revmap->rm_aoChainInfo, metadata->aoChainInfo, sizeof(metadata->aoChainInfo));
+	revmap->rm_aoIterBlockSeqNum = InvalidBlockSequenceNum;
+	revmap->rm_aoIterRevmapPage = InvalidBlockNumber;
+	revmap->rm_aoIterRevmapPageNum = InvalidLogicalPageNum;
 
 	*pagesPerRange = metadata->pagesPerRange;
 
@@ -112,7 +127,8 @@ brinRevmapExtend(BrinRevmap *revmap, BlockNumber heapBlk)
 	/* Ensure the buffer we got is in the expected range */
 	Assert(mapBlk != InvalidBlockNumber &&
 		   mapBlk != BRIN_METAPAGE_BLKNO &&
-		   mapBlk <= revmap->rm_lastRevmapPage);
+		   ((!revmap->rm_isAo && mapBlk <= revmap->rm_lastRevmapPage) ||
+		   	(revmap->rm_isAo && mapBlk == revmap->rm_aoChainInfo[revmap->rm_aoIterBlockSeqNum].lastPage)));
 }
 
 /*
@@ -227,6 +243,8 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk,
 
 			Assert(mapBlk != InvalidBlockNumber);
 			revmap->rm_currBuf = ReadBuffer(revmap->rm_irel, mapBlk);
+			if (revmap->rm_isAo)
+				revmap->rm_aoIterRevmapPageNum = BrinLogicalPageNum(BufferGetPage(revmap->rm_currBuf));
 		}
 
 		LockBuffer(revmap->rm_currBuf, BUFFER_LOCK_SHARE);
@@ -434,9 +452,49 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 }
 
 /*
- * Given a heap block number, find the corresponding physical revmap block
- * number and return it.  If the revmap page hasn't been allocated yet, return
- * InvalidBlockNumber.
+ * Position the AO revmap iterator at the beginning of the revmap chain for the
+ * given block sequence. This does temporarily lock the first page in the chain.
+ */
+void
+brinRevmapAOPositionAtStart(BrinRevmap *revmap, int seqNum)
+{
+	Assert(seqNum != InvalidBlockSequenceNum);
+
+	revmap->rm_aoIterBlockSeqNum = seqNum;
+	revmap->rm_aoIterRevmapPage = revmap->rm_aoChainInfo[seqNum].firstPage;
+
+	if (revmap->rm_aoChainInfo[seqNum].firstPage != InvalidBlockNumber)
+	{
+		/* chain exists, read the first page to get its logical page number */
+		Buffer buf = ReadBuffer(revmap->rm_irel,
+								revmap->rm_aoChainInfo[seqNum].firstPage);
+		LockBuffer(buf, BUFFER_LOCK_SHARE);
+		revmap->rm_aoIterRevmapPageNum = BrinLogicalPageNum(BufferGetPage(buf));
+		UnlockReleaseBuffer(buf);
+	}
+	else
+	{
+		/* chain doesn't exist yet */
+		revmap->rm_aoIterRevmapPageNum = InvalidLogicalPageNum;
+	}
+}
+
+/*
+ * Position the AO revmap iterator at the end of the revmap chain for the given
+ * block sequence. This is a lockless operation.
+ */
+void
+brinRevmapAOPositionAtEnd(BrinRevmap *revmap, int seqNum)
+{
+	Assert(seqNum != InvalidBlockSequenceNum);
+
+	revmap->rm_aoIterBlockSeqNum = seqNum;
+	revmap->rm_aoIterRevmapPage = revmap->rm_aoChainInfo[seqNum].lastPage;
+	revmap->rm_aoIterRevmapPageNum = revmap->rm_aoChainInfo[seqNum].lastLogicalPageNum;
+}
+
+/*
+ * Upstream version of revmap_get_blkno() for heap tables.
  */
 static BlockNumber
 revmap_get_blkno_heap(BrinRevmap *revmap, BlockNumber heapBlk)
@@ -454,6 +512,73 @@ revmap_get_blkno_heap(BrinRevmap *revmap, BlockNumber heapBlk)
 }
 
 /*
+ * Similar in spirit to revmap_get_blkno_heap(), except here we traverse the
+ * revmap chain maintained for the block sequence in which 'heapBlk' falls. Our
+ * access struct buffer is used to read in each chain member. The iterator
+ * state is always kept up-to-date with the traversal.
+ */
+static BlockNumber
+revmap_get_blkno_ao(BrinRevmap *revmap, BlockNumber heapBlk)
+{
+	BlockNumber mapBlk;
+	BlockNumber targetRevmapPageNum =
+		HEAPBLK_TO_REVMAP_PAGENUM_AO(revmap->rm_pagesPerRange, heapBlk);
+
+	Assert(targetRevmapPageNum >= 1);
+
+	/* There are no revmap pages for the current block sequence */
+	if (revmap->rm_aoIterRevmapPageNum == InvalidLogicalPageNum)
+		return InvalidBlockNumber;
+
+	Assert(revmap->rm_aoIterRevmapPage != InvalidBlockNumber);
+
+	/*
+	 * Traverse the revmap chain, looking for the target logical page number.
+	 * Once found, the iterator will point to the required revmap page.
+	 */
+	mapBlk = revmap->rm_aoIterRevmapPage;
+	while (revmap->rm_aoIterRevmapPageNum < targetRevmapPageNum && mapBlk != InvalidBlockNumber)
+	{
+		Page currPage;
+
+		if (!BufferIsValid(revmap->rm_currBuf))
+		{
+			/* Read the next chain member */
+			revmap->rm_currBuf = ReadBuffer(revmap->rm_irel, mapBlk);
+		}
+		else
+		{
+			/* Our access struct buffer already is what the iterator points to */
+			Assert(revmap->rm_aoIterRevmapPage == BufferGetBlockNumber(revmap->rm_currBuf));
+		}
+
+		LockBuffer(revmap->rm_currBuf, BUFFER_LOCK_SHARE);
+
+		currPage = BufferGetPage(revmap->rm_currBuf);
+
+		/* Update the iterator position */
+		revmap->rm_aoIterRevmapPage = mapBlk;
+		revmap->rm_aoIterRevmapPageNum = BrinLogicalPageNum(currPage);
+
+		/* Traverse to the next chain member */
+		mapBlk = BrinNextRevmapPage(currPage);
+
+		/* Release, so we can read in the next member */
+		UnlockReleaseBuffer(revmap->rm_currBuf);
+		revmap->rm_currBuf = InvalidBuffer;
+	}
+
+	if (revmap->rm_aoIterRevmapPageNum == targetRevmapPageNum)
+	{
+		/* Reached our destination */
+		return revmap->rm_aoIterRevmapPage;
+	}
+
+	/* Destination doesn't exist yet */
+	return InvalidBlockNumber;
+}
+
+/*
  * Given a heap block number, find the corresponding physical revmap block
  * number and return it.  If the revmap page hasn't been allocated yet, return
  * InvalidBlockNumber.
@@ -462,7 +587,7 @@ static BlockNumber
 revmap_get_blkno(BrinRevmap *revmap, BlockNumber heapBlk)
 {
 	if (revmap->rm_isAo)
-		return -1;
+		return revmap_get_blkno_ao(revmap, heapBlk);
 	else
 		return revmap_get_blkno_heap(revmap, heapBlk);
 }
@@ -486,7 +611,8 @@ revmap_get_buffer(BrinRevmap *revmap, BlockNumber heapBlk)
 
 	/* Ensure the buffer we got is in the expected range */
 	Assert(mapBlk != BRIN_METAPAGE_BLKNO &&
-		   mapBlk <= revmap->rm_lastRevmapPage);
+		((!revmap->rm_isAo && mapBlk <= revmap->rm_lastRevmapPage) ||
+		 (revmap->rm_isAo && mapBlk <= revmap->rm_aoChainInfo[revmap->rm_aoIterBlockSeqNum].lastPage)));
 
 	/*
 	 * Obtain the buffer from which we need to read.  If we already have the
@@ -500,6 +626,8 @@ revmap_get_buffer(BrinRevmap *revmap, BlockNumber heapBlk)
 			ReleaseBuffer(revmap->rm_currBuf);
 
 		revmap->rm_currBuf = ReadBuffer(revmap->rm_irel, mapBlk);
+		if (revmap->rm_isAo)
+			revmap->rm_aoIterRevmapPageNum = BrinLogicalPageNum(BufferGetPage(revmap->rm_currBuf));
 	}
 
 	return revmap->rm_currBuf;
@@ -513,6 +641,19 @@ revmap_get_buffer(BrinRevmap *revmap, BlockNumber heapBlk)
 static BlockNumber
 revmap_extend_and_get_blkno(BrinRevmap *revmap, BlockNumber heapBlk)
 {
+	if (revmap->rm_isAo)
+		return revmap_extend_and_get_blkno_ao(revmap, heapBlk);
+
+	return revmap_extend_and_get_blkno_heap(revmap, heapBlk);
+}
+
+/*
+ * GPDB: The upstream code from revmap_extend_and_get_blkno(), which applies to
+ * heap tables has been moved here.
+ */
+static BlockNumber
+revmap_extend_and_get_blkno_heap(BrinRevmap *revmap, BlockNumber heapBlk)
+{
 	BlockNumber targetblk;
 
 	/* obtain revmap block number, skip 1 for metapage block */
@@ -522,18 +663,55 @@ revmap_extend_and_get_blkno(BrinRevmap *revmap, BlockNumber heapBlk)
 	while (targetblk > revmap->rm_lastRevmapPage)
 	{
 		CHECK_FOR_INTERRUPTS();
-		revmap_physical_extend(revmap);
+		revmap_physical_extend(revmap, InvalidLogicalPageNum);
 	}
 
 	return targetblk;
 }
 
 /*
+ * Similar in spirit to revmap_extend_and_get_blkno_heap(), except here we know
+ * when we are done based on the positioning of the AO revmap iterator with
+ * respect to the target logical page number. We can simply derive this target
+ * page number based on some math.
+ * The reason why we need to take this approach is that unlike for heap, revmap
+ * pages don't reside in deterministic block numbers.
+ */
+static BlockNumber
+revmap_extend_and_get_blkno_ao(BrinRevmap *revmap, BlockNumber heapBlk)
+{
+	int 			currSeqNum = revmap->rm_aoIterBlockSeqNum;
+	LogicalPageNum 	targetLogicalPageNum;
+
+	Assert(currSeqNum == AOSegmentGet_blockSequenceNum(heapBlk));
+
+	/* set up the target page number state */
+	targetLogicalPageNum = HEAPBLK_TO_REVMAP_PAGENUM_AO(revmap->rm_pagesPerRange,
+														heapBlk);
+	/*
+	 * Extend the revmap, only if necessary. It is not necessary if the iterator
+	 * is already positioned on the target logical page number.
+	 */
+	while (targetLogicalPageNum > revmap->rm_aoIterRevmapPageNum)
+	{
+		CHECK_FOR_INTERRUPTS();
+		revmap_physical_extend(revmap, targetLogicalPageNum);
+		/* Make sure the iterator is positioned at the end of the current chain */
+		brinRevmapAOPositionAtEnd(revmap, currSeqNum);
+	}
+
+	return revmap->rm_aoIterRevmapPage;
+}
+
+/*
  * Try to extend the revmap by one page.  This might not happen for a number of
  * reasons; caller is expected to retry until the expected outcome is obtained.
+ *
+ * GPDB: For AO/CO tables, 'targetLogicalPageNum' contains the logical page
+ * number of the to-be-added revmap page. (It is InvalidBlockNumber otherwise)
  */
 static void
-revmap_physical_extend(BrinRevmap *revmap)
+revmap_physical_extend(BrinRevmap *revmap, LogicalPageNum targetLogicalPageNum)
 {
 	Buffer		buf;
 	Page		page;
@@ -544,6 +722,13 @@ revmap_physical_extend(BrinRevmap *revmap)
 	Relation	irel = revmap->rm_irel;
 	bool		needLock = !RELATION_IS_LOCAL(irel);
 
+	/* GPDB: AO/CO specific state */
+	bool		isAo = revmap->rm_isAo;
+	Buffer		currLastRevmapBuf = InvalidBuffer;
+	Page		currLastRevmapPage = NULL;
+	bool		ao_chain_exists = false;
+	int 		currSeq = revmap->rm_aoIterBlockSeqNum;
+
 	/*
 	 * Lock the metapage. This locks out concurrent extensions of the revmap,
 	 * but note that we still need to grab the relation extension lock because
@@ -552,6 +737,12 @@ revmap_physical_extend(BrinRevmap *revmap)
 	LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_EXCLUSIVE);
 	metapage = BufferGetPage(revmap->rm_metaBuf);
 	metadata = (BrinMetaPageData *) PageGetContents(metapage);
+
+	if (!isAo)
+	{
+	/* unindented to prevent merge conflicts */
+
+	Assert(targetLogicalPageNum == InvalidLogicalPageNum);
 
 	/*
 	 * Check that our cached lastRevmapPage value was up-to-date; if it
@@ -565,7 +756,36 @@ revmap_physical_extend(BrinRevmap *revmap)
 	}
 	mapBlk = metadata->lastRevmapPage + 1;
 
+	/* end if */
+	}
+	else
+	{
+		Assert(currSeq != InvalidBlockSequenceNum);
+		/* assert that we have a valid target page number to assign */
+		Assert(targetLogicalPageNum != InvalidLogicalPageNum);
+
+		/*
+		 * GPDB: AO/CO: Check that our cached last revmap page and logical page
+		 * number values were up-to-date; if they weren't, update the cached
+		 * copies and have caller start over.
+		 */
+		if (metadata->aoChainInfo[currSeq].lastPage != revmap->rm_aoChainInfo[currSeq].lastPage)
+		{
+			set_ao_revmap_chain(revmap, metadata, currSeq);
+			LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
+			return;
+		}
+	}
+
 	nblocks = RelationGetNumberOfBlocks(irel);
+
+	/*
+	 * GPDB: For AO/CO tables, the new revmap page would always be allocated at
+	 * the end of the relation.
+	 */
+	if (isAo)
+		mapBlk = nblocks;
+
 	if (mapBlk < nblocks)
 	{
 		buf = ReadBuffer(irel, mapBlk);
@@ -578,7 +798,7 @@ revmap_physical_extend(BrinRevmap *revmap)
 			LockRelationForExtension(irel, ExclusiveLock);
 
 		buf = ReadBuffer(irel, P_NEW);
-		if (BufferGetBlockNumber(buf) != mapBlk)
+		if (!isAo && BufferGetBlockNumber(buf) != mapBlk)
 		{
 			/*
 			 * Very rare corner case: somebody extended the relation
@@ -597,10 +817,42 @@ revmap_physical_extend(BrinRevmap *revmap)
 
 		if (needLock)
 			UnlockRelationForExtension(irel, ExclusiveLock);
+
+		if (isAo)
+		{
+			Assert(mapBlk == BufferGetBlockNumber(buf));
+
+			if (metadata->aoChainInfo[currSeq].lastPage != InvalidBlockNumber)
+			{
+				/*
+				 * We are extending the chain for the current block sequence. So,
+				 * read and lock the last chain member.
+				 */
+				ao_chain_exists = true;
+
+				currLastRevmapBuf = ReadBuffer(irel,
+											   metadata->aoChainInfo[currSeq].lastPage);
+				LockBuffer(currLastRevmapBuf, BUFFER_LOCK_EXCLUSIVE);
+				currLastRevmapPage = BufferGetPage(currLastRevmapBuf);
+
+				Assert(!PageIsNew(currLastRevmapPage));
+			}
+			else
+			{
+				/*
+				 * We have no revmap pages yet for the current BlockSequence.
+				 * A new chain will be started for the current block sequence
+				 * below. Consequently, there is no last chain member to read.
+				 */
+				Assert(revmap->rm_aoChainInfo[currSeq].lastLogicalPageNum == InvalidLogicalPageNum);
+			}
+		}
 	}
 
+	AssertImply(isAo, PageIsNew(page));
+
 	/* Check that it's a regular block (or an empty page) */
-	if (!PageIsNew(page) && !BRIN_IS_REGULAR_PAGE(page))
+	if (!isAo && !PageIsNew(page) && !BRIN_IS_REGULAR_PAGE(page))
 		ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
 				 errmsg("unexpected page type 0x%04X in BRIN index \"%s\" block %u",
@@ -609,7 +861,8 @@ revmap_physical_extend(BrinRevmap *revmap)
 						BufferGetBlockNumber(buf))));
 
 	/* If the page is in use, evacuate it and restart */
-	if (brin_start_evacuating_page(irel, buf))
+	/* GPDB: We don't follow the page evacuation protoocol for AO/CO tables */
+	if (!isAo && brin_start_evacuating_page(irel, buf))
 	{
 		LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
 		brin_evacuate_page(irel, revmap->rm_pagesPerRange, revmap, buf);
@@ -626,9 +879,36 @@ revmap_physical_extend(BrinRevmap *revmap)
 
 	/* the rm_tids array is initialized to all invalid by PageInit */
 	brin_page_init(page, BRIN_PAGETYPE_REVMAP);
+
+	/* Set the logical page number for AO/CO tables */
+	if (isAo)
+		BrinLogicalPageNum(page) = targetLogicalPageNum;
+
 	MarkBufferDirty(buf);
 
-	metadata->lastRevmapPage = mapBlk;
+	if (!isAo)
+		metadata->lastRevmapPage = mapBlk;
+	else
+	{
+		/* GPDB: Revmap chain bookkeeping for AO/CO tables */
+		if (ao_chain_exists)
+		{
+			/* Extend the chain */
+			BrinNextRevmapPage(currLastRevmapPage) = mapBlk;
+			MarkBufferDirty(currLastRevmapBuf);
+		}
+		else
+		{
+			/* Begin a new chain */
+			metadata->aoChainInfo[currSeq].firstPage = mapBlk;
+		}
+
+		metadata->aoChainInfo[currSeq].lastPage = mapBlk;
+		metadata->aoChainInfo[currSeq].lastLogicalPageNum = targetLogicalPageNum;
+
+		/* And refresh the revmap's cached state as well. */
+		set_ao_revmap_chain(revmap, metadata, currSeq);
+	}
 
 	/*
 	 * Set pd_lower just past the end of the metadata.  This is essential,
@@ -648,6 +928,13 @@ revmap_physical_extend(BrinRevmap *revmap)
 		XLogRecPtr	recptr;
 
 		xlrec.targetBlk = mapBlk;
+		xlrec.isAo = isAo;
+
+		if (isAo)
+		{
+			xlrec.blockSeq = currSeq;
+			xlrec.targetPageNum = targetLogicalPageNum;
+		}
 
 		XLogBeginInsert();
 		XLogRegisterData((char *) &xlrec, SizeOfBrinRevmapExtend);
@@ -655,9 +942,19 @@ revmap_physical_extend(BrinRevmap *revmap)
 
 		XLogRegisterBuffer(1, buf, REGBUF_WILL_INIT);
 
+		/*
+		 * GPDB: Register the last chain member, so that we can link the new
+		 * revmap page to it during replay. Pass empty flags as revmap pages
+		 * don't follow the "standard" layout.
+		 */
+		if (ao_chain_exists)
+			XLogRegisterBuffer(2, currLastRevmapBuf, 0);
+
 		recptr = XLogInsert(RM_BRIN_ID, XLOG_BRIN_REVMAP_EXTEND);
 		PageSetLSN(metapage, recptr);
 		PageSetLSN(page, recptr);
+		if (ao_chain_exists)
+			PageSetLSN(currLastRevmapPage, recptr);
 	}
 
 	END_CRIT_SECTION();
@@ -665,17 +962,18 @@ revmap_physical_extend(BrinRevmap *revmap)
 	LockBuffer(revmap->rm_metaBuf, BUFFER_LOCK_UNLOCK);
 
 	UnlockReleaseBuffer(buf);
+	if (ao_chain_exists)
+		UnlockReleaseBuffer(currLastRevmapBuf);
 }
 
 /*
- * Get the start block number of the current aoseg by block number.
- *
- * append-optimized table logically has 128 segment files. The highest 7 bits
- * of the logical Tid represent the segment file number. So, segment file number
- * with zero after is the start block number in a segment file.
+ * Set the cache of chain metadata maintained in the revmap access struct,
+ * for the chain with the given 'seqnum', using the metapage contents.
  */
-BlockNumber
-heapBlockGetCurrentAosegStart(BlockNumber heapBlk)
+static void
+set_ao_revmap_chain(BrinRevmap *revmap, BrinMetaPageData *metadata, int seqnum)
 {
-	return heapBlk & 0xFE000000;
+	revmap->rm_aoChainInfo[seqnum].firstPage = metadata->aoChainInfo[seqnum].firstPage;
+	revmap->rm_aoChainInfo[seqnum].lastPage = metadata->aoChainInfo[seqnum].lastPage;
+	revmap->rm_aoChainInfo[seqnum].lastLogicalPageNum = metadata->aoChainInfo[seqnum].lastLogicalPageNum;
 }

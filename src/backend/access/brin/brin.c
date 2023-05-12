@@ -57,6 +57,8 @@ typedef struct BrinBuildState
 	BrinRevmap *bs_rmAccess;
 	BrinDesc   *bs_bdesc;
 	BrinMemTuple *bs_dtuple;
+	/* GPDB specific state for AO/CO tables */
+	bool		bs_isAo;
 } BrinBuildState;
 
 /*
@@ -71,8 +73,11 @@ typedef struct BrinOpaque
 
 #define BRIN_ALL_BLOCKRANGES	InvalidBlockNumber
 
-static BrinBuildState *initialize_brin_buildstate(Relation idxRel,
-												  BrinRevmap *revmap, BlockNumber pagesPerRange);
+static BrinBuildState *
+initialize_brin_buildstate(Relation idxRel,
+						   BrinRevmap *revmap,
+						   BlockNumber pagesPerRange,
+						   bool isAo);
 static void terminate_brin_buildstate(BrinBuildState *state);
 static void brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 						  bool include_partial, double *numSummarized, double *numExisting);
@@ -161,6 +166,16 @@ brininsert(Relation idxRel, Datum *values, bool *nulls,
 	MemoryContext oldcxt = CurrentMemoryContext;
 	bool		autosummarize = BrinGetAutoSummarize(idxRel);
 
+	/*
+	 * GPDB: XXX: We initialize the revmap per-tuple. This routine has
+	 * non-trivial CPU overhead (including a snapshot test and meta-page lock)
+	 * Also, there is definitely memory overhead (even more so for GPDB, due to
+	 * the added AO/CO specific state)
+	 *
+	 * Can we cache the access struct somehow, maybe in BrinDesc (as
+	 * part of IndexInfo->ii_AmCache)? Both heap tables and AO/CO tables can
+	 * definitely benefit from it. There might be concurrency concerns, however.
+	 */
 	revmap = brinRevmapInitialize(idxRel, &pagesPerRange, NULL);
 
 	/*
@@ -169,6 +184,22 @@ brininsert(Relation idxRel, Datum *values, bool *nulls,
 	 */
 	origHeapBlk = ItemPointerGetBlockNumber(heaptid);
 	heapBlk = (origHeapBlk / pagesPerRange) * pagesPerRange;
+
+	/*
+	 * GPDB: Due to the appendonly nature of AO/CO tables, we would always write
+	 * to the last logical heap block within a block sequence (due to
+	 * monotonically increasing gp_fastsequence allocations). Thus, unlike for
+	 * heap, blocks other than the last block would never be summarized as a
+	 * result of an insert.
+	 *
+	 * This holds true even for INSERTs following a VACUUM on a given segment,
+	 * since VACUUM does not reset gp_fastsequence on the VACUUMed segment.
+	 *
+	 * So, we can safely position the revmap iterator at the end of the chain
+	 * (instead of traversing the chain unnecessarily from the front).
+	 */
+	if (RelationIsAppendOptimized(heapRel))
+		brinRevmapAOPositionAtEnd(revmap, AOSegmentGet_blockSequenceNum(heapBlk));
 
 	for (;;)
 	{
@@ -457,6 +488,11 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	 */
 	BlockNumber startblknum = sequences[i].startblknum;
 	BlockNumber endblknum = sequences[i].startblknum + sequences[i].nblocks;
+	int			currseq = AOSegmentGet_blockSequenceNum(startblknum);
+
+	if (RelationIsAppendOptimized(heapRel))
+		brinRevmapAOPositionAtStart(opaque->bo_rmAccess, currseq);
+
 	for (heapBlk = startblknum; heapBlk < endblknum; heapBlk += opaque->bo_pagesPerRange)
 	{
 		bool		addrange;
@@ -657,8 +693,25 @@ brinbuildCallback(Relation index,
 	 * tuples for those too.
 	 */
 
-	if (state->bs_currRangeStart < heapBlockGetCurrentAosegStart(thisblock))
-		state->bs_currRangeStart = heapBlockGetCurrentAosegStart(thisblock);
+	/*
+	 * GPDB: Adjust build state depending on latest logical heap block
+	 *
+	 * XXX: We can move this out of brinbuildCallback() if we refactor
+	 * brinbuild() to loop over BlockSequences, much like we do in
+	 * bringetbitmap() and brinsummarize().
+	 */
+	if (state->bs_isAo)
+	{
+		BlockNumber seqStartBlk = AOHeapBlockGet_startHeapBlock(thisblock);
+		if (state->bs_currRangeStart < seqStartBlk)
+		{
+			/* adjust the current block sequence */
+			int seqNum = AOSegmentGet_blockSequenceNum(thisblock);
+			brinRevmapAOPositionAtStart(state->bs_rmAccess, seqNum);
+			/* readjust the range lower bound */
+			state->bs_currRangeStart = seqStartBlk;
+		}
+	}
 
 	while (thisblock > state->bs_currRangeStart + state->bs_pagesPerRange - 1)
 	{
@@ -672,6 +725,7 @@ brinbuildCallback(Relation index,
 		form_and_insert_tuple(state);
 
 		/* set state to correspond to the next range */
+		/* XXX: This needs clamping for AO/CO tables for seg i full case. */
 		state->bs_currRangeStart += state->bs_pagesPerRange;
 
 		/* re-initialize state for it */
@@ -762,7 +816,10 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	 * Initialize our state, including the deformed tuple state.
 	 */
 	revmap = brinRevmapInitialize(index, &pagesPerRange, NULL);
-	state = initialize_brin_buildstate(index, revmap, pagesPerRange);
+	state = initialize_brin_buildstate(index, revmap, pagesPerRange, isAo);
+
+	/* GPDB: AO/CO tables: position iterator to start of sequence 0's chain. */
+	brinRevmapAOPositionAtStart(revmap, 0);
 
 	/*
 	 * Now scan the relation.  No syncscan allowed here because we want the
@@ -772,7 +829,14 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 									   brinbuildCallback, (void *) state, NULL);
 
 	/* process the final batch */
-	form_and_insert_tuple(state);
+	/*
+	 * GPDB: Avoid this for AO/CO tables with no rows. We opt to not create a
+	 * revmap page and data page with a placeholder tuple for empty relations,
+	 * as is done for heap. If we did, we would have to do so for all 128
+	 * possible block sequences, creating unnecessary bloat.
+	 */
+	if (!isAo || reltuples != 0)
+		form_and_insert_tuple(state);
 
 	/* release resources */
 	idxtuples = state->bs_numtuples;
@@ -1189,7 +1253,26 @@ brinGetStats(Relation index, BrinStatsData *stats)
 	metadata = (BrinMetaPageData *) PageGetContents(metapage);
 
 	stats->pagesPerRange = metadata->pagesPerRange;
+
+/*
+ * GPDB: Since planning is done on the QD and since there is no data on the QD,
+ * there are no revmap pages on the QD. So, it is currently not possible to get
+ * an estimate on the number of revmap pages (since we want to avoid dispatching
+ * during planning).
+ *
+ * For AO/CO tables, the following wouldn't be applicable anyway (we would have
+ * to look at the revmap chains etc).
+ *
+ * Even though we are unable to get an estimate on the number of revmap pages,
+ * it works out fine for AO/CO tables as these pages get treated like data pages
+ * (i.e. they are costed as random access), as well as they should be (due to
+ * chaining, please refer to the BRIN README). For heap tables, we end up losing
+ * out a little as we would be costing a BRIN plan higher, due to this limitation.
+ */
+#if 0
 	stats->revmapNumPages = metadata->lastRevmapPage - 1;
+#endif
+	stats->revmapNumPages = 0;
 
 	UnlockReleaseBuffer(metabuffer);
 }
@@ -1199,7 +1282,7 @@ brinGetStats(Relation index, BrinStatsData *stats)
  */
 static BrinBuildState *
 initialize_brin_buildstate(Relation idxRel, BrinRevmap *revmap,
-						   BlockNumber pagesPerRange)
+						   BlockNumber pagesPerRange, bool isAo)
 {
 	BrinBuildState *state;
 
@@ -1213,6 +1296,9 @@ initialize_brin_buildstate(Relation idxRel, BrinRevmap *revmap,
 	state->bs_rmAccess = revmap;
 	state->bs_bdesc = brin_build_desc(idxRel);
 	state->bs_dtuple = brin_new_memtuple(state->bs_bdesc);
+
+	/* GPDB specific state for AO/CO tables */
+	state->bs_isAo = isAo;
 
 	brin_memtuple_initialize(state->bs_dtuple, state->bs_bdesc);
 
@@ -1496,6 +1582,10 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		}
 	}
 
+	if (RelationIsAppendOptimized(heapRel))
+		brinRevmapAOPositionAtStart(revmap,
+									AOSegmentGet_blockSequenceNum(startBlk));
+
 	/*
 	 * Scan the revmap to find unsummarized items for each block sequence
 	 * involved.
@@ -1528,7 +1618,8 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 				/* first time through */
 				Assert(!indexInfo);
 				state = initialize_brin_buildstate(index, revmap,
-												   pagesPerRange);
+												   pagesPerRange,
+												   RelationIsAppendOptimized(heapRel));
 				indexInfo = BuildIndexInfo(index);
 			}
 			summarize_range(indexInfo, state, heapRel, startBlk, endBlk);

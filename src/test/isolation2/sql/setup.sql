@@ -464,3 +464,32 @@ begin
     return 'Fail'; /* in func */
 end; /* in func */
 $$ language plpgsql;
+
+-- Helper function to get the number of blocks in a relation.
+CREATE OR REPLACE FUNCTION blocks(rel regclass) RETURNS int AS $$ /* in func */
+BEGIN /* in func */
+RETURN pg_relation_size(rel) / current_setting('block_size')::int; /* in func */
+END; $$ /* in func */
+    LANGUAGE PLPGSQL;
+
+-- Helper function to populate logical heap pages in a certain block sequence.
+-- Can be used for both heap and AO/CO tables. The target block sequence into
+-- which we insert the pages depends on the session which is inserting the data.
+-- This is currently meant to be used with a single column integer table.
+--
+-- Sample usage: SELECT populate_pages('foo', 1, tid '(33554435,0)')
+-- This will insert tuples with value=1 into a single QE such that logical
+-- heap blocks [33554432, 33554434] will be full and 33554435 will have only
+-- 1 tuple.
+--
+-- Note: while using this with AO/CO tables, please account for how the block
+-- sequences start/end based on the concurrency level (see AOSegmentGet_startHeapBlock())
+CREATE OR REPLACE FUNCTION populate_pages(relname text, value int, upto tid) RETURNS VOID AS $$ /* in func */
+DECLARE curtid tid; /* in func */
+BEGIN /* in func */
+LOOP /* in func */
+EXECUTE format('INSERT INTO %I VALUES($1) RETURNING ctid', relname) INTO curtid USING value; /* in func */
+EXIT WHEN curtid > upto; /* in func */
+END LOOP; /* in func */
+END; $$ /* in func */
+    LANGUAGE PLPGSQL;
