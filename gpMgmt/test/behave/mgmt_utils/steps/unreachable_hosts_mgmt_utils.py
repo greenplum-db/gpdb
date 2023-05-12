@@ -99,6 +99,23 @@ def impl(context, disconnected):
         for cmd in cmds:
             subprocess.check_output(["ssh", host, cmd])
 
+
+@given('An entry to {action} {env} env var is added on all hosts of cluster')
+@when('An entry to {action} {env} env var is added on all hosts of cluster')
+def impl(context, action, env):
+    if action == "send":
+        cmdstr = "echo '{} {}' | sudo tee -a /etc/ssh/ssh_config".format("SendEnv", env)
+    else:
+        cmdstr = "echo '{} {}' | sudo tee -a /etc/ssh/sshd_config".format("AcceptEnv", env)
+
+    cmds = [cmdstr, "sudo systemctl restart sshd.service"]
+
+    hosts = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
+    for host in hosts:
+        for cmd in cmds:
+            subprocess.check_output(["ssh", host, cmd])
+
+
 # This step is very specific to the CCP CI cluster.
 @given('the original cluster state is recreated for "{test_case}"')
 @when('the original cluster state is recreated for "{test_case}"')

@@ -357,7 +357,7 @@ def impl(context, env_var):
     if env_var in os.environ:
         del os.environ[env_var]
 
-@then('{env_var} environment variable should be restored')
+@then('"{env_var}" environment variable should be restored')
 def impl(context, env_var):
     if not hasattr(context, 'orig_env'):
         raise Exception('%s can not be reset' % env_var)
@@ -365,7 +365,10 @@ def impl(context, env_var):
     if env_var not in context.orig_env:
         raise Exception('%s can not be reset.' % env_var)
 
-    os.environ[env_var] = context.orig_env[env_var]
+    if context.orig_env[env_var] is None:
+        del os.environ[env_var]
+    else:
+        os.environ[env_var] = context.orig_env[env_var]
 
     del context.orig_env[env_var]
 
@@ -637,6 +640,15 @@ def impl(context, kill_process_name, log_msg, logfile_name):
 def impl(context, process_name):
     command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -2" % (process_name)
     run_async_command(context, command)
+
+
+@given('the user asynchronously sets up to end {process_name} process with SIGHUP')
+@when('the user asynchronously sets up to end {process_name} process with SIGHUP')
+@then('the user asynchronously sets up to end {process_name} process with SIGHUP')
+def impl(context, process_name):
+    command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -9" % (process_name)
+    run_async_command(context, command)
+
 
 @when('the user asynchronously sets up to end gpcreateseg process when it starts')
 def impl(context):
@@ -1397,7 +1409,10 @@ def impl(context):
 
 @given('the environment variable "{var}" is set to "{val}"')
 def impl(context, var, val):
-    context.env_var = os.environ.get(var)
+    if not hasattr(context, 'orig_env'):
+        context.orig_env = dict()
+
+    context.orig_env[var] = os.environ.get(var)
     os.environ[var] = val
 
 
@@ -1591,6 +1606,21 @@ def impl(context, seg):
     pids = cmd.get_stdout().splitlines()
     for pid in pids:
         cmd = Command(name="killbg pid", cmdStr='kill -9 %s' % pid, remoteHost=hostname, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
+
+
+@when('{process} is killed on mirror with content {contentids}')
+@then('{process} is killed on mirror with content {contentids}')
+def impl(context, process, contentids):
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    content_ids = [int(i) for i in contentids.split(',')]
+    hosts = set()
+    for seg in segments:
+        if seg.content in content_ids and seg.role == 'm':
+            hosts.add(seg.getSegmentHostName())
+
+    for host in hosts:
+        cmd = Command(name="kill process {}".format(process), cmdStr="pkill -9 {}".format(process), remoteHost=host, ctxt=REMOTE)
         cmd.run(validateAfter=True)
 
 

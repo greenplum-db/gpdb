@@ -254,6 +254,21 @@ main(int argc, char **argv)
 
 	sanityChecks();
 
+#ifdef FAULT_INJECTOR
+	/*
+	 * SUSPEND_PG_REWIND is used for testing purposes. If set to an int, the pg_rewind process will be
+	 * suspended for set amount of time(secs), so that it's entry can be checked in the pg_stat_activity table.
+	 * The goal being that we can run another instance of gprecoverseg and assert that it ignores
+	 * recovery for segments that already have an active pg_rewind process.
+	 */
+	char* suspend_pg_rewind = getenv("SUSPEND_PG_REWIND");
+	if(suspend_pg_rewind != NULL)
+	{
+		printf(_("pg_rewind suspended for %s seconds\n"), suspend_pg_rewind);
+		sleep(atoi(suspend_pg_rewind));
+	}
+#endif
+
 	/*
 	 * If both clusters are already on the same timeline, there's nothing to
 	 * do.

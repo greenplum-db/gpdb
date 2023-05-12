@@ -2114,6 +2114,8 @@ jobs:
             file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
             image: ccp-image
             params:
+              SUDO_ACCESS_ON_HOSTS: 1
+              SUDO_CDW_USERNAME: rocky
               BEHAVE_FLAGS: --tags=gprecoverseg --tags=concourse_cluster
               
             on_success:
