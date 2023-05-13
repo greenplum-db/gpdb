@@ -1492,6 +1492,25 @@ explain select g%10 as c1, sum(g::numeric)as c2, count(*) as c3 from generate_se
 
 reset optimizer_force_multistage_agg;
 
+-- Test if Motion is placed between the "group by clauses"
+drop table if exists t;
+set optimizer_enable_hashagg to off;
+set optimizer_enumerate_plans to on;
+set optimizer_plan_id =2;
+
+create table t(a int, b int, c int);
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+
+explain (costs off) select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+
+reset optimizer_enable_hashagg;
+reset optimizer_enumerate_plans;
+reset optimizer_plan_id;
+drop table t;
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;
