@@ -7,7 +7,7 @@
 
          set optimizer_enable_hashagg to off;
          set optimizer_enumerate_plans to on;
-         set optimizer_plan_id =2;
+         set optimizer_plan_id =8;
 
          create table t(a int, b int, c int);
          insert into t select 1, i, i from generate_series(1, 10)i;
@@ -15,29 +15,29 @@
          insert into t select 1, i, i from generate_series(1, 10)i;
          insert into t select 1, i, i from generate_series(1, 10)i;
 
-                                                                  QUERY PLAN
-           ------------------------------------------------------------------------------------------------------------------------
-            Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-              ->  Finalize GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
-                    Group Key: gp_segment_id
-                    ->  Sort  (cost=0.00..431.00 rows=1 width=12)
-                          Sort Key: gp_segment_id
-                          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-                                Hash Key: gp_segment_id
-                                ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
-                                      Group Key: gp_segment_id
-                                      ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                                            Sort Key: gp_segment_id, b
-                                            ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                  Hash Key: b
-                                                  ->  Seq Scan on t  (cost=0.00..431.00 rows=1 width=8)
-            Optimizer: Pivotal Optimizer (GPORCA)
-           (15 rows)
+                                                               QUERY PLAN
+        ------------------------------------------------------------------------------------------------------------------------
+         Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+           ->  Finalize GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                 Group Key: gp_segment_id
+                 ->  Sort  (cost=0.00..431.00 rows=1 width=12)
+                       Sort Key: gp_segment_id
+                       ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+                             Hash Key: gp_segment_id
+                             ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                                   Group Key: gp_segment_id
+                                   ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                         Sort Key: gp_segment_id, b
+                                         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                               Hash Key: gp_segment_id, b
+                                               ->  Seq Scan on t  (cost=0.00..431.00 rows=1 width=8)
+         Optimizer: Pivotal Optimizer (GPORCA)
+        (15 rows)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
-      <dxl:EnumeratorConfig Id="2" PlanSamples="2" CostThreshold="2"/>
+      <dxl:EnumeratorConfig Id="8" PlanSamples="8" CostThreshold="8"/>
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.000000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/>
       <dxl:WindowOids RowNumber="3100" Rank="3101"/>
@@ -276,7 +276,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="2" SpaceSize="15">
+    <dxl:Plan Id="8" SpaceSize="15">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000113" Rows="1.000000" Width="12"/>
@@ -426,6 +426,9 @@
                       <dxl:Filter/>
                       <dxl:SortingColumnList/>
                       <dxl:HashExprList>
+                        <dxl:HashExpr Opfamily="0.1977.1.0">
+                          <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                        </dxl:HashExpr>
                         <dxl:HashExpr Opfamily="0.1977.1.0">
                           <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                         </dxl:HashExpr>

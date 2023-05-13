@@ -1496,7 +1496,7 @@ reset optimizer_force_multistage_agg;
 drop table if exists t;
 set optimizer_enable_hashagg to off;
 set optimizer_enumerate_plans to on;
-set optimizer_plan_id =2;
+set optimizer_plan_id =8;
 
 create table t(a int, b int, c int);
 insert into t select 1, i, i from generate_series(1, 10)i;
