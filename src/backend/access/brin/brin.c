@@ -61,8 +61,8 @@ typedef struct BrinBuildState
 	/* GPDB specific state for AO/CO tables */
 
 	bool         bs_isAO;
-	/* Number of tuples processed for current BlockSequence */
-	uint64       bs_seq_reltuples;
+	/* Have we incorporated even one data tuple into the build state? */
+	bool         bs_aoHasDataTuple;
 } BrinBuildState;
 
 /*
@@ -712,31 +712,25 @@ brinbuildCallback(Relation index,
 	if (state->bs_isAO)
 	{
 		BlockNumber seqStartBlk = AOHeapBlockGet_startHeapBlock(thisblock);
+
 		if (state->bs_currRangeStart < seqStartBlk)
 		{
 			/* We are starting a new block sequence */
+			int seqNum;
 
 			/* process the final batch in the current block sequence (if any) */
-			if (state->bs_seq_reltuples > 0)
+			if (state->bs_aoHasDataTuple)
 				form_and_insert_tuple(state);
 
 			/* adjust the current block sequence */
-			int seqNum = AOSegmentGet_blockSequenceNum(thisblock);
+			seqNum = AOSegmentGet_blockSequenceNum(thisblock);
 			brinRevmapAOPositionAtStart(state->bs_rmAccess, seqNum);
 
 			/* readjust the range lower bound */
 			state->bs_currRangeStart = seqStartBlk;
 
-			/* reset the bs_seq_reltuples counter for the new block sequence */
-			state->bs_seq_reltuples = 1;
-
 			/* re-initialize state for it */
 			brin_memtuple_initialize(state->bs_dtuple, state->bs_bdesc);
-		}
-		else
-		{
-			/* We are in the same block sequence */
-			state->bs_seq_reltuples++;
 		}
 	}
 
@@ -779,6 +773,8 @@ brinbuildCallback(Relation index,
 						  PointerGetDatum(col),
 						  values[i], isnull[i]);
 	}
+	/* GPDB: Additional accounting in the build state for AO/CO relations */
+	state->bs_aoHasDataTuple = true;
 }
 
 /*
@@ -862,7 +858,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	 * as is done for heap. If we did, we would have to do so for all 128
 	 * possible block sequences, creating unnecessary bloat.
 	 */
-	if (!isAO || state->bs_seq_reltuples != 0)
+	if (!isAO || state->bs_aoHasDataTuple)
 		form_and_insert_tuple(state);
 
 	/* release resources */
@@ -1325,8 +1321,8 @@ initialize_brin_buildstate(Relation idxRel, BrinRevmap *revmap,
 	state->bs_dtuple = brin_new_memtuple(state->bs_bdesc);
 
 	/* GPDB specific state for AO/CO tables */
-	state->bs_isAO          = isAO;
-	state->bs_seq_reltuples = 0;
+	state->bs_isAO           = isAO;
+	state->bs_aoHasDataTuple = false;
 
 	brin_memtuple_initialize(state->bs_dtuple, state->bs_bdesc);
 
