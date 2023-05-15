@@ -223,7 +223,13 @@ ExecInitQual(List *qual, PlanState *parent)
 
 	/* short-circuit (here and in ExecQual) for empty restriction list */
 	if (qual == NIL)
+	{
+		if (parent && IsJitCacheMatchPlan(parent->state, parent->plan))
+		{
+			parent->state->es_jit_caches[JIT_CACHE_QUAL].valid = false;
+		}
 		return NULL;
+	}
 
 	Assert(IsA(qual, List));
 
@@ -285,6 +291,11 @@ ExecInitQual(List *qual, PlanState *parent)
 	scratch.opcode = EEOP_DONE;
 	ExprEvalPushStep(state, &scratch);
 
+	/* GPDB: provide JIT cache to exprstate */
+	if (parent && IsJitCacheMatchPlan(parent->state, parent->plan))
+	{
+		state->jit_cache = &(parent->state->es_jit_caches[JIT_CACHE_QUAL]);
+	}
 	ExecReadyExpr(state);
 
 	return state;
@@ -511,6 +522,10 @@ ExecBuildProjectionInfoExt(List *targetList,
 	scratch.opcode = EEOP_DONE;
 	ExprEvalPushStep(state, &scratch);
 
+	if (parent && IsJitCacheMatchPlan(parent->state, parent->plan))
+	{
+		state->jit_cache = &(parent->state->es_jit_caches[JIT_CACHE_PROJ]);
+	}
 	ExecReadyExpr(state);
 
 	return projInfo;

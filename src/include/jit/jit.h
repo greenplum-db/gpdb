@@ -61,6 +61,20 @@ typedef struct JitContext
 	JitInstrumentation instr;
 } JitContext;
 
+typedef enum
+{
+	JIT_CACHE_PROJ,
+	JIT_CACHE_QUAL,
+	JIT_CACHE_N
+} JitCacheType;
+
+typedef struct JitCache
+{
+	bool			valid;
+	int			id;
+	struct ExprState	*exprstate;
+} JitCache;
+
 typedef struct JitProviderCallbacks JitProviderCallbacks;
 
 extern void _PG_jit_provider_init(JitProviderCallbacks *cb);

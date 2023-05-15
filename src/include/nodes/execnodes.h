@@ -99,6 +99,9 @@ typedef struct ExprState
 	/* private state for an evalfunc */
 	void	   *evalfunc_private;
 
+	/* GPDB: JIT cache for partition table */
+	struct JitCache	   *jit_cache;
+
 	/*
 	 * XXX: following fields only needed during "compilation" (ExecInitExpr);
 	 * could be thrown away afterwards.
@@ -107,7 +110,7 @@ typedef struct ExprState
 	int			steps_len;		/* number of steps currently */
 	int			steps_alloc;	/* allocated length of steps array */
 
-#define FIELDNO_EXPRSTATE_PARENT 11
+#define FIELDNO_EXPRSTATE_PARENT 12
 	struct PlanState *parent;	/* parent PlanState node, if any */
 	ParamListInfo ext_params;	/* for compiling PARAM_EXTERN nodes */
 
@@ -681,7 +684,14 @@ typedef struct EState
 	 */
 	bool		gp_bypass_unique_check;
 
+	/* GPDB: refer to JIT cache from upper planstate */
+	struct JitCache	*es_jit_caches;
+	Plan		*es_jit_plan;
+
 } EState;
+
+#define IsJitCacheMatchPlan(estateptr, planptr) (estateptr && planptr && estateptr->es_jit_caches && estateptr->es_jit_plan == planptr) 
+
 
 struct PlanState;
 struct MotionState;
@@ -2141,6 +2151,8 @@ typedef struct DynamicSeqScanState
 	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
 	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
 	bool 		did_pruning; /* flag that is set once dynamic pruning is performed */
+
+	struct JitCache	*jit_caches;
 } DynamicSeqScanState;
 
 /*

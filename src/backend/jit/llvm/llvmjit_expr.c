@@ -53,8 +53,8 @@ typedef struct CompiledExprState
 	const char *funcname;
 } CompiledExprState;
 
-
 static Datum ExecRunCompiledExpr(ExprState *state, ExprContext *econtext, bool *isNull);
+static Datum ExecRunCachedExpr(ExprState *state, ExprContext *econtext, bool *isNull);
 
 static LLVMValueRef BuildV1Call(LLVMJitContext *context, LLVMBuilderRef b,
 								LLVMModuleRef mod, FunctionCallInfo fcinfo,
@@ -64,6 +64,38 @@ static void build_EvalXFunc(LLVMBuilderRef b, LLVMModuleRef mod,
 							LLVMValueRef v_state, LLVMValueRef v_econtext,
 							ExprEvalStep *op);
 static LLVMValueRef create_LifetimeEnd(LLVMModuleRef mod);
+
+bool
+llvm_compile_expr_wrapper(ExprState *state)
+{
+	bool ret = false;
+
+	if (state->jit_cache && state->jit_cache->valid)
+	{
+		ExprState	*cached_exprstate = state->jit_cache->exprstate;
+		if (cached_exprstate && cached_exprstate->evalfunc
+				&& cached_exprstate->evalfunc != ExecRunCompiledExpr)
+		{
+			/* reuse JIT-ed evalfunc */
+			state->evalfunc = ExecRunCachedExpr;
+			state->evalfunc_private = cached_exprstate;
+			return true;
+		}
+		/* invalid the JIT cache */
+		state->jit_cache->valid = false;
+	}
+	/* generate new JIT code */
+	ret = llvm_compile_expr(state);
+
+	if (state->jit_cache && ret)
+	{
+		/* update JIT cache */
+		state->jit_cache->exprstate = state;
+		state->jit_cache->valid = true;
+		//elog(WARNING, "updating JIT cache [%d] %s", state->jit_cache->id, ((CompiledExprState *)(state->evalfunc_private))->funcname);
+	}
+	return ret;
+}
 
 
 /*
@@ -2591,6 +2623,23 @@ llvm_compile_expr(ExprState *state)
 						  endtime, starttime);
 
 	return true;
+}
+
+static Datum
+ExecRunCachedExpr(ExprState *state, ExprContext *econtext, bool *isNull)
+{
+	ExprState	*cached_exprstate = state->evalfunc_private;
+	TupleTableSlot	*old_slot = cached_exprstate->resultslot;
+	Datum		res = 0;
+
+	cached_exprstate->resultslot = state->resultslot;
+	res = cached_exprstate->evalfunc(cached_exprstate, econtext, isNull);
+	cached_exprstate->resultslot = old_slot;
+	//copy resvalue/resnull from cached expr
+	state->resvalue = cached_exprstate->resvalue;
+	state->resnull = cached_exprstate->resnull;
+	return res;
+	
 }
 
 /*
