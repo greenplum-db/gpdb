@@ -3293,6 +3293,7 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 	return (Plan *) subquery_scan;
 }
 
+//--------------------------------------------------------------------------------------
 // If the top level is not a function returning set then we need to check if
 // the project element contains any SRF's deep down the tree.
 // If we found any SRF's at lower levels then we will require a result node on
@@ -3304,8 +3305,8 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 //			</dxl:FuncExpr>
 //		  </dxl:FuncExpr>
 // Here we have SRF present at a lower level. So we will require a result node on top.
-
-static bool
+//--------------------------------------------------------------------------------------
+static BOOL
 ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 {
 	const ULONG arity = scalar_expr_dxlnode->Arity();
@@ -3325,6 +3326,7 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 	return false;
 }
 
+//-----------------------------------------------------------------------------------------
 // This method is required to check if we need a result node on top of ProjectSet node.
 // If the project element contains SRF on top then we don't require a
 // result node.Eg
@@ -3338,8 +3340,8 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 //		 </dxl:FuncExpr>
 // Here we have a FuncExpr which returns a set on top.So we don't require a result node on
 // top of ProjectSet node.
-
-static bool
+//------------------------------------------------------------------------------------------
+static BOOL
 RequiresResultNode(const CDXLNode *project_list_dxlnode)
 {
 	const ULONG arity = project_list_dxlnode->Arity();
@@ -3371,6 +3373,14 @@ RequiresResultNode(const CDXLNode *project_list_dxlnode)
 	return false;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::TranslateDXLProjectSet
+//
+//	@doc:
+//		Translate DXL result node into project set node if SRF's are present
+//
+//---------------------------------------------------------------------------
 Plan *
 CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 {
@@ -3383,7 +3393,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 			GPOS_WSZ_LIT("Unsupported one-time filter in ProjectSet node"));
 	}
 
-	// create project set (nee result) plan node
+	// create project set plan node
 	ProjectSet *project_set = MakeNode(ProjectSet);
 
 	Plan *plan = &(project_set->plan);
@@ -3399,17 +3409,17 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorDXLToPlStmt::TranslateDXLResult
+//		CTranslatorDXLToPlStmt::CreateProjectSetNodeTree
 //
 //	@doc:
-//		Translate DXL result node into GPDB result plan node
+//		Creates a tree of project set plan nodes to contain the SRF's
 //
 //---------------------------------------------------------------------------
-
 Plan *
-CTranslatorDXLToPlStmt::TranslateDXLResult(
-	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
-	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
+CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
+												 Plan *result_node_plan,
+												 Plan *child_plan,
+												 BOOL &will_require_result_node)
 {
 	// Method split_pathtarget_at_srfs will split the given PathTarget into multiple levels to position SRFs safely.
 	// This list will hold the splited PathTarget created by split_pathtarget_at_srfs method.
@@ -3419,76 +3429,18 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	// corresponding PathTarget contains any evaluatable SRFs
 	List *targets_with_srf_bool = NIL;
 
-	// Pointer to the child plan of result dxl node
-	Plan *child_plan = nullptr;
-
-	// Pointer to the top level ProjectSet node. If a result node is required then it will
+	// Pointer to the top level ProjectSet node. If a result node is required then this will
 	// be attached to the lefttree of the result node.
-	Plan *project_set_final_plan = nullptr;
+	Plan *project_set_parent_plan = nullptr;
 
 	// Pointer to the lowest level ProjectSet node. If multiple ProjectSet nodes are required then
 	// the child plan of result dxl node will be attched to its lefttree.
 	Plan *project_set_child_plan = nullptr;
 
-	// Do we require a result node to be attached on top of ProjectSet node.
-	BOOL will_require_result_node = false;
-
-	// create result plan node
-	Result *result = MakeNode(Result);
-	Plan *plan = &(result->plan);
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
-
-	// translate operator costs
-	TranslatePlanCosts(result_dxlnode, plan);
-
-	CDXLNode *child_dxlnode = nullptr;
-	CDXLTranslateContext child_context(m_mp, false,
-									   output_context->GetColIdToParamIdMap());
-
-	if (result_dxlnode->Arity() - 1 == EdxlresultIndexChild)
-	{
-		// translate child plan
-		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
-		child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context,
-												ctxt_translation_prev_siblings);
-		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
-	}
-
-	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
-
-	CDXLNode *filter_dxlnode = (*result_dxlnode)[EdxlresultIndexFilter];
-
-	CDXLNode *one_time_filter_dxlnode =
-		(*result_dxlnode)[EdxlresultIndexOneTimeFilter];
-
-	List *quals_list = nullptr;
-
-	CDXLTranslationContextArray *child_contexts =
-		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
-	child_contexts->Append(&child_context);
-
-	// translate proj list and filter
-	TranslateProjListAndFilter(project_list_dxlnode, filter_dxlnode,
-							   nullptr,	 // translate context for the base table
-							   child_contexts, &plan->targetlist, &quals_list,
-							   output_context);
-
-	// translate one time filter
-	List *one_time_quals_list =
-		TranslateDXLFilterToQual(one_time_filter_dxlnode,
-								 nullptr,  // base table translation context
-								 child_contexts, output_context);
-
-	plan->qual = quals_list;
-
-	result->resconstantqual = (Node *) one_time_quals_list;
-
-	SetParamIds(plan);
-
 	// Create Pathtarget object from Result node's targetlist which is required
 	// by SplitPathtargetAtSrfs method
 	PathTarget *complete_result_pathtarget =
-		gpdb::MakePathtargetFromTlist(plan->targetlist);
+		gpdb::MakePathtargetFromTlist(result_node_plan->targetlist);
 
 	// Split given PathTarget into multiple levels to position SRFs safely
 	gpdb::SplitPathtargetAtSrfs(nullptr, complete_result_pathtarget, nullptr,
@@ -3499,15 +3451,12 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	// the same PathTarget back.In this case a ProjectSet node is not required.
 	if (1 == gpdb::ListLength(targets_with_srf))
 	{
-		result->plan.lefttree = child_plan;
-		child_contexts->Release();
-		return (Plan *) result;
+		return nullptr;
 	}
 
-	if (RequiresResultNode((*result_dxlnode)[EdxlresultIndexProjList]))
-	{
-		will_require_result_node = true;
-	}
+	// Do we require a result node to be attached on top of ProjectSet node.
+	will_require_result_node =
+		RequiresResultNode((*result_dxlnode)[EdxlresultIndexProjList]);
 
 	ListCell *lc;
 	ULONG list_cell_pos = 1;
@@ -3545,37 +3494,45 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 
 		temp_plan_project_set->targetlist = target_list_entry;
 
-		temp_plan_project_set->qual = plan->qual;
+		temp_plan_project_set->qual = result_node_plan->qual;
 
 		// Creating the links between all the nested ProjectSet nodes
-		if (nullptr == project_set_final_plan)
+		if (nullptr == project_set_parent_plan)
 		{
-			project_set_final_plan = temp_plan_project_set;
+			project_set_parent_plan = temp_plan_project_set;
 			project_set_child_plan = temp_plan_project_set;
 		}
 		else
 		{
-			temp_plan_project_set->lefttree = project_set_final_plan;
-			project_set_final_plan = temp_plan_project_set;
+			temp_plan_project_set->lefttree = project_set_parent_plan;
+			project_set_parent_plan = temp_plan_project_set;
 		}
 	}
 
 	project_set_child_plan->lefttree = child_plan;
-	Plan *final_plan = nullptr;
 
-	if (will_require_result_node)
-	{
-		result->plan.lefttree = project_set_final_plan;
-		final_plan = &(result->plan);
-	}
-	else
+	return project_set_parent_plan;
+}
+
+//---------------------------------------------------------------------------------
+// If a result plan node is not required on top of a project set node
+// then the alias parameter needs to be set for all the project set nodes
+// else not required as that information will already be present in the result
+// node created
+//---------------------------------------------------------------------------------
+void
+SetupAliasParameter(const BOOL will_require_result_node,
+					const CDXLNode *project_list_dxlnode,
+					Plan *parent_project_set_plan)
+{
+	if (!will_require_result_node)
 	{
 		// Setting up the alias value (te->resname)
 		ULONG ul = 0;
 		ListCell *listcell_project_targetentry;
 
 		ForEach(listcell_project_targetentry,
-				project_set_final_plan->targetlist)
+				parent_project_set_plan->targetlist)
 		{
 			TargetEntry *te =
 				(TargetEntry *) lfirst(listcell_project_targetentry);
@@ -3597,11 +3554,12 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 						->GetBuffer());
 			ul++;
 		}
-
-		final_plan = project_set_final_plan;
 	}
+}
 
-	// Modifying FUNEXPR in args to VAR for every parent ProjectSet node
+void
+CTranslatorDXLToPlStmt::MutateFuncExprToVarProjectSet(Plan *final_plan)
+{
 	Plan *it_set_upper_ref = final_plan;
 	while (it_set_upper_ref->lefttree != nullptr &&
 		   it_set_upper_ref->lefttree->type == T_ProjectSet)
@@ -3629,11 +3587,30 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 		it_set_upper_ref->targetlist = output_targetlist;
 		it_set_upper_ref = it_set_upper_ref->lefttree;
 	}
+}
 
-	// cleanup
-	child_contexts->Release();
+Var *
+SearchTlistForNonVarProjectset(Expr *node, List *itlist, Index newvarno)
+{
+	TargetEntry *tle;
 
-	return final_plan;
+	if (IsA(node, Const))
+	{
+		return nullptr;
+	}
+
+	tle = gpdb::TlistMember(node, itlist);
+	if (tle)
+	{
+		/* Found a matching subplan output expression */
+		Var *newvar;
+
+		newvar = gpdb::MakeVarFromTargetEntry(newvarno, tle);
+		newvar->varnoold = 0;
+		newvar->varoattno = 0;
+		return newvar;
+	}
+	return nullptr; /* no match */
 }
 
 Node *
@@ -3661,30 +3638,108 @@ CTranslatorDXLToPlStmt::fix_upper_expr_mutator_projectSet(
 		(void *) context);
 }
 
-Var *
-CTranslatorDXLToPlStmt::SearchTlistForNonVarProjectset(Expr *node, List *itlist,
-													   Index newvarno)
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::TranslateDXLResult
+//
+//	@doc:
+//		Translate DXL result node into GPDB result plan node and
+//      create Project Set plan node if SRV are present.
+//
+//---------------------------------------------------------------------------
+Plan *
+CTranslatorDXLToPlStmt::TranslateDXLResult(
+	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	TargetEntry *tle;
+	// Pointer to the child plan of result node
+	Plan *child_plan = nullptr;
 
-	if (IsA(node, Const))
+	// Do we require a result node to be attached on top of ProjectSet node?
+	BOOL will_require_result_node = false;
+
+	// create result plan node
+	Result *result = MakeNode(Result);
+	Plan *plan = &(result->plan);
+	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+
+	// translate operator costs
+	TranslatePlanCosts(result_dxlnode, plan);
+
+	CDXLNode *child_dxlnode = nullptr;
+	CDXLTranslateContext child_context(m_mp, false,
+									   output_context->GetColIdToParamIdMap());
+
+	if (result_dxlnode->Arity() - 1 == EdxlresultIndexChild)
 	{
-		return nullptr;
+		// translate child plan
+		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
+		child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context,
+												ctxt_translation_prev_siblings);
+		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
 	}
 
-	tle = gpdb::TlistMember(node, itlist);
-	if (tle)
-	{
-		/* Found a matching subplan output expression */
-		Var *newvar;
+	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
+	CDXLNode *filter_dxlnode = (*result_dxlnode)[EdxlresultIndexFilter];
+	CDXLNode *one_time_filter_dxlnode =
+		(*result_dxlnode)[EdxlresultIndexOneTimeFilter];
+	List *quals_list = nullptr;
 
-		newvar = gpdb::MakeVarFromTargetEntry(newvarno, tle);
-		newvar->varnoold = 0; /* wasn't ever a plain Var */
-		newvar->varoattno = 0;
-		return newvar;
+	CDXLTranslationContextArray *child_contexts =
+		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
+	child_contexts->Append(&child_context);
+
+	// translate proj list and filter
+	TranslateProjListAndFilter(project_list_dxlnode, filter_dxlnode,
+							   nullptr,	 // translate context for the base table
+							   child_contexts, &plan->targetlist, &quals_list,
+							   output_context);
+
+	// translate one time filter
+	List *one_time_quals_list =
+		TranslateDXLFilterToQual(one_time_filter_dxlnode,
+								 nullptr,  // base table translation context
+								 child_contexts, output_context);
+
+	plan->qual = quals_list;
+	result->resconstantqual = (Node *) one_time_quals_list;
+	SetParamIds(plan);
+
+	// Creating project set nodes plan tree
+	Plan *parent_project_set_plan = CreateProjectSetNodeTree(
+		result_dxlnode, plan, child_plan, will_require_result_node);
+
+	// If Project Set plan nodes are not required return the result plan node created
+	if (nullptr == parent_project_set_plan)
+	{
+		result->plan.lefttree = child_plan;
+		child_contexts->Release();
+		return (Plan *) result;
 	}
-	return nullptr; /* no match */
+
+	SetupAliasParameter(will_require_result_node, project_list_dxlnode,
+						parent_project_set_plan);
+
+	Plan *final_plan = nullptr;
+
+	if (will_require_result_node)
+	{
+		result->plan.lefttree = parent_project_set_plan;
+		final_plan = &(result->plan);
+	}
+	else
+	{
+		final_plan = parent_project_set_plan;
+	}
+
+	MutateFuncExprToVarProjectSet(final_plan);
+
+	// cleanup
+	child_contexts->Release();
+
+	return final_plan;
 }
+
 
 //---------------------------------------------------------------------------
 //	@function:

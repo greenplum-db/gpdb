@@ -316,6 +316,12 @@ private:
 
 	Plan *TranslateDXLProjectSet(const CDXLNode *result_dxlnode);
 
+	Plan *CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
+								   Plan *result_node_plan, Plan *child_plan,
+								   BOOL &will_require_result_node);
+
+	void MutateFuncExprToVarProjectSet(Plan *final_plan);
+
 	Plan *TranslateDXLResult(
 		const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
 		CDXLTranslationContextArray *
@@ -608,9 +614,6 @@ private:
 
 	static Node *fix_upper_expr_mutator_projectSet(
 		Node *node, fix_upper_expr_context_projectset *context);
-
-	static Var *SearchTlistForNonVarProjectset(Expr *node, List *itlist,
-											   Index newvarno);
 };
 }  // namespace gpdxl
 
