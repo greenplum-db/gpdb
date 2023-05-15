@@ -3296,8 +3296,8 @@ DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disab
 
 set optimizer_enable_multiple_distinct_aggs=on;
 explain (verbose on, costs off) select count(distinct a), count(distinct b) from dqa_f4 group by c;
-                                                                                                                    QUERY PLAN                                                                                                                    
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                                                             QUERY PLAN                                                                                                                             
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (count(DISTINCT share0_ref3.a)), (count(DISTINCT share0_ref2.b))
    ->  Sequence
@@ -3309,37 +3309,50 @@ explain (verbose on, costs off) select count(distinct a), count(distinct b) from
          ->  Hash Join
                Output: (count(DISTINCT share0_ref3.a)), (count(DISTINCT share0_ref2.b))
                Hash Cond: (NOT (share0_ref3.c IS DISTINCT FROM share0_ref2.c))
-               ->  GroupAggregate
+               ->  Finalize GroupAggregate
                      Output: count(DISTINCT share0_ref3.a), share0_ref3.c
                      Group Key: share0_ref3.c
                      ->  Sort
-                           Output: share0_ref3.a, share0_ref3.c
+                           Output: share0_ref3.c, (PARTIAL count(DISTINCT share0_ref3.a))
                            Sort Key: share0_ref3.c
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Output: share0_ref3.a, share0_ref3.c
+                                 Output: share0_ref3.c, (PARTIAL count(DISTINCT share0_ref3.a))
                                  Hash Key: share0_ref3.c
-                                 ->  Result
-                                       Output: share0_ref3.a, share0_ref3.c
-                                       ->  Shared Scan (share slice:id 2:0)
+                                 ->  Partial GroupAggregate
+                                       Output: share0_ref3.c, PARTIAL count(DISTINCT share0_ref3.a)
+                                       Group Key: share0_ref3.c
+                                       ->  Sort
                                              Output: share0_ref3.a, share0_ref3.b, share0_ref3.c, share0_ref3.ctid, share0_ref3.xmin, share0_ref3.cmin, share0_ref3.xmax, share0_ref3.cmax, share0_ref3.tableoid, share0_ref3.gp_segment_id
+                                             Sort Key: share0_ref3.c, share0_ref3.a
+                                             ->  Shared Scan (share slice:id 2:0)
+                                                   Output: share0_ref3.a, share0_ref3.b, share0_ref3.c, share0_ref3.ctid, share0_ref3.xmin, share0_ref3.cmin, share0_ref3.xmax, share0_ref3.cmax, share0_ref3.tableoid, share0_ref3.gp_segment_id
                ->  Hash
                      Output: (count(DISTINCT share0_ref2.b)), share0_ref2.c
-                     ->  GroupAggregate
+                     ->  Finalize GroupAggregate
                            Output: count(DISTINCT share0_ref2.b), share0_ref2.c
                            Group Key: share0_ref2.c
                            ->  Sort
-                                 Output: share0_ref2.b, share0_ref2.c
+                                 Output: share0_ref2.c, (PARTIAL count(DISTINCT share0_ref2.b))
                                  Sort Key: share0_ref2.c
                                  ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Output: share0_ref2.b, share0_ref2.c
+                                       Output: share0_ref2.c, (PARTIAL count(DISTINCT share0_ref2.b))
                                        Hash Key: share0_ref2.c
-                                       ->  Result
-                                             Output: share0_ref2.b, share0_ref2.c
-                                             ->  Shared Scan (share slice:id 3:0)
-                                                   Output: share0_ref2.a, share0_ref2.b, share0_ref2.c, share0_ref2.ctid, share0_ref2.xmin, share0_ref2.cmin, share0_ref2.xmax, share0_ref2.cmax, share0_ref2.tableoid, share0_ref2.gp_segment_id
+                                       ->  Partial GroupAggregate
+                                             Output: share0_ref2.c, PARTIAL count(DISTINCT share0_ref2.b)
+                                             Group Key: share0_ref2.c
+                                             ->  Sort
+                                                   Output: share0_ref2.b, share0_ref2.c
+                                                   Sort Key: share0_ref2.c, share0_ref2.b
+                                                   ->  Redistribute Motion 3:3  (slice4; segments: 3)
+                                                         Output: share0_ref2.b, share0_ref2.c
+                                                         Hash Key: share0_ref2.b
+                                                         ->  Result
+                                                               Output: share0_ref2.b, share0_ref2.c
+                                                               ->  Shared Scan (share slice:id 4:0)
+                                                                     Output: share0_ref2.a, share0_ref2.b, share0_ref2.c, share0_ref2.ctid, share0_ref2.xmin, share0_ref2.cmin, share0_ref2.xmax, share0_ref2.cmax, share0_ref2.tableoid, share0_ref2.gp_segment_id
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1', optimizer_enable_multiple_distinct_aggs = 'on'
-(41 rows)
+(54 rows)
 
 select count(distinct a), count(distinct b) from dqa_f4 group by c;
  count | count 
