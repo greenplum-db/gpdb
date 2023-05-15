@@ -233,3 +233,17 @@ SELECT distinct C.z, count(distinct FS.x), count(distinct FS.y) FROM (SELECT i A
 
 
 drop table foo_mdqa;
+-- Test some corner case of dqa ex.NULL
+create table dqa_f4(a int, b int, c int);
+insert into dqa_f4 values(null, null, null);
+insert into dqa_f4 values(1, 1, 1);
+insert into dqa_f4 values(2, 2, 2);
+
+select count(distinct a), count(distinct b) from dqa_f4 group by c;
+
+set optimizer_enable_multiple_distinct_aggs=on;
+explain (verbose on, costs off) select count(distinct a), count(distinct b) from dqa_f4 group by c;
+select count(distinct a), count(distinct b) from dqa_f4 group by c;
+reset optimizer_enable_multiple_distinct_aggs;
+
+drop table dqa_f4;

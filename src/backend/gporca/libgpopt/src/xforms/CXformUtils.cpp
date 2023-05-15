@@ -4394,6 +4394,11 @@ CXformUtils::MapPrjElemsWithDistinctAggs(
 			// use first argument of Distinct Agg as key
 			pexprKey = (*pexprChild)[0];
 		}
+		else if (is_distinct && COperator::EopScalarAggFunc == eopidChild)
+		{
+			// use first argument of AggFunc args list as key
+			pexprKey = (*(pexprChild->PdrgPexpr()))[EaggfuncIndexArgs];
+		}
 		else
 		{
 			// use constant True as key

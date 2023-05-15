@@ -1319,3 +1319,77 @@ SELECT distinct C.z, count(distinct FS.x), count(distinct FS.y) FROM (SELECT i A
 (0 rows)
 
 drop table foo_mdqa;
+-- Test some corner case of dqa ex.NULL
+create table dqa_f4(a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dqa_f4 values(null, null, null);
+insert into dqa_f4 values(1, 1, 1);
+insert into dqa_f4 values(2, 2, 2);
+select count(distinct a), count(distinct b) from dqa_f4 group by c;
+ count | count 
+-------+-------
+     0 |     0
+     1 |     1
+     1 |     1
+(3 rows)
+
+set optimizer_enable_multiple_distinct_aggs=on;
+explain (verbose on, costs off) select count(distinct a), count(distinct b) from dqa_f4 group by c;
+                                                                                                                    QUERY PLAN                                                                                                                    
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   Output: (count(DISTINCT share0_ref3.a)), (count(DISTINCT share0_ref2.b))
+   ->  Sequence
+         Output: (count(DISTINCT share0_ref3.a)), (count(DISTINCT share0_ref2.b))
+         ->  Shared Scan (share slice:id 3:0)
+               Output: share0_ref1.a, share0_ref1.b, share0_ref1.c, share0_ref1.ctid, share0_ref1.xmin, share0_ref1.cmin, share0_ref1.xmax, share0_ref1.cmax, share0_ref1.tableoid, share0_ref1.gp_segment_id
+               ->  Materialize
+                     Output: dqa_f4.a, dqa_f4.b, dqa_f4.c, dqa_f4.ctid, dqa_f4.xmin, dqa_f4.cmin, dqa_f4.xmax, dqa_f4.cmax, dqa_f4.tableoid, dqa_f4.gp_segment_id
+                     ->  Seq Scan on public.dqa_f4
+                           Output: dqa_f4.a, dqa_f4.b, dqa_f4.c, dqa_f4.ctid, dqa_f4.xmin, dqa_f4.cmin, dqa_f4.xmax, dqa_f4.cmax, dqa_f4.tableoid, dqa_f4.gp_segment_id
+         ->  Hash Join
+               Output: (count(DISTINCT share0_ref3.a)), (count(DISTINCT share0_ref2.b))
+               Hash Cond: (NOT (share0_ref3.c IS DISTINCT FROM share0_ref2.c))
+               ->  GroupAggregate
+                     Output: count(DISTINCT share0_ref3.a), share0_ref3.c
+                     Group Key: share0_ref3.c
+                     ->  Sort
+                           Output: share0_ref3.a, share0_ref3.c
+                           Sort Key: share0_ref3.c
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Output: share0_ref3.a, share0_ref3.c
+                                 Hash Key: share0_ref3.c
+                                 ->  Result
+                                       Output: share0_ref3.a, share0_ref3.c
+                                       ->  Shared Scan (share slice:id 1:0)
+                                             Output: share0_ref3.a, share0_ref3.b, share0_ref3.c, share0_ref3.ctid, share0_ref3.xmin, share0_ref3.cmin, share0_ref3.xmax, share0_ref3.cmax, share0_ref3.tableoid, share0_ref3.gp_segment_id
+               ->  Hash
+                     Output: (count(DISTINCT share0_ref2.b)), share0_ref2.c
+                     ->  GroupAggregate
+                           Output: count(DISTINCT share0_ref2.b), share0_ref2.c
+                           Group Key: share0_ref2.c
+                           ->  Sort
+                                 Output: share0_ref2.b, share0_ref2.c
+                                 Sort Key: share0_ref2.c
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Output: share0_ref2.b, share0_ref2.c
+                                       Hash Key: share0_ref2.c
+                                       ->  Result
+                                             Output: share0_ref2.b, share0_ref2.c
+                                             ->  Shared Scan (share slice:id 2:0)
+                                                   Output: share0_ref2.a, share0_ref2.b, share0_ref2.c, share0_ref2.ctid, share0_ref2.xmin, share0_ref2.cmin, share0_ref2.xmax, share0_ref2.cmax, share0_ref2.tableoid, share0_ref2.gp_segment_id
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: enable_groupagg=on, enable_hashagg=off
+(43 rows)
+
+select count(distinct a), count(distinct b) from dqa_f4 group by c;
+ count | count 
+-------+-------
+     1 |     1
+     1 |     1
+     0 |     0
+(3 rows)
+
+reset optimizer_enable_multiple_distinct_aggs;
+drop table dqa_f4;

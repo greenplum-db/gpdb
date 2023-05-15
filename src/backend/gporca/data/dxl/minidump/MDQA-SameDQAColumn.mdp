@@ -90,6 +90,14 @@
       </dxl:GPDBAgg>
       <dxl:ColumnStatistics Mdid="1.359750.1.1.7" Name="cmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.359750.1.1.6" Name="xmax" Width="4.000000"/>
+      <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq">
+        <dxl:LeftType Mdid="0.23.1.0"/>
+        <dxl:RightType Mdid="0.23.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.65.1.0"/>
+        <dxl:Commutator Mdid="0.96.1.0"/>
+        <dxl:InverseOp Mdid="0.518.1.0"/>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT">
         <dxl:LeftType Mdid="0.23.1.0"/>
         <dxl:RightType Mdid="0.23.1.0"/>
@@ -382,7 +390,7 @@
             <dxl:ProjElem ColId="10" Alias="count">
               <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" >
                 <dxl:ValuesList ParamType="aggargs">
-                <dxl:Ident ColId="13" ColName="ColRef_0013" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="13" ColName="ColRef_0013" TypeMdid="0.23.1.0"/>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -392,7 +400,7 @@
             <dxl:ProjElem ColId="11" Alias="sum">
               <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" >
                 <dxl:ValuesList ParamType="aggargs">
-                <dxl:Ident ColId="13" ColName="ColRef_0013" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="13" ColName="ColRef_0013" TypeMdid="0.23.1.0"/>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -402,7 +410,7 @@
             <dxl:ProjElem ColId="12" Alias="avg">
               <dxl:AggFunc AggMdid="0.2101.1.0" AggDistinct="false" AggStage="Final" AggKind="n" >
                 <dxl:ValuesList ParamType="aggargs">
-                <dxl:Ident ColId="15" ColName="ColRef_0015" TypeMdid="0.17.1.0"/>
+                  <dxl:Ident ColId="15" ColName="ColRef_0015" TypeMdid="0.17.1.0"/>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -423,7 +431,7 @@
               <dxl:ProjElem ColId="15" Alias="ColRef_0015">
                 <dxl:AggFunc AggMdid="0.2101.1.0" AggDistinct="false" AggStage="Intermediate" AggKind="n" >
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="14" ColName="ColRef_0014" TypeMdid="0.17.1.0"/>
+                    <dxl:Ident ColId="14" ColName="ColRef_0014" TypeMdid="0.17.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -511,10 +519,10 @@
                       <dxl:ProjElem ColId="14" Alias="ColRef_0014">
                         <dxl:AggFunc AggMdid="0.2101.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" >
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
-                            <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                            <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-                          </dxl:OpExpr>
+                            <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
+                              <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+                              <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                            </dxl:OpExpr>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>
