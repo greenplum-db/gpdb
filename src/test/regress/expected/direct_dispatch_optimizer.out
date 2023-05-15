@@ -923,13 +923,17 @@ explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid grou
                     QUERY PLAN                     
 ---------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  Finalize GroupAggregate
          Group Key: gp_segment_id
          ->  Sort
                Sort Key: gp_segment_id
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: gp_segment_id
-                     ->  Seq Scan on t_test_dd_via_segid
+                     ->  Partial GroupAggregate
+                           Group Key: gp_segment_id
+                           ->  Sort
+                                 Sort Key: gp_segment_id
+                                 ->  Seq Scan on t_test_dd_via_segid
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 

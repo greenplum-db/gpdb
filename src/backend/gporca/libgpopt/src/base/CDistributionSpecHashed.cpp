@@ -173,20 +173,6 @@ CDistributionSpecHashed::StripEquivColumns(CMemoryPool *mp)
 		CDistributionSpecHashed(m_pdrgpexpr, m_fNullsColocated, m_opfamilies);
 }
 
-
-BOOL
-CDistributionSpecHashed::FDistributionSpecHashedOnlyOnGpSegmentId() const
-{
-	const ULONG length = m_pdrgpexpr->Size();
-	COperator *pop = (*(m_pdrgpexpr))[0]->Pop();
-
-	return length == 1 && pop->Eopid() == COperator::EopScalarIdent &&
-		   CScalarIdent::PopConvert(pop)->Pcr()->IsSystemCol() &&
-		   CScalarIdent::PopConvert(pop)->Pcr()->Name().Equals(
-			   CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName));
-}
-
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CDistributionSpecHashed::FSatisfies
