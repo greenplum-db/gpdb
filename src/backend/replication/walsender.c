@@ -2383,6 +2383,13 @@ InitWalSenderSlot(void)
 			MyWalSnd = (WalSnd *) walsnd;
 			walsnd->is_for_gp_walreceiver =
 				(strcmp(application_name, GP_WALRECEIVER_APPNAME) == 0);
+			
+			walsnd->xmax = 0;
+			walsnd->xmin = 0;
+			walsnd->xips = NULL;
+			walsnd->cnt_xips = 0;
+			walsnd->is_for_cdc = false;
+			walsnd->snapshot_ready = false;
 
 			break;
 		}

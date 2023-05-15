@@ -106,6 +106,13 @@ typedef struct WalSnd
 	 * mirror in streaming mode
 	 */
 	bool 		is_for_gp_walreceiver;
+
+	DistributedTransactionId xmax;
+	DistributedTransactionId xmin;
+	DistributedTransactionId* xips;
+	int cnt_xips;
+	bool snapshot_ready;
+	bool is_for_cdc;
 } WalSnd;
 
 extern WalSnd *MyWalSnd;
@@ -184,6 +191,8 @@ extern void replication_scanner_init(const char *query_string);
 extern void replication_scanner_finish(void);
 
 extern Node *replication_parse_result;
+
+extern int max_wal_senders;
 
 #define GP_WALRECEIVER_APPNAME "gp_walreceiver"
 
