@@ -817,7 +817,7 @@ strip_gsetid_from_pathkeys(Index gsetid_sortref, List *pathkeys)
  * input isn't sorted already).
  */
 static void
-	add_first_stage_group_agg_path(PlannerInfo *root,
+add_first_stage_group_agg_path(PlannerInfo *root,
 							   Path *path,
 							   bool is_sorted,
 							   cdb_agg_planning_context *ctx)
