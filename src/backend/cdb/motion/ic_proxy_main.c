@@ -602,3 +602,50 @@ ic_proxy_server_main(void)
 
 	return ic_proxy_server_exit_code;
 }
+
+void
+ic_proxy_server_quit(uv_loop_t *loop, bool relaunch)
+{
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE, LOG,
+		   "ic-proxy: server quiting");
+
+	if (relaunch)
+		/* return non-zero value so we are restarted by the postmaster */
+		ic_proxy_server_exit_code = 1;
+	else
+		ic_proxy_server_exit_code = 0;
+
+	/*
+	 * we can't close the loop directly, we need to properly shutdown all the
+	 * clients first.
+	 */
+	if (ic_proxy_peer_listening)
+	{
+		/* cancel pending relistening request */
+		ic_proxy_peer_relistening = false;
+
+		uv_unref((uv_handle_t *) &ic_proxy_peer_listener);
+		uv_close((uv_handle_t *) &ic_proxy_peer_listener, NULL);
+	}
+	if (ic_proxy_client_listening)
+	{
+		uv_unref((uv_handle_t *) &ic_proxy_client_listener);
+		uv_close((uv_handle_t *) &ic_proxy_client_listener, NULL);
+	}
+	uv_timer_stop(&ic_proxy_server_timer);
+	uv_unref((uv_handle_t *) &ic_proxy_server_signal_hup);
+	uv_unref((uv_handle_t *) &ic_proxy_server_signal_term);
+	uv_unref((uv_handle_t *) &ic_proxy_server_signal_stop);
+
+#if 0
+	uv_client_table_disconnect_all();
+#endif
+
+	/*
+	 * do not close the loop directly, it will quit automatically after all the
+	 * clients are closed.
+	 */
+#if 0
+	uv_loop_close(loop);
+#endif
+}

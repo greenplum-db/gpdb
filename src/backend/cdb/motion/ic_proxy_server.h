@@ -104,6 +104,7 @@ struct ICProxyDelay
 
 
 extern int ic_proxy_server_main(void);
+extern void ic_proxy_server_quit(uv_loop_t *loop, bool relaunch);
 
 extern ICProxyClient *ic_proxy_client_new(uv_loop_t *loop, bool placeholder);
 extern const char *ic_proxy_client_get_name(ICProxyClient *client);
