@@ -3433,10 +3433,6 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 	// be attached to the lefttree of the result node.
 	Plan *project_set_parent_plan = nullptr;
 
-	// Pointer to the lowest level ProjectSet node. If multiple ProjectSet nodes are required then
-	// the child plan of result dxl node will be attched to its lefttree.
-	Plan *project_set_child_plan = nullptr;
-
 	// Create Pathtarget object from Result node's targetlist which is required
 	// by SplitPathtargetAtSrfs method
 	PathTarget *complete_result_pathtarget =
@@ -3496,20 +3492,10 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 
 		temp_plan_project_set->qual = result_node_plan->qual;
 
-		// Creating the links between all the nested ProjectSet nodes
-		if (nullptr == project_set_parent_plan)
-		{
-			project_set_parent_plan = temp_plan_project_set;
-			project_set_child_plan = temp_plan_project_set;
-		}
-		else
-		{
-			temp_plan_project_set->lefttree = project_set_parent_plan;
-			project_set_parent_plan = temp_plan_project_set;
-		}
-	}
+		temp_plan_project_set->lefttree = project_set_parent_plan;
 
-	project_set_child_plan->lefttree = child_plan;
+		project_set_parent_plan = temp_plan_project_set;
+	}
 
 	return project_set_parent_plan;
 }
@@ -3561,8 +3547,7 @@ void
 CTranslatorDXLToPlStmt::MutateFuncExprToVarProjectSet(Plan *final_plan)
 {
 	Plan *it_set_upper_ref = final_plan;
-	while (it_set_upper_ref->lefttree != nullptr &&
-		   it_set_upper_ref->lefttree->type == T_ProjectSet)
+	while (it_set_upper_ref->lefttree != nullptr)
 	{
 		Plan *subplan = it_set_upper_ref->lefttree;
 		List *output_targetlist;
@@ -3734,9 +3719,17 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 
 	MutateFuncExprToVarProjectSet(final_plan);
 
+	// Attaching the child plan
+	Plan *it = final_plan;
+	while (it->lefttree != nullptr)
+	{
+		it = it->lefttree;
+	}
+
+	it->lefttree = child_plan;
+
 	// cleanup
 	child_contexts->Release();
-
 	return final_plan;
 }
 
