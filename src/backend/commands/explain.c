@@ -3446,8 +3446,8 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 	int64 peakSpaceUsed = 0;
 	int64 totalSpaceUsed = 0;
 	int64 avgSpaceUsed = 0;
-	char *sortMethod = NULL;
-	char *spaceType = NULL;
+	const char *sortMethod = NULL;
+	const char *spaceType = NULL;
 
 	if (sortstate->shared_info != NULL)
 	{
