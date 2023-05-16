@@ -4882,14 +4882,6 @@ binary_upgrade_set_rel_ao_oids(Archive *fout, PQExpBuffer upgrade_buffer, const 
 						"'%u'::pg_catalog.oid, '%s_%u'::text);\n",
 						tblinfo->aotbl->segrelid, PG_AOSEGMENT_NAMESPACE, aoseg_prefix, tblinfo->dobj.catId.oid);
 
-	/* pg_aoseg composite type */
-	simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->segreltype);
-	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-	 					"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, '%s_%u'::text);\n",
-					  tblinfo->aotbl->segreltype, PG_AOSEGMENT_NAMESPACE, aoseg_prefix, tblinfo->dobj.catId.oid);
-
 	/* blkdir is optional. */
 	if (OidIsValid(tblinfo->aotbl->blkdirrelid))
 	{
@@ -4901,14 +4893,6 @@ binary_upgrade_set_rel_ao_oids(Archive *fout, PQExpBuffer upgrade_buffer, const 
 							"SELECT pg_catalog.binary_upgrade_set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
 							"'%u'::pg_catalog.oid, 'pg_aoblkdir_%d'::text);\n",
 							tblinfo->aotbl->blkdirrelid, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
-
-		/* pg_aoblkdir composite type */
-		simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->blkdirreltype);
-		appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-		appendPQExpBuffer(upgrade_buffer,
-							"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
-							"'%u'::pg_catalog.oid, 'pg_aoblkdir_%d'::text);\n",
-							tblinfo->aotbl->blkdirreltype, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
 
 		/* pg_aoblkdir index */
 		simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->blkdiridxid);
@@ -4928,14 +4912,6 @@ binary_upgrade_set_rel_ao_oids(Archive *fout, PQExpBuffer upgrade_buffer, const 
 						"SELECT pg_catalog.binary_upgrade_set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
 						"'%u'::pg_catalog.oid, 'pg_aovisimap_%u'::text);\n",
 						tblinfo->aotbl->visimaprelid, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
-
-	/* pg_aovisimap composite type */
-	simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->visimapreltype);
-	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-	 					"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, 'pg_aovisimap_%u'::text);\n\n",
-					  tblinfo->aotbl->visimapreltype, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
 
 	/* pg_aovisimap index */
 	simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->visimapidxid);
