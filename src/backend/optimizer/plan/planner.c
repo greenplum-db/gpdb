@@ -8632,7 +8632,7 @@ static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
 	{
 
 		/*
-		 * True means, we have to set values for ORCA
+		 * True means, we have to set values for ORCA.
 		 */
 		jit_on = optimizer_jit_enabled;
 		above_cost = optimizer_jit_above_cost;
@@ -8643,7 +8643,7 @@ static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
 	{
 
 		/*
-		 * False means, we have to set values for Planner
+		 * False means, we have to set values for Planner.
 		 */
 		jit_on = jit_enabled;
 		above_cost = jit_above_cost;

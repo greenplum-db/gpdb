@@ -4356,7 +4356,7 @@ struct config_real ConfigureNamesReal_gp[] =
 			GUC_EXPLAIN
 		},
 		&optimizer_jit_above_cost,
-		1000000, -1, DBL_MAX,
+		7500, -1, DBL_MAX,
 		NULL, NULL, NULL
 	},
 	{
@@ -4366,7 +4366,7 @@ struct config_real ConfigureNamesReal_gp[] =
 			GUC_EXPLAIN
 		},
 		&optimizer_jit_optimize_above_cost,
-		5000000, -1, DBL_MAX,
+		37500, -1, DBL_MAX,
 		NULL, NULL, NULL
 	},
 	{
@@ -4376,7 +4376,7 @@ struct config_real ConfigureNamesReal_gp[] =
 			GUC_EXPLAIN
 		},
 		&optimizer_jit_inline_above_cost,
-		5000000, -1, DBL_MAX,
+		37500, -1, DBL_MAX,
 		NULL, NULL, NULL
 	},
 
