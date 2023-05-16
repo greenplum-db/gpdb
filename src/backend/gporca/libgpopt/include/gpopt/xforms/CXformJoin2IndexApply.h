@@ -30,8 +30,7 @@ private:
 		CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet,
 		CTableDescriptor *ptabdescInner, CColRefSet *pcrsScalarExpr,
-		CColRefSet *outer_refs, CColRefSet *pcrsReqd, ULONG ulIndices,
-		CXformResult *pxfres);
+		CColRefSet *outer_refs, ULONG ulIndices, CXformResult *pxfres);
 
 	// helper to add IndexApply expression to given xform results container
 	// for homogeneous b-tree indexes
@@ -41,7 +40,7 @@ private:
 		CExpression *nodesToInsertAboveIndexGet,
 		CExpression *endOfNodesToInsertAboveIndexGet, CMDAccessor *md_accessor,
 		CExpressionArray *pdrgpexprConjuncts, CColRefSet *pcrsScalarExpr,
-		CColRefSet *outer_refs, CColRefSet *pcrsReqd, const IMDRelation *pmdrel,
+		CColRefSet *outer_refs, const IMDRelation *pmdrel,
 		const IMDIndex *pmdindex, CXformResult *pxfres);
 
 	// helper to add IndexApply expression to given xform results container

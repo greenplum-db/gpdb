@@ -1907,7 +1907,6 @@ BOOL
 CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 							  const IMDRelation *pmdrel,
 							  CColRefArray *pdrgpcrOutput,
-							  CColRefSet *pcrsReqd GPOS_UNUSED,
 							  CColRefSet *pcrsScalar,
 							  IMDIndex::EmdindexType emdindtype,
 							  IMDIndex::EmdindexType altindtype)
@@ -2397,15 +2396,16 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 //
 //---------------------------------------------------------------------------
 CExpression *
-CXformUtils::PexprBuildBtreeIndexPlan(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
-	ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds, CColRefSet *pcrsReqd,
-	CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-	const IMDIndex *pmdindex, const IMDRelation *pmdrel)
+CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
+									  CExpression *pexprGet, ULONG ulOriginOpId,
+									  CExpressionArray *pdrgpexprConds,
+									  CColRefSet *pcrsScalarExpr,
+									  CColRefSet *outer_refs,
+									  const IMDIndex *pmdindex,
+									  const IMDRelation *pmdrel)
 {
 	GPOS_ASSERT(nullptr != pexprGet);
 	GPOS_ASSERT(nullptr != pdrgpexprConds);
-	GPOS_ASSERT(nullptr != pcrsReqd);
 	GPOS_ASSERT(nullptr != pcrsScalarExpr);
 	GPOS_ASSERT(nullptr != pmdindex);
 	GPOS_ASSERT(nullptr != pmdrel);
@@ -2454,8 +2454,8 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 			GPOS_NEW(mp) CWStringConst(mp, popGet->Name().Pstr()->GetBuffer());
 	}
 
-	if (!FIndexApplicable(mp, pmdindex, pmdrel, pdrgpcrOutput, pcrsReqd,
-						  pcrsScalarExpr, IMDIndex::EmdindBtree))
+	if (!FIndexApplicable(mp, pmdindex, pmdrel, pdrgpcrOutput, pcrsScalarExpr,
+						  IMDIndex::EmdindBtree))
 	{
 		GPOS_DELETE(alias);
 
@@ -2815,9 +2815,9 @@ CExpression *
 CXformUtils::PexprBitmapSelectBestIndex(
 	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprPred,
 	CTableDescriptor *ptabdesc, const IMDRelation *pmdrel,
-	CColRefArray *pdrgpcrOutput, CColRefSet *pcrsReqd,
-	CColRefSet *pcrsOuterRefs, CExpression **ppexprRecheck,
-	CExpression **ppexprResidual, BOOL alsoConsiderBTreeIndexes)
+	CColRefArray *pdrgpcrOutput, CColRefSet *pcrsOuterRefs,
+	CExpression **ppexprRecheck, CExpression **ppexprResidual,
+	BOOL alsoConsiderBTreeIndexes)
 {
 	CColRefSet *pcrsScalar = pexprPred->DeriveUsedColumns();
 	ULONG ulBestIndex = 0;
@@ -2840,8 +2840,8 @@ CXformUtils::PexprBitmapSelectBestIndex(
 			md_accessor->RetrieveIndex(pmdrel->IndexMDidAt(ul));
 
 		if (CXformUtils::FIndexApplicable(mp, pmdindex, pmdrel, pdrgpcrOutput,
-										  pcrsReqd, pcrsScalar,
-										  IMDIndex::EmdindBitmap, altIndexType))
+										  pcrsScalar, IMDIndex::EmdindBitmap,
+										  altIndexType))
 		{
 			// found an applicable index
 			CExpressionArray *pdrgpexprScalar =
@@ -3110,7 +3110,7 @@ CXformUtils::CreateBitmapIndexProbesWithOrWithoutPredBreakdown(
 
 			// this also applies for the simple predicates of the form "ident op const" or "ident op const-array"
 			pexprBitmapLocal = PexprBitmapSelectBestIndex(
-				pmp, pmda, pexprPred, ptabdesc, pmdrel, pdrgpcrOutput, pcrsReqd,
+				pmp, pmda, pexprPred, ptabdesc, pmdrel, pdrgpcrOutput,
 				pcrsOuterRefs, &pexprRecheckLocal, &pexprResidualLocal,
 				isAPartialPredicateOrArrayCmp  // for partial preds or array comps
 				// we want to consider btree indexes
