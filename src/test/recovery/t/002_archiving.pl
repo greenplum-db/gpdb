@@ -164,24 +164,24 @@ $node_master->safe_psql('postgres',
 
 sub wait_until_file_exists
 {
-	my ($filename) = @_;
-	my $query = "SELECT size IS NOT NULL FROM pg_stat_file('$filename')";
+	my ($filepath, $filedesc) = @_;
+	my $query = "SELECT size IS NOT NULL FROM pg_stat_file('$filepath')";
 	# we aren't querying master because we stop the master node for some of the
 	# scenarios
 	$node_standby->poll_query_until('postgres', $query)
-	  or die "Timed out while waiting for file $filename";
+	  or die "Timed out while waiting for $filedesc $filepath";
 }
 
 sub post_standby_promotion_tests
 {
 	#assert that 0000100004 exists on master
-	wait_until_file_exists($latest_wal_filepath_old_timeline);
+	wait_until_file_exists($latest_wal_filepath_old_timeline, "latest wal file from the old timeline to exist on master");
 	#assert that 0000100004.partial exists on standby
-	wait_until_file_exists($node_standby->data_dir . $partial_wal_file_path);
+	wait_until_file_exists($node_standby->data_dir . $partial_wal_file_path, "partial wal file from the old timeline to exist on standby");
 	#assert that 0000100004.partial.done exists on standby
-	wait_until_file_exists($node_standby->data_dir . $partial_done_file_path);
+	wait_until_file_exists($node_standby->data_dir . $partial_done_file_path, "partial done file from the old timeline to exist on standby");
 	#assert that 0000100004.partial got archived
-	wait_until_file_exists($archived_partial_wal_file);
+	wait_until_file_exists($archived_partial_wal_file, "latest partial wal file from the old timeline to be archived");
 
 	#assert that 0000100004.partial doesn't exist on master
 	ok(!-f $node_master->data_dir . $partial_wal_file_path, 'partial wal file from the old timeline should not exist on master');
@@ -200,27 +200,27 @@ sub post_standby_promotion_tests
 sub post_master_stop_tests
 {
 	#assert that 0000100004 still exists on master
-	wait_until_file_exists($latest_wal_filepath_old_timeline);
+	wait_until_file_exists($latest_wal_filepath_old_timeline, "latest wal file from the old timeline to exist on master");
 	#assert that 0000100004.done exists on master
-	wait_until_file_exists($node_master->data_dir . $latest_done_old_timeline);
+	wait_until_file_exists($node_master->data_dir . $latest_done_old_timeline, "done file from the old timeline to exist on master");
 	#assert that 0000100004 is archived
-	wait_until_file_exists($latest_archived_wal_old_timeline);
+	wait_until_file_exists($latest_archived_wal_old_timeline, "latest wal file from the old timeline to be archived");
 }
 
 sub post_pg_rewind_tests
 {
 	#assert that 0000100004.partial exists on master
-	wait_until_file_exists($node_master->data_dir . $partial_wal_file_path);
+	wait_until_file_exists($node_master->data_dir . $partial_wal_file_path, "latest partial wal file from the old timeline to exist on master");
 	#assert that 0000100004.partial.done exists on master
-	wait_until_file_exists($node_master->data_dir . $partial_done_file_path);
+	wait_until_file_exists($node_master->data_dir . $partial_done_file_path, "latest partial done file from the old timeline to exist on master");
 
 	#assert that 0000100004 is still archived
-	wait_until_file_exists($latest_archived_wal_old_timeline);
+	wait_until_file_exists($latest_archived_wal_old_timeline, "latest wal file from the old timeline to be archived");
 	#partial wal file is still archived
-	wait_until_file_exists($archived_partial_wal_file);
+	wait_until_file_exists($archived_partial_wal_file, "latest partial wal file from the old timeline to be archived");
 
 	#assert that 0000100004 does not exist on master
-	ok(!-f "$latest_wal_filepath_old_timeline", 'latest wal file from the old timeline exists should not exist on standby');
+	ok(!-f "$latest_wal_filepath_old_timeline", 'latest wal file from the old timeline should not exist on standby');
 	#assert that 0000100004.done does not exist on master
 	ok(!-f $node_master->data_dir . $latest_done_old_timeline, 'latest done file from the old timeline should not exist on master');
 
@@ -241,7 +241,7 @@ sub check_history_files
 	# the second standby created below will be able to restore this file,
 	# creating a RECOVERYHISTORY.
 	my $primary_archive = $node_master->archive_dir;
-	wait_until_file_exists("$primary_archive/00000002.history");
+	wait_until_file_exists("$primary_archive/00000002.history", "history file to be archived");
 
 	my $node_standby2 = get_new_node('standby2');
 	$node_standby2->init_from_backup($node_master, $backup_name,
