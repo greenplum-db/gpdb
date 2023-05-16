@@ -155,6 +155,27 @@ Feature: gpcheckcat tests
         And the user runs "dropdb owner_db2"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    Scenario: gpcheckcat should report and repair owner errors on appendonly tables and its indexes
+        Given database "owner_db" is dropped and recreated
+          And the path "gpcheckcat.repair.*" is removed from current working directory
+          And there is a "ao" table "public.gpadmin_ao_tbl" in "owner_db" with data
+          And the user runs "psql owner_db -c "CREATE INDEX gpadmin_ao_tbl_idx on gpadmin_ao_tbl (column1);""
+          And the user runs sql "alter table gpadmin_ao_tbl OWNER TO wolf" in "owner_db" on first primary segment
+         Then psql should return a return code of 0
+
+        When the user runs "gpcheckcat -R owner owner_db"
+         Then gpcheckcat should return a return code of 3
+         Then the path "gpcheckcat.repair.*" is found in cwd "1" times
+
+        When the user runs all the repair scripts in the dir "gpcheckcat.repair.*"
+          And the path "gpcheckcat.repair.*" is removed from current working directory
+          And the user runs "gpcheckcat -R owner owner_db"
+         Then Then gpcheckcat should return a return code of 0
+         Then the path "gpcheckcat.repair.*" is found in cwd "0" times
+
+        And the user runs "dropdb owner_db"
+        And the path "gpcheckcat.repair.*" is removed from current working directory
+        
     Scenario: gpcheckcat should report and repair invalid constraints
         Given database "constraint_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
