@@ -1257,7 +1257,6 @@ _outPlanRowMark(StringInfo str, const PlanRowMark *node)
 	WRITE_ENUM_FIELD(strength, LockClauseStrength);
 	WRITE_ENUM_FIELD(waitPolicy, LockWaitPolicy);
 	WRITE_BOOL_FIELD(isParent);
-	WRITE_BOOL_FIELD(canOptSelectLockingClause);
 }
 
 static void
