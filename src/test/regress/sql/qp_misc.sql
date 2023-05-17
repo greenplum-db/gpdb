@@ -15640,6 +15640,8 @@ select generate_series(generate_series(1,2),4)+1 as output;
 -- Both inner and outer SRF are present under OPEXPR
 explain verbose select generate_series(generate_series(1,2)+1,4)+1 as output;
 select generate_series(generate_series(1,2)+1,4)+1 as output;
+explain verbose select generate_series(1,3)+1 as x from (select generate_series(1, 3)) as y;
+select generate_series(1,3)+1 as x from (select generate_series(1, 3)) as y;
 create table test_srf(a int,b int,c int) distributed by (a);
 insert into test_srf values(2,2,2);
 insert into test_srf values(3,2,2);

@@ -3419,6 +3419,7 @@ Plan *
 CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 												 Plan *result_node_plan,
 												 Plan *child_plan,
+												 Plan *&project_set_child_plan,
 												 BOOL &will_require_result_node)
 {
 	// Method split_pathtarget_at_srfs will split the given PathTarget into multiple levels to position SRFs safely.
@@ -3492,9 +3493,17 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 
 		temp_plan_project_set->qual = result_node_plan->qual;
 
-		temp_plan_project_set->lefttree = project_set_parent_plan;
-
-		project_set_parent_plan = temp_plan_project_set;
+		// Creating the links between all the nested ProjectSet nodes
+		if (nullptr == project_set_parent_plan)
+		{
+			project_set_parent_plan = temp_plan_project_set;
+			project_set_child_plan = temp_plan_project_set;
+		}
+		else
+		{
+			temp_plan_project_set->lefttree = project_set_parent_plan;
+			project_set_parent_plan = temp_plan_project_set;
+		}
 	}
 
 	return project_set_parent_plan;
@@ -3509,7 +3518,7 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 void
 SetupAliasParameter(const BOOL will_require_result_node,
 					const CDXLNode *project_list_dxlnode,
-					Plan *parent_project_set_plan)
+					Plan *project_set_parent_plan)
 {
 	if (!will_require_result_node)
 	{
@@ -3518,7 +3527,7 @@ SetupAliasParameter(const BOOL will_require_result_node,
 		ListCell *listcell_project_targetentry;
 
 		ForEach(listcell_project_targetentry,
-				parent_project_set_plan->targetlist)
+				project_set_parent_plan->targetlist)
 		{
 			TargetEntry *te =
 				(TargetEntry *) lfirst(listcell_project_targetentry);
@@ -3630,6 +3639,11 @@ CTranslatorDXLToPlStmt::fix_upper_expr_mutator_projectSet(
 //	@doc:
 //		Translate DXL result node into GPDB result plan node and
 //      create Project Set plan node if SRV are present.
+//      The current approach is to create a Project Set plan node from a result dxl
+//      node as it already contains the info to create a project set node from it.But
+//      it's not the best approach.The better approach will be to actually create a
+//      new Clogical node to handle the set returning functions and then creating
+//      CPhysical, dxl and plan nodes.
 //
 //---------------------------------------------------------------------------
 Plan *
@@ -3639,6 +3653,10 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 {
 	// Pointer to the child plan of result node
 	Plan *child_plan = nullptr;
+
+	// Pointer to the lowest level ProjectSet node. If multiple ProjectSet nodes are required then
+	// the child plan of result dxl node will be attched to its lefttree.
+	Plan *project_set_child_plan = nullptr;
 
 	// Do we require a result node to be attached on top of ProjectSet node?
 	BOOL will_require_result_node = false;
@@ -3691,11 +3709,12 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	SetParamIds(plan);
 
 	// Creating project set nodes plan tree
-	Plan *parent_project_set_plan = CreateProjectSetNodeTree(
-		result_dxlnode, plan, child_plan, will_require_result_node);
+	Plan *project_set_parent_plan = CreateProjectSetNodeTree(
+		result_dxlnode, plan, child_plan, project_set_child_plan,
+		will_require_result_node);
 
 	// If Project Set plan nodes are not required return the result plan node created
-	if (nullptr == parent_project_set_plan)
+	if (nullptr == project_set_parent_plan)
 	{
 		result->plan.lefttree = child_plan;
 		child_contexts->Release();
@@ -3703,30 +3722,24 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	}
 
 	SetupAliasParameter(will_require_result_node, project_list_dxlnode,
-						parent_project_set_plan);
+						project_set_parent_plan);
 
 	Plan *final_plan = nullptr;
 
 	if (will_require_result_node)
 	{
-		result->plan.lefttree = parent_project_set_plan;
+		result->plan.lefttree = project_set_parent_plan;
 		final_plan = &(result->plan);
 	}
 	else
 	{
-		final_plan = parent_project_set_plan;
+		final_plan = project_set_parent_plan;
 	}
 
 	MutateFuncExprToVarProjectSet(final_plan);
 
 	// Attaching the child plan
-	Plan *it = final_plan;
-	while (it->lefttree != nullptr)
-	{
-		it = it->lefttree;
-	}
-
-	it->lefttree = child_plan;
+	project_set_child_plan->lefttree = child_plan;
 
 	// cleanup
 	child_contexts->Release();
