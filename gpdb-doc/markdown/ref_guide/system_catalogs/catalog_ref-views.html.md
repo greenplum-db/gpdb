@@ -848,7 +848,7 @@ The maximum number of entries in the array fields can be controlled on a column-
 
 ## <a id="summary_views"></a>Summary Views
 
-Greenplum Database includes a number of summary views -- all related to collected statistics -- which aggregate across the Greenplum cluster the metrics reported by their corresponding `gp_` view. For example, `gp_stat_archiver_summary` aggregates the metrics reported by `gp_stat_archiver`. These metrics are reported as sum, average, or list, depending on the view. For more information, see the [summary view code in Github](https://github.com/greenplum-db/gpdb/blob/main/src/backend/catalog/system_views_gp_summary.sql).
+Greenplum Database includes a number of summary views -- all related to collected statistics -- which aggregate across the Greenplum cluster the metrics reported by their corresponding `gp_` view. For example, `gp_stat_archiver_summary` aggregates the metrics reported by `gp_stat_archiver`. These metrics are reported as sum, average, or last, depending on the column. For more information, see the [summary view code in Github](https://github.com/greenplum-db/gpdb/blob/main/src/backend/catalog/system_views_gp_summary.sql).
 
 The following is a list of summary views:
 
