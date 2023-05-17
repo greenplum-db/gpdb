@@ -72,7 +72,7 @@ Greenplum Database provides the system views listed below.
 
 **Summary Views**
 
-For more information on summary views, see [Summary Views](#summary-views), below.
+For more information on summary views, see [Summary Views](#summary_views), below.
 
 - gp_stat_all_indexes_summary
 - gp_stat_all_tables_summary
