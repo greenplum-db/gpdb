@@ -232,7 +232,7 @@ typedef TSQueryData *TSQuery;
  * but PG_DETOAST_DATUM_COPY is used for simplicity
  */
 
-#define DatumGetTSQuery(X)			((TSQuery) DatumGetPointer(X))
+#define DatumGetTSQuery(X)			((TSQuery) PG_DETOAST_DATUM(X))
 #define DatumGetTSQueryCopy(X)		((TSQuery) PG_DETOAST_DATUM_COPY(X))
 #define TSQueryGetDatum(X)			PointerGetDatum(X)
 #define PG_GETARG_TSQUERY(n)		DatumGetTSQuery(PG_GETARG_DATUM(n))
