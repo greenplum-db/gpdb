@@ -13,10 +13,8 @@ where group\_attribute is:
 ```
 CPU_HARD_QUOTA_LIMIT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
 [ MEMORY_LIMIT=<integer> ]
+[ CPU_SOFT_PRIORITY=<integer> ]
 [ CONCURRENCY=<integer> ]
-[ MEMORY_SHARED_QUOTA=<integer> ]
-[ MEMORY_SPILL_RATIO=<integer> ]
-[ MEMORY_AUDITOR= {vmtracker | cgroup} ]
 ```
 
 ## <a id="section3"></a>Description 
@@ -43,17 +41,17 @@ name
 :   The name of the resource group.
 
 CONCURRENCY integer
-:   The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The `CONCURRENCY` value must be an integer in the range \[0 .. `max_connections`\]. The default `CONCURRENCY` value for resource groups defined for roles is 20.
+:   Optional. The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The `CONCURRENCY` value must be an integer in the range \[0 .. `max_connections`\]. The default `CONCURRENCY` value for resource groups defined for roles is 20.
 
 :   You must set `CONCURRENCY` to zero \(0\) for resource groups that you create for external components.
 
 :   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to zero \(0\).
 
-CPU\_RATE\_LIMIT integer
-CPUSET <coordinator_cores>;<segment_cores>
-:   Required. You must specify only one of `CPU_RATE_LIMIT` or `CPUSET` when you create a resource group.
+CPU_HARD_QUOTA_LIMIT integer
+:   Optional. The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the `CPU_HARD_QUOTA_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
 
-:   `cpu_hard_quota_limit` is the percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the `cpu_hard_quota_limit` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+CPUSET <coordinator_cores>;<segment_cores>
+:   You must specify only one of `CPU_HARD_QUOTA_LIMIT` or `CPUSET` when you create a resource group.
 
 :   `CPUSET` identifies the CPU cores to reserve for this resource group on the coordinator host and on segment hosts. The CPU cores that you specify must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
@@ -61,23 +59,12 @@ CPUSET <coordinator_cores>;<segment_cores>
 
 :   > **Note** You can configure `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
 
-MEMORY\_LIMIT integer
-:   The total percentage of Greenplum Database memory resources to reserve for this resource group. The minimum memory percentage you can specify for a resource group is 0. The maximum is 100. The default value is 0.
+MEMORY_LIMIT integer
+:   Optional. The total percentage of Greenplum Database memory resources to reserve for this resource group. The minimum memory percentage you can specify for a resource group is 0. The maximum is 100. The default value is 0.
 
-:   When you specify a `MEMORY_LIMIT` of 0, Greenplum Database reserves no memory for the resource group, but uses global shared memory to fulfill all memory requests in the group. If `MEMORY_LIMIT` is 0, `MEMORY_SPILL_RATIO` must also be 0.
+:   When you specify a `MEMORY_LIMIT` of 0, Greenplum Database reserves no memory for the resource group, but uses global shared memory to fulfill all memory requests in the group.
 
 :   The sum of the `MEMORY_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
-
-MEMORY\_SHARED\_QUOTA integer
-:   The quota of shared memory in the resource group. Resource groups with a `MEMORY_SHARED_QUOTA` threshold set aside a percentage of memory allotted to the resource group to share across transactions. This shared memory is allocated on a first-come, first-served basis as available. A transaction may use none, some, or all of this memory. The minimum memory shared quota percentage you can specify for a resource group is 0. The maximum is 100. The default `MEMORY_SHARED_QUOTA` value is 80.
-
-MEMORY\_SPILL\_RATIO integer
-:   The memory usage threshold for memory-intensive operators in a transaction. When this threshold is reached, a transaction spills to disk. You can specify an integer percentage value from 0 to 100 inclusive. The default `MEMORY_SPILL_RATIO` value is 0. When `MEMORY_SPILL_RATIO` is 0, Greenplum Database uses the [`statement_mem`](../config_params/guc-list.html) server configuration parameter value to control initial query operator memory.
-
-MEMORY\_AUDITOR \{vmtracker \| cgroup\}
-:   The memory auditor for the resource group. Greenplum Database employs virtual memory tracking for role resources and cgroup memory tracking for resources used by external components. The default `MEMORY_AUDITOR` is `vmtracker`. When you create a resource group with `vmtracker` memory auditing, Greenplum Database tracks that resource group's memory internally.
-
-:   When you create a resource group specifying the `cgroup` `MEMORY_AUDITOR`, Greenplum Database defers the accounting of memory used by that resource group to cgroups. `CONCURRENCY` must be zero \(0\) for a resource group that you create for external components such as PL/Container. You cannot assign a resource group that you create for external components to a Greenplum Database role.
 
 ## <a id="section5"></a>Notes 
 
@@ -108,7 +95,7 @@ Create a resource group to manage PL/Container resources specifying a memory lim
 
 ```
 CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, cpu_hard_quota_limit=10,
-  CONCURRENCY=0, MEMORY_AUDITOR=cgroup);
+  CONCURRENCY=0);
 ```
 
 Create a resource group with a memory limit percentage of 11 to which you assign CPU core 1 on the coordinator host, and cores 1 to 3 on segment hosts:

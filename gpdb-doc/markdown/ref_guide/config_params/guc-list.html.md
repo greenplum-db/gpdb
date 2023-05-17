@@ -1378,11 +1378,11 @@ Cancel a transaction queued in a resource group that waits longer than the speci
 
 ## <a id="gp_resource_manager"></a>gp\_resource\_manager 
 
-Identifies the resource management scheme currently enabled in the Greenplum Database cluster. The default scheme is to use resource queues. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
+Identifies the resource management scheme currently enabled in the Greenplum Database cluster. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|group, queue|queue|local, system, restart|
+|none, group-v1, group-v2, queue|none|local, system, restart|
 
 ## <a id="gp_resqueue_memory_policy"></a>gp\_resqueue\_memory\_policy 
 
