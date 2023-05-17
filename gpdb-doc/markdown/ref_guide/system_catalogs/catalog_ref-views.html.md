@@ -852,28 +852,28 @@ Greenplum Database includes a number of summary views -- all related to collecte
 
 The following is a list of summary views:
 
-- `gp_stat_all_indexes_summary`
-- `gp_stat_all_tables_summary`
-- `gp_stat_archiver_summary`
-- `gp_stat_bgwriter_summary`
-- `gp_stat_database_summary`
-- `gp_stat_slru_summary`
-- `gp_stat_sys_indexes_summary`
-- `gp_stat_user_functions_summary`
-- `gp_stat_user_indexes_summary`
-- `gp_stat_wal_summary`
-- `gp_stat_xact_all_tables_summary`
-- `gp_stat_xact_sys_tables_summary`
-- `gp_stat_xact_user_functions_summary`
-- `gp_stat_xact_user_tables_summary`
-- `gp_statio_all_indexes_summary`
-- `gp_statio_all_sequences_summary`
-- `gp_statio_all_tables_summary`
-- `gp_statio_sys_indexes_summary`
-- `gp_statio_sys_sequences_summary`
-- `gp_statio_sys_tables_summary`
-- `gp_statio_user_indexes_summary`
-- `gp_statio_user_sequences_summary`
-- `gp_statio_user_tables_summary`
+- gp_stat_all_indexes_summary
+- gp_stat_all_tables_summary
+- gp_stat_archiver_summary
+- gp_stat_bgwriter_summary
+- gp_stat_database_summary
+- gp_stat_slru_summary
+- gp_stat_sys_indexes_summary
+- gp_stat_user_functions_summary
+- gp_stat_user_indexes_summary
+- gp_stat_wal_summary
+- gp_stat_xact_all_tables_summary
+- gp_stat_xact_sys_tables_summary
+- gp_stat_xact_user_functions_summary
+- gp_stat_xact_user_tables_summary
+- gp_statio_all_indexes_summary
+- gp_statio_all_sequences_summary
+- gp_statio_all_tables_summary
+- gp_statio_sys_indexes_summary
+- gp_statio_sys_sequences_summary
+- gp_statio_sys_tables_summary
+- gp_statio_user_indexes_summary
+- gp_statio_user_sequences_summary
+- gp_statio_user_tables_summary
 
 **Parent topic:** [System Catalogs](../system_catalogs/catalog_ref.html)
