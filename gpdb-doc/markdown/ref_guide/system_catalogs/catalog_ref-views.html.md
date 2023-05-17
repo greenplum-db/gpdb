@@ -74,29 +74,29 @@ Greenplum Database provides the system views listed below.
 
 For more information on summary views, see [Summary Views](#summary-views), below.
 
-- `gp_stat_all_indexes_summary`
-- `gp_stat_all_tables_summary`
-- `gp_stat_archiver_summary`
-- `gp_stat_bgwriter_summary`
-- `gp_stat_database_summary`
-- `gp_stat_slru_summary`
-- `gp_stat_sys_indexes_summary`
-- `gp_stat_user_functions_summary`
-- `gp_stat_user_indexes_summary`
-- `gp_stat_wal_summary`
-- `gp_stat_xact_all_tables_summary`
-- `gp_stat_xact_sys_tables_summary`
-- `gp_stat_xact_user_functions_summary`
-- `gp_stat_xact_user_tables_summary`
-- `gp_statio_all_indexes_summary`
-- `gp_statio_all_sequences_summary`
-- `gp_statio_all_tables_summary`
-- `gp_statio_sys_indexes_summary`
-- `gp_statio_sys_sequences_summary`
-- `gp_statio_sys_tables_summary`
-- `gp_statio_user_indexes_summary`
-- `gp_statio_user_sequences_summary`
-- `gp_statio_user_tables_summary`
+- gp_stat_all_indexes_summary
+- gp_stat_all_tables_summary
+- gp_stat_archiver_summary
+- gp_stat_bgwriter_summary
+- gp_stat_database_summary
+- gp_stat_slru_summary
+- gp_stat_sys_indexes_summary
+- gp_stat_user_functions_summary
+- gp_stat_user_indexes_summary
+- gp_stat_wal_summary
+- gp_stat_xact_all_tables_summary
+- gp_stat_xact_sys_tables_summary
+- gp_stat_xact_user_functions_summary
+- gp_stat_xact_user_tables_summary
+- gp_statio_all_indexes_summary
+- gp_statio_all_sequences_summary
+- gp_statio_all_tables_summary
+- gp_statio_sys_indexes_summary
+- gp_statio_sys_sequences_summary
+- gp_statio_sys_tables_summary
+- gp_statio_user_indexes_summary
+- gp_statio_user_sequences_summary
+- gp_statio_user_tables_summary
 
 For more information about the standard system views supported in PostgreSQL and Greenplum Database, see the following sections of the PostgreSQL documentation:
 
