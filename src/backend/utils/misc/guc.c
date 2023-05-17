@@ -3060,7 +3060,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&autovacuum_vac_thresh,
-		50, 0, INT_MAX,
+		500, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 	{
@@ -3143,7 +3143,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_UNIT_KB
 		},
 		&autovacuum_work_mem,
-		-1, -1, MAX_KILOBYTES,
+		131072, -1, MAX_KILOBYTES,
 		check_autovacuum_work_mem, NULL, NULL
 	},
 
@@ -3516,7 +3516,7 @@ static struct config_real ConfigureNamesReal[] =
 			NULL
 		},
 		&autovacuum_vac_scale,
-		0.2, 0.0, 100.0,
+		0.05, 0.0, 100.0,
 		NULL, NULL, NULL
 	},
 	{
