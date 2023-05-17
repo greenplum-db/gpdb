@@ -43,11 +43,11 @@ def impl(context, contents):
                                                "preferred_role = '%s'" % (content, preferred_role))
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             num_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND "
-                                                     "gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
+                                                     "description LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
         context.original_config_history_info[key] = num_tuples
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             context.original_config_history_backout_count = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE "
-                                                     "gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';")
+                                                     "description LIKE 'gprecoverseg: segment config for backout%%';")
 
 
 
@@ -606,7 +606,7 @@ def impl(context, seg, contents):
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             dbid = dbconn.querySingleton(conn, "SELECT dbid FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, role))
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
-            actual_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
+            actual_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND description LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
 
         original_tuples = context.original_config_history_info["{}_{}".format(content, role)]
         if actual_tuples != original_tuples + 1: # Running the backout script should have inserted exactly 1 entry
@@ -618,7 +618,7 @@ def impl(context, seg, contents):
 def impl(context, expected_additional_entries):
     with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
         actual_backout_entries = int(dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE "
-                                                             "gp_configuration_history.desc LIKE "
+                                                             "description LIKE "
                                                              "'gprecoverseg: segment config for backout%%';"))
     expected_total_entries = int(context.original_config_history_backout_count) + int(expected_additional_entries)
     if actual_backout_entries != expected_total_entries:
