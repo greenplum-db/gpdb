@@ -103,6 +103,18 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	get_loadable_libraries();
 
 
+	if (skip_checks())
+	{
+		/*
+		 * GPDB: This check is needed even when skipping checks since it has a
+		 * side effect of populating old_cluster.install_role_oid
+		 */
+		check_is_super_user(&old_cluster);
+		prep_status("Skipping Consistency Checks");
+		check_ok();
+		goto dump_old_cluster;
+	}
+
 	/*
 	 * Check for various failure cases
 	 */
@@ -146,6 +158,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		}
 	}
 
+dump_old_cluster:
 	/*
 	 * While not a check option, we do this now because this is the only time
 	 * the old server is running.
@@ -169,11 +182,16 @@ check_new_cluster(void)
 
 	check_new_cluster_is_empty();
 
-	check_loadable_libraries();
+	if (!skip_checks())
+		check_loadable_libraries();
 
 	if (user_opts.transfer_mode == TRANSFER_MODE_LINK)
 		check_hard_link();
 
+	/*
+	 * GPDB: This check is needed even when skipping checks since it has a
+	 * side effect of populating new_cluster.install_role_oid
+	 */
 	check_is_super_user(&new_cluster);
 
 	/*
@@ -200,7 +218,8 @@ check_new_cluster(void)
 			pg_fatal("Only the install user can be defined in the new cluster.\n");
 	}
 
-	check_for_prepared_transactions(&new_cluster);
+	if (!skip_checks())
+		check_for_prepared_transactions(&new_cluster);
 }
 
 
