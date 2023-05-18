@@ -1494,7 +1494,6 @@ reset optimizer_force_multistage_agg;
 
 -- Test if Motion is placed between the "group by clauses"
 drop table if exists t;
-set optimizer_enable_hashagg to off;
 create table t(a int, b int, c int) distributed by (a);
 insert into t select 1, i, i from generate_series(1, 10)i;
 insert into t select 1, i, i from generate_series(1, 10)i;
@@ -1505,7 +1504,6 @@ analyze t;
 explain (costs off) select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 
-reset optimizer_enable_hashagg;
 drop table t;
 -- CLEANUP
 set client_min_messages='warning';
