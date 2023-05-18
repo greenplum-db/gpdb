@@ -205,3 +205,14 @@ set gp_select_invisible=false;
 select * into sto_heap_10 from sto_uao_8;
 select count(*) from sto_heap_10;
 COMMIT;
+BEGIN;
+CREATE TABLE test_ao_tsquery(
+          c1 TSVECTOR,
+          c2 TSQUERY,
+          c3 INT
+          ) DISTRIBUTED BY (c3);
+INSERT INTO test_ao_tsquery(c1, c2, c3) VALUES('a fat cat sat on a mat and ate a fat rat'::TSVECTOR, 'fat & rat'::TSQUERY, 1);
+ANALYZE test_ao_tsquery;
+SELECT * FROM test_ao_tsquery;
+DROP TABLE test_ao_tsquery;
+COMMIT;

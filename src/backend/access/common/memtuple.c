@@ -454,7 +454,7 @@ compute_memtuple_size_using_bind(Datum *values,
 		/* We plan to convert to short varlena even if it is not currently */
 		if (bind->flag == MTB_ByRef &&
 			attr->attstorage != 'p' &&
-			value_type_could_short(DatumGetPointer(values[i]), attr->atttypid))
+			value_type_could_short(DatumGetPointer(values[i])))
 		{
 			data_length += VARSIZE_ANY_EXHDR(DatumGetPointer(values[i])) + VARHDRSZ_SHORT;
 		}
@@ -744,7 +744,7 @@ memtuple_form_to(MemTupleBinding *pbind,
 					memcpy(varlen_start, DatumGetPointer(values[i]), attr_len);
 				}
 				else if(attr->attstorage != 'p' &&
-						value_type_could_short(DatumGetPointer(values[i]), attr->atttypid))
+						value_type_could_short(DatumGetPointer(values[i])))
 				{
 					attr_len = VARSIZE(DatumGetPointer(values[i])) - VARHDRSZ + VARHDRSZ_SHORT;
 					*varlen_start = VARSIZE_TO_SHORT_D(values[i]);
