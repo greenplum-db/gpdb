@@ -877,7 +877,7 @@ ExecInitBitmapHeapScanForPartition(BitmapHeapScan *node, EState *estate, int efl
 	}
 
 	/* Prefetching hasn't been implemented for AO tables */
-	if (RelationIsAppendOptimized(currentRelation))
+	if (RelationStorageIsAO(currentRelation))
 		scanstate->prefetch_maximum = 0;
 
 	scanstate->ss.ss_currentRelation = currentRelation;

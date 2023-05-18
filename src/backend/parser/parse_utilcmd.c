@@ -1253,7 +1253,7 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 		 */
 		oldcontext = MemoryContextSwitchTo(CurTransactionContext);
 
-		if (RelationIsAppendOptimized(relation))
+		if (RelationStorageIsAO(relation))
 		{
 			bool		checksum = true;
 			int32		blocksize = -1;

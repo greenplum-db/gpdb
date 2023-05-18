@@ -622,7 +622,7 @@ ao_rel_get_physical_size(Relation aorel)
 	Oid			segrelid;
 	uint64 		total_physical_size = 0;
 
-	Assert(RelationIsAppendOptimized(aorel));
+	Assert(RelationStorageIsAO(aorel));
 
 	GetAppendOnlyEntryAuxOids(aorel,
 							  &segrelid, NULL, NULL);

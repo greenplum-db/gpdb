@@ -152,7 +152,7 @@ GetAppendOnlyEntryAuxOids(Relation rel,
 	Form_pg_appendonly	aoForm;
 
 	/* the relation has to be a non-partitioned AO/CO table */
-	Assert(RelationIsAppendOptimized(rel));
+	Assert(RelationStorageIsAO(rel));
 
 	aoForm = rel->rd_appendonly;
 
@@ -178,7 +178,7 @@ GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry)
 	Form_pg_appendonly	aoForm;
 
 	/* the relation has to be a non-partitioned AO/CO table and the aoEntry is valid */
-	Assert(RelationIsAppendOptimized(rel));
+	Assert(RelationStorageIsAO(rel));
 	Assert(aoEntry);
 
 	aoForm = rel->rd_appendonly;

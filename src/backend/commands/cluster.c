@@ -670,6 +670,8 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	TransactionId frozenXid;
 	MultiXactId cutoffMulti;
 
+    bool		is_ao = RelationStorageIsAO(OldHeap);
+
 	/* Mark the correct index as clustered */
 	if (OidIsValid(indexOid))
 		mark_index_clustered(OldHeap, indexOid, true);

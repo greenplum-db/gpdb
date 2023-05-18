@@ -1012,7 +1012,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	{
 		BlockNumber relallvisible;
 
-		if (RelationIsAppendOptimized(onerel))
+		if (RelationStorageIsAO(onerel))
 			relallvisible = 0;
 		else
 			visibilitymap_count(onerel, &relallvisible, NULL);
@@ -1530,7 +1530,7 @@ acquire_sample_rows(Relation onerel, int elevel,
 	 * in table_relation_acquire_sample_rows(). So leave here an assertion to ensure
 	 * the relation should not be an AO/CO table.
 	 */
-	Assert(!RelationIsAppendOptimized(onerel));
+	Assert(!RelationStorageIsAO(onerel));
 
 	totalblocks = RelationGetNumberOfBlocks(onerel);
 

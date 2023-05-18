@@ -502,7 +502,7 @@ heap_create(const char *relname,
 		 * AO tables don't use the buffer manager, better to not keep the
 		 * smgr open for it.
 		 */
-		if (RelationIsAppendOptimized(rel))
+		if (RelationStorageIsAO(rel))
 			RelationCloseSmgr(rel);
 	}
 
@@ -1706,7 +1706,7 @@ heap_create_with_catalog(const char *relname,
 	/*
 	 * If this is an append-only relation, add an entry in pg_appendonly.
 	 */
-	if (RelationIsAppendOptimized(new_rel_desc))
+	if (RelationStorageIsAO(new_rel_desc))
 	{
 		InsertAppendOnlyEntry(relid,
 							  InvalidOid,
@@ -2344,7 +2344,7 @@ heap_drop_with_catalog(Oid relid)
 	 */
 	rel = relation_open(relid, AccessExclusiveLock);
 
-	is_appendonly_rel = RelationIsAppendOptimized(rel);
+	is_appendonly_rel = RelationStorageIsAO(rel);
 
 	/*
 	 * There can no longer be anyone *else* touching the relation, but we

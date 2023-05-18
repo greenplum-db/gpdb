@@ -1132,7 +1132,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	/*
 	 * If this is an append-only relation, create the auxliary tables necessary
 	 */
-	if (RelationIsAppendOptimized(rel) && relkind != RELKIND_PARTITIONED_TABLE)
+	if (RelationStorageIsAO(rel))
 		NewRelationCreateAOAuxTables(RelationGetRelid(rel), stmt->buildAoBlkdir);
 
 	/*
@@ -1803,7 +1803,7 @@ relid_set_new_relfilenode(Oid relid)
 static void
 ao_aux_tables_safe_truncate(Relation rel)
 {
-	if (!RelationIsAppendOptimized(rel))
+	if (!RelationStorageIsAO(rel))
 		return;
 
 	Oid aoseg_relid = InvalidOid;
@@ -14261,7 +14261,7 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing, LOCKMODE lock
 			ATExecChangeOwner(tuple_class->reltoastrelid, newOwnerId,
 							  true, lockmode);
 
-		if (RelationIsAppendOptimized(target_rel))
+		if (RelationStorageIsAO(target_rel))
 		{
 			Oid segrelid, blkdirrelid;
 			Oid visimap_relid;
@@ -14942,7 +14942,7 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 	}
 
 	/* Get the ao sub objects */
-	if (RelationIsAppendOptimized(rel))
+	if (RelationStorageIsAO(rel))
 		GetAppendOnlyEntryAuxOids(rel,
 								  &relaosegrelid,
 								  &relaoblkdirrelid,
