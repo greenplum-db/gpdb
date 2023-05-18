@@ -15,7 +15,7 @@ There are changes to Greenplum Database behavior with the GPORCA optimizer enabl
     update r set b =  r.b  + 1 from s where  r.a  in (select a from s);
     ```
 
--   Statistics are required on the root table of a partitioned table. The ANALYZE command generates statistics on both root and individual partition tables \(leaf child tables\). See the ROOTPARTITION clause for ANALYZE command.
+-   Statistics are required on the root table of a partitioned table. The ANALYZE command generates statistics on both the root partitioned table and individual leaf partitions. See the ROOTPARTITION clause for ANALYZE command.
 -   Additional Result nodes in the query plan:
     -   Query plan Assert operator.
     -   Query plan Partition selector operator.

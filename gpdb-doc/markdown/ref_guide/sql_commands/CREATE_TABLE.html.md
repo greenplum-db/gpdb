@@ -255,7 +255,7 @@ ENCODING ( storage\_directive [, ...] )
 
 :   This clause is valid only for append-optimized, column-oriented tables.
 
-:   Column compression settings are inherited from the table level to the partition level to the subpartition level. The lowest-level settings have priority.
+:   Column compression settings are inherited from the table level to the partition level to the sub-partition level. The lowest-level settings have priority.
 
 :   For more information about using column compression, refer to [Adding Column-Level Compression](../../admin_guide/ddl/ddl-storage.html#topic43).
 
@@ -511,7 +511,7 @@ Descriptions of additional parameters that are specific to the *classic partitio
 
 CREATE TABLE table\_name ... PARTITION BY
 
-:   When creating a partitioned table using the *classic syntax*, Greenplum Database creates the root partitioned table with the specified table name. Greenplum also creates a hierarchy of tables, child tables, that are the subpartitions based on the partitioning options that you specify. The [pg_partitioned_table](../system_catalogs/pg_partitioned_table.html) system catalog contains information about the subpartition tables.
+:   When creating a partitioned table using the *classic syntax*, Greenplum Database creates the root partitioned table with the specified table name. Greenplum also creates a hierarchy of tables, child tables, that are the sub-partitions based on the partitioning options that you specify. The [pg_partitioned_table](../system_catalogs/pg_partitioned_table.html) system catalog contains information about the sub-partition tables.
 
 classic\_partition\_spec
 :   Declares the individual partitions to create. Each partition can be defined individually or, for range partitions, you can use the `EVERY` clause (with a `START` and optional `END` clause) to define an increment pattern to use to create the individual partitions.
@@ -541,16 +541,16 @@ TABLESPACE
 :   The name of the tablespace in which the partition is to be created.
 
 SUBPARTITION BY
-:   Declares one or more columns by which to subpartition the first-level partitions of the table. For `LIST` partitioning, the partition key must consist of a single column or expression. The format of the subpartition specification is similar to that of a partition specification described above.
+:   Declares one or more columns by which to sub-partition the first-level partitions of the table. For `LIST` partitioning, the partition key must consist of a single column or expression. The format of the sub-partition specification is similar to that of a partition specification described above.
 
 SUBPARTITION TEMPLATE
-:   Instead of declaring each subpartition definition individually for each partition, you can optionally declare a subpartition template to be used to create the subpartitions (lower level child tables). This subpartition specification would then apply to all parent partitions.
+:   Instead of declaring each sub-partition definition individually for each partition, you can optionally declare a sub-partition template to be used to create the sub-partitions (lower level child tables). This sub-partition specification would then apply to all parent partitions.
 
 ### <a id="storage_parameters"></a>Storage Parameters
 
 The `WITH` clause can specify storage parameters for tables, and for indexes associated with a `UNIQUE`, `PRIMARY KEY`, or `EXCLUDE` constraint. Storage parameters for indexes are documented on the [CREATE INDEX](CREATE_INDEX.html.md) reference page. The storage parameters currently available for tables are listed below. For many of these parameters, as shown, there is an additional parameter with the same name prefixed with `toast.`, which controls the behavior of the table's secondary TOAST table, if any. If a table parameter value is set and the equivalent `toast.` parameter is not, the TOAST table will use the table's parameter value. Specifying these parameters for partitioned tables is not supported, but you may specify them for individual leaf partitions.
 
-Note that you can also set storage parameters for a particular partition or subpartition by declaring the `WITH` clause in the *classic syntax* partition specification. The lowest-level partition's settings have priority. 
+Note that you can also set storage parameters for a particular partition or sub-partition by declaring the `WITH` clause in the *classic syntax* partition specification. The lowest-level partition's settings have priority. 
 
 You can specify the defaults for some of the table storage options with the server configuration parameter [gp\_default\_storage\_options](../config_params/guc-list.html#gp_default_storage_options). For information about setting default storage options, see [Notes](#section5).
 
@@ -988,7 +988,7 @@ PARTITION BY LIST (code)
 );
 ```
 
-Create a three level partitioned table that defines subpartitions without the `SUBPARTITION TEMPLATE` clause:
+Create a three level partitioned table that defines sub-partitions without the `SUBPARTITION TEMPLATE` clause:
 
 ```
 CREATE TABLE sales (id int, year int, qtr int, c_rank int, code char(1), region text)
@@ -1032,7 +1032,7 @@ PARTITION BY LIST (code)
 );
 ```
 
-Create a three level partitioned table using subpartition templates and default partitions at each level:
+Create a three level partitioned table using sub-partition templates and default partitions at each level:
 
 ```
 CREATE TABLE sales (id int, year int, qtr int, c_rank int, code char(1), region text)

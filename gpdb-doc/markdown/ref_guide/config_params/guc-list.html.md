@@ -867,7 +867,7 @@ The Greenplum Database metrics collection extension, when enabled, sends the col
 
 Enables GPORCA and the Postgres Planner to use the estimated size of a table \(`pg_relation_size` function\) if there are no statistics for the table. By default, GPORCA and the planner use a default value to estimate the number of rows if statistics are not available. The default behavior improves query optimization time and reduces resource queue usage in heavy workloads, but can lead to suboptimal plans.
 
-This parameter is ignored for a root partition of a partitioned table. When GPORCA is enabled and the root partition does not have statistics, GPORCA always uses the default value. You can use `ANALZYE ROOTPARTITION` to collect statistics on the root partition. See [ANALYZE](../sql_commands/ANALYZE.html).
+This parameter is ignored for a root partitioned table. When GPORCA is enabled and the root partition does not have statistics, GPORCA always uses the default value. You can use `ANALZYE ROOTPARTITION` to collect statistics on the root partition. See [ANALYZE](../sql_commands/ANALYZE.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2219,7 +2219,7 @@ For information about the Postgres Planner and GPORCA, see [Querying Data](../..
 
 For a partitioned table, controls whether the `ROOTPARTITION` keyword is required to collect root partition statistics when the `ANALYZE` command is run on the table. GPORCA uses the root partition statistics when generating a query plan. The Postgres Planner does not use these statistics.
 
-The default setting for the parameter is `on`, the `ANALYZE` command can collect root partition statistics without the `ROOTPARTITION` keyword. Root partition statistics are collected when you run `ANALYZE` on the root partition, or when you run `ANALYZE` on a child leaf partition of the partitioned table and the other child leaf partitions have statistics. When the value is `off`, you must run `ANALZYE ROOTPARTITION` to collect root partition statistics.
+The default setting for the parameter is `on`, the `ANALYZE` command can collect root partition statistics without the `ROOTPARTITION` keyword. Root partition statistics are collected when you run `ANALYZE` on the root partition, or when you run `ANALYZE` on a leaf partition of the partitioned table and the other leaf partitions have statistics. When the value is `off`, you must run `ANALZYE ROOTPARTITION` to collect root partition statistics.
 
 When the value of the server configuration parameter [optimizer](#optimizer) is `on` \(the default\), the value of this parameter should also be `on`. For information about collecting table statistics on partitioned tables, see [ANALYZE](../sql_commands/ANALYZE.html).
 

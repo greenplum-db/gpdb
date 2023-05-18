@@ -174,7 +174,7 @@ See [System Monitoring and Maintenance](maintenance.html), [Query Profiling](../
 -   Always run `ANALYZE` after `CREATE INDEX` operations.
 -   If `ANALYZE` on very large tables takes too long, run `ANALYZE` only on the columns used in a join condition, `WHERE` clause, `SORT`, `GROUP BY`, or `HAVING` clause.
 -   When dealing with large sets of tables, use `analyzedb` instead of `ANALYZE.`
--   Run `analyzedb` on the root partition any time that you add a new partition(s) to a partitioned table. This operation both analyzes the child leaf partitions in parallel and merges any updated statistics into the root partition.
+-   Run `analyzedb` on the root partition any time that you add a new partition(s) to a partitioned table. This operation both analyzes the leaf partitions in parallel and merges any updated statistics into the root partition.
 
 See [Updating Statistics with ANALYZE](analyze.html).
 

@@ -101,7 +101,7 @@ DELETE FROM rank WHERE id IN (SELECT id FROM names WHERE name
 
 Execution of `UPDATE` and `DELETE` commands directly on a specific partition \(child table\) of a partitioned table is not supported. Instead, these commands must be run on the root partitioned table, the table created with the `CREATE TABLE` command.
 
-For a partitioned table, all the child tables are locked during the `DELETE` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf child tables are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
+For a partitioned table, all the child tables are locked during the `DELETE` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf partitions are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 ## <a id="section7"></a>Examples 
 

@@ -167,7 +167,7 @@ The `stakindN` columns each contain a numeric code to describe the type of stati
                 </tr>
                 <tr class="row">
                   <td class="entry" headers="topic_oq3_qxj_3s__table_upf_1yc_nt__entry__1">99</td>
-                  <td class="entry" headers="topic_oq3_qxj_3s__table_upf_1yc_nt__entry__2"><em class="ph i">Hyperloglog Slot</em> - for child leaf partitions of a partitioned table,
+                  <td class="entry" headers="topic_oq3_qxj_3s__table_upf_1yc_nt__entry__2"><em class="ph i">Hyperloglog Slot</em> - for leaf partitions of a partitioned table,
                     stores the <code class="ph codeph">hyperloglog_counter</code> created for the sampled data.
                     The <code class="ph codeph">hyperloglog_counter</code> data structure is converted into a
                       <code class="ph codeph">bytea</code> and stored in a <code class="ph codeph">stavalues5</code> slot of the
@@ -241,15 +241,15 @@ Refer to the *Greenplum Database Management Utility Reference* for details of ru
 
 ### <a id="section_cv2_crv_mt"></a>Analyzing Partitioned Tables 
 
-When the `ANALYZE` command is run on a partitioned table, it analyzes each child leaf partition table, one at a time. You can run `ANALYZE` on just new or changed partition tables to avoid analyzing partitions that have not changed.
+When the `ANALYZE` command is run on a partitioned table, it analyzes each leaf partition, one at a time. You can run `ANALYZE` on just new or changed partitioned tables to avoid analyzing partitions that have not changed.
 
 The `analyzedb` command-line utility skips unchanged partitions automatically. It also runs concurrent sessions so it can analyze several partitions concurrently. It runs five sessions by default, but the number of sessions can be set from 1 to 10 with the `-p` command-line option. Each time `analyzedb` runs, it saves state information for append-optimized tables and partitions in the `db_analyze` directory in the coordinator data directory. The next time it runs, `analyzedb` compares the current state of each table with the saved state and skips analyzing a table or partition if it is unchanged. Heap tables are always analyzed.
 
-If GPORCA is enabled \(the default\), you also need to run `ANALYZE` or `ANALYZE ROOTPARTITION` on the root partition of a partitioned table \(not a leaf partition\) to refresh the root partition statistics. GPORCA requires statistics at the root level for partitioned tables. The Postgres Planner does not use these statistics.
+If GPORCA is enabled \(the default\), you also need to run `ANALYZE` or `ANALYZE ROOTPARTITION` on the root partitioned table \(not a leaf partition\) to refresh the root partition statistics. GPORCA requires statistics at the root level for partitioned tables. The Postgres Planner does not use these statistics.
 
 The time to analyze a partitioned table is similar to the time to analyze a non-partitioned table with the same data. When all the leaf partitions have statistics, performing `ANALYZE ROOTPARTITION` to generate root partition statistics should be quick \(a few seconds depending on the number of partitions and table columns\). If some of the leaf partitions do not have statistics, then all the table data is sampled to generate root partition statistics. Sampling table data takes longer and results in lower quality root partition statistics.
 
-The Greenplum Database server configuration parameter [optimizer\_analyze\_root\_partition](../../ref_guide/config_params/guc-list.html) affects when statistics are collected on the root partition of a partitioned table. If the parameter is `on` \(the default\), the `ROOTPARTITION` keyword is not required to collect statistics on the root partition when you run `ANALYZE`. Root partition statistics are collected when you run `ANALYZE` on the root partition, or when you run `ANALYZE` on a child leaf partition of the partitioned table and the other child leaf partitions have statistics. If the parameter is `off`, you must run `ANALYZE ROOTPARTITION` to collect root partition statistics.
+The Greenplum Database server configuration parameter [optimizer\_analyze\_root\_partition](../../ref_guide/config_params/guc-list.html) affects when statistics are collected on the root partitioned table. If the parameter is `on` \(the default\), the `ROOTPARTITION` keyword is not required to collect statistics on the root partition when you run `ANALYZE`. Root partition statistics are collected when you run `ANALYZE` on the root partition, or when you run `ANALYZE` on a leaf partition of the partitioned table and the other leaf partitions have statistics. If the parameter is `off`, you must run `ANALYZE ROOTPARTITION` to collect root partition statistics.
 
 If you do not intend to run queries on partitioned tables with GPORCA \(setting the server configuration parameter [optimizer](../../ref_guide/config_params/guc-list.html) to `off`\), you can also set the server configuration parameter `optimizer_analyze_root_partition` to `off` to limit when `ANALYZE` updates the root partition statistics.
 
@@ -275,7 +275,7 @@ ALTER TABLE emp ALTER COLUMN notes SET STATISTICS 0;
 
 The statistics target can be set in the range 0 to 1000, or set it to -1 to revert to using the system default statistics target.
 
-Setting the statistics target on a parent partition table affects the child partitions. If you set statistics to 0 on some columns on the parent table, the statistics for the same columns are set to 0 for all children partitions. However, if you later add or exchange another child partition, the new child partition will use either the default statistics target or, in the case of an exchange, the previous statistics target. Therefore, if you add or exchange child partitions, you should set the statistics targets on the new child table.
+Setting the statistics target on a parent partitioned table affects the child partitions. If you set statistics to 0 on some columns on the parent table, the statistics for the same columns are set to 0 for all children partitions. However, if you later add or exchange another child partition, the new child partition will use either the default statistics target or, in the case of an exchange, the previous statistics target. Therefore, if you add or exchange child partitions, you should set the statistics targets on the new child table.
 
 ### <a id="section_j3p_drv_mt"></a>Automatic Statistics Collection 
 

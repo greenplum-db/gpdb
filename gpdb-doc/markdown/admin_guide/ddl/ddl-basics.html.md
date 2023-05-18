@@ -111,7 +111,7 @@ Several restrictions apply to the definition of generated columns and tables inv
 - A generated column cannot have a column default or an identity definition.
 - A generated column cannot be used as a distribution key.
 - A generated column cannot be part of a partition key.
-- While you can specify a generated column in a partitioned table, you cannot specify one in child table partitions.
+- While you can specify a generated column in a root partitioned table, you cannot specify one in a child table.
 
 - For inheritance:
 
