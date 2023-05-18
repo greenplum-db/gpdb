@@ -1372,6 +1372,18 @@ aoco_vacuum_rel(Relation onerel, VacuumParams *params,
 }
 
 static void
+aoco_relation_add_columns(Relation rel, List *newvals, List *constraints, TupleDesc oldDesc)
+{
+	aocs_writecol_add(RelationGetRelid(rel), newvals, constraints, oldDesc);
+}
+
+static void
+aoco_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
+{
+	aocs_writecol_rewrite(RelationGetRelid(rel), newvals, oldDesc);
+}
+
+static void
 aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
                                      Relation OldIndex, bool use_sort,
                                      TransactionId OldestXmin,
@@ -2373,6 +2385,8 @@ static const TableAmRoutine ao_column_methods = {
 	.relation_nontransactional_truncate = aoco_relation_nontransactional_truncate,
 	.relation_copy_data = aoco_relation_copy_data,
 	.relation_copy_for_cluster = aoco_relation_copy_for_cluster,
+	.relation_add_columns = aoco_relation_add_columns,
+	.relation_rewrite_columns = aoco_relation_rewrite_columns,
 	.relation_vacuum = aoco_vacuum_rel,
 	.scan_analyze_next_block = aoco_scan_analyze_next_block,
 	.scan_analyze_next_tuple = aoco_scan_analyze_next_tuple,

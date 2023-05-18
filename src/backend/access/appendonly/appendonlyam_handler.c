@@ -1155,6 +1155,18 @@ appendonly_vacuum_rel(Relation onerel, VacuumParams *params,
 }
 
 static void
+appendonly_relation_add_columns(Relation rel, List *newvals, List *constraints, TupleDesc oldDesc)
+{
+	elog(ERROR, "add columns-only not implemented for AO_ROW tables");
+}
+
+static void
+appendonly_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
+{
+	elog(ERROR, "rewrite columns-only not implemented for AO_ROW tables");
+}
+
+static void
 appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 								 Relation OldIndex, bool use_sort,
 								 TransactionId OldestXmin,
@@ -2169,6 +2181,8 @@ static const TableAmRoutine ao_row_methods = {
 	.relation_nontransactional_truncate = appendonly_relation_nontransactional_truncate,
 	.relation_copy_data = appendonly_relation_copy_data,
 	.relation_copy_for_cluster = appendonly_relation_copy_for_cluster,
+	.relation_add_columns = appendonly_relation_add_columns,
+	.relation_rewrite_columns = appendonly_relation_rewrite_columns,
 	.relation_vacuum = appendonly_vacuum_rel,
 	.scan_analyze_next_block = appendonly_scan_analyze_next_block,
 	.scan_analyze_next_tuple = appendonly_scan_analyze_next_tuple,

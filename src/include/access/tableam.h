@@ -541,6 +541,17 @@ typedef struct TableAmRoutine
 	void		(*relation_copy_data) (Relation rel,
 									   const RelFileNode *newrnode);
 
+	/* See table_relation_add_columns(). */
+	void 		(*relation_add_columns) (Relation rel,
+									List *newvals,
+									List *constraints,
+									TupleDesc oldDesc);
+
+	/* See table_relation_rewrite_columns(). */
+	void 		(*relation_rewrite_columns) (Relation rel,
+									List *newvals,
+									TupleDesc oldDesc);
+
 	/* See table_relation_copy_for_cluster() */
 	void		(*relation_copy_for_cluster) (Relation NewTable,
 											  Relation OldTable,
@@ -1581,6 +1592,18 @@ static inline void
 table_relation_copy_data(Relation rel, const RelFileNode *newrnode)
 {
 	rel->rd_tableam->relation_copy_data(rel, newrnode);
+}
+
+static inline void
+table_relation_add_columns(Relation rel, List *newvals, List *constraints, TupleDesc oldDesc)
+{
+	rel->rd_tableam->relation_add_columns(rel, newvals, constraints, oldDesc);
+}
+
+static inline void
+table_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
+{
+	rel->rd_tableam->relation_rewrite_columns(rel, newvals, oldDesc);
 }
 
 /*

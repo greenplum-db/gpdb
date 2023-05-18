@@ -725,6 +725,18 @@ heapam_relation_copy_data(Relation rel, const RelFileNode *newrnode)
 }
 
 static void
+heapam_relation_add_columns(Relation rel, List *newvals, List *constraints, TupleDesc oldDesc)
+{
+	elog(ERROR, "add columns-only not implemented for HEAP tables");
+}
+
+static void
+heapam_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
+{
+	elog(ERROR, "rewrite columns-only not implemented for HEAP tables");
+}
+
+static void
 heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 								 Relation OldIndex, bool use_sort,
 								 TransactionId OldestXmin,
@@ -2764,6 +2776,8 @@ static const TableAmRoutine heapam_methods = {
 	.relation_nontransactional_truncate = heapam_relation_nontransactional_truncate,
 	.relation_copy_data = heapam_relation_copy_data,
 	.relation_copy_for_cluster = heapam_relation_copy_for_cluster,
+	.relation_add_columns = heapam_relation_add_columns,
+	.relation_rewrite_columns = heapam_relation_rewrite_columns,
 	.relation_vacuum = lazy_vacuum_rel_heap,
 	.scan_analyze_next_block = heapam_scan_analyze_next_block,
 	.scan_analyze_next_tuple = heapam_scan_analyze_next_tuple,

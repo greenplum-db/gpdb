@@ -411,27 +411,10 @@ extern void aocs_delete_finish(AOCSDeleteDesc desc);
 
 extern AOCSHeaderScanDesc aocs_begin_headerscan(
 		Relation rel, int colno);
-extern void aocs_headerscan_opensegfile(
-		AOCSHeaderScanDesc hdesc, AOCSFileSegInfo *seginfo, char *basepath);
-extern bool aocs_get_nextheader(AOCSHeaderScanDesc hdesc);
-extern void aocs_end_headerscan(AOCSHeaderScanDesc hdesc);
-extern AOCSWriteColumnDesc
-aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op);
-extern void
-aocs_writecol_newsegfiles(AOCSWriteColumnDesc desc, AOCSFileSegInfo *seginfo);
-extern void
-aocs_writecol_closefiles(AOCSWriteColumnDesc desc);
-extern void aocs_writecol_endblock(AOCSWriteColumnDesc desc, int64 firstRowNum);
-extern void
-aocs_writecol_insert_datum(AOCSWriteColumnDesc desc, Datum *d, bool *isnull);
-extern void
-aocs_writecol_finish(AOCSWriteColumnDesc desc);
-extern void aocs_addcol_emptyvpe(
-		Relation rel, AOCSFileSegInfo **segInfos,
-		int32 nseg, int num_newcols);
-extern void aocs_writecol_setfirstrownum(AOCSWriteColumnDesc desc,
-										 int64 firstRowNum);
 extern bool aocs_get_target_tuple(AOCSScanDesc aoscan, int64 targrow, TupleTableSlot *slot);
+extern AOCSWriteColumnDesc aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op);
+extern void aocs_writecol_add(Oid relid, List *newvals, List *constraints, TupleDesc oldDesc);
+extern void aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc);
 
 extern void aoco_dml_init(Relation relation);
 extern void aoco_dml_finish(Relation relation);
