@@ -2564,8 +2564,6 @@ drop table if exists bar_PT2;
 drop table if exists bar_PT3;
 drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
--- check motion is added when performing a NL Left Outer Join between relations
--- when the join condition columns belong to different opfamily
 create table foo_varchar (a varchar(5)) distributed by (a);
 create table bar_char (p char(5)) distributed by (p);
 create table random_dis_varchar (x varchar(5)) distributed randomly;
@@ -2577,6 +2575,9 @@ insert into random_dis_char values ('1 '),('2  '),('3   ');
 set optimizer_enable_hashjoin to off;
 set enable_hashjoin to off;
 set enable_nestloop to on;
+-- check motion is added when performing a NL Left Outer Join between relations
+-- when the join condition columns belong to different opfamily and both are
+-- distribution keys
 explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
@@ -2591,7 +2592,7 @@ explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p order by foo_varchar.a;
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
   a   |   p   
 ------+-------
  1    | 1    
@@ -2599,6 +2600,9 @@ select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p order b
  3    | 3    
 (3 rows)
 
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
 explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -2615,7 +2619,7 @@ explain select * from foo_varchar left join random_dis_char on foo_varchar.a=ran
  Optimizer: Postgres query optimizer
 (11 rows)
 
-select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y order by foo_varchar.a;
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
   a   |   y   
 ------+-------
  1    | 1    
@@ -2637,7 +2641,7 @@ explain select * from bar_char left join random_dis_varchar on bar_char.p=random
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x order by bar_char.p;
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
    p   |  x   
 -------+------
  1     | 1 
@@ -2646,7 +2650,8 @@ select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_var
 (3 rows)
 
 -- check motion is added when performing a NL Inner Join between relations when
--- the join condition columns belong to different opfamily
+-- the join condition columns belong to different opfamily and both are
+-- distribution keys
 explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
@@ -2661,7 +2666,7 @@ explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p order by foo_varchar.a;
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
   a   |   p   
 ------+-------
  1    | 1    
@@ -2669,6 +2674,9 @@ select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p order 
  3    | 3    
 (3 rows)
 
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
 explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -2685,7 +2693,7 @@ explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=ra
  Optimizer: Postgres query optimizer
 (11 rows)
 
-select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y order by foo_varchar.a;
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
   a   |   y   
 ------+-------
  1    | 1    
@@ -2707,7 +2715,7 @@ explain select * from bar_char inner join random_dis_varchar on bar_char.p=rando
  Optimizer: Postgres query optimizer
 (9 rows)
 
-select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x order by bar_char.p;
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
    p   |  x   
 -------+------
  1     | 1 
