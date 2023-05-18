@@ -239,8 +239,7 @@ cdbpathlocus_for_insert(PlannerInfo *root, GpPolicy *policy,
 			contain_volatile_functions((Node *) expr))
 		{
 			/*
-			 * GPDB_96_MERGE_FIXME: this modifies the subpath's targetlist in place.
-			 * That's a bit ugly.
+			 * sortgrouprefs should never be zero if the expression is volatile!
 			 */
 			pathtarget->sortgrouprefs[attno - 1] = ++maxRef;
 		}
