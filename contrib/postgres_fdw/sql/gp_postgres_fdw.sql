@@ -285,3 +285,14 @@ select * from gp_any, table_dist_int where gp_any.a=table_dist_int.f1;
 -- validate join is on segments for replicated table
 explain select * from gp_any, table_dist_repl where gp_any.a=table_dist_repl.f1;
 select * from gp_any, table_dist_repl where gp_any.a=table_dist_repl.f1;
+
+create table part_mixed_dpe(a int, b int) partition by range(b);
+create table p2 (a int, b int);
+insert into p2 select i,10+(i%9) from generate_series(1,10)i;
+insert into p2 select i,18 from generate_series(1,50)i;
+alter table part_mixed detach partition gp_any;
+alter table part_mixed_dpe attach partition p2 for values from (10) to (20);
+alter table part_mixed_dpe attach partition gp_any for values from (5) to (10);
+analyze part_mixed_dpe;
+explain select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
+select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;

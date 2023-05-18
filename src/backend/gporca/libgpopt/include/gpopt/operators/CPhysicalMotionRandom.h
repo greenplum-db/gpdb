@@ -88,6 +88,12 @@ public:
 							CDrvdPropArray *pdrgpdpCtxt,
 							ULONG ulOptReq) const override;
 
+	// compute required partition propoagation spec of the n-th child
+	CPartitionPropagationSpec *PppsRequired(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
+		CDrvdPropArray *pdrgpdpCtxt, ULONG ulOptReq) const override;
+
 	// check if required columns are included in output columns
 	BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, CColRefSet *pcrsRequired,
 						   ULONG ulOptReq) const override;
@@ -100,6 +106,9 @@ public:
 	COrderSpec *PosDerive(CMemoryPool *mp,
 						  CExpressionHandle &exprhdl) const override;
 
+	// derived properties: derive partition propagation spec
+	CPartitionPropagationSpec *PppsDerive(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 	//-------------------------------------------------------------------------------------
 	// Enforced Properties
 	//-------------------------------------------------------------------------------------
