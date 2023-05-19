@@ -206,13 +206,11 @@ installcheck-gpcheckcat:
 	@echo "Running gpcheckcat on all databases"
 	gpcheckcat -A
 
-.PHONY: installcheck-analyzedb
-installcheck-world: installcheck-analyzedb
-installcheck-analyzedb:
-	@echo "Running analyzedb on regression database"
-	analyzedb -a -d regression > /dev/null
-	@echo "Running analyzedb on isolation2test database"
-	analyzedb -a -d isolation2test > /dev/null
+.PHONY: installcheck-analyze
+installcheck-world: installcheck-analyze
+installcheck-analyze:
+	@echo "Running analyze on databases"
+	vacuumdb --all --analyze-only --jobs=5
 $(call recurse,installcheck-world,gpcontrib/gp_replica_check,installcheck)
 $(call recurse,installcheck-world,src/bin/pg_upgrade,check)
 
