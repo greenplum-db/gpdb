@@ -169,6 +169,66 @@ SELECT segno, sum(tupcount) AS totalrows FROM
 
 DROP TABLE ao_blkdir_test_rowcount;
 
+--
+-- Test tuple fetch with holes from ABORTs
+--
+CREATE TABLE ao_fetch_hole(i int, j int) USING ao_row;
+CREATE INDEX ON ao_fetch_hole(i);
+INSERT INTO ao_fetch_hole VALUES (2, 0);
+-- Create a hole after the last entry (of the last minipage) in the blkdir.
+BEGIN;
+INSERT INTO ao_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
+ABORT;
+SELECT (gp_toolkit.__gp_aoblkdir('ao_fetch_hole')).* FROM gp_dist_random('gp_id')
+  WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+-- Ensure we will do an index scan.
+SET enable_seqscan TO off;
+SET enable_indexonlyscan TO off;
+SET optimizer TO off;
+EXPLAIN SELECT count(*) FROM ao_fetch_hole WHERE i = 3;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM ao_fetch_hole WHERE i = 3;
+-- Since the hole is at the end of the minipage, we can't avoid a sysscan for
+-- each tuple.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+-- Now do 1 more insert, so that the hole is sandwiched between two successive
+-- minipage entries.
+INSERT INTO ao_fetch_hole VALUES (4, 21);
+SELECT (gp_toolkit.__gp_aoblkdir('ao_fetch_hole')).* FROM gp_dist_random('gp_id')
+  WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM ao_fetch_hole WHERE i = 3;
+-- Since the hole is between two entries, we are always able to find the last
+-- entry in the minipage, determine that the target row doesn't lie within it
+-- and early return, thereby avoiding an expensive per-tuple sysscan. We only
+-- do 1 sysscan - for the first tuple fetch in the hole and avoid it for all
+-- subsequent fetches in the hole.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+RESET enable_seqscan;
+RESET enable_indexonlyscan;
+RESET optimizer;
+
 --------------------------------------------------------------------------------
 -- AOCO tables
 --------------------------------------------------------------------------------
@@ -350,3 +410,63 @@ SELECT segno, column_num, sum(tupcount) AS totalrows FROM
     gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
 
 DROP TABLE aoco_blkdir_test_rowcount;
+
+--
+-- Test tuple fetch with holes from ABORTs
+--
+CREATE TABLE aoco_fetch_hole(i int, j int) USING ao_row;
+CREATE INDEX ON aoco_fetch_hole(i);
+INSERT INTO aoco_fetch_hole VALUES (2, 0);
+-- Create a hole after the last entry (of the last minipage) in the blkdir.
+BEGIN;
+INSERT INTO aoco_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
+ABORT;
+SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id')
+WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+-- Ensure we will do an index scan.
+SET enable_seqscan TO off;
+SET enable_indexonlyscan TO off;
+SET optimizer TO off;
+EXPLAIN SELECT count(*) FROM aoco_fetch_hole WHERE i = 3;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM aoco_fetch_hole WHERE i = 3;
+-- Since the hole is at the end of the minipage, we can't avoid a sysscan for
+-- each tuple.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+-- Now do 1 more insert, so that the hole is sandwiched between two successive
+-- minipage entries.
+INSERT INTO aoco_fetch_hole VALUES (4, 21);
+SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id')
+WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM aoco_fetch_hole WHERE i = 3;
+-- Since the hole is between two entries, we are always able to find the last
+-- entry in the minipage, determine that the target row doesn't lie within it
+-- and early return, thereby avoiding an expensive per-tuple sysscan. We only
+-- do 1 sysscan - for the first tuple fetch in the hole and avoid it for all
+-- subsequent fetches in the hole.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+RESET enable_seqscan;
+RESET enable_indexonlyscan;
+RESET optimizer;
