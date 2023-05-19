@@ -3011,6 +3011,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into dqa_f4 values(null, null, null);
 insert into dqa_f4 values(1, 1, 1);
 insert into dqa_f4 values(2, 2, 2);
+analyze dqa_f4;
 select count(distinct a), count(distinct b) from dqa_f4 group by c;
  count | count 
 -------+-------
