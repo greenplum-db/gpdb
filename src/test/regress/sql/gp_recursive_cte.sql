@@ -445,3 +445,26 @@ with recursive cte (n) as
   ) q
 )
 select * from cte;
+
+-- Test recursive CTE when the non-recursive term is a table scan with a
+-- predicate on the distribution key, and the recursive term joins the CTE with
+-- the same table on its non-distribution key
+create table recursive_table_6(a numeric(4), b int);
+insert into recursive_table_6 values (0::numeric, 3);
+insert into recursive_table_6 values (2::numeric, 0);
+insert into recursive_table_6 values (5::numeric, 0);
+analyze recursive_table_6;
+
+SELECT $query$
+WITH RECURSIVE cte (i, j) AS (
+    SELECT a, b FROM recursive_table_6 WHERE a = 0::numeric::numeric
+    UNION ALL
+    SELECT a, b FROM cte, recursive_table_6 WHERE cte.i = recursive_table_6.b
+)
+SELECT i, j FROM cte;
+$query$ AS qry \gset
+
+EXPLAIN (COSTS OFF)
+    :qry ;
+
+:qry ;
