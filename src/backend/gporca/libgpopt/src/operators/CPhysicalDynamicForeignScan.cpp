@@ -48,21 +48,21 @@ CPhysicalDynamicForeignScan::CPhysicalDynamicForeignScan(
 {
 	// we need to overwrite the distribution spec for DynamicForeignGets, as
 	// the partition table can have one distribution, but the distribution for the
-	// foreign get can be different. Note this distribution spec mismatch is only
+	// ForeignGet can be different. Note this distribution spec mismatch is only
 	// allowed for foreign partitions
 	m_pds->Release();
-	// if this table is coordinator only, use a strict singleton distribution request
+	// if this table is coordinator only, set the distribution as strict singleton
 	if (m_dist == IMDRelation::EreldistrCoordinatorOnly)
 	{
 		m_pds = GPOS_NEW(mp) CDistributionSpecStrictSingleton(
 			CDistributionSpecSingleton::EstCoordinator);
 	}
+	// if the table can be executed on either a segment or coordinator, set it as universal
 	else if (m_dist == IMDRelation::EreldistrUniversal)
 	{
 		m_pds = GPOS_NEW(mp) CDistributionSpecUniversal();
 	}
-	// otherwise, we want to execute on each segment, but can't assume anything
-	// about the distribution so we treat it as random
+	// if the distribution is set to "all segments", it is set to a random distribution
 	else
 	{
 		GPOS_ASSERT(m_dist == IMDRelation::EreldistrRandom);
