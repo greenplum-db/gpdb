@@ -2693,7 +2693,7 @@ select * from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x jo
  a | a | a
 (1 row)
 
-select x.b from ( ( select 'a'::text as a ) xx join (select 'a'::text as b) yy on a = b ) x join (select 'a'::text as c) y on a=c;
+select x.b from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
  b 
 ---
  a
