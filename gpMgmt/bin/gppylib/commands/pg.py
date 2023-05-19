@@ -385,6 +385,7 @@ class PgBaseBackup(Command):
         # This is needed to handle Greenplum tablespaces
         cmd_tokens.append('--target-gp-dbid')
         cmd_tokens.append(str(target_gp_dbid))
+        
         cmd_tokens.append('--progress')
         cmd_tokens.append('--verbose')
 
