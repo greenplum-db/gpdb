@@ -18513,7 +18513,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		tmprelid = RangeVarGetRelid(tmprv, NoLock, false);
 		swap_relation_files(tarrelid, tmprelid,
 							false, /* target_is_pg_class */
-							false, /* swap_toast_by_content */
+							true, /* swap_toast_by_content */
 							false, /* swap_stats */
 							true,
 							RecentXmin,
