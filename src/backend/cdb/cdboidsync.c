@@ -106,7 +106,7 @@ pg_highest_oid(PG_FUNCTION_ARGS pg_attribute_unused())
 
 		/*
 		 * Return the logically larger Oid between the numeric maximum of the
-		 * primaries and the master's Oid counter. This is not 100% accurate
+		 * primaries and the coordinator's Oid counter. This is not 100% accurate
 		 * because the primaries can be in a wide range of Oids... but this is
 		 * good enough for the majority of production clusters.
 		 */

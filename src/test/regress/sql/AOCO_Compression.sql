@@ -1790,3 +1790,17 @@ SELECT t.typname, te.typoptions
 FROM pg_type t
 LEFT JOIN pg_type_encoding te ON (t.oid=te.typid)
 WHERE t.typname in ('mood_encoded', '_mood_encoded');
+
+-- get_ao_compression_ratio when the relation is a partitioned table with ao table children.
+-- please refer to https://github.com/greenplum-db/gpdb/issues/14876
+CREATE TABLE public.partitioned_table_14876
+(id SERIAL, value TEXT, sales_date date)
+WITH (appendoptimized=true, orientation=column, compresstype=zlib, compresslevel=5)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (sales_date)
+(
+  -- monthly
+  START (date '2020-12-01') INCLUSIVE END (date '2021-01-01') EXCLUSIVE  EVERY (INTERVAL '1 month')
+);
+SELECT get_ao_compression_ratio('public.partitioned_table_14876');
+DROP TABLE public.partitioned_table_14876;

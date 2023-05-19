@@ -51,6 +51,7 @@
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarArray.h"
 #include "gpopt/operators/CScalarArrayCoerceExpr.h"
+#include "gpopt/operators/CScalarCaseTest.h"
 #include "gpopt/operators/CScalarCast.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarCoerceViaIO.h"
@@ -733,6 +734,7 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 		!IMDId::IsValid(pmdidCmpOp))
 	{
 		// cannot construct an ArrayCmp expression if any of these are invalid
+		pexprScalarChildren->Release();
 		return nullptr;
 	}
 
@@ -3027,6 +3029,13 @@ CUtils::FScalarBoolOp(CExpression *pexpr, CScalarBoolOp::EBoolOperator eboolop)
 		   eboolop == CScalarBoolOp::PopConvert(pop)->Eboolop();
 }
 
+// check if given expression is a boolean test
+BOOL
+CUtils::FScalarBooleanTest(CExpression *pexpr)
+{
+	return (COperator::EopScalarBooleanTest == pexpr->Pop()->Eopid());
+}
+
 // check if given expression is a scalar null test
 BOOL
 CUtils::FScalarNullTest(CExpression *pexpr)
@@ -3168,6 +3177,7 @@ CUtils::FConstrainableType(IMDId *mdid_type)
 	{
 		// also allow date/time/timestamp/float4/float8
 		return (CMDIdGPDB::m_mdid_date.Equals(mdid_type) ||
+				CMDIdGPDB::m_mdid_bool.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_time.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_timestamp.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_timeTz.Equals(mdid_type) ||
@@ -3784,15 +3794,18 @@ CUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpr,
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+
 		pexprCast = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarArrayCoerceExpr(
-				mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			pexpr);
+			pexpr,
+			CUtils::PexprFuncElemExpr(mp, md_accessor, mdid_func,
+									  parrayCoerceCast->GetSrcElemTypeMdId(),
+									  parrayCoerceCast->TypeModifier()));
 	}
 	else if (pmdcast->GetMDPathType() == IMDCast::EmdtCoerceViaIO)
 	{
@@ -3810,6 +3823,27 @@ CUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpr,
 	}
 
 	return pexprCast;
+}
+
+// construct a func element expr for array coerce
+CExpression *
+CUtils::PexprFuncElemExpr(CMemoryPool *mp, CMDAccessor *md_accessor,
+						  IMDId *mdid_func, IMDId *mdid_elem_type, INT typmod)
+{
+	const IMDFunction *cast_func = md_accessor->RetrieveFunc(mdid_func);
+	const CWStringConst *pstrFunc = GPOS_NEW(mp)
+		CWStringConst(mp, (cast_func->Mdname().GetMDName())->GetBuffer());
+	mdid_func->AddRef();
+	cast_func->GetResultTypeMdid()->AddRef();
+	CScalarFunc *popCastScalarFunc =
+		GPOS_NEW(mp) CScalarFunc(mp, mdid_func, cast_func->GetResultTypeMdid(),
+								 typmod, pstrFunc, false /* funcvariadic */);
+	mdid_elem_type->AddRef();
+	CExpression *pexprCaseTest = GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CScalarCaseTest(mp, mdid_elem_type));
+	CExpression *pexpr =
+		GPOS_NEW(mp) CExpression(mp, popCastScalarFunc, pexprCaseTest);
+	return pexpr;
 }
 
 // check whether a colref array contains repeated items

@@ -30,10 +30,6 @@ CREATE INDEX on vacuum_progress_ao_column(j);
 -- Also delete half of the tuples evenly before the EOF of segno 2.
 DELETE FROM vacuum_progress_ao_column where j % 2 = 0;
 
--- Lookup pg_class and collected stats view before VACUUM
-SELECT relpages, reltuples, relallvisible FROM pg_class where relname = 'vacuum_progress_ao_column';
-SELECT n_live_tup, n_dead_tup, last_vacuum, vacuum_count FROM gp_stat_all_tables WHERE relname = 'vacuum_progress_ao_column' and gp_segment_id = 1;
-
 -- Perform VACUUM and observe the progress
 
 -- Suspend execution at pre-cleanup phase after truncating both segfiles to their logical EOF.

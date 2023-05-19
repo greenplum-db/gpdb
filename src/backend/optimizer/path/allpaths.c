@@ -3095,7 +3095,6 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		List	   *pathkeys;
 		CdbPathLocus locus;
 
-		/* GPDB_96_MERGE_FIXME: Should we check forceDistRandom here, like set_subquery_pathlist() does? */
 		locus = cdbpathlocus_from_subquery(root, rel, subpath);
 
 		/* Convert subquery pathkeys to outer representation */

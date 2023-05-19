@@ -165,13 +165,13 @@ declare -a DATA_DIRECTORY=(/data1/primary /data1/primary
 /data1/primary /data2/primary /data2/primary /data2/primary)
 ```
 
-MASTER\_HOSTNAME
+COORDINATOR\_HOSTNAME
 :   **Required.** The host name of the coordinator instance. This host name must exactly match the configured host name of the machine \(run the `hostname` command to determine the correct hostname\).
 
-MASTER\_DIRECTORY
+COORDINATOR\_DIRECTORY
 :   **Required.** This specifies the location where the data directory will be created on the coordinator host. You must make sure that the user who runs `gpinitsystem` \(for example, the `gpadmin` user\) has permissions to write to this directory.
 
-MASTER\_PORT
+COORDINATOR\_PORT
 :   **Required.** The port number for the coordinator instance. This is the port number that users and client connections will use when accessing the Greenplum Database system.
 
 TRUSTED\_SHELL

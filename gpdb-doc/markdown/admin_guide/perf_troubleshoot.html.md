@@ -110,7 +110,7 @@ con6 /gpdata/*/log/gpdb*.csv' > seglog.out
 
 ### <a id="topic9"></a>Gathering Information for VMware Customer Support 
 
-The Greenplum Magic Tool \(GPMT\) can run diagnostics and collect information from a Greenplum Database system. You can then send the information to VMware Customer Support to aid in the diagnosis of Greenplum Database errors or system failures.
+The `gpsupport` tool can run diagnostics and collect information from a Greenplum Database system. You can then send the information to VMware Customer Support to aid in the diagnosis of Greenplum Database errors or system failures.
 
-The `gpmt` utility command is available in the `bin` directory of your Greenplum Database installation. See [gpmt](../utility_guide/ref/gpmt.html) for usage information.
+The `gpsupport` utility command is available in the `bin` directory of your Greenplum Database installation. See [gpsupport](../utility_guide/ref/gpsupport.html) for usage information.
 

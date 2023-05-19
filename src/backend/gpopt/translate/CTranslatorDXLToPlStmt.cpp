@@ -2252,7 +2252,7 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion(
 		int segindex = *((*input_segids_array)[0]);
 
 		// only one segment in total
-		if (segindex == MASTER_CONTENT_ID)
+		if (segindex == COORDINATOR_CONTENT_ID)
 		{
 			// sender is on coordinator, must be singleton gang
 			sendslice->gangType = GANGTYPE_ENTRYDB_READER;

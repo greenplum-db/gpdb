@@ -2139,7 +2139,7 @@ gp_keepalives_check(PG_FUNCTION_ARGS)
 
 		context = (Context *) palloc(sizeof(Context));
 		context->index = 0;
-		context->cdbs = (cdbcomponent_getComponentInfo(MASTER_CONTENT_ID))->cdbs;
+		context->cdbs = (cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID))->cdbs;
 		context->currentQE = NULL;
 
 		funcctx->user_fctx = (void *) context;

@@ -145,10 +145,10 @@ AND
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.2710.1.0" Name="pg_has_role" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.2710.1.0" Name="pg_has_role" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.1400.1.0" Name="name" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1400.1.0" Name="name" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.19.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.25.1.0" Name="text" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="true" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -350,7 +350,7 @@ AND
           <dxl:Opfamily Mdid="0.3031.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.62.1.0" Name="nameeq" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.62.1.0" Name="nameeq" ReturnsSet="false" Stability="Immutable" IsStrict="true">
 	    <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.2799.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
@@ -631,7 +631,7 @@ AND
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:GPDBFunc Mdid="0.1401.1.0" Name="varchar" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1401.1.0" Name="varchar" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.1043.1.0"/>
       </dxl:GPDBFunc>
     </dxl:Metadata>
@@ -819,7 +819,7 @@ AND
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="604">
+    <dxl:Plan Id="0" SpaceSize="692">
       <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1373.906987" Rows="512.000000" Width="106"/>

@@ -275,7 +275,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenTypeMod, GPOS_WSZ_LIT("TypeModifier")},
 		{EdxltokenCoercionForm, GPOS_WSZ_LIT("CoercionForm")},
 		{EdxltokenLocation, GPOS_WSZ_LIT("Location")},
-		{EdxltokenElementFunc, GPOS_WSZ_LIT("ElementFunc")},
 		{EdxltokenIsExplicit, GPOS_WSZ_LIT("IsExplicit")},
 
 		{EdxltokenJoinType, GPOS_WSZ_LIT("JoinType")},
@@ -664,11 +663,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenGPDBFuncStable, GPOS_WSZ_LIT("Stable")},
 		{EdxltokenGPDBFuncImmutable, GPOS_WSZ_LIT("Immutable")},
 		{EdxltokenGPDBFuncVolatile, GPOS_WSZ_LIT("Volatile")},
-		{EdxltokenGPDBFuncDataAccess, GPOS_WSZ_LIT("DataAccess")},
-		{EdxltokenGPDBFuncNoSQL, GPOS_WSZ_LIT("NoSQL")},
-		{EdxltokenGPDBFuncContainsSQL, GPOS_WSZ_LIT("ContainsSQL")},
-		{EdxltokenGPDBFuncReadsSQLData, GPOS_WSZ_LIT("ReadsSQLData")},
-		{EdxltokenGPDBFuncModifiesSQLData, GPOS_WSZ_LIT("ModifiesSQLData")},
 		{EdxltokenGPDBFuncResultTypeId, GPOS_WSZ_LIT("ResultType")},
 		{EdxltokenGPDBFuncReturnsSet, GPOS_WSZ_LIT("ReturnsSet")},
 		{EdxltokenGPDBFuncStrict, GPOS_WSZ_LIT("IsStrict")},
@@ -689,6 +683,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenGPDBCastSrcType, GPOS_WSZ_LIT("SourceTypeId")},
 		{EdxltokenGPDBCastDestType, GPOS_WSZ_LIT("DestinationTypeId")},
 		{EdxltokenGPDBCastFuncId, GPOS_WSZ_LIT("CastFuncId")},
+		{EdxltokenGPDBCastSrcElemType, GPOS_WSZ_LIT("SourceElemTypeId")},
 		{EdxltokenGPDBCastCoercePathType, GPOS_WSZ_LIT("CoercePathType")},
 		{EdxltokenGPDBArrayCoerceCast, GPOS_WSZ_LIT("ArrayCoerceCast")},
 

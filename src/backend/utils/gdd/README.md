@@ -199,7 +199,7 @@ while true:
 if count_vertices_not_deleted() > 0:
     # detected at least one cycle
     # the cycles are only reliable if all the contained vertices
-    # are valid transactions on master
+    # are valid transactions on coordinator
     if all_vertices_are_valid():
         # choose a vertex and cancel it
 ```
@@ -261,12 +261,12 @@ select * from gp_dist_wait_status();
 The local wait-relationship graphs collected from each segment are generated
 asynchronously. We have to take the impact into account.
 
-- if a transaction A is valid on master then it's valid on all segments;
-- transaction A's solid in edges are all valid as long as A is valid on master;
+- if a transaction A is valid on coordinator then it's valid on all segments;
+- transaction A's solid in edges are all valid as long as A is valid on coordinator;
 - if there is a solid edge from B to A on a segment, then B is valid as long as
   A is valid;
 - further more, if there is a solid edge from B to A on a segment, then B is
-  valid on all segments as long as A is valid on master;
+  valid on all segments as long as A is valid on coordinator;
 - if there is a dotted edge from B to A on a segment, then this edge is valid
   unless A's status changed;
 - if there is a solid edge from B to A then all the vertices wait for B
@@ -274,11 +274,11 @@ asynchronously. We have to take the impact into account.
 
 Our algorithm reduces all the edges that are possible to change. On each
 segment the reduced graph's end vertices (vertices whose local out degree is
-0) must only have solid in edges. We can validate these transactions on master,
+0) must only have solid in edges. We can validate these transactions on coordinator,
 if they are all valid then those solid edges to them are also valid, so the
 transactions waiting for them directly or indirectly are valid, so the graphs
 are valid and the detected deadlock cycles are true; if any of the
-transactions is invalid on master then the graphs are not reliable and we
+transactions is invalid on coordinator then the graphs are not reliable and we
 should retry later.
 
 So our algorithm only requires the edges information to be consistent at
@@ -304,7 +304,7 @@ edge.
 
 Let's run the new algorithm on an actual case to understand how does it work.
 
-The testing cluster has 3 segments: seg -1, seg 0 and seg 1. Master is on seg
+The testing cluster has 3 segments: seg -1, seg 0 and seg 1. Coordinator is on seg
 -1.  A table `t1` is created as below:
 
 ```sql

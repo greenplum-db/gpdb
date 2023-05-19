@@ -216,6 +216,7 @@
 		"gp_resource_group_cpu_limit",
 		"gp_resource_group_cpu_priority",
 		"gp_resource_group_bypass_catalog_query",
+		"gp_resource_group_bypass_direct_dispatch",
 		"gp_resource_group_queuing_timeout",
 		"gp_resource_manager",
 		"gp_resqueue_memory_policy",

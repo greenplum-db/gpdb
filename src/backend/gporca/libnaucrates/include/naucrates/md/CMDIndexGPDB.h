@@ -68,7 +68,7 @@ private:
 	IMdIdArray *m_mdid_opfamilies_array;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// Child index oids
 	IMdIdArray *m_child_index_oids;
@@ -122,11 +122,7 @@ public:
 	ULONG GetIncludedColPos(ULONG column) const override;
 
 	// DXL string for index
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// serialize MD index in DXL format given a serializer object
 	void Serialize(gpdxl::CXMLSerializer *) const override;

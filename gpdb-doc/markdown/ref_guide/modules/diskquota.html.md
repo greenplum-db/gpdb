@@ -37,7 +37,7 @@ Before you can use the module, you must perform these steps:
     GUC              : shared_preload_libraries
     Coordinator value: auto_explain
     Segment     value: auto_explain
-    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.1'
+    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.2'
     $ gpstop -ar
     ```
 
@@ -461,39 +461,39 @@ When you expand the Greenplum Database cluster, each table consumes more table s
 
 ## <a id="upgrade"></a>Upgrading the Module
 
-The `diskquota` 2.1 module is installed when you install or upgrade Greenplum Database. Versions 1.x and 2.0.x of the module will continue to work after you upgrade Greenplum.
+The `diskquota` 2.2 module is installed when you install or upgrade Greenplum Database. Versions 1.x, 2.0.x, and 2.1.x of the module will continue to work after you upgrade Greenplum.
 
 > **Note**
 > `diskquota` will be paused during the upgrade procedure and will be automatically resumed when the upgrade completes.
 
-*If you are upgrading from `diskquota` version 2.0.x*, perform the procedure in [Upgrading from Version 2.0.x](#upgrade_20to21).
+*If you are upgrading from an earlier `diskquota` 2.x version, perform the procedure in [Upgrading from an Earlier 2.x Version](#upgrade_tolastest2).
 
 *If you are upgrading from `diskquota` version 1.x*, there are two steps in the upgrade procedure:
 
 1. You must first [Upgrade the Module from Version 1.x to Version 2.0.x](#upgrade_1to2).
-1. And then you must [Upgrade the Module from Version 2.0.x](#upgrade_20to21) to version 2.1.
+1. And then you must [Upgrade from an Earlier 2.x Version](#upgrade_tolatest2) to version 2.2.x.
 
 
-### <a id="upgrade_20to21"></a>Upgrading from Version 2.0.x
+### <a id="upgrade_tolatest2"></a>Upgrading from an Earlier 2.x Version
 
-If you are using version 2.0.x of the module and you want to upgrade to `diskquota` version 2.1, you must perform the following procedure:
+If you are using version 2.0.x or 2.1.x of the module and you want to upgrade to `diskquota` version 2.2.x, you must perform the following procedure:
 
-1.  Replace the `diskquota-2.0` shared library in the Greenplum Database `shared_preload_libraries` server configuration parameter setting and restart Greenplum Database. Be sure to retain the other libraries. For example:
+1.  Replace the `diskquota-2.<n>` shared library in the Greenplum Database `shared_preload_libraries` server configuration parameter setting and restart Greenplum Database. Be sure to retain the other libraries. For example:
 
     ```
     $ gpconfig -s shared_preload_libraries
     Values on all segments are consistent
     GUC              : shared_preload_libraries
-    Coordinator value: auto_explain,diskquota-2.0
-    Segment     value: auto_explain,diskquota-2.0
-    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.1'
+    Coordinator value: auto_explain,diskquota-2.1
+    Segment     value: auto_explain,diskquota-2.1
+    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.2'
     $ gpstop -ar
     ```
 
 2.  Update the `diskquota` extension in every database in which you registered the module:
 
     ```
-    $ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.1'";
+    $ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.2'";
     ```
 
 4.  Restart Greenplum Database:

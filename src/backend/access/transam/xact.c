@@ -869,7 +869,7 @@ GetCurrentCommandId(bool used)
 	{
 		/*
 		 * Forbid setting currentCommandIdUsed in a parallel worker, because
-		 * we have no provision for communicating this back to the master.  We
+		 * we have no provision for communicating this back to the leader.  We
 		 * could relax this restriction when currentCommandIdUsed was already
 		 * true at the start of the parallel operation.
 		 */
@@ -1251,7 +1251,7 @@ ExitParallelMode(void)
 /*
  *	IsInParallelMode
  *
- * Are we in a parallel operation, as either the master or a worker?  Check
+ * Are we in a parallel operation, as either the leader or a worker?  Check
  * this to prohibit operations that change backend-local state expected to
  * match across all workers.  Mere caches usually don't require such a
  * restriction.  State modified in a strict push/pop fashion, such as the
@@ -2682,21 +2682,21 @@ StartTransaction(void)
 	/*
 	 * Acquire a resource group slot.
 	 *
-	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned.
+	 * Slot is successfully acquired when AssignResGroupOnCoordinator() is returned.
 	 * This slot will be released when the transaction is committed or aborted.
 	 *
-	 * Note that AssignResGroupOnMaster() can throw a PG exception. Since we
+	 * Note that AssignResGroupOnCoordinator() can throw a PG exception. Since we
 	 * have set the transaction state to TRANS_INPROGRESS by this point, any
 	 * exceptions thrown will trigger AbortTransaction() and free the slot.
 	 *
 	 * It's important that we acquire the resource group *after* starting the
 	 * transaction (i.e. setting up the per-transaction memory context).
 	 * As part of determining the resource group that the transaction should be
-	 * assigned to, AssignResGroupOnMaster() accesses pg_authid, and a
+	 * assigned to, AssignResGroupOnCoordinator() accesses pg_authid, and a
 	 * transaction should be in progress when it does so.
 	 */
-	if (ShouldAssignResGroupOnMaster())
-		AssignResGroupOnMaster();
+	if (ShouldAssignResGroupOnCoordinator())
+		AssignResGroupOnCoordinator();
 
 	initialize_wal_bytes_written();
 	ShowTransactionState("StartTransaction");
@@ -2864,13 +2864,13 @@ CommitTransaction(void)
 	else
 	{
 		/*
-		 * We must not mark our XID committed; the parallel master is
+		 * We must not mark our XID committed; the parallel leader is
 		 * responsible for that.
 		 */
 		latestXid = InvalidTransactionId;
 
 		/*
-		 * Make sure the master will know about any WAL we wrote before it
+		 * Make sure the leader will know about any WAL we wrote before it
 		 * commits.
 		 */
 		ParallelWorkerReportLastRecEnd(XactLastRecEnd);
@@ -2883,7 +2883,7 @@ CommitTransaction(void)
 	 * signals (which may attempt to abort our now partially-completed
 	 * transaction) until we've notified the QEs.
 	 *
-	 * And, that we have not master released locks, yet, too.
+	 * And, that we have not coordinator released locks, yet, too.
 	 *
 	 * Note:  do this BEFORE clearing the resource owner, as the dispatch
 	 * routines might want to use them.  Plus, we want AtCommit_Memory to
@@ -3514,7 +3514,7 @@ AbortTransaction(void)
 		latestXid = InvalidTransactionId;
 
 		/*
-		 * Since the parallel master won't get our value of XactLastRecEnd in
+		 * Since the parallel leader won't get our value of XactLastRecEnd in
 		 * this case, we nudge WAL-writer ourselves in this case.  See related
 		 * comments in RecordTransactionAbort for why this matters.
 		 */
@@ -5633,7 +5633,7 @@ RollbackAndReleaseCurrentSubTransaction(void)
 
 	/*
 	 * Unlike ReleaseCurrentSubTransaction(), this is nominally permitted
-	 * during parallel operations.  That's because we may be in the master,
+	 * during parallel operations.  That's because we may be in the leader,
 	 * recovering from an error thrown while we were in parallel mode.  We
 	 * won't reach here in a worker, because BeginInternalSubTransaction()
 	 * will have failed.

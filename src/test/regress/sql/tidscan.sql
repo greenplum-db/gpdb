@@ -120,7 +120,7 @@ RESET enable_hashjoin;
 
 -- check predicate lock on CTID
 -- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: Greenplum does not support serializable transactions,
--- ingore the below test case.
+-- ignore the below test case.
 -- start_ignore
 BEGIN ISOLATION LEVEL SERIALIZABLE;
 SELECT * FROM tidscan WHERE ctid = '(0,1)';

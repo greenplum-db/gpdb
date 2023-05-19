@@ -146,13 +146,13 @@ find_inheritance_children(Oid parentrelId, LOCKMODE lockmode)
 	pfree(oidarr);
 
 	/*
-	 * The order in which child OIDs are scanned on master may not be
+	 * The order in which child OIDs are scanned on coordinator may not be
 	 * the same on segments.  When a partitioned table needs to be
-	 * rewritten during ALTER TABLE, master generates new OIDs for
+	 * rewritten during ALTER TABLE, coordinator generates new OIDs for
 	 * every child in this list.  Segments scan pg_inherits and
-	 * correlate the list of OIDs dispatched by master with each
+	 * correlate the list of OIDs dispatched by coordinator with each
 	 * child.  To guarantee that the child <--> new OID pairs are
-	 * identical on master and segments, we need the following sort.
+	 * identical on coordinator and segments, we need the following sort.
 	 */
 	{
 		ListCell   *item;

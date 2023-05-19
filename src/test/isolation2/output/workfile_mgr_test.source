@@ -34,14 +34,14 @@ CREATE
 -- start_ignore
 20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Starting gpstop with args: -ari
 20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Gathering information and validating the environment...
-20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20200923:12:05:57:014232 gpstop:mdw:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
 20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.7339.g02578435d1 build dev'
-20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Commencing Coordinator instance shutdown with mode='immediate'
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Coordinator segment instance directory=/home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover coordinator process
 20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Stopping master standby host mdw mode=immediate
+20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Stopping coordinator standby host mdw mode=immediate
 20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Successfully shutdown standby process on mdw
 20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
 20200923:12:05:58:014232 gpstop:mdw:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
@@ -176,14 +176,14 @@ DROP
 -- start_ignore
 20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Starting gpstop with args: -ari
 20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Gathering information and validating the environment...
-20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
 20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.7339.g02578435d1 build dev'
-20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
-20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Commencing Coordinator instance shutdown with mode='immediate'
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Coordinator segment instance directory=/home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover coordinator process
 20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/Documents/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
-20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Stopping master standby host mdw mode=immediate
+20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Stopping coordinator standby host mdw mode=immediate
 20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Successfully shutdown standby process on mdw
 20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
 20200923:12:08:05:016154 gpstop:mdw:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...

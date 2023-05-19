@@ -937,7 +937,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 
 	/*
 	 * If this function has restrictions on where it can be executed
-	 * (EXECUTE ON MASTER or EXECUTE ON ALL SEGMENTS), make note of that,
+	 * (EXECUTE ON COORDINATOR or EXECUTE ON ALL SEGMENTS), make note of that,
 	 * so that the planner knows to be prepared for it.
 	 */
 	if (func_exec_location(funcid) != PROEXECLOCATION_ANY)

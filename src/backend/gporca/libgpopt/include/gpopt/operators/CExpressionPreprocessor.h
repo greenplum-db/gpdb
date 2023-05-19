@@ -78,7 +78,8 @@ private:
 
 	// eliminate self comparisons
 	static CExpression *PexprEliminateSelfComparison(CMemoryPool *mp,
-													 CExpression *pexpr);
+													 CExpression *pexpr,
+													 CColRefSet *pcrsNotNull);
 
 	// trim superfluos equality
 	static CExpression *PexprPruneSuperfluousEquality(CMemoryPool *mp,

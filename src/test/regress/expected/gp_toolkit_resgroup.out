@@ -110,7 +110,7 @@ select logseverity from gp_toolkit.__gp_log_segment_ext where logseverity='LOG' 
  LOG
 (5 rows)
 
-select logseverity from gp_toolkit.__gp_log_master_ext where logseverity='LOG' limit 5;
+select logseverity from gp_toolkit.__gp_log_coordinator_ext where logseverity='LOG' limit 5;
  logseverity 
 -------------
  LOG
@@ -138,7 +138,7 @@ select logseverity from gp_toolkit.gp_log_database where logseverity='LOG' limit
  LOG
 (3 rows)
 
-select logseverity from gp_toolkit.gp_log_master_concise where logseverity='LOG' limit 5; -- superuser only
+select logseverity from gp_toolkit.gp_log_coordinator_concise where logseverity='LOG' limit 5; -- superuser only
  logseverity 
 -------------
  LOG

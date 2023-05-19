@@ -55,10 +55,10 @@ select aunnspname from gp_toolkit.__gp_user_namespaces where aunnspname='tktest'
 -- Test log reading functions
 
 select logseverity from gp_toolkit.__gp_log_segment_ext where logseverity='LOG' limit 5;
-select logseverity from gp_toolkit.__gp_log_master_ext where logseverity='LOG' limit 5;
+select logseverity from gp_toolkit.__gp_log_coordinator_ext where logseverity='LOG' limit 5;
 select logseverity from gp_toolkit.gp_log_system where logseverity='LOG' limit 5;
 select logseverity from gp_toolkit.gp_log_database where logseverity='LOG' limit 3;
-select logseverity from gp_toolkit.gp_log_master_concise where logseverity='LOG' limit 5; -- superuser only
+select logseverity from gp_toolkit.gp_log_coordinator_concise where logseverity='LOG' limit 5; -- superuser only
 
 -- GP Command Timings
 --

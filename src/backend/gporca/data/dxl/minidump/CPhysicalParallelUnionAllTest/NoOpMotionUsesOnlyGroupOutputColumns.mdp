@@ -179,7 +179,7 @@ EXPLAIN SELECT b, a FROM foo UNION ALL SELECT b, a FROM foo INTERSECT ALL SELECT
       </dxl:Relation>
       <dxl:MDCast Mdid="3.20.1.0;20.1.0" Name="int8" BinaryCoercible="true" SourceTypeId="0.20.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.0.0.0"/>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
-      <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" IsStrict="false">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.25025.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>

@@ -73,9 +73,6 @@ CMDTypeInt2GPDB::CMDTypeInt2GPDB(CMemoryPool *mp) : m_mp(mp)
 	m_mdid_count =
 		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT2_AGG_COUNT);
 
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
-
 	GPOS_ASSERT(GPDB_INT2_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
 	m_mdid->AddRef();
 	m_datum_null =
@@ -110,8 +107,21 @@ CMDTypeInt2GPDB::~CMDTypeInt2GPDB()
 	m_mdid_sum->Release();
 	m_mdid_count->Release();
 	m_datum_null->Release();
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
+}
 
-	GPOS_DELETE(m_dxl_str);
+const CWStringDynamic *
+CMDTypeInt2GPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
 }
 
 //---------------------------------------------------------------------------

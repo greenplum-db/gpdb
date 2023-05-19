@@ -21,7 +21,7 @@ SET gp_create_table_random_default_distribution=off;
 2: select 'dummy select to establish snapshot';
 1: alter table reindex_serialize_tab_heap drop column c;
 1: COMMIT;
--- Remember index relfilenodes from master and segments before
+-- Remember index relfilenodes from coordinator and segments before
 -- reindex.
 2: create temp table old_relfilenodes as
    (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class')
@@ -31,7 +31,7 @@ SET gp_create_table_random_default_distribution=off;
     where relname like 'idx%_reindex_serialize_tab_heap');
 2: reindex table reindex_serialize_tab_heap;
 2: COMMIT;
--- Validate that reindex changed all index relfilenodes on master as well as
+-- Validate that reindex changed all index relfilenodes on coordinator as well as
 -- segments.  The following query should return 0 tuples.
 2: select oldrels.* from old_relfilenodes oldrels join
    (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class')

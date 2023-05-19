@@ -174,17 +174,17 @@ This table lists the versions of the Greenplum Extensions that are compatible wi
 <tbody class="tbody">
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_java.html">PL/Java</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.4</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.7</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports Java 8 and 11.</td>
 </tr>
 <tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python Data Science Module Package</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.2</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python 3.9 Data Science Module Package</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.1</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_r.html">PL/R</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.1.0</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.1.1</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">(CentOS) R 3.3.3<p class="p"> (Ubuntu) You install R 3.5.1+.</p>
 </td>
 </tr>
@@ -195,7 +195,7 @@ This table lists the versions of the Greenplum Extensions that are compatible wi
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_container.html">PL/Container</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.2.1</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
 </tr>
 <tr class="row">

@@ -56,13 +56,11 @@ select sum((select count(*) from t11_t group by b having b = s.b)) as sum_col fr
 -- Test: 15
 -- ----------------------------------------------------------------------
 -- aggregate over partition by
--- GPDB_10_MERGE_FIXME: Here we cast the unknown typed literal to text. After
--- we move past postgres 10 we can drop the cast.
 select state,
        sum(revenue) over (partition by state)
 from
-   (select 'A'::text as enc_email, 1 as revenue) b
-   join (select 'A'::text as enc_email, 'B'::text as state ) c using(enc_email)
+   (select 'A' as enc_email, 1 as revenue) b
+   join (select 'A' as enc_email, 'B' as state ) c using(enc_email)
 group by 1,b.revenue;
  state | sum 
 -------+-----

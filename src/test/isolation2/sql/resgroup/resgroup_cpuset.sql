@@ -147,7 +147,7 @@ SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 DROP RESOURCE GROUP rg1_test_group;
 -- end_ignore
 
--- test segment/master cpuset
+-- test segment/coordinator cpuset
 CREATE RESOURCE GROUP rg_multi_cpuset1 WITH (concurrency=2, cpuset='0;0');
 ALTER RESOURCE GROUP rg_multi_cpuset1 set CPUSET '1;1';
 select groupname,cpuset from gp_toolkit.gp_resgroup_config where groupname='rg_multi_cpuset1';

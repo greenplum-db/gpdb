@@ -54,6 +54,8 @@
 #define RESGROUP_MIN_CPU_SOFT_PRIORITY	(1)
 #define RESGROUP_MAX_CPU_SOFT_PRIORITY	(500)
 
+#define RESGROUP_MIN_MIN_COST		(0)
+#define RESGROUP_MAX_MIN_COST		(500)
 static int str2Int(const char *str, const char *prop);
 static ResGroupLimitType getResgroupOptionType(const char* defname);
 static ResGroupCap getResgroupOptionValue(DefElem *defel);
@@ -442,6 +444,9 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 			caps.memory_limit = value;
 			break;
+		case RESGROUP_LIMIT_TYPE_MIN_COST:
+			caps.min_cost = value;
+			break;
 		default:
 			break;
 	}
@@ -583,6 +588,10 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 				resgroupCaps->memory_limit = str2Int(value,
+													getResgroupOptionName(type));
+				break;
+			case RESGROUP_LIMIT_TYPE_MIN_COST:
+				resgroupCaps->min_cost = str2Int(value,
 													getResgroupOptionName(type));
 				break;
 			default:
@@ -759,6 +768,8 @@ getResgroupOptionType(const char* defname)
 		return RESGROUP_LIMIT_TYPE_CPU_SHARES;
 	else if (strcmp(defname, "memory_limit") == 0)
 		return RESGROUP_LIMIT_TYPE_MEMORY_LIMIT;
+	else if (strcmp(defname, "min_cost") == 0)
+		return RESGROUP_LIMIT_TYPE_MIN_COST;
 	else
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
@@ -802,6 +813,8 @@ getResgroupOptionName(ResGroupLimitType type)
 			return "cpu_soft_priority";
 		case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 			return "memory_limit";
+		case RESGROUP_LIMIT_TYPE_MIN_COST:
+			return "min_cost";
 		default:
 			return "unknown";
 	}
@@ -844,6 +857,15 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 				break;
 
 			case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
+				break;
+
+			case RESGROUP_LIMIT_TYPE_MIN_COST:
+				if (value < RESGROUP_MIN_MIN_COST ||
+					value > RESGROUP_MAX_MIN_COST)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+									errmsg("min_cost range is [%d, %d]",
+										RESGROUP_MIN_MIN_COST, RESGROUP_MAX_MIN_COST)));
 				break;
 
 			default:
@@ -911,6 +933,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 				case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 					caps->memory_limit = value;
 					break;
+				case RESGROUP_LIMIT_TYPE_MIN_COST:
+					caps->min_cost = value;
+					break;
 				default:
 					break;
 			}
@@ -937,6 +962,9 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_LIMIT)))
 		caps->memory_limit = -1;
+
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MIN_COST)))
+		caps->min_cost = 0;
 
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		!(mask & (1 << RESGROUP_LIMIT_TYPE_CPU_SHARES)))
@@ -1030,6 +1058,10 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	snprintf(value, sizeof(value), "%d", caps->memory_limit);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_LIMIT, value);
+
+	snprintf(value, sizeof(value), "%d", caps->min_cost);
+	insertResgroupCapabilityEntry(rel, groupId,
+								  RESGROUP_LIMIT_TYPE_MIN_COST, value);
 }
 
 /*
@@ -1462,7 +1494,7 @@ getCpuSetByRole(const char *cpuset)
 	{
 		char *scpu = first + 1;
 
-		/* Get result cpuset by IS_QUERY_DISPATCHER(), on master or segment */
+		/* Get result cpuset by IS_QUERY_DISPATCHER(), on coordinator or segment */
 		if (IS_QUERY_DISPATCHER())
 			splitcpuset = scpu;
 		else

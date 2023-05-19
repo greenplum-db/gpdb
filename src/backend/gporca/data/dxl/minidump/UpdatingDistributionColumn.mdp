@@ -203,7 +203,7 @@
           <dxl:Opfamily Mdid="0.7042.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.877.1.0" Name="substr" ReturnsSet="false" Stability="Immutable" DataAccess="ContainsSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.877.1.0" Name="substr" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
     </dxl:Metadata>

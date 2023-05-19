@@ -28,7 +28,7 @@ UPDATE 1
 DROP TABLE t_concurrent_update;
 DROP
 
--- Test the concurrent update transaction order on the segment is reflected on master
+-- Test the concurrent update transaction order on the segment is reflected on coordinator
 1: CREATE TABLE t_concurrent_update(a int, b int);
 CREATE
 1: INSERT INTO t_concurrent_update VALUES(1,1);
@@ -59,7 +59,7 @@ SET
 -------------------------------
  Success:                      
 (1 row)
--- transaction 3 should wait transaction 2 commit on master
+-- transaction 3 should wait transaction 2 commit on coordinator
 3<:  <... completed>
 UPDATE 1
 3&: END;  <waiting ...>

@@ -2,8 +2,6 @@
                       {'name': 'gpmovemirrors',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 4'},
-                      {'name': 'gppkg',
-                       'use_concourse_cluster': true},
                       {'name': 'analyzedb',
                        'use_concourse_cluster': false},
                       {'name': 'gpreload',
@@ -27,7 +25,8 @@
                         'use_concourse_cluster': true },
                       {'name': 'gprecoverseg',
                        'use_concourse_cluster': true,
-                       'additional_ccp_vars': 'number_of_nodes: 3'},
+                       'additional_ccp_vars': 'number_of_nodes: 3',
+                       'sudo_access_on_hosts': true},
                       {'name': 'gprecoverseg_newhost',
                        'use_concourse_cluster': true,
                        'additional_ccp_vars': 'number_of_nodes: 7',
@@ -217,6 +216,7 @@ groups:
   - gate_icw_start
   - icw_gporca_[[ os_type ]]
   - icw_gporca_jit_[[ os_type ]]
+  - icw_gporca_memory_[[ os_type ]]
   - icw_planner_[[ os_type ]]
   - icw_planner_jit_[[ os_type ]]
   - icw_gporca_icproxy_[[ os_type ]]
@@ -282,6 +282,7 @@ groups:
   - gate_icw_start
   - icw_gporca_[[ os_type ]]
   - icw_gporca_jit_[[ os_type ]]
+  - icw_gporca_memory_[[ os_type ]]
   - icw_planner_[[ os_type ]]
   - icw_planner_jit_[[ os_type ]]
   - icw_gporca_icproxy_[[ os_type ]]
@@ -842,6 +843,31 @@ jobs:
       TEST_OS: [[ test_os ]]
       CONFIGURE_FLAGS: ((configure_flags))
 
+- name: icw_gporca_memory_[[ os_type ]]
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [gate_icw_start]
+      - get: bin_gpdb
+        passed: [gate_icw_start]
+        trigger: true
+      - get: gpdb7-[[ os_type ]]-test
+      - get: llvm-with-asserts-packages
+  - task: ic_gpdb
+    {% if use_ICW_workers %}
+    tags: [icw-worker]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb7-[[ os_type ]]-test
+    timeout: 24h
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on -c jit=off' installcheck-world
+      TEST_OS: [[ test_os ]]
+      CONFIGURE_FLAGS: ((configure_flags))
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - optimizer_use_gpdb_allocators=off
+
 - name: icw_planner_[[ os_type ]]
   plan:
   - in_parallel:
@@ -1163,6 +1189,7 @@ jobs:
         passed:
         - icw_gporca_[[ os_type ]]
         - icw_gporca_jit_[[ os_type ]]
+        - icw_gporca_memory_[[ os_type ]]
         - icw_planner_jit_[[ os_type ]]
         - icw_gporca_icproxy_[[ os_type ]]
         - icw_planner_icproxy_[[ os_type ]]
@@ -1186,6 +1213,7 @@ jobs:
         passed:
         - icw_gporca_[[ os_type ]]
         - icw_gporca_jit_[[ os_type ]]
+        - icw_gporca_memory_[[ os_type ]]
         - icw_planner_jit_[[ os_type ]]
         - icw_gporca_icproxy_[[ os_type ]]
         - icw_planner_icproxy_[[ os_type ]]

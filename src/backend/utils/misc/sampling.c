@@ -116,6 +116,85 @@ BlockSampler_Next(BlockSampler bs)
 }
 
 /*
+ * This is used for sampling AO/CO row numbers, in the flattened
+ * row number space, across all segfile tuple counts. 64 bits is
+ * used for simplicity and is sufficient to hold a maximum tuple
+ * count of (AOTupleId_MaxSegmentFileNum * MAX_AOREL_CONCURRENCY),
+ * which can be represented with 48 bits.
+ *
+ * The code is same as BlockSampler except replacing
+ * int type of variables with int64, which is intended
+ * to support larger size of the data set (N).
+ * 
+ * Duplicate code for not willing to break the original
+ * design to conflict with upstream for some special case.
+ */
+void
+RowSampler_Init(RowSampler rs, int64 nobjects, int64 samplesize,
+				long randseed)
+{
+	rs->N = nobjects;			/* measured table size */
+
+	/*
+	 * If we decide to reduce samplesize for tables that have less or not much
+	 * more than samplesize objects, here is the place to do it.
+	 */
+	rs->n = samplesize;
+	rs->t = 0;					/* objects scanned so far */
+	rs->m = 0;					/* objects selected so far */
+
+	sampler_random_init_state(randseed, rs->randstate);
+}
+
+bool
+RowSampler_HasMore(RowSampler rs)
+{
+	return (rs->t < rs->N) && (rs->m < rs->n);
+}
+
+int64
+RowSampler_Next(RowSampler rs)
+{
+	int64       K = rs->N - rs->t;	/* remaining objects */
+	int64		k = rs->n - rs->m;	/* objects still to sample */
+	double		p;				    /* probability to skip object */
+	double		V;				    /* random */
+
+	Assert(RowSampler_HasMore(rs));	/* hence K > 0 and k > 0 */
+
+	if (k >= K)
+	{
+		/* need all the rest */
+		rs->m++;
+		return rs->t++;
+	}
+
+    /* 
+     * It is not obvious that this code matches Knuth's Algorithm S.
+     * Refer to BlockSampler_Next() for detail.
+     */
+	V = sampler_random_fract(rs->randstate);
+    /*
+	 * Don't bother overflow of conversion from int64 K (N) as it was
+	 * already converted to "double" range value when initialized.
+	 */
+	p = 1.0 - (double) k / (double) K;
+	while (V < p)
+	{
+		/* skip */
+		rs->t++;
+		K--; /* keep K == N - t */
+
+		/* adjust p to be new cutoff point in reduced range */
+		p *= 1.0 - (double) k / (double) K;
+	}
+
+	/* select */
+	rs->m++;
+	return rs->t++;
+}
+
+/*
  * These two routines embody Algorithm Z from "Random sampling with a
  * reservoir" by Jeffrey S. Vitter, in ACM Trans. Math. Softw. 11, 1
  * (Mar. 1985), Pages 37-57.  Vitter describes his algorithm in terms

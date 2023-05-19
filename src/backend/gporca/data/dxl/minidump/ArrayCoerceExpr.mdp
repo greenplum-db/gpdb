@@ -193,11 +193,14 @@ explain select * from foo where d in ('a', 'b');
           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
             <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1043.1.0"/>
           </dxl:Cast>
-          <dxl:ArrayCoerceExpr ElementFunc="0.0.0.0" TypeMdid="0.1009.1.0" IsExplicit="false" CoercionForm="2" Location="0">
+          <dxl:ArrayCoerceExpr TypeMdid="0.1009.1.0" CoercionForm="2" Location="0">
             <dxl:Array ArrayType="0.1015.1.0" ElementType="0.1043.1.0" MultiDimensional="false">
               <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWE=" LintValue="160440876"/>
               <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWI=" LintValue="160449068"/>
             </dxl:Array>
+	    <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+             <dxl:CaseTest TypeMdid="0.1043.1.0"/>
+            </dxl:Cast>
           </dxl:ArrayCoerceExpr>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
@@ -249,12 +252,15 @@ explain select * from foo where d in ('a', 'b');
               <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                 <dxl:Ident ColId="1" ColName="d" TypeMdid="0.1043.1.0"/>
               </dxl:Cast>
-              <dxl:ArrayCoerceExpr ElementFunc="0.0.0.0" TypeMdid="0.1009.1.0" IsExplicit="false" CoercionForm="2" Location="0">
+              <dxl:ArrayCoerceExpr TypeMdid="0.1009.1.0" CoercionForm="2" Location="0">
                 <dxl:Array ArrayType="0.1015.1.0" ElementType="0.1043.1.0" MultiDimensional="false">
                   <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWE=" LintValue="160440876"/>
                   <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWI=" LintValue="160449068"/>
                 </dxl:Array>
-              </dxl:ArrayCoerceExpr>
+		<dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                 <dxl:CaseTest TypeMdid="0.1043.1.0"/>
+                </dxl:Cast>
+	      </dxl:ArrayCoerceExpr>
             </dxl:ArrayComp>
           </dxl:Filter>
           <dxl:TableDescriptor Mdid="6.97283.1.1" TableName="foo">

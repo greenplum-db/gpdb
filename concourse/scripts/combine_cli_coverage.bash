@@ -86,7 +86,6 @@ omit =
     */python/pygresql/*
     */python/subprocess32.py
     */python/yaml/*
-    */gppkg_migrate/*
     */bin/pythonSrc/ext/*
 EOF
 

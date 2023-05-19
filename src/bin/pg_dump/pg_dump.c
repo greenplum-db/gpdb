@@ -1446,7 +1446,7 @@ static void
 setupDumpWorker(Archive *AH)
 {
 	/*
-	 * We want to re-select all the same values the master connection is
+	 * We want to re-select all the same values the leader connection is
 	 * using.  We'll have inherited directly-usable values in
 	 * AH->sync_snapshot_id and AH->use_role, but we need to translate the
 	 * inherited encoding value back to a string to pass to setup_connection.
@@ -4693,7 +4693,7 @@ binary_upgrade_set_namespace_oid(Archive *fout, PQExpBuffer upgrade_buffer,
 	}
 	appendPQExpBuffer(upgrade_buffer,
 						"SELECT binary_upgrade_set_next_pg_namespace_oid('%u'::pg_catalog.oid, "
-						"$$%s$$::text);\n\n",
+						"$_GPDB_$%s$_GPDB_$::text);\n\n",
 						pg_namespace_oid, pg_nspname);
 	PQclear(upgrade_res);
 	destroyPQExpBuffer(upgrade_query);
@@ -4716,7 +4716,7 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 						"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
+						"'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n\n",
 						tyinfo->dobj.catId.oid, tyinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
 
 	if (!OidIsValid(pg_type_array_oid) && force_array_type)
@@ -4757,7 +4757,7 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 							 "\n-- For binary upgrade, must preserve pg_type array oid\n");
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT pg_catalog.binary_upgrade_set_next_array_pg_type_oid('%u'::pg_catalog.oid, "
-						  "'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
+						  "'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n\n",
 						  pg_type_array_oid, pg_type_array_ns_oid,
 						  pg_type_array_name);
 	}
@@ -4788,7 +4788,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 						"\n-- For binary upgrade, must preserve pg_class oids\n");
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT pg_catalog.binary_upgrade_set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
-						  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
+						  "'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n",
 						  tblinfo->dobj.catId.oid, tblinfo->dobj.namespace->dobj.catId.oid, tblinfo->dobj.name);
 		/* Only tables have toast tables, not indexes
 		 * Starting GPDB7 CO tables no longer have TOAST tables. Hence, ignore
@@ -4810,7 +4810,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 		simple_oid_list_append(&preassigned_oids, pg_class_oid);
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT pg_catalog.binary_upgrade_set_next_index_pg_class_oid('%u'::pg_catalog.oid, "
-							"'%u'::pg_catalog.oid, $$%s$$::text);\n",
+							"'%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n",
 						  idxinfo->dobj.catId.oid, idxinfo->dobj.namespace->dobj.catId.oid, idxinfo->dobj.name);
 
 		/* Set up bitmap index auxiliary tables */
@@ -10996,7 +10996,7 @@ dumpEnumType(Archive *fout, const TypeInfo *tyinfo)
 			if (i == 0)
 				appendPQExpBufferStr(q, "\n-- For binary upgrade, must preserve pg_enum oids\n");
 			appendPQExpBuffer(q,
-							  "SELECT pg_catalog.binary_upgrade_set_next_pg_enum_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
+							  "SELECT pg_catalog.binary_upgrade_set_next_pg_enum_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $_GPDB_$%s$_GPDB_$::text);\n",
 							  enum_oid, tyinfo->dobj.catId.oid, label);
 			appendPQExpBuffer(q, "ALTER TYPE %s ADD VALUE ", qualtypname);
 			appendStringLiteralAH(q, label, fout);
@@ -12519,8 +12519,8 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 	proexeclocation = PQgetvalue(res, 0, PQfnumber(res, "proexeclocation"));
 
 	/*
-	 * See backend/commands/define.c for details of how the 'AS' clause is
-	 * used. In GPDB Paris and up, an unused probin is NULL (here ""); previous8bc709b37411ba7ad0fd0f1f79c354714424af3d
+	 * See backend/commands/functioncmds.c for details of how the 'AS' clause
+	 * is used.  In 8.4 and up, an unused probin is NULL (here ""); previous
 	 * versions would set it to "-".  There are no known cases in which prosrc
 	 * is unused, so the tests below for "-" are probably useless.
 	 */

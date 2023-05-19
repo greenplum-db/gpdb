@@ -1,11 +1,8 @@
 -- test memory limit
 -- start_ignore
+DROP TABLE IF EXISTS t_memory_limit;
 DROP ROLE IF EXISTS role_memory_test;
-DROP
 DROP RESOURCE GROUP rg_memory_test;
-ERROR:  resource group "rg_memory_test" does not exist
-DROP TABLE t_memory_limit;
-ERROR:  table "t_memory_limit" does not exist
 -- end_ignore
 
 -- create a pl function to show the memory used by a process
@@ -38,7 +35,7 @@ BEGIN
 (1 row)
 
 -- session2: test alter resource group's memory limit
-2:ALTER RESOURCE GROUP rg_memory_test SET memory_limit 1000;
+2: ALTER RESOURCE GROUP rg_memory_test SET memory_limit 1000;
 ALTER
 
 -- memory used will grow up to 500 Mb
@@ -57,6 +54,9 @@ SET
 ------------------
  204800kB         
 (1 row)
+1: RESET gp_resgroup_memory_query_fixed_mem;
+RESET
+
 1: RESET ROLE;
 RESET
 -- clean

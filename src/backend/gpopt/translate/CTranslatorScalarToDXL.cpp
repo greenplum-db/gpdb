@@ -1270,42 +1270,31 @@ CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
 
 	CDXLNode *child_node =
 		TranslateScalarToDXL(array_coerce_expr->arg, var_colid_mapping);
+	CDXLNode *elemexpr_node =
+		TranslateScalarToDXL(array_coerce_expr->elemexpr, var_colid_mapping);
 
 	GPOS_ASSERT(nullptr != child_node);
+	GPOS_ASSERT(nullptr != elemexpr_node);
 
-	Oid elemfuncid = 0;
-
-	if (IsA(array_coerce_expr->elemexpr, FuncExpr))
-	{
-		elemfuncid = ((FuncExpr *) array_coerce_expr->elemexpr)->funcid;
-	}
-	else if (IsA(array_coerce_expr->elemexpr, RelabelType))
-	{
-		;
-	}
-	else
+	if (!(IsA(array_coerce_expr->elemexpr, FuncExpr) ||
+		  IsA(array_coerce_expr->elemexpr, RelabelType)))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("ArrayCoerceExpr with elemexpr that is neither "
 								"FuncExpr or RelabelType"));
 	}
 
-	// GPDB_12_MERGE_FIXME: faking an explicit cast is wrong
-	// This _will_ lead to wrong behavior, e.g.
-	// INSERT INTO bar SELECT b FROM foo;
-	// where foo.b is of type varchar(100)[]
-	// and bar.b is of type varchar(9)[]
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
-		m_mp,
-		GPOS_NEW(m_mp) CDXLScalarArrayCoerceExpr(
-			m_mp, GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral, elemfuncid),
-			GPOS_NEW(m_mp)
-				CMDIdGPDB(IMDId::EmdidGeneral, array_coerce_expr->resulttype),
-			array_coerce_expr->resulttypmod, true,
-			(EdxlCoercionForm) array_coerce_expr->coerceformat,
-			array_coerce_expr->location));
+		m_mp, GPOS_NEW(m_mp) CDXLScalarArrayCoerceExpr(
+				  m_mp,
+				  GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral,
+										   array_coerce_expr->resulttype),
+				  array_coerce_expr->resulttypmod,
+				  (EdxlCoercionForm) array_coerce_expr->coerceformat,
+				  array_coerce_expr->location));
 
 	dxlnode->AddChild(child_node);
+	dxlnode->AddChild(elemexpr_node);
 
 	return dxlnode;
 }
@@ -2298,6 +2287,7 @@ CTranslatorScalarToDXL::TranslateGenericDatumToDXL(CMemoryPool *mp,
 		// base_mdid is used for text related domain types
 		lint_value = ExtractLintValueFromDatum(md_type, is_null, bytes, length,
 											   base_mdid);
+		base_mdid->Release();
 	}
 
 	return CMDTypeGenericGPDB::CreateDXLDatumVal(

@@ -242,7 +242,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.63859.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:GPDBFunc Mdid="0.1780.1.0" Name="to_date" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1780.1.0" Name="to_date" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.1082.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Relation Mdid="6.63859.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">

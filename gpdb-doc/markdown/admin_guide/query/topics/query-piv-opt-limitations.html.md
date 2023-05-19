@@ -43,7 +43,7 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   Multiple Distinct Qualified Aggregates, such as `SELECT count(DISTINCT a), sum(DISTINCT b) FROM foo`, are not supported by default. They can be enabled with the `optimizer_enable_multiple_distinct_aggs` [Configuration Parameter](../../../ref_guide/config_params/guc-list.html).
 -   percentile\_\* window functions \(ordered-set aggregate functions\).
 -   Inverse distribution functions.
--   Queries that run functions that are defined with the `ON MASTER` or `ON ALL SEGMENTS` attribute.
+-   Queries that run functions that are defined with the `ON COORDINATOR` or `ON ALL SEGMENTS` attribute.
 -   Queries that contain UNICODE characters in metadata names, such as table names, and the characters are not compatible with the host system locale.
 -   `SELECT`, `UPDATE`, and `DELETE` commands where a table name is qualified by the `ONLY` keyword.
 -   Per-column collation. GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.

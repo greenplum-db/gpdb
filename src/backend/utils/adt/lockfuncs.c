@@ -176,9 +176,9 @@ pg_lock_status(PG_FUNCTION_ARGS)
 		mystatus->segresults = NULL;
 
 		/*
-		 * Seeing the locks just from the masterDB isn't enough to know what is locked,
+		 * Seeing the locks just from the coordinatorDB isn't enough to know what is locked,
 		 * or if there is a deadlock.  That's because the segDBs also take locks.
-		 * Some locks show up only on the master, some only on the segDBs, and some on both.
+		 * Some locks show up only on the coordinator, some only on the segDBs, and some on both.
 		 *
 		 * So, let's collect the lock information from all the segDBs.  Sure, this means
 		 * there are a lot more rows coming back from pg_locks than before, since most locks
@@ -220,7 +220,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 			 * is to hand-build the plan tree, and I'm to lazy to do it right now. It's just a matter of
 			 * building a function scan node, and filling it in with our result set info (from the tupledesc).
 			 *
-			 * One thing to note:  it's OK to join pg_locks with any catalog table or master-only table,
+			 * One thing to note:  it's OK to join pg_locks with any catalog table or coordinator-only table,
 			 * but joining to a distributed table will result in "writer gang busy: possible attempt to
 			 * execute volatile function in unsupported context" errors, because
 			 * the scan of the distributed table might already be running on the writer gang
@@ -231,7 +231,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 			 * distributed table.
 			 *
 			 * GPDB_84_MERGE_FIXME: Should we rewrite this in a different way now that we have
-			 * ON SEGMENT/ ON MASTER attributes on functions?
+			 * ON SEGMENT/ ON COORDINATOR attributes on functions?
 			 */
 			CdbDispatchCommand("SELECT * FROM pg_catalog.pg_lock_status()", DF_WITH_SNAPSHOT, &cdb_pgresults);
 
@@ -254,7 +254,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				/*
 				 * numSegLocks needs to be the total size we are returning to
 				 * the application. At the start of this loop, it has the count
-				 * for the masterDB locks.  Add each of the segDB lock counts.
+				 * for the coordinatorDB locks.  Add each of the segDB lock counts.
 				 */
 				mystatus->numSegLocks += PQntuples(cdb_pgresults.pg_results[i]);
 
@@ -496,7 +496,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * This loop only executes on the masterDB and only in dispatch mode,
+	 * This loop only executes on the coordinatorDB and only in dispatch mode,
 	 * because that is the only time we dispatched to the segDBs.
 	 */
 	while (mystatus->currIdx >= lockData->nelements && mystatus->currIdx < lockData->nelements + mystatus->numSegLocks)
@@ -914,7 +914,7 @@ pg_isolation_test_session_is_blocked(PG_FUNCTION_ARGS)
 	/*
 	 * Check if blocked_pid is waiting for a safe snapshot.  We could in
 	 * theory check the resulting array of blocker PIDs against the
-	 * interesting PIDs whitelist, but since there is no danger of autovacuum
+	 * interesting PIDs list, but since there is no danger of autovacuum
 	 * blocking GetSafeSnapshot there seems to be no point in expending cycles
 	 * on allocating a buffer and searching for overlap; so it's presently
 	 * sufficient for the isolation tester's purposes to use a single element

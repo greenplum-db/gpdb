@@ -7,7 +7,7 @@ Know the location and content of system log files and monitor them on a regular 
 The following table shows the locations of the various Greenplum Database log files. In file paths:
 
 -   `$GPADMIN_HOME` refers to the home directory of the `gpadmin` operating system user.
--   `$MASTER_DATA_DIRECTORY` refers to the coordinator data directory on the Greenplum Database coordinator host.
+-   `$COORDINATOR_DATA_DIRECTORY` refers to the coordinator data directory on the Greenplum Database coordinator host.
 -   `$GPDATA_DIR` refers to a data directory on the Greenplum Database segment host.
 -   `host` identifies the Greenplum Database segment host name.
 -   `segprefix` identifies the segment prefix.
@@ -24,8 +24,8 @@ The following table shows the locations of the various Greenplum Database log fi
 |`$GPADMIN_HOME/gpAdminLogs/gpstop_date.log`|stop log|
 |`$GPADMIN_HOME/gpAdminLogs/gpsegstart.py_host:gpadmin_date.log`|segment host start log|
 |`$GPADMIN_HOME/gpAdminLogs/gpsegstop.py_host:gpadmin_date.log`|segment host stop log|
-|`$MASTER_DATA_DIRECTORY/log/startup.log`, `$GPDATA_DIR/segprefixN/log/startup.log`|segment instance start log|
-|`$MASTER_DATA_DIRECTORY/log/*.csv`, `$GPDATA_DIR/segprefixN/log/*.csv`|coordinator and segment database logs|
+|`$COORDINATOR_DATA_DIRECTORY/log/startup.log`, `$GPDATA_DIR/segprefixN/log/startup.log`|segment instance start log|
+|`$COORDINATOR_DATA_DIRECTORY/log/*.csv`, `$GPDATA_DIR/segprefixN/log/*.csv`|coordinator and segment database logs|
 |`$GPDATA_DIR/mirror/segprefixN/log/*.csv`|mirror segment database logs|
 |`$GPDATA_DIR/primary/segprefixN/log/*.csv`|primary segment database logs|
 |`/var/log/messages`|Global Linux system messages|

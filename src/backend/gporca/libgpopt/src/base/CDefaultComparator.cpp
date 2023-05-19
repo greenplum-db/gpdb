@@ -115,6 +115,7 @@ CDefaultComparator::FUseInternalEvaluator(const IDatum *datum1,
 	// double value
 	if (mdid1->Equals(datum2->MDId()) && datum1->StatsAreComparable(datum2) &&
 		(CMDIdGPDB::m_mdid_date.Equals(mdid1) ||
+		 CMDIdGPDB::m_mdid_bool.Equals(mdid1) ||
 		 CMDIdGPDB::m_mdid_time.Equals(mdid1) ||
 		 CMDIdGPDB::m_mdid_timestamp.Equals(mdid1) ||
 		 CMDIdGPDB::m_mdid_float4.Equals(mdid1) ||

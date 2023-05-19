@@ -134,7 +134,7 @@ contain_ordered_aggs_walker(Node *node, void *context)
 
 /**
  * Is an agg operator memory intensive? The following cases mean it is:
- * 1. If agg strategy is hashed
+ * 1. If agg strategy is hashed or mixed (assuming that MIXED must contains hash agg)
  * 2. If targetlist or qual contains a DQA
  * 3. If there is an ordered aggregated.
  */
@@ -142,7 +142,7 @@ static bool
 IsAggMemoryIntensive(Agg *agg)
 {
 	/* Case 1 */
-	if (agg->aggstrategy == AGG_HASHED)
+	if (agg->aggstrategy == AGG_HASHED || agg->aggstrategy == AGG_MIXED)
 		return true;
 
 	/* Cases 2 & 3 */

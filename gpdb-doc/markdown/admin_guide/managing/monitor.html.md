@@ -277,7 +277,7 @@ Tracking the amount of memory used by a server process or a long-running query c
 
 ### <a id="topic_memcontext_view"></a>About the pg_backend_memory_contexts View
 
-To display the memory usage of all active memory contexts in the server process attached to the current session, use the [pg_backend_memory_contexts](../../ref_guide/system_catalogs/pg_backend_memory_contexts.html) system view. This view is restricted to superusers, but access may be granted to other roles.
+To display the memory usage of all active memory contexts in the server process attached to the current session, use the [pg_backend_memory_contexts](../../ref_guide/system_catalogs/catalog_ref-views.html#pg_backend_memory_contexts) system view. This view is restricted to superusers, but access may be granted to other roles.
 
 ``` sql
 SELECT * FROM pg_backend_memory_contexts;

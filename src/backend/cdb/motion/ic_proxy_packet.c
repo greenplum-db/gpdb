@@ -101,30 +101,6 @@ ic_proxy_message_init(ICProxyPkt *pkt, ICProxyMessageType type,
 }
 
 /*
- * Build a new packet.
- *
- * The data will also be copied to the packet.
- *
- * The returned packet must be freed with the ic_proxy_pkt_cache_free()
- * function.
- */
-ICProxyPkt *
-ic_proxy_pkt_new(const ICProxyKey *key, const void *data, uint16 size)
-{
-	ICProxyPkt *pkt;
-
-	Assert(size + sizeof(*pkt) <= IC_PROXY_MAX_PKT_SIZE);
-
-	pkt = ic_proxy_pkt_cache_alloc(NULL);
-	ic_proxy_message_init(pkt, IC_PROXY_MESSAGE_DATA, key);
-
-	memcpy(((char *) pkt) + sizeof(*pkt), data, size);
-	pkt->len = sizeof(*pkt) + size;
-
-	return pkt;
-}
-
-/*
  * Duplicate a packet.
  *
  * The returned packet must be freed with the ic_proxy_pkt_cache_free()

@@ -43,6 +43,7 @@
 #include "utils/datum.h"
 #include "utils/rel.h"
 
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbgang.h"
 #include "nodes/altertablenodes.h"
 
@@ -1257,7 +1258,6 @@ _outPlanRowMark(StringInfo str, const PlanRowMark *node)
 	WRITE_ENUM_FIELD(strength, LockClauseStrength);
 	WRITE_ENUM_FIELD(waitPolicy, LockWaitPolicy);
 	WRITE_BOOL_FIELD(isParent);
-	WRITE_BOOL_FIELD(canOptSelectLockingClause);
 }
 
 static void
@@ -3535,6 +3535,7 @@ _outNewColumnValue(StringInfo str, const NewColumnValue *node)
 	WRITE_NODE_FIELD(expr);
 	/* can't serialize exprstate */
 	WRITE_BOOL_FIELD(is_generated);
+	WRITE_ENUM_FIELD(op, AOCSWriteColumnOperation);
 }
 
 static void

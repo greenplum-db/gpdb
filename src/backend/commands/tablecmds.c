@@ -114,6 +114,7 @@
 #include "utils/metrics_utils.h"
 #include "utils/partcache.h"
 #include "utils/relcache.h"
+#include "utils/resgroup.h"
 #include "utils/ruleutils.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
@@ -319,8 +320,11 @@ static void ATRewriteTables(AlterTableStmt *parsetree,
 							List **wqueue, LOCKMODE lockmode);
 static void ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode);
 static void ATAocsWriteSegFileNewColumns(
-		AOCSAddColumnDesc idesc, AOCSHeaderScanDesc sdesc,
-		AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot);
+	AOCSWriteColumnDesc idesc, AOCSHeaderScanDesc sdesc,
+	AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot);
+static void ATAocsRewriteColumnsSegfile(
+	AOCSWriteColumnDesc idesc, AOCSScanDesc scanDesc, AlteredTableInfo *tab,
+	ExprContext *econtext, TupleTableSlot *oldslot, TupleTableSlot *newslot);
 static void ATAocsWriteNewColumns(AlteredTableInfo *tab);
 static AlteredTableInfo *ATGetQueueEntry(List **wqueue, Relation rel);
 static void ATSimplePermissions(Relation rel, int allowed_targets);
@@ -433,8 +437,12 @@ static void ATPrepAlterColumnType(List **wqueue,
 								  bool recurse, bool recursing,
 								  AlterTableCmd *cmd, LOCKMODE lockmode);
 static bool ATColumnChangeRequiresRewrite(Node *expr, AttrNumber varattno);
-static ObjectAddress ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
-										   AlterTableCmd *cmd, LOCKMODE lockmode);
+static ObjectAddress
+ATExecAlterColumnType(List **wqueue,
+					  AlteredTableInfo *tab,
+					  Relation rel,
+					  AlterTableCmd *cmd,
+					  LOCKMODE lockmode);
 static void RememberConstraintForRebuilding(Oid conoid, AlteredTableInfo *tab);
 static void RememberIndexForRebuilding(Oid indoid, AlteredTableInfo *tab);
 static void ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab,
@@ -532,7 +540,9 @@ static List *strip_gpdb_part_commands(List *cmds);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
 static Datum get_rel_opts(Relation rel);
 
-
+static void ATAocsRewriteColumns(AlteredTableInfo *tab);
+static void
+ATAocsReindexRewrittenColumns(AlteredTableInfo *tab);
 /* ----------------------------------------------------------------
  *		DefineRelation
  *				Creates a new relation.
@@ -726,7 +736,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		tablespaceId = get_rel_tablespace(linitial_oid(inheritOids));
 
 		/* 
-		 * MPP-8238 : inconsistent tablespaces between segments and master 
+		 * MPP-8238 : inconsistent tablespaces between segments and coordinator 
 		 */
 		stmt->tablespacename = get_tablespace_name(tablespaceId);
 	}
@@ -4477,7 +4487,7 @@ AlterTableInternal(Oid relid, List *cmds, bool recurse)
  * and does not travel through this section of code and cannot be combined with
  * any of the subcommands given here.
  *
- * Note that Hot Standby only knows about AccessExclusiveLocks on the master
+ * Note that Hot Standby only knows about AccessExclusiveLocks on the primary
  * so any changes that might affect SELECTs running on standbys need to use
  * AccessExclusiveLocks even if you think a lesser lock would do, unless you
  * have a solution for that also.
@@ -5205,7 +5215,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				{
 					ereport(NOTICE,
 							(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-							 errmsg("skipped, table \"%s\" has already been expanded partiton prepare",
+							 errmsg("skipped, table \"%s\" has already been expanded partition prepare",
 									RelationGetRelationName(rel))));
 					pass = AT_PASS_MISC;	/* We do nothing here */
 					break;
@@ -5544,7 +5554,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 								 cmd->missing_ok, lockmode);
 			break;
 		case AT_AlterColumnType:	/* ALTER COLUMN TYPE */
-			address = ATExecAlterColumnType(tab, rel, cmd, lockmode);
+			address = ATExecAlterColumnType(wqueue, tab, rel, cmd, lockmode);
 			break;
 		case AT_AlterColumnGenericOptions:	/* ALTER COLUMN OPTIONS */
 			address =
@@ -5930,11 +5940,32 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 		 * specific to table AM.  Descide the best option to achieve this
 		 * goal.
 		 */
-		if (tab->rewrite & AT_REWRITE_NEW_COLUMNS_ONLY_AOCS)
+
+
+		/*
+		 * If the operation can be optimized to not rewrite the AOCO table
+		 * but instead just write new columns/ rewrite existing columns with new type
+		 * Call the corresponding optimization and continue
+		 *
+		 * We call CommandCounterIncrement after ATAocsWriteNewColumns since
+		 * we might edit the catalog again in ATAocsRewriteColumns if the AT
+		 * cmd has both subcmds
+		 */
+		if (tab->rewrite & AT_REWRITE_NEW_COLUMNS_ONLY_AOCS || tab->rewrite & AT_REWRITE_REWRITE_COLUMNS_ONLY_AOCS)
 		{
-			ATAocsWriteNewColumns(tab);
+			if (tab->rewrite & AT_REWRITE_NEW_COLUMNS_ONLY_AOCS)
+			{
+				ATAocsWriteNewColumns(tab);
+				CommandCounterIncrement();
+			}
+			if (tab->rewrite & AT_REWRITE_REWRITE_COLUMNS_ONLY_AOCS)
+			{
+				ATAocsRewriteColumns(tab);
+				ATAocsReindexRewrittenColumns(tab);
+			}
 			continue;
 		}
+
 		/*
 		 * We only need to rewrite the table if at least one column needs to
 		 * be recomputed, we are adding/removing the OID column, or we are
@@ -6171,118 +6202,6 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 }
 
 /*
- * A helper for ATAocsWriteNewColumns(). It scans an existing column for
- * varblock headers. Write one new segfile each for new columns.
- */
-static void
-ATAocsWriteSegFileNewColumns(
-		AOCSAddColumnDesc idesc, AOCSHeaderScanDesc sdesc,
-		AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot)
-{
-	NewColumnValue *newval;
-	TupleDesc tupdesc = RelationGetDescr(idesc->rel);
-	Form_pg_attribute attr;
-	Datum *values = slot->tts_values;
-	bool *isnull = slot->tts_isnull;
-	int64 expectedFRN = -1; /* expected firstRowNum of the next varblock */
-	ListCell *l;
-	int i;
-
-	/* Start index in values and isnull array for newly added columns. */
-	AttrNumber newcol = tupdesc->natts - idesc->num_newcols;
-
-	/* Loop over each varblock in an appendonly segno. */
-	while (aocs_get_nextheader(sdesc))
-	{
-		if (sdesc->ao_read.current.hasFirstRowNum)
-		{
-			if (expectedFRN == -1)
-			{
-				/*
-				 * Initialize expected firstRowNum for each appendonly
-				 * segment.  Initializing it to 1 may not always be
-				 * good.  E.g. if the first insert into an appendonly
-				 * segment is aborted.  A subsequent successful insert
-				 * creates the first varblock having firstRowNum
-				 * greater than 1.
-				 */
-				expectedFRN = sdesc->ao_read.current.firstRowNum;
-				aocs_addcol_setfirstrownum(idesc, expectedFRN);
-			}
-			else
-			{
-				Assert(expectedFRN <= sdesc->ao_read.current.firstRowNum);
-				if (expectedFRN < sdesc->ao_read.current.firstRowNum)
-				{
-					elogif(Debug_appendonly_print_storage_headers, LOG,
-						   "hole in %s: exp FRN: " INT64_FORMAT ", actual FRN: "
-						   INT64_FORMAT, sdesc->ao_read.segmentFileName,
-						   expectedFRN, sdesc->ao_read.current.firstRowNum);
-					/*
-					 * We encountered a break in sequence of row
-					 * numbers (hole), replicate it in the new
-					 * segfiles.
-					 */
-					aocs_addcol_endblock(
-							idesc, sdesc->ao_read.current.firstRowNum);
-				}
-			}
-			for (i = 0; i < sdesc->ao_read.current.rowCount; ++i)
-			{
-				foreach (l, tab->newvals)
-				{
-					newval = lfirst(l);
-					values[newval->attnum-1] =
-							ExecEvalExprSwitchContext(newval->exprstate,
-													  econtext,
-													  &isnull[newval->attnum-1]);
-					/*
-					 * Ensure that NOT NULL constraint for the newly
-					 * added columns is not being violated.  This
-					 * covers the case when explicit "CHECK()"
-					 * constraint is not specified but only "NOT NULL"
-					 * is specified in the new column's definition.
-					 */
-					attr = TupleDescAttr(tupdesc, newval->attnum - 1);
-					if (attr->attnotnull &&	isnull[newval->attnum-1])
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_NOT_NULL_VIOLATION),
-								 errmsg("column \"%s\" contains null values",
-										NameStr(attr->attname))));
-					}
-				}
-				foreach (l, tab->constraints)
-				{
-					NewConstraint *con = lfirst(l);
-					switch(con->contype)
-					{
-						case CONSTR_CHECK:
-							if(!ExecCheck(con->qualstate, econtext))
-								ereport(ERROR,
-										(errcode(ERRCODE_CHECK_VIOLATION),
-										 errmsg("check constraint \"%s\" is violated by some row",
-											con->name)));
-							break;
-						case CONSTR_FOREIGN:
-							/* Nothing to do */
-							break;
-						default:
-							elog(ERROR, "Unrecognized constraint type: %d",
-								 (int) con->contype);
-					}
-				}
-				aocs_addcol_insert_datum(idesc, values+newcol, isnull+newcol);
-				ResetExprContext(econtext);
-				CHECK_FOR_INTERRUPTS();
-			}
-			expectedFRN = sdesc->ao_read.current.firstRowNum +
-					sdesc->ao_read.current.rowCount;
-		}
-	}
-}
-
-/*
  * Choose the column that has the smallest segfile size so as to
  * minimize disk I/O in subsequent varblock header scan. The natts arg
  * includes only existing columns and not the ones being added. Once
@@ -6331,13 +6250,21 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 	return scancol;
 }
 
+/*
+ * Optimization for AT ADD COLUMN for AOCO tables for writing new columns
+ * without requiring a full table rewrite
+ *
+ * This involves scanning header blocks in each segfile for one of the columns
+ * and replicating that block structure into new files for the new columns, with
+ * the default value for each row
+ */
 static void
 ATAocsWriteNewColumns(AlteredTableInfo *tab)
 {
 	AOCSFileSegInfo **segInfos;
-	AOCSHeaderScanDesc sdesc;
-	AOCSAddColumnDesc idesc;
-	NewColumnValue *newval;
+	AOCSHeaderScanDesc  sdesc;
+	AOCSWriteColumnDesc idesc;
+	NewColumnValue      *newval;
 	NewConstraint *con;
 	TupleTableSlot *slot;
 	EState *estate;
@@ -6349,7 +6276,7 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 	int32 scancol; /* chosen column number to scan from */
 	ListCell *l;
 	Snapshot snapshot;
-	int addcols;
+	int numaddcols;
 
 	snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
@@ -6371,9 +6298,12 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 		}
 	}
 	Assert(tab->newvals);
+
 	foreach(l, tab->newvals)
 	{
 		newval = lfirst(l);
+		if (newval->op == AOCSREWRITECOLUMN)
+			continue;
 		newval->exprstate = ExecPrepareExpr((Expr *) newval->expr, estate);
 	}
 
@@ -6403,11 +6333,9 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 
 	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg, NULL);
 	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
+	numaddcols = RelationGetDescr(rel)->natts - tab->oldDesc->natts;
 	if (nseg > 0)
-	{
-		aocs_addcol_emptyvpe(rel, segInfos, nseg,
-							 list_length(tab->newvals));
-	}
+		aocs_addcol_emptyvpe(rel, segInfos, nseg, numaddcols);
 
 	scancol = column_to_scan(segInfos, nseg, tab->oldDesc->natts, rel);
 	elogif(Debug_appendonly_print_storage_headers, LOG,
@@ -6439,14 +6367,13 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 		ExecStoreAllNullTuple(slot);
 
 		sdesc = aocs_begin_headerscan(rel, scancol);
-		addcols = RelationGetDescr(rel)->natts - tab->oldDesc->natts;
 		/*
 		 * Protect against potential negative number here.
 		 * Note that natts is not decremented to reflect dropped columns,
 		 * so this should be safe
 		 */
-		Assert(addcols > 0);
-		idesc = aocs_addcol_init(rel, addcols);
+		Assert(numaddcols > 0);
+		idesc = aocs_writecol_init(rel, tab->newvals, AOCSADDCOLUMN);
 
 		/* Loop over all appendonly segments */
 		for (segi = 0; segi < nseg; ++segi)
@@ -6483,20 +6410,439 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 			rnode.node = rel->rd_node;
 			rnode.backend = rel->rd_backend;
 
-			aocs_addcol_newsegfile(idesc, segInfos[segi],
-								   basepath, rnode);
+			aocs_writecol_newsegfiles(idesc, segInfos[segi]);
 
 			ATAocsWriteSegFileNewColumns(idesc, sdesc, tab, econtext, slot);
 		}
 		aocs_end_headerscan(sdesc);
-		aocs_addcol_finish(idesc);
+		aocs_writecol_finish(idesc);
 		ExecDropSingleTupleTableSlot(slot);
 	}
-
 
 	FreeExecutorState(estate);
 	heap_close(rel, NoLock);
 	UnregisterSnapshot(snapshot);
+}
+
+/*
+ * A helper for ATAocsWriteNewColumns(). It scans an existing column for
+ * varblock headers. Write one new segfile each for new columns.
+ */
+static void
+ATAocsWriteSegFileNewColumns(
+	AOCSWriteColumnDesc idesc, AOCSHeaderScanDesc sdesc,
+	AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *slot)
+{
+	NewColumnValue *newval;
+	TupleDesc tupdesc = RelationGetDescr(idesc->rel);
+	Form_pg_attribute attr;
+	Datum *values = slot->tts_values;
+	bool *isnull = slot->tts_isnull;
+	int64 expectedFRN = -1; /* expected firstRowNum of the next varblock */
+	ListCell *l;
+	int i;
+
+	/* Loop over each varblock in an appendonly segno. */
+	while (aocs_get_nextheader(sdesc))
+	{
+		if (sdesc->ao_read.current.hasFirstRowNum)
+		{
+			if (expectedFRN == -1)
+			{
+				/*
+				 * Initialize expected firstRowNum for each appendonly
+				 * segment.  Initializing it to 1 may not always be
+				 * good.  E.g. if the first insert into an appendonly
+				 * segment is aborted.  A subsequent successful insert
+				 * creates the first varblock having firstRowNum
+				 * greater than 1.
+				 */
+				expectedFRN = sdesc->ao_read.current.firstRowNum;
+				aocs_writecol_setfirstrownum(idesc, expectedFRN);
+			}
+			else
+			{
+				Assert(expectedFRN <= sdesc->ao_read.current.firstRowNum);
+				if (expectedFRN < sdesc->ao_read.current.firstRowNum)
+				{
+					elogif(Debug_appendonly_print_storage_headers, LOG,
+						   "hole in %s: exp FRN: " INT64_FORMAT ", actual FRN: "
+							   INT64_FORMAT, sdesc->ao_read.segmentFileName,
+						   expectedFRN, sdesc->ao_read.current.firstRowNum);
+					/*
+					 * We encountered a break in sequence of row
+					 * numbers (hole), replicate it in the new
+					 * segfiles.
+					 */
+					aocs_writecol_endblock(
+						idesc, sdesc->ao_read.current.firstRowNum);
+				}
+			}
+			for (i = 0; i < sdesc->ao_read.current.rowCount; ++i)
+			{
+				foreach (l, idesc->newcolvals)
+				{
+					newval = lfirst(l);
+					values[newval->attnum-1] =
+						ExecEvalExprSwitchContext(newval->exprstate,
+												  econtext,
+												  &isnull[newval->attnum-1]);
+					/*
+					 * Ensure that NOT NULL constraint for the newly
+					 * added columns is not being violated.  This
+					 * covers the case when explicit "CHECK()"
+					 * constraint is not specified but only "NOT NULL"
+					 * is specified in the new column's definition.
+					 */
+					attr = TupleDescAttr(tupdesc, newval->attnum - 1);
+					if (attr->attnotnull &&	isnull[newval->attnum-1])
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_NOT_NULL_VIOLATION),
+									errmsg("column \"%s\" contains null values",
+										   NameStr(attr->attname))));
+					}
+				}
+				foreach (l, tab->constraints)
+				{
+					NewConstraint *con = lfirst(l);
+					switch(con->contype)
+					{
+						case CONSTR_CHECK:
+							if(!ExecCheck(con->qualstate, econtext))
+								ereport(ERROR,
+										(errcode(ERRCODE_CHECK_VIOLATION),
+											errmsg("check constraint \"%s\" is violated by some row",
+												   con->name)));
+							break;
+						case CONSTR_FOREIGN:
+							/* Nothing to do */
+							break;
+						default:
+							elog(ERROR, "Unrecognized constraint type: %d",
+								 (int) con->contype);
+					}
+				}
+				aocs_writecol_insert_datum(idesc,
+										   values,
+										   isnull);
+				ResetExprContext(econtext);
+				CHECK_FOR_INTERRUPTS();
+			}
+			expectedFRN = sdesc->ao_read.current.firstRowNum +
+				sdesc->ao_read.current.rowCount;
+		}
+	}
+}
+
+/*
+ * Rewrite the segfiles of columns involved in a rewrite operation into new
+ * segfiles using the pg_attribute_encoding.filenum pair
+ * (i, i+MaxHeapAttributeNumber), where i is the attnum of a given column.
+ *
+ * To do this, we scan the old column files segfiles (using projection), including deleted rows,
+ * evaluate new altered datums (eg. ALTER COLUMN TYPE would change the type of
+ * the datums). Then we write the altered datums into a new segfile, determined
+ * by the filenum pair: (i, i+MaxHeapAttributeNumber) where i is the attnum of a
+ * given column and i <= MaxHeapAttributeNumber.
+ */
+static void
+ATAocsRewriteColumns(AlteredTableInfo *tab)
+{
+	Relation rel = relation_open(tab->relid, NoLock);
+	AttrNumber natts = RelationGetNumberOfAttributes(rel);
+	Snapshot snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	bool *proj = palloc0(sizeof(bool*) * natts);
+	ListCell *l;
+	EState *estate;
+	AOCSFileSegInfo **segInfos;
+	ExprContext *econtext;
+	TupleTableSlot *oldslot;
+	TupleTableSlot *newslot;
+	int32 nseg;
+	AOCSWriteColumnDesc idesc;
+	FileNumber newfilenum;
+
+	estate = CreateExecutorState();
+	Assert(tab->newvals);
+	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg, NULL);
+
+	if (Gp_role != GP_ROLE_DISPATCH && nseg >= 1)
+	{
+		idesc = aocs_writecol_init(rel, tab->newvals, AOCSREWRITECOLUMN);
+		foreach(l, idesc->newcolvals)
+		{
+			NewColumnValue *ex = lfirst(l);
+			proj[ex->attnum - 1] = true;
+			/* expr already planned */
+			ex->exprstate = ExecInitExpr((Expr *) ex->expr, NULL);
+		}
+		oldslot = MakeSingleTupleTableSlot(tab->oldDesc, &TTSOpsVirtual);
+		newslot = MakeSingleTupleTableSlot(RelationGetDescr(rel), &TTSOpsVirtual);
+
+		/*
+		 * GENERATED expressions might reference the
+		 * tableoid column, so fill tts_tableOid with the desired
+		 * value. It is sufficient to do it once here, instead of once
+		 * per tuple, as we don't modify this field during the rewrite
+		 * process.
+		 */
+		newslot->tts_tableOid = tab->relid;
+
+		/*
+		 * Initialize expression context for evaluating values
+		 * of the columns being rewritten
+		 */
+		econtext = GetPerTupleExprContext(estate);
+
+		for (int segi = 0; segi < nseg; ++segi)
+		{
+			AOCSScanDesc scanDesc;
+
+			if (segInfos[segi]->total_tupcount <= 0 ||
+				segInfos[segi]->state == AOSEG_STATE_AWAITING_DROP)
+			{
+				/*
+				 * VACUUM may cause appendonly segments with eof=0.
+				 *
+				 * Compaction leaves redundant segments in
+				 * AOSEG_STATE_AWAITING_DROP.
+				 *
+				 * Both of these cases don't require a rewrite.
+				 */
+				elogif(Debug_appendonly_print_storage_headers, LOG,
+					   "Skipping over empty segno %d relation %s total tupcount %ld state %u",
+					   segInfos[segi]->segno, RelationGetRelationName(rel), segInfos[segi]->total_tupcount, segInfos[segi]->state);
+				continue;
+			}
+
+			/*
+			 * We are using SnapshotAny to scan the column here.
+			 * We can't exclude datums from dead rows, unlike a full table rewrite.
+			 * as we need to replicate block structure like other columns to maintain
+			 * tuple id for every row
+			 */
+			scanDesc = aocs_beginrangescan(rel,
+										   SnapshotAny, NULL,
+										   &(segInfos[segi]->segno), 1, proj);
+
+			aocs_writecol_newsegfiles(idesc, segInfos[segi]);
+			if (idesc->blockDirectory.blkdirRel != NULL)
+			{
+				/*
+				 * Delete the existing block directory entries for the given col and segno.
+				 * New entries for this col and segno will be added during the course of
+				 * the rewrite process.
+				 */
+				ListCell *lc;
+				foreach(lc, idesc->newcolvals)
+				{
+					NewColumnValue *newval = lfirst(lc);
+					AttrNumber     colno   = newval->attnum - 1;
+					AppendOnlyBlockDirectory_DeleteSegmentFile(&idesc->blockDirectory,
+															   colno,
+															   segi + 1,
+															   snapshot);
+				}
+			}
+
+			/*
+			 * Rewrite segfiles for columns for current appendonly segment.
+			 */
+			ATAocsRewriteColumnsSegfile(idesc,
+										scanDesc,
+										tab,
+										econtext,
+										oldslot,
+										newslot);
+			aocs_endscan(scanDesc);
+		}
+
+		aocs_writecol_finish(idesc);
+		FreeExecutorState(estate);
+		ExecDropSingleTupleTableSlot(oldslot);
+		ExecDropSingleTupleTableSlot(newslot);
+	}
+
+	/* Update the filenum value for the column entry in pg_attribute_encoding */
+	foreach(l, tab->newvals)
+	{
+		NewColumnValue *ex = lfirst(l);
+		if (ex->op == AOCSADDCOLUMN)
+			continue;
+		newfilenum = GetFilenumForRewriteAttribute(RelationGetRelid(rel), ex->attnum);
+		UpdateFilenumForAttnum(RelationGetRelid(rel), ex->attnum, newfilenum);
+	}
+
+	heap_close(rel, NoLock);
+	UnregisterSnapshot(snapshot);
+	pfree(proj);
+}
+
+/*
+ * A helper for ATAocsRewriteColumns(). It scans an existing column's segfiles
+ * for all rows including deleted rows. Write one new segfile each for each column
+ *
+ * Note: this is similar to ATAocsWriteNewColumns() with one important difference:
+ * we don't directly iterate over varblocks, but over the tuples (with projection applied).
+ * It also borrows code from ATRewriteTable().
+ */
+static void
+ATAocsRewriteColumnsSegfile(
+	AOCSWriteColumnDesc idesc, AOCSScanDesc scanDesc,
+	AlteredTableInfo *tab, ExprContext *econtext, TupleTableSlot *oldslot,
+	TupleTableSlot *newslot)
+{
+	ListCell *l;
+	/* expected first row number of the next varblock */
+	int64 expectedFRN = -1;
+	Assert(list_length(idesc->newcolvals) > 0);
+
+	/* take any column that we are altering, for reading the header info */
+	int colno = ((NewColumnValue*)linitial(idesc->newcolvals))->attnum-1;
+
+	/* Loop over each row in the segment. */
+	while (aocs_getnext(scanDesc, ForwardScanDirection, oldslot))
+	{
+		if (scanDesc->columnScanInfo.ds[colno]->ao_read.current.hasFirstRowNum)
+		{
+			if (expectedFRN == -1)
+			{
+				/* first time init */
+				expectedFRN =
+					scanDesc->columnScanInfo.ds[colno]->ao_read.current.firstRowNum;
+				aocs_writecol_setfirstrownum(idesc, expectedFRN);
+			}
+			else
+			{
+				/* row number grows monotonically */
+				/* we have switched to the next block, so end the current block */
+				if (expectedFRN <
+					scanDesc->columnScanInfo.ds[colno]->ao_read.current.firstRowNum)
+				{
+					elogif(Debug_appendonly_print_storage_headers, LOG,
+						   "hole in %s: exp FRN: " INT64_FORMAT ", actual FRN: "
+							   INT64_FORMAT, scanDesc->columnScanInfo.ds[colno]->ao_read.segmentFileName,
+						   expectedFRN, scanDesc->columnScanInfo.ds[colno]->ao_read.current.firstRowNum);
+					/*
+					 * We encountered a break in sequence of row
+					 * numbers (hole), replicate it in the new
+					 * segfiles.
+					 */
+					expectedFRN =
+						scanDesc->columnScanInfo.ds[colno]->ao_read.current.firstRowNum;
+					aocs_writecol_endblock(idesc,
+										   scanDesc->columnScanInfo.ds[colno]->ao_read.current.firstRowNum);
+					expectedFRN = scanDesc->columnScanInfo.ds[colno]->ao_read.current.firstRowNum + scanDesc->columnScanInfo.ds[colno]->ao_read.current.rowCount;
+				}
+			}
+		}
+		ExecClearTuple(newslot);
+
+		memcpy(newslot->tts_values, oldslot->tts_values,
+			   sizeof(Datum) * oldslot->tts_nvalid);
+		memcpy(newslot->tts_isnull, oldslot->tts_isnull,
+			   sizeof(bool) * oldslot->tts_nvalid);
+
+
+		/*
+		 * Process supplied expressions to replace selected columns.
+		 *
+		 * First, evaluate expressions whose inputs come from the old
+		 * tuple.
+		 */
+		econtext->ecxt_scantuple = oldslot;
+
+		foreach(l, idesc->newcolvals)
+		{
+			NewColumnValue *ex = lfirst(l);
+			if (ex->is_generated)
+				continue;
+
+			newslot->tts_values[ex->attnum - 1]
+				= ExecEvalExprSwitchContext(ex->exprstate,
+										  econtext,
+										  &newslot->tts_isnull[ex->attnum-1]);
+		}
+
+		ExecStoreVirtualTuple(newslot);
+
+		/*
+		 * Now, evaluate any expressions whose inputs come from the
+		 * new tuple.  We assume these columns won't reference each
+		 * other, so that there's no ordering dependency.
+		 */
+		econtext->ecxt_scantuple = newslot;
+
+		foreach(l, idesc->newcolvals)
+		{
+			NewColumnValue *ex = lfirst(l);
+			if (!ex->is_generated)
+				continue;
+
+			newslot->tts_values[ex->attnum - 1]
+				= ExecEvalExprSwitchContext(ex->exprstate,
+											econtext,
+											&newslot->tts_isnull[ex->attnum-1]);
+		}
+
+		aocs_writecol_insert_datum(idesc,
+								   newslot->tts_values,
+								   newslot->tts_isnull);
+		ResetExprContext(econtext);
+		CHECK_FOR_INTERRUPTS();
+		expectedFRN++;
+	}
+}
+
+/*
+ * Recreate indexes that depend on the columns rewritten during
+ * AT for AOCO tables.
+ */
+static void
+ATAocsReindexRewrittenColumns(AlteredTableInfo *tab)
+{
+	ListCell       *lcindex;
+	ListCell       *lc;
+	NewColumnValue *newval;
+	Relation       OldHeap = relation_open(tab->relid, NoLock);
+	char           oldRelPersistence = OldHeap->rd_rel->relpersistence;
+	List           *indexoidlist = RelationGetIndexList(OldHeap);
+
+	heap_close(OldHeap, NoLock);
+	foreach(lcindex, indexoidlist)
+	{
+		bool      reindex  = false;
+		Oid       indexoid = lfirst_oid(lcindex);
+		HeapTuple indexTuple;
+
+		indexTuple = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(indexoid));
+		if (!HeapTupleIsValid(indexTuple))	/* should not happen */
+			elog(ERROR, "cache lookup failed for index %u", indexoid);
+		int       indnatts = ((Form_pg_index) GETSTRUCT(indexTuple))->indnatts;
+		foreach (lc, tab->newvals)
+		{
+			newval = lfirst(lc);
+			if (newval->op == AOCSADDCOLUMN)
+				continue;
+			AttrNumber rewrittenattnum = newval->attnum;
+			for (int i = 0; i < indnatts; ++i)
+			{
+				if (rewrittenattnum == ((Form_pg_index) GETSTRUCT(indexTuple))->indkey.values[i])
+				{
+					reindex = true;
+					break;
+				}
+			}
+			if (reindex)
+				break;
+		}
+		ReleaseSysCache(indexTuple);
+		if (reindex)
+			reindex_index(indexoid, false, oldRelPersistence, 0);
+	}
+
+	list_free(indexoidlist);
 }
 
 /*
@@ -7460,6 +7806,67 @@ ATPrepAddColumn(List **wqueue, Relation rel, bool recurse, bool recursing,
 }
 
 /*
+ * Checks if we can avoid a full-table rewrite in phase 3,
+ * by only manipulating the columns involved in the ALTER operation.
+ * For instance, for an ADD COLUMN operation,
+ * we can simply add a new column file for CO tables.
+ * Also, for CO tables, we can rewrite an existing column solely, if we ALTER it's type.
+ * If we can optimize, then we set AlteredTableInfo->rewrite with the appropriate flag.
+ */
+static void
+setupColumnarRewrite(List **wqueue,
+					 const AlteredTableInfo *tab,
+					 AlterTableType ATtype)
+{
+	bool columnar_rewrite;
+	/*
+	* ADD COLUMN or ALTER COLUMN TYPE for CO can be optimized only if it is the
+	* only subcommand being performed.
+	*/
+	columnar_rewrite = true;
+	for (int i = 0; i < AT_NUM_PASSES; ++i)
+	{
+		if (i != AT_PASS_ADD_COL && i != AT_PASS_ALTER_TYPE && i != AT_PASS_DROP && tab->subcmds[i])
+		{
+			columnar_rewrite = false;
+			break;
+		}
+	}
+
+	if (columnar_rewrite)
+	{
+		/*
+		 * We have acquired lockmode on the root and first-level partitions
+		 * already. This leaves the deeper subpartitions unlocked, but no
+		 * operations can drop (or alter) those relations without locking
+		 * through the root. But we still lock them to meet the upstream
+		 * expecation in relation_open that all callers should have acquired
+		 * a lock on the table except in bootstrap mode.
+
+		 * Note that find_all_inheritors() also includes the root partition
+		 * in the returned list.
+		 */
+		List *all_inheritors = find_all_inheritors(tab->relid, AccessShareLock, NULL);
+		ListCell *lc;
+		foreach (lc, all_inheritors)
+		{
+			Oid r = lfirst_oid(lc);
+			Relation rel = heap_open(r, NoLock);
+			AlteredTableInfo *childtab;
+			childtab = ATGetQueueEntry(wqueue, rel);
+
+			if (RelationIsAoCols(rel))
+			{
+				if (ATtype == AT_AddColumn)
+					childtab->rewrite |= AT_REWRITE_NEW_COLUMNS_ONLY_AOCS;
+				else
+					childtab->rewrite |= AT_REWRITE_REWRITE_COLUMNS_ONLY_AOCS;
+			}
+			heap_close(rel, NoLock);
+		}
+	}
+}
+/*
  * Add a column to a table.  The return value is the address of the
  * new column in the parent relation.
  */
@@ -7819,13 +8226,14 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		{
 			NewColumnValue *newval;
 
-			/* If QE, AlteredTableInfo streamed from QD already contains newvals */
+			/* If QE, AlteredTableInfo streamed from QD already contains newcolvals */
 			if (Gp_role != GP_ROLE_EXECUTE)
 			{
 				newval = (NewColumnValue *) palloc0(sizeof(NewColumnValue));
 				newval->attnum = attribute.attnum;
 				newval->expr = expression_planner(defval);
 				newval->is_generated = (colDef->generated != '\0');
+				newval->op = AOCSADDCOLUMN;
 
 				/*
 				 * tab is null if this is called by "create or replace view" which
@@ -7838,8 +8246,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 				Assert(tab->newvals != NULL);
 			}
-
-			/* 
+			/*
 			 * We need to write the new column for AOCO tables. But don't do that
 			 * if we are going to rewrite the whole table anyway.
 			 */
@@ -7928,50 +8335,8 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	 * So, we only need to execute this block on QD.
 	 */
 	if (!recursing && (tab->relkind == RELKIND_PARTITIONED_TABLE || tab->relkind == RELKIND_RELATION) && Gp_role != GP_ROLE_EXECUTE)
-	{
-		bool	aocs_write_new_columns_only;
-		/*
-		 * ADD COLUMN for CO can be optimized only if it is the
-		 * only subcommand being performed.
-		 */
-		aocs_write_new_columns_only = true;
-		for (int i = 0; i < AT_NUM_PASSES; ++i)
-		{
-			if (i != AT_PASS_ADD_COL && tab->subcmds[i])
-			{
-				aocs_write_new_columns_only = false;
-				break;
-			}
-		}
-
-		if (aocs_write_new_columns_only)
-		{
-			/*
-			 * We have acquired lockmode on the root and first-level partitions
-			 * already. This leaves the deeper subpartitions unlocked, but no
-			 * operations can drop (or alter) those relations without locking
-			 * through the root. But we still lock them to meet the upstream 
-			 * expecation in relation_open that all callers should have acquired
-			 * a lock on the table except in bootstrap mode.
-
-			 * Note that find_all_inheritors() also includes the root partition 
-			 * in the returned list.
-			 */
-			List *all_inheritors = find_all_inheritors(tab->relid, AccessShareLock, NULL);
-			ListCell *lc;
-			foreach (lc, all_inheritors)
-			{
-				Oid r = lfirst_oid(lc);
-				Relation rel = heap_open(r, NoLock);
-				AlteredTableInfo *childtab;
-				childtab = ATGetQueueEntry(wqueue, rel);
-
-				if (RelationIsAoCols(rel))
-					childtab->rewrite |= AT_REWRITE_NEW_COLUMNS_ONLY_AOCS;
-				heap_close(rel, NoLock);
-			}
-		}
-	}
+		setupColumnarRewrite(wqueue,
+							 tab, AT_AddColumn);
 
 	foreach(child, children)
 	{
@@ -12916,6 +13281,7 @@ ATPrepAlterColumnType(List **wqueue,
 		newval->attnum = attnum;
 		newval->expr = (Expr *) transform;
 		newval->is_generated = false;
+		newval->op = AOCSREWRITECOLUMN;
 
 		tab->newvals = lappend(tab->newvals, newval);
 		if (ATColumnChangeRequiresRewrite(transform, attnum))
@@ -13123,8 +13489,11 @@ ATColumnChangeRequiresRewrite(Node *expr, AttrNumber varattno)
  * Return the address of the modified column.
  */
 static ObjectAddress
-ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
-					  AlterTableCmd *cmd, LOCKMODE lockmode)
+ATExecAlterColumnType(List **wqueue,
+					  AlteredTableInfo *tab,
+					  Relation rel,
+					  AlterTableCmd *cmd,
+					  LOCKMODE lockmode)
 {
 	char	   *colName = cmd->name;
 	ColumnDef  *def = (ColumnDef *) cmd->def;
@@ -13160,6 +13529,20 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		/* make sure we don't conflict with later attribute modifications */
 		CommandCounterIncrement();
 	}
+	/*
+	 * Leave a flag on tables in the partition hierarchy that can benefit from the
+	 * optimization for columnar tables.
+	 * We have to do it while processing the root partition because that's the
+	 * only level where the `ADD COLUMN` or `ALTER COLUMN TYPE` subcommands are
+	 * populated.
+	 *
+	 * QD will dispatch wqueue and the QE will get all the info
+	 * to perform the column optimized rewrite.
+	 * So, we only need to execute this block on QD.
+	 */
+		if ((tab->relkind == RELKIND_PARTITIONED_TABLE || tab->relkind == RELKIND_RELATION) && Gp_role != GP_ROLE_EXECUTE)
+			setupColumnarRewrite(wqueue, tab, AT_AlterColumnType);
+
 
 	attrelation = table_open(AttributeRelationId, RowExclusiveLock);
 
@@ -13844,7 +14227,7 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)
 			/*
 			 * Currently, GPDB doesn't support alter type on primary key and unique
 			 * constraint column. Because it requires drop - recreate logic.
-			 * The drop currently only performs on master which lead error when
+			 * The drop currently only performs on coordinator which lead error when
 			 * recreating index (since recreate index will dispatch to segments and
 			 * there still old constraint index exists)
 			 * Related issue: https://github.com/greenplum-db/gpdb/issues/10561.
@@ -17489,6 +17872,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 		queryDesc->ddesc = makeNode(QueryDispatchDesc);
 		queryDesc->ddesc->useChangedAOOpts = false;
 
+		check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 		queryDesc->plannedstmt->query_mem =
 				ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
@@ -18023,6 +18407,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			if (query_info_collect_hook)
 				(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, queryDesc);
 
+			check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 			queryDesc->plannedstmt->query_mem =
 				ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
@@ -18086,7 +18471,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			GpPolicyReplace(RelationGetRelid(rel), policy);
 
 		/*
-		 * Set to random distribution on master with no reorganisation.
+		 * Set to random distribution on coordinator with no reorganisation.
 		 * Or this is a partitioned table, with no data.
 		 */
 		if (cmd->backendId == 0)
@@ -19961,6 +20346,11 @@ ComputePartitionAttrs(ParseState *pstate, Relation rel, List *partParams, AttrNu
 							 errmsg("cannot use constant expression as partition key")));
 			}
 		}
+
+		if (strategy == PARTITION_STRATEGY_HASH && type_is_enum(atttype))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot use ENUM column \"%s\" in PARTITION BY statement for hash partitions", pelem->name)));
 
 		/*
 		 * Apply collation override if any

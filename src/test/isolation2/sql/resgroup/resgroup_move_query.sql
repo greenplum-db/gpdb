@@ -3,7 +3,7 @@
 -- m/ERROR:  process \d+ is in IDLE state/
 -- s/\d+/XXX/g
 --
--- m/ERROR:  group \d+ doesn't have enough memory on master, expect:\d+, available:\d+/
+-- m/ERROR:  group \d+ doesn't have enough memory on coordinator, expect:\d+, available:\d+/
 -- s/\d+/XXX/g
 --
 -- m/ERROR:  group \d+ doesn't have enough memory on segment, expect:\d+, available:\d+/

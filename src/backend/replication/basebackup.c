@@ -184,7 +184,7 @@ static const char *excludeDirContents[] =
 
 	/*
 	 * It is generally not useful to backup the contents of this directory
-	 * even if the intention is to restore to another master. See backup.sgml
+	 * even if the intention is to restore to another primary. See backup.sgml
 	 * for a more detailed description.
 	 */
 	"pg_replslot",
@@ -480,6 +480,7 @@ perform_base_backup(basebackup_options *opt)
 			tblspc_streamed++;
 			pgstat_progress_update_param(PROGRESS_BASEBACKUP_TBLSPC_STREAMED,
 										 tblspc_streamed);
+			SIMPLE_FAULT_INJECTOR("basebackup_progress_tablespace_streamed");
 		}
 
 		pgstat_progress_update_param(PROGRESS_BASEBACKUP_PHASE,
@@ -752,6 +753,7 @@ perform_base_backup(basebackup_options *opt)
 				 errmsg("checksum verification failure during base backup")));
 	}
 
+	SIMPLE_FAULT_INJECTOR("basebackup_progress_end");
 	pgstat_progress_end_command();
 }
 

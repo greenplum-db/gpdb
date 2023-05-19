@@ -42,6 +42,7 @@
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/pg_rusage.h"
+#include "utils/sampling.h"
 
 #define IS_BTREE(r) ((r)->rd_rel->relam == BTREE_AM_OID)
 
@@ -1584,10 +1585,13 @@ static bool
 aoco_scan_analyze_next_block(TableScanDesc scan, BlockNumber blockno,
                                    BufferAccessStrategy bstrategy)
 {
-	AOCSScanDesc aoscan = (AOCSScanDesc) scan;
-	aoscan->targetTupleId = blockno;
-
-	return true;
+	/*
+	 * For append-optimized relations, we use a separate sampling
+	 * method. See table_relation_acquire_sample_rows().
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_INTERNAL_ERROR),
+			 errmsg("API not supported for appendoptimized relations")));
 }
 
 static bool
@@ -1595,28 +1599,78 @@ aoco_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
                                    double *liverows, double *deadrows,
                                    TupleTableSlot *slot)
 {
-	AOCSScanDesc aoscan = (AOCSScanDesc) scan;
-	bool		ret = false;
+	/*
+	 * For append-optimized relations, we use a separate sampling
+	 * method. See table_relation_acquire_sample_rows().
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_INTERNAL_ERROR),
+			 errmsg("API not supported for appendoptimized relations")));
+}
 
-	/* skip several tuples if they are not sampling target */
-	while (aoscan->targetTupleId > aoscan->nextTupleId)
+static int
+aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
+						 int targrows, double *totalrows, double *totaldeadrows)
+{
+	int		numrows = 0;	/* # rows now in reservoir */
+	double	liverows = 0;	/* # live rows seen */
+	double	deadrows = 0;	/* # dead rows seen */
+
+	Assert(targrows > 0);
+
+	TableScanDesc scan = table_beginscan_analyze(onerel);
+	TupleTableSlot *slot = table_slot_create(onerel, NULL);
+	AOCSScanDesc aocoscan = (AOCSScanDesc) scan;
+
+	int64 totaltupcount = AOCSScanDesc_TotalTupCount(aocoscan);
+	int64 totaldeadtupcount = 0;
+	if (aocoscan->total_seg > 0 )
+		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aocoscan->visibilityMap);
+	/*
+     * The conversion from int64 to double (53 significant bits) is safe as the
+	 * AOTupleId is 48bits, the max value of totalrows is never greater than
+	 * AOTupleId_MaxSegmentFileNum * AOTupleId_MaxRowNum (< 48 significant bits).
+	 */
+	*totalrows = (double) (totaltupcount - totaldeadtupcount);
+	*totaldeadrows = (double) totaldeadtupcount;
+
+	/* Prepare for sampling tuple numbers */
+	RowSamplerData rs;
+	RowSampler_Init(&rs, *totalrows, targrows, random());
+
+	while (RowSampler_HasMore(&rs))
 	{
-		aoco_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
-	}
+		aocoscan->targrow = RowSampler_Next(&rs);
 
-	if (aoscan->targetTupleId == aoscan->nextTupleId)
-	{
-		ret = aoco_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
+		vacuum_delay_point();
 
-		if (ret)
-			*liverows += 1;
+		if (aocs_get_target_tuple(aocoscan, aocoscan->targrow, slot))
+		{
+			rows[numrows++] = ExecCopySlotHeapTuple(slot);
+			liverows++;
+		}
 		else
-			*deadrows += 1; /* if return an invisible tuple */
+			deadrows++;
+		
+		ExecClearTuple(slot);
 	}
 
-	return ret;
+	ExecDropSingleTupleTableSlot(slot);
+	table_endscan(scan);
+
+	/*
+	 * Emit some interesting relation info
+	 */
+	ereport(elevel,
+			(errmsg("\"%s\": scanned " INT64_FORMAT " rows, "
+					"containing %.0f live rows and %.0f dead rows; "
+					"%d rows in sample, %.0f accurate total live rows, "
+					"%.f accurate total dead rows",
+					RelationGetRelationName(onerel),
+					rs.m, liverows, deadrows, numrows,
+					*totalrows, *totaldeadrows)));
+
+	return numrows;
 }
 
 static double
@@ -1659,7 +1713,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 
 	/* Appendoptimized catalog tables are not supported. */
 	Assert(!is_system_catalog);
-	/* Appendoptimized tables have no data on master. */
+	/* Appendoptimized tables have no data on coordinator. */
 	if (IS_QUERY_DISPATCHER())
 		return 0;
 
@@ -1839,6 +1893,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	{
 		bool		tupleIsAlive;
 		AOTupleId 	*aoTupleId;
+		BlockNumber currblockno = ItemPointerGetBlockNumber(&slot->tts_tid);
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -1847,8 +1902,8 @@ aoco_index_build_range_scan(Relation heapRelation,
 		 * we scan the whole table, and throw away tuples that are not in the
 		 * range. That's clearly very inefficient.
 		 */
-		if (ItemPointerGetBlockNumber(&slot->tts_tid) < start_blockno ||
-			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
+		if (currblockno < start_blockno ||
+			(numblocks != InvalidBlockNumber && currblockno >= (start_blockno + numblocks)))
 			continue;
 
 		/* Report scan progress, if asked to. */
@@ -2321,6 +2376,7 @@ static const TableAmRoutine ao_column_methods = {
 	.relation_vacuum = aoco_vacuum_rel,
 	.scan_analyze_next_block = aoco_scan_analyze_next_block,
 	.scan_analyze_next_tuple = aoco_scan_analyze_next_tuple,
+	.relation_acquire_sample_rows = aoco_acquire_sample_rows,
 	.index_build_range_scan = aoco_index_build_range_scan,
 	.index_validate_scan = aoco_index_validate_scan,
 

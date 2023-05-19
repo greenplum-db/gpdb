@@ -696,8 +696,8 @@ const char *const config_group_names[] =
 	gettext_noop("Replication"),
 	/* REPLICATION_SENDING */
 	gettext_noop("Replication / Sending Servers"),
-	/* REPLICATION_MASTER */
-	gettext_noop("Replication / Master Server"),
+	/* REPLICATION_PRIMARY */
+	gettext_noop("Replication / Primary Server"),
 	/* REPLICATION_STANDBY */
 	gettext_noop("Replication / Standby Servers"),
 	/* REPLICATION_SUBSCRIBERS */
@@ -915,7 +915,7 @@ static const unit_conversion time_unit_conversion_table[] =
  *	  variable_is_guc_list_quote() in src/bin/pg_dump/dumputils.c.
  *
  * 8. In gpdb, the guc is force explicit declare whether it needs to sync value
- * 	  between master and primary. Add guc name into either sync_guc_names_array
+ * 	  between coordinator and primary. Add guc name into either sync_guc_names_array
  * 	  or unsync_guc_names_array.
  */
 
@@ -2535,7 +2535,7 @@ static struct config_int ConfigureNamesInt[] =
 	},
 
 	{
-		{"vacuum_defer_cleanup_age", PGC_SIGHUP, REPLICATION_MASTER,
+		{"vacuum_defer_cleanup_age", PGC_SIGHUP, REPLICATION_PRIMARY,
 			gettext_noop("Number of transactions by which VACUUM and HOT cleanup should be deferred, if any."),
 			NULL
 		},
@@ -3381,7 +3381,7 @@ static struct config_real ConfigureNamesReal[] =
 	{
 		{"parallel_tuple_cost", PGC_USERSET, QUERY_TUNING_COST,
 			gettext_noop("Sets the planner's estimate of the cost of "
-						 "passing each tuple (row) from worker to master backend."),
+						 "passing each tuple (row) from worker to leader backend."),
 			NULL,
 			GUC_EXPLAIN
 		},
@@ -4206,7 +4206,7 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-		{"synchronous_standby_names", PGC_SIGHUP, REPLICATION_MASTER,
+		{"synchronous_standby_names", PGC_SIGHUP, REPLICATION_PRIMARY,
 			gettext_noop("Number of synchronous standbys and list of names of potential synchronous ones."),
 			NULL,
 			GUC_LIST_INPUT

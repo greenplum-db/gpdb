@@ -2,8 +2,8 @@
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
 -- case segment is in recovery. Approximately we want to wait 30 seconds.
-!\retcode gpconfig -c gp_gang_creation_retry_count -v 120 --skipvalidation --masteronly;
-!\retcode gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 120 --skipvalidation --coordinatoronly;
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --coordinatoronly;
 !\retcode gpstop -u;
 
 1:CREATE TABLE t(a int, b int);
@@ -44,6 +44,6 @@ select wait_until_all_segments_synchronized();
 -- verify no segment is down after recovery
 1:SELECT COUNT(*) FROM gp_segment_configuration WHERE status = 'd';
 
-!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
-!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --coordinatoronly;
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --coordinatoronly;
 !\retcode gpstop -u;

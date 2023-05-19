@@ -721,13 +721,6 @@ build_join_rel(PlannerInfo *root,
 	if (bms_is_empty(joinrel->direct_lateral_relids))
 		joinrel->direct_lateral_relids = NULL;
 
-	/* GPDB_96_MERGE_FIXME: The 'width' is now in joinrel->reltarget. But I
-	 * don't think this is the right place to set it. Do we actually care
-	 * about doing this? PostgreSQL doesn't bother..
-	 */
-	/* cap width of output row by sum of its inputs */
-	//joinrel->width = Min(joinrel->width, outer_rel->width + inner_rel->width);
-
 	/*
 	 * Construct restrict and join clause lists for the new joinrel. (The
 	 * caller might or might not need the restrictlist, but I need it anyway

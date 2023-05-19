@@ -56,7 +56,7 @@ private:
 	CMemoryPool *m_mp;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// metadata id
 	IMDId *m_mdid;
@@ -165,11 +165,7 @@ public:
 	~CMDTypeGenericGPDB() override;
 
 	// accessors
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	IMDId *MDId() const override;
 

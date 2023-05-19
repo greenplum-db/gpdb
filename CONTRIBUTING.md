@@ -45,11 +45,11 @@ To improve the odds of the right discussion of your patch or idea happening, pay
 
 Once you are ready to share your work with the Greenplum core team and the rest of the Greenplum community, you should push all the commits to a branch in your own repository forked from the official Greenplum and send us a pull request.
 
-We require all pull requests to be submitted against the main master branch (clearly stating if the change needs to be back-ported to STABLE branches). If the change is ONLY applicable to given STABLE branch, you may decide to submit your pull requests against an active STABLE release branch.
+We require all pull requests to be submitted against the main branch (clearly stating if the change needs to be back-ported to STABLE branches). If the change is ONLY applicable to given STABLE branch, you may decide to submit your pull requests against an active STABLE release branch.
 
 Things which slow down patch approval
  - missing to accompany tests (or reproducible steps at minimum)
- - submitting the patch against STABLE branch where the fix also applies to main master branch
+ - submitting the patch against STABLE branch where the fix also applies to main branch
 
 ## Submissions against 5X_STABLE
 

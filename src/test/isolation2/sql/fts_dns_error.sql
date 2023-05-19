@@ -1,14 +1,14 @@
 -- Tests FTS can handle DNS error.
 
 -- to make test deterministic and fast
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --coordinatoronly;
 
 -- Allow extra time for mirror promotion to complete recovery to avoid
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
 -- case segment is in recovery. Approximately we want to wait 30 seconds.
-!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly;
-!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --coordinatoronly;
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --coordinatoronly;
 !\retcode gpstop -u;
 
 -- no down segment in the beginning
@@ -41,9 +41,9 @@ select wait_until_all_segments_synchronized()
 -- verify no segment is down after recovery
 select count(*) from gp_segment_configuration where status = 'd';
 
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
-!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
-!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
+!\retcode gpconfig -r gp_fts_probe_retries --coordinatoronly;
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --coordinatoronly;
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --coordinatoronly;
 !\retcode gpstop -u;
 
 

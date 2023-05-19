@@ -17,6 +17,7 @@
 #ifndef BRIN_PAGE_H
 #define BRIN_PAGE_H
 
+#include "appendonlywriter.h"
 #include "storage/block.h"
 #include "storage/itemptr.h"
 
@@ -28,7 +29,9 @@
  */
 typedef struct BrinSpecialSpace
 {
-	uint16		vector[MAXALIGN(1) / sizeof(uint16)];
+	BlockNumber logicalPageNum; /* AO/CO: 1-based logical page number */
+	BlockNumber nextRevmapPage; /* AO/CO: Only for revmap pages */
+	uint16      vector[MAXALIGN(1) / sizeof(uint16)];
 } BrinSpecialSpace;
 
 /*
@@ -47,20 +50,49 @@ typedef struct BrinSpecialSpace
 	(((BrinSpecialSpace *)		\
 	  PageGetSpecialPointer(page))->vector[MAXALIGN(1) / sizeof(uint16) - 2])
 
+/* GPDB: We maintain a chain of revmap pages for AO/CO tables */
+#define BrinLogicalPageNum(page)	\
+	(((BrinSpecialSpace *)			\
+	  PageGetSpecialPointer(page))->logicalPageNum)
+
+#define BrinNextRevmapPage(page)	\
+	(((BrinSpecialSpace *)			\
+	  PageGetSpecialPointer(page))->nextRevmapPage)
 /* special space on all BRIN pages stores a "type" identifier */
 #define		BRIN_PAGETYPE_META			0xF091
 #define		BRIN_PAGETYPE_REVMAP		0xF092
 #define		BRIN_PAGETYPE_REGULAR		0xF093
-#define		BRIN_PAGETYPE_UPPER			0xF094
 
 #define BRIN_IS_META_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_META)
 #define BRIN_IS_REVMAP_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_REVMAP)
 #define BRIN_IS_REGULAR_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_REGULAR)
-#define BRIN_IS_UPPER_PAGE(page) (BrinPageType(page) == BRIN_PAGETYPE_UPPER)
 
 /* flags for BrinSpecialSpace */
 #define		BRIN_EVACUATE_PAGE			(1 << 0)
 
+/*
+ * GPDB: We maintain a 1-based logical page number in revmap pages. This number
+ * gives us a way to find revmap pages, given a logical block number. This
+ * number is relative within a block sequence and starts from 1, with 1
+ * representing all the heap blocks the 1st revmap page can contain. See
+ * HEAPBLK_TO_REVMAP_PAGENUM_AO() for more details. It is 1-based for
+ * convenience in routines such as revmap_extend_and_get_blkno_ao(), where a
+ * value of 0, can be used to represent the empty case.
+ */
+typedef BlockNumber LogicalPageNum;
+#define InvalidLogicalPageNum (0)
+
+/*
+ * GPDB: Bookkeeping for the head and tail of the revmap page chain maintained
+ * for AO/CO tables.
+ */
+typedef struct AOChainInfo {
+	/* the first and last revmap pages of a chain for each block sequence */
+	BlockNumber firstPage;
+	BlockNumber lastPage;
+	/* last logical revmap page number for each block sequence (1-based) */
+	LogicalPageNum	lastLogicalPageNum;
+} AOChainInfo;
 
 /* Metapage definitions */
 typedef struct BrinMetaPageData
@@ -69,7 +101,10 @@ typedef struct BrinMetaPageData
 	uint32		brinVersion;
 	BlockNumber pagesPerRange;
 	BlockNumber lastRevmapPage;
-	bool		isAo;
+
+	/* GPDB section to handle AO/CO tables */
+	bool 		isAO;
+	AOChainInfo aoChainInfo[MAX_AOREL_CONCURRENCY];
 } BrinMetaPageData;
 
 #define BRIN_CURRENT_VERSION		1
@@ -88,11 +123,6 @@ typedef struct RevmapContents
 	ItemPointerData rm_tids[1];
 } RevmapContents;
 
-typedef struct RevmapUpperBlockContents
-{
-	BlockNumber rm_blocks[1];
-} RevmapUpperBlockContents;
-
 #define REVMAP_CONTENT_SIZE \
 	(BLCKSZ - MAXALIGN(SizeOfPageHeaderData) - \
 	 offsetof(RevmapContents, rm_tids) - \
@@ -100,11 +130,5 @@ typedef struct RevmapUpperBlockContents
 /* max num of items in the array */
 #define REVMAP_PAGE_MAXITEMS \
 	(REVMAP_CONTENT_SIZE / sizeof(ItemPointerData))
-
-#define REVMAP_UPPER_PAGE_MAXITEMS \
-	(REVMAP_CONTENT_SIZE/ sizeof(BlockNumber))
-
-#define REVMAP_INDEX_PAGE_NUM \
-	(65536 / REVMAP_PAGE_MAXITEMS) * 65536
 
 #endif							/* BRIN_PAGE_H */

@@ -41,7 +41,7 @@ SET
 DROP
 1: COMMIT;
 COMMIT
--- Remember index relfilenodes from master and segments before
+-- Remember index relfilenodes from coordinator and segments before
 -- reindex.
 2: create table old_heap_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_dropindex_serialize_tab_heap' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname like 'idx%_reindex_dropindex_serialize_tab_heap');
 CREATE 28
@@ -49,7 +49,7 @@ CREATE 28
 REINDEX
 2: COMMIT;
 COMMIT
--- Validate that reindex changed all index relfilenodes on master as well as
+-- Validate that reindex changed all index relfilenodes on coordinator as well as
 -- segments.  The following query should return 0 tuples.
 2: select oldrels.* from old_heap_relfilenodes oldrels join (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_dropindex_serialize_tab_heap' union all select gp_segment_id as dbid, relfilenode, relname from pg_class where relname like 'idx%_reindex_dropindex_serialize_tab_heap') newrels on oldrels.relfilenode = newrels.relfilenode and oldrels.dbid = newrels.dbid and oldrels.relname = newrels.relname;
  dbid | relfilenode | oid | relname 

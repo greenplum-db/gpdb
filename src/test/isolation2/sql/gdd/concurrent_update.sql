@@ -15,7 +15,7 @@ INSERT INTO t_concurrent_update VALUES(1,1,'test');
 
 DROP TABLE t_concurrent_update;
 
--- Test the concurrent update transaction order on the segment is reflected on master
+-- Test the concurrent update transaction order on the segment is reflected on coordinator
 1: CREATE TABLE t_concurrent_update(a int, b int);
 1: INSERT INTO t_concurrent_update VALUES(1,1);
 
@@ -31,7 +31,7 @@ DROP TABLE t_concurrent_update;
 2: select gp_inject_fault('before_xact_end_procarray', 'suspend', '', 'isolation2test', '', 1, 1, 0, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
 2&: END;
 1: select gp_wait_until_triggered_fault('before_xact_end_procarray', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
--- transaction 3 should wait transaction 2 commit on master
+-- transaction 3 should wait transaction 2 commit on coordinator
 3<:
 3&: END;
 -- the query should not get the incorrect distributed snapshot: transaction 1 in-progress

@@ -20,7 +20,7 @@
 #define CDBVARS_H
 
 #include "access/xlogdefs.h"  /*XLogRecPtr*/
-#include "catalog/gp_segment_configuration.h" /* MASTER_CONTENT_ID */
+#include "catalog/gp_segment_configuration.h" /* COORDINATOR_CONTENT_ID */
 
 /*
  * ----- Declarations of Greenplum-specific global variables ------
@@ -727,7 +727,7 @@ extern GpId GpIdentity;
 #define MAX_DBID_STRING_LENGTH  11
 
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
-#define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
+#define IS_QUERY_DISPATCHER() (GpIdentity.segindex == COORDINATOR_CONTENT_ID)
 
 #define IS_QUERY_EXECUTOR_BACKEND() (Gp_role == GP_ROLE_EXECUTE && gp_session_id > 0)
 

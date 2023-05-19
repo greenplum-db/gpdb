@@ -64,7 +64,7 @@ The [gppkg](../utility_guide/ref/gppkg.html) utility installs Greenplum Database
 
 #### <a id="topic4"></a>Installing the Extension Package 
 
-Before you install the PL/R extension, make sure that your Greenplum Database is running, you have sourced `greenplum_path.sh`, and that the `$MASTER_DATA_DIRECTORY` and `$GPHOME` variables are set.
+Before you install the PL/R extension, make sure that your Greenplum Database is running, you have sourced `greenplum_path.sh`, and that the `$COORDINATOR_DATA_DIRECTORY` and `$GPHOME` variables are set.
 
 1.  Download the PL/R extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/R** software.

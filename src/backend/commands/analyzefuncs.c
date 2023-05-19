@@ -19,6 +19,8 @@
 #include "foreign/fdwapi.h"
 #include "miscadmin.h"
 #include "funcapi.h"
+#include "utils/syscache.h"
+#include "utils/faultinjector.h"
 
 /**
  * Statistics related parameters.
@@ -204,6 +206,15 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 
 		ctx->index = 0;
 		ctx->summary_sent = false;
+		/*
+		 * we only get sample data from segindex 0 for replicated table
+		 */
+		if (Gp_role == GP_ROLE_EXECUTE && GpPolicyIsReplicated(onerel->rd_cdbpolicy)
+									   && GpIdentity.segindex > 0)
+		{
+			ctx->index = ctx->num_sample_rows;
+			ctx->summary_sent = true;
+		}
 
 		MemoryContextSwitchTo(oldcontext);
 	}
@@ -286,6 +297,8 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 
 		ctx->index++;
 
+		SIMPLE_FAULT_INJECTOR("returned_sample_row");
+
 		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(res));
 	}
 	else if (!ctx->summary_sent)
@@ -349,4 +362,160 @@ gp_acquire_sample_rows_col_type(Oid typid)
 			return TEXTOID;
 	}
 	return typid;
+}
+
+/*
+ * gp_acquire_correlations - Acquire each column's correlation for a table.
+ * This is an internal function called in gp_acquire_correlations_dispatcher.
+ * this function will return a result set, a row for each alive column.
+ * each row contains 3 columns: attnum, the correlation for it and totalrows.
+ * if correlation is null, set totalrows to 0 for it.
+ *
+ * So overall, this returns a result set like this:
+ * create table t(tc1 int, tc2 int, tc3 int);
+ * insert values.
+ * alter table t drop column tc2;
+ *
+ *    attnum | correlation| totalrows
+ * ----------+------------|+------------
+ *      0    |      0.8   | 200
+ *      2    |            | 0
+ */
+Datum
+gp_acquire_correlations(PG_FUNCTION_ARGS)
+{
+	FuncCallContext *funcctx = NULL;
+	gp_acquire_correlation_context *ctx;
+	MemoryContext oldcontext;
+	Oid			relOid = PG_GETARG_OID(0);
+	bool		inherited = PG_GETARG_BOOL(1);
+	TupleDesc	relDesc;
+	TupleDesc	outDesc;
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		Relation	onerel;
+		funcctx = SRF_FIRSTCALL_INIT();
+
+		/*
+		 * switch to memory context appropriate for multiple function
+		 * calls
+		 */
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		/* Construct the context to keep across calls. */
+		ctx = (gp_acquire_correlation_context *) palloc0(sizeof(gp_acquire_correlation_context));
+
+		if (!pg_class_ownercheck(relOid, GetUserId()))
+			aclcheck_error(ACLCHECK_NOT_OWNER, OBJECT_TABLE,
+						   get_rel_name(relOid));
+
+		onerel = table_open(relOid, AccessShareLock);
+		relDesc = RelationGetDescr(onerel);
+
+		outDesc = CreateTemplateTupleDesc(3);
+		TupleDescInitEntry(outDesc,
+						   1,
+						   "attnum",
+						   INT4OID,
+						   -1,
+						   0);
+		TupleDescInitEntry(outDesc,
+						   2,
+						   "correlation",
+						   FLOAT4OID,
+						   -1,
+						   0);
+		TupleDescInitEntry(outDesc,
+						   3,
+						   "totalrows",
+						   INT4OID,
+						   -1,
+						   0);
+
+		BlessTupleDesc(outDesc);
+		funcctx->tuple_desc = outDesc;
+
+		ctx->onerel = onerel;
+		funcctx->user_fctx = ctx;
+		ctx->outDesc = outDesc;
+
+		ctx->index = 0;
+		ctx->totalAttr = relDesc->natts;
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	/* stuff done on every call of the function */
+	funcctx = SRF_PERCALL_SETUP();
+
+	ctx = funcctx->user_fctx;
+	relDesc = RelationGetDescr(ctx->onerel);
+	outDesc = ctx->outDesc;
+
+	Datum		*outvalues = (Datum *) palloc(outDesc->natts * sizeof(Datum));
+	bool		*outnulls = (bool *) palloc(outDesc->natts * sizeof(bool));
+	HeapTuple	res;
+	int attno = ctx->index;
+
+	/* Return all alive attribute correlation */
+	for (; attno < ctx->totalAttr; attno++)
+	{
+		/* get the correlation of the column */
+		int			totalrows = 0;
+		HeapTuple	statsTuple;
+		Form_pg_attribute relatt = TupleDescAttr(relDesc, attno);
+		if (relatt->attisdropped)
+			continue;
+		statsTuple = SearchSysCache3(STATRELATTINH,
+												ObjectIdGetDatum(relOid),
+												Int16GetDatum(attno + 1),
+												BoolGetDatum(inherited));
+		outvalues[0] = Int32GetDatum(attno);
+		outnulls[0] = false;
+
+		if (HeapTupleIsValid(statsTuple))
+		{
+			AttStatsSlot sslot;
+
+			if (get_attstatsslot(&sslot, statsTuple,
+						 STATISTIC_KIND_CORRELATION, InvalidOid,
+						 ATTSTATSSLOT_NUMBERS))
+			{
+				float4		varCorrelation;
+				Assert(sslot.nnumbers == 1);
+				varCorrelation = sslot.numbers[0];
+
+				free_attstatsslot(&sslot);
+
+				outvalues[1] = Float4GetDatum(varCorrelation);
+				outnulls[1] = false;
+				totalrows = ctx->onerel->rd_rel->reltuples;
+			}
+			else
+			{
+				outvalues[1] = (Datum) 0;
+				outnulls[1] = true;
+			}
+			ReleaseSysCache(statsTuple);
+		}
+		else
+		{
+			outvalues[1] = (Datum) 0;
+			outnulls[1] = true;
+		}
+
+		outvalues[2] = Int32GetDatum(totalrows);
+		outnulls[2] = false;
+
+		res = heap_form_tuple(outDesc, outvalues, outnulls);
+		ctx->index = attno + 1;
+
+		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(res));
+	}
+
+	table_close(ctx->onerel, AccessShareLock);
+	pfree(ctx);
+	funcctx->user_fctx = NULL;
+
+	SRF_RETURN_DONE(funcctx);
 }

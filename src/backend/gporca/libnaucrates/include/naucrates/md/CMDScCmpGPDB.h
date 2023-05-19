@@ -37,7 +37,7 @@ private:
 	CMemoryPool *m_mp;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// object id
 	IMDId *m_mdid;
@@ -69,11 +69,7 @@ public:
 	~CMDScCmpGPDB() override;
 
 	// accessors
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// copmarison object id
 	IMDId *MDId() const override;

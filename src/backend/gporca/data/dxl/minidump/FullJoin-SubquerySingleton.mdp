@@ -319,7 +319,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="24">
+    <dxl:Plan Id="0" SpaceSize="54">
       <dxl:MergeJoin JoinType="Full" UniqueOuter="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000642" Rows="3.000000" Width="16"/>

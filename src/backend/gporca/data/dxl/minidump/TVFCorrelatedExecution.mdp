@@ -24,7 +24,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.65639.1.0" Name="myfunc" ReturnsSet="true" Stability="Volatile" DataAccess="ContainsSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.65639.1.0" Name="myfunc" ReturnsSet="true" Stability="Volatile" IsStrict="false">
         <dxl:ResultType Mdid="0.2249.1.0"/>
         <dxl:OutputColumns TypeMdids="0.23.1.0,0.23.1.0"/>
       </dxl:GPDBFunc>

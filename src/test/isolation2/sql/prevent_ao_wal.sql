@@ -41,9 +41,9 @@
 ! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;
 
 -- *********** Set wal_level=minimal **************
-!\retcode gpconfig -c wal_level -v minimal --masteronly;
+!\retcode gpconfig -c wal_level -v minimal --coordinatoronly;
 -- Set max_wal_senders to 0 because a non-zero value requires wal_level >= 'archive'
-!\retcode gpconfig -c max_wal_senders -v 0 --masteronly;
+!\retcode gpconfig -c max_wal_senders -v 0 --coordinatoronly;
 -- Restart QD
 !\retcode pg_ctl -l /dev/null -D $COORDINATOR_DATA_DIRECTORY restart -w -t 600 -m fast;
 
@@ -67,8 +67,8 @@
 -1U: DROP TABLE aoco_foo;
 
 -- Reset wal_level
-!\retcode gpconfig -r wal_level --masteronly;
+!\retcode gpconfig -r wal_level --coordinatoronly;
 -- Reset max_wal_senders
-!\retcode gpconfig -r max_wal_senders --masteronly;
+!\retcode gpconfig -r max_wal_senders --coordinatoronly;
 -- Restart QD
 !\retcode pg_ctl -l /dev/null -D $COORDINATOR_DATA_DIRECTORY restart -w -t 600 -m fast;

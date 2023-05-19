@@ -27,7 +27,7 @@ where <action> is one of:
     [ NOT ] LEAKPROOF
     { [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER }
     PARALLEL { UNSAFE | RESTRICTED | SAFE }
-    EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
+    EXECUTE ON { ANY | COORDINATOR | ALL SEGMENTS | INITPLAN }
     COST <execution_cost>
     ROWS <result_rows>
     SUPPORT <support_function>
@@ -90,14 +90,14 @@ LEAKPROOF
 :   Change whether the function is considered leakproof or not. See [CREATE FUNCTION](CREATE_FUNCTION.html) for more information about this capability.
 
 EXECUTE ON ANY
-EXECUTE ON MASTER
+EXECUTE ON COORDINATOR
 EXECUTE ON ALL SEGMENTS
 EXECUTE ON INITPLAN
 :   The `EXECUTE ON` attributes specify where \(coordinator or segment instance\) a function runs when it is invoked during the query execution process.
 
 :   `EXECUTE ON ANY` \(the default\) indicates that the function can be run on the coordinator, or any segment instance, and it returns the same result regardless of where it is run. Greenplum Database determines where the function runs.
 
-:   `EXECUTE ON MASTER` indicates that the function must run only on the coordinator instance.
+:   `EXECUTE ON COORDINATOR` indicates that the function must run only on the coordinator instance.
 
 :   `EXECUTE ON ALL SEGMENTS` indicates that the function must run on all primary segment instances, but not the coordinator, for each invocation. The overall result of the function is the `UNION ALL` of the results from all segment instances.
 

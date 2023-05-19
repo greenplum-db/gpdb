@@ -47,9 +47,6 @@ CMDCastGPDB::CMDCastGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	GPOS_ASSERT(m_mdid_dest->IsValid());
 	GPOS_ASSERT_IMP(!is_binary_coercible && m_path_type != EmdtCoerceViaIO,
 					m_mdid_cast_func->IsValid());
-
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -67,9 +64,22 @@ CMDCastGPDB::~CMDCastGPDB()
 	m_mdid_dest->Release();
 	CRefCount::SafeRelease(m_mdid_cast_func);
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 }
 
+const CWStringDynamic *
+CMDCastGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

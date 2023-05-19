@@ -118,7 +118,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_enable_dml](guc-list.html#optimizer_enable_dml)
 - [optimizer_enable_foreign_table](guc-list.html#optimizer_enable_foreign_table)
 - [optimizer_enable_indexonlyscan](guc-list.html#optimizer_enable_indexonlyscan)
-- [optimizer_enable_master_only_queries](guc-list.html#optimizer_enable_master_only_queries)
+- [optimizer_enable_coordinator_only_queries](guc-list.html#optimizer_enable_coordinator_only_queries)
 - [optimizer_enable_multiple_distinct_aggs](guc-list.html#optimizer_enable_multiple_distinct_aggs)
 - [optimizer_enable_replicated_table](guc-list.html#optimizer_enable_replicated_table)
 - [optimizer_force_agg_skew_avoidance](guc-list.html#optimizer_force_agg_skew_avoidance)
@@ -296,7 +296,11 @@ These configuration parameters control Greenplum Database logging.
 These parameters pertain to auto-vacuuming databases.
 
 - [autovacuum](guc-list.html#autovacuum)
+- [autovacuum_freeze_max_age](guc-list.html#autovacuum_freeze_max_age)
 - [autovacuum_naptime](guc-list.html#autovacuum_naptime)
+- [autovacuum_vacuum_cost_delay](guc-list.html#autovacuum_vacuum_cost_delay)
+- [autovacuum_vacuum_scale_factor](guc-list.html#autovacuum_vacuum_scale_factor)
+- [autovacuum_vacuum_threshold](guc-list.html#autovacuum_vacuum_threshold)
 - [gp_autovacuum_scope](guc-list.html#gp_autovacuum_scope)
 
 ## <a id="query-metrics"></a>Query Metrics Collection Parameters 
@@ -457,6 +461,7 @@ The following parameters provide compatibility with older PostgreSQL and Greenpl
 - [array_nulls](guc-list.html#array_nulls)
 - [backslash_quote](guc-list.html#backslash_quote)
 - [escape_string_warning](guc-list.html#escape_string_warning)
+- [gp_quicklz_fallback](guc-list.html#gp_quickz_fallback)
 - [quote_all_identifiers](guc-list.html#quote_all_identifiers)
 - [regex_flavor](guc-list.html#regex_flavor)
 - [standard_conforming_strings](guc-list.html#standard_conforming_strings)

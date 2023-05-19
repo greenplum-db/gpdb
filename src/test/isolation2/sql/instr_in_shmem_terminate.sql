@@ -15,12 +15,12 @@ CREATE EXTERNAL WEB TABLE __gp_localid
 EXECUTE E'echo $GP_SEGMENT_ID' FORMAT 'TEXT';
 GRANT SELECT ON TABLE __gp_localid TO public;
 
-CREATE EXTERNAL WEB TABLE __gp_masterid
+CREATE EXTERNAL WEB TABLE __gp_coordinatorid
 (
-    masterid    int
+    coordinatorid    int
 )
 EXECUTE E'echo $GP_SEGMENT_ID' ON COORDINATOR FORMAT 'TEXT';
-GRANT SELECT ON TABLE __gp_masterid TO public;
+GRANT SELECT ON TABLE __gp_coordinatorid TO public;
 
 CREATE FUNCTION gp_instrument_shmem_detail_f()
 RETURNS SETOF RECORD
@@ -37,7 +37,7 @@ WITH all_entries AS (
     )
   UNION ALL
   SELECT C.*
-    FROM __gp_masterid, gp_instrument_shmem_detail_f() as C (
+    FROM __gp_coordinatorid, gp_instrument_shmem_detail_f() as C (
       tmid int4,ssid int4,ccnt int2,segid int2,pid int4
       ,nid int2,tuplecount int8,nloops int8,ntuples int8
     ))

@@ -2257,29 +2257,6 @@ get_func_support(Oid funcid)
 }
 
 /*
- * func_data_access
- *		Given procedure id, return the function's data access flag.
- */
-char
-func_data_access(Oid funcid)
-{
-	HeapTuple	tp;
-	char		result;
-	bool		isnull;
-
-	tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-	if (!HeapTupleIsValid(tp))
-		elog(ERROR, "cache lookup failed for function %u", funcid);
-
-	result = DatumGetChar(
-		SysCacheGetAttr(PROCOID, tp, Anum_pg_proc_prodataaccess, &isnull));
-	ReleaseSysCache(tp);
-
-	Assert(!isnull);
-	return result;
-}
-
-/*
  * func_exec_location
  *		Given procedure id, return the function's proexeclocation field
  */
@@ -4509,7 +4486,7 @@ child_distribution_mismatch(Relation rel)
 	}
 
 	GpPolicy *rootPolicy = rel->rd_cdbpolicy;
-	Assert(NULL != rootPolicy && "Partitioned tables cannot be master-only");
+	Assert(NULL != rootPolicy && "Partitioned tables cannot be coordinator-only");
 
 	/* replicated table can't have child */
 	Assert(!GpPolicyIsReplicated(rootPolicy));

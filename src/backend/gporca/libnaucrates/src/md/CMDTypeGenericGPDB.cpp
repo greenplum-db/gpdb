@@ -90,8 +90,6 @@ CMDTypeGenericGPDB::CMDTypeGenericGPDB(
 {
 	GPOS_ASSERT_IMP(m_is_fixed_length, 0 < m_length);
 	GPOS_ASSERT_IMP(!m_is_fixed_length, 0 > m_gpdb_length);
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 
 	m_mdid->AddRef();
 	m_datum_null = GPOS_NEW(m_mp) CDatumGenericGPDB(
@@ -128,10 +126,23 @@ CMDTypeGenericGPDB::~CMDTypeGenericGPDB()
 	m_mdid_count->Release();
 	CRefCount::SafeRelease(m_mdid_base_relation);
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_datum_null->Release();
 }
 
+const CWStringDynamic *
+CMDTypeGenericGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

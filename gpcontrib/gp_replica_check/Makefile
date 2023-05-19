@@ -15,7 +15,7 @@ include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
 # GPDB_FEATURE_NOT_SUPPORTED: Enable btree, gin and gist as physical
-# and logical order is equivalent now. Also, enable brin, spgist,
+# and logical order is equivalent now. Also, enable spgist,
 # bitmap. Basically, "all" option should be functional for this tool.
 installcheck: install
-	gp_replica_check.py -r="heap, ao_row, ao_column"
+	gp_replica_check.py -r="heap, ao_row, ao_column, brin"

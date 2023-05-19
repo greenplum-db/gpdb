@@ -130,27 +130,30 @@ SELECT DISTINCT p.age FROM person* p ORDER BY age using >;
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT count(*) FROM
   (SELECT DISTINCT two, four, two FROM tenk1) ss;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
- Aggregate
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Finalize Aggregate
    Output: count()
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  GroupAggregate
-               Group Key: tenk1.two, tenk1.four, tenk1.two
-               ->  Sort
+         Output: (PARTIAL count())
+         ->  Partial Aggregate
+               Output: PARTIAL count()
+               ->  GroupAggregate
                      Output: two, four
-                     Sort Key: tenk1.two, tenk1.four, tenk1.two
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Group Key: tenk1.two, tenk1.four, tenk1.two
+                     ->  Sort
                            Output: two, four
-                           Hash Key: two, four, two
-                           ->  Streaming HashAggregate
+                           Sort Key: tenk1.two, tenk1.four, tenk1.two
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                  Output: two, four
-                                 Group Key: tenk1.two, tenk1.four, tenk1.two
-                                 ->  Seq Scan on public.tenk1
+                                 Hash Key: two, four, two
+                                 ->  Streaming HashAggregate
                                        Output: two, four
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
- Settings: optimizer=on
-(18 rows)
+                                       Group Key: tenk1.two, tenk1.four, tenk1.two
+                                       ->  Seq Scan on public.tenk1
+                                             Output: two, four
+ Optimizer: Pivotal Optimizer (GPORCA)
+(21 rows)
 
 SELECT count(*) FROM
   (SELECT DISTINCT two, four, two FROM tenk1) ss;

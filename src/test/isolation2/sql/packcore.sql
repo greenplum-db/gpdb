@@ -71,7 +71,7 @@ stderr: {stderr}
     # gzip runs much faster with -1
     os.putenv('GZIP', '-1')
 
-    # do not put the packcore results under master data, that will cause
+    # do not put the packcore results under coordinator data, that will cause
     # failures in other tests
     os.chdir('/tmp')
 

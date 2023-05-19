@@ -833,7 +833,8 @@ CPredicateUtils::FPlainEquality(CExpression *pexpr)
 
 // is an expression a self comparison on some column
 BOOL
-CPredicateUtils::FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt)
+CPredicateUtils::FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt,
+								 CColRefSet *pcrsNotNull)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(nullptr != pecmpt);
@@ -859,8 +860,8 @@ CPredicateUtils::FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt)
 		CColRef *colref =
 			const_cast<CColRef *>(CScalarIdent::PopConvert(popLeft)->Pcr());
 
-		return CColRef::EcrtTable == colref->Ecrt() &&
-			   !CColRefTable::PcrConvert(colref)->IsNullable();
+		// return true if column is a member of NotNull columns(pcrsNotNull) of parent expression
+		return pcrsNotNull->FMember(colref);
 	}
 
 	return false;
@@ -869,14 +870,15 @@ CPredicateUtils::FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt)
 // eliminate self comparison and replace it with True or False if possible
 CExpression *
 CPredicateUtils::PexprEliminateSelfComparison(CMemoryPool *mp,
-											  CExpression *pexpr)
+											  CExpression *pexpr,
+											  CColRefSet *pcrsNotNull)
 {
 	GPOS_ASSERT(pexpr->Pop()->FScalar());
 
 	pexpr->AddRef();
 	CExpression *pexprNew = pexpr;
 	IMDType::ECmpType cmp_type = IMDType::EcmptOther;
-	if (FSelfComparison(pexpr, &cmp_type))
+	if (FSelfComparison(pexpr, &cmp_type, pcrsNotNull))
 	{
 		switch (cmp_type)
 		{

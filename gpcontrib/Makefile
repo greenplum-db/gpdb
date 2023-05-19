@@ -32,9 +32,6 @@ endif
 ifeq "$(with_zstd)" "yes"
 	recurse_targets += zstd
 endif
-ifeq "$(with_quicklz)" "yes"
-	recurse_targets += quicklz
-endif
 $(call recurse,all install clean distclean, $(recurse_targets))
 
 all: gpcloud mapreduce orafce
@@ -85,6 +82,5 @@ installcheck:
 	fi
 	if [ "$(enable_orafce)" = "yes" ]; then $(MAKE) -C orafce installcheck; fi
 	if [ "$(with_zstd)" = "yes" ]; then $(MAKE) -C zstd installcheck; fi
-	if [ "$(with_quicklz)" = "yes" ]; then $(MAKE) -C quicklz installcheck; fi
 	$(MAKE) -C gp_sparse_vector installcheck
 	$(MAKE) -C gp_exttable_fdw installcheck

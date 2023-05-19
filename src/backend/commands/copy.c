@@ -2593,6 +2593,9 @@ BeginCopyTo(ParseState *pstate,
 					   options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
+	if (cstate->on_segment)
+		progress_vals[0] = PROGRESS_COPY_COMMAND_TO_ON_SEGMENT;
+
 	/* Determine the mode */
 	if (Gp_role == GP_ROLE_DISPATCH && !cstate->on_segment &&
 		cstate->rel && cstate->rel->rd_cdbpolicy)
@@ -3232,6 +3235,10 @@ CopyTo(CopyState cstate)
 						*/
 						pgstat_progress_update_param(PROGRESS_COPY_TUPLES_PROCESSED,
 													 ++processed);
+#ifdef FAULT_INJECTOR
+						if (processed == 2)
+							SIMPLE_FAULT_INJECTOR("copy_processed_two_tuples");
+#endif
 					}
 					ExecDropSingleTupleTableSlot(slot);
 					table_endscan(scandesc);
@@ -4314,7 +4321,7 @@ CopyFrom(CopyState cstate)
 		cdbCopyStart(cdbCopy, glob_copystmt, cstate->file_encoding);
 
 		/*
-		 * Skip header processing if dummy file get from master for COPY FROM ON
+		 * Skip header processing if dummy file get from coordinator for COPY FROM ON
 		 * SEGMENT
 		 */
 		if (!cstate->on_segment)
@@ -4633,7 +4640,7 @@ CopyFrom(CopyState cstate)
 		{
 			/*
 			 * If the tuple was dispatched to segments, do not execute trigger
-			 * on master.
+			 * on coordinator.
 			 */
 			if (!skip_tuple && !ExecBRInsertTriggers(estate, resultRelInfo, myslot))
 				skip_tuple = true;	/* "do nothing" */
@@ -4753,6 +4760,10 @@ CopyFrom(CopyState cstate)
 			 */
 			pgstat_progress_update_param(PROGRESS_COPY_TUPLES_PROCESSED,
 										 ++processed);
+#ifdef FAULT_INJECTOR
+			if (processed == 2)
+				SIMPLE_FAULT_INJECTOR("copy_processed_two_tuples");
+#endif
 			if (cstate->cdbsreh)
 				cstate->cdbsreh->processed++;
 		}
@@ -4823,7 +4834,7 @@ CopyFrom(CopyState cstate)
 			 * If error log has been requested, then we send the row to the segment
 			 * so that it can be written in the error log file. The segment process
 			 * counts it again as a rejected row. So we ignore the reject count
-			 * from the master and only consider the reject count from segments.
+			 * from the coordinator and only consider the reject count from segments.
 			 */
 			if (IS_LOG_TO_FILE(cstate->cdbsreh->logerrors))
 				total_rejected_from_qd = 0;
@@ -4932,6 +4943,9 @@ BeginCopyFrom(ParseState *pstate,
 
 	cstate = BeginCopy(pstate, true, rel, NULL, InvalidOid, attnamelist, options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
+
+	if (cstate->on_segment)
+		progress_vals[0] = PROGRESS_COPY_COMMAND_FROM_ON_SEGMENT;
 
 	/*
 	 * Determine the mode

@@ -39,7 +39,7 @@ typedef struct DtxContextInfo
 extern DtxContextInfo QEDtxContextInfo;	
 
 extern void DtxContextInfo_Reset(DtxContextInfo *dtxContextInfo);
-extern void DtxContextInfo_CreateOnMaster(DtxContextInfo *dtxContextInfo, bool inCursor,
+extern void DtxContextInfo_CreateOnCoordinator(DtxContextInfo *dtxContextInfo, bool inCursor,
 										  int txnOptions, Snapshot snapshot);
 extern int DtxContextInfo_SerializeSize(DtxContextInfo *dtxContextInfo);
 

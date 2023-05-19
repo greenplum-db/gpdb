@@ -164,6 +164,7 @@ static char *cdb_init_d_dir;
 static char *features_file;
 static char *system_views_file;
 static char *system_views_gp_file;
+static char *system_views_gp_summary_file;
 static bool success = false;
 static bool made_new_pgdata = false;
 static bool found_existing_pgdata = false;
@@ -1723,6 +1724,19 @@ setup_sysviews(FILE *cmdfd)
 	PG_CMD_PUTS("\n\n");
 
 	free(sysviews_setup);
+
+	/* system_views_gp_summary.sql */
+	sysviews_setup = readfile(system_views_gp_summary_file);
+
+	for (line = sysviews_setup; *line != NULL; line++)
+	{
+		PG_CMD_PUTS(*line);
+		free(*line);
+	}
+
+	PG_CMD_PUTS("\n\n");
+
+	free(sysviews_setup);
 }
 
 /*
@@ -2870,6 +2884,7 @@ setup_data_file_paths(void)
 	set_input(&features_file, "sql_features.txt");
 	set_input(&system_views_file, "system_views.sql");
 	set_input(&system_views_gp_file, "system_views_gp.sql");
+	set_input(&system_views_gp_summary_file, "system_views_gp_summary.sql");
 
 	set_input(&cdb_init_d_dir, "cdb_init.d");
 
@@ -2903,6 +2918,7 @@ setup_data_file_paths(void)
 	check_input(features_file);
 	check_input(system_views_file);
 	check_input(system_views_gp_file);
+	check_input(system_views_gp_summary_file);
 }
 
 

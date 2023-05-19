@@ -47,8 +47,6 @@ CDXLColStats::CDXLColStats(CMemoryPool *mp, CMDIdColStats *mdid_col_stats,
 {
 	GPOS_ASSERT(mdid_col_stats->IsValid());
 	GPOS_ASSERT(nullptr != dxl_stats_bucket_array);
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -62,9 +60,23 @@ CDXLColStats::CDXLColStats(CMemoryPool *mp, CMDIdColStats *mdid_col_stats,
 CDXLColStats::~CDXLColStats()
 {
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_mdid_col_stats->Release();
 	m_dxl_stats_bucket_array->Release();
+}
+
+const CWStringDynamic *
+CDXLColStats::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
 }
 
 //---------------------------------------------------------------------------
@@ -93,20 +105,6 @@ CMDName
 CDXLColStats::Mdname() const
 {
 	return *m_mdname;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLColStats::GetMDName
-//
-//	@doc:
-//		Returns the DXL string for this object
-//
-//---------------------------------------------------------------------------
-const CWStringDynamic *
-CDXLColStats::GetStrRepr() const
-{
-	return m_dxl_str;
 }
 
 //---------------------------------------------------------------------------

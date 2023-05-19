@@ -2272,7 +2272,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" IsNull="false" Value="9000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:GPDBFunc Mdid="0.1773.1.0" Name="to_char" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1773.1.0" Name="to_char" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
     </dxl:Metadata>

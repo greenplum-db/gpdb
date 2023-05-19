@@ -383,7 +383,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="354">
+    <dxl:Plan Id="0" SpaceSize="528">
       <dxl:DMLInsert Columns="0" ActionCol="41" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1808628108.398402" Rows="1.000000" Width="4"/>

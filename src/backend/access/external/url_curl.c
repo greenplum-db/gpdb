@@ -1295,10 +1295,15 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	}
 	else
 	{
+
+		/* Keep these for backwards compatibility */
+		set_httpheader(file, "X-GP-MASTER_HOST", ev->GP_COORDINATOR_HOST);
+		set_httpheader(file, "X-GP-MASTER_PORT", ev->GP_COORDINATOR_PORT);
+
 		/* read specific - (TODO: unclear why some of these are needed) */
 		set_httpheader(file, "X-GP-PROTO", "1");
-		set_httpheader(file, "X-GP-MASTER_HOST", ev->GP_MASTER_HOST);
-		set_httpheader(file, "X-GP-MASTER_PORT", ev->GP_MASTER_PORT);
+		set_httpheader(file, "X-GP-COORDINATOR_HOST", ev->GP_COORDINATOR_HOST);
+		set_httpheader(file, "X-GP-COORDINATOR_PORT", ev->GP_COORDINATOR_PORT);
 		set_httpheader(file, "X-GP-CSVOPT", ev->GP_CSVOPT);
 		set_httpheader(file, "X-GP_SEG_PG_CONF", ev->GP_SEG_PG_CONF);
 		set_httpheader(file, "X-GP_SEG_DATADIR", ev->GP_SEG_DATADIR);

@@ -947,18 +947,12 @@ CDXLOperatorFactory::MakeDXLArrayCoerceExpr(
 {
 	CMemoryPool *mp = dxl_memory_manager->Pmp();
 
-	IMDId *element_func = ExtractConvertAttrValueToMdId(
-		dxl_memory_manager, attrs, EdxltokenElementFunc,
-		EdxltokenScalarArrayCoerceExpr);
 	IMDId *mdid_type = ExtractConvertAttrValueToMdId(
 		dxl_memory_manager, attrs, EdxltokenTypeId,
 		EdxltokenScalarArrayCoerceExpr);
 	INT type_modifier = ExtractConvertAttrValueToInt(
 		dxl_memory_manager, attrs, EdxltokenTypeMod,
 		EdxltokenScalarArrayCoerceExpr, true, default_type_modifier);
-	BOOL is_explicit = ExtractConvertAttrValueToBool(
-		dxl_memory_manager, attrs, EdxltokenIsExplicit,
-		EdxltokenScalarArrayCoerceExpr);
 	ULONG coercion_form = ExtractConvertAttrValueToUlong(
 		dxl_memory_manager, attrs, EdxltokenCoercionForm,
 		EdxltokenScalarArrayCoerceExpr);
@@ -966,9 +960,9 @@ CDXLOperatorFactory::MakeDXLArrayCoerceExpr(
 												EdxltokenLocation,
 												EdxltokenScalarArrayCoerceExpr);
 
-	return GPOS_NEW(mp) CDXLScalarArrayCoerceExpr(
-		mp, element_func, mdid_type, type_modifier, is_explicit,
-		(EdxlCoercionForm) coercion_form, location);
+	return GPOS_NEW(mp)
+		CDXLScalarArrayCoerceExpr(mp, mdid_type, type_modifier,
+								  (EdxlCoercionForm) coercion_form, location);
 }
 
 //---------------------------------------------------------------------------

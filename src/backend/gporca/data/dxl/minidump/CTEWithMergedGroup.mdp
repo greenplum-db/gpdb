@@ -423,7 +423,7 @@
         </dxl:LogicalProject>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="41793672096">
+    <dxl:Plan Id="0" SpaceSize="157890951632">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1356250698.553420" Rows="1.000000" Width="4"/>

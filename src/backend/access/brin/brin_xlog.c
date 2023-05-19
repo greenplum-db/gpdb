@@ -33,50 +33,10 @@ brin_xlog_createidx(XLogReaderState *record)
 	buf = XLogInitBufferForRedo(record, 0);
 	Assert(BufferIsValid(buf));
 	page = (Page) BufferGetPage(buf);
-	brin_metapage_init(page, xlrec->pagesPerRange, xlrec->version, xlrec->isAo);
+	brin_metapage_init(page, xlrec->pagesPerRange, xlrec->version, xlrec->isAO);
 	PageSetLSN(page, lsn);
 	MarkBufferDirty(buf);
 	UnlockReleaseBuffer(buf);
-}
-
-static void
-brin_xlog_revmap_init_upper_blk(XLogReaderState *record)
-{
-	XLogRecPtr	lsn = record->EndRecPtr;
-	xl_brin_createupperblk *xlrec = (xl_brin_createupperblk *) XLogRecGetData(record);
-	Buffer		buf;
-	Page		page;
-	XLogRedoAction action;
-	Buffer		metabuf;
-
-	/* Update the metapage */
-	action = XLogReadBufferForRedo(record, 0, &metabuf);
-	if (action == BLK_NEEDS_REDO)
-	{
-		Page		metapg;
-		BrinMetaPageData *metadata;
-
-		metapg = BufferGetPage(metabuf);
-		metadata = (BrinMetaPageData *) PageGetContents(metapg);
-
-		Assert(metadata->lastRevmapPage == xlrec->targetBlk - 1);
-		metadata->lastRevmapPage = xlrec->targetBlk;
-
-		PageSetLSN(metapg, lsn);
-		MarkBufferDirty(metabuf);
-	}
-
-	/* create upper blk */
-	buf = XLogInitBufferForRedo(record, 1);
-	page = (Page) BufferGetPage(buf);
-	brin_page_init(page, BRIN_PAGETYPE_UPPER);
-
-	PageSetLSN(page, lsn);
-	MarkBufferDirty(buf);
-
-	UnlockReleaseBuffer(buf);
-	if (BufferIsValid(metabuf))
-		UnlockReleaseBuffer(metabuf);
 }
 
 /*
@@ -256,10 +216,39 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 	BlockNumber targetBlk;
 	XLogRedoAction action;
 
+	/* GPDB AO/CO specific */
+	bool		ao_chain_exists = false;
+	Buffer 		currLastRevmapBuf = InvalidBuffer;
+
 	xlrec = (xl_brin_revmap_extend *) XLogRecGetData(record);
 
 	XLogRecGetBlockTag(record, 1, NULL, NULL, &targetBlk);
 	Assert(xlrec->targetBlk == targetBlk);
+
+	/*
+	 * GPDB: If we have registered backup block id = 2, it means that this index
+	 * is on an AO/CO relation, and we are extending a revmap chain.
+	 */
+	ao_chain_exists = XLogRecGetBlockTag(record, 2, NULL, NULL, NULL);
+	if (ao_chain_exists)
+	{
+		XLogRedoAction 	currLastRevmapBufAction =
+							  XLogReadBufferForRedo(record, 2, &currLastRevmapBuf);
+
+		Assert(xlrec->isAO);
+
+		if (currLastRevmapBufAction == BLK_NEEDS_REDO)
+		{
+			/* Extend the chain for the current block sequence. */
+			Page currLastRevmapPage = BufferGetPage(currLastRevmapBuf);
+
+			Assert(!PageIsNew(currLastRevmapPage));
+
+			BrinNextRevmapPage(currLastRevmapPage) = xlrec->targetBlk;
+			PageSetLSN(currLastRevmapPage, lsn);
+			MarkBufferDirty(currLastRevmapBuf);
+		}
+	}
 
 	/* Update the metapage */
 	action = XLogReadBufferForRedo(record, 0, &metabuf);
@@ -271,8 +260,30 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 		metapg = BufferGetPage(metabuf);
 		metadata = (BrinMetaPageData *) PageGetContents(metapg);
 
-		Assert(metadata->lastRevmapPage == xlrec->targetBlk - 1);
-		metadata->lastRevmapPage = xlrec->targetBlk;
+		AssertImply(xlrec->isAO, metadata->isAO);
+
+		if (!metadata->isAO)
+		{
+			Assert(metadata->lastRevmapPage == xlrec->targetBlk - 1);
+			metadata->lastRevmapPage = xlrec->targetBlk;
+			Assert(!ao_chain_exists);
+		}
+		else
+		{
+			/* GPDB AO/CO: Update the metapage's revmap chain info */
+			int blockSeq = xlrec->blockSeq;
+
+			if (!ao_chain_exists)
+			{
+				/* Begin a new chain */
+				metadata->aoChainInfo[blockSeq].firstPage = xlrec->targetBlk;
+			}
+
+			Assert(xlrec->targetBlk != InvalidBlockNumber);
+			Assert(xlrec->targetPageNum != InvalidLogicalPageNum);
+			metadata->aoChainInfo[blockSeq].lastPage = xlrec->targetBlk;
+			metadata->aoChainInfo[blockSeq].lastLogicalPageNum = xlrec->targetPageNum;
+		}
 
 		PageSetLSN(metapg, lsn);
 
@@ -298,12 +309,18 @@ brin_xlog_revmap_extend(XLogReaderState *record)
 	page = (Page) BufferGetPage(buf);
 	brin_page_init(page, BRIN_PAGETYPE_REVMAP);
 
+	/* GPDB: Set the logical page number for AO/CO tables */
+	if (xlrec->isAO)
+		BrinLogicalPageNum(page) = xlrec->targetPageNum;
+
 	PageSetLSN(page, lsn);
 	MarkBufferDirty(buf);
 
 	UnlockReleaseBuffer(buf);
 	if (BufferIsValid(metabuf))
 		UnlockReleaseBuffer(metabuf);
+	if (BufferIsValid(currLastRevmapBuf))
+		UnlockReleaseBuffer(currLastRevmapBuf);
 }
 
 static void
@@ -346,50 +363,6 @@ brin_xlog_desummarize_page(XLogReaderState *record)
 		UnlockReleaseBuffer(buffer);
 }
 
-/*
- * We have an extra upper layer in the brin revmap of the
- * ao / aocs table. Set the block number of revmap page by this
- * function.
- */
-static void
-brinSetRevmapBlockNumber(Buffer buf, BlockNumber pagesPerRange,
-						 BlockNumber heapBlk, BlockNumber revmapBlk)
-{
-	RevmapUpperBlockContents *contents;
-	Page		page;
-	BlockNumber targetupperindex;
-	BlockNumber *blks;
-
-	page = BufferGetPage(buf);
-	contents = (RevmapUpperBlockContents*) PageGetContents(page);
-	targetupperindex = HEAPBLK_TO_REVMAP_UPPER_IDX(pagesPerRange, heapBlk);
-	blks = (BlockNumber*) contents->rm_blocks;
-	blks[targetupperindex] = revmapBlk;
-}
-
-static void
-brin_xlog_revmap_extend_upper(XLogReaderState *record)
-{
-	XLogRecPtr	lsn = record->EndRecPtr;
-	xl_brin_revmap_extend_upper *xlrec;
-	Buffer		buf;
-	Page		page;
-	XLogRedoAction action;
-
-	xlrec = (xl_brin_revmap_extend_upper *) XLogRecGetData(record);
-	action = XLogReadBufferForRedo(record, 0, &buf);
-	if (action == BLK_NEEDS_REDO)
-	{
-		page = (Page) BufferGetPage(buf);
-		brinSetRevmapBlockNumber(buf, xlrec->pagesPerRange, xlrec->heapBlk, xlrec->revmapBlk);
-		PageSetLSN(page, lsn);
-		MarkBufferDirty(buf);
-	}
-
-	if (BufferIsValid(buf))
-		UnlockReleaseBuffer(buf);
-}
-
 void
 brin_redo(XLogReaderState *record)
 {
@@ -399,9 +372,6 @@ brin_redo(XLogReaderState *record)
 	{
 		case XLOG_BRIN_CREATE_INDEX:
 			brin_xlog_createidx(record);
-			break;
-		case XLOG_BRIN_REVMAP_INIT_UPPER_BLK:
-			brin_xlog_revmap_init_upper_blk(record);
 			break;
 		case XLOG_BRIN_INSERT:
 			brin_xlog_insert(record);
@@ -417,9 +387,6 @@ brin_redo(XLogReaderState *record)
 			break;
 		case XLOG_BRIN_DESUMMARIZE:
 			brin_xlog_desummarize_page(record);
-			break;
-		case XLOG_BRIN_REVMAP_EXTEND_UPPER:
-			brin_xlog_revmap_extend_upper(record);
 			break;
 		default:
 			elog(PANIC, "brin_redo: unknown op code %u", info);

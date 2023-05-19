@@ -366,27 +366,6 @@ ic_proxy_obuf_push(ICProxyOBuf *obuf,
 }
 
 /*
- * Set the packet size of a b2c one.
- *
- * The b2c packet only contains a 4-byte packet length in host byte-order.
- */
-static void
-ic_proxy_obuf_set_packet_size_b2c(void *data, uint16 size)
-{
-	*(uint32 *) data = size;
-}
-
-/*
- * Initialize an obuf for b2c packet.
- */
-void
-ic_proxy_obuf_init_b2c(ICProxyOBuf *obuf)
-{
-	ic_proxy_obuf_init(obuf, PACKET_HEADER_SIZE,
-					   ic_proxy_obuf_set_packet_size_b2c);
-}
-
-/*
  * Set the packet size of a p2p one.
  *
  * The p2p packet contains a 32-byte ICProxyPkt header, all the fields are in

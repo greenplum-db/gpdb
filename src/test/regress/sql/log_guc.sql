@@ -4,24 +4,24 @@ set log_min_error_statement = error;
 -- Case 1, test the log_min_error_statement GUC for coordinator log
 -- the error statement will be logged as default
 creat table log_aaa (id int, c text); -- this should raise error
-select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_coordinator_ext
 where logseverity='ERROR' and logmessage like '%"creat"%' order by logtime desc limit 1;
 
 -- should contain the log from elog_exception_statement()
-select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_coordinator_ext
 where logseverity='LOG' and logmessage like '%exception was encountered%'
-and logmessage not like '%__gp_log_master_ext%'
+and logmessage not like '%__gp_log_coordinator_ext%'
 order by logtime desc limit 1;
 
 -- set log_min_error_statement to panic to skip log the error statement
 set log_min_error_statement = panic;
 creat table log_aaa (id int, c text); -- this should raise error
 -- logdebug should be null
-select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_coordinator_ext
 where logseverity='ERROR' and logmessage like '%"creat"%' order by logtime desc limit 1;
 
 -- this should only show the two select and log from elog_exception_statement() is not included
-select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_master_ext
+select logseverity, logmessage, logdebug from gp_toolkit.__gp_log_coordinator_ext
 where logseverity='LOG' and logmessage like '%exception was encountered%'
 order by logtime desc limit 2;
 set log_min_error_statement = error;

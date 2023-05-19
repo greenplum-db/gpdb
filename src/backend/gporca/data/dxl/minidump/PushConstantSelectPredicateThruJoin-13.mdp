@@ -260,7 +260,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49186.1.0.0" Name="id" Width="2.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:GPDBFunc Mdid="0.313.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.313.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDScalarComparison Mdid="4.23.1.0;21.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.23.1.0" RightType="0.21.1.0" OperatorMdid="0.533.1.0"/>

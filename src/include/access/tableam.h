@@ -606,6 +606,13 @@ typedef struct TableAmRoutine
 											double *liverows,
 											double *deadrows,
 											TupleTableSlot *slot);
+	
+	int			(*relation_acquire_sample_rows) (Relation onerel,
+												 int elevel,
+												 HeapTuple *rows,
+												 int targrows,
+												 double *totalrows,
+												 double *totaldeadrows);
 
 	/* see table_index_build_range_scan for reference about parameters */
 	double		(*index_build_range_scan) (Relation table_rel,
@@ -1631,6 +1638,38 @@ table_relation_vacuum(Relation rel, struct VacuumParams *params,
 					  BufferAccessStrategy bstrategy)
 {
 	rel->rd_tableam->relation_vacuum(rel, params, bstrategy);
+}
+
+/*
+ * GPDB: Interface to acquire sample rows from a given relation (currently
+ * AO/CO).
+ *
+ * Selected rows are returned in the caller-allocated array rows[], which
+ * must have space to hold at least targrows entries.
+ *
+ * The actual number of rows selected is returned as the function result.
+ * We also estimate the total numbers of live and dead rows in the table,
+ * and return them into *totalrows and *totaldeadrows, respectively.
+ *
+ * The returned list of tuples is in order by physical position in the table.
+ * (We will rely on this later to derive correlation estimates.)
+ *
+ * Note: this interface is not used by upstream code.
+ * The upstream interface (implemented by heap) uses a 2-stage sampling method
+ * using table_scan_analyze_next_block() and table_scan_analyze_next_tuple().
+ * See acquire_sample_rows(). Since this upstream method does not suit AO/CO
+ * tables we have created the relation_acquire_sample_rows() interface.
+ *
+ * Note for future merges:
+ * We have to keep this interface consistent with acquire_sample_rows().
+ */
+static inline int
+table_relation_acquire_sample_rows(Relation rel, int elevel, HeapTuple *rows,
+								   int targrows, double *totalrows, double *totaldeadrows)
+{
+	return rel->rd_tableam->relation_acquire_sample_rows(rel, elevel, rows,
+														 targrows, totalrows,
+														 totaldeadrows);
 }
 
 /*

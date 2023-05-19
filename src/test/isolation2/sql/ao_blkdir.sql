@@ -94,6 +94,81 @@ WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 
 DROP TABLE ao_blkdir_test;
 
+-- Test `tupcount` in pg_aoseg == sum of number of `row_count` across all
+-- aoblkdir entries for each segno. Test with commits, aborts and deletes.
+
+-- Case1: without VACUUM ANALYZE
+CREATE TABLE ao_blkdir_test_rowcount(i int, j int) USING ao_row DISTRIBUTED BY (j);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: ABORT;
+3: BEGIN;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 40) i;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+1: COMMIT;
+2: COMMIT;
+3: COMMIT;
+4: COMMIT;
+DELETE FROM ao_blkdir_test_rowcount WHERE j = 7;
+
+CREATE INDEX ao_blkdir_test_rowcount_idx ON ao_blkdir_test_rowcount(i);
+
+SELECT segno, sum(row_count) AS totalrows FROM
+  (SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno;
+SELECT segno, sum(tupcount) AS totalrows FROM
+  gp_toolkit.__gp_aoseg('ao_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno;
+
+-- Case2: with VACUUM ANALYZE
+DROP TABLE ao_blkdir_test_rowcount;
+CREATE TABLE ao_blkdir_test_rowcount(i int, j int) USING ao_row DISTRIBUTED BY (j);
+CREATE INDEX ao_blkdir_test_rowcount_idx ON ao_blkdir_test_rowcount(i);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM ao_blkdir_test_rowcount;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM ao_blkdir_test_rowcount;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM ao_blkdir_test_rowcount;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM ao_blkdir_test_rowcount;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM ao_blkdir_test_rowcount;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM ao_blkdir_test_rowcount;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM ao_blkdir_test_rowcount;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM ao_blkdir_test_rowcount;
+1: COMMIT;
+2: COMMIT;
+3: ABORT;
+4: COMMIT;
+
+DELETE FROM ao_blkdir_test_rowcount WHERE j = 7;
+VACUUM ANALYZE ao_blkdir_test_rowcount;
+
+SELECT segno, sum(row_count) AS totalrows FROM
+  (SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno;
+SELECT segno, sum(tupcount) AS totalrows FROM
+  gp_toolkit.__gp_aoseg('ao_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno;
+
+UPDATE ao_blkdir_test_rowcount SET i = i + 1;
+VACUUM ANALYZE ao_blkdir_test_rowcount;
+
+SELECT segno, sum(row_count) AS totalrows FROM
+  (SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno;
+SELECT segno, sum(tupcount) AS totalrows FROM
+  gp_toolkit.__gp_aoseg('ao_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno;
+
+DROP TABLE ao_blkdir_test_rowcount;
+
 --------------------------------------------------------------------------------
 -- AOCO tables
 --------------------------------------------------------------------------------
@@ -199,3 +274,79 @@ FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
 4: INSERT INTO aoco_blkdir_test VALUES (2, 2);
 
 DROP TABLE aoco_blkdir_test;
+
+-- Test `tupcount` in pg_ao(cs)seg == sum of number of `row_count` across all
+-- aoblkdir entries for each <segno, columngroup_no>. Test with commits, aborts
+-- and deletes.
+
+-- Case1: without VACUUM ANALYZE
+CREATE TABLE aoco_blkdir_test_rowcount(i int, j int) USING ao_column DISTRIBUTED BY (j);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: ABORT;
+3: BEGIN;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 40) i;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+1: COMMIT;
+2: COMMIT;
+3: COMMIT;
+4: COMMIT;
+DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
+
+CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
+
+SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
+    (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+     WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
+SELECT segno, column_num, sum(tupcount) AS totalrows FROM
+    gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
+
+-- Case2: with VACUUM ANALYZE
+DROP TABLE aoco_blkdir_test_rowcount;
+CREATE TABLE aoco_blkdir_test_rowcount(i int, j int) USING ao_column DISTRIBUTED BY (j);
+CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM aoco_blkdir_test_rowcount;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM aoco_blkdir_test_rowcount;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM aoco_blkdir_test_rowcount;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM aoco_blkdir_test_rowcount;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM aoco_blkdir_test_rowcount;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM aoco_blkdir_test_rowcount;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM aoco_blkdir_test_rowcount;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM aoco_blkdir_test_rowcount;
+1: COMMIT;
+2: COMMIT;
+3: ABORT;
+4: COMMIT;
+
+DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
+VACUUM ANALYZE aoco_blkdir_test_rowcount;
+
+SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
+    (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+     WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
+SELECT segno, column_num, sum(tupcount) AS totalrows FROM
+    gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
+
+UPDATE aoco_blkdir_test_rowcount SET i = i + 1;
+VACUUM ANALYZE aoco_blkdir_test_rowcount;
+
+SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
+    (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+     WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
+SELECT segno, column_num, sum(tupcount) AS totalrows FROM
+    gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
+
+DROP TABLE aoco_blkdir_test_rowcount;

@@ -30,7 +30,7 @@ If the coordinator cannot connect to a segment instance, it marks that segment i
 
 If you do not have mirroring enabled, the system will automatically shut down if a segment instance becomes invalid. You must recover all failed segments before operations can continue.
 
-## <a id="master_mirroring"></a>About Coordinator Mirroring 
+## <a id="coordinator_mirroring"></a>About Coordinator Mirroring 
 
 You can also optionally deploy a backup or mirror of the coordinator instance on a separate host from the coordinator host. The backup coordinator instance \(the *standby coordinator*\) serves as a *warm standby* in the event that the primary coordinator host becomes non-operational. The standby coordinator is kept current by a transaction log replication process, which synchronizes the data between the primary and standby coordinator.
 
@@ -38,7 +38,7 @@ If the primary coordinator fails, the log replication process stops, and the sta
 
 Since the coordinator does not contain any user data, only the system catalog tables need to be synchronized between the primary and backup copies. When these tables are updated, changes are automatically copied over to the standby coordinator to ensure synchronization with the primary coordinator.
 
-![Coordinator Mirroring in Greenplum Database](../graphics/standby_master.jpg "Coordinator Mirroring in Greenplum Database")
+![Coordinator Mirroring in Greenplum Database](../graphics/standby_coordinator.jpg "Coordinator Mirroring in Greenplum Database")
 
 ## <a id="interconnect_redundancy"></a>About Interconnect Redundancy 
 

@@ -17,7 +17,7 @@ def validate(json_obj, segnum):
       return False
    qd_info = [j for j in array if j["segid"] == -1][0]
    #validate keys
-   keys = ["segid", "segmentsOnMaster", "loaded", "groups"]
+   keys = ["segid", "segmentsOnCoordinator", "loaded", "groups"]
    for key in keys:
        if key not in qd_info:
            return False

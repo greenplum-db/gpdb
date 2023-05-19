@@ -41,9 +41,6 @@ CMDCheckConstraintGPDB::CMDCheckConstraintGPDB(CMemoryPool *mp, IMDId *mdid,
 	GPOS_ASSERT(rel_mdid->IsValid());
 	GPOS_ASSERT(nullptr != mdname);
 	GPOS_ASSERT(nullptr != dxlnode);
-
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -57,12 +54,25 @@ CMDCheckConstraintGPDB::CMDCheckConstraintGPDB(CMemoryPool *mp, IMDId *mdid,
 CMDCheckConstraintGPDB::~CMDCheckConstraintGPDB()
 {
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_mdid->Release();
 	m_rel_mdid->Release();
 	m_dxl_node->Release();
 }
 
+const CWStringDynamic *
+CMDCheckConstraintGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDCheckConstraintGPDB::GetCheckConstraintExpr

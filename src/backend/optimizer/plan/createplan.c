@@ -2136,7 +2136,7 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path, int flags)
 	 * https://github.com/greenplum-db/gpdb/issues/9874 for more
 	 * detailed info.
 	 */
-	if (best_path->direct_dispath_contentIds)
+	if (root->config->gp_enable_direct_dispatch && best_path->direct_dispath_contentIds)
 	{
 		DirectDispatchInfo dispatchInfo;
 

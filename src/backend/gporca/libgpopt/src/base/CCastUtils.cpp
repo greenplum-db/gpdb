@@ -131,15 +131,18 @@ CCastUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor,
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+
 		pexpr = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarArrayCoerceExpr(
-				mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			CUtils::PexprScalarIdent(mp, colref));
+			CUtils::PexprScalarIdent(mp, colref),
+			CUtils::PexprFuncElemExpr(mp, md_accessor, mdid_func,
+									  parrayCoerceCast->GetSrcElemTypeMdId(),
+									  parrayCoerceCast->TypeModifier()));
 	}
 	else
 	{
@@ -331,9 +334,7 @@ CCastUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor,
 		pexprCast = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarArrayCoerceExpr(
-				mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
 			pexpr);

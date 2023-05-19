@@ -214,13 +214,13 @@ REVOKE ALL ON TABLE gp_toolkit.__gp_log_segment_ext FROM public;
 
 --------------------------------------------------------------------------------
 -- @table:
---        gp_toolkit.gp_log_master
+--        gp_toolkit.gp_log_coordinator
 --
 -- @doc:
---        External table to read the master log; requires superuser privilege
+--        External table to read the coordinator log; requires superuser privilege
 --
 --------------------------------------------------------------------------------
-CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_log_master_ext
+CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_log_coordinator_ext
 (
     logtime timestamp with time zone,
     loguser text,
@@ -256,6 +256,13 @@ CREATE EXTERNAL WEB TABLE gp_toolkit.__gp_log_master_ext
 EXECUTE E'cat $GP_SEG_DATADIR/log/*.csv' ON COORDINATOR
 FORMAT 'CSV' (DELIMITER AS ',' NULL AS '' QUOTE AS '"');
 
+REVOKE ALL ON TABLE gp_toolkit.__gp_log_coordinator_ext FROM public;
+
+-- keep a view with the legacy name for backwards compatibility
+CREATE VIEW gp_toolkit.__gp_log_master_ext
+AS
+    SELECT * FROM gp_toolkit.__gp_log_coordinator_ext;
+
 REVOKE ALL ON TABLE gp_toolkit.__gp_log_master_ext FROM public;
 
 
@@ -264,14 +271,14 @@ REVOKE ALL ON TABLE gp_toolkit.__gp_log_master_ext FROM public;
 --        gp_toolkit.gp_log_system
 --
 -- @doc:
---        View of segment and master logs
+--        View of segment and coordinator logs
 --
 --------------------------------------------------------------------------------
 CREATE VIEW gp_toolkit.gp_log_system
 AS
     SELECT * FROM gp_toolkit.__gp_log_segment_ext
     UNION ALL
-    SELECT * FROM gp_toolkit.__gp_log_master_ext
+    SELECT * FROM gp_toolkit.__gp_log_coordinator_ext
     ORDER BY logtime;
 
 REVOKE ALL ON TABLE gp_toolkit.gp_log_system FROM public;
@@ -296,14 +303,14 @@ REVOKE ALL ON TABLE gp_toolkit.gp_log_database FROM public;
 
 --------------------------------------------------------------------------------
 -- @view:
---        gp_toolkit.gp_log_master_concise
+--        gp_toolkit.gp_log_coordinator_concise
 --
 -- @doc:
---        Shorthand to view most important columns of master log only;
+--        Shorthand to view most important columns of coordinator log only;
 --        requires superuser privilege
 --
 --------------------------------------------------------------------------------
-CREATE VIEW gp_toolkit.gp_log_master_concise
+CREATE VIEW gp_toolkit.gp_log_coordinator_concise
 AS
     SELECT
         logtime
@@ -336,10 +343,17 @@ AS
 --        ,logfile
 --        ,logline
 --        ,logstack
-    FROM gp_toolkit.__gp_log_master_ext;
+    FROM gp_toolkit.__gp_log_coordinator_ext;
+
+REVOKE ALL ON TABLE gp_toolkit.gp_log_coordinator_concise FROM public;
+
+
+-- keep a view with the legacy name for backwards compatibility
+CREATE VIEW gp_toolkit.gp_log_master_concise
+AS
+    SELECT * FROM gp_toolkit.gp_log_coordinator_concise;
 
 REVOKE ALL ON TABLE gp_toolkit.gp_log_master_concise FROM public;
-
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -362,7 +376,7 @@ AS
         MAX(logtime) AS logtimemax,
         MAX(logtime) - MIN(logtime) AS logduration
     FROM
-        gp_toolkit.__gp_log_master_ext
+        gp_toolkit.__gp_log_coordinator_ext
     WHERE
         logsession IS NOT NULL
         AND logcmdcount IS NOT NULL
@@ -404,7 +418,7 @@ AS
 --        text - value of PARAM
 --
 -- @doc:
---        Collect value of a PARAM from master and all segments
+--        Collect value of a PARAM from coordinator and all segments
 --
 --------------------------------------------------------------------------------
 CREATE FUNCTION gp_toolkit.__gp_param_setting_on_segments(varchar)
@@ -418,6 +432,18 @@ VOLATILE CONTAINS SQL EXECUTE ON ALL SEGMENTS;
 
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_param_setting_on_segments(varchar) TO public;
 
+CREATE FUNCTION gp_toolkit.__gp_param_setting_on_coordinator(varchar)
+RETURNS SETOF gp_toolkit.gp_param_setting_t
+AS
+$$
+    SELECT gp_execution_segment(), $1, current_setting($1);
+$$
+LANGUAGE SQL
+VOLATILE CONTAINS SQL EXECUTE ON COORDINATOR;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_param_setting_on_coordinator(varchar) TO public;
+
+-- prefer the *_coordinator function, but keep this for backwards compatibility
 CREATE FUNCTION gp_toolkit.__gp_param_setting_on_master(varchar)
 RETURNS SETOF gp_toolkit.gp_param_setting_t
 AS
@@ -433,7 +459,7 @@ CREATE FUNCTION gp_toolkit.gp_param_setting(varchar)
 RETURNS SETOF gp_toolkit.gp_param_setting_t
 AS
 $$
-  SELECT * FROM gp_toolkit.__gp_param_setting_on_master($1)
+  SELECT * FROM gp_toolkit.__gp_param_setting_on_coordinator($1)
   UNION ALL
   SELECT * FROM gp_toolkit.__gp_param_setting_on_segments($1);
 $$
@@ -1712,11 +1738,13 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
          , T3.value    AS cpu_soft_priority
          , T4.value    AS cpuset
          , T5.value    AS memory_limit
+         , T6.value    AS min_cost
     FROM pg_resgroup G
          JOIN pg_resgroupcapability T1 ON G.oid = T1.resgroupid AND T1.reslimittype = 1
          JOIN pg_resgroupcapability T2 ON G.oid = T2.resgroupid AND T2.reslimittype = 2
          JOIN pg_resgroupcapability T3 ON G.oid = T3.resgroupid AND T3.reslimittype = 3
          JOIN pg_resgroupcapability T5 ON G.oid = T5.resgroupid AND T5.reslimittype = 5
+         JOIN pg_resgroupcapability T6 ON G.oid = T6.resgroupid AND T6.reslimittype = 6
          LEFT JOIN pg_resgroupcapability T4 ON G.oid = T4.resgroupid AND T4.reslimittype = 4
     ;
 
@@ -1961,6 +1989,14 @@ LANGUAGE plpgsql;
 --
 --------------------------------------------------------------------------------
 
+CREATE FUNCTION gp_toolkit.__gp_workfile_entries_f_on_coordinator()
+RETURNS SETOF record
+AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries'
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_entries_f_on_coordinator() TO public;
+
+-- prefer the *_coordinator function, but keep this for backwards compatibility
 CREATE FUNCTION gp_toolkit.__gp_workfile_entries_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_cache_entries'
@@ -1988,7 +2024,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_entries_f_on_segments() TO pu
 CREATE VIEW gp_toolkit.gp_workfile_entries AS
 WITH all_entries AS (
    SELECT C.*
-          FROM gp_toolkit.__gp_workfile_entries_f_on_master() AS C (
+          FROM gp_toolkit.__gp_workfile_entries_f_on_coordinator() AS C (
             segid int,
             prefix text,
             size bigint,
@@ -2082,6 +2118,14 @@ GRANT SELECT ON gp_toolkit.gp_workfile_usage_per_query TO public;
 --
 --------------------------------------------------------------------------------
 
+CREATE FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_coordinator()
+RETURNS SETOF record
+AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_coordinator() TO public;
+
+-- prefer the *_coordinator function, but keep this for backwards compatibility
 CREATE FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_master()
 RETURNS SETOF record
 AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
@@ -2106,7 +2150,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_segme
 --------------------------------------------------------------------------------
 CREATE VIEW gp_toolkit.gp_workfile_mgr_used_diskspace AS
   SELECT C.*
-	FROM gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_master() as C (
+	FROM gp_toolkit.__gp_workfile_mgr_used_diskspace_f_on_coordinator() as C (
 	  segid int,
 	  bytes bigint
 	)
@@ -2129,6 +2173,7 @@ GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AO segment file numbers for each ao_row table
@@ -2136,7 +2181,7 @@ GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION gp_toolkit.__get_ao_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -2145,22 +2190,25 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid 
-             FROM pg_appendonly a 
-             JOIN pg_class tc ON a.relid = tc.oid 
-             JOIN pg_am am ON tc.relam = am.oid 
-             JOIN pg_class sc ON a.segrelid = sc.oid 
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname 
+             FROM pg_appendonly a
+             JOIN pg_class tc ON a.relid = tc.oid
+             JOIN pg_am am ON tc.relam = am.oid
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE amname = 'ao_row' 
   LOOP
-    table_name := rec.segrel;
-    -- Fetch and return each row from the aoseg table
+    table_name := rec.relname;
+    -- Fetch and return each row from the aoseg table.
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT segno FROM pg_aoseg.%I', table_name);
+      OPEN cur FOR EXECUTE format('SELECT segno, eof '
+                                  'FROM gp_toolkit.__gp_aoseg(''%I.%I'') ',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -2169,7 +2217,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aoseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -2188,6 +2236,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__get_ao_segno_list() TO public;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AOCO segment file numbers for each ao_column table
@@ -2195,7 +2244,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__get_ao_segno_list() TO public;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION gp_toolkit.__get_aoco_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -2204,25 +2253,25 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aocoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname
              FROM pg_appendonly a
              JOIN pg_class tc ON a.relid = tc.oid
              JOIN pg_am am ON tc.relam = am.oid
-             JOIN pg_class sc ON a.segrelid = sc.oid
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE amname = 'ao_column'
   LOOP
-    table_name := rec.segrel;
-    -- Fetch and return each extended segno corresponding to filenum and segno in the aocoseg table
+    table_name := rec.relname;
+    -- Fetch and return each extended segno corresponding to filenum and segno in the aocoseg table.
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT ((a.filenum - 1) * 128 + s.segno) as segno '
-                                  'FROM (SELECT * FROM pg_attribute_encoding '
-                                  'WHERE attrelid = %s) a CROSS JOIN pg_aoseg.%I s', 
-                                   rec.tableoid, table_name);
+      OPEN cur FOR EXECUTE format('SELECT physical_segno as segno, eof '
+                                  'FROM gp_toolkit.__gp_aocsseg(''%I.%I'') ',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -2231,7 +2280,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aocoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aocsseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -2289,7 +2338,8 @@ CREATE OR REPLACE VIEW gp_toolkit.__get_expect_files AS
 SELECT s.reltablespace AS tablespace, s.relname, a.amname AS AM,
        (CASE WHEN s.relfilenode != 0 THEN s.relfilenode ELSE pg_relation_filenode(s.oid) END)::text AS filename
 FROM pg_class s
-LEFT JOIN pg_am a ON s.relam = a.oid;
+LEFT JOIN pg_am a ON s.relam = a.oid
+WHERE s.relkind != 'v'; -- view could have valid relfilenode if created from a table, but its relfile is gone
 
 GRANT SELECT ON gp_toolkit.__get_expect_files TO public;
 
@@ -2301,12 +2351,21 @@ GRANT SELECT ON gp_toolkit.__get_expect_files TO public;
 --        Retrieve a list of expected data files in the database,
 --        using the knowledge from catalogs. This includes all
 --        the extended data files for AO/CO tables.
+--        But ignore those w/ eof=0. They might be created just for
+--        modcount whereas no data has ever been inserted to the seg.
+--        Or, they could be created when a seg has only aborted rows.
+--        In both cases, we can ignore these segs, because no matter
+--        whether the data files exist or not, the rest of the system
+--        can handle them gracefully.
+--        Also exclude views which could have valid relfilenode if 
+--        created from a table, but their relfiles are gone.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_toolkit.__get_expect_files_ext AS
 SELECT s.reltablespace AS tablespace, s.relname, a.amname AS AM,
        (CASE WHEN s.relfilenode != 0 THEN s.relfilenode ELSE pg_relation_filenode(s.oid) END)::text AS filename
 FROM pg_class s LEFT JOIN pg_am a ON s.relam = a.oid
+WHERE s.relkind != 'v'
 UNION
 -- AO extended files
 SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
@@ -2314,13 +2373,15 @@ SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
 FROM gp_toolkit.__get_ao_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
 LEFT JOIN pg_am a ON c.relam = a.oid
+WHERE s.eof > 0 AND c.relkind != 'v'
 UNION
 -- CO extended files
 SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
        format(c.relfilenode::text || '.' || s.segno::text) AS filename
 FROM gp_toolkit.__get_aoco_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
-LEFT JOIN pg_am a ON c.relam = a.oid;
+LEFT JOIN pg_am a ON c.relam = a.oid
+WHERE s.eof > 0 AND c.relkind != 'v';
 
 GRANT SELECT ON gp_toolkit.__get_expect_files_ext TO public;
 
@@ -2329,46 +2390,21 @@ GRANT SELECT ON gp_toolkit.__get_expect_files_ext TO public;
 --        gp_toolkit.__check_orphaned_files
 --
 -- @doc:
---        Check orphaned data files on default and user tablespaces,
---        not including extended files.
+--        Check orphaned data files on default and user tablespaces.
+--        A file is considered orphaned if its main relfilenode is not expected
+--        to exist. For example, '12345.1' is an orphaned file if there is no
+--        table has relfilenode=12345, but not otherwise.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_toolkit.__check_orphaned_files AS
 SELECT f1.tablespace, f1.filename
 from gp_toolkit.__get_exist_files f1
 LEFT JOIN gp_toolkit.__get_expect_files f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
+ON f1.tablespace = f2.tablespace AND substring(f1.filename from '[0-9]+') = f2.filename
 WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+';
+  AND f1.filename SIMILAR TO '[0-9]+(\.)?(\_)?%';
 
 GRANT SELECT ON gp_toolkit.__check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        gp_toolkit.__check_orphaned_files_ext
---
--- @doc:
---        Check orphaned data files on default and user tablespaces,
---        including extended files.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW gp_toolkit.__check_orphaned_files_ext AS
-SELECT f1.tablespace, f1.filename
-FROM gp_toolkit.__get_exist_files f1
-LEFT JOIN gp_toolkit.__get_expect_files_ext f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
-WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+(\.[0-9]+)?'
-  AND NOT EXISTS (
-    -- XXX: not supporting heap for now, do not count them
-    SELECT 1 FROM pg_class c 
-    JOIN pg_am a 
-    ON c.relam = a.oid 
-    WHERE c.relfilenode::text = split_part(f1.filename, '.', 1) 
-        AND a.amname = 'heap'
-  );
-
-GRANT SELECT ON gp_toolkit.__check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -2425,24 +2461,6 @@ SELECT -1 AS gp_segment_id, *
 FROM gp_toolkit.__check_orphaned_files;
 
 GRANT SELECT ON gp_toolkit.gp_check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        gp_toolkit.gp_check_orphaned_files_ext
---
--- @doc:
---        User-facing view of gp_toolkit.__check_orphaned_files_ext.
---        Gather results from coordinator and all segments.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW gp_toolkit.gp_check_orphaned_files_ext AS 
-SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
-FROM gp_dist_random('gp_toolkit.__check_orphaned_files_ext')
-UNION ALL 
-SELECT -1 AS gp_segment_id, *
-FROM gp_toolkit.__check_orphaned_files; -- not checking ext on coordinator
-
-GRANT SELECT ON gp_toolkit.gp_check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:

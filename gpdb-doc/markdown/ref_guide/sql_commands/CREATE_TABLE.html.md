@@ -116,7 +116,7 @@ and index_parameters in `UNIQUE` and `PRIMARY KEY` constraints are:
 and storage_directive for a column is:
 
 ```
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
     [compresslevel={0-9}]
     [blocksize={8192-2097152} ]
 ```
@@ -128,7 +128,7 @@ and `storage_parameter` for a table or partition is:
    blocksize={8192-2097152}
    orientation={COLUMN|ROW}
    checksum={TRUE|FALSE}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
    compresslevel={0-9}
    fillfactor={10-100}
    analyze_hll_non_part_table={TRUE|FALSE}
@@ -152,7 +152,7 @@ and key\_action is:
 and partition\_type is:
 
 ```
-    LIST | RANGE
+    LIST | RANGE | HASH
 ```
 
 and partition\_specification is:
@@ -211,7 +211,7 @@ If you specify a schema name, Greenplum creates the table in the specified schem
 
 `CREATE TABLE` also automatically creates a data type that represents the composite type corresponding to one row of the table. Therefore, tables cannot have the same name as any existing data type in the same schema.
 
-The optional constraint clauses specify conditions that new or updated rows must satisfy for an insert or update operation to succeed. A constraint is an SQL object that helps define the set of valid values in the table in various ways. Constraints apply to tables, not to partitions. You cannot add a constraint to a partition or subpartition.
+The optional constraint clauses specify conditions that new or updated rows must satisfy for an insert or update operation to succeed. A constraint is an SQL object that helps define the set of valid values in the table in various ways.
 
 Referential integrity constraints \(foreign keys\) are accepted but not enforced. The information is kept in the system catalogs but is otherwise ignored.
 
@@ -221,7 +221,7 @@ When creating a table, there is an additional clause to declare the Greenplum Da
 
 If the `DISTRIBUTED REPLICATED` clause is supplied, Greenplum Database distributes all rows of the table to all segments in the Greenplum Database system. This option can be used in cases where user-defined functions must run on the segments, and the functions require access to all rows of the table. Replicated functions can also be used to improve query performance by preventing broadcast motions for the table. The `DISTRIBUTED REPLICATED` clause cannot be used with the `PARTITION BY` clause or the `INHERITS` clause. A replicated table also cannot be inherited by another table. The hidden system columns \(`ctid`, `cmin`, `cmax`, `xmin`, `xmax`, and `gp_segment_id`\) cannot be referenced in user queries on replicated tables because they have no single, unambiguous value. Greenplum Database returns a `column does not exist` error for the query.
 
-The `PARTITION BY` clause allows you to divide the table into multiple sub-tables \(or parts\) that, taken together, make up the parent table and share its schema. Though the sub-tables exist as independent tables, the Greenplum Database restricts their use in important ways. Internally, partitioning is implemented as a special form of inheritance. Each child table partition is created with a distinct `CHECK` constraint which limits the data the table can contain, based on some defining criteria. The `CHECK` constraints are also used by the query optimizer to determine which table partitions to scan in order to satisfy a given query predicate. These partition constraints are managed automatically by the Greenplum Database.
+The `PARTITION BY` clause allows you to divide the table into multiple sub-tables \(or parts\) that, taken together, make up the parent table and share its schema.
 
 ## <a id="section4"></a>Parameters 
 
@@ -414,16 +414,16 @@ DISTRIBUTED REPLICATED
 :   The `DISTRIBUTED REPLICATED` clause replicates the entire table to all Greenplum Database segment instances. It can be used when it is necessary to run user-defined functions on segments when the functions require access to all rows in the table, or to improve query performance by preventing broadcast motions.
 
 PARTITION BY
-:   Declares one or more columns by which to partition the table.
+:   Declares one or more columns by which to partition the table. For `LIST` partitioning, the partition key must consist of a single column or expression.
 
-:   When creating a partitioned table, Greenplum Database creates the root partitioned table \(the root partition\) with the specified table name. Greenplum Database also creates a hierarchy of tables, child tables, that are the subpartitions based on the partitioning options that you specify. The Greenplum Database *pg\_partition*\* system views contain information about the subpartition tables.
+:   When creating a partitioned table, Greenplum Database creates the root partitioned table \(the root partition\) with the specified table name. Greenplum Database also creates a hierarchy of tables, child tables, that are the subpartitions based on the partitioning options that you specify. The Greenplum Database [pg_partitioned_table](../system_catalogs/pg_partitioned_table.html) system catalog contain information about the subpartition tables.
 
 :   For each partition level \(each hierarchy level of tables\), a partitioned table can have a maximum of 32,767 partitions.
 
 :   > **Note** Greenplum Database stores partitioned table data in the leaf child tables, the lowest-level tables in the hierarchy of child tables for use by the partitioned table.
 
 :   partition\_type
-:   Declares partition type: `LIST` \(list of values\) or `RANGE` \(a numeric or date range\).
+:   Declares partition type: `LIST` \(list of values\), `RANGE` \(a numeric or date range\), or `HASH` (modulus and remainder, supported for modern syntax only).
 
 partition\_specification
 :   Declares the individual partitions to create. Each partition can be defined individually or, for range partitions, you can use the `EVERY` clause \(with a `START` and optional `END` clause\) to define an increment pattern to use to create the individual partitions.
@@ -434,18 +434,18 @@ partition\_specification
 
 :   **`VALUES`** — For list partitions, defines the value\(s\) that the partition will contain.
 
-:   **`START`** — For range partitions, defines the starting range value for the partition. By default, start values are `INCLUSIVE`. For example, if you declared a start date of '`2016-01-01`', then the partition would contain all dates greater than or equal to '`2016-01-01`'. Typically the data type of the `START` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
+:   **`START`** — For range partitions, defines the starting range value for the partition. By default, start values are `INCLUSIVE`. For example, if you declared a start date of '`2016-01-01`', then the partition would contain all dates greater than or equal to '`2016-01-01`'. The data type of the `START` expression must support a suitable `+` operator, for example `timestamp` or `integer` (not `float` or `text`) if it is defined with the `EXCLUSIVE` keyword. Typically the data type of the `START` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
 
-:   **`END`** — For range partitions, defines the ending range value for the partition. By default, end values are `EXCLUSIVE`. For example, if you declared an end date of '`2016-02-01`', then the partition would contain all dates less than but not equal to '`2016-02-01`'. Typically the data type of the `END` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
+:   **`END`** — For range partitions, defines the ending range value for the partition. By default, end values are `EXCLUSIVE`. For example, if you declared an end date of '`2016-02-01`', then the partition would contain all dates less than but not equal to '`2016-02-01`'. The data type of the `END` expression must support a suitable `+` operator, for example `timestamp` or `integer` (not `float` or `text`) if it is defined with the `INCLUSIVE` keyword. The data type of the `END` expression is typically the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
 
-:   **`EVERY`** — For range partitions, defines how to increment the values from `START` to `END` to create individual partitions. Typically the data type of the `EVERY` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
+:   **`EVERY`** — For range partitions, defines how to increment the values from `START` to `END` to create individual partitions. The data type of the `EVERY` expression is typically the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
 
 :   **`WITH`**— Sets the table storage options for a partition. For example, you may want older partitions to be append-optimized tables and newer partitions to be regular heap tables. See [Storage Parameters](#storage-parameters), below.
 
 :   **`TABLESPACE`** — The name of the tablespace in which the partition is to be created.
 
 SUBPARTITION BY
-:   Declares one or more columns by which to subpartition the first-level partitions of the table. The format of the subpartition specification is similar to that of a partition specification described above.
+:   Declares one or more columns by which to subpartition the first-level partitions of the table. For `LIST` partitioning, the partition key must consist of a single column or expression. The format of the subpartition specification is similar to that of a partition specification described above.
 
 SUBPARTITION TEMPLATE
 :   Instead of declaring each subpartition definition individually for each partition, you can optionally declare a subpartition template to be used to create the subpartitions \(lower level child tables\). This subpartition specification would then apply to all parent partitions.
@@ -471,18 +471,16 @@ checksum
 : This option is valid only for append-optimized tables \(`appendoptimized=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is cancelled. If you set the value to `FALSE` to deactivate checksum validation, checking the table data for on-disk corruption will not be performed.
 
 compresstype
-: Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ` <sup>1</sup> to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed and a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
+: Set to `ZLIB` \(the default\), `ZSTD`, or `RLE_TYPE` to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed and a good compression ratio, tunable with the `compresslevel` option. zlib is provided for backward compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is only valid if `appendoptimized=TRUE`.
 
-<sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
-
-:    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
+:    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd or zlib compression algorithms when the same data value occurs in many consecutive rows.
 
 :    For columns of type `BIGINT`, `INTEGER`, `DATE`, `TIME`, or `TIMESTAMP`, delta compression is also applied if the `compresstype` option is set to `RLE_TYPE` compression. The delta compression algorithm is based on the delta between column values in consecutive rows and is designed to improve compression when data is loaded in sorted order or the compression is applied to column data that is in sorted order.
 
 :    For information about using table compression, see [Choosing the Table Storage Model](../../admin_guide/ddl/ddl-storage.html#topic1) in the *Greenplum Database Administrator Guide*.
 
 compresslevel
-: For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only be set to 1. If not declared, the default is 1. For `RLE_TYPE`, the compression level can be an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\).
+: For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. If not declared, the default is 1. For `RLE_TYPE`, the compression level can be an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\).
 
 :   The `compresslevel` option is valid only if `appendoptimized=TRUE`.
 

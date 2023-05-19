@@ -11,7 +11,7 @@
       <dxl:TraceFlags Value="101013,102001,102002,102003,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:GPDBFunc Mdid="0.7565.1.0" Name="lag" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.7565.1.0" Name="lag" ReturnsSet="false" Stability="Immutable" IsStrict="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -108,7 +108,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.188453.1.1" Name="test" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:GPDBFunc Mdid="0.7075.1.0" Name="lead" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.7075.1.0" Name="lead" ReturnsSet="false" Stability="Immutable" IsStrict="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Relation Mdid="6.188453.1.1" Name="test" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">

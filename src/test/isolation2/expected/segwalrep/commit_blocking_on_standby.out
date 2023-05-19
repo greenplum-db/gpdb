@@ -1,13 +1,13 @@
 --
--- Master/standby commit blocking scenarios.  These are different from
+-- Coordinator/standby commit blocking scenarios.  These are different from
 -- primary/mirror commit blocking because there is no FTS or a
--- third-party as external arbiter in case of master/standby.
+-- third-party as external arbiter in case of coordinator/standby.
 --
 -- Scenario1: Commits should block until standby confirms WAL flush
 -- up to commit LSN.
 
 -- Check that are starting with a clean slate, standby must be in sync
--- with master.
+-- with coordinator.
 
 select application_name, state from pg_stat_replication;
  application_name | state     
@@ -77,7 +77,7 @@ INSERT 1
 -- has caught up within range.  And thereafter, commits should start
 -- blocking.
 
--- In order to get master and standby in CATCHUP state, existing
+-- In order to get coordinator and standby in CATCHUP state, existing
 -- connection, which is in STREAMING state must be closed.  A new
 -- connection will then be initiated by standby, beginning in STARTUP
 -- then CATCHUP to STREAMING.  Faults are used to suspend WAL sender
@@ -209,7 +209,7 @@ select wait_until_standby_in_state('streaming');
 
 -- Scenario3: verify repl_catchup_within_range is enabled on segment.
 -- It is similar as Scenario2, just running the test against primary/mirror
--- instead of master/standby.
+-- instead of coordinator/standby.
 
 select gp_inject_fault_infinite('wal_sender_loop', 'infinite_loop', dbid) from gp_segment_configuration where content=0 and role='p';
  gp_inject_fault_infinite 
