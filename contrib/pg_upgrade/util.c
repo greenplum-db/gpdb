@@ -89,6 +89,17 @@ prep_status(const char *fmt,...)
 		pg_log(PG_REPORT, "%-*s", MESSAGE_WIDTH, message);
 }
 
+void
+start_parallel_check(const char *check_name)
+{
+	/*
+	 * If the start time is not set, it means a new step is being started.
+	 */
+	if (INSTR_TIME_IS_ZERO(timer.start_time))
+		INSTR_TIME_SET_CURRENT(timer.start_time);
+
+	pg_log(PG_REPORT, "Running: %s...\n", check_name);
+}
 
 static
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 0)))
@@ -183,6 +194,14 @@ check_ok(void)
 	log_with_timing(&timer, "ok");
 }
 
+void
+parallel_check_ok(const char *check_name)
+{
+	char		message[MAX_STRING];
+
+	snprintf(message, sizeof(message), "%-*sok", MESSAGE_WIDTH, check_name);
+	log_with_timing(&timer, message);
+}
 
 /*
  *  Wrapper around pg_fatal to continue check when running in check mode
@@ -215,6 +234,25 @@ gp_fatal_log(const char *fmt,...)
 	va_end(args);
 }
 
+void
+parallel_gp_fatal_log(const char *check_name, const char *fmt,...)
+{
+	char		message[MAX_STRING];
+	va_list		args;
+	eLogType error_type = PG_FATAL;
+
+	snprintf(message, sizeof(message), "%-*sfatal\n%s", MESSAGE_WIDTH, check_name, fmt);
+
+	if(is_continue_check_on_fatal())
+	{
+		set_check_fatal_occured();
+		error_type = PG_WARNING;
+	}
+
+	va_start(args, fmt);
+	pg_log_v(error_type, message, args);
+	va_end(args);
+}
 
 /*
  * quote_identifier()

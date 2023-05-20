@@ -470,6 +470,8 @@ extern void appendConnStrVal(PQExpBuffer buf, const char *str);
 extern void appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname);
 int			get_user_info(char **user_name_p);
 void		check_ok(void);
+void		parallel_check_ok(const char *check_name);
+void		start_parallel_check(const char *check_name);
 void
 report_status(eLogType type, const char *fmt,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
@@ -489,7 +491,8 @@ unsigned int str2uint(const char *str);
 void		pg_putenv(const char *var, const char *val);
 void 		gp_fatal_log(const char *fmt,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
-
+void 		parallel_gp_fatal_log(const char *check_name, const char *fmt,...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 
 /* version.c */
 #if 0
