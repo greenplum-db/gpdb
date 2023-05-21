@@ -2080,6 +2080,33 @@ def impl(context, filename, contain, output):
         if (not valuesShouldExist) and (output in actual):
             raise Exception('File %s on host %s contains "%s"' % (filepath, host, output))
 
+@given('verify that the path "{filename}" in each segment data directory does not exist')
+@then('verify that the path "{filename}" in each segment data directory does not exist')
+def impl(context, filename):
+    try:
+        with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+            curs = dbconn.execSQL(conn, "SELECT hostname, datadir FROM gp_segment_configuration WHERE content > -1;")
+            result = curs.fetchall()
+            segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
+    except Exception as e:
+        raise Exception("Could not retrieve segment information: %s" % e.message)
+
+    for info in segment_info:
+        host, datadir = info
+        filepath = os.path.join(datadir, filename)
+        cmd_str = 'test -d "%s" && echo 1 || echo 0' % (filepath)
+        cmd = Command(name='check exists directory or not',
+                      cmdStr=cmd_str,
+                      ctxt=REMOTE,
+                      remoteHost=host)
+        cmd.run(validateAfter=False)
+        try:
+            val = int(cmd.get_stdout().strip())
+            if val:
+                raise Exception('Path %s on host %s exists (val %s) (cmd "%s")' % (filepath, host, val, cmd_str))
+        except:
+            raise Exception('Path %s on host %s exists (cmd "%s")' % (filepath, host, cmd_str))
+
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
 def impl(context, port, hostfile):
