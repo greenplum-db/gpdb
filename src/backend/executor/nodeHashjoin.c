@@ -1684,6 +1684,16 @@ ExecReScanHashJoin(HashJoinState *node)
 				ExecReScan(node->js.ps.righttree);
 		}
 	}
+	else 
+	{
+		/*
+		 * GPDB: HashTable not built with righttree may be squelched,
+		 * HashJoin need rescan righttree to reset its squelch flag.
+		 */
+		if (node->js.ps.righttree->chgParam == NULL &&
+			node->js.ps.righttree->squelched)
+				ExecReScan(node->js.ps.righttree);
+	}
 
 	/* Always reset intra-tuple state */
 	node->hj_CurHashValue = 0;
