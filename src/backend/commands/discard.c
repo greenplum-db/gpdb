@@ -108,6 +108,17 @@ DiscardAll(bool isTopLevel)
 	Async_UnlistenAll();
 	LockReleaseAll(USER_LOCKMETHOD, true);
 	ResetPlanCache();
-	ResetTempTableNamespace();
 	ResetSequenceCaches();
+	/*
+	 * For temp table's cleanup in DISCARD ALL, we could dispatch a 'DISCARD TEMP'
+	 * command. If ERROR occurs during the execution of QE, it will cause the local
+	 * file cleanup of QE to fail, and it will have no effect on the current
+	 * DISCARD ALL, which itself is a situation where the temporary table cannot be
+	 * cleaned up.
+	 */
+	ResetTempTableNamespace();
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CdbDispatchCommand("DISCARD TEMP", DF_CANCEL_ON_ERROR, NULL);
+	}
 }
