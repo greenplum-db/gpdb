@@ -3570,7 +3570,7 @@ CTranslatorDXLToPlStmt::MutateFuncExprToVarProjectSet(Plan *final_plan)
 
 
 			fix_upper_expr_context_projectset context(subplan->targetlist,
-													  OUTER_VAR, 0);
+													  OUTER_VAR);
 
 			newexpr =
 				fix_upper_expr_mutator_projectSet((Node *) tle->expr, &context);

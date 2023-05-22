@@ -106,19 +106,19 @@ private:
 		}
 	};	// SContextIndexVarAttno
 
+	// struct that holds whatever context information the
+	// "fix_upper_expr_mutator_projectSet" mutator routine needs.
 	struct fix_upper_expr_context_projectset
 	{
+		// For a given node,this will contain the targetlist of the lefttree of that node
 		List *m_subplan_tlist;
 
+		// If a matching subplan output expression is found, a new VAR will be created
+		// with this varno(OUTER_VAR)
 		Index m_newvarno;
 
-		int m_rtoffset;
-
-		fix_upper_expr_context_projectset(List *subplan_tlist, Index newvarno,
-										  int rtoffset)
-			: m_subplan_tlist(subplan_tlist),
-			  m_newvarno(newvarno),
-			  m_rtoffset(rtoffset)
+		fix_upper_expr_context_projectset(List *subplan_tlist, Index newvarno)
+			: m_subplan_tlist(subplan_tlist), m_newvarno(newvarno)
 		{
 		}
 
