@@ -829,39 +829,6 @@ generate_nonunion_paths(SetOperationStmt *op, PlannerInfo *root,
 		optype = PSETOP_SEQUENTIAL_QD;
 	}
 
-	if ( optype == PSETOP_PARALLEL_PARTITIONED )
-	{
-		/*
-		 * CDB: Collocate non-distinct tuples prior to sort or hash. We must
-		 * put the Redistribute nodes below the Append, otherwise we lose
-		 * the order of the firstFlags.
-		 */
-		ListCell   *pathcell;
-		ListCell   *tlistcell;
-		List	   *newpathlist = NIL;
-
-		forboth(pathcell, pathlist, tlistcell, tlist_list)
-		{
-			Path	   *subpath = (Path *) lfirst(pathcell);
-			List	   *subtlist = (List *) lfirst(tlistcell);
-#if 0
-			/* GPDB_96_MERGE_FIXME */
-			/*
-			 * If the subplan already has a Motion at the top, peel it off
-			 * first, so that we don't have a Motion on top of a Motion.
-			 * That would be silly. I wish we could be smarter and not
-			 * create such a Motion in the first place, but it's too late
-			 * for that here.
-			 */
-			while (IsA(subpath, Motion))
-				subpath = subpath->lefttree;
-#endif
-			newpathlist = lappend(newpathlist,
-								  make_motion_hash_all_targets(root, subpath, subtlist));
-		}
-		pathlist = newpathlist;
-	}
-
 	/*
 	 * Generate tlist for Append plan node.
 	 *
