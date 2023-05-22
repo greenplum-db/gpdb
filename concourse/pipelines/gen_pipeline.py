@@ -98,12 +98,26 @@ def create_pipeline(args, git_remote, git_branch):
     os_username = {
         "rhel8" : "rhel",
         "rocky8" : "rocky",
-        "oel8" : "oel"
+        "oel8" : "oel",
+        "rhel9" : "rhel",
+        "rocky9" : "rocky",
+        "oel9" : "oel"
     }
     test_os = {
         "rhel8" : "centos",
         "rocky8": "centos",
-        "oel8" : "centos"
+        "oel8" : "centos",
+        "rhel9" : "centos",
+        "rocky9": "centos",
+        "oel9" : "centos"
+    }
+    compile_platform = {
+        "rhel8" : "rocky8",
+        "rocky8": "rocky8",
+        "oel8" : "rocky8",
+        "rhel9" : "rocky9",
+        "rocky9": "rocky9",
+        "oel9" : "rocky9"
     }
 
 
@@ -115,6 +129,7 @@ def create_pipeline(args, git_remote, git_branch):
         'default_os_type': default_os_type,
         'os_username': os_username[args.os_type],
         'test_os': test_os[args.os_type],
+        'compile_platform': compile_platform[args.os_type],
         'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'use_ICW_workers': args.use_ICW_workers,
@@ -240,7 +255,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['rhel8', 'rocky8', 'oel8'],
+        choices=['rhel8', 'rocky8', 'oel8', 'rhel9', 'rocky9', 'oel9'],
         help='OS value to support'
     )
 
