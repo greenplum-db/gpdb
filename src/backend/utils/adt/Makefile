@@ -132,6 +132,6 @@ varlena.o: varlena.c levenshtein.c
 
 # GPDB additions
 OBJS +=	complex_type.o gp_dump_oids.o gp_optimizer_functions.o \
-	interpolate.o matrix.o pivot.o
+	interpolate.o matrix.o pivot.o dbsize_gp.o
 
 include $(top_srcdir)/src/backend/common.mk

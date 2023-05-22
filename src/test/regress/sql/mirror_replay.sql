@@ -5,13 +5,6 @@ create language plpython3u;
 -- end_ignore
 
 -- helper functions
-CREATE FUNCTION rel_filepaths_on_segments(regclass) RETURNS TABLE(gp_segment_id int, filepath text)
-STRICT STABLE LANGUAGE SQL AS
-  $fn$
-  SELECT gp_execution_segment(), pg_relation_filepath($1) AS filepath
-  $fn$
-EXECUTE ON ALL SEGMENTS;
-
 CREATE or REPLACE FUNCTION change_file_permission_readonly(path text)
   RETURNS void as
 $$
@@ -54,7 +47,7 @@ INSERT INTO mirror_reply_test_table SELECT i AS a, 1 AS b, 'hello world' AS c FR
 SELECT wait_for_replication_replay(5000);
 -- step to inject fault to make sure truncate xlog replay cannot open the file in write mode
 SELECT change_file_permission_readonly(datadir || '/' ||
-  (SELECT filepath FROM rel_filepaths_on_segments('mirror_reply_test_table')
+  (SELECT filepath FROM gp_relation_filepath('mirror_reply_test_table')
   WHERE gp_segment_id = 0) || '.1')
   FROM gp_segment_configuration WHERE content = 0 AND role = 'm';
 -- generate truncate xlog record with non-zero EOF

@@ -11599,6 +11599,10 @@
    proname => 'gp_create_restore_point', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 'v', prorettype => 'record', proargtypes => 'text', proexeclocation => 'c',
    proallargtypes => '{text,int2,pg_lsn}', proargmodes => '{i,o,o}', proargnames => '{restore_point_name,gp_segment_id,restore_lsn}', prosrc => 'gp_create_restore_point' },
 
+{ oid => 7003, descr => 'Get the entire file path name of a relation all segments',
+   proname => 'gp_relation_filepath', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 's', prorettype => 'record', proargtypes => 'regclass', proexeclocation => 'c',
+   proallargtypes => '{regclass,int2,text}', proargmodes => '{i,o,o}', proargnames => '{relid,gp_segment_id,filepath}', prosrc => 'gp_relation_filepath' },
+
 { oid => 7001, descr => 'Switch WAL segment files on all segments',
    proname => 'gp_switch_wal', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 'v', prorettype => 'record', proargtypes => '', proexeclocation => 'c',
    proallargtypes => '{int2,pg_lsn,text}', proargmodes => '{o,o,o}', proargnames => '{gp_segment_id,pg_switch_wal,pg_walfile_name}', prosrc => 'gp_switch_wal' },
