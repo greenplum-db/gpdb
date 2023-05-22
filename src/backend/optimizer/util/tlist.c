@@ -1272,7 +1272,7 @@ split_pathtarget_at_srfs(PlannerInfo *root,
 				}
 			}
 			/* This is specific for GPDB */
-			if(root != NULL)
+			if (root != NULL)
 			{
 				set_pathtarget_cost_width(root, ntarget);
 			}
