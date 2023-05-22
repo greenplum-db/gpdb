@@ -531,6 +531,8 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// If it's a foreign table, but not an external table
 	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE && gp_policy == nullptr)
 	{
+		// for foreign tables, we need to convert from the foreign table's execution locaiton,
+		// to an Orca distribution spec. We do this maping in `GetForeignRelDistribution`
 		ForeignTable *ft = GetForeignTable(rel->rd_id);
 		dist = GetForeignRelDistribution(ft);
 	}
@@ -799,7 +801,8 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 }
 
 // Foreign relations don't store their distribution policy in GpPolicy,
-// so we need to extract it separately from the ForeignTable itself
+// so we need to extract it separately from the ForeignTable itself.
+// maps foreign table's execution location to Orca distribution policy
 IMDRelation::Ereldistrpolicy
 CTranslatorRelcacheToDXL::GetForeignRelDistribution(ForeignTable *ft)
 {
