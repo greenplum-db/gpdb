@@ -247,9 +247,8 @@ explain select count(*) from foo group by a;
  Optimizer: Postgres query optimizer
 (5 rows)
 
--- Test ORCA fallsback to planner if partition key column is dropped
--- Direct drop of a partition key column isn't allowed in gpdb, but using DROP TYPE..CASCADE
--- on a user type associated with partition key will drop the partition key column too
+-- Test DROP TYPE..CASCADE on a user type associated with partition key doesn't drop
+-- the column and error's out instead
 CREATE TYPE bug_status AS ENUM ('new', 'open', 'closed');
 CREATE TABLE partition_key_dropped(a int, b bug_status) PARTITION BY LIST(b)
 ( PARTITION p1 VALUES ('new'),
@@ -265,30 +264,31 @@ NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to table partition_key_dropped column b
 drop cascades to table partition_key_dropped_1_prt_p1 column b
 drop cascades to table partition_key_dropped_1_prt_p2 column b
+ERROR:  cannot drop partitioning column "b" for table "partition_key_dropped"
 EXPLAIN SELECT * FROM partition_key_dropped;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2126.00 rows=192600 width=4)
-   ->  Append  (cost=0.00..2126.00 rows=64200 width=4)
-         ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1063.00 rows=32100 width=4)
-         ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1063.00 rows=32100 width=4)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1922.00 rows=172200 width=8)
+   ->  Append  (cost=0.00..1922.00 rows=57400 width=8)
+         ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..961.00 rows=28700 width=8)
+         ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..961.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
 (5 rows)
 
 SELECT * FROM partition_key_dropped;
- a 
----
- 2
- 1
+ a |  b   
+---+------
+ 2 | open
+ 1 | new
 (2 rows)
 
 EXPLAIN DELETE FROM partition_key_dropped WHERE a=1;
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
- Delete on partition_key_dropped_1_prt_p1  (cost=0.00..2607.50 rows=193 width=10)
-   ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1303.75 rows=33 width=10)
+ Delete on partition_key_dropped_1_prt_p1  (cost=0.00..2352.50 rows=173 width=10)
+   ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1176.25 rows=29 width=10)
          Filter: (a = 1)
-   ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1303.75 rows=33 width=10)
+   ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1176.25 rows=29 width=10)
          Filter: (a = 1)
  Optimizer: Postgres query optimizer
 (6 rows)
@@ -297,22 +297,21 @@ DELETE FROM partition_key_dropped WHERE a=1;
 EXPLAIN UPDATE partition_key_dropped SET a=21 where a=2;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Update on partition_key_dropped_1_prt_p1  (cost=0.00..2611.35 rows=129 width=14)
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1305.68 rows=65 width=14)
+ Update on partition_key_dropped_1_prt_p1  (cost=0.00..2355.94 rows=115 width=18)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1177.97 rows=58 width=18)
          Hash Key: "outer".a
-         ->  Split  (cost=0.00..1305.68 rows=65 width=14)
-               ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1303.75 rows=33 width=14)
+         ->  Split  (cost=0.00..1177.97 rows=58 width=18)
+               ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1176.25 rows=29 width=18)
                      Filter: (a = 2)
-   ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1305.68 rows=65 width=14)
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1177.97 rows=58 width=18)
          Hash Key: "outer".a
-         ->  Split  (cost=0.00..1305.68 rows=65 width=14)
-               ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1303.75 rows=33 width=14)
+         ->  Split  (cost=0.00..1177.97 rows=58 width=18)
+               ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1176.25 rows=29 width=18)
                      Filter: (a = 2)
  Optimizer: Postgres query optimizer
 (12 rows)
 
 UPDATE partition_key_dropped SET a=21 where a=2;
-ERROR:  no partition for partitioning key  (seg2 127.0.0.1:6004 pid=85464)
 EXPLAIN INSERT INTO partition_key_dropped VALUES(3);
                             QUERY PLAN                             
 -------------------------------------------------------------------
@@ -322,5 +321,4 @@ EXPLAIN INSERT INTO partition_key_dropped VALUES(3);
 (3 rows)
 
 INSERT INTO partition_key_dropped VALUES(3);
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:6002 pid=85462)
-DROP TABLE partition_key_dropped;
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:6002 pid=13466)

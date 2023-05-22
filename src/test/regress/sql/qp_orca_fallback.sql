@@ -102,9 +102,8 @@ set optimizer_enable_hashagg = off;
 set optimizer_enable_groupagg = off;
 explain select count(*) from foo group by a;
 
--- Test ORCA fallsback to planner if partition key column is dropped
--- Direct drop of a partition key column isn't allowed in gpdb, but using DROP TYPE..CASCADE
--- on a user type associated with partition key will drop the partition key column too
+-- Test DROP TYPE..CASCADE on a user type associated with partition key doesn't drop
+-- the column and error's out instead
 CREATE TYPE bug_status AS ENUM ('new', 'open', 'closed');
 CREATE TABLE partition_key_dropped(a int, b bug_status) PARTITION BY LIST(b)
 ( PARTITION p1 VALUES ('new'),
@@ -124,5 +123,3 @@ UPDATE partition_key_dropped SET a=21 where a=2;
 
 EXPLAIN INSERT INTO partition_key_dropped VALUES(3);
 INSERT INTO partition_key_dropped VALUES(3);
-
-DROP TABLE partition_key_dropped;

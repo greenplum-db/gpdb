@@ -293,9 +293,8 @@ DETAIL:  No plan has been computed for required properties
  Optimizer: Postgres query optimizer
 (5 rows)
 
--- Test ORCA fallsback to planner if partition key column is dropped
--- Direct drop of a partition key column isn't allowed in gpdb, but using DROP TYPE..CASCADE
--- on a user type associated with partition key will drop the partition key column too
+-- Test DROP TYPE..CASCADE on a user type associated with partition key doesn't drop
+-- the column and error's out instead
 CREATE TYPE bug_status AS ENUM ('new', 'open', 'closed');
 CREATE TABLE partition_key_dropped(a int, b bug_status) PARTITION BY LIST(b)
 ( PARTITION p1 VALUES ('new'),
@@ -311,78 +310,67 @@ NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to table partition_key_dropped column b
 drop cascades to table partition_key_dropped_1_prt_p1 column b
 drop cascades to table partition_key_dropped_1_prt_p2 column b
+ERROR:  cannot drop partitioning column "b" for table "partition_key_dropped"
 EXPLAIN SELECT * FROM partition_key_dropped;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2126.00 rows=192600 width=4)
-   ->  Append  (cost=0.00..2126.00 rows=64200 width=4)
-         ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1063.00 rows=32100 width=4)
-         ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1063.00 rows=32100 width=4)
- Optimizer: Postgres query optimizer
-(5 rows)
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
+         ->  Partition Selector for partition_key_dropped (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Partitions selected: 2 (out of 2)
+         ->  Dynamic Seq Scan on partition_key_dropped (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 SELECT * FROM partition_key_dropped;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
- a 
----
- 1
- 2
+ a |  b   
+---+------
+ 1 | new
+ 2 | open
 (2 rows)
 
 EXPLAIN DELETE FROM partition_key_dropped WHERE a=1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
- Delete on partition_key_dropped_1_prt_p1  (cost=0.00..2607.50 rows=193 width=10)
-   ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1303.75 rows=33 width=10)
-         Filter: (a = 1)
-   ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1303.75 rows=33 width=10)
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(6 rows)
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..431.03 rows=1 width=1)
+   ->  Result  (cost=0.00..431.00 rows=1 width=22)
+         ->  Sequence  (cost=0.00..431.00 rows=1 width=18)
+               ->  Partition Selector for partition_key_dropped (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 2 (out of 2)
+               ->  Dynamic Seq Scan on partition_key_dropped (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=18)
+                     Filter: (a = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 DELETE FROM partition_key_dropped WHERE a=1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
 EXPLAIN UPDATE partition_key_dropped SET a=21 where a=2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
- Update on partition_key_dropped_1_prt_p1  (cost=0.00..2611.35 rows=129 width=14)
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1305.68 rows=65 width=14)
-         Hash Key: "outer".a
-         ->  Split  (cost=0.00..1305.68 rows=65 width=14)
-               ->  Seq Scan on partition_key_dropped_1_prt_p1  (cost=0.00..1303.75 rows=33 width=14)
-                     Filter: (a = 2)
-   ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1305.68 rows=65 width=14)
-         Hash Key: "outer".a
-         ->  Split  (cost=0.00..1305.68 rows=65 width=14)
-               ->  Seq Scan on partition_key_dropped_1_prt_p2  (cost=0.00..1303.75 rows=33 width=14)
-                     Filter: (a = 2)
- Optimizer: Postgres query optimizer
-(12 rows)
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..431.06 rows=1 width=1)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
+         Hash Key: partition_key_dropped.a
+         ->  Split  (cost=0.00..431.00 rows=1 width=22)
+               ->  Result  (cost=0.00..431.00 rows=1 width=22)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=18)
+                           ->  Partition Selector for partition_key_dropped (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 2 (out of 2)
+                           ->  Dynamic Seq Scan on partition_key_dropped (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=18)
+                                 Filter: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
 
 UPDATE partition_key_dropped SET a=21 where a=2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
-ERROR:  no partition for partitioning key  (seg2 127.0.0.1:6004 pid=86519)
 EXPLAIN INSERT INTO partition_key_dropped VALUES(3);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
-                            QUERY PLAN                             
--------------------------------------------------------------------
- Insert on partition_key_dropped  (cost=0.00..0.01 rows=1 width=0)
-   ->  Result  (cost=0.00..0.01 rows=1 width=0)
- Optimizer: Postgres query optimizer
-(3 rows)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Insert  (cost=0.00..0.02 rows=1 width=4)
+   ->  Result  (cost=0.00..0.00 rows=1 width=12)
+         ->  Result  (cost=0.00..0.00 rows=1 width=8)
+               ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                           ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 INSERT INTO partition_key_dropped VALUES(3);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Table with dropped partition key column.
-ERROR:  no partition for partitioning key  (seg0 127.0.0.1:6002 pid=86517)
-DROP TABLE partition_key_dropped;
+ERROR:  no partition for partitioning key  (seg0 127.0.0.1:6002 pid=12782)

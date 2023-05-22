@@ -253,4 +253,6 @@ extern PartitionRule*
 get_next_level_matched_partition(PartitionNode *partnode, Datum *values, bool *isnull,
 								TupleDesc tupdesc, PartitionAccessMethods *accessMethods);
 
+extern bool is_part_key(Oid relid, AttrNumber attno);
+
 #endif   /* CDBPARTITION_H */

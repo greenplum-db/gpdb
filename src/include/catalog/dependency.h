@@ -172,6 +172,7 @@ typedef enum ObjectClass
 
 #define PERFORM_DELETION_INTERNAL			0x0001
 #define PERFORM_DELETION_CONCURRENTLY		0x0002
+#define PERFORM_DELETION_AVOID_PARTKEY_CHK	0x0004
 
 extern void performDeletion(const ObjectAddress *object,
 				DropBehavior behavior, int flags);

@@ -8874,7 +8874,9 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 	object.objectId = RelationGetRelid(rel);
 	object.objectSubId = attnum;
 
-	performDeletion(&object, behavior, 0);
+	/* Set flag to avoid partition key check inside deleteOneObject()
+	 * for every drop column command as its already checked above. */
+	performDeletion(&object, behavior, PERFORM_DELETION_AVOID_PARTKEY_CHK);
 
 	/*
 	 * If we dropped the OID column, must adjust pg_class.relhasoids and tell

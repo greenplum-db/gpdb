@@ -1066,6 +1066,22 @@ deleteOneObject(const ObjectAddress *object, Relation *depRel, int flags)
 	SysScanDesc scan;
 	HeapTuple	tup;
 
+	/*
+	 * If the object being deleted is a partitioning column, error out.
+	 * Same behavior as direct drop on the partitioning column.
+	 */
+	if (!(flags & PERFORM_DELETION_AVOID_PARTKEY_CHK) &&
+		IS_QUERY_DISPATCHER() &&
+		OCLASS_CLASS == getObjectClass(object) &&
+		object->objectSubId > 0 &&
+		is_part_key(object->objectId, (AttrNumber) object->objectSubId))
+	{
+		ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("cannot drop partitioning column \"%s\" for table \"%s\"",
+				 get_relid_attribute_name(object->objectId,
+					 object->objectSubId), get_rel_name(object->objectId))));
+	}
 	/* DROP hook of the objects being removed */
 	InvokeObjectDropHookArg(object->classId, object->objectId,
 							object->objectSubId, flags);

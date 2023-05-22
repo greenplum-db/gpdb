@@ -9077,3 +9077,20 @@ collect_external_partitions(PartitionNode *pn, List **extparts) {
 		heap_close(rel, NoLock);
 	}
 }
+
+/*
+ * Is attno a partition key of relid?
+ * Returns false if relid is not a partitioned table.
+ */
+bool
+is_part_key(Oid relid, AttrNumber attno)
+{
+	bool result;
+	Bitmapset *partKeys = get_partition_key_bitmapset(relid);
+
+	Assert(AttributeNumberIsValid(attno));
+
+	result = bms_is_member(attno, partKeys);
+	bms_free(partKeys);
+	return result;
+}
