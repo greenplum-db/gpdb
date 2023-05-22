@@ -195,20 +195,4 @@
 		} \
 	} while (0)
 
-#ifndef FRONTEND
-/*
- * Determine if a varlena datum can be stored in short varlena format.
- *
- * The caller must've checked that it's a pass-by-reference and not a
- * plain-storage type.
- */
-static inline bool
-value_type_could_short(Pointer ptr)
-{
-	return !VARATT_IS_EXTERNAL(ptr) &&
-		(VARATT_IS_SHORT(ptr) ||
-		 (VARATT_CAN_MAKE_SHORT(ptr)));
-}
-#endif
-
 #endif
