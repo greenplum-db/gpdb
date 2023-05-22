@@ -4157,3 +4157,4 @@ begin
   v_test := 0 || v_test;  -- fail
 end;
 $$;
+DROP TABLE rc_test;

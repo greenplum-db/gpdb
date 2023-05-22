@@ -5346,3 +5346,4 @@ end;
 $$;
 ERROR:  value for domain plpgsql_arr_domain violates check constraint "plpgsql_arr_domain_check"
 CONTEXT:  PL/pgSQL function inline_code_block line 4 at assignment
+DROP TABLE rc_test;
