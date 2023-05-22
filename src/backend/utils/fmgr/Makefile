@@ -16,4 +16,7 @@ OBJS = dfmgr.o fmgr.o funcapi.o deprecated.o
 
 override CPPFLAGS += -DDLSUFFIX=\"$(DLSUFFIX)\"
 
+# GPDB additions
+OBJS +=	fmgr_gp.o
+
 include $(top_srcdir)/src/backend/common.mk
