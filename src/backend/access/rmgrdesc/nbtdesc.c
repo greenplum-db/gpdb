@@ -26,9 +26,9 @@ out_insert(StringInfo buf, uint8 info, XLogReaderState *record)
 	char		*ptr;
 	xl_btree_insert	*xlrec = (xl_btree_insert *) rec;
 	xl_btree_metadata *md;
-	BlockNumber	blkno;	
+	BlockNumber	blkno = 0;
 	bool		fullpage;
-	Size		datalen;
+	Size		datalen = 0;
 
 	fullpage = XLogRecHasBlockImage(record, 0);
 	XLogRecGetBlockTag(record, 0, NULL, NULL, &blkno);
