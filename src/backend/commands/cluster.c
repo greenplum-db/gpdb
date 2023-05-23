@@ -669,12 +669,6 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	bool		swap_toast_by_content;
 	TransactionId frozenXid;
 	MultiXactId cutoffMulti;
-	/*
-	 * GPDB_12_MERGE_FIXME: We use specific bool in abstract code. This should
-	 * be somehow hidden by table am api or necessity of this switch should be
-	 * revisited.
-	 */
-	bool		is_ao = RelationIsAppendOptimized(OldHeap);
 
 	/* Mark the correct index as clustered */
 	if (OidIsValid(indexOid))
@@ -706,7 +700,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	 */
 	finish_heap_swap(tableOid, OIDNewHeap, is_system_catalog,
 					 swap_toast_by_content,
-					 !is_ao /* swap_stats */,
+					 true /* swap_stats */,
 					 false, true,
 					 frozenXid, cutoffMulti,
 					 relpersistence);
@@ -1097,6 +1091,15 @@ copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 	/* Reset rd_toastoid just to be tidy --- it shouldn't be looked at again */
 	NewHeap->rd_toastoid = InvalidOid;
 
+	if (RelationIsAppendOptimized(NewHeap))
+	{
+		/*
+		 * If it's an AO/CO table, we need to hike the command counter here so
+		 * that we can retrieve the ao(cs)seg eof count of the rewritten table,
+		 * during the num_pages calculation below.
+		 */
+		CommandCounterIncrement();
+	}
 	num_pages = RelationGetNumberOfBlocks(NewHeap);
 
 	/* Log what we did */
