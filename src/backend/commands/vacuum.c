@@ -75,13 +75,6 @@
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 
-
-typedef struct VacuumStatsContext
-{
-	List		*updated_stats;
-	int			nsegs;
-} VacuumStatsContext;
-
 /*
  * GUC parameters
  */
@@ -110,9 +103,6 @@ static VacOptTernaryValue get_vacopt_ternary_value(DefElem *def);
 static void dispatchVacuum(VacuumParams *params, Oid relid,
 						   VacuumStatsContext *ctx);
 static List *vacuum_params_to_options_list(VacuumParams *params);
-static void vacuum_combine_stats(VacuumStatsContext *stats_context,
-								 CdbPgResults *cdb_pgresults);
-static void vac_update_relstats_from_list(VacuumStatsContext *stats_context);
 
 /*
  * Primary entry point for manual VACUUM and ANALYZE commands
@@ -2786,7 +2776,7 @@ dispatchVacuum(VacuumParams *params, Oid relid, VacuumStatsContext *ctx)
 								GetAssignedOidsForDispatch(),
 								&cdb_pgresults);
 
-	vacuum_combine_stats(ctx, &cdb_pgresults);
+	vacuum_combine_stats(ctx, &cdb_pgresults, vac_context);
 
 	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 }
@@ -2891,9 +2881,12 @@ vacuum_params_to_options_list(VacuumParams *params)
  * the final stats for QD relations.
  *
  * Note that the mirrorResults is ignored by this function.
+ * context: Perform any additional memory allocation necessary.
  */
-static void
-vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresults)
+void
+vacuum_combine_stats(VacuumStatsContext *stats_context,
+					 CdbPgResults *cdb_pgresults,
+					 MemoryContext context)
 {
 	int			result_no;
 	MemoryContext old_context;
@@ -2954,7 +2947,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 		{
 			Assert(pgresult->extraslen == sizeof(VPgClassStats));
 
-			old_context = MemoryContextSwitchTo(vac_context);
+			old_context = MemoryContextSwitchTo(context);
 			pgclass_stats_combo = palloc(sizeof(VPgClassStatsCombo));
 			memcpy(pgclass_stats_combo, pgresult->extras, pgresult->extraslen);
 			pgclass_stats_combo->count = 1;
@@ -2969,7 +2962,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 /*
  * Update relpages/reltuples of all the relations in the list.
  */
-static void
+void
 vac_update_relstats_from_list(VacuumStatsContext *stats_context)
 {
 	List *updated_stats = stats_context->updated_stats;

@@ -18,6 +18,7 @@
 #include "catalog/pg_class.h"
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_type.h"
+#include "cdb/cdbdispatchresult.h"
 #include "nodes/parsenodes.h"
 #include "storage/buf.h"
 #include "storage/lock.h"
@@ -295,6 +296,12 @@ typedef struct
 	int			totalAttr;
 } gp_acquire_correlation_context;
 
+typedef struct VacuumStatsContext
+{
+	List		*updated_stats;
+	int			nsegs;
+} VacuumStatsContext;
+
 /* GUC parameters */
 extern PGDLLIMPORT int default_statistics_target;	/* PGDLLIMPORT for PostGIS */
 extern int	vacuum_freeze_min_age;
@@ -371,5 +378,10 @@ extern Datum gp_acquire_correlations(PG_FUNCTION_ARGS);
 extern Oid gp_acquire_sample_rows_col_type(Oid typid);
 
 extern bool gp_vacuum_needs_update_stats(void);
+
+extern void vacuum_combine_stats(VacuumStatsContext *stats_context,
+								 CdbPgResults *cdb_pgresults,
+								 MemoryContext context);
+extern void vac_update_relstats_from_list(VacuumStatsContext *stats_context);
 
 #endif							/* VACUUM_H */

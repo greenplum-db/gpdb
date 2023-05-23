@@ -65,3 +65,24 @@ ABORT;
 -- try cluster again
 CLUSTER cluster_foo USING cluster_ifoo;
 DROP TABLE cluster_foo;
+
+-- Test that reltuples and relpages are populated on both QE and QD post-CLUSTER.
+CREATE TABLE cluster_stats(a int, b int);
+CREATE INDEX ON cluster_stats(a);
+INSERT INTO cluster_stats SELECT a, a FROM generate_series(1, 100)a;
+ANALYZE cluster_stats;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats';
+
+DELETE FROM cluster_stats where a % 3 = 1;
+CLUSTER cluster_stats USING cluster_stats_a_idx;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats';
