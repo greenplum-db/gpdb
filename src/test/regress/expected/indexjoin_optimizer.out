@@ -107,13 +107,11 @@ ORDER BY 1 asc ;
                                  ->  Result  (cost=0.00..1341.01 rows=94594 width=8)
                                        ->  Nested Loop  (cost=0.00..1339.87 rows=94594 width=8)
                                              Join Filter: (((my_tq_agg_small.sym)::bpchar = my_tt_agg_small.symbol) AND (my_tt_agg_small.event_ts >= my_tq_agg_small.ets) AND (my_tt_agg_small.event_ts < my_tq_agg_small.end_ts))
-                                             ->  Seq Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
-                                             ->  Materialize  (cost=0.00..431.16 rows=676 width=20)
-                                                   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=676 width=20)
-                                                         Hash Key: (my_tq_agg_small.sym)::bpchar
-                                                         ->  Seq Scan on my_tq_agg_small  (cost=0.00..431.03 rows=676 width=20)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.1.0
-(20 rows)
+                                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.29 rows=280 width=25)
+                                                   ->  Seq Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
+                                             ->  Seq Scan on my_tq_agg_small  (cost=0.00..431.03 rows=676 width=20)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
 
 reset optimizer_segments;
 reset optimizer_nestloop_factor;

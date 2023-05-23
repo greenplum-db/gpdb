@@ -1513,3 +1513,159 @@ where x.a + 1 in (select b from t2_dedupsemi_indexonly);
 
 drop table t1_dedupsemi_indexonly;
 drop table t2_dedupsemi_indexonly;
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+-- check motion is added when performing a NL Left Outer Join between relations
+-- when the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.89 rows=6 width=10)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.89 rows=2 width=10)
+         Join Filter: ((foo_varchar.a)::bpchar = bar_char.p)
+         ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=4)
+         ->  Materialize  (cost=0.00..431.00 rows=3 width=6)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=6)
+                     ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=6)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+  a   |   p   
+------+-------
+ 2    | 2    
+ 1    | 1    
+ 3    | 3    
+(3 rows)
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.89 rows=6 width=10)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.89 rows=2 width=10)
+         Join Filter: ((foo_varchar.a)::bpchar = random_dis_char.y)
+         ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=4)
+         ->  Materialize  (cost=0.00..431.00 rows=3 width=6)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=6)
+                     ->  Seq Scan on random_dis_char  (cost=0.00..431.00 rows=1 width=6)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+  a   |   y   
+------+-------
+ 2    | 2    
+ 1    | 1    
+ 3    | 3    
+(3 rows)
+
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.77 rows=6 width=10)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.77 rows=2 width=10)
+         Join Filter: (bar_char.p = (random_dis_varchar.x)::bpchar)
+         ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=6)
+         ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+                     ->  Seq Scan on random_dis_varchar  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+   p   |  x   
+-------+------
+ 1     | 1 
+ 2     | 2  
+ 3     | 3   
+(3 rows)
+
+-- check motion is added when performing a NL Inner Join between relations when
+-- the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.72 rows=3 width=10)
+   ->  Nested Loop  (cost=0.00..1324032.72 rows=1 width=10)
+         Join Filter: ((foo_varchar.a)::bpchar = bar_char.p)
+         ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=6)
+         ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+                     ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+  a   |   p   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
+(3 rows)
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.72 rows=3 width=10)
+   ->  Nested Loop  (cost=0.00..1324032.72 rows=1 width=10)
+         Join Filter: ((foo_varchar.a)::bpchar = random_dis_char.y)
+         ->  Seq Scan on random_dis_char  (cost=0.00..431.00 rows=1 width=6)
+         ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+                     ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+  a   |   y   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
+(3 rows)
+
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.72 rows=3 width=10)
+   ->  Nested Loop  (cost=0.00..1324032.72 rows=1 width=10)
+         Join Filter: (bar_char.p = (random_dis_varchar.x)::bpchar)
+         ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=6)
+         ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+                     ->  Seq Scan on random_dis_varchar  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+   p   |  x   
+-------+------
+ 1     | 1 
+ 2     | 2  
+ 3     | 3   
+(3 rows)
+
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;

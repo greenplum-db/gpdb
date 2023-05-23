@@ -21,7 +21,7 @@ select * from foo, bar where foo.a is not distinct from bar.a;
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102029,102046,102048,102053,102054,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102029,102046,102048,102053,102054,102074,102120,102144,103001,103014,103015,103022,103027,103033,103038,103040,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32768.1.0" Name="t1" Rows="0.000000" EmptyRelation="true"/>
@@ -58,6 +58,9 @@ select * from foo, bar where foo.a is not distinct from bar.a;
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+         <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.32771.1.0" Name="t2" Rows="0.000000" EmptyRelation="true"/>
       <dxl:Relation Mdid="6.32771.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
@@ -93,6 +96,9 @@ select * from foo, bar where foo.a is not distinct from bar.a;
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+         <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
         <dxl:EqualityOp Mdid="0.91.1.0"/>

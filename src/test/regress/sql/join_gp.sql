@@ -712,3 +712,56 @@ where x.a + 1 in (select b from t2_dedupsemi_indexonly);
 
 drop table t1_dedupsemi_indexonly;
 drop table t2_dedupsemi_indexonly;
+
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
+
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+
+-- check motion is added when performing a NL Left Outer Join between relations
+-- when the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+-- check motion is added when performing a NL Inner Join between relations when
+-- the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
+
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;

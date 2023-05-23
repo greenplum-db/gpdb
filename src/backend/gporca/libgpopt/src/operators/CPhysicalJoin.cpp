@@ -387,8 +387,22 @@ CPhysicalJoin::PedInnerHashedFromOuterHashed(
 			{
 				IMDId *pmdidTypeInner =
 					CScalar::PopConvert(pexprMatching->Pop())->MdidType();
-				CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-				if (md_accessor->RetrieveType(pmdidTypeInner)->IsHashable())
+
+				IMDId *pmdidTypeOuter =
+					CScalar::PopConvert(pexpr->Pop())->MdidType();
+
+				CMDAccessor *mdAccessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+				IMDId *mdidOpfamilyInner =
+					mdAccessor->RetrieveType(pmdidTypeInner)
+						->GetDistrOpfamilyMdid();
+
+				IMDId *mdidOpfamilyOuter =
+					mdAccessor->RetrieveType(pmdidTypeOuter)
+						->GetDistrOpfamilyMdid();
+
+				if (mdidOpfamilyOuter->Equals(mdidOpfamilyInner) &&
+					mdAccessor->RetrieveType(pmdidTypeInner)->IsHashable())
 				{
 					pexprMatching->AddRef();
 					pdrgpexprMatching->Append(pexprMatching);

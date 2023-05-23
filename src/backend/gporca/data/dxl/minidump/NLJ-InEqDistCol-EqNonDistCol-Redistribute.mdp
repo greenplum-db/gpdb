@@ -32,7 +32,7 @@ explain select * from a1,b1 where a1.a != b1.a and a1.a = b1.b;
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102029,102046,102048,102053,102054,102120,102144,103001,103014,103015,103022,103033,104003,104004,104005,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102029,102046,102048,102053,102054,102120,102144,103001,103014,103015,103022,103033,103038,103040,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:GPDBScalarOp Mdid="0.518.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true">
@@ -167,6 +167,9 @@ explain select * from a1,b1 where a1.a != b1.a and a1.a = b1.b;
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+         <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49824.1.0" Name="a1" Rows="0.000000" EmptyRelation="true"/>
       <dxl:Relation Mdid="6.49824.1.0" Name="a1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
@@ -202,6 +205,9 @@ explain select * from a1,b1 where a1.a != b1.a and a1.a = b1.b;
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+         <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
+        </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49827.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.49827.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -378,7 +384,7 @@ explain select * from a1,b1 where a1.a != b1.a and a1.a = b1.b;
               <dxl:Filter/>
               <dxl:SortingColumnList/>
               <dxl:HashExprList>
-                <dxl:HashExpr>
+                <dxl:HashExpr Opfamily="0.1977.1.0">
                   <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
                 </dxl:HashExpr>
               </dxl:HashExprList>
