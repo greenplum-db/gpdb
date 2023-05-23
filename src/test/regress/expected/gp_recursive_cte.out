@@ -660,7 +660,7 @@ SELECT $query$
 WITH RECURSIVE cte (i, j) AS (
     SELECT a, b FROM recursive_table_6 WHERE a = 0::numeric::numeric
     UNION ALL
-    SELECT a, b FROM cte, recursive_table_6 WHERE cte.i = recursive_table_6.b
+    SELECT a, b FROM recursive_table_6, cte WHERE cte.i = recursive_table_6.b
 )
 SELECT i, j FROM cte;
 $query$ AS qry \gset
