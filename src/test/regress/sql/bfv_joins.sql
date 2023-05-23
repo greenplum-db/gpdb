@@ -175,6 +175,20 @@ select * from
 ) s
 full outer join fjtest_c on (s.aid = cid);
 
+--
+-- Test for unsupported syntax of Full outer join in Orca.
+--
+--start_ignore
+drop table foo;
+--end_ignore
+CREATE TABLE foo(col1 int, col2 boolean);
+CREATE STATISTICS IF NOT EXISTS s0 (mcv) ON col2, col1 FROM foo;
+INSERT INTO foo VALUES('1', true);
+--start_ignore
+VACUUM VERBOSE ANALYZE foo;
+--end_ignore
+SELECT 1 FROM foo t1 FULL JOIN foo t2 ON t2.col2;
+
 -- Do not push down any implied predicates to the Left Outer Join
 CREATE TABLE member(member_id int NOT NULL, group_id int NOT NULL) DISTRIBUTED BY(member_id);
 CREATE TABLE member_group(group_id int NOT NULL) DISTRIBUTED BY(group_id);

@@ -247,7 +247,8 @@ CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation(
 {
 	GPOS_ASSERT(scale_factors->Size() == 0);
 
-	if (!md_statsinfo || md_statsinfo->GetExtStatInfoArray()->Size() == 0)
+	if (!md_statsinfo || md_statsinfo->GetExtStatInfoArray()->Size() == 0 ||
+		colid_to_attno_mapping->is_empty())
 	{
 		return;
 	}

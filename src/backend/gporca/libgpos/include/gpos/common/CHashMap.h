@@ -298,6 +298,12 @@ public:
 	{
 		return m_keys;
 	}
+
+	bool
+	is_empty() const
+	{
+		return(nullptr == m_chains || nullptr == *m_chains);
+	}
 };	// class CHashMap
 
 using UlongToUlongMap =
