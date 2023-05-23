@@ -37,7 +37,7 @@ protected:
 	CMemoryPool *m_mp;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// func id
 	IMDId *m_mdid;
@@ -72,11 +72,7 @@ public:
 	~CMDCastGPDB() override;
 
 	// accessors
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// cast object id
 	IMDId *MDId() const override;

@@ -179,7 +179,7 @@
           <dxl:Opfamily Mdid="0.7027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.1574.1.0" Name="nextval" ReturnsSet="false" Stability="Volatile" DataAccess="ContainsSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1574.1.0" Name="nextval" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.692.1.0" Name="+" ComparisonType="Other" ReturnsNullOnNullInput="true">

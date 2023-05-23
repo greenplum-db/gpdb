@@ -22,7 +22,7 @@ INSERT 1
 -- start_ignore
 --
 -- Invalidate the index of the toast table for our relation. Because this is a
--- catalog change, we have to execute it on the master and all segments.
+-- catalog change, we have to execute it on the coordinator and all segments.
 --
 -- This is done in an ignore block so it can run correctly with any number of
 -- segments.

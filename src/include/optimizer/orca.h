@@ -22,16 +22,7 @@
 #ifdef USE_ORCA
 
 extern PlannedStmt * optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams);
-
-#else
-
-/* Keep compilers quiet in case the build used --disable-orca */
-static PlannedStmt *
-optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams)
-{
-	Assert(false);
-	return NULL;
-}
+extern Node *transformGroupedWindows(Node *node, void *context);
 
 #endif
 

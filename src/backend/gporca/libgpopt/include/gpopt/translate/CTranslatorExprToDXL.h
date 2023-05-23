@@ -98,8 +98,8 @@ private:
 	// segment ids on target system
 	IntPtrArray *m_pdrgpiSegments;
 
-	// id of master node
-	INT m_iMasterId;
+	// id of coordinator node
+	INT m_iCoordinatorId;
 
 	// private copy ctor
 	CTranslatorExprToDXL(const CTranslatorExprToDXL &);

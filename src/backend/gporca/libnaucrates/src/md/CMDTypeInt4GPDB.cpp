@@ -51,6 +51,8 @@ CMDTypeInt4GPDB::CMDTypeInt4GPDB(CMemoryPool *mp) : m_mp(mp)
 		m_distr_opfamily = nullptr;
 		m_legacy_distr_opfamily = nullptr;
 	}
+	m_part_opfamily =
+		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_PART_OPFAMILY);
 	m_mdid_op_eq = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_EQ_OP);
 	m_mdid_op_neq =
 		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_NEQ_OP);
@@ -71,9 +73,6 @@ CMDTypeInt4GPDB::CMDTypeInt4GPDB(CMemoryPool *mp) : m_mp(mp)
 	m_mdid_count =
 		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, GPDB_INT4_AGG_COUNT);
 
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
-
 	GPOS_ASSERT(GPDB_INT4_OID == CMDIdGPDB::CastMdid(m_mdid)->Oid());
 	m_mdid->AddRef();
 	m_datum_null =
@@ -93,6 +92,7 @@ CMDTypeInt4GPDB::~CMDTypeInt4GPDB()
 	m_mdid->Release();
 	CRefCount::SafeRelease(m_distr_opfamily);
 	CRefCount::SafeRelease(m_legacy_distr_opfamily);
+	CRefCount::SafeRelease(m_part_opfamily);
 	m_mdid_op_eq->Release();
 	m_mdid_op_neq->Release();
 	m_mdid_op_lt->Release();
@@ -107,8 +107,21 @@ CMDTypeInt4GPDB::~CMDTypeInt4GPDB()
 	m_mdid_sum->Release();
 	m_mdid_count->Release();
 	m_datum_null->Release();
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
+}
 
-	GPOS_DELETE(m_dxl_str);
+const CWStringDynamic *
+CMDTypeInt4GPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
 }
 
 //---------------------------------------------------------------------------
@@ -150,6 +163,12 @@ CMDTypeInt4GPDB::GetDistrOpfamilyMdid() const
 	{
 		return m_distr_opfamily;
 	}
+}
+
+IMDId *
+CMDTypeInt4GPDB::GetPartOpfamilyMdid() const
+{
+	return m_part_opfamily;
 }
 
 //---------------------------------------------------------------------------

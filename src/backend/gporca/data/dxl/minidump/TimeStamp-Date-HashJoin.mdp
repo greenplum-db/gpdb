@@ -135,14 +135,6 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBScalarOp Mdid="0.2347.1.0" Name="=" ComparisonType="Eq">
-        <dxl:LeftType Mdid="0.1082.1.0"/>
-        <dxl:RightType Mdid="0.1114.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.2340.1.0"/>
-        <dxl:Commutator Mdid="0.2373.1.0"/>
-        <dxl:InverseOp Mdid="0.2350.1.0"/>
-      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.2060.1.0" Name="=" ComparisonType="Eq">
         <dxl:LeftType Mdid="0.1114.1.0"/>
         <dxl:RightType Mdid="0.1114.1.0"/>
@@ -151,7 +143,7 @@
         <dxl:Commutator Mdid="0.2060.1.0"/>
         <dxl:InverseOp Mdid="0.2061.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.1114.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDCast Mdid="3.1082.1.0;1114.1.0" Name="timestamp" BinaryCoercible="false" SourceTypeId="0.1082.1.0" DestinationTypeId="0.1114.1.0" CastFuncId="0.2024.1.0"/>

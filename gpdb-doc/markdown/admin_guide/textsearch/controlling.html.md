@@ -49,13 +49,13 @@ Here we have used `setweight` to label the source of each lexeme in the finished
 
 ## <a id="parsing-queries"></a>Parsing Queries 
 
-Greenplum Database provides the functions `to_tsquery` and `plainto_tsquery` for converting a query to the `tsquery` data type. `to_tsquery` offers access to more features than `plainto_tsquery`, but is less forgiving about its input.
+Greenplum Database provides the functions `to_tsquery`, `plainto_tsquery`, `phraseto_tsquery`, and `websearch_to_tsquery` for converting a query to the `tsquery` data type. `to_tsquery` offers access to more features than `plainto_tsquery`, but is less forgiving about its input. `websearch_to_tsquery` is a simplified version of `to_tsquery` with an alternative syntax, similar to the one used by web search engines.
 
 ```
 to_tsquery([<config> regconfig, ] <querytext> text) returns tsquery
 ```
 
-`to_tsquery` creates a `tsquery` value from *querytext*, which must consist of single tokens separated by the Boolean operators `&` \(AND\), `|` \(OR\), and `!`\(NOT\). These operators can be grouped using parentheses. In other words, the input to `to_tsquery` must already follow the general rules for `tsquery` input, as described in [Text Search Data Types](../../ref_guide/datatype-textsearch.html). The difference is that while basic `tsquery` input takes the tokens at face value, `to_tsquery` normalizes each token to a lexeme using the specified or default configuration, and discards any tokens that are stop words according to the configuration. For example:
+`to_tsquery` creates a `tsquery` value from *querytext*, which must consist of single tokens separated by the Boolean operators `&` \(AND\), `|` \(OR\), `!` \(NOT\), and <-> (FOLLOWED BY), possibly grouped using parentheses. In other words, the input to `to_tsquery` must already follow the general rules for tsquery input, as described in [Text Search Data Types](../../ref_guide/datatype-textsearch.html). The difference is that while basic `tsquery` input takes the tokens at face value, `to_tsquery` normalizes each token to a lexeme using the specified or default configuration, and discards any tokens that are stop words according to the configuration. For example:
 
 ```
 SELECT to_tsquery('english', 'The & Fat & Rats');
@@ -93,7 +93,7 @@ SELECT to_tsquery('''supernovae stars'' & !crab');
  'sn' & !'crab'
 ```
 
-Without quotes, `to_tsquery` will generate a syntax error for tokens that are not separated by an AND or OR operator.
+Without quotes, `to_tsquery` will generate a syntax error for tokens that are not separated by an AND, OR, or FOLLOWED BY operator.
 
 ```
 plainto_tsquery([ <config> regconfig, ] <querytext> ext) returns tsquery
@@ -120,6 +120,78 @@ SELECT plainto_tsquery('english', 'The Fat & Rats:C');
 ```
 
 Here, all the input punctuation was discarded as being space symbols.
+
+```
+phraseto_tsquery([ <config> regconfig, ] <querytext> text) returns tsquery
+```
+
+`phraseto_tsquery` behaves much like `plainto_tsquery`, except that it inserts the `<->` (FOLLOWED BY) operator between surviving words instead of the `&` (AND) operator. Also, stop words are not simply discarded, but are accounted for by inserting `<N>` operators rather than `<->` operators. This function is useful when searching for exact lexeme sequences, since the FOLLOWED BY operators check lexeme order not just the presence of all the lexemes.
+
+Example:
+
+```
+SELECT phraseto_tsquery('english', 'The Fat Rats');
+ phraseto_tsquery
+------------------
+ 'fat' <-> 'rat'
+```
+
+Like `plainto_tsquery`, the `phraseto_tsquery` function will not recognize `tsquery` operators, weight labels, or prefix-match labels in its input:
+
+```
+SELECT phraseto_tsquery('english', 'The Fat & Rats:C');
+      phraseto_tsquery
+-----------------------------
+ 'fat' <-> 'rat' <-> 'c'
+```
+
+```
+websearch_to_tsquery([ <config> regconfig, ] <querytext> text) returns tsquery
+```
+
+`websearch_to_tsquery` creates a `tsquery` value from querytext using an alternative syntax in which simple unformatted text is a valid query. Unlike `plainto_tsquery` and `phraseto_tsquery`, it also recognizes certain operators. Moreover, this function should never raise syntax errors, which makes it possible to use raw user-supplied input for search. The following syntax is supported:
+
+- `unquoted text`: text not inside quote marks will be converted to terms separated by `&` operators, as if processed by `plainto_tsquery`.
+
+- `"quoted text"`: text inside quote marks will be converted to terms separated by `<->` operators, as if processed by `phraseto_tsquery`.
+
+- `OR`: logical or will be converted to the `|` operator.
+
+- `-`: the logical not operator, converted to the the `!` operator.
+
+Examples:
+
+```
+SELECT websearch_to_tsquery('english', 'The fat rats');
+ websearch_to_tsquery
+----------------------
+ 'fat' & 'rat'
+(1 row)
+
+SELECT websearch_to_tsquery('english', '"supernovae stars" -crab');
+       websearch_to_tsquery
+----------------------------------
+ 'supernova' <-> 'star' & !'crab'
+(1 row)
+
+SELECT websearch_to_tsquery('english', '"sad cat" or "fat rat"');
+       websearch_to_tsquery
+-----------------------------------
+ 'sad' <-> 'cat' | 'fat' <-> 'rat'
+(1 row)
+
+SELECT websearch_to_tsquery('english', 'signal -"segmentation fault"');
+         websearch_to_tsquery
+---------------------------------------
+ 'signal' & !( 'segment' <-> 'fault' )
+(1 row)
+
+SELECT websearch_to_tsquery('english', '""" )( dummy \\ query <->');
+ websearch_to_tsquery
+----------------------
+ 'dummi' & 'queri'
+(1 row)
+```
 
 ## <a id="ranking"></a>Ranking Search Results 
 
@@ -221,20 +293,16 @@ ts_headline([<config> regconfig, ] <document> text, <query> tsquery [, <options>
 
 If an `*options*` string is specified it must consist of a comma-separated list of one or more `*option=value*` pairs. The available options are:
 
--   `StartSel`, `StopSel`: the strings with which to delimit query words appearing in the document, to distinguish them from other excerpted words. You must double-quote these strings if they contain spaces or commas.
--   `MaxWords`, `MinWords`: these numbers determine the longest and shortest headlines to output.
--   `ShortWord`: words of this length or less will be dropped at the start and end of a headline. The default value of three eliminates common English articles.
--   `HighlightAll`: Boolean flag; if `true` the whole document will be used as the headline, ignoring the preceding three parameters.
--   `MaxFragments`: maximum number of text excerpts or fragments to display. The default value of zero selects a non-fragment-oriented headline generation method. A value greater than zero selects fragment-based headline generation. This method finds text fragments with as many query words as possible and stretches those fragments around the query words. As a result query words are close to the middle of each fragment and have words on each side. Each fragment will be of at most `MaxWords` and words of length `ShortWord` or less are dropped at the start and end of each fragment. If not all query words are found in the document, then a single fragment of the first `MinWords` in the document will be displayed.
--   `FragmentDelimiter`: When more than one fragment is displayed, the fragments will be separated by this string.
+-   `MaxWords`, `MinWords` (integers): these numbers determine the longest and shortest headlines to output. The default values are 35 and 15.
+-   `ShortWord` (integer): words of this length or less will be dropped at the start and end of a headline, unless they are query terms. The default value of three eliminates common English articles.
+-   `HighlightAll` (boolean): the whole document will be used as the headline, ignoring the preceding three parameters. The default is `false`.
+-   `MaxFragments` (integer): maximum number of text fragments to display. The default value of zero selects a non-fragment-based headline generation method. A value greater than zero selects fragment-based headline generation (see below).
+-   `StartSel`, `StopSel` (strings): the strings with which to delimit query words appearing in the document, to distinguish them from other excerpted words. The default values are "`<b>`" and "`</b>`", which can be suitable for HTML output.
+-   `FragmentDelimiter` (string): When more than one fragment is displayed, the fragments will be separated by this string. The default is "`...`".
 
-Any unspecified options receive these defaults:
+These option names are recognized case-insensitively. You must double-quote string values if they contain spaces or commas.
 
-```
-StartSel=<b>, StopSel=</b>,
-MaxWords=35, MinWords=15, ShortWord=3, HighlightAll=FALSE,
-MaxFragments=0, FragmentDelimiter=" ... "
-```
+In non-fragment-based headline generation, `ts_headline` locates matches for the given `<query>` and chooses a single one to display, preferring matches that have more query words within the allowed headline length. In fragment-based headline generation, `ts_headline` locates the query matches and splits each match into “fragments” of no more than `MaxWords` words each, preferring fragments with more query words, and when possible “stretching” fragments to include surrounding words. The fragment-based mode is thus more useful when the query matches span large sections of the document, or when it's desirable to display multiple matches. In either mode, if no query matches can be identified, then a single fragment of the first `MinWords` words in the document will be displayed.
 
 For example:
 
@@ -244,37 +312,27 @@ SELECT ts_headline('english',
 is to find all documents containing given query terms
 and return them in order of their similarity to the
 query.',
-  to_tsquery('query & similarity'));
-                        ts_headline                         
+  to_tsquery('english', 'query & similarity'));
+                        ts_headline
 ------------------------------------------------------------
- containing given <b>query</b> terms
- and return them in order of their <b>similarity</b> to the
+ containing given <b>query</b> terms                       +
+ and return them in order of their <b>similarity</b> to the+
  <b>query</b>.
 
 SELECT ts_headline('english',
-  'The most common type of search
-is to find all documents containing given query terms
-and return them in order of their similarity to the
-query.',
-  to_tsquery('query & similarity'),
-  'StartSel = <, StopSel = >');
-                      ts_headline                      
--------------------------------------------------------
- containing given <query> terms
- and return them in order of their <similarity> to the
- <query>.
+  'Search terms may occur
+many times in a document,
+requiring ranking of the search matches to decide which
+occurrences to display in the result.',
+  to_tsquery('english', 'search & term'),
+  'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<, StopSel=>>');
+                        ts_headline
+------------------------------------------------------------
+ <<Search>> <<terms>> may occur                            +
+ many times ... ranking of the <<search>> matches to decide
 ```
 
-`ts_headline` uses the original document, not a `tsvector` summary, so it can be slow and should be used with care. A typical mistake is to call `ts_headline` for *every* matching document when only ten documents are to be shown. SQL subqueries can help; here is an example:
-
-```
-SELECT id, ts_headline(body, q), rank
-FROM (SELECT id, body, q, ts_rank_cd(ti, q) AS rank
-      FROM apod, to_tsquery('stars') q
-      WHERE ti @@ q
-      ORDER BY rank DESC
-      LIMIT 10) AS foo;
-```
+`ts_headline` uses the original document, not a `tsvector` summary, so it can be slow and should be used with care.
 
 **Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

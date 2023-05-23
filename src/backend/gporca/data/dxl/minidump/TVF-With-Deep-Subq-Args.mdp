@@ -94,7 +94,7 @@ SELECT generate_series((
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="3"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:GPDBFunc Mdid="0.1068.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1068.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">

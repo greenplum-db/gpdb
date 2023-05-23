@@ -9,9 +9,11 @@ from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import checkNotNone, normalizeAndValidateInputPath
 from gppylib.gparray import GpArray, Segment
+from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
 from gppylib.commands.gp import RECOVERY_REWIND_APPNAME
 
 logger = gplog.get_default_logger()
+
 
 def get_segments_with_running_basebackup():
     """
@@ -210,17 +212,43 @@ class RecoveryTriplets(abc.ABC):
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
 
         failed_segments_with_running_basebackup = []
+        failed_segments_with_running_pgrewind = []
+        failed_segments_in_backup_mode = []
         segments_with_running_basebackup = get_segments_with_running_basebackup()
 
         for req in requests:
-            if req.failed.getSegmentContentId() in segments_with_running_basebackup:
-                failed_segments_with_running_basebackup.append(req.failed.getSegmentContentId())
+            """
+                When running gprecoverseg (any sort of recovery full/incremental), if the pg_rewind, pg_basebackup is 
+                already running for a segment, that segment should be skipped from the recovery. The reason being that 
+                there should be only one writer per target segment at a time. Having several writers to a target will 
+                eventually make the segment inconsistent and in a weird state. 
+                
+                Although technically we could allow user to run a full recovery to a new host even if there is a 
+                pg_rewind/pg_basebackup running for that segment. This is a pretty rare scenario and we have decided not 
+                to over complicates the code just to support this scenario.
+            """
+            failed_segment_dbid = req.failed.getSegmentDbId()
+            peer = dbIdToPeerMap.get(failed_segment_dbid)
+            if peer is None:
+                raise Exception("No peer found for dbid {}. liveSegment is None".format(failed_segment_dbid))
+            peer_contentid = peer.getSegmentContentId()
+
+            if peer_contentid in segments_with_running_basebackup:
+                failed_segments_with_running_basebackup.append(peer_contentid)
+                continue
+
+            if is_pg_rewind_running(peer.getSegmentHostName(), peer.getSegmentPort()):
+                failed_segments_with_running_pgrewind.append(peer_contentid)
+                continue
+
+            # if source server(peer) is already in backup, we can not start recovery of the failed segment
+            if is_seg_in_backup_mode(peer.getSegmentHostName(), peer.getSegmentPort()):
+                failed_segments_in_backup_mode.append(peer_contentid)
                 continue
 
             # TODO: These 2 cases have different behavior which might be confusing to the user.
             # "<failed_address>|<failed_port>|<failed_data_dir> <failed_address>|<failed_port>|<failed_data_dir>" does full recovery
             # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
-            peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
             failover = None
             if req.failover_host:
                 # these two lines make it so that failover points to the object that is registered in gparray
@@ -239,12 +267,6 @@ class RecoveryTriplets(abc.ABC):
                 if req.failed.unreachable:
                     # skip the recovery
                     continue
-                if is_pg_rewind_running(peer.getSegmentHostName(), peer.getSegmentPort()):
-                    logger.debug("Skipping incremental recovery of segment on host {} and port {} because it has an "
-                                 "active pg_rewind connection with segment on host {} and port {}".format(
-                        req.failed.getSegmentHostName(),
-                        req.failed.getSegmentPort(), peer.getSegmentHostName(), peer.getSegmentPort()))
-                    continue
 
             triplets.append(RecoveryTriplet(req.failed, peer, failover))
 
@@ -252,6 +274,16 @@ class RecoveryTriplets(abc.ABC):
             logger.warning(
                 "Found pg_basebackup running for segments with contentIds %s, skipping recovery of these segments" % (
                     failed_segments_with_running_basebackup))
+
+        if len(failed_segments_with_running_pgrewind) > 0:
+            logger.warning(
+                "Found pg_rewind running for segments with contentIds %s, skipping recovery of these segments" % (
+                    failed_segments_with_running_pgrewind))
+
+        if len(failed_segments_in_backup_mode) > 0:
+            logger.warning(
+                "Found differential recovery running for segments with contentIds %s, skipping recovery of these segments" % (
+                    failed_segments_in_backup_mode))
 
         return triplets
 

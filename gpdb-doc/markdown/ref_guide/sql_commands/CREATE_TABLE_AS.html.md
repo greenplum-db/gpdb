@@ -22,7 +22,7 @@ where storage\_parameter is:
    appendoptimized={TRUE|FALSE}
    blocksize={8192-2097152}
    orientation={COLUMN|ROW}
-   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
    compresslevel={1-19 | 1}
    fillfactor={10-100}
    [oids=FALSE]
@@ -60,17 +60,15 @@ WITH \( storage\_parameter=value \)
 
 :   **orientation** — Set to `column` for column-oriented storage, or `row` \(the default\) for row-oriented storage. This option is only valid if `appendoptimized=TRUE`. Heap-storage tables can only be row-oriented.
 
-:   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is valid only if `appendoptimized=TRUE`.
+:   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, or `RLE_TYPE` to specify the type of compression used. The value `NONE` deactivates compression.  zlib is provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is valid only if `appendoptimized=TRUE`.
 
-    > **Note** <sup>1</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
-
-    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many consecutive rows.
+    The value `RLE_TYPE`, which is supported only if `orientation`=`column` is specified, enables the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the Zstd or zlib compression algorithms when the same data value occurs in many consecutive rows.
 
     For columns of type `BIGINT`, `INTEGER`, `DATE`, `TIME`, or `TIMESTAMP`, delta compression is also applied if the `compresstype` option is set to `RLE_TYPE` compression. The delta compression algorithm is based on the delta between column values in consecutive rows and is designed to improve compression when data is loaded in sorted order or the compression is applied to column data that is in sorted order.
 
     For information about using table compression, see [Choosing the Table Storage Model](../../admin_guide/ddl/ddl-storage.html#topic1) in the *Greenplum Database Administrator Guide*.
 
-:   **compresslevel** — For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only be set to 1. If not declared, the default is 1. The `compresslevel` option is valid only if `appendoptimized=TRUE`.
+:   **compresslevel** — For Zstd compression of append-optimized tables, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. If not declared, the default is 1. The `compresslevel` option is valid only if `appendoptimized=TRUE`.
 
 :   **fillfactor** — See [CREATE INDEX](CREATE_INDEX.html) for more information about this index storage parameter.
 

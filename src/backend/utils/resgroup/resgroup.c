@@ -20,7 +20,9 @@
 #include "libpq-fe.h"
 #include "access/genam.h"
 #include "access/table.h"
+#include "access/xact.h"
 #include "tcop/tcopprot.h"
+#include "catalog/catalog.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resgroup.h"
 #include "catalog/pg_resgroupcapability.h"
@@ -44,6 +46,7 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
+#include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
@@ -120,7 +123,7 @@ struct ResGroupProcData
  * Per slot resource group information.
  *
  * Resource group have 'concurrency' number of slots.
- * Each transaction acquires a slot on master before running.
+ * Each transaction acquires a slot on coordinator before running.
  * The information shared by QE processes on each segments are stored
  * in this structure.
  */
@@ -157,7 +160,7 @@ struct ResGroupData
 
 struct ResGroupControl
 {
-	int 			segmentsOnMaster;
+	int 			segmentsOnCoordinator;
 
 	ResGroupSlotData	*slots;		/* slot pool shared by all resource groups */
 	ResGroupSlotData	*freeSlot;	/* head of the free list */
@@ -277,6 +280,10 @@ static bool slotIsInUse(const ResGroupSlotData *slot);
 static bool groupIsNotDropped(const ResGroupData *group);
 static bool groupWaitQueueFind(ResGroupData *group, const PGPROC *proc);
 #endif /* USE_ASSERT_CHECKING */
+
+static bool is_pure_catalog_plan(PlannedStmt *stmt);
+static bool can_bypass_based_on_plan_cost(PlannedStmt *stmt);
+static bool can_bypass_direct_dispatch_plan(PlannedStmt *stmt);
 
 /*
  * Estimate size the resource group structures will need in
@@ -469,17 +476,17 @@ InitResGroups(void)
 	on_shmem_exit(AtProcExit_ResGroup, 0);
 
 	/*
-	 * On master and segments, the first backend does the initialization.
+	 * On coordinator and segments, the first backend does the initialization.
 	 */
 	if (pResGroupControl->loaded)
 		return;
 
-	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnMaster == 0)
+	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnCoordinator == 0)
 	{
 		Assert(IS_QUERY_DISPATCHER());
-		qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
-		pResGroupControl->segmentsOnMaster = qdinfo->hostPrimaryCount;
-		Assert(pResGroupControl->segmentsOnMaster > 0);
+		qdinfo = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID); 
+		pResGroupControl->segmentsOnCoordinator = qdinfo->hostPrimaryCount;
+		Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	}
 
 	/*
@@ -799,6 +806,11 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		{
 			cgroupOpsRoutine->setcpulimit(callbackCtx->groupid,
 										callbackCtx->caps.cpuHardQuotaLimit);
+
+			/* We should set cpuset to the default value */
+			char *cpuset = (char *) palloc(MaxCpuSetLength);
+			sprintf(cpuset, "0-%d", cgroupSystemInfo->ncores-1);
+			cgroupOpsRoutine->setcpuset(callbackCtx->groupid, cpuset);
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU_SHARES)
 		{
@@ -945,7 +957,7 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 int
 ResGroupGetHostPrimaryCount()
 {
-	return (Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnMaster);
+	return (Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnCoordinator);
 }
 
 /*
@@ -1191,7 +1203,7 @@ decideResGroup(ResGroupInfo *pGroupInfo)
 	Oid				 groupId;
 
 	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+	Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* always find out the up-to-date resgroup id */
@@ -1394,7 +1406,7 @@ groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot, bool isMoveQuery)
 	groupPutSlot(group, slot);
 
 	/*
-	 * We should wake up other pending queries on master nodes.
+	 * We should wake up other pending queries on coordinator nodes.
 	 */
 	if (IS_QUERY_DISPATCHER())
 		/*
@@ -1435,6 +1447,8 @@ SerializeResGroupInfo(StringInfo str)
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memory_limit);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
+	itmp = htonl(caps->min_cost);
+	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 
 	cpuset_len = strlen(caps->cpuset);
 	itmp = htonl(cpuset_len);
@@ -1473,7 +1487,8 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 	capsOut->cpuSoftPriority = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->memory_limit = ntohl(itmp);
-
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->min_cost = ntohl(itmp);
 
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	cpuset_len = ntohl(itmp);
@@ -1489,10 +1504,10 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 }
 
 /*
- * Check whether resource group should be assigned on master.
+ * Check whether resource group should be assigned on coordinator.
  */
 bool
-ShouldAssignResGroupOnMaster(void)
+ShouldAssignResGroupOnCoordinator(void)
 {
 	/*
 	 * Bypass resource group when it's waiting for a resource group slot. e.g.
@@ -1512,7 +1527,7 @@ ShouldAssignResGroupOnMaster(void)
 
 /*
  * Check whether resource group should be un-assigned.
- * This will be called on both master and segments.
+ * This will be called on both coordinator and segments.
  */
 bool
 ShouldUnassignResGroup(void)
@@ -1523,13 +1538,13 @@ ShouldUnassignResGroup(void)
 }
 
 /*
- * On master, QD is assigned to a resource group at the beginning of a transaction.
+ * On coordinator, QD is assigned to a resource group at the beginning of a transaction.
  * It will first acquire a slot from the resource group, and then, it will get the
  * current capability snapshot, update the memory usage information, and add to
  * the corresponding cgroup.
  */
 void
-AssignResGroupOnMaster(void)
+AssignResGroupOnCoordinator(void)
 {
 	ResGroupSlotData	*slot;
 	ResGroupInfo		groupInfo;
@@ -1590,7 +1605,7 @@ AssignResGroupOnMaster(void)
 		self->caps = slot->caps;
 
 		/* Don't error out before this line in this function */
-		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_master");
+		SIMPLE_FAULT_INJECTOR("resgroup_assigned_on_coordinator");
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
@@ -2705,7 +2720,7 @@ ResGroupDumpInfo(StringInfo str)
 
 	appendStringInfo(str, "{\"segid\":%d,", GpIdentity.segindex);
 	/* dump fields in pResGroupControl. */
-	appendStringInfo(str, "\"segmentsOnMaster\":%d,", pResGroupControl->segmentsOnMaster);
+	appendStringInfo(str, "\"segmentsOnCoordinator\":%d,", pResGroupControl->segmentsOnCoordinator);
 	appendStringInfo(str, "\"loaded\":%s,", pResGroupControl->loaded ? "true" : "false");
 	
 	/* dump each group */
@@ -3291,7 +3306,7 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 	char *cmd;
 
 	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+	Assert(pResGroupControl->segmentsOnCoordinator > 0);
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	LWLockAcquire(ResGroupLock, LW_SHARED);
@@ -3367,13 +3382,15 @@ ResourceGroupGetQueryMemoryLimit(void)
 	ResGroupCaps		*caps;
 	int64	resgLimit = -1;
 	uint64	queryMem = -1;
+	uint64  stateMem = (uint64) statement_mem * 1024L;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
 
+	/* for bypass query,use statement_mem as the query mem. */
 	if (bypassedGroup)
-		return 0;
+		return stateMem;
 
-	if (gp_resgroup_memory_query_fixed_mem)
+	if (gp_resgroup_memory_query_fixed_mem > 0)
 		return (uint64) gp_resgroup_memory_query_fixed_mem * 1024L;
 
 	Assert(selfIsAssigned());
@@ -3387,11 +3404,163 @@ ResourceGroupGetQueryMemoryLimit(void)
 	if (resgLimit == -1)
 	{
 		LWLockRelease(ResGroupLock);
-		return (uint64) statement_mem * 1024L;
+		return stateMem;
 	}
 
 	queryMem = (uint64)(resgLimit *1024L *1024L / caps->concurrency);
 	LWLockRelease(ResGroupLock);
 
-	return queryMem;
+	/*
+	 * If user requests more than statement_mem, grant that.
+	 */
+	return Max(queryMem, stateMem);
+}
+
+/*
+ * After getting the plan of a query, it must be inside
+ * a transaction which means it must already hold a resgroup
+ * slot. For some cases, we can unassign to save a concurrency
+ * slot and other resources (just like bypass):
+ *   - only happen on QD
+ *   - for explicit transaction block (begin; end), don't do it
+ *     because for following SQLs it will not try to enter resgroup
+ *   - pure catalog query or very simple query (no rangetable and
+ *     no function)
+ *   - if the total cost is smaller than resgroup configured mincost
+ */
+void
+check_and_unassign_from_resgroup(PlannedStmt* stmt)
+{
+	bool         inFunction;
+	ResGroupInfo groupInfo;
+
+	SIMPLE_FAULT_INJECTOR("check_and_unassign_from_resgroup_entry");
+
+	if (Gp_role != GP_ROLE_DISPATCH ||
+		!IsNormalProcessingMode() ||
+		!IsResGroupActivated() ||
+		bypassedGroup != NULL)
+		return;
+
+	/*
+	 * Don't need to consider the sql commands inside the UDF, they will also
+	 * be bypassed or use the same resgroup as the outer query.
+	 */
+	inFunction = already_under_executor_run() || utility_nested();
+	if (IsInTransactionBlock(!inFunction))
+		return;
+
+	/*
+	 * If none of the bypass(unassign) rule satisfy, return directly
+	 */
+	if (!can_bypass_based_on_plan_cost(stmt) &&
+		!(gp_resource_group_bypass_direct_dispatch && can_bypass_direct_dispatch_plan(stmt)) &&
+		!(gp_resource_group_bypass_catalog_query && is_pure_catalog_plan(stmt)))
+		return;
+
+	/* Unassign from resgroup and bypass */
+	UnassignResGroup(true);
+
+	do {
+		decideResGroup(&groupInfo);
+	} while (!groupIncBypassedRef(&groupInfo));
+
+	bypassedGroup = groupInfo.group;
+	bypassedGroup->totalExecuted++;
+	pgstat_report_resgroup(bypassedGroup->groupId);
+	bypassedSlot.group = groupInfo.group;
+	bypassedSlot.groupId = groupInfo.groupId;
+
+	cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
+								   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+}
+
+/*
+ * Given a planned statement, check if it is pure catalog query or a very simple query.
+ * Return true only when:
+ *   - there must be only one slice
+ *   - there is no FuncExpr in target list
+ *   - range table cannot contain FUNCTION or TABLEFUNC
+ *   - range table must be catalog if it is RTE_RELATION
+ */
+static bool
+is_pure_catalog_plan(PlannedStmt *stmt)
+{
+	ListCell *rtable;
+	List     *func_tag;
+
+	/* For catalog SQL, we only consider SELECT stmt. */
+	if (stmt->commandType != CMD_SELECT)
+		return false;
+
+	if (stmt->numSlices != 1)
+		return false;
+
+	if (stmt->planTree->targetlist != NIL)
+	{
+		int    pos;
+		func_tag = list_make1_int(T_FuncExpr);
+		pos = find_nodes((Node *) (stmt->planTree->targetlist), func_tag);
+		list_free(func_tag);
+		if (pos >= 0)
+			return false;
+	}
+
+	foreach(rtable, stmt->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(rtable);
+
+		if (rte->rtekind == RTE_FUNCTION ||
+			rte->rtekind == RTE_TABLEFUNC ||
+			rte->rtekind == RTE_TABLEFUNCTION)
+			return false;
+
+		if (rte->rtekind != RTE_RELATION)
+			continue;
+
+		if (rte->relkind == RELKIND_MATVIEW)
+			return false;
+
+		if (rte->relkind == RELKIND_VIEW)
+			continue;
+
+		if(!IsCatalogRelationOid(rte->relid))
+			return false;
+	}
+
+	return true;
+}
+
+static bool
+can_bypass_based_on_plan_cost(PlannedStmt *stmt)
+{
+	ResGroupCaps *caps = &self->group->caps;
+	int           min_cost;
+
+	min_cost = (int) pg_atomic_read_u32((pg_atomic_uint32 *) &caps->min_cost);
+	return stmt->planTree->total_cost < min_cost;
+}
+
+/*
+ * Insert|Delete|Update: bypass those with numSlice = 1
+ * and the slice is direct dispatch.
+ *
+ * Select: since there is motion to gather to QD, bypass
+ * those with numSlice = 2, and  the 1st slice in QD and
+ * the 2nd slice is direct dispatch.
+ */
+static bool
+can_bypass_direct_dispatch_plan(PlannedStmt *stmt)
+{
+	if (stmt->commandType == CMD_SELECT)
+	{
+		return (stmt->numSlices == 2 &&
+				stmt->slices[1].directDispatch.isDirectDispatch);
+	}
+	else if (stmt->commandType == CMD_UPDATE ||
+			 stmt->commandType == CMD_INSERT ||
+			 stmt->commandType == CMD_DELETE)
+		return stmt->numSlices == 1 && stmt->slices[0].directDispatch.isDirectDispatch;
+	else
+		return false;
 }

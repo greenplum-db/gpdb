@@ -2,6 +2,16 @@
 -- Test create/alter database options
 --
 -- Test CONNECTION LIMIT
+-- create a regular user as superusers are exempt from limits
+create user connlimit_test_user;
+-- add created user to pg_hba.conf
+\! echo "local    all         connlimit_test_user         trust" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
 create database limitdb connection limit 1;
 select -1 as gp_segment_id, datconnlimit from pg_database where datname='limitdb'
 union
@@ -14,6 +24,19 @@ order by gp_segment_id;
              1 |            1
              2 |            1
 (4 rows)
+
+-- Ensure that the db connection limit is not enforced on the segment. We check
+-- this by ensuring that a multi-slice plan, exceeding the connection limit on
+-- the segment can execute.
+\! psql limitdb -U connlimit_test_user -c 'create table tbl(i int);'
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+\! psql limitdb -U connlimit_test_user -c 'select count(*) from tbl t1, tbl t2;'
+ count 
+-------
+     0
+(1 row)
 
 alter database limitdb connection limit 2;
 select -1 as gp_segment_id, datconnlimit from pg_database where datname='limitdb'
@@ -29,16 +52,6 @@ order by gp_segment_id;
 (4 rows)
 
 alter database limitdb with connection limit 0;
--- create a regular user as superusers are exempt from limits
-create user connlimit_test_user;
--- add superuser to pg_hba.conf
-\! echo "local    all         connlimit_test_user         trust" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
-select pg_reload_conf();
- pg_reload_conf 
-----------------
- t
-(1 row)
-
 -- should fail, because the connection limit is 0
 \! psql limitdb -c "select 'connected'" -U connlimit_test_user
 psql: error: FATAL:  too many connections for database "limitdb"

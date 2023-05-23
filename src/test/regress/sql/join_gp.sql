@@ -768,6 +768,94 @@ full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) tq_
 on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
 
 drop table t_issue_10315;
+--
+-- Left Join Pruning --
+-- Cases when join will be pruned--
+-- Single Unique key in inner relation --
+create table fooJoinPruning (a int,b int,c int,constraint idx1 unique(a));
+create table barJoinPruning (p int,q int,r int,constraint idx2 unique(p));
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where fooJoinPruning.b>300;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b>300;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains subquery--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b>300 and fooJoinPruning.c in (select barJoinPruning.q from barJoinPruning );
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p where fooJoinPruning.b>300 and fooJoinPruning.c > ANY (select barJoinPruning.q from barJoinPruning );
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing outer relation column--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select fooJoinPruning.a from barJoinPruning);
+drop table fooJoinPruning;
+drop table barJoinPruning;
+-- MultipleUnique key sets  in inner relation --
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
+-- Unique key set of inner relation ie 'p,q' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200 where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.q=100 where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+-- Unique key set of inner relation ie 'p,r,s' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.r=100 and fooJoinPruning.b=barJoinPruning.s where fooJoinPruning.f<>10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and fooJoinPruning.c=barJoinPruning.s and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains subquery --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.c in (select barJoinPruning.t from barJoinPruning );
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.c > ANY (select barJoinPruning.t from barJoinPruning );
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing outer relation column --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.e in (select fooJoinPruning.f from barJoinPruning);
+-- Prunable Left join present in subquery --
+explain select t1JoinPruning.n from t1JoinPruning where t1JoinPruning.m in (select fooJoinPruning.a from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200);
+drop table fooJoinPruning;
+drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;
+create table t1 (a int);
+create table t2 (a int primary key, b int);
+create table t3 (a int primary key, b int);
+-- inner table is join
+EXPLAIN select t1.a from t1 left join (t2 join t3 on true) on t2.a=t1.a and t3.a=t1.a;
+-- inner table has new left join
+EXPLAIN select t1.* from t1 left join (t2 left join t3 on t3.a=t2.b) on t2.a=t1.a;
+-- inner table is a derived table
+EXPLAIN
+select t1.* from t1 left join
+                 (
+                     select t2.b as v2b, count(*) as v2c
+                     from t2 left join t3 on t3.a=t2.b
+                     group by t2.b
+                 ) v2
+                 on v2.v2b=t1.a;
+drop table t1;
+drop table t2;
+drop table t3;
+--
+-- Cases where join will not be pruned
+--
+-- Single Unique key in inner relation --
+create table fooJoinPruning (a int,b int,c int,constraint idx1 unique(a));
+create table barJoinPruning (p int,q int,r int,constraint idx2 unique(p));
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation but filter is on a inner relation --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=fooJoinPruning.b  where barJoinPruning.q<>10;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation but output columns are from inner relation --
+explain select barJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=fooJoinPruning.b  where fooJoinPruning.b>1000;
+-- Subquery present in join condition
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p in (select fooJoinPruning.b from fooJoinPruning  ) where fooJoinPruning.c>100;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing inner relation column--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select barJoinPruning.q from fooJoinPruning);
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select barJoinPruning.q from fooJoinPruning where fooJoinPruning.a=barJoinPruning.r);
+drop table fooJoinPruning;
+drop table barJoinPruning;
+-- Multiple Unique key sets  in inner relation --
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+-- No equality operator present in join condition --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p>100 and barJoinPruning.q>200  where fooJoinPruning.b>300;
+-- OR operator is present in join condition --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.c=barJoinPruning.r or fooJoinPruning.d=barJoinPruning.s;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p or fooJoinPruning.b=barJoinPruning.q  where fooJoinPruning.b>300;
+-- Not all unique keys of inner relation are equal to a constant or column from outer relation
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and barJoinPruning.r=barJoinPruning.s;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+drop table fooJoinPruning;
+drop table barJoinPruning;
 
 -----------------------------------------------------------------
 -- Test cases on Dynamic Partition Elimination(DPE) for Right Joins
@@ -878,3 +966,56 @@ drop table if exists bar_PT2;
 drop table if exists bar_PT3;
 drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
+
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
+
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+
+-- check motion is added when performing a NL Left Outer Join between relations
+-- when the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+-- check motion is added when performing a NL Inner Join between relations when
+-- the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
+
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;

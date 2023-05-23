@@ -1246,8 +1246,8 @@ _bitmap_log_updatewords(Relation rel,
  * a cluster with mirroring enabled. Add _dump_page() calls in the routine
  * that writes a certain WAL record type, and in the corresponding WAL
  * replay routine. Run a test workload. This produces a bmdump_* file
- * in the master and the mirror. Run 'diff' to compare them: if the WAL
- * replay recreated the same changes that were made on the master, the
+ * in the primary and the mirror. Run 'diff' to compare them: if the WAL
+ * replay recreated the same changes that were made on the primary, the
  * files should be identical.
  */
 #ifdef DUMP_BITMAPAM_INSERT_RECORDS

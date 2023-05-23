@@ -223,10 +223,6 @@ typedef struct _PQconninfoOption
 								 * hide value "D"  Debug option - don't show
 								 * by default */
 	int			dispsize;		/* Field size in characters for dialog	*/
-#ifndef FRONTEND  /* modules other than backend have this macro */
-	off_t		connofs;		/* Offset into PGconn struct, -1 if not there
-								 * (Greenplum specified) */
-#endif
 } PQconninfoOption;
 
 /* ----------------

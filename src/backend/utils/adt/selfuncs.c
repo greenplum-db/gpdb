@@ -4565,13 +4565,13 @@ largest_child_relation(PlannerInfo *root, Path *path, bool recursing)
  * The purpose of this method is to make the statistics (on a specific column) of a child partition
  * representative of the parent relation. This entails the following assumptions:
  * 1.  if ndistinct<=-1.0 in child partition, the column is a unique column in the child partition. We
- * 	   expect the column to remain distinct in the master as well.
+ * 	   expect the column to remain distinct in the primary as well.
  * 2.  if -1.0 < ndistinct < 0.0, the absolute number of ndistinct values in the child partition is a fraction
- *     of the number of rows in the partition. We expect that the absolute number of ndistinct in the master
+ *     of the number of rows in the partition. We expect that the absolute number of ndistinct in the primary
  *     to stay the same. Therefore, we convert this to a positive number.
- *     The method get_variable_numdistinct will multiply this by the number of tuples in the master relation.
+ *     The method get_variable_numdistinct will multiply this by the number of tuples in the primary relation.
  * 3.  if ndistinct is positive, it indicates a small absolute number of distinct values. We expect these
- * 	   values to be repeated in all partitions. Therefore, we expect no change in the ndistinct in the master.
+ * 	   values to be repeated in all partitions. Therefore, we expect no change in the ndistinct in the primary.
  *
  * Input:
  * 	   statsTuple, which is a heaptuple representing statistics on a child relation. It expects statstuple to be non-null.

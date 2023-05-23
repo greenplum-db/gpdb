@@ -84,6 +84,19 @@ typedef struct AOTupleId
  */
 #define AOSegmentGet_startHeapBlock(segno) ((segno) << 25)
 
+/*
+ * Get the start block number of the current aoseg/block sequence from a given
+ * logical heap block number.
+ *
+ * The highest 7 bits of the BlockNumber represents the segment file number. So,
+ * the starting block number in a specific segment (or block sequence) is just
+ * those bits with the lower order bits masked out.
+ */
+#define AOHeapBlockGet_startHeapBlock(heapBlk)	((heapBlk) & 0xFE000000)
+
+#define AOSegmentGet_blockSequenceNum(heapBlk)	(AOSegmentGet_segno((heapBlk)))
+#define InvalidBlockSequenceNum (-1)
+
 static inline uint64
 AOTupleIdGet_rowNum(AOTupleId *h)
 {

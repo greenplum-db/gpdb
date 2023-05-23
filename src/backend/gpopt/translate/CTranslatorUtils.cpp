@@ -76,7 +76,7 @@ using namespace gpmd;
 using namespace gpos;
 using namespace gpopt;
 
-extern bool optimizer_enable_master_only_queries;
+extern bool optimizer_enable_coordinator_only_queries;
 extern bool optimizer_multilevel_partitioning;
 
 #define GPDB_NEXTVAL 1574
@@ -146,16 +146,17 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 		*is_distributed_table = true;
 	}
 	else if (IMDRelation::ErelstorageForeign != rel->RetrieveRelStorageType() &&
-			 !optimizer_enable_master_only_queries &&
-			 (IMDRelation::EreldistrMasterOnly == distribution_policy))
+			 !optimizer_enable_coordinator_only_queries &&
+			 (IMDRelation::EreldistrCoordinatorOnly == distribution_policy))
 	{
-		// fall back to the planner for queries on master-only table if they are disabled with Orca. This is due to
-		// the fact that catalog tables (master-only) are not analyzed often and will result in Orca producing
+		// fall back to the planner for queries on coordinator-only table if they are disabled with Orca. This is due to
+		// the fact that catalog tables (coordinator-only) are not analyzed often and will result in Orca producing
 		// inferior plans.
 
-		GPOS_THROW_EXCEPTION(gpdxl::ExmaDXL,						  // major
-							 gpdxl::ExmiQuery2DXLUnsupportedFeature,  // minor
-							 GPOS_WSZ_LIT("Queries on master-only tables"));
+		GPOS_THROW_EXCEPTION(
+			gpdxl::ExmaDXL,							 // major
+			gpdxl::ExmiQuery2DXLUnsupportedFeature,	 // minor
+			GPOS_WSZ_LIT("Queries on coordinator-only tables"));
 	}
 
 	// add columns from md cache relation object to table descriptor
@@ -1027,6 +1028,7 @@ CTranslatorUtils::GetColumnAttnosForGroupBy(
 		}
 		else
 		{
+			col_attnos_arr->Release();
 			col_attnos_arr = col_attnos_arr_current;
 		}
 	}
@@ -1185,6 +1187,7 @@ CTranslatorUtils::CreateGroupingSetsForCube(CMemoryPool *mp,
 			current_result->Union(bset);
 			bset->Release();
 			col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp, *current_result));
+			current_result->Release();
 		}
 	}
 	return col_attnos_arr;

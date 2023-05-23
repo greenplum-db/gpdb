@@ -40,7 +40,7 @@ class CMDAggregateGPDB : public IMDAggregate
 	CMemoryPool *m_mp;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// aggregate id
 	IMDId *m_mdid;
@@ -80,11 +80,7 @@ public:
 	~CMDAggregateGPDB() override;
 
 	// string representation of object
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// aggregate id
 	IMDId *MDId() const override;

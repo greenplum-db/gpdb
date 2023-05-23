@@ -3,7 +3,7 @@
   <dxl:Comment><![CDATA[
 -- A set-returning function that "CONTAINS SQL" used to be passed up for
 -- singleton-segment distribution consideration. Instead it used to require a
--- singleton-master distribution if we ever try to "gather" from it, e.g. when
+-- singleton-coordinator distribution if we ever try to "gather" from it, e.g. when
 -- we need to perform a global limit.
 --
 -- The following plan used to gather to QD node. Subtle difference: the old
@@ -246,7 +246,7 @@ LIMIT 999
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:GPDBFunc Mdid="0.49201.1.0" Name="yolo" ReturnsSet="true" Stability="Immutable" DataAccess="ContainsSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.49201.1.0" Name="yolo" ReturnsSet="true" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
         <dxl:OutputColumns TypeMdids="0.23.1.0"/>
       </dxl:GPDBFunc>

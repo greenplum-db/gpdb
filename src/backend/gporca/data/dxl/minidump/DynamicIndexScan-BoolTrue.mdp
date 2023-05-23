@@ -473,10 +473,10 @@
       <dxl:ColumnStatistics Mdid="1.296682.1.1.8" Name="tableoid" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.296682.1.1.1" Name="b" Width="8.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.296682.1.1.0" Name="a" Width="8.000000" NullFreq="0.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.296682.1.1" Name="pp" Rows="0.000000"/>

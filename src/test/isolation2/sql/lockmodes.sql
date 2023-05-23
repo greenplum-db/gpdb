@@ -1,4 +1,4 @@
--- table to just store the master's data directory path on segment.
+-- table to just store the coordinator's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
 INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
 
@@ -384,7 +384,7 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 
 -- enable gdd
 ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
--- Use utility session on seg 0 to restart master. This way avoids the
+-- Use utility session on seg 0 to restart coordinator. This way avoids the
 -- situation where session issuing the restart doesn't disappear
 -- itself.
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;

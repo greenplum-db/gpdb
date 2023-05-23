@@ -437,6 +437,46 @@ CCostContext::FBetterThan(const CCostContext *pcc) const
 		}
 	}
 
+	// if multistageAgg flag is true and the distribution type is not
+	// replicated/universal mark multistage agg plan is better and should
+	// override cost based check between multistage agg and singlestage
+	// agg.  When data distribution is universal or replicated, it means
+	// that the same data is available across all the nodes, there is no
+	// need for motions between nodes during aggregation. What if we force
+	// a multi-stage plan where no motion exists, we would get 2
+	// consecutive aggs that are redundant. So multi-stage aggregation may
+	// not be necessary in this scenario, instead single-stage aggregation
+	// approach can be used, where each node independently aggregates its
+	// local data and the final result is obtained by combining the local
+	// aggregates.
+	if (GPOS_FTRACE(EopttraceForceMultiStageAgg))
+	{
+		if ((IsMultiStageAggCostCtxt(pcc) && IsSingleStageAggCostCtxt(this)))
+		{
+			switch (Pdpplan()->Pds()->Edt())
+			{
+				case CDistributionSpec::EdtStrictReplicated:
+				case CDistributionSpec::EdtTaintedReplicated:
+				case CDistributionSpec::EdtUniversal:
+					return true;
+				default:
+					return false;
+			}
+		}
+		else if (IsSingleStageAggCostCtxt(pcc) && IsMultiStageAggCostCtxt(this))
+		{
+			switch (pcc->Pdpplan()->Pds()->Edt())
+			{
+				case CDistributionSpec::EdtStrictReplicated:
+				case CDistributionSpec::EdtTaintedReplicated:
+				case CDistributionSpec::EdtUniversal:
+					return false;
+				default:
+					return true;
+			}
+		}
+	}
+
 	DOUBLE dCostDiff = (Cost().Get() - pcc->Cost().Get());
 	if (dCostDiff < 0.0)
 	{
@@ -530,6 +570,30 @@ CCostContext::IsThreeStageScalarDQACostCtxt(const CCostContext *pcc)
 		GPOS_ASSERT_IMP(popAgg->IsThreeStageScalarDQA(),
 						popAgg->IsAggFromSplitDQA());
 		return (popAgg->IsAggFromSplitDQA() && popAgg->IsThreeStageScalarDQA());
+	}
+
+	return false;
+}
+
+BOOL
+CCostContext::IsMultiStageAggCostCtxt(const CCostContext *pcc)
+{
+	if (CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
+	{
+		CPhysicalAgg *popAgg = CPhysicalAgg::PopConvert(pcc->Pgexpr()->Pop());
+		return popAgg->FMultiStage();
+	}
+
+	return false;
+}
+
+BOOL
+CCostContext::IsSingleStageAggCostCtxt(const CCostContext *pcc)
+{
+	if (CUtils::FPhysicalAgg(pcc->Pgexpr()->Pop()))
+	{
+		CPhysicalAgg *popAgg = CPhysicalAgg::PopConvert(pcc->Pgexpr()->Pop());
+		return !popAgg->FMultiStage();
 	}
 
 	return false;

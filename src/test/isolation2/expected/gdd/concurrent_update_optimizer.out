@@ -28,7 +28,7 @@ UPDATE 1
 DROP TABLE t_concurrent_update;
 DROP
 
--- Test the concurrent update transaction order on the segment is reflected on master
+-- Test the concurrent update transaction order on the segment is reflected on coordinator
 1: CREATE TABLE t_concurrent_update(a int, b int);
 CREATE
 1: INSERT INTO t_concurrent_update VALUES(1,1);
@@ -59,7 +59,7 @@ SET
 -------------------------------
  Success:                      
 (1 row)
--- transaction 3 should wait transaction 2 commit on master
+-- transaction 3 should wait transaction 2 commit on coordinator
 3<:  <... completed>
 UPDATE 1
 3&: END;  <waiting ...>
@@ -277,6 +277,33 @@ END
 DELETE 1
 drop table test;
 DROP
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- test ORCA partition table
+create table test(a int, b int, c int) partition by range(b) (start (1) end (7) every (3));
+CREATE
+insert into test values (1, 1, 1);
+INSERT 1
+1: begin;
+BEGIN
+1: delete from test where b = 1;
+DELETE 1
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: update test set b = 1;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+ERROR:  could not split update tuple which has been deleted by other transaction  (seg1 127.0.0.1:7003 pid=22726)
+
+0: select * from test;
+ a | b | c 
+---+---+---
+(0 rows)
+0: drop table test;
+DROP
+0q: ... <quitting>
 1q: ... <quitting>
 2q: ... <quitting>
 

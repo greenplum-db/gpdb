@@ -43,8 +43,8 @@ public:
 		EdtReplicated,	// data is strict or tainted replicated (required only)
 		EdtTaintedReplicated,  // data once-replicated, after being processed by an input-order-sensitive operator or volatile function (derived only)
 		EdtAny,		   // data can be anywhere on the segments (required only)
-		EdtSingleton,  // data is on a single segment or the master
-		EdtStrictSingleton,	 // data is on a single segment or the master (derived only, only compatible with other singleton distributions)
+		EdtSingleton,  // data is on a single segment or the coordinator
+		EdtStrictSingleton,	 // data is on a single segment or the coordinator (derived only, only compatible with other singleton distributions)
 		EdtRandom,			 // data is randomly distributed across all segments
 		EdtStrictRandom,  // same as random, used to force multiple slices for parallel union all.
 		EdtRouted,	// data is routed to a segment explicitly specified in the tuple,

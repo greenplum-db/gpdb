@@ -334,7 +334,7 @@
         <dxl:SumAgg Mdid="0.2114.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.1574.1.0" Name="nextval" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1574.1.0" Name="nextval" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.98421.1.0.3" Name="l_linenumber" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -356,7 +356,7 @@
       <dxl:ColumnStatistics Mdid="1.98306.1.0.0" Name="p_partkey" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:MDScalarComparison Mdid="4.23.1.0;20.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.23.1.0" RightType="0.20.1.0" OperatorMdid="0.15.1.0"/>
       <dxl:MDScalarComparison Mdid="4.20.1.0;23.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.20.1.0" RightType="0.23.1.0" OperatorMdid="0.416.1.0"/>
-      <dxl:GPDBFunc Mdid="0.480.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.480.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.98421.1.0" Name="lineitem" Rows="0.000000" EmptyRelation="true"/>

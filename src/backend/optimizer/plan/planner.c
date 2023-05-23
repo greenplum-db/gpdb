@@ -349,15 +349,15 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	instr_time		endtime;
 
 	/*
-	 * Use ORCA only if it is enabled and we are in a master QD process.
+	 * Use ORCA only if it is enabled and we are in a coordinator QD process.
 	 *
 	 * ORCA excels in complex queries, most of which will access distributed
 	 * tables. We can't run such queries from the segments slices anyway because
 	 * they require dispatching a query within another - which is not allowed in
 	 * GPDB (see querytree_safe_for_qe()). Note that this restriction also
-	 * applies to non-QD master slices.  Furthermore, ORCA doesn't currently
+	 * applies to non-QD coordinator slices.  Furthermore, ORCA doesn't currently
 	 * support pl/<lang> statements (relevant when they are planned on the segments).
-	 * For these reasons, restrict to using ORCA on the master QD processes only.
+	 * For these reasons, restrict to using ORCA on the coordinator QD processes only.
 	 *
 	 * PARALLEL RETRIEVE CURSOR is not supported by ORCA yet.
 	 */
@@ -370,7 +370,14 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
+#ifdef USE_ORCA
 		result = optimize_query(parse, cursorOptions, boundParams);
+#else
+		/* Make sure this branch is not taken in builds using --disable-orca. */
+		Assert(false);
+		/* Keep compilers quiet in case the build used --disable-orca. */
+		result = NULL;
+#endif
 
 		/* decide jit state */
 		if (result)
@@ -2088,7 +2095,7 @@ inheritance_planner(PlannerInfo *root)
 	else
 	{
 		/*
-		 * Put back the final adjusted rtable into the master copy of the
+		 * Put back the final adjusted rtable into the original copy of the
 		 * Query.  (We mustn't do this if we found no non-excluded children,
 		 * since we never saved an adjusted rtable at all.)
 		 */
@@ -2097,7 +2104,7 @@ inheritance_planner(PlannerInfo *root)
 		root->simple_rel_array = save_rel_array;
 		root->append_rel_array = save_append_rel_array;
 
-		/* Must reconstruct master's simple_rte_array, too */
+		/* Must reconstruct original's simple_rte_array, too */
 		root->simple_rte_array = (RangeTblEntry **)
 			palloc0((list_length(final_rtable) + 1) * sizeof(RangeTblEntry *));
 		rti = 1;
@@ -2759,28 +2766,9 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		 * The conflict with UPDATE|DELETE is implemented by locking the entire
 		 * table in ExclusiveMode. More details please refer docs.
 		 */
-		/*
-		 * GPDB_96_MERGE_FIXME: since we now process this in the path
-		 * context, it's much simpler than before, please kindly
-		 * revisit this, I'm not quite sure here.
-		 */
 		if (parse->rowMarks)
 		{
-			ListCell   *lc;
-			List   *newmarks = NIL;
-
 			if (parse->canOptSelectLockingClause)
-			{
-				foreach(lc, root->rowMarks)
-				{
-					PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
-
-					rc->canOptSelectLockingClause = true;
-					newmarks = lappend(newmarks, rc);
-				}
-			}
-
-			if (newmarks)
 			{
 				/*
 				 * Greenplum specific behavior:

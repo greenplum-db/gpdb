@@ -233,7 +233,7 @@ extern PGDLLIMPORT bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
 extern PGDLLIMPORT bool IsBackgroundWorker;
 extern PGDLLIMPORT bool IsBinaryUpgrade;
-extern bool ConvertMasterDataDirToSegment;
+extern bool ConvertCoordinatorDataDirToSegment;
 
 extern PGDLLIMPORT bool ExitOnAnyError;
 
@@ -566,5 +566,7 @@ extern bool has_rolreplication(Oid roleid);
 /* in access/transam/xlog.c */
 extern bool BackupInProgress(void);
 extern void CancelBackup(void);
+
+extern bool should_reject_connection;
 
 #endif							/* MISCADMIN_H */

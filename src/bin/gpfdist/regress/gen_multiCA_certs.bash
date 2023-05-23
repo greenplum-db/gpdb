@@ -45,7 +45,7 @@ function generate_gpfdist_certs() {
 }
 
 function update_gpdb_certs() {
-    for dir in $(find $MASTER_DATA_DIRECTORY/../../.. -name pg_hba.conf)
+    for dir in $(find $COORDINATOR_DATA_DIRECTORY/../../.. -name pg_hba.conf)
         do
         if [ -d $(dirname $dir)/gpfdists ]; then
             rm -rf $(dirname $dir)/gpfdists/*

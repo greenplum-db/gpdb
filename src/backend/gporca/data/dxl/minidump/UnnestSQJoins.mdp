@@ -47,14 +47,6 @@ WHERE
         <dxl:SumAgg Mdid="0.2107.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBScalarOp Mdid="0.1869.1.0" Name="&lt;&gt;" ComparisonType="NEq">
-        <dxl:LeftType Mdid="0.20.1.0"/>
-        <dxl:RightType Mdid="0.21.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.1857.1.0"/>
-        <dxl:Commutator Mdid="0.1863.1.0"/>
-        <dxl:InverseOp Mdid="0.1868.1.0"/>
-      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.660.1.0" Name="&lt;" ComparisonType="LT">
         <dxl:LeftType Mdid="0.19.1.0"/>
         <dxl:RightType Mdid="0.19.1.0"/>
@@ -671,7 +663,7 @@ WHERE
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2602.1.1" Name="pg_amop" Rows="702.000000"/>
       <dxl:RelationStatistics Mdid="2.2616.1.1" Name="pg_opclass" Rows="141.000000"/>
-      <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amopclaid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -716,7 +708,7 @@ WHERE
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="opcamid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -978,7 +970,7 @@ WHERE
       <dxl:ColumnStatistics Mdid="1.2601.1.1.1" Name="amstrategies" Width="2.000000"/>
       <dxl:ColumnStatistics Mdid="1.2601.1.1.0" Name="amname" Width="64.000000"/>
       <dxl:RelationStatistics Mdid="2.2601.1.1" Name="pg_am" Rows="5.000000"/>
-      <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>

@@ -97,7 +97,8 @@ update_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum newattoption
 							  NULL, 2, skey);
 
 	oldtup = systable_getnext(scan);
-	Assert(HeapTupleIsValid(oldtup));
+	if (!HeapTupleIsValid(oldtup))
+		elog(ERROR, "could not find tuple for attnum %d for relid %d during scan on pg_attribute_encoding", attnum, relid);
 
 	heap_deform_tuple(oldtup, RelationGetDescr(rel), values, nulls);
 
@@ -460,8 +461,27 @@ GetFilenumForAttribute(Oid relid, AttrNumber attnum)
 }
 
 /*
+ * Rewriting a column happens on filenum pairs where
+ * one of the filenum value (i) is in the range 1 to MaxHeapAttributeNumber
+ * and other corresponding value is (i + MaxHeapAttributeNumber)
+ *
+ * Returns the corresponding pair filenum value for a relation/attnum entry
+ * in pg_attribute_encoding for rewriting the column.
+ */
+FileNumber
+GetFilenumForRewriteAttribute(Oid relid, AttrNumber attnum)
+{
+	FileNumber currentfilenum = GetFilenumForAttribute(relid, attnum);
+	if (currentfilenum <= MaxHeapAttributeNumber)
+		return currentfilenum + MaxHeapAttributeNumber;
+	else
+		return currentfilenum - MaxHeapAttributeNumber;
+}
+/*
  * Returns a sorted list of first n unused filenums in pg_attribute_encoding
  * for the relation
+ * Unused filenum means that both possible filenums in the pair (i or i + MaxHeapAttributeNumber)
+ * are unused by any current attnums
  * In the outside chance that filenums have been exhausted,
  * the list may contain < n unused filenums
  */
@@ -493,15 +513,15 @@ GetNextNAvailableFilenums(Oid relid, int n)
 		FileNumber usedfilenum = heap_getattr(tup, Anum_pg_attribute_encoding_filenum,
 							   RelationGetDescr(rel), &isnull);
 		Assert(!isnull);
-		used[usedfilenum-1] = true;
+		used[usedfilenum - 1] = true;
 	}
 
 	systable_endscan(scan);
 	heap_close(rel, AccessShareLock);
 
-	for (int i = 0; i < MaxFileNumber; ++i)
+	for (int i = 0; i < MaxHeapAttributeNumber; ++i)
 	{
-		if(!used[i])
+		if(! (used[i] || used[i + MaxHeapAttributeNumber]) )
 		{
 			newfilenums = lappend_int(newfilenums, i + 1);
 			if (newfilenums->length == n)
@@ -509,4 +529,55 @@ GetNextNAvailableFilenums(Oid relid, int n)
 		}
 	}
 	return newfilenums;
+}
+
+/*
+ * Update the filenum value for an entry in pg_attribute_encoding
+ */
+void
+UpdateFilenumForAttnum(Oid relid, AttrNumber attnum, FileNumber newfilenum)
+{
+	Relation    rel;
+	SysScanDesc scan;
+	ScanKeyData skey[2];
+	HeapTuple	oldtup;
+	HeapTuple	newtup;
+	Datum	    values[Natts_pg_attribute_encoding];
+	bool	    nulls[Natts_pg_attribute_encoding];
+	bool		repl[Natts_pg_attribute_encoding];
+
+	MemSet(values, 0, sizeof(values));
+	MemSet(nulls, false, sizeof(nulls));
+	MemSet(repl, false, sizeof(repl));
+
+	Assert(OidIsValid(relid));
+	Assert(AttributeNumberIsValid(attnum));
+
+	rel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_attribute_encoding_attnum,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(attnum));
+	scan = systable_beginscan(rel, AttributeEncodingAttrelidAttnumIndexId, true,
+							  NULL, 2, skey);
+
+	oldtup = systable_getnext(scan);
+	if (!HeapTupleIsValid(oldtup))
+		elog(ERROR, "invalid tuple found during scan on pg_attribute_encoding");
+
+	values[Anum_pg_attribute_encoding_filenum - 1] = newfilenum;
+	repl[Anum_pg_attribute_encoding_filenum - 1] = true;
+
+	newtup = heap_modify_tuple(oldtup, RelationGetDescr(rel), values, nulls, repl);
+
+	CatalogTupleUpdate(rel, &oldtup->t_self, newtup);
+	heap_freetuple(newtup);
+
+	systable_endscan(scan);
+	heap_close(rel, RowExclusiveLock);
 }

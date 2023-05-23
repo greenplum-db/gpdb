@@ -54,14 +54,6 @@
       <dxl:TraceFlags Value="101013,103045,102046,102048,102053,102054,102074,102120,102146,102152,103001,103014,103022,103027,103029,103038,104002,104003,104004,104005,105000,106000,102157,102158"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:GPDBScalarOp Mdid="0.521.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
-        <dxl:LeftType Mdid="0.23.1.0"/>
-        <dxl:RightType Mdid="0.23.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.147.1.0"/>
-        <dxl:Commutator Mdid="0.97.1.0"/>
-        <dxl:InverseOp Mdid="0.523.1.0"/>
-      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.525.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.23.1.0"/>
         <dxl:RightType Mdid="0.23.1.0"/>

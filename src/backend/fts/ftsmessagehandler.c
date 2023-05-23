@@ -153,7 +153,7 @@ checkIODataDirectory(void)
 		 * We are more concerned with IOs hanging than failures.
 		 * Cleanup the file as detected the problem and reporting the same.
 		 * This is done to cover for cases like:
-		 * 1] FTS detects corruption/read failure on the file, reports to Master
+		 * 1] FTS detects corruption/read failure on the file, reports to Coordinator
 		 * 2] Triggers failover to mirror
 		 * 3] But if the file stays around, when it transitions back to Primary
 		 *    would again detect this corrupted file and again trigger failover.

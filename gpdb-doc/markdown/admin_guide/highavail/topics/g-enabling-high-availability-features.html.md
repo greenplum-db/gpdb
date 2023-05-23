@@ -20,7 +20,7 @@ For information about the utilities that are used to enable high availability, s
 
 -   **[Recovering from Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)**  
 
--   **[Recovering a Failed Coordinator](../../highavail/topics/g-recovering-a-failed-master.html)**  
+-   **[Recovering a Failed Coordinator](../../highavail/topics/g-recovering-a-failed-coordinator.html)**  
 
 
 **Parent topic:** [Managing a Greenplum System](../../managing/partII.html)

@@ -51,6 +51,7 @@
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarArray.h"
 #include "gpopt/operators/CScalarArrayCoerceExpr.h"
+#include "gpopt/operators/CScalarCaseTest.h"
 #include "gpopt/operators/CScalarCast.h"
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarCoerceViaIO.h"
@@ -733,6 +734,7 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 		!IMDId::IsValid(pmdidCmpOp))
 	{
 		// cannot construct an ArrayCmp expression if any of these are invalid
+		pexprScalarChildren->Release();
 		return nullptr;
 	}
 
@@ -1420,44 +1422,6 @@ CUtils::FScalarConstIntZero(CExpression *pexprOffset)
 	}
 }
 
-// Construct commutative equivalent scalar compare operator
-//
-// In other words, given:
-//    (A op B)
-// then return
-//    (B op' A)
-// if such an operator exists
-CExpression *
-CUtils::PexprOpComEquality(CMemoryPool *mp, CExpression *pexpr)
-{
-	GPOS_ASSERT(CUtils::FScalarCmp(pexpr));
-	GPOS_ASSERT(2 == pexpr->Arity());
-
-	CScalarCmp *popCmp = CScalarCmp::PopConvert(pexpr->Pop());
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDScalarOp *opSc = md_accessor->RetrieveScOp(popCmp->MdIdOp());
-
-	if (nullptr == opSc->GetCommuteOpMdid())
-	{
-		return nullptr;
-	}
-
-	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-	// Add in reverse order
-	(*pexpr)[1]->AddRef();
-	pdrgpexpr->Append((*pexpr)[1]);
-	(*pexpr)[0]->AddRef();
-	pdrgpexpr->Append((*pexpr)[0]);
-
-	CWStringConst *pstrOp =
-		CScalarCmp::Pstr(mp, md_accessor, opSc->GetCommuteOpMdid());
-	CScalarCmp *popNew = GPOS_NEW(mp)
-		CScalarCmp(mp, opSc->GetCommuteOpMdid(), pstrOp, opSc->ParseCmpType());
-
-	CExpression *pexprNew = GPOS_NEW(mp) CExpression(mp, popNew, pdrgpexpr);
-	return pexprNew;
-}
-
 // deduplicate an array of expressions
 CExpressionArray *
 CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
@@ -1480,22 +1444,20 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 			pexpr->Release();
 		}
 
-		// Here we also take into account cast equality and commutative equal
-		// expressions as possible duplicates.
+		// Here we also take into account cast equality expressions. This
+		// allows us to consider the following 2 expressions as duplicates.
+		//
+		//  1)
+		//     +--CScalarCmp (=)
+		//        |--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		//  2)
+		//     +--CScalarCmp (=)
+		//        |--CScalarCast
+		//        |  +--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
 		if (pexpr->Pop()->Eopid() == COperator::EopScalarCmp)
 		{
-			// Cast equality expressions considers the following 2 expressions
-			// as duplicates:
-			//
-			//  1)
-			//     +--CScalarCmp (=)
-			//        |--CScalarIdent "d" (1)
-			//        +--CScalarIdent "d" (10)
-			//  2)
-			//     +--CScalarCmp (=)
-			//        |--CScalarCast
-			//        |  +--CScalarIdent "d" (1)
-			//        +--CScalarIdent "d" (10)
 			CExpressionArray *pdexpr =
 				CCastUtils::PdrgpexprCastEquality(mp, pexpr);
 			for (ULONG ulInner = 0; ulInner < pdexpr->Size(); ulInner++)
@@ -1506,27 +1468,6 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 				}
 			}
 			pdexpr->Release();
-
-			// Commutative equal expressions consider the following 2
-			// expressions as duplicates:
-			//
-			//  1)
-			//     +--CScalarCmp (=)
-			//        |--CScalarIdent "a" (1)
-			//        +--CScalarIdent "b" (10)
-			//  2)
-			//     +--CScalarCmp (=)
-			//        |--CScalarIdent "b" (10)
-			//        +--CScalarIdent "a" (1)
-			CExpression *pexprComm = CUtils::PexprOpComEquality(mp, pexpr);
-			if (pexprComm)
-			{
-				if (phsexpr->Insert(pexprComm))
-				{
-					pexprComm->AddRef();
-				}
-			}
-			CRefCount::SafeRelease(pexprComm);
 		}
 	}
 
@@ -2591,21 +2532,6 @@ CUtils::FScalarConstBoolNull(CExpression *pexpr)
 	return false;
 }
 
-CScalarIdent *
-CUtils::PscalarIdent(CExpression *pexpr)
-{
-	CScalarIdent *popScId;
-	if (CUtils::FScalarIdent(pexpr))
-	{
-		popScId = CScalarIdent::PopConvert(pexpr->Pop());
-	}
-	else
-	{
-		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedScId(pexpr));
-		popScId = CScalarIdent::PopConvert((*pexpr)[0]->Pop());
-	}
-	return popScId;
-}
 
 BOOL
 CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
@@ -2613,23 +2539,6 @@ CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
 	return CUtils::FScalarConst(pexpr) ||
 		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
 }
-
-CScalarConst *
-CUtils::PscalarConst(CExpression *pexpr)
-{
-	CScalarConst *popScConst;
-	if (CUtils::FScalarConst(pexpr))
-	{
-		popScConst = CScalarConst::PopConvert(pexpr->Pop());
-	}
-	else
-	{
-		GPOS_ASSERT(CCastUtils::FBinaryCoercibleCastedConst(pexpr));
-		popScConst = CScalarConst::PopConvert((*pexpr)[0]->Pop());
-	}
-	return popScConst;
-}
-
 // checks to see if the expression is a scalar const TRUE
 BOOL
 CUtils::FScalarConstTrue(CExpression *pexpr)
@@ -3120,6 +3029,13 @@ CUtils::FScalarBoolOp(CExpression *pexpr, CScalarBoolOp::EBoolOperator eboolop)
 		   eboolop == CScalarBoolOp::PopConvert(pop)->Eboolop();
 }
 
+// check if given expression is a boolean test
+BOOL
+CUtils::FScalarBooleanTest(CExpression *pexpr)
+{
+	return (COperator::EopScalarBooleanTest == pexpr->Pop()->Eopid());
+}
+
 // check if given expression is a scalar null test
 BOOL
 CUtils::FScalarNullTest(CExpression *pexpr)
@@ -3261,6 +3177,7 @@ CUtils::FConstrainableType(IMDId *mdid_type)
 	{
 		// also allow date/time/timestamp/float4/float8
 		return (CMDIdGPDB::m_mdid_date.Equals(mdid_type) ||
+				CMDIdGPDB::m_mdid_bool.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_time.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_timestamp.Equals(mdid_type) ||
 				CMDIdGPDB::m_mdid_timeTz.Equals(mdid_type) ||
@@ -3877,15 +3794,18 @@ CUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpr,
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+
 		pexprCast = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarArrayCoerceExpr(
-				mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			pexpr);
+			pexpr,
+			CUtils::PexprFuncElemExpr(mp, md_accessor, mdid_func,
+									  parrayCoerceCast->GetSrcElemTypeMdId(),
+									  parrayCoerceCast->TypeModifier()));
 	}
 	else if (pmdcast->GetMDPathType() == IMDCast::EmdtCoerceViaIO)
 	{
@@ -3903,6 +3823,27 @@ CUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpr,
 	}
 
 	return pexprCast;
+}
+
+// construct a func element expr for array coerce
+CExpression *
+CUtils::PexprFuncElemExpr(CMemoryPool *mp, CMDAccessor *md_accessor,
+						  IMDId *mdid_func, IMDId *mdid_elem_type, INT typmod)
+{
+	const IMDFunction *cast_func = md_accessor->RetrieveFunc(mdid_func);
+	const CWStringConst *pstrFunc = GPOS_NEW(mp)
+		CWStringConst(mp, (cast_func->Mdname().GetMDName())->GetBuffer());
+	mdid_func->AddRef();
+	cast_func->GetResultTypeMdid()->AddRef();
+	CScalarFunc *popCastScalarFunc =
+		GPOS_NEW(mp) CScalarFunc(mp, mdid_func, cast_func->GetResultTypeMdid(),
+								 typmod, pstrFunc, false /* funcvariadic */);
+	mdid_elem_type->AddRef();
+	CExpression *pexprCaseTest = GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CScalarCaseTest(mp, mdid_elem_type));
+	CExpression *pexpr =
+		GPOS_NEW(mp) CExpression(mp, popCastScalarFunc, pexprCaseTest);
+	return pexpr;
 }
 
 // check whether a colref array contains repeated items
@@ -4433,7 +4374,7 @@ CUtils::ValidateCTEProducerConsumerLocality(
 	COperator *pop = pexpr->Pop();
 	if (COperator::EopPhysicalCTEProducer == pop->Eopid())
 	{
-		// record the location (either master or segment or singleton)
+		// record the location (either coordinator or segment or singleton)
 		// where the CTE producer is being executed
 		ULONG ulCTEID = CPhysicalCTEProducer::PopConvert(pop)->UlCTEId();
 		phmulul->Insert(GPOS_NEW(mp) ULONG(ulCTEID), GPOS_NEW(mp) ULONG(eelt));
@@ -4493,9 +4434,9 @@ CUtils::ExecLocalityType(CDistributionSpec *pds)
 	{
 		CDistributionSpecSingleton *pdss =
 			CDistributionSpecSingleton::PdssConvert(pds);
-		if (pdss->FOnMaster())
+		if (pdss->FOnCoordinator())
 		{
-			eelt = EeltMaster;
+			eelt = EeltCoordinator;
 		}
 		else
 		{

@@ -4,7 +4,7 @@
 	Objective: For a DML query with a predicate containing an outer
 	reference, predicate (x.a + y.b) in the below query; the PhysicalFilter
 	generated from such a predicate should request for Singleton Segment
-	distribution spec instead of Singleton Master. 
+	distribution spec instead of Singleton coordinator.
 
 	create table x(a int);
 	create table y(b int);
@@ -337,7 +337,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1620">
+    <dxl:Plan Id="0" SpaceSize="3048">
       <dxl:DMLInsert Columns="0" ActionCol="32" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1356691694.210227" Rows="1.000000" Width="4"/>

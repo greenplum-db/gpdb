@@ -1,6 +1,6 @@
 -- Test this scenario:
--- mirror has latency replaying the WAL from the primary, the master is reset
--- from PANIC, master will start the DTX recovery process to recover the
+-- mirror has latency replaying the WAL from the primary, the coordinator is reset
+-- from PANIC, coordinator will start the DTX recovery process to recover the
 -- in-progress two-phase transactions.
 -- The FTS process should be able to continue probe and 'sync off' the mirror
 -- while the 'dtx recovery' process is hanging recovering distributed transactions.
@@ -57,13 +57,13 @@ CREATE
 --------
  OK     
 (1 row)
--- trigger master reset
+-- trigger coordinator reset
 3: select gp_inject_fault('exec_simple_query_start', 'panic', current_setting('gp_dbid')::smallint);
  gp_inject_fault 
 -----------------
  Success:        
 (1 row)
--- verify master panic happens. The PANIC message does not emit sometimes so
+-- verify coordinator panic happens. The PANIC message does not emit sometimes so
 -- mask it.
 -- start_matchsubs
 -- m/PANIC:  fault triggered, fault name:'exec_simple_query_start' fault type:'panic'\n/
@@ -75,7 +75,7 @@ server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
 
--- wait for master finish crash recovery
+-- wait for coordinator finish crash recovery
 -1U: select wait_until_standby_in_state('streaming');
  wait_until_standby_in_state 
 -----------------------------
@@ -101,9 +101,9 @@ server closed the connection unexpectedly
 -- start_ignore
 20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Starting gprecoverseg with args: -a
 20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.5441.g9dc261e1f2 build dev'
-20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.6beta4 (Greenplum Database 7.0.0-alpha.0+dev.5441.g9dc261e1f2 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jan 23 2020 07:13:04'
-20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from master...
-20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 9.6beta4 (Greenplum Database 7.0.0-alpha.0+dev.5441.g9dc261e1f2 build dev) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.2.0, 64-bit compiled on Jan 23 2020 07:13:04'
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
+20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
 20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Greenplum instance recovery parameters
 20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:----------------------------------------------------------
 20200123:08:12:02:395970 gprecoverseg:09c5497cf854:gpadmin-[INFO]:-Recovery type              = Standard

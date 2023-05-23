@@ -524,7 +524,7 @@ typedef struct ResultRelInfo
 /* ----------------
  *	  EState information
  *
- * Master working state for an Executor invocation
+ * Working state for an Executor invocation
  * ----------------
  */
 typedef struct EState
@@ -2562,6 +2562,9 @@ typedef struct AggState
 
 	/* if input tuple has an AggExprId, save the Attribute Number */
 	Index       AggExprId_AttrNum;
+
+	/* stream entries when out of memory instead of spilling to disk */
+	bool		streaming;
 } AggState;
 
 typedef struct TupleSplitState

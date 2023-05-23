@@ -240,22 +240,6 @@ set optimizer_enable_hashjoin = off;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBScalarOp Mdid="0.644.1.0" Name="&lt;&gt;" ComparisonType="NEq" ReturnsNullOnNullInput="true">
-        <dxl:LeftType Mdid="0.30.1.0"/>
-        <dxl:RightType Mdid="0.30.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.619.1.0"/>
-        <dxl:Commutator Mdid="0.644.1.0"/>
-        <dxl:InverseOp Mdid="0.649.1.0"/>
-      </dxl:GPDBScalarOp>
-      <dxl:GPDBScalarOp Mdid="0.664.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
-        <dxl:LeftType Mdid="0.25.1.0"/>
-        <dxl:RightType Mdid="0.25.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.740.1.0"/>
-        <dxl:Commutator Mdid="0.666.1.0"/>
-        <dxl:InverseOp Mdid="0.667.1.0"/>
-      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.666.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.25.1.0"/>
         <dxl:RightType Mdid="0.25.1.0"/>

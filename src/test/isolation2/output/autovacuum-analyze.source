@@ -1,5 +1,5 @@
 -- Enable auto-ANALYZE only on AUTOVACUUM launcher. When set `autovacuum` to
--- true on Master, the launcher will take care of databases' analyze job on Master.
+-- true on Coordinator, the launcher will take care of databases' analyze job on Coordinator.
 -- VACUUM anti-XID wraparounds of 'template0' is not changed.
 
 -- Speed up test.
@@ -25,7 +25,7 @@ ANALYZE
 1: CREATE TABLE anatest (id bigint);
 CREATE
 
--- Track report gpstat on master
+-- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anatest', 1, -1, 0, 1);
  gp_inject_fault 
 -----------------
@@ -46,7 +46,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
 
 1&: INSERT INTO anatest select i from generate_series(1, 1000) as i;  <waiting ...>
 
--- Wait until report pgstat on master
+-- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -112,7 +112,7 @@ select relpages, reltuples from pg_class where oid = 'anatest'::regclass;
 1: CREATE TABLE rankpart (id int, rank int, product int) DISTRIBUTED BY (id) PARTITION BY RANGE (rank) ( START (1) END (10) EVERY (2), DEFAULT PARTITION extra );
 CREATE
 
--- Track report gpstat on master
+-- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'rankpart_1_prt_extra', 1, -1, 0, 1);
  gp_inject_fault 
 -----------------
@@ -134,7 +134,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
 -- No data inserted into rankpart_1_prt_6
 1&: insert into rankpart select i, i % 8, i from generate_series(1, 1000)i;  <waiting ...>
 
--- Wait until report pgstat on master
+-- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -260,7 +260,7 @@ select relpages, reltuples from pg_class where oid = 'rankpart'::regclass;
 1: CREATE TABLE anaabort(id int);
 CREATE
 
--- Track report gpstat on master
+-- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anaabort', 1, -1, 0, 1);
  gp_inject_fault 
 -----------------
@@ -287,7 +287,7 @@ SELECT gp_inject_fault('auto_vac_worker_abort', 'skip', '', '', 'anaabort', 1, -
 
 1&: INSERT INTO anaabort select i from generate_series(1, 1000) as i;  <waiting ...>
 
--- Wait until report pgstat on master
+-- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -417,7 +417,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
 (1 row)
 -- expect analyze_count = 1, autoanalyze_count = 0, and n_mod_since_analyze = 1000 since ANALYZE executed
 -- in same transaction for the insert statement.
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  1             | 0                 | 1000                
@@ -460,7 +460,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
  3        | 1000      
 (1 row)
 -- expect analyze_count = 1, autoanalyze_count = 1, and n_mod_since_analyze = 0
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  1             | 1                 | 0                   
@@ -497,7 +497,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 1, and n_mod_since_analyze = 1000 since ANALYZE executed
 -- in same transaction for the insert statement.
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 1                 | 1000                
@@ -540,7 +540,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
  3        | 2000      
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 2, and n_mod_since_analyze = 0
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 2                 | 0                   
@@ -576,7 +576,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 2, and n_mod_since_analyze = 1000 since ANALYZE executed
 -- in same transaction for the insert statement.
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 2                 | 1000                
@@ -619,7 +619,7 @@ select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
  6        | 3000      
 (1 row)
 -- expect analyze_count = 2, autoanalyze_count = 3, and n_mod_since_analyze = 0 since ANALYZE executed
-select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables_internal where relname = 'autostatstbl';
+select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_tables where relname = 'autostatstbl';
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 3                 | 0                   

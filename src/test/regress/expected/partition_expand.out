@@ -99,7 +99,7 @@ select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, dist
 (12 rows)
 
 alter table t_hash_partition expand partition prepare;
-NOTICE:  skipped, table "t_hash_partition" has already been expanded partiton prepare
+NOTICE:  skipped, table "t_hash_partition" has already been expanded partition prepare
 --dml of parent table
 select count(*) from t_hash_partition;
  count 
@@ -282,7 +282,7 @@ select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, dist
 
 		
 alter table t_randomly_partition expand partition prepare;
-NOTICE:  skipped, table "t_randomly_partition" has already been expanded partiton prepare
+NOTICE:  skipped, table "t_randomly_partition" has already been expanded partition prepare
 --dml of parent table
 select count(*) from t_randomly_partition;
  count 
@@ -553,7 +553,7 @@ select gp_segment_id, localoid::regclass, policytype, numsegments, distkey, dist
 (30 rows)
 
 alter table t_hash_subpartition expand partition prepare;
-NOTICE:  skipped, table "t_hash_subpartition" has already been expanded partiton prepare
+NOTICE:  skipped, table "t_hash_subpartition" has already been expanded partition prepare
 --dml of parent table
 select count(*) from t_hash_subpartition;
  count 

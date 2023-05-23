@@ -5,7 +5,7 @@
 -- This is caused by gprecoverseg fetch the smallest dbid in
 -- gp_segment_configuration which is not occupied by others when
 -- adding a new mirror. When dbid in gp_segment_configuration is not
--- continous, the inconsistent issue will happen
+-- continuous, the inconsistent issue will happen
 
 --
 -- generate_recover_config_file:

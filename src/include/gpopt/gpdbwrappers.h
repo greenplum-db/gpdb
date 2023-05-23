@@ -208,6 +208,9 @@ void FreeAttrStatsSlot(AttStatsSlot *sslot);
 // attribute statistics
 HeapTuple GetAttStats(Oid relid, AttrNumber attnum);
 
+// attribute width
+int32 GetAttAvgWidth(Oid relid, AttrNumber attnum);
+
 List *GetExtStats(Relation rel);
 
 char *GetExtStatsName(Oid statOid);
@@ -227,9 +230,6 @@ bool IsFuncNDVPreserving(Oid funcid);
 
 // stability property of given function
 char FuncStability(Oid funcid);
-
-// data access property of given function
-char FuncDataAccess(Oid funcid);
 
 // exec location property of given function
 char FuncExecLocation(Oid funcid);
@@ -321,6 +321,7 @@ Oid GetColumnDefOpclassForType(List *opclassName, Oid typid);
 
 // get the default hash opfamily for type
 Oid GetDefaultDistributionOpfamilyForType(Oid typid);
+Oid GetDefaultPartitionOpfamilyForType(Oid typid);
 
 // get the hash function in an opfamily for given datatype
 Oid GetHashProcInOpfamily(Oid opfamily, Oid typid);

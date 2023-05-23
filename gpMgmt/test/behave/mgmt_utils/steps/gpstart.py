@@ -45,7 +45,7 @@ def impl(context):
     cleanup(context)
 
 """
-Reverses the changes done by change_hostname() function by starting up cluster in master-only utility mode. 
+Reverses the changes done by change_hostname() function by starting up cluster in coordinator-only utility mode. 
 Since the standby host is incorrect, a regular gpstart call won't work.
 """
 def cleanup(context):

@@ -17,7 +17,7 @@ INSERT INTO toastable_heap VALUES(repeat('A',100000), repeat('B',100001), 2);
 -- start_ignore
 --
 -- Invalidate the index of the toast table for our relation. Because this is a
--- catalog change, we have to execute it on the master and all segments.
+-- catalog change, we have to execute it on the coordinator and all segments.
 --
 -- This is done in an ignore block so it can run correctly with any number of
 -- segments.

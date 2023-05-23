@@ -14,7 +14,7 @@ CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE <table_name>     
            [, ...])
        | ('pxf://<path-to-data>?PROFILE=<profile_name>[&SERVER=<server_name>][&<custom-option>=<value>[...]]'))
        | ('s3://<S3_endpoint>[:<port>]/<bucket_name>/[<S3_prefix>] [region=<S3-region>] [config=<config_file> | config_server=<url>]')
-     [ON MASTER]
+     [ON COORDINATOR]
      FORMAT 'TEXT' 
            [( [HEADER]
               [DELIMITER [AS] '<delimiter>' | 'OFF']
@@ -41,7 +41,7 @@ CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <table_name>     
    ( <column_name> <data_type> [, ...] | LIKE <other_table >)
       LOCATION ('http://<webhost>[:<port>]/<path>/<file>' [, ...])
     | EXECUTE '<command>' [ON ALL 
-                          | MASTER
+                          | COORDINATOR
                           | <number_of_segments>
                           | HOST ['<segment_hostname>'] 
                           | SEGMENT <segment_id> ]
@@ -92,7 +92,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <table_name>
 CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table >)
      LOCATION('s3://<S3_endpoint>[:<port>]/<bucket_name>/[<S3_prefix>] [region=<S3-region>] [config=<config_file> | config_server=<url>]')
-      [ON MASTER]
+      [ON COORDINATOR]
       FORMAT 'TEXT' 
                [( [DELIMITER [AS] '<delimiter>']
                [NULL [AS] '<null string>']
@@ -169,7 +169,7 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 
     ```
     'gpfdist://filehost:8081/*'
-    'gpfdist://masterhost/my_load_file'
+    'gpfdist://coordinatorhost/my_load_file'
     'file://seghost1/dbfast1/external/myfile.txt'
     'http://intranet.example.com/finance/expenses.csv'
     ```
@@ -185,17 +185,17 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 
     With the option `#transform=trans\_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [`gpfdist`](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
 
-ON MASTER
-:   Restricts all table-related operations to the Greenplum coordinator segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON MASTER`.
+ON COORDINATOR
+:   Restricts all table-related operations to the Greenplum coordinator segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON COORDINATOR`.
 
-:   > **Note** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON MASTER` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum coordinator segment.
+:   > **Note** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON COORDINATOR` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum coordinator segment.
 
 EXECUTE 'command' \[ON ...\]
 :   Allowed for readable external web tables or writable external tables only. For readable external web tables, specifies the OS command to be run by the segment instances. The command can be a single OS command or a script. The `ON` clause is used to specify which segment instances will run the given command.
 
     -   ON ALL is the default. The command will be run by every active \(primary\) segment instance on all segment hosts in the Greenplum Database system. If the command runs a script, that script must reside in the same location on all of the segment hosts and be executable by the Greenplum superuser \(`gpadmin`\).
-    -   ON MASTER runs the command on the coordinator host only.
-        > **Note** Logging is not supported for external web tables when the `ON MASTER` clause is specified.
+    -   ON COORDINATOR runs the command on the coordinator host only.
+        > **Note** Logging is not supported for external web tables when the `ON COORDINATOR` clause is specified.
 
     -   ON number means the command will be run by the specified number of segments. The particular segments are chosen randomly at runtime by the Greenplum Database system. If the command runs a script, that script must reside in the same location on all of the segment hosts and be executable by the Greenplum superuser \(`gpadmin`\).
     -   HOST means the command will be run by one segment on each segment host \(once per segment host\), regardless of the number of active segment instances per host.

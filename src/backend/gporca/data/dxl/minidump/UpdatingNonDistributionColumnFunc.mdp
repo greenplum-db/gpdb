@@ -182,7 +182,7 @@
       </dxl:Type>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
       <dxl:ColumnStatistics Mdid="1.40973.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="100.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
-      <dxl:GPDBFunc Mdid="0.877.1.0" Name="substr" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.877.1.0" Name="substr" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
     </dxl:Metadata>

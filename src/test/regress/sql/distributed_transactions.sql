@@ -602,3 +602,63 @@ end;
 reset test_print_direct_dispatch_info;
 reset optimizer;
 select count(gp_segment_id) from distxact1_4 group by gp_segment_id; -- sanity check: tuples should be in > 1 segments
+
+-- Tests for AND CHAIN
+CREATE TABLE abc (a int);
+
+-- set nondefault value so we have something to override below
+SET default_transaction_read_only = on;
+
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ WRITE, DEFERRABLE;
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+INSERT INTO abc VALUES (1);
+INSERT INTO abc VALUES (2);
+COMMIT AND CHAIN;  -- TBLOCK_END
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+INSERT INTO abc VALUES ('error');
+INSERT INTO abc VALUES (3);  -- check it's really aborted
+COMMIT AND CHAIN;  -- TBLOCK_ABORT_END
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+INSERT INTO abc VALUES (4);
+COMMIT;
+
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ WRITE, DEFERRABLE;
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+SAVEPOINT x;
+INSERT INTO abc VALUES ('error');
+
+COMMIT AND CHAIN;  -- TBLOCK_ABORT_PENDING
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+INSERT INTO abc VALUES (5);
+COMMIT;
+
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ WRITE, DEFERRABLE;
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+SAVEPOINT x;
+COMMIT AND CHAIN;  -- TBLOCK_SUBCOMMIT
+SHOW transaction_isolation;
+SHOW transaction_read_only;
+SHOW transaction_deferrable;
+COMMIT;
+
+-- not allowed outside a transaction block
+COMMIT AND CHAIN;  -- error
+ROLLBACK AND CHAIN;  -- error
+
+SELECT * FROM abc ORDER BY 1;
+
+RESET default_transaction_read_only;
+ 
+DROP TABLE abc;

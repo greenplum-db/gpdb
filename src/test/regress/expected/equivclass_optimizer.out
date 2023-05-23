@@ -116,14 +116,13 @@ explain (costs off)
 
 explain (costs off)
   select * from ec0 where ff = f1 and f1 = '42'::int8alias1;
-                 QUERY PLAN                  
----------------------------------------------
+                       QUERY PLAN                        
+---------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using ec0_pkey on ec0
-         Index Cond: (ff = '42'::int8alias1)
-         Filter: (f1 = '42'::int8alias1)
- Optimizer: Postgres query optimizer
-(5 rows)
+   ->  Seq Scan on ec0
+         Filter: ((ff = f1) AND (f1 = '42'::int8alias1))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 explain (costs off)
   select * from ec1 where ff = f1 and f1 = '42'::int8alias1;
@@ -165,12 +164,12 @@ explain (costs off)
 ---------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
+         Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3)
-               ->  Index Scan using ec1_pkey on ec1
-                     Index Cond: (ff = '42'::int8alias1)
-         ->  Seq Scan on ec2
-               Filter: (x1 = '42'::int8alias1)
- Optimizer: Postgres query optimizer
+               ->  Seq Scan on ec2
+         ->  Index Scan using ec1_pkey on ec1
+               Index Cond: ((ff = ec2.x1) AND (ff = '42'::int8alias1))
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 explain (costs off)
@@ -445,14 +444,13 @@ explain (costs off)
 ---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
-         ->  Index Scan using ec0_pkey on ec0 a
+         Join Filter: true
+         ->  Index Scan using ec0_pkey on ec0
                Index Cond: (ff = '43'::int8alias1)
-         ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Index Scan using ec1_pkey on ec1 b
-                           Index Cond: (ff = '43'::int8alias1)
- Optimizer: Postgres query optimizer
-(9 rows)
+         ->  Index Scan using ec1_pkey on ec1
+               Index Cond: (ff = ec0.ff)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 set session authorization regress_user_ectest;
 -- with RLS active, the non-leakproof a.ff = 43 clause is not treated

@@ -757,6 +757,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarFuncExprToScalar(
 		CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
 	func_expr->args = TranslateScalarChildren(func_expr->args,
 											  scalar_func_expr_node, colid_var);
+	func_expr->funcvariadic = dxlop->IsFuncVariadic();
 
 	// GPDB_91_MERGE_FIXME: collation
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
@@ -1508,52 +1509,22 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCoerceExprToScalar(
 	CDXLScalarArrayCoerceExpr *dxlop =
 		CDXLScalarArrayCoerceExpr::Cast(scalar_coerce_node->GetOperator());
 
-	GPOS_ASSERT(1 == scalar_coerce_node->Arity());
+	GPOS_ASSERT(2 == scalar_coerce_node->Arity());
 	CDXLNode *child_dxl = (*scalar_coerce_node)[0];
+	CDXLNode *elemexpr_dxl = (*scalar_coerce_node)[1];
 
 	Expr *child_expr = TranslateDXLToScalar(child_dxl, colid_var);
+	Expr *elem_expr = TranslateDXLToScalar(elemexpr_dxl, colid_var);
 
 	ArrayCoerceExpr *coerce = MakeNode(ArrayCoerceExpr);
 
 	coerce->arg = child_expr;
-	Oid elemfuncid = CMDIdGPDB::CastMdid(dxlop->GetCoerceFuncMDid())->Oid();
+	coerce->elemexpr = elem_expr;
 	coerce->resulttype = CMDIdGPDB::CastMdid(dxlop->GetResultTypeMdId())->Oid();
 	coerce->resulttypmod = dxlop->TypeModifier();
-	// GPDB_91_MERGE_FIXME: collation
 	coerce->resultcollid = gpdb::TypeCollation(coerce->resulttype);
 	coerce->coerceformat = (CoercionForm) dxlop->GetDXLCoercionForm();
 	coerce->location = dxlop->GetLocation();
-	// GPDB_12_MERGE_FIXME: change the representation of
-	// CDXLScalarArrayCoerceExpr so that we can correctly roundtrip
-	CaseTestExpr *case_test_expr = MakeNode(CaseTestExpr);
-	Oid input_array_type = gpdb::ExprType((Node *) child_expr);
-	int32 input_array_elem_typmod = gpdb::ExprTypeMod((Node *) child_expr);
-	case_test_expr->typeId = gpdb::GetElementType(input_array_type);
-	case_test_expr->typeMod = input_array_elem_typmod;
-	if (elemfuncid != 0)
-	{
-		FuncExpr *func_expr = MakeNode(FuncExpr);
-		func_expr->funcid = elemfuncid;
-		func_expr->funcformat = COERCE_EXPLICIT_CAST;
-		func_expr->funcresulttype =
-			CMDIdGPDB::CastMdid(dxlop->GetResultTypeMdId())->Oid();
-
-		// FIXME: this is a giant hack. We really should know the arity of the
-		//   function we're calling. Instead, we're jamming three arguments,
-		//   _always_
-		func_expr->args = gpdb::LPrepend(
-			case_test_expr, ListMake2(gpdb::MakeIntConst(dxlop->TypeModifier()),
-									  gpdb::MakeBoolConst(true, false)));
-		coerce->elemexpr = (Expr *) func_expr;
-	}
-	else
-	{
-		RelabelType *rt = MakeNode(RelabelType);
-		rt->resulttypmod = dxlop->TypeModifier();
-		rt->resulttype = gpdb::GetElementType(coerce->resulttype);
-		rt->arg = (Expr *) case_test_expr;
-		coerce->elemexpr = (Expr *) rt;
-	}
 
 	return (Expr *) coerce;
 }

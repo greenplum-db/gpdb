@@ -7,30 +7,34 @@ CREATE TABLE ao_index_build_progress(i int, j bigint) USING ao_row
 
 -- Insert all tuples to seg1.
 INSERT INTO ao_index_build_progress SELECT 0, i FROM generate_series(1, 100000) i;
+INSERT INTO ao_index_build_progress SELECT 2, i FROM generate_series(1, 100000) i;
+INSERT INTO ao_index_build_progress SELECT 5, i FROM generate_series(1, 100000) i;
 
 -- Suspend execution when some blocks have been read.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'suspend', '', '', '', 10, 10, 0, dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 1&: CREATE INDEX ON ao_index_build_progress(i);
 
 -- Wait until some AO varblocks have been read.
 SELECT gp_wait_until_triggered_fault('AppendOnlyStorageRead_ReadNextBlock_success', 10, dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 -- By now, we should have reported some blocks (of size 'block_size') as "done",
 -- as well as a total number of blocks that matches the relation's on-disk size.
-1U: SELECT command, phase,
+SELECT command, phase,
         (pg_relation_size('ao_index_build_progress') +
          (current_setting('block_size')::int - 1)) / current_setting('block_size')::int
         AS blocks_total_actual,
         blocks_total AS blocks_total_reported,
         blocks_done AS blocks_done_reported
-    FROM pg_stat_progress_create_index
-    WHERE relid = 'ao_index_build_progress'::regclass;
+    FROM gp_stat_progress_create_index
+    WHERE gp_segment_id = 1 AND relid = 'ao_index_build_progress'::regclass;
+-- The same should be true for the summary view, and the total number of blocks should be tripled.
+SELECT command, phase, blocks_total, blocks_done FROM gp_stat_progress_create_index_summary WHERE relid = 'ao_index_build_progress'::regclass;
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 1<:
 
@@ -40,31 +44,35 @@ CREATE TABLE aoco_index_build_progress(i int, j int ENCODING (compresstype=zstd,
 
 -- Insert all tuples to seg1.
 INSERT INTO aoco_index_build_progress SELECT 0, i FROM generate_series(1, 100000) i;
+INSERT INTO aoco_index_build_progress SELECT 2, i FROM generate_series(1, 100000) i;
+INSERT INTO aoco_index_build_progress SELECT 5, i FROM generate_series(1, 100000) i;
 
 -- Suspend execution when some blocks have been read.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'suspend', '', '', '', 5, 5, 0, dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 1&: CREATE INDEX ON aoco_index_build_progress(i);
 
 -- Wait until some AOCO varblocks have been read.
 SELECT gp_wait_until_triggered_fault('AppendOnlyStorageRead_ReadNextBlock_success', 5, dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 -- By now, we should have reported some blocks (of size 'block_size') as "done",
 -- as well as a total number of blocks that matches the relation's on-disk size.
 -- Note: all blocks for the relation have to be scanned as we are building an
 -- index for the first time and a block directory has to be created.
-1U: SELECT command, phase,
+SELECT command, phase,
            (pg_relation_size('aoco_index_build_progress') +
             (current_setting('block_size')::int - 1)) / current_setting('block_size')::int AS blocks_total_actual,
             blocks_total AS blocks_total_reported,
            blocks_done AS blocks_done_reported
-    FROM pg_stat_progress_create_index
-    WHERE relid = 'aoco_index_build_progress'::regclass;
+    FROM gp_stat_progress_create_index
+    WHERE gp_segment_id = 1 AND relid = 'aoco_index_build_progress'::regclass;
+-- The same should be true for the summary view, and the total number of blocks should be tripled.
+SELECT command, phase, blocks_total, blocks_done FROM gp_stat_progress_create_index_summary WHERE relid = 'aoco_index_build_progress'::regclass;
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 1<:
 
@@ -72,13 +80,13 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Suspend execution when some blocks have been read.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'suspend', '', '', '', 5, 5, 0, dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 1&: CREATE INDEX ON aoco_index_build_progress(j);
 
 -- Wait until some AOCO varblocks have been read.
 SELECT gp_wait_until_triggered_fault('AppendOnlyStorageRead_ReadNextBlock_success', 5, dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 -- By now, we should have reported some blocks (of size 'block_size') as "done",
 -- as well as a total number of blocks that matches the size of col j's segfile.
@@ -90,10 +98,12 @@ SELECT gp_wait_until_triggered_fault('AppendOnlyStorageRead_ReadNextBlock_succes
                 AS col_j_blocks,
            blocks_total AS blocks_total_reported,
            blocks_done AS blocks_done_reported
-    FROM pg_stat_progress_create_index
-    WHERE relid = 'aoco_index_build_progress'::regclass;
+    FROM gp_stat_progress_create_index
+    WHERE gp_segment_id = 1 AND relid = 'aoco_index_build_progress'::regclass;
+-- The same should be true for the summary view, and the total number of blocks should be tripled.
+SELECT command, phase, blocks_total, blocks_done FROM gp_stat_progress_create_index_summary WHERE relid = 'aoco_index_build_progress'::regclass;
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
-    FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+    FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 1<:

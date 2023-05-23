@@ -258,7 +258,7 @@
       <dxl:ColumnStatistics Mdid="1.904881.1.1.14" Name="ss_ext_discount_amt" Width="5.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.7" Name="ss_store_sk" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.6" Name="ss_addr_sk" Width="4.000000"/>
-      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -645,10 +645,10 @@
       <dxl:ColumnStatistics Mdid="1.904881.1.1.12" Name="ss_list_price" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.5" Name="ss_hdemo_sk" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.4" Name="ss_cdemo_sk" Width="4.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.897052.1.1.29" Name="xmin" Width="4.000000"/>

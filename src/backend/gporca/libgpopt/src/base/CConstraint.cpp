@@ -200,7 +200,7 @@ CConstraint *
 CConstraint::PcnstrFromScalarExpr(
 	CMemoryPool *mp, CExpression *pexpr,
 	CColRefSetArray **ppdrgpcrs,  // output equivalence classes
-	BOOL infer_nulls_as)
+	BOOL infer_nulls_as, IMDIndex::EmdindexType access_method)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(pexpr->Pop()->FScalar());
@@ -229,7 +229,7 @@ CConstraint::PcnstrFromScalarExpr(
 
 		// first, try creating a single interval constraint from the expression
 		pcnstr = CConstraintInterval::PciIntervalFromScalarExpr(
-			mp, pexpr, colref, infer_nulls_as);
+			mp, pexpr, colref, infer_nulls_as, access_method);
 		if (nullptr == pcnstr)
 		{
 			// if the interval creation failed, try creating a disjunction or conjunction
@@ -256,7 +256,8 @@ CConstraint::PcnstrFromScalarExpr(
 	switch (pexpr->Pop()->Eopid())
 	{
 		case COperator::EopScalarBoolOp:
-			return PcnstrFromScalarBoolOp(mp, pexpr, ppdrgpcrs, infer_nulls_as);
+			return PcnstrFromScalarBoolOp(mp, pexpr, ppdrgpcrs, infer_nulls_as,
+										  access_method);
 
 		case COperator::EopScalarCmp:
 			return PcnstrFromScalarCmp(mp, pexpr, ppdrgpcrs, infer_nulls_as);
@@ -448,10 +449,6 @@ CConstraint::PcnstrFromScalarCmp(
 
 		if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
 		{
-			CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
-			CScalarCmp *sc_cmp = CScalarCmp::PopConvert(pexpr->Pop());
-			const IMDScalarOp *op = mda->RetrieveScOp(sc_cmp->MdIdOp());
-
 			// The left type and right type are both scalar ident types
 			// In case of casting, such as
 			// --CScalarCast
@@ -466,16 +463,14 @@ CConstraint::PcnstrFromScalarCmp(
 			// and hash of char don't belong to the same opfamily, we
 			// cannot generate equivalent classes with foo.a and bar.b
 
-			const IMDType *left_type = mda->RetrieveType(left_mdid);
+			// To build equivalence class, operator has to belong
+			// to the left column's hash (distribution) opfamily, and the
+			// right column's hash (distribution) opfamily
 
-			const IMDType *right_type = mda->RetrieveType(right_mdid);
-
-			// Build constraint (e.g for equivalent classes) only when the hash families
-			// of the operator and operands match.
-			if (!CUtils::Equals(op->HashOpfamilyMdid(),
-								left_type->GetDistrOpfamilyMdid()) ||
-				!CUtils::Equals(op->HashOpfamilyMdid(),
-								right_type->GetDistrOpfamilyMdid()))
+			if (!CPredicateUtils::FOpInOpfamily(left_mdid, pexpr,
+												IMDIndex::EmdindHash) ||
+				!CPredicateUtils::FOpInOpfamily(right_mdid, pexpr,
+												IMDIndex::EmdindHash))
 			{
 				return nullptr;
 			}
@@ -528,7 +523,7 @@ CConstraint *
 CConstraint::PcnstrFromScalarBoolOp(
 	CMemoryPool *mp, CExpression *pexpr,
 	CColRefSetArray **ppdrgpcrs,  // output equivalence classes
-	BOOL infer_nulls_as)
+	BOOL infer_nulls_as, IMDIndex::EmdindexType access_method)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(CUtils::FScalarBoolOp(pexpr));
@@ -561,7 +556,7 @@ CConstraint::PcnstrFromScalarBoolOp(
 	{
 		CColRefSetArray *pdrgpcrsChild = nullptr;
 		CConstraint *pcnstrChild = PcnstrFromScalarExpr(
-			mp, (*pexpr)[ul], &pdrgpcrsChild, infer_nulls_as);
+			mp, (*pexpr)[ul], &pdrgpcrsChild, infer_nulls_as, access_method);
 		if (nullptr == pcnstrChild || pcnstrChild->IsConstraintUnbounded())
 		{
 			CRefCount::SafeRelease(pcnstrChild);

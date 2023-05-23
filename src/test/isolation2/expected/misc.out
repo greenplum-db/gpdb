@@ -1,7 +1,7 @@
 --
 -- Validate GPDB can create unique index on a table created in utility mode
 --
--- NOTICE: we must connect to master in utility mode because the oid of table is
+-- NOTICE: we must connect to coordinator in utility mode because the oid of table is
 -- preassigned in QD, if we create a table in utility mode in QE, the oid might
 -- conflict with preassigned oid.
 -1U: create table utilitymode_primary_key_tab (c1 int);
@@ -66,3 +66,37 @@ CREATE
 -----------------
  pg_toast_temp_0 
 (1 row)
+
+--
+-- gp_dist_random('<view>') should not crash in utility mode
+--
+create or replace view misc_v as select 1;
+CREATE
+0U: select 1 from gp_dist_random('misc_v') union select 1 from misc_v;
+ ?column? 
+----------
+ 1        
+(1 row)
+0U: select count(*) from gp_dist_random('misc_v');
+ count 
+-------
+ 1     
+(1 row)
+-- But views created in utility mode should not throw away gp_dist_random
+0U: create or replace view misc_v2 as select 1 from gp_dist_random('pg_class');
+CREATE
+0U: select definition from pg_views where viewname = 'misc_v2';
+ definition                                                  
+------------
+   FROM gp_dist_random('pg_class'); 
+  SELECT 1 AS "?column?"
+(1 row)
+0U: select count(*) > 0 from gp_dist_random('misc_v2');
+ ?column? 
+----------
+ t        
+(1 row)
+0U: drop view misc_v2;
+DROP
+drop view misc_v;
+DROP

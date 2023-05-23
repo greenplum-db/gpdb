@@ -116,8 +116,9 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_discard_redistribute_hashjoin](guc-list.html#optimizer_discard_redistribute_hashjoin)
 - [optimizer_enable_associativity](guc-list.html#optimizer_enable_associativity)
 - [optimizer_enable_dml](guc-list.html#optimizer_enable_dml)
+- [optimizer_enable_foreign_table](guc-list.html#optimizer_enable_foreign_table)
 - [optimizer_enable_indexonlyscan](guc-list.html#optimizer_enable_indexonlyscan)
-- [optimizer_enable_master_only_queries](guc-list.html#optimizer_enable_master_only_queries)
+- [optimizer_enable_coordinator_only_queries](guc-list.html#optimizer_enable_coordinator_only_queries)
 - [optimizer_enable_multiple_distinct_aggs](guc-list.html#optimizer_enable_multiple_distinct_aggs)
 - [optimizer_enable_replicated_table](guc-list.html#optimizer_enable_replicated_table)
 - [optimizer_force_agg_skew_avoidance](guc-list.html#optimizer_force_agg_skew_avoidance)
@@ -130,6 +131,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_mdcache_size](guc-list.html#optimizer_mdcache_size)
 - [optimizer_metadata_caching](guc-list.html#optimizer_metadata_caching)
 - [optimizer_parallel_union](guc-list.html#optimizer_parallel_union)
+- [optimizer_penalize_broadcast_threshold](guc-list.html#optimizer_penalize_broadcast_threshold)
 - [optimizer_penalize_skew](guc-list.html#optimizer_penalize_skew)
 - [optimizer_print_missing_stats](guc-list.html#optimizer_print_missing_stats)
 - [optimizer_print_optimization_stats](guc-list.html#optimizer_print_optimization_stats)
@@ -294,7 +296,11 @@ These configuration parameters control Greenplum Database logging.
 These parameters pertain to auto-vacuuming databases.
 
 - [autovacuum](guc-list.html#autovacuum)
+- [autovacuum_freeze_max_age](guc-list.html#autovacuum_freeze_max_age)
 - [autovacuum_naptime](guc-list.html#autovacuum_naptime)
+- [autovacuum_vacuum_cost_delay](guc-list.html#autovacuum_vacuum_cost_delay)
+- [autovacuum_vacuum_scale_factor](guc-list.html#autovacuum_vacuum_scale_factor)
+- [autovacuum_vacuum_threshold](guc-list.html#autovacuum_vacuum_threshold)
 - [gp_autovacuum_scope](guc-list.html#gp_autovacuum_scope)
 
 ## <a id="query-metrics"></a>Query Metrics Collection Parameters 
@@ -392,12 +398,14 @@ The following configuration parameters configure the Greenplum Database resource
 - [stats_queue_level](guc-list.html#stats_queue_level)
 - [vmem_process_interrupt](guc-list.html#vmem_process_interrupt)
 
-## <a id="topic444"></a>Resource Management Parameters \(Resource Groups\) 
+## <a id="topic444"></a>Resource Management Parameters (Resource Groups) 
 
 The following parameters configure the Greenplum Database resource group workload management feature.
 
 - [gp_resgroup_memory_policy](guc-list.html#gp_resgroup_memory_policy)
-- [gp_resource_group_bypass](guc-list.html) [gp_resource_group_cpu_ceiling_enforcement](guc-list.html#gp_resource_group_bypass](guc-list.html) [gp_resource_group_cpu_ceiling_enforcement)
+- [gp_resource_group_bypass](guc-list.html#gp_resource_group_bypass)
+- [gp_resource_group_bypass_catalog_query](guc-list.html#gp_resource_group_bypass_catalog_query)
+- [gp_resource_group_cpu_ceiling_enforcement](guc-list.html#gp_resource_group_cpu_ceiling_enforcement)
 - [gp_resource_group_cpu_limit](guc-list.html#gp_resource_group_cpu_limit)
 - [gp_resource_group_cpu_priority](guc-list.html#gp_resource_group_cpu_priority)
 - [gp_resource_group_enable_recalculate_query_mem](guc-list.html#gp_resource_group_enable_recalculate_query_mem)
@@ -453,6 +461,7 @@ The following parameters provide compatibility with older PostgreSQL and Greenpl
 - [array_nulls](guc-list.html#array_nulls)
 - [backslash_quote](guc-list.html#backslash_quote)
 - [escape_string_warning](guc-list.html#escape_string_warning)
+- [gp_quicklz_fallback](guc-list.html#gp_quickz_fallback)
 - [quote_all_identifiers](guc-list.html#quote_all_identifiers)
 - [regex_flavor](guc-list.html#regex_flavor)
 - [standard_conforming_strings](guc-list.html#standard_conforming_strings)
@@ -515,11 +524,12 @@ The parameters in this topic control the configuration of the Greenplum Database
 
 These parameters control the configuration of the replication between Greenplum Database primary coordinator and standby coordinator.
 
+- [max_slot_wal_keep_size](guc-list.html#max_slot_wal_keep_size)
 - [repl_catchup_within_range](guc-list.html#repl_catchup_within_range)
 - [replication_timeout](guc-list.html#replication_timeout)
 - [track_wal_io_timing](guc-list.html#track_wal_io_timing)
 - [wait_for_replication_threshold](guc-list.html#wait_for_replication_threshold)
-- [wal_keep_segments](guc-list.html#wal_keep_segments)
+- [wal_keep_size](guc-list.html#wal_keep_size)
 - [wal_receiver_status_interval](guc-list.html#wal_receiver_status_interval)
 
 ## <a id="topic56"></a>Greenplum PL/Java Parameters 

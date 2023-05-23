@@ -424,12 +424,6 @@ XLogInsert(RmgrId rmid, uint8 info)
 	return XLogInsert_Internal(rmid, info, GetCurrentTransactionIdIfAny());
 }
 
-XLogRecPtr
-XLogInsert_OverrideXid(RmgrId rmid, uint8 info, TransactionId overrideXid)
-{
-	return XLogInsert_Internal(rmid, info, overrideXid);
-}
-
 static XLogRecPtr
 XLogInsert_Internal(RmgrId rmid, uint8 info, TransactionId headerXid)
 {
@@ -992,8 +986,6 @@ XLogSaveBufferForHint(Buffer buffer, bool buffer_std)
 		XLogRegisterBlock(0, &rnode, forkno, blkno, copied_buffer.data, flags);
 
 		recptr = XLogInsert(RM_XLOG_ID, XLOG_FPI_FOR_HINT);
-
-		wait_to_avoid_large_repl_lag();
 	}
 
 	return recptr;

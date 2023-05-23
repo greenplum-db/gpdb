@@ -52,7 +52,6 @@ test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_
 test: spi_processed64bit
 test: gp_lock
 test: gp_tablespace_with_faults
-test: gp_check_files
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
 
@@ -169,7 +168,7 @@ test: resource_group_cpuset
 test: resource_group_gucs
 
 # expand_table tests may affect the result of 'gp_explain', keep them below that
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression
+test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression sysviews_gp
 
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
@@ -189,7 +188,7 @@ test: rpt rpt_joins rpt_tpch rpt_returning
 # temp tables
 test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
 
-test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_skew
+test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_skew qp_select partition_prune_opfamily
 
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan qp_dropped_cols
 test: qp_with_functional_inlining qp_with_functional_noinlining
@@ -302,7 +301,8 @@ test: autovacuum-ao-aux
 test: gangsize gang_reuse
 
 # some utilities do not work while doing gpexpand, check them can print correct message
-test: run_utility_gpexpand_phase1
+## FIXME: We should enable this test after gppkg being integrated into gpdb.
+## test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
 test: create_extension_fail
@@ -339,5 +339,14 @@ test: resource_manager_restore_to_none
 
 # test dispatch and result handling of gp_log_memory_backend_contexts
 test: gp_log_mem_dispatch
+
+# test that distributing or hash partitioning by an enum field or expression is blocked
+test: enum_dist_part_ban
+
+# test compresstype fallback from quicklz when gp_quicklz_fallback=true
+test: quicklz_fallback
+
+# run this at the end of the schedule for more chance to catch abnormalities
+test: gp_check_files
 
 # end of tests

@@ -2,7 +2,7 @@
 -- The test focuses on the vacuum behavior when the table is locked
 -- on segments. There is another test vacuum-skip-locked in
 -- isolation dir which focuses on regular test cases (table is locked
--- on master).
+-- on coordinator).
 
 1: CREATE TABLE vacuum_tbl (c1 int) DISTRIBUTED BY (c1);
 CREATE

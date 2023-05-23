@@ -595,18 +595,6 @@ gpdb::FuncStability(Oid funcid)
 }
 
 char
-gpdb::FuncDataAccess(Oid funcid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_proc */
-		return func_data_access(funcid);
-	}
-	GP_WRAP_END;
-	return '\0';
-}
-
-char
 gpdb::FuncExecLocation(Oid funcid)
 {
 	GP_WRAP_START;
@@ -760,6 +748,18 @@ gpdb::GetAttStats(Oid relid, AttrNumber attnum)
 	}
 	GP_WRAP_END;
 	return nullptr;
+}
+
+int32
+gpdb::GetAttAvgWidth(Oid relid, AttrNumber attnum)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_statistic */
+		return get_attavgwidth(relid, attnum);
+	}
+	GP_WRAP_END;
+	return 0;
 }
 
 List *
@@ -1150,6 +1150,18 @@ gpdb::GetDefaultDistributionOpfamilyForType(Oid typid)
 	{
 		/* catalog tables: pg_type, pg_opclass */
 		return cdb_default_distribution_opfamily_for_type(typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
+gpdb::GetDefaultPartitionOpfamilyForType(Oid typid)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_type, pg_opclass */
+		return default_partition_opfamily_for_type(typid);
 	}
 	GP_WRAP_END;
 	return false;

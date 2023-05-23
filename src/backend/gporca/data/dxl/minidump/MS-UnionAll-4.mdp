@@ -5959,7 +5959,7 @@
         </dxl:LogicalGroupBy>
       </dxl:UnionAll>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="549755813888">
+    <dxl:Plan Id="0" SpaceSize="10000000000000">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5603.004348" Rows="1.000000" Width="24"/>

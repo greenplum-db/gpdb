@@ -41,8 +41,8 @@
  * So, the theme is to share private, not-yet-committed session transaction
  * information with the QE Readers so the SegMate process group can all work
  * on the transaction correctly. [We mostly think of QE Writers/Readers being
- * on the segments. However, masters have special purpose QE Reader called the
- * Entry DB Singleton. So, the SegMate module also works on the master.]
+ * on the segments. However, coordinators have special purpose QE Reader called the
+ * Entry DB Singleton. So, the SegMate module also works on the coordinator.]
  *
  * Each shared snapshot is local only to the segment database. High level
  * Writer gang member establishes a local transaction, acquires the slot in

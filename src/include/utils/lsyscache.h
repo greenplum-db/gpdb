@@ -152,7 +152,6 @@ extern char func_volatile(Oid funcid);
 extern char func_parallel(Oid funcid);
 extern char get_func_prokind(Oid funcid);
 extern bool get_func_leakproof(Oid funcid);
-extern char func_data_access(Oid funcid);
 extern char func_exec_location(Oid funcid);
 extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
@@ -246,6 +245,7 @@ extern CmpType get_comparison_type(Oid oidOp);
 
 extern List *get_operator_opfamilies(Oid opno);
 extern List *get_index_opfamilies(Oid oidIndex);
+extern Oid default_partition_opfamily_for_type(Oid typeoid);
 
 #define type_is_array(typid)  (get_element_type(typid) != InvalidOid)
 /* type_is_array_domain accepts both plain arrays and domains over arrays */

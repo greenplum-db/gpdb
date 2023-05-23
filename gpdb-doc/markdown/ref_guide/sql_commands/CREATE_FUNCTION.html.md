@@ -16,7 +16,7 @@ CREATE [OR REPLACE] FUNCTION <name>    
     | [ NOT ] LEAKPROOF
     | { CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT }
     | { [ EXTERNAL ] SECURITY INVOKER | [ EXTERNAL ] SECURITY DEFINER }
-    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
+    | EXECUTE ON { ANY | COORDINATOR | ALL SEGMENTS | INITPLAN }
     | PARALLEL { UNSAFE | RESTRICTED | SAFE }
     | COST <execution_cost>
     | ROWS <result_rows>
@@ -68,7 +68,7 @@ One exception to this rule are functions that return a table reference \(`rangeF
 
 Volatility attributes \(`IMMUTABLE`, `STABLE`, `VOLATILE`\) and `EXECUTE ON` attributes specify two different aspects of function execution. In general, volatility indicates when the function is run, and `EXECUTE ON` indicates where it is run.
 
-For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON MASTER` attribute is run only on the coordinator segment and a function with the `EXECUTE ON ALL SEGMENTS` attribute is run on all primary segment instances \(not the coordinator\).
+For example, a function defined with the `IMMUTABLE` attribute can be run at query planning time, while a function with the `VOLATILE` attribute must be run for every row in the query. A function with the `EXECUTE ON COORDINATOR` attribute is run only on the coordinator segment and a function with the `EXECUTE ON ALL SEGMENTS` attribute is run on all primary segment instances \(not the coordinator\).
 
 See [Using Functions and Operators](../../admin_guide/query/topics/functions-operators.html#topic26/in151167) in the *Greenplum Database Administrator Guide*.
 
@@ -149,14 +149,14 @@ STRICT
 :   The key word `EXTERNAL` is allowed for SQL conformance, but it is optional since, unlike in SQL, this feature applies to all functions not just external ones.
 
 EXECUTE ON ANY
-EXECUTE ON MASTER
+EXECUTE ON COORDINATOR
 EXECUTE ON ALL SEGMENTS
 EXECUTE ON INITPLAN
 :   The `EXECUTE ON` attributes specify where \(coordinator or segment instance\) a function runs when it is invoked during the query execution process.
 
 :   `EXECUTE ON ANY` \(the default\) indicates that the function can be run on the coordinator, or any segment instance, and it returns the same result regardless of where it is run. Greenplum Database determines where the function runs.
 
-:   `EXECUTE ON MASTER` indicates that the function must run only on the coordinator instance.
+:   `EXECUTE ON COORDINATOR` indicates that the function must run only on the coordinator instance.
 
 :   `EXECUTE ON ALL SEGMENTS` indicates that the function must run on all primary segment instances, but not the coordinator, for each invocation. The overall result of the function is the `UNION ALL` of the results from all segment instances.
 
@@ -233,7 +233,7 @@ A call `foo(10)` will fail due to the ambiguity about which function should be c
 
 ## <a id="section6"></a>Notes 
 
-Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database cluster \(master and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended that you locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all master segment instances in the Greenplum cluster.
+Any compiled code \(shared library files\) for custom functions must be placed in the same location on every host in your Greenplum Database cluster \(coordinator and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended that you locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all coordinator segment instances in the Greenplum cluster.
 
 The full SQL type syntax is allowed for input arguments and return value. However, parenthesized type modifiers \(e.g., the precision field for type `numeric`\) are discarded by `CREATE FUNCTION`. Thus for example `CREATE FUNCTION foo (varchar(10)) ...` is exactly the same as `CREATE FUNCTION foo (varchar) ...`.
 
@@ -263,9 +263,9 @@ If any of the conditions are not met, the function is supported. Specifically, t
 
 **Using EXECUTE ON attributes**
 
-Most functions that run queries to access tables can only run on the coordinator. However, functions that run only `SELECT` queries on replicated tables can run on segments. If the function accesses a hash-distributed table or a randomly distributed table, the function should be defined with the `EXECUTE ON MASTER` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
+Most functions that run queries to access tables can only run on the coordinator. However, functions that run only `SELECT` queries on replicated tables can run on segments. If the function accesses a hash-distributed table or a randomly distributed table, the function should be defined with the `EXECUTE ON COORDINATOR` attribute. Otherwise, the function might return incorrect results when the function is used in a complicated query. Without the attribute, planner optimization might determine it would be beneficial to push the function invocation to segment instances.
 
-These are limitations for functions defined with the `EXECUTE ON MASTER` or `EXECUTE ON ALL SEGMENTS` attribute:
+These are limitations for functions defined with the `EXECUTE ON COORDINATOR` or `EXECUTE ON ALL SEGMENTS` attribute:
 
 -   The function must be a set-returning function.
 -   The function cannot be in the `FROM` clause of a query.

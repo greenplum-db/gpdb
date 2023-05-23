@@ -279,7 +279,6 @@ enum Edxltoken
 	EdxltokenTypeMod,
 	EdxltokenCoercionForm,
 	EdxltokenLocation,
-	EdxltokenElementFunc,
 	EdxltokenIsExplicit,
 
 	EdxltokenJoinType,
@@ -393,6 +392,7 @@ enum Edxltoken
 
 	EdxltokenFuncId,
 	EdxltokenFuncRetSet,
+	EdxltokenFuncVariadic,
 
 
 	EdxltokenSortOpId,
@@ -486,7 +486,7 @@ enum Edxltoken
 	EdxltokenPartTypes,
 
 	EdxltokenRelDistrPolicy,
-	EdxltokenRelDistrMasterOnly,
+	EdxltokenRelDistrCoordinatorOnly,
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,
@@ -554,6 +554,7 @@ enum Edxltoken
 	EdxltokenMDTypeByValue,
 	EdxltokenMDTypeDistrOpfamily,
 	EdxltokenMDTypeLegacyDistrOpfamily,
+	EdxltokenMDTypePartOpfamily,
 	EdxltokenMDTypeEqOp,
 	EdxltokenMDTypeNEqOp,
 	EdxltokenMDTypeLTOp,
@@ -601,11 +602,7 @@ enum Edxltoken
 	EdxltokenGPDBFuncStable,
 	EdxltokenGPDBFuncImmutable,
 	EdxltokenGPDBFuncVolatile,
-	EdxltokenGPDBFuncDataAccess,
-	EdxltokenGPDBFuncNoSQL,
-	EdxltokenGPDBFuncContainsSQL,
-	EdxltokenGPDBFuncReadsSQLData,
-	EdxltokenGPDBFuncModifiesSQLData,
+
 	EdxltokenGPDBFuncResultTypeId,
 	EdxltokenGPDBFuncReturnsSet,
 	EdxltokenGPDBFuncStrict,
@@ -617,6 +614,7 @@ enum Edxltoken
 	EdxltokenGPDBCastSrcType,
 	EdxltokenGPDBCastDestType,
 	EdxltokenGPDBCastFuncId,
+	EdxltokenGPDBCastSrcElemType,
 	EdxltokenGPDBCastCoercePathType,
 	EdxltokenGPDBArrayCoerceCast,
 

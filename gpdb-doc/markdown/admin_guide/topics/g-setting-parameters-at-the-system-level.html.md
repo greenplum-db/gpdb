@@ -22,5 +22,5 @@ Coordinator parameter settings in the coordinator `postgresql.conf`file are the 
 
 For details about the server configuration parameters, see the *Greenplum Database Reference Guide*.
 
-**Parent topic:** [Setting a Coordinator Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
+**Parent topic:** [Setting a Coordinator Configuration Parameter](../topics/g-setting-a-coordinator-configuration-parameter.html)
 

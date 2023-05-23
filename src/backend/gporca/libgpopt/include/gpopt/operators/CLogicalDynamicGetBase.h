@@ -48,7 +48,7 @@ protected:
 	// partition keys
 	CColRef2dArray *m_pdrgpdrgpcrPart;
 
-	// distribution columns (empty for master only tables)
+	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
 	// private copy ctor
@@ -69,6 +69,11 @@ protected:
 	// child partition's table descr by matching column names$
 	static ColRefToUlongMapArray *ConstructRootColMappingPerPart(
 		CMemoryPool *mp, CColRefArray *root_cols, IMdIdArray *partition_mdids);
+
+	using ColNameToIndexMap =
+		CHashMap<const CWStringConst, ULONG, CWStringConst::HashValue,
+				 CWStringConst::Equals, CleanupNULL<const CWStringConst>,
+				 CleanupDelete<ULONG>>;
 
 public:
 	// ctors

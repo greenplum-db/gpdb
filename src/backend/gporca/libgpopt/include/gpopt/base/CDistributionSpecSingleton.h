@@ -35,7 +35,7 @@ public:
 	// type of segment
 	enum ESegmentType
 	{
-		EstMaster,
+		EstCoordinator,
 		EstSegment,
 		EstSentinel
 	};
@@ -70,11 +70,11 @@ public:
 		return m_est;
 	}
 
-	// is this a master-only distribution
+	// is this a coordinator-only distribution
 	BOOL
-	FOnMaster() const
+	FOnCoordinator() const
 	{
-		return EstMaster == m_est;
+		return EstCoordinator == m_est;
 	}
 
 	// return distribution partitioning type
@@ -92,10 +92,10 @@ public:
 	HashValue() const override
 	{
 		ULONG ulEdt = (ULONG) Edt();
-		BOOL fOnMaster = FOnMaster();
+		BOOL fOnCoordinator = FOnCoordinator();
 
 		return gpos::CombineHashes(gpos::HashValue<ULONG>(&ulEdt),
-								   gpos::HashValue<BOOL>(&fOnMaster));
+								   gpos::HashValue<BOOL>(&fOnCoordinator));
 	}
 
 	// match function for singleton distribution specs
@@ -103,9 +103,9 @@ public:
 	Matches(const CDistributionSpec *pds) const override
 	{
 		return Edt() == pds->Edt() &&
-			   FOnMaster() ==
+			   FOnCoordinator() ==
 				   dynamic_cast<const CDistributionSpecSingleton *>(pds)
-					   ->FOnMaster();
+					   ->FOnCoordinator();
 	}
 
 	// append enforcers to dynamic array for the given plan properties

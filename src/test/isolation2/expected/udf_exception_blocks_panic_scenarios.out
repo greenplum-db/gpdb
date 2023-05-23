@@ -14,7 +14,7 @@
 
 -- debug_dtm_action_target: Allows to set target for specified
 -- dtm_action should it be DTM protocol command or SQL command from
--- master to segment.
+-- coordinator to segment.
 
 -- debug_dtm_action_protocol: Allows to specify sub-type of DTM
 -- protocol for which to perform specified dtm_action (like prepare,

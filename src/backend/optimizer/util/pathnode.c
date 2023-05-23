@@ -2875,19 +2875,19 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						break;
 					case PROEXECLOCATION_COORDINATOR:
 						/*
-						 * This function forces the execution to master.
+						 * This function forces the execution to coordinator.
 						 */
 						if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 						{
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+									 (errmsg("cannot mix EXECUTE ON COORDINATOR and ALL SEGMENTS functions in same function scan"))));
 						}
 						exec_location = PROEXECLOCATION_COORDINATOR;
 						break;
 					case PROEXECLOCATION_INITPLAN:
 						/*
-						 * This function forces the execution to master.
+						 * This function forces the execution to coordinator.
 						 */
 						if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
 						{
@@ -2905,7 +2905,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						{
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+									 (errmsg("cannot mix EXECUTE ON COORDINATOR and ALL SEGMENTS functions in same function scan"))));
 						}
 						exec_location = PROEXECLOCATION_ALL_SEGMENTS;
 						break;
@@ -2933,7 +2933,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 				 * If all the functions are ON ANY, we presumably could execute
 				 * the function scan anywhere. However, historically, before the
 				 * EXECUTE ON syntax was introduced, we always executed
-				 * non-IMMUTABLE functions on the master. Keep that behavior
+				 * non-IMMUTABLE functions on the coordinator. Keep that behavior
 				 * for backwards compatibility.
 				 */
 				if (contain_outer_params)
@@ -2945,7 +2945,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 				break;
 			case PROEXECLOCATION_COORDINATOR:
 				if (contain_outer_params)
-					elog(ERROR, "cannot execute EXECUTE ON MASTER function in a subquery with arguments from outer query");
+					elog(ERROR, "cannot execute EXECUTE ON COORDINATOR function in a subquery with arguments from outer query");
 				CdbPathLocus_MakeEntry(&pathnode->locus);
 				break;
 			case PROEXECLOCATION_INITPLAN:
@@ -3257,6 +3257,37 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 						  Relids required_outer)
 {
 	Path	   *pathnode = makeNode(Path);
+	CdbPathLocus result;
+
+	/*
+	 * Between Recursive union plannode node and WorkTableScan plannode
+	 * there must be no Motion nodes because the execution of WorkTableScan
+	 * depends on the Recursive union's data structure.
+	 *
+	 * To avoid Motion nodes, we set the locus of the WorkTableScan to Strewn
+	 * for certain cases. For example, if the locus of the non-recursive path of
+	 * the CTE is Hashed, we need to set the locus of the WorkTableScan to Strewn
+	 * instead of Hashed. Otherwise, if the WorkTableScan is part of a JOIN, we
+	 * could end up redistribute the other side (always inner side for now) of
+	 * the JOIN with incorrect hash keys.
+	 */
+	if (ctelocus.locustype == CdbLocusType_Entry)
+		CdbPathLocus_MakeEntry(&result);
+	else if (ctelocus.locustype == CdbLocusType_SingleQE)
+		CdbPathLocus_MakeSingleQE(&result, ctelocus.numsegments);
+	else if (ctelocus.locustype == CdbLocusType_General)
+		CdbPathLocus_MakeGeneral(&result);
+	else if (ctelocus.locustype == CdbLocusType_OuterQuery)
+		CdbPathLocus_MakeOuterQuery(&result);
+	else if (ctelocus.locustype == CdbLocusType_SegmentGeneral)
+	{
+		/* See comments in set_worktable_pathlist */
+		elog(ERROR,
+			 "worktable scan path can never have "
+			 "segmentgeneral locus.");
+	}
+	else
+		CdbPathLocus_MakeStrewn(&result, ctelocus.numsegments);
 
 	pathnode->pathtype = T_WorkTableScan;
 	pathnode->parent = rel;
@@ -3268,7 +3299,7 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_workers = 0;
 	pathnode->pathkeys = NIL;	/* result is always unordered */
 
-	pathnode->locus = ctelocus;
+	pathnode->locus = result;
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
 	pathnode->sameslice_relids = rel->relids;
@@ -5364,7 +5395,7 @@ adjust_modifytable_subpaths(PlannerInfo *root, CmdType operation,
 		}
 		else if (targetPolicyType == POLICYTYPE_ENTRY)
 		{
-			/* Master-only table */
+			/* Coordinator-only table */
 			all_subplans_replicated = false;
 		}
 		else if (targetPolicyType == POLICYTYPE_REPLICATED)

@@ -58,6 +58,8 @@ class CgroupValidationVersionTwo(CgroupValidation):
         self.validate_permission("gpdb/cpuset.cpus.effective", "r")
         self.validate_permission("gpdb/cpuset.mems.effective", "r")
 
+        self.validate_permission("gpdb/memory.current", "r")
+
     def die(self, msg):
         raise ValidationException("cgroup is not properly configured: {}".format(msg))
 

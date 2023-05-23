@@ -337,7 +337,7 @@ GpPolicyFetch(Oid tbloid)
 		/*
 		 * Writeable external tables have gp_distribution_policy entries, like
 		 * regular tables. Readable external tables are implicitly randomly
-		 * distributed, except for "EXECUTE ... ON MASTER" ones.
+		 * distributed, except for "EXECUTE ... ON COORDINATOR" ones.
 		 */
 		if (e)
 		{
@@ -356,7 +356,7 @@ GpPolicyFetch(Oid tbloid)
 				ListCell   *cell;
 				Assert(e->urilocations != NIL);
 
-				/* set policy for writable s3 on master external table */
+				/* set policy for writable s3 on primary external table */
 				foreach(cell, e->urilocations)
 				{
 					const char *uri_str = (char *) strVal(lfirst(cell));

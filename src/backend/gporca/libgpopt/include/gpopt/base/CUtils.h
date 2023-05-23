@@ -22,7 +22,6 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarConst.h"
-#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/xforms/CXform.h"
 
@@ -77,7 +76,7 @@ private:
 public:
 	enum EExecLocalityType
 	{
-		EeltMaster,
+		EeltCoordinator,
 		EeltSegments,
 		EeltSingleton
 	};
@@ -438,8 +437,6 @@ public:
 	// Helpers for comparisons
 	//-------------------------------------------------------------------
 
-	static CExpression *PexprOpComEquality(CMemoryPool *mp, CExpression *pexpr);
-
 	// deduplicate array of expressions
 	static CExpressionArray *PdrgpexprDedup(CMemoryPool *mp,
 											CExpressionArray *pdrgpexpr);
@@ -657,6 +654,9 @@ public:
 	// is the given expression a scalar bool op of the passed type?
 	static BOOL FScalarBoolOp(CExpression *pexpr,
 							  CScalarBoolOp::EBoolOperator eboolop);
+
+	// check if expression is scalar bool test op
+	static BOOL FScalarBooleanTest(CExpression *pexpr);
 
 	// check if expression is scalar null test
 	static BOOL FScalarNullTest(CExpression *pexpr);
@@ -878,6 +878,12 @@ public:
 	static CExpression *PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor,
 								  CExpression *pexpr, IMDId *mdid_dest);
 
+	// construct a func element expr for array coerce
+	static CExpression *PexprFuncElemExpr(CMemoryPool *mp,
+										  CMDAccessor *md_accessor,
+										  IMDId *mdid_func,
+										  IMDId *mdid_elem_type, INT typmod);
+
 	// construct a logical join expression of the given type, with the given children
 	static CExpression *PexprLogicalJoin(CMemoryPool *mp,
 										 EdxlJoinType edxljointype,
@@ -1001,10 +1007,6 @@ public:
 						 CExpressionArrays *input_exprs);
 
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
-
-	static CScalarIdent *PscalarIdent(CExpression *pexpr);
-
-	static CScalarConst *PscalarConst(CExpression *pexpr);
 
 	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
 };	// class CUtils

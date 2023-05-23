@@ -27,7 +27,7 @@ class CMDArrayCoerceCastGPDB : public CMDCastGPDB
 {
 private:
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// type mod
 	INT m_type_modifier;
@@ -41,6 +41,9 @@ private:
 	// location
 	INT m_location;
 
+	// Src element MDId
+	IMDId *m_mdid_src_elemtype;
+
 public:
 	CMDArrayCoerceCastGPDB(const CMDArrayCoerceCastGPDB &) = delete;
 
@@ -50,17 +53,14 @@ public:
 						   BOOL is_binary_coercible, IMDId *mdid_cast_func,
 						   EmdCoercepathType path_type, INT type_modifier,
 						   BOOL is_explicit, EdxlCoercionForm dxl_coerce_format,
-						   INT location);
+						   INT location, IMDId *mdid_src_elemtype);
 
 	// dtor
 	~CMDArrayCoerceCastGPDB() override;
 
+
 	// accessors
-	virtual const CWStringDynamic *
-	Pstr() const
-	{
-		return m_dxl_str;
-	}
+	virtual const CWStringDynamic *Pstr();
 
 	// return type modifier
 	virtual INT TypeModifier() const;
@@ -72,6 +72,9 @@ public:
 
 	// return token location
 	virtual INT Location() const;
+
+	// return src element type
+	virtual IMDId *GetSrcElemTypeMdId() const;
 
 	// serialize object in DXL format
 	void Serialize(gpdxl::CXMLSerializer *xml_serializer) const override;

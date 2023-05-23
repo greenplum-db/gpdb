@@ -1,4 +1,4 @@
--- table to just store the master's data directory path on segment.
+-- table to just store the coordinator's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
 CREATE
 INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
@@ -1138,7 +1138,7 @@ ROLLBACK
 -- enable gdd
 ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 ALTER
--- Use utility session on seg 0 to restart master. This way avoids the
+-- Use utility session on seg 0 to restart coordinator. This way avoids the
 -- situation where session issuing the restart doesn't disappear
 -- itself.
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
@@ -2388,7 +2388,7 @@ DROP
  schemaname | tablename     | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds                                 | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
 ------------+---------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+--------------------------------------------------+-------------+-------------------+------------------------+----------------------
  public     | analyzedrop   | a       | t         | 0         | 4         | -1         |                  |                   | {0,1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19} |             |                   |                        |                      
- public     | analyzedrop_2 | a       | f         | 0         | 4         | -1         |                  |                   | {10,11,12,13,14,15,16,17,18,19}                  | -0.345455   |                   |                        |                      
+ public     | analyzedrop_2 | a       | f         | 0         | 4         | -1         |                  |                   | {10,11,12,13,14,15,16,17,18,19}                  | 1           |                   |                        |                      
 (2 rows)
 -- Case 2. No failure should happen when there's concurrent drop on parent as well.
 1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';

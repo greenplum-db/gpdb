@@ -34,12 +34,14 @@
 #include "rewrite/rewriteHandler.h"
 #include "storage/bufmgr.h"
 #include "tcop/tcopprot.h"
+#include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/guc_tables.h"
 #include "utils/json.h"
 #include "utils/lsyscache.h"
 #include "utils/metrics_utils.h"
 #include "utils/rel.h"
+#include "utils/resgroup.h"
 #include "utils/ruleutils.h"
 #include "utils/snapmgr.h"
 #include "utils/tuplesort.h"
@@ -48,8 +50,10 @@
 
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
+#include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
 #include "optimizer/optimizer.h"
+#include "optimizer/orca.h"
 
 #ifdef USE_ORCA
 extern char *SerializeDXLPlan(Query *parse);
@@ -384,6 +388,9 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	MemoryContext oldcxt = CurrentMemoryContext;
 	bool		save_enumerate;
 	char	   *dxl = NULL;
+	PlannerInfo		*root;
+	PlannerGlobal	*glob;
+	Query			*pqueryCopy;
 
 	save_enumerate = optimizer_enumerate_plans;
 
@@ -392,8 +399,53 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	/* enable plan enumeration before calling optimizer */
 	optimizer_enumerate_plans = true;
 
+	/*
+	 * Initialize a dummy PlannerGlobal struct. ORCA doesn't use it, but the
+	 * pre- and post-processing steps do.
+	 */
+	glob = makeNode(PlannerGlobal);
+	glob->subplans = NIL;
+	glob->subroots = NIL;
+	glob->rewindPlanIDs = NULL;
+	glob->transientPlan = false;
+	glob->oneoffPlan = false;
+	glob->share.shared_inputs = NULL;
+	glob->share.shared_input_count = 0;
+	glob->share.motStack = NIL;
+	glob->share.qdShares = NULL;
+	/* these will be filled in below, in the pre- and post-processing steps */
+	glob->finalrtable = NIL;
+	glob->relationOids = NIL;
+	glob->invalItems = NIL;
+
+	root = makeNode(PlannerInfo);
+	root->parse = query;
+	root->glob = glob;
+	root->query_level = 1;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+
+	/* create a local copy to hand to the optimizer */
+	pqueryCopy = (Query *) copyObject(query);
+
+	/*
+	 * Pre-process the Query tree before calling optimizer.
+	 *
+	 * Constant folding will add dependencies to functions or relations in
+	 * glob->invalItems, for any functions that are inlined or eliminated
+	 * away. (We will find dependencies to other objects later, after planning).
+	 */
+	pqueryCopy = fold_constants(root, pqueryCopy, params, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
+
+	/*
+	 * If any Query in the tree mixes window functions and aggregates, we need to
+	 * transform it such that the grouped query appears as a subquery
+	 */
+	pqueryCopy = (Query *) transformGroupedWindows((Node *) pqueryCopy, NULL);
+
+
 	/* optimize query using optimizer and get generated plan in DXL format */
-	dxl = SerializeDXLPlan(query);
+	dxl = SerializeDXLPlan(pqueryCopy);
 
 	/* restore old value of enumerate plans GUC */
 	optimizer_enumerate_plans = save_enumerate;
@@ -634,6 +686,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	if (into)
 		eflags |= GetIntoRelEFlags(into);
 
+	check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 	queryDesc->plannedstmt->query_mem =
 		ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
@@ -668,7 +721,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 			if (qeError)
 			{
 				FlushErrorState();
-				ReThrowError(qeError);
+				ThrowErrorData(qeError);
 			}
 		}
 
@@ -3378,32 +3431,24 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 
 /*
  * If it's EXPLAIN ANALYZE, show tuplesort stats for a sort node
- *
- * GPDB_90_MERGE_FIXME: The sort statistics are stored quite differently from
- * upstream, it would be nice to rewrite this to avoid looping over all the
- * sort methods and instead have a _get_stats() function as in upstream.
  */
 static void
 show_sort_info(SortState *sortstate, ExplainState *es)
 {
-	CdbExplain_NodeSummary *ns;
-	int			i;
-
 	if (!es->analyze)
-		return;
-
-	ns = ((PlanState *) sortstate)->instrument->cdbNodeSummary;
-	if (!ns)
 		return;
 
 	/*
 	 * Gather QEs' sort statistics
 	 *
-	 * shared_info stores workers' info, but Greenplum stores QEs
+	 * shared_info stores workers' info, but Greenplum stores QEs'
 	 */
 	int64 peakSpaceUsed = 0;
 	int64 totalSpaceUsed = 0;
 	int64 avgSpaceUsed = 0;
+	const char *sortMethod = NULL;
+	const char *spaceType = NULL;
+
 	if (sortstate->shared_info != NULL)
 	{
 		int n;
@@ -3413,6 +3458,10 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			sinstrument = &sortstate->shared_info->sinstrument[n];
 			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
 				continue;		/* ignore any unfilled slots */
+			if (!sortMethod)
+				sortMethod = tuplesort_method_name(sinstrument->sortMethod);
+			if (!spaceType)
+				spaceType = tuplesort_space_type_name(sinstrument->spaceType);
 			peakSpaceUsed = Max(peakSpaceUsed, sinstrument->spaceUsed);
 			totalSpaceUsed += sinstrument->spaceUsed;
 		}
@@ -3421,67 +3470,31 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			totalSpaceUsed / sortstate->shared_info->num_workers : 0;
 	}
 
-	for (i = 0; i < NUM_SORT_METHOD; i++)
 	{
-		CdbExplain_Agg	*agg;
-		const char *sortMethod;
-		const char *spaceType;
-		int			j;
-
-		/*
-		 * Memory and disk usage statistics are saved separately in GPDB so
-		 * need to pull out the one in question first
-		 */
-		for (j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
-			agg = &ns->sortSpaceUsed[j][i];
-
-			if (agg->vcnt > 0)
-				break;
-		}
-		/*
-		 * If the current sort method in question hasn't been used, skip to
-		 * next one
-		 */
-		if (j >= NUM_SORT_SPACE_TYPE)
-			continue;
-
-		sortMethod = tuplesort_method_name(i);
-		spaceType = tuplesort_space_type_name(j);
-
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Sort Method:  %s  %s: %ldkB",
-				sortMethod, spaceType, (long) agg->vsum);
+							 sortMethod, spaceType, totalSpaceUsed);
 			if (es->verbose)
 			{
-				if (peakSpaceUsed)
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Peak Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
-									 peakSpaceUsed,
-									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
-									 agg->vcnt);
-				else
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
-									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
-									 agg->vcnt);
+				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+								 peakSpaceUsed,
+								 avgSpaceUsed,
+								 sortstate->shared_info->num_workers);
 			}
 			appendStringInfo(es->str, "\n");
 		}
 		else
 		{
 			ExplainPropertyText("Sort Method", sortMethod, es);
-			ExplainPropertyInteger("Sort Space Used", "kB", agg->vsum, es);
+			ExplainPropertyInteger("Sort Space Used", "kB", totalSpaceUsed, es);
 			ExplainPropertyText("Sort Space Type", spaceType, es);
 			if (es->verbose)
 			{
-				ExplainPropertyInteger("Sort Max Segment Memory", "kB", totalSpaceUsed ? totalSpaceUsed : agg->vmax, es);
-				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed ? avgSpaceUsed : (agg->vsum / agg->vcnt), es);
-				if (peakSpaceUsed)
-					ExplainPropertyInteger("Sort Peak Segment Memory", "kB", peakSpaceUsed, es);
-				ExplainPropertyInteger("Sort Segments", NULL, agg->vcnt, es);
+				ExplainPropertyInteger("Sort Max Segment Memory", "kB", peakSpaceUsed, es);
+				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed, es);
+				ExplainPropertyInteger("Sort Segments", NULL, sortstate->shared_info->num_workers, es);
 			}
 		}
 	}

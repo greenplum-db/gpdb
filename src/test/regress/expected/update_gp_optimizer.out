@@ -144,9 +144,10 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                                                            ->  Hash Join
                                                                                  Hash Cond: ((min((keo4.keo_para_budget_date)::text)) = (keo4_1.keo_para_budget_date)::text)
                                                                                  ->  Redistribute Motion 1:3  (slice5; segments: 1)
-                                                                                       ->  Aggregate
+                                                                                       ->  Finalize Aggregate
                                                                                              ->  Gather Motion 3:1  (slice6; segments: 3)
-                                                                                                   ->  Seq Scan on keo4
+                                                                                                   ->  Partial Aggregate
+                                                                                                         ->  Seq Scan on keo4
                                                                                  ->  Hash
                                                                                        ->  Broadcast Motion 3:3  (slice7; segments: 3)
                                                                                              ->  Seq Scan on keo4 keo4_1
@@ -157,7 +158,7 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                  ->  Broadcast Motion 3:3  (slice9; segments: 3)
                                        ->  Seq Scan on keo2
  Optimizer: Pivotal Optimizer (GPORCA)
-(37 rows)
+(38 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -810,9 +811,9 @@ SELECT tableoid::regclass, * FROM update_gp_rangep WHERE b = 1;
 
 -- Test for update with LASJ_NOTIN
 -- See Issue: https://github.com/greenplum-db/gpdb/issues/13265
--- Actually master branch does not have the above issue even master
+-- Actually main branch does not have the above issue even main
 -- does have the same problematic code (other parts of code are
--- refactored). Also cherry-pick the case to master and keep it
+-- refactored). Also cherry-pick the case to main and keep it
 -- since more test cases do no harm.
 create table t1_13265(a int, b int, c int, d int) distributed by (a);
 create table t2_13265(a int, b int, c int, d int) distributed by (a);

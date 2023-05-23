@@ -260,16 +260,6 @@ DistributedSnapshot_Copy(DistributedSnapshot *target,
 	if (source->count == 0)
 		return;
 
-	if (target->inProgressXidArray == NULL)
-	{
-		target->inProgressXidArray =
-			(DistributedTransactionId*) malloc(GetMaxSnapshotDistributedXidCount() * sizeof(DistributedTransactionId));
-		if (target->inProgressXidArray == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 errmsg("out of memory")));
-	}
-
 	Assert(source->count <= GetMaxSnapshotDistributedXidCount());
 	memcpy(target->inProgressXidArray,
 			source->inProgressXidArray,

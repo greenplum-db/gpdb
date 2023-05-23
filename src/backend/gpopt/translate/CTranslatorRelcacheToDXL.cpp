@@ -632,7 +632,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		// translate the default column value
 		CDXLNode *dxl_default_col_val = nullptr;
 
-		if (!att->attisdropped && !rel->rd_att->attrs[ul].attgenerated)
+		if (!att->attisdropped && !att->attgenerated)
 		{
 			dxl_default_col_val = GetDefaultColumnValue(
 				mp, md_accessor, rel->rd_att, att->attnum);
@@ -641,46 +641,41 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		ULONG col_len = gpos::ulong_max;
 		CMDIdGPDB *mdid_col =
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, att->atttypid);
-		HeapTuple stats_tup = gpdb::GetAttStats(rel->rd_id, ul + 1);
 
-		// Column width priority:
-		// 1. If there is average width kept in the stats for that column, pick that value.
-		// 2. If not, if it is a fixed length text type, pick the size of it. E.g if it is
-		//    varchar(10), assign 10 as the column length.
-		// 3. Else if it not dropped and a fixed length type such as int4, assign the fixed
-		//    length.
-		// 4. Otherwise, assign it to default column width which is 8.
-		if (HeapTupleIsValid(stats_tup))
+		// if the type is of a known fixed width, just use that. If attlen is -1,
+		// it is variable length, and if -2, it is a null-terminated string
+		if (att->attlen > 0)
 		{
-			Form_pg_statistic form_pg_stats =
-				(Form_pg_statistic) GETSTRUCT(stats_tup);
-
-			// column width
-			col_len = form_pg_stats->stawidth;
-			gpdb::FreeHeapTuple(stats_tup);
-		}
-		else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
-				  mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) &&
-				 (VARHDRSZ < att->atttypmod))
-		{
-			col_len = (ULONG) att->atttypmod - VARHDRSZ;
+			col_len = att->attlen;
 		}
 		else
 		{
-			DOUBLE width = CStatistics::DefaultColumnWidth.Get();
-			col_len = (ULONG) width;
+			// This is expensive, but luckily we don't need it for most types
+			int32 avg_width = gpdb::GetAttAvgWidth(rel->rd_id, ul + 1);
 
-			if (!att->attisdropped)
+			// Column width priority for non-fixed width:
+			// 1. If there is average width kept in the stats for that column, pick that value.
+			// 2. If not, if it is a fixed length text type, pick the size of it. E.g if it is
+			//    varchar(10), assign 10 as the column length.
+			// 3. Otherwise, assign it to default column width which is 8.
+			if (avg_width > 0)
 			{
-				IMDType *md_type =
-					CTranslatorRelcacheToDXL::RetrieveType(mp, mdid_col);
-				if (md_type->IsFixedLength())
-				{
-					col_len = md_type->Length();
-				}
-				md_type->Release();
+				col_len = avg_width;
+			}
+			else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
+					  mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) &&
+					 (VARHDRSZ < att->atttypmod))
+			{
+				col_len = (ULONG) att->atttypmod - VARHDRSZ;
+			}
+			else
+			{
+				DOUBLE width = CStatistics::DefaultColumnWidth.Get();
+				col_len = (ULONG) width;
 			}
 		}
+
+
 
 		CMDColumn *md_col = GPOS_NEW(mp)
 			CMDColumn(md_colname, att->attnum, mdid_col, att->atttypmod,
@@ -767,7 +762,7 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 {
 	if (nullptr == gp_policy)
 	{
-		return IMDRelation::EreldistrMasterOnly;
+		return IMDRelation::EreldistrCoordinatorOnly;
 	}
 
 	if (POLICYTYPE_REPLICATED == gp_policy->ptype)
@@ -787,7 +782,7 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 
 	if (POLICYTYPE_ENTRY == gp_policy->ptype)
 	{
-		return IMDRelation::EreldistrMasterOnly;
+		return IMDRelation::EreldistrCoordinatorOnly;
 	}
 
 	GPOS_RAISE(gpdxl::ExmaMD, ExmiDXLUnrecognizedType,
@@ -1226,13 +1221,21 @@ CTranslatorRelcacheToDXL::RetrieveType(CMemoryPool *mp, IMDId *mdid)
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, legacy_opfamily);
 	}
 
+	OID part_opfamily = gpdb::GetDefaultPartitionOpfamilyForType(oid_type);
+	CMDIdGPDB *mdid_part_opfamily = nullptr;
+	if (part_opfamily != InvalidOid)
+	{
+		mdid_part_opfamily =
+			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, part_opfamily);
+	}
+
 	mdid->AddRef();
 	return GPOS_NEW(mp) CMDTypeGenericGPDB(
 		mp, mdid, mdname, is_redistributable, is_fixed_length, length,
 		is_passed_by_value, mdid_distr_opfamily, mdid_legacy_distr_opfamily,
-		mdid_op_eq, mdid_op_neq, mdid_op_lt, mdid_op_leq, mdid_op_gt,
-		mdid_op_geq, mdid_op_cmp, mdid_min, mdid_max, mdid_avg, mdid_sum,
-		mdid_count, is_hashable, is_merge_joinable, is_composite_type,
+		mdid_part_opfamily, mdid_op_eq, mdid_op_neq, mdid_op_lt, mdid_op_leq,
+		mdid_op_gt, mdid_op_geq, mdid_op_cmp, mdid_min, mdid_max, mdid_avg,
+		mdid_sum, mdid_count, is_hashable, is_merge_joinable, is_composite_type,
 		is_text_related_type, mdid_type_relid, mdid_type_array, ptce->typlen);
 }
 
@@ -1364,7 +1367,6 @@ void
 CTranslatorRelcacheToDXL::LookupFuncProps(
 	OID func_oid,
 	IMDFunction::EFuncStbl *stability,	// output: function stability
-	IMDFunction::EFuncDataAcc *access,	// output: function datya access
 	BOOL *is_strict,					// output: is function strict?
 	BOOL *is_ndv_preserving,			// output: preserves NDVs of inputs
 	BOOL *returns_set,					// output: does function return set?
@@ -1373,13 +1375,11 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 )
 {
 	GPOS_ASSERT(nullptr != stability);
-	GPOS_ASSERT(nullptr != access);
 	GPOS_ASSERT(nullptr != is_strict);
 	GPOS_ASSERT(nullptr != is_ndv_preserving);
 	GPOS_ASSERT(nullptr != returns_set);
 
 	*stability = GetFuncStability(gpdb::FuncStability(func_oid));
-	*access = GetEFuncDataAccess(gpdb::FuncDataAccess(func_oid));
 
 	if (gpdb::FuncExecLocation(func_oid) != PROEXECLOCATION_ANY)
 	{
@@ -1455,18 +1455,17 @@ CTranslatorRelcacheToDXL::RetrieveFunc(CMemoryPool *mp, IMDId *mdid)
 	}
 
 	IMDFunction::EFuncStbl stability = IMDFunction::EfsImmutable;
-	IMDFunction::EFuncDataAcc access = IMDFunction::EfdaNoSQL;
 	BOOL is_strict = true;
 	BOOL returns_set = true;
 	BOOL is_ndv_preserving = true;
 	BOOL is_allowed_for_PS = false;
-	LookupFuncProps(func_oid, &stability, &access, &is_strict,
-					&is_ndv_preserving, &returns_set, &is_allowed_for_PS);
+	LookupFuncProps(func_oid, &stability, &is_strict, &is_ndv_preserving,
+					&returns_set, &is_allowed_for_PS);
 
 	mdid->AddRef();
 	CMDFunctionGPDB *md_func = GPOS_NEW(mp) CMDFunctionGPDB(
 		mp, mdid, mdname, result_type_mdid, arg_type_mdids, returns_set,
-		stability, access, is_strict, is_ndv_preserving, is_allowed_for_PS);
+		stability, is_strict, is_ndv_preserving, is_allowed_for_PS);
 
 	return md_func;
 }
@@ -1669,43 +1668,6 @@ CTranslatorRelcacheToDXL::GetFuncStability(CHAR c)
 	}
 
 	return efuncstbl;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::GetEFuncDataAccess
-//
-//	@doc:
-//		Get function data access property from the GPDB character representation
-//
-//---------------------------------------------------------------------------
-CMDFunctionGPDB::EFuncDataAcc
-CTranslatorRelcacheToDXL::GetEFuncDataAccess(CHAR c)
-{
-	CMDFunctionGPDB::EFuncDataAcc access = CMDFunctionGPDB::EfdaSentinel;
-
-	switch (c)
-	{
-		case 'n':
-			access = CMDFunctionGPDB::EfdaNoSQL;
-			break;
-		case 'c':
-			access = CMDFunctionGPDB::EfdaContainsSQL;
-			break;
-		case 'r':
-			access = CMDFunctionGPDB::EfdaReadsSQLData;
-			break;
-		case 'm':
-			access = CMDFunctionGPDB::EfdaModifiesSQLData;
-			break;
-		case 's':
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("unknown data access"));
-		default:
-			GPOS_ASSERT(!"Invalid data access property");
-	}
-
-	return access;
 }
 
 //---------------------------------------------------------------------------
@@ -2079,11 +2041,13 @@ CTranslatorRelcacheToDXL::RetrieveCast(CMemoryPool *mp, IMDId *mdid)
 	{
 		case COERCION_PATH_ARRAYCOERCE:
 		{
+			IMDId *src_elem_mdid = GPOS_NEW(mp)
+				CMDIdGPDB(IMDId::EmdidGeneral, gpdb::GetElementType(src_oid));
 			return GPOS_NEW(mp) CMDArrayCoerceCastGPDB(
 				mp, mdid, mdname, mdid_src, mdid_dest, is_binary_coercible,
 				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, cast_fn_oid),
 				IMDCast::EmdtArrayCoerce, default_type_modifier, false,
-				EdxlcfImplicitCast, -1);
+				EdxlcfImplicitCast, -1, src_elem_mdid);
 		}
 		break;
 		case COERCION_PATH_FUNC:
@@ -2498,7 +2462,6 @@ CTranslatorRelcacheToDXL::RetrievePartKeysAndTypes(CMemoryPool *mp,
 {
 	GPOS_ASSERT(nullptr != rel);
 
-	// FIXME: isn't it faster to check rel.rd_partkey?
 	if (!rel->rd_partdesc)
 	{
 		// not a partitioned table

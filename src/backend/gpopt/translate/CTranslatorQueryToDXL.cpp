@@ -997,7 +997,7 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 			nullptr);
 	}
 
-	GPOS_ASSERT(IMDRelation::EreldistrMasterOnly != rel_distr_policy);
+	GPOS_ASSERT(IMDRelation::EreldistrCoordinatorOnly != rel_distr_policy);
 	m_context->m_has_distributed_tables = true;
 
 	// TODO: Mar 5, 2014; reserve an OID
@@ -2405,6 +2405,7 @@ CTranslatorQueryToDXL::CheckNoDuplicateAliasGroupingColumn(List *target_list,
 	if (gpdb::ListLength(processed_list) < 1)
 	{
 		// no duplicates if no duplicates found in target list
+		bitset->Release();
 		return;
 	}
 
@@ -2441,6 +2442,7 @@ CTranslatorQueryToDXL::CheckNoDuplicateAliasGroupingColumn(List *target_list,
 			}
 		}
 	}
+	bitset->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -3452,7 +3454,7 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 		gpdb::RelationWrapper rel = gpdb::GetRelation(rte->relid);
 		GpPolicy *policy = rel->rd_cdbpolicy;
 
-		// master-only tables
+		// coordinator-only tables
 		if (nullptr == policy)
 		{
 			return;

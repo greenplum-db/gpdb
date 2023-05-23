@@ -29,7 +29,7 @@ select gp_inject_fault('all', 'reset', 1) from master();
 create temp table fts_probe_results(seq serial, seq_name varchar(20), current_started int, expected_start_delta int, current_done int, expected_done_delta int);
 CREATE
 
--- create extension only on coordinator since the fts process is only on master
+-- create extension only on coordinator since the fts process is only on coordinator
 create or replace function fts_probe_stats() returns table ( start_count int, done_count int, status_version int2 ) as '/@abs_builddir@/../regress/regress.so', 'gp_fts_probe_stats' language c execute on coordinator reads sql data;
 CREATE
 
@@ -55,8 +55,8 @@ CREATE
 -- start_ignore
 20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Starting gpstop with args: -u
 20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Gathering information and validating the environment...
-20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Greenplum Master catalog information
-20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Segment details from master...
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Segment details from coordinator...
 20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.575.g59811832fc build dev'
 20190730:11:15:27:045929 gpstop:office-5-75:dkrieger-[INFO]:-Signalling all postmaster processes to reload
 
@@ -273,8 +273,8 @@ select * from get_raw_stats;
 -- start_ignore
 20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Starting gpstop with args: -u
 20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Gathering information and validating the environment...
-20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Greenplum Master catalog information
-20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Segment details from master...
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Obtaining Segment details from coordinator...
 20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.575.g59811832fc build dev'
 20190730:11:15:35:046018 gpstop:office-5-75:dkrieger-[INFO]:-Signalling all postmaster processes to reload
 

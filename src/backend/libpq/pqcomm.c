@@ -745,8 +745,8 @@ Setup_AF_UNIX(char *sock_path)
  *		server port.  Set port->sock to the FD of the new connection.
  *
  * ASSUME: that this doesn't need to be non-blocking because
- *		the Postmaster uses select() to tell when the server master
- *		socket is ready for accept().
+ *		the Postmaster uses select() to tell when the socket is ready for
+ *		accept().
  *
  * RETURNS: STATUS_OK or STATUS_ERROR
  */
@@ -785,7 +785,7 @@ StreamConnection(pgsocket server_fd, Port *port)
 	}
 
 	/* 
-	 * Set a send timeout on the socket if specified, on the master only
+	 * Set a send timeout on the socket if specified, on the coordinator only
 	 * Solaris doesn't support setting SO_SNDTIMEO, so setting this won't work on Solaris (MPP-22526) 
 	 */ 
 	if (IS_QUERY_DISPATCHER() && gp_connection_send_timeout > 0)

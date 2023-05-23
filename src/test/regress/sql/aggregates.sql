@@ -999,21 +999,28 @@ create aggregate my_sum(int4)
    finalfunc = sum_finalfn
 );
 
+-- reset the plan cache, sometimes it would re-plan these prepared statements and log ORCA fallbacks
+discard plans;
 -- aggregate state should be shared as aggs are the same.
 select my_avg(one),my_avg(one) from (values(1),(3)) t(one);
 
+discard plans;
 -- aggregate state should be shared as transfn is the same for both aggs.
 select my_avg(one),my_sum(one) from (values(1),(3)) t(one);
 
+discard plans;
 -- same as previous one, but with DISTINCT, which requires sorting the input.
 select my_avg(distinct one),my_sum(distinct one) from (values(1),(3),(1)) t(one);
 
+discard plans;
 -- shouldn't share states due to the distinctness not matching.
 select my_avg(distinct one),my_sum(one) from (values(1),(3)) t(one);
 
+discard plans;
 -- shouldn't share states due to the filter clause not matching.
 select my_avg(one) filter (where one > 1),my_sum(one) from (values(1),(3)) t(one);
 
+discard plans;
 -- this should not share the state due to different input columns.
 select my_avg(one),my_sum(two) from (values(1,2),(3,4)) t(one,two);
 

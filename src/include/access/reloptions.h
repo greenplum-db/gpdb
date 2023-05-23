@@ -31,16 +31,18 @@
 #define AO_DEFAULT_BLOCKSIZE      DEFAULT_APPENDONLY_BLOCK_SIZE
 /* Compression is turned off by default. */
 #define AO_DEFAULT_COMPRESSLEVEL  0
+#define AO_DEFAULT_USABLE_COMPRESSLEVEL  1 /* used when there's a meaningful compresstype */
 #define AO_MIN_COMPRESSLEVEL  0
 #define AO_MAX_COMPRESSLEVEL  19
 /*
  * If compression is turned on without specifying compresstype, this
  * is the default.
  */
-#ifdef HAVE_LIBZ
-#define AO_DEFAULT_COMPRESSTYPE   "zlib"
-#else
 #define AO_DEFAULT_COMPRESSTYPE   "none"
+#ifdef HAVE_LIBZ
+#define AO_DEFAULT_USABLE_COMPRESSTYPE   "zlib" /* used when there's a meaningful compresslevel */
+#else
+#define AO_DEFAULT_USABLE_COMPRESSTYPE   "none"
 #endif
 #define AO_DEFAULT_CHECKSUM       true
 #define ANALYZE_DEFAULT_HLL       false
@@ -313,11 +315,7 @@ extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool ha
 
 extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
 
-extern void validateAppendOnlyRelOptions(int blocksize,
-										 int complevel, char* comptype,
-										 bool checksum, bool co);
-extern void parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
-									  bool validate, relopt_kind relkind);
+extern void validateOrientationRelOptions(char* comptype, bool co);
 
 extern void setDefaultAOStorageOpts(StdRdOptions *copy);
 extern const StdRdOptions *currentAOStorageOptions(void);
@@ -326,8 +324,6 @@ extern void resetDefaultAOStorageOpts(void);
 extern void resetAOStorageOpts(StdRdOptions *ao_opts);
 
 extern void initialize_reloptions_gp(void);
-extern void validate_and_refill_options(StdRdOptions *result, relopt_value *options,
-							int numoptions, relopt_kind kind, bool validate);
 extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
 										int num_options, relopt_kind kind, bool validate);
 

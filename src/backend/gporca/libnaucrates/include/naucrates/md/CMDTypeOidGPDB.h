@@ -20,6 +20,7 @@
 #define GPDB_OID_OID OID(26)
 #define GPDB_OID_OPFAMILY OID(1990)
 #define GPDB_OID_LEGACY_OPFAMILY OID(7109)
+#define GPDB_OID_PART_OPFAMILY OID(1989)
 #define GPDB_OID_LENGTH 4
 #define GPDB_OID_EQ_OP OID(607)
 #define GPDB_OID_NEQ_OP OID(608)
@@ -74,6 +75,7 @@ private:
 	IMDId *m_mdid;
 	IMDId *m_distr_opfamily;
 	IMDId *m_legacy_distr_opfamily;
+	IMDId *m_part_opfamily;
 
 	// mdids of different comparison operators
 	IMDId *m_mdid_op_eq;
@@ -100,7 +102,7 @@ private:
 	// count aggregate
 	IMDId *m_mdid_count;
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// type name and type
 	static CWStringConst m_str;
@@ -122,15 +124,13 @@ public:
 							  BOOL is_null) const override;
 
 	// accessors
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	IMDId *MDId() const override;
 
 	IMDId *GetDistrOpfamilyMdid() const override;
+
+	IMDId *GetPartOpfamilyMdid() const override;
 
 	CMDName Mdname() const override;
 

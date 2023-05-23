@@ -14,7 +14,7 @@ pg_dumpall -V | --version
 
 ## <a id="section3"></a>Description 
 
-`pg_dumpall` is a standard PostgreSQL utility for backing up all databases in a Greenplum Database \(or PostgreSQL\) instance, and is also supported in Greenplum Database. It creates a single \(non-parallel\) dump file. For routine backups of Greenplum Database it is better to use the Greenplum Database backup utility, [gpbackup](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html), for the best performance.
+`pg_dumpall` is a standard PostgreSQL utility for backing up all databases in a Greenplum Database \(or PostgreSQL\) instance, and is also supported in Greenplum Database. It creates a single \(non-parallel\) dump file. For routine backups of Greenplum Database it is better to use the Greenplum Database backup utility, [gpbackup](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html), for the best performance.
 
 `pg_dumpall` creates a single script file that contains SQL commands that can be used as input to [psql](psql.html) to restore the databases. It does this by calling [pg\_dump](pg_dump.html) for each database. `pg_dumpall` also dumps global objects that are common to all databases. \(`pg_dump` does not save these objects.\) This currently includes information about database users and groups, and access permissions that apply to databases as a whole.
 

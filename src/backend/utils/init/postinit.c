@@ -422,8 +422,12 @@ CheckMyDatabase(const char *name, bool am_superuser, bool override_allow_connect
 		 * ideally one should succeed and one fail.  Getting that to work
 		 * exactly seems more trouble than it is worth, however; instead we
 		 * just document that the connection limit is approximate.
+		 *
+		 * We do not want to do this for QEs since a single QD might initialise
+		 * many connections to each segment to execute a non-trivial plan and
+		 * the db connection limit does not map, semantically, to that idea.
 		 */
-		if (dbform->datconnlimit >= 0 &&
+		if (Gp_role == GP_ROLE_DISPATCH && dbform->datconnlimit >= 0 &&
 			!am_superuser &&
 			CountDBConnections(MyDatabaseId) > dbform->datconnlimit)
 			ereport(FATAL,
@@ -925,7 +929,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * In Greenplum, there is a concept of restricted mode where
 	 * superuser_reserved_connections is set equal to max_connections making
 	 * it so only superusers can connect. Changes made in restricted mode need
-	 * to be replicated to the standby master. We currently only support one
+	 * to be replicated to the standby primary. We currently only support one
 	 * walsender anyways so we should allow the connection to happen. This may
 	 * need to be reviewed later when we start supporting multiple mirrors.
 	 */
@@ -1172,6 +1176,13 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		CheckMyDatabase(dbname, am_superuser, override_allow_connections);
 
 	/*
+	 * Reject non-utility connections if the PostMaster was started in the
+	 * utility mode.
+	 */
+	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess() && Gp_role == GP_ROLE_UTILITY)
+		should_reject_connection = true;
+
+	/*
 	 * Now process any command-line switches and any additional GUC variable
 	 * settings passed in the startup packet.   We couldn't do this before
 	 * because we didn't know if client is a superuser.
@@ -1186,6 +1197,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	if (am_cursor_retrieve_handler)
 	{
 		Gp_role = GP_ROLE_UTILITY;
+		should_reject_connection = false;
 
 		/* Sanity check for security: This should not happen but in case ... */
 		if (!retrieve_conn_authenticated)
@@ -1205,6 +1217,10 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("maintenance mode: connected by superuser only")));
+
+	if (should_reject_connection)
+		ereport(FATAL,(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+					   errmsg("System was started in single node mode - only utility mode connections are allowed")));
 
 	if (Gp_role == GP_ROLE_EXECUTE && gp_session_id < 0)
 		ereport(FATAL,

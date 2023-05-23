@@ -32,14 +32,15 @@ CDXLExtStatsInfo::CDXLExtStatsInfo(CMemoryPool *mp, IMDId *mdid,
 	  m_extstats_info_array(extstats_info_array)
 {
 	GPOS_ASSERT(mdid->IsValid());
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 CDXLExtStatsInfo::~CDXLExtStatsInfo()
 {
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_mdid->Release();
 	m_extstats_info_array->Release();
 }
@@ -81,8 +82,13 @@ CDXLExtStatsInfo::Mdname() const
 //
 //---------------------------------------------------------------------------
 const CWStringDynamic *
-CDXLExtStatsInfo::GetStrRepr() const
+CDXLExtStatsInfo::GetStrRepr()
 {
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
 	return m_dxl_str;
 }
 

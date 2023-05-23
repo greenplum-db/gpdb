@@ -94,11 +94,11 @@ ERROR:  resource group "rg_test_group" does not exist
 --end_ignore
 
 SELECT * FROM gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit 
----------+---------------+-------------+----------------------+-------------------+--------+--------------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           
- 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           
- 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
+ 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      
+ 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           | 500      
 (3 rows)
 
 -- negative

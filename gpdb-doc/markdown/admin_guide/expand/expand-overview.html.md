@@ -9,7 +9,7 @@ Data warehouses typically grow over time, often at a continuous pace, as additio
 When you expand your database, you should expect the following qualities:
 
 -   Scalable capacity and performance. When you add resources to a Greenplum Database, the capacity and performance are the same as if the system had been originally implemented with the added resources.
--   Uninterrupted service during expansion. Regular workloads, both scheduled and ad-hoc, are not interrupted.
+-   Uninterrupted service during expansion, once past the initialization phase. Regular workloads, both scheduled and ad-hoc, are not interrupted.
 -   Transactional consistency.
 -   Fault tolerance. During the expansion, standard fault-tolerance mechanisms—such as segment mirroring—remain active, consistent, and effective.
 -   Replication and disaster recovery. Any existing replication mechanisms continue to function during expansion. Restore mechanisms needed in case of a failure or catastrophic event remain effective.

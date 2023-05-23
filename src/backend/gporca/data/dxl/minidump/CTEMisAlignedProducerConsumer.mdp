@@ -148,6 +148,30 @@ SELECT 1 FROM (SELECT * FROM foo) t2 FULL JOIN (SELECT 1) t1 ON true;
       <dxl:ColumnStatistics Mdid="1.16385.1.0.4" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.16385.1.0.7" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.16385.1.0.6" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
+      <dxl:GPDBScalarOp Mdid="0.1695.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.16.1.0"/>
+        <dxl:RightType Mdid="0.16.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1692.1.0"/>
+        <dxl:Commutator Mdid="0.1694.1.0"/>
+        <dxl:InverseOp Mdid="0.58.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.424.1.0"/>
+          <dxl:Opfamily Mdid="0.10002.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.1694.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.16.1.0"/>
+        <dxl:RightType Mdid="0.16.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1691.1.0"/>
+        <dxl:Commutator Mdid="0.1695.1.0"/>
+        <dxl:InverseOp Mdid="0.59.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.424.1.0"/>
+          <dxl:Opfamily Mdid="0.10002.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
     </dxl:Metadata>
     <dxl:Query>
       <dxl:OutputColumns>

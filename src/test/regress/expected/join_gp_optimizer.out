@@ -1627,6 +1627,441 @@ on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
 (14 rows)
 
 drop table t_issue_10315;
+--
+-- Left Join Pruning --
+-- Cases when join will be pruned--
+-- Single Unique key in inner relation --
+create table fooJoinPruning (a int,b int,c int,constraint idx1 unique(a));
+create table barJoinPruning (p int,q int,r int,constraint idx2 unique(p));
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where fooJoinPruning.b>300;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+         Filter: (b > 300)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b>300;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+         Filter: (b > 300)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains subquery--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b>300 and fooJoinPruning.c in (select barJoinPruning.q from barJoinPruning );
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=12)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=12)
+         Hash Cond: (foojoinpruning.c = barjoinpruning.q)
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (b > 300)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p where fooJoinPruning.b>300 and fooJoinPruning.c > ANY (select barJoinPruning.q from barJoinPruning );
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.22 rows=1 width=12)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..1324032.22 rows=1 width=12)
+         Filter: ((b > 300) AND (SubPlan 1))
+         SubPlan 1
+           ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                       ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing outer relation column--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select fooJoinPruning.a from barJoinPruning);
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.19 rows=1 width=12)
+   ->  Nested Loop Semi Join  (cost=0.00..1324032.19 rows=1 width=12)
+         Join Filter: true
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (b = a)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+               ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=1)
+                     ->  Limit  (cost=0.00..431.00 rows=1 width=1)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+                                 ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+drop table fooJoinPruning;
+drop table barJoinPruning;
+-- MultipleUnique key sets  in inner relation --
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
+-- Unique key set of inner relation ie 'p,q' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200 where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=28)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
+         Filter: ((e > 300) AND (f <> 10))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=28)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
+         Filter: ((e > 300) AND (f <> 10))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.q=100 where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=28)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
+         Filter: ((e > 300) AND (f <> 10))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+-- Unique key set of inner relation ie 'p,r,s' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.r=100 and fooJoinPruning.b=barJoinPruning.s where fooJoinPruning.f<>10;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=28)
+   ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
+         Filter: (f <> 10)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and fooJoinPruning.c=barJoinPruning.s and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=28)
+   ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+         Index Cond: (b > 300)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains subquery --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.c in (select barJoinPruning.t from barJoinPruning );
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=1 width=28)
+   ->  Nested Loop  (cost=0.00..437.00 rows=1 width=28)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+               ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+                     Group Key: barjoinpruning.t
+                     ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                           Sort Key: barjoinpruning.t
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 Hash Key: barjoinpruning.t
+                                 ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+                                       Group Key: barjoinpruning.t
+                                       ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                                             Sort Key: barjoinpruning.t
+                                             ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=4)
+         ->  Index Scan using idx2 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (c = barjoinpruning.t)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.c > ANY (select barJoinPruning.t from barJoinPruning );
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=1 width=28)
+   ->  GroupAggregate  (cost=0.00..437.00 rows=1 width=28)
+         Group Key: foojoinpruning.a, foojoinpruning.b, foojoinpruning.c, foojoinpruning.d, foojoinpruning.e, foojoinpruning.f, foojoinpruning.g
+         ->  Sort  (cost=0.00..437.00 rows=1 width=28)
+               Sort Key: foojoinpruning.a, foojoinpruning.b
+               ->  Nested Loop  (cost=0.00..437.00 rows=1 width=28)
+                     Join Filter: true
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Index Scan using idx2 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+                           Index Cond: (c > barjoinpruning.t)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
+
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing outer relation column --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.e in (select fooJoinPruning.f from barJoinPruning);
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.16 rows=1 width=28)
+   ->  Nested Loop Semi Join  (cost=0.00..1324032.16 rows=1 width=28)
+         Join Filter: true
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
+               Filter: (e = f)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+               ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=1)
+                     ->  Limit  (cost=0.00..431.00 rows=1 width=1)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+                                 ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+-- Prunable Left join present in subquery --
+explain select t1JoinPruning.n from t1JoinPruning where t1JoinPruning.m in (select fooJoinPruning.a from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200);
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=1 width=4)
+   ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4)
+         Join Filter: true
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+               Group Key: foojoinpruning.a
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                     Sort Key: foojoinpruning.a
+                     ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=4)
+         ->  Index Scan using t1joinpruning_pkey on t1joinpruning  (cost=0.00..6.00 rows=1 width=4)
+               Index Cond: (m = foojoinpruning.a)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+drop table fooJoinPruning;
+drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;
+create table t1 (a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2 (a int primary key, b int);
+create table t3 (a int primary key, b int);
+-- inner table is join
+EXPLAIN select t1.a from t1 left join (t2 join t3 on true) on t2.a=t1.a and t3.a=t1.a;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+   ->  Seq Scan on t1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+-- inner table has new left join
+EXPLAIN select t1.* from t1 left join (t2 left join t3 on t3.a=t2.b) on t2.a=t1.a;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+   ->  Seq Scan on t1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+-- inner table is a derived table
+EXPLAIN
+select t1.* from t1 left join
+                 (
+                     select t2.b as v2b, count(*) as v2c
+                     from t2 left join t3 on t3.a=t2.b
+                     group by t2.b
+                 ) v2
+                 on v2.v2b=t1.a;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+   ->  Seq Scan on t1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+drop table t1;
+drop table t2;
+drop table t3;
+--
+-- Cases where join will not be pruned
+--
+-- Single Unique key in inner relation --
+create table fooJoinPruning (a int,b int,c int,constraint idx1 unique(a));
+create table barJoinPruning (p int,q int,r int,constraint idx2 unique(p));
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation but filter is on a inner relation --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=fooJoinPruning.b  where barJoinPruning.q<>10;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=1 width=12)
+   ->  Nested Loop  (cost=0.00..437.00 rows=1 width=12)
+         Join Filter: true
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+               Hash Key: foojoinpruning.b
+               ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+         ->  Index Scan using idx2 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+               Index Cond: (p = foojoinpruning.b)
+               Filter: (q <> 10)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation but output columns are from inner relation --
+explain select barJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=fooJoinPruning.b  where fooJoinPruning.b>1000;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=2 width=12)
+   ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=12)
+         Join Filter: true
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+               Hash Key: foojoinpruning.b
+               ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=4)
+                     Filter: (b > 1000)
+         ->  Index Scan using idx2 on barjoinpruning  (cost=0.00..6.00 rows=1 width=12)
+               Index Cond: ((p = foojoinpruning.b) AND (p > 1000))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+-- Subquery present in join condition
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p in (select fooJoinPruning.b from fooJoinPruning  ) where fooJoinPruning.c>100;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1330176.22 rows=2 width=12)
+   ->  Nested Loop Left Join  (cost=0.00..1330176.22 rows=1 width=12)
+         Join Filter: true
+         ->  Seq Scan on foojoinpruning foojoinpruning_1  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (c > 100)
+         ->  Materialize  (cost=0.00..437.00 rows=1 width=1)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=1)
+                     ->  Nested Loop  (cost=0.00..437.00 rows=1 width=1)
+                           Join Filter: true
+                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+                                 Group Key: foojoinpruning.b
+                                 ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                                       Sort Key: foojoinpruning.b
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                             Hash Key: foojoinpruning.b
+                                             ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+                                                   Group Key: foojoinpruning.b
+                                                   ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                                                         Sort Key: foojoinpruning.b
+                                                         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Index Scan using idx2 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+                                 Index Cond: (p = foojoinpruning.b)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(23 rows)
+
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing inner relation column--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select barJoinPruning.q from fooJoinPruning);
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324038.10 rows=1 width=12)
+   ->  Nested Loop  (cost=0.00..1324038.10 rows=1 width=12)
+         Join Filter: true
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324032.10 rows=1 width=12)
+               Hash Key: foojoinpruning_1.c
+               ->  Nested Loop Semi Join  (cost=0.00..1324032.10 rows=1 width=12)
+                     Join Filter: true
+                     ->  Seq Scan on foojoinpruning foojoinpruning_1  (cost=0.00..431.00 rows=1 width=12)
+                     ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+                           ->  Broadcast Motion 1:3  (slice3)  (cost=0.00..431.00 rows=1 width=1)
+                                 ->  Limit  (cost=0.00..431.00 rows=1 width=1)
+                                       ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
+                                             ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=1)
+         ->  Index Scan using idx2 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+               Index Cond: (p = foojoinpruning_1.c)
+               Filter: (foojoinpruning_1.b = q)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select barJoinPruning.q from fooJoinPruning where fooJoinPruning.a=barJoinPruning.r);
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=12)
+   ->  Hash Join  (cost=0.00..868.00 rows=1 width=12)
+         Hash Cond: (barjoinpruning.r = foojoinpruning_1.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=16)
+               Hash Key: barjoinpruning.r
+               ->  Nested Loop  (cost=0.00..437.00 rows=1 width=16)
+                     Join Filter: true
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+                           Hash Key: foojoinpruning.c
+                           ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=12)
+                     ->  Index Scan using idx2 on barjoinpruning  (cost=0.00..6.00 rows=1 width=4)
+                           Index Cond: (p = foojoinpruning.c)
+                           Filter: ((foojoinpruning.b = q) AND (NOT (r IS NULL)))
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Seq Scan on foojoinpruning foojoinpruning_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+drop table fooJoinPruning;
+drop table barJoinPruning;
+-- Multiple Unique key sets  in inner relation --
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+-- No equality operator present in join condition --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p>100 and barJoinPruning.q>200  where fooJoinPruning.b>300;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..453632.48 rows=2 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..453632.48 rows=1 width=28)
+         Join Filter: true
+         ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (b > 300)
+         ->  Materialize  (cost=0.00..6.00 rows=1 width=1)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..6.00 rows=1 width=1)
+                     ->  Index Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+                           Index Cond: ((p > 100) AND (q > 200))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+-- OR operator is present in join condition --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.c=barJoinPruning.r or fooJoinPruning.d=barJoinPruning.s;
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324033.62 rows=1 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..1324033.62 rows=1 width=28)
+         Join Filter: (((foojoinpruning.a = barjoinpruning.p) AND (foojoinpruning.c = barjoinpruning.r)) OR (foojoinpruning.d = barjoinpruning.s))
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=12)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p or fooJoinPruning.b=barJoinPruning.q  where fooJoinPruning.b>300;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..888833.66 rows=1 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..888833.66 rows=1 width=28)
+         Join Filter: ((foojoinpruning.a = barjoinpruning.p) OR (foojoinpruning.b = barjoinpruning.q))
+         ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (b > 300)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+-- Not all unique keys of inner relation are equal to a constant or column from outer relation
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and barJoinPruning.r=barJoinPruning.s;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=2 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=28)
+         Join Filter: true
+         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
+         ->  Index Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+               Index Cond: (p = foojoinpruning.a)
+               Filter: (r = s)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..12.00 rows=2 width=28)
+   ->  Nested Loop Left Join  (cost=0.00..12.00 rows=1 width=28)
+         Join Filter: true
+         ->  Index Scan using idx1 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
+               Index Cond: (b > 300)
+         ->  Index Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+               Index Cond: (p = foojoinpruning.a)
+               Filter: ((foojoinpruning.b = r) AND (s = t) AND (r > 300))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+drop table fooJoinPruning;
+drop table barJoinPruning;
 -----------------------------------------------------------------
 -- Test cases on Dynamic Partition Elimination(DPE) for Right Joins
 -----------------------------------------------------------------
@@ -2031,3 +2466,156 @@ drop table if exists bar_PT2;
 drop table if exists bar_PT3;
 drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+-- check motion is added when performing a NL Left Outer Join between relations
+-- when the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.82 rows=2 width=16)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.82 rows=1 width=16)
+         Join Filter: ((foo_varchar.a)::bpchar = bar_char.p)
+         ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+  a   |   p   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
+(3 rows)
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.50 rows=2 width=16)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.50 rows=1 width=16)
+         Join Filter: ((foo_varchar.a)::bpchar = random_dis_char.y)
+         ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on random_dis_char  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+  a   |   y   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
+(3 rows)
+
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.50 rows=2 width=16)
+   ->  Nested Loop Left Join  (cost=0.00..1324032.50 rows=1 width=16)
+         Join Filter: (bar_char.p = (random_dis_varchar.x)::bpchar)
+         ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=8)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on random_dis_varchar  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+   p   |  x   
+-------+------
+ 1     | 1 
+ 2     | 2  
+ 3     | 3   
+(3 rows)
+
+-- check motion is added when performing a NL Inner Join between relations when
+-- the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.79 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.79 rows=1 width=16)
+         Join Filter: ((foo_varchar.a)::bpchar = bar_char.p)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+  a   |   p   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
+(3 rows)
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.47 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.47 rows=1 width=16)
+         Join Filter: ((foo_varchar.a)::bpchar = random_dis_char.y)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Seq Scan on random_dis_char  (cost=0.00..431.00 rows=1 width=8)
+         ->  Seq Scan on foo_varchar  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+  a   |   y   
+------+-------
+ 1    | 1    
+ 2    | 2    
+ 3    | 3    
+(3 rows)
+
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.47 rows=1 width=16)
+   ->  Nested Loop  (cost=0.00..1324032.47 rows=1 width=16)
+         Join Filter: (bar_char.p = (random_dis_varchar.x)::bpchar)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Seq Scan on random_dis_varchar  (cost=0.00..431.00 rows=1 width=8)
+         ->  Seq Scan on bar_char  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+   p   |  x   
+-------+------
+ 1     | 1 
+ 2     | 2  
+ 3     | 3   
+(3 rows)
+
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;

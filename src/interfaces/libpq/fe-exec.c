@@ -1246,7 +1246,7 @@ pqRowProcessor(PGconn *conn, const char **errmsgp)
 
 	return 1;
 
-	fail:
+fail:
 	/* release locally allocated PGresult, if we made one */
 	if (res != conn->result)
 		PQclear(res);

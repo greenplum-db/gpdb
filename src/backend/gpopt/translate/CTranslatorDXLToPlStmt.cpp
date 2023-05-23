@@ -2252,9 +2252,9 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion(
 		int segindex = *((*input_segids_array)[0]);
 
 		// only one segment in total
-		if (segindex == MASTER_CONTENT_ID)
+		if (segindex == COORDINATOR_CONTENT_ID)
 		{
-			// sender is on master, must be singleton gang
+			// sender is on coordinator, must be singleton gang
 			sendslice->gangType = GANGTYPE_ENTRYDB_READER;
 		}
 		else if (1 == gpdb::GetGPSegmentCount())
@@ -4462,7 +4462,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 		dml->forceTupleRouting = false;
 	}
 
-	if (IMDRelation::EreldistrMasterOnly != md_rel->GetRelDistribution())
+	if (IMDRelation::EreldistrCoordinatorOnly != md_rel->GetRelDistribution())
 	{
 		m_is_tgt_tbl_distributed = true;
 	}
@@ -5543,7 +5543,7 @@ CTranslatorDXLToPlStmt::IsTgtTblDistributed(CDXLOperator *dxlop)
 	CDXLPhysicalDML *phy_dml_dxlop = CDXLPhysicalDML::Cast(dxlop);
 	IMDId *mdid = phy_dml_dxlop->GetDXLTableDescr()->MDId();
 
-	return IMDRelation::EreldistrMasterOnly !=
+	return IMDRelation::EreldistrCoordinatorOnly !=
 		   m_md_accessor->RetrieveRel(mdid)->GetRelDistribution();
 }
 
@@ -5717,7 +5717,7 @@ CTranslatorDXLToPlStmt::TranslateDXLCtas(
 		TranslateDXLPhyCtasToDistrPolicy(phy_ctas_dxlop, target_list);
 	m_dxl_to_plstmt_context->AddCtasInfo(into_clause, distr_policy);
 
-	GPOS_ASSERT(IMDRelation::EreldistrMasterOnly !=
+	GPOS_ASSERT(IMDRelation::EreldistrCoordinatorOnly !=
 				phy_ctas_dxlop->Ereldistrpolicy());
 
 	m_is_tgt_tbl_distributed = true;

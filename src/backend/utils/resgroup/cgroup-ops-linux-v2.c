@@ -791,6 +791,15 @@ convertcpuusage_v2(int64 usage, int64 duration)
 	return percent;
 }
 
+/* Get the memory usage of the OS group. Return memory usage in bytes */
+static int64
+getmemoryusage_v2(Oid group)
+{
+	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
+
+	return readInt64(group, BASEDIR_GPDB, component, "memory.current");
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.getcgroupname = getcgroupname_v2,
 		.probecgroup = probecgroup_v2,
@@ -813,6 +822,8 @@ static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.setcpuset = setcpuset_v2,
 
 		.convertcpuusage = convertcpuusage_v2,
+
+		.getmemoryusage = getmemoryusage_v2
 };
 
 CGroupOpsRoutine *get_group_routine_v2(void)

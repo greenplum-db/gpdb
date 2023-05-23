@@ -86,7 +86,7 @@ SELECT * from gp_toolkit.gp_resqueue_status WHERE
   rsqname='queue_name';
 ```
 
-There is also another system view named `pg_stat_resqueues` which shows statistical metrics for a resource queue over time. To use this view, however, you must enable the `stats_queue_level` server configuration parameter. See "Managing Workload and Resources" in the *Greenplum Database Administrator Guide* for more information about using resource queues.
+There is also another system view named `pg_stat_resqueue` which shows statistical metrics for a resource queue over time. To use this view, however, you must enable the `stats_queue_level` server configuration parameter. See "Managing Workload and Resources" in the *Greenplum Database Administrator Guide* for more information about using resource queues.
 
 `CREATE RESOURCE QUEUE` cannot be run within a transaction.
 

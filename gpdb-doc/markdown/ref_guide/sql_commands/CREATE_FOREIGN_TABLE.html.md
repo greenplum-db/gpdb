@@ -12,7 +12,7 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <table_name> ( [
 ] )
 [ INHERITS ( <parent_table> [, ... ] ) ]
   SERVER <server_name>
-  [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <option> '<value>' [, ... ] ) ]
+  [ OPTIONS ( [ mpp_execute { 'coordinator' | 'any' | 'all segments' } [, ] ] <option> '<value>' [, ... ] ) ]
 
 CREATE FOREIGN TABLE [ IF NOT EXISTS ] <table_name>
   PARTITION OF <parent_table> [ (
@@ -22,7 +22,7 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <table_name>
 ) ]
 { FOR VALUES <partition_bound_spec> | DEFAULT }
   SERVER <server_name>
-  [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <option> '<value>' [, ... ] ) ]
+  [ OPTIONS ( [ mpp_execute { 'coordinator' | 'any' | 'all segments' } [, ] ] <option> '<value>' [, ... ] ) ]
 
 where <column_constraint> is:
 
@@ -111,10 +111,10 @@ server\_name
 OPTIONS \( option 'value' \[, ... \] \)
 :   The options for the new foreign table or one of its columns. While option names must be unique, a table option and a column option may have the same name. The option names and values are foreign-data wrapper-specific. Greenplum Database validates the options and values using the foreign-data wrapper's validator\_function.
 
-mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
+mpp\_execute \{ 'coordinator' \| 'any' \| 'all segments' \}
 :   A Greenplum Database-specific option that identifies the host from which the foreign-data wrapper reads or writes data:
 
-    -   `master` \(the default\)—Read or write data from the coordinator host.
+    -   `coordinator` \(the default\)—Read or write data from the coordinator host.
     -   `any`—Read data from either the coordinator host or any one segment, depending on which path costs less.
     -   `all segments`—Read or write data from all segments. To support this option value, the foreign-data wrapper must have a policy that matches the segments to data.
 

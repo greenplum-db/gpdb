@@ -78,21 +78,15 @@ function unittest_check_gpdb() {
 
 function include_dependencies() {
 
-	mkdir -p ${GREENPLUM_INSTALL_DIR}/{lib/pkgconfig,include}
-	declare -a library_search_path header_search_path vendored_headers vendored_libs pkgconfigs
+	declare -a library_search_path vendored_libs
 
-	header_search_path=(/usr/local/include/ /usr/include/)
 	library_search_path+=($(cat /etc/ld.so.conf.d/*.conf | grep -v '#'))
 	library_search_path+=(/lib64 /usr/lib64 /lib /usr/lib)
 
-	pkgconfigs=(quicklz.pc)
-	vendored_libs=(libquicklz.so{,.1,.1.5.0} libxerces-c{,-3.1}.so)
+	vendored_libs=(libxerces-c{,-3.1}.so)
 
 	# Vendor shared libraries - follow symlinks
 	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]]; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib \;; done; fi; done
-	# vendor pkgconfig files
-	for path in "${library_search_path[@]}"; do if [[ -d "${path}/pkgconfig" ]]; then for pkg in "${pkgconfigs[@]}"; do find -L $path/pkgconfig/ -name $pkg -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib/pkgconfig \;; done; fi; done
-
 }
 function export_gpdb() {
 	TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_BIN_FILENAME}"
@@ -142,6 +136,11 @@ function _main() {
 
 	## Add CCache Support (?)
 	add_ccache_support "${OS}"
+
+
+	# The WITH_ASSERTIONS state should keep the same between build and test.
+	# Or LLVM_ABI_BREAKING_CHECKS will fail the loading of libllvmjit
+	setup_llvm
 
 	generate_build_number
 	build_gpdb "${BLD_TARGET_OPTION[@]}"

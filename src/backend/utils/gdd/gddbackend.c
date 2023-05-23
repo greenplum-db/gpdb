@@ -421,7 +421,7 @@ dumpCancelResult(StringInfo str, List *xids)
 	{
 		DistributedTransactionId xid = *(DistributedTransactionId*) lfirst(cell);
 
-		appendStringInfo(str, UINT64_FORMAT"(Master Pid: %d)", xid, GetPidByGxid(xid));
+		appendStringInfo(str, UINT64_FORMAT"(Coordinator Pid: %d)", xid, GetPidByGxid(xid));
 
 		if (lnext(cell))
 			appendStringInfo(str, ",");

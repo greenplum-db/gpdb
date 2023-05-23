@@ -36,14 +36,6 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
       <dxl:TraceFlags Value="102001,102002,102003,102024,102025,102115,102116,102117,102119,102144,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:GPDBScalarOp Mdid="0.37.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
-        <dxl:LeftType Mdid="0.23.1.0"/>
-        <dxl:RightType Mdid="0.20.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.854.1.0"/>
-        <dxl:Commutator Mdid="0.419.1.0"/>
-        <dxl:InverseOp Mdid="0.82.1.0"/>
-      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.97.1.0" Name="&lt;" ComparisonType="LT">
         <dxl:LeftType Mdid="0.23.1.0"/>
         <dxl:RightType Mdid="0.23.1.0"/>

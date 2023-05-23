@@ -275,7 +275,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenTypeMod, GPOS_WSZ_LIT("TypeModifier")},
 		{EdxltokenCoercionForm, GPOS_WSZ_LIT("CoercionForm")},
 		{EdxltokenLocation, GPOS_WSZ_LIT("Location")},
-		{EdxltokenElementFunc, GPOS_WSZ_LIT("ElementFunc")},
 		{EdxltokenIsExplicit, GPOS_WSZ_LIT("IsExplicit")},
 
 		{EdxltokenJoinType, GPOS_WSZ_LIT("JoinType")},
@@ -441,6 +440,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenFuncId, GPOS_WSZ_LIT("FuncId")},
 		{EdxltokenFuncRetSet, GPOS_WSZ_LIT("FuncRetSet")},
+		{EdxltokenFuncVariadic, GPOS_WSZ_LIT("FuncVariadic")},
+
 
 		{EdxltokenAlias, GPOS_WSZ_LIT("Alias")},
 
@@ -536,7 +537,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenRelStorageCompositeType, GPOS_WSZ_LIT("Composite")},
 
 		{EdxltokenRelDistrPolicy, GPOS_WSZ_LIT("DistributionPolicy")},
-		{EdxltokenRelDistrMasterOnly, GPOS_WSZ_LIT("MasterOnly")},
+		{EdxltokenRelDistrCoordinatorOnly, GPOS_WSZ_LIT("CoordinatorOnly")},
 		{EdxltokenRelDistrHash, GPOS_WSZ_LIT("Hash")},
 		{EdxltokenRelDistrRandom, GPOS_WSZ_LIT("Random")},
 		{EdxltokenRelDistrReplicated, GPOS_WSZ_LIT("Replicated")},
@@ -612,6 +613,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenMDTypeDistrOpfamily, GPOS_WSZ_LIT("DistrOpfamily")},
 		{EdxltokenMDTypeLegacyDistrOpfamily,
 		 GPOS_WSZ_LIT("LegacyDistrOpfamily")},
+		{EdxltokenMDTypePartOpfamily, GPOS_WSZ_LIT("PartOpfamily")},
 		{EdxltokenMDTypeEqOp, GPOS_WSZ_LIT("EqualityOp")},
 		{EdxltokenMDTypeNEqOp, GPOS_WSZ_LIT("InequalityOp")},
 		{EdxltokenMDTypeLTOp, GPOS_WSZ_LIT("LessThanOp")},
@@ -661,11 +663,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenGPDBFuncStable, GPOS_WSZ_LIT("Stable")},
 		{EdxltokenGPDBFuncImmutable, GPOS_WSZ_LIT("Immutable")},
 		{EdxltokenGPDBFuncVolatile, GPOS_WSZ_LIT("Volatile")},
-		{EdxltokenGPDBFuncDataAccess, GPOS_WSZ_LIT("DataAccess")},
-		{EdxltokenGPDBFuncNoSQL, GPOS_WSZ_LIT("NoSQL")},
-		{EdxltokenGPDBFuncContainsSQL, GPOS_WSZ_LIT("ContainsSQL")},
-		{EdxltokenGPDBFuncReadsSQLData, GPOS_WSZ_LIT("ReadsSQLData")},
-		{EdxltokenGPDBFuncModifiesSQLData, GPOS_WSZ_LIT("ModifiesSQLData")},
 		{EdxltokenGPDBFuncResultTypeId, GPOS_WSZ_LIT("ResultType")},
 		{EdxltokenGPDBFuncReturnsSet, GPOS_WSZ_LIT("ReturnsSet")},
 		{EdxltokenGPDBFuncStrict, GPOS_WSZ_LIT("IsStrict")},
@@ -686,6 +683,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenGPDBCastSrcType, GPOS_WSZ_LIT("SourceTypeId")},
 		{EdxltokenGPDBCastDestType, GPOS_WSZ_LIT("DestinationTypeId")},
 		{EdxltokenGPDBCastFuncId, GPOS_WSZ_LIT("CastFuncId")},
+		{EdxltokenGPDBCastSrcElemType, GPOS_WSZ_LIT("SourceElemTypeId")},
 		{EdxltokenGPDBCastCoercePathType, GPOS_WSZ_LIT("CoercePathType")},
 		{EdxltokenGPDBArrayCoerceCast, GPOS_WSZ_LIT("ArrayCoerceCast")},
 

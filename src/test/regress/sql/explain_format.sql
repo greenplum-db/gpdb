@@ -7,8 +7,8 @@
 -- s/Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
 -- m/Work_mem: \d+\w bytes max\./
 -- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
--- m/Memory: \d+kB  Max Memory: \d+kB  Peak Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/
--- s/Memory: \d+kB  Max Memory: \d+kB  Peak Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/Memory: ###kB  Max Memory: ###kB  Peak Memory: ###kB  Avg Memory: ###kB \(3 segments\)/
+-- m/Memory: \d+kB  Max Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/
+-- s/Memory: \d+kB  Max Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/Memory: ###kB  Max Memory: ###kB  Avg Memory: ###kB \(3 segments\)/
 -- m/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(0 spilling\)/
 -- s/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(0 spilling\)/work_mem: ###kB  Segments: 3  Max: ###kB \(segment ##\)  Workfile: \(0 spilling\)/
 -- m/Execution Time: \d+\.\d+ ms/
@@ -82,6 +82,9 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- m/Memory used: \d+/
 -- s/Memory used: \d+/Memory used: ###/
 -- end_matchsubs
+-- start_matchignore
+-- m/\s*optimizer:\s*"off"/
+-- end_matchignore
 -- Check Explain YAML output
 EXPLAIN (FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
 SET random_page_cost = 1;
@@ -101,14 +104,16 @@ EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id
 -- m/Executor Memory: \d+kB  Segments: 3  Max: \d+kB \(segment \d\)/
 -- s/Executor Memory: \d+kB  Segments: 3  Max: \d+kB \(segment \d\)/Executor Memory: ###kB  Segments: 3  Max: ##kB (segment #)/
 -- end_matchsubs
--- ignore the variable JIT gucs in Settings (unaligned mode + text format)
+-- ignore the variable JIT gucs and "optimizer = 'off'" in Settings (unaligned mode + text format)
 -- start_matchsubs
 -- m/^Settings:.*/
 -- s/,?\s*jit\w*\s*=\s*[^,\n]+//g
 -- m/^Settings:.*/
 -- s/^Settings:[,\s]*/Settings: /
+-- m/^Settings:.*/
+-- s/,?\s*optimizer\w*\s*=\s*'off'//g
 -- end_matchsubs
---- Check explain analyze sort infomation in verbose mode
+--- Check explain analyze sort information in verbose mode
 EXPLAIN (ANALYZE, VERBOSE) SELECT * from boxes ORDER BY apple_id;
 RESET random_page_cost;
 RESET cpu_index_tuple_cost;

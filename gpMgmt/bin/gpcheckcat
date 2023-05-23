@@ -1072,7 +1072,9 @@ def checkOwners():
       left join pg_index i on (c.oid = i.indexrelid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.blkdirrelid or
-                                     i.indrelid = ao.blkdirrelid)
+                                     c.oid = ao.visimaprelid or
+                                     i.indrelid = ao.blkdirrelid or
+                                     i.indrelid = ao.visimaprelid)
       left join pg_class o on (o.oid = ao.relid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)

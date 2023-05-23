@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:ScalarExpr>
-    <dxl:FuncExpr FuncId="0.1346.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
-      <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+    <dxl:FuncExpr FuncId="0.1346.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
+      <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
         <dxl:ConstValue TypeMdid="0.23.1.0" Value="222"/>
       </dxl:FuncExpr>
-      <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+      <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
         <dxl:ConstValue TypeMdid="0.23.1.0" Value="333"/>
       </dxl:FuncExpr>
     </dxl:FuncExpr>

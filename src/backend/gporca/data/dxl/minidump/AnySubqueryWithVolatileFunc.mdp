@@ -11,7 +11,7 @@
     explain select * from foo where a = 10 or a > any (select a * random() from bar);
 
  	Physical plan:
-    +--CPhysicalMotionGather(master)   rows:1   width:34  rebinds:1   cost:1324044.192904   origin: [Grp:15, GrpExpr:8]
+    +--CPhysicalMotionGather(coordinator)   rows:1   width:34  rebinds:1   cost:1324044.192904   origin: [Grp:15, GrpExpr:8]
        +--CPhysicalFilter   rows:1   width:34  rebinds:1   cost:1324044.192889   origin: [Grp:15, GrpExpr:7]
           |--CPhysicalCorrelatedLeftOuterNLJoin   rows:1000   width:5  rebinds:1   cost:1324044.170956   origin: [Grp:22, GrpExpr:1]
           |  |--CPhysicalTableScan "foo" ("foo")   rows:1   width:34  rebinds:1   cost:431.000019   origin: [Grp:0, GrpExpr:1]
@@ -174,18 +174,6 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBScalarOp Mdid="0.672.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
-        <dxl:LeftType Mdid="0.701.1.0"/>
-        <dxl:RightType Mdid="0.701.1.0"/>
-        <dxl:ResultType Mdid="0.16.1.0"/>
-        <dxl:OpFunc Mdid="0.295.1.0"/>
-        <dxl:Commutator Mdid="0.674.1.0"/>
-        <dxl:InverseOp Mdid="0.675.1.0"/>
-        <dxl:Opfamilies>
-          <dxl:Opfamily Mdid="0.1972.1.0"/>
-          <dxl:Opfamily Mdid="0.3024.1.0"/>
-        </dxl:Opfamilies>
-      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.410.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true">
         <dxl:LeftType Mdid="0.20.1.0"/>
         <dxl:RightType Mdid="0.20.1.0"/>
@@ -284,7 +272,7 @@
           <dxl:Opfamily Mdid="0.7024.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.297.1.0" Name="float8gt" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.297.1.0" Name="float8gt" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.40960.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -293,7 +281,7 @@
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.701.1.0" Name="float8" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="8" PassByValue="true">
@@ -311,7 +299,7 @@
         <dxl:SumAgg Mdid="0.2111.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" DataAccess="ContainsSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.594.1.0" Name="*" ComparisonType="Other" ReturnsNullOnNullInput="true">

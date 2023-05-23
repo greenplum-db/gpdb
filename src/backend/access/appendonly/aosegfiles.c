@@ -45,6 +45,7 @@
 #include "storage/lmgr.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/int8.h"
 #include "utils/lsyscache.h"
@@ -134,7 +135,15 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	if (!HeapTupleIsValid(pg_aoseg_tuple))
 		elog(ERROR, "failed to build AO file segment tuple");
 
-	CatalogTupleInsertFrozen(pg_aoseg_rel, pg_aoseg_tuple);
+	CatalogTupleInsert(pg_aoseg_rel, pg_aoseg_tuple);
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+							"insert_aoseg_before_freeze",
+							DDLNotSpecified,
+							"", //databaseName
+							RelationGetRelationName(parentrel));
+#endif
+	heap_freeze_tuple_wal_logged(pg_aoseg_rel, pg_aoseg_tuple);
 
 	/*
 	 * Lock the tuple so that a concurrent insert transaction will not
@@ -1518,18 +1527,24 @@ get_ao_compression_ratio(PG_FUNCTION_ARGS)
 {
 	Oid			relid = PG_GETARG_OID(0);
 	Relation	parentrel;
-	float8		result;
+	float8		result = -1.0;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
 	/* open the parent (main) relation */
 	parentrel = table_open(relid, AccessShareLock);
 
-	if (!RelationIsAppendOptimized(parentrel))
+	if (!(RelationIsAoRows(parentrel) || RelationIsAoCols(parentrel)))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("'%s' is not an append-only relation",
 						RelationGetRelationName(parentrel))));
+
+	if (parentrel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+	{
+		table_close(parentrel, AccessShareLock);
+		PG_RETURN_FLOAT8(result);
+	}
 
 	if (RelationIsAoRows(parentrel))
 		result = aorow_compression_ratio_internal(parentrel);

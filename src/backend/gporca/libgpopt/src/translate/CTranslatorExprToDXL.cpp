@@ -186,7 +186,7 @@ using namespace gpdxl;
 using namespace gpopt;
 using namespace gpnaucrates;
 
-#define GPOPT_MASTER_SEGMENT_ID (-1)
+#define GPOPT_COORDINATOR_SEGMENT_ID (-1)
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -205,7 +205,7 @@ CTranslatorExprToDXL::CTranslatorExprToDXL(CMemoryPool *mp,
 	  m_pdpplan(nullptr),
 	  m_pcf(nullptr),
 	  m_pdrgpiSegments(pdrgpiSegments),
-	  m_iMasterId(GPOPT_MASTER_SEGMENT_ID)
+	  m_iCoordinatorId(GPOPT_COORDINATOR_SEGMENT_ID)
 {
 	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(nullptr != md_accessor);
@@ -1727,7 +1727,7 @@ CTranslatorExprToDXL::PdxlnDynamicForeignScan(
 	{
 		const CBitSet *bs = pps_reqd->SelectorIds(popDFS->ScanId());
 		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
+		while (bsi.Advance())
 		{
 			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
@@ -5605,10 +5605,10 @@ CTranslatorExprToDXL::PdxlnScFuncExpr(CExpression *pexprFunc)
 
 	const IMDFunction *pmdfunc = m_pmda->RetrieveFunc(mdid_func);
 
-	CDXLNode *pdxlnFuncExpr = GPOS_NEW(m_mp)
-		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarFuncExpr(
-						   m_mp, mdid_func, mdid_return_type,
-						   popScFunc->TypeModifier(), pmdfunc->ReturnsSet()));
+	CDXLNode *pdxlnFuncExpr = GPOS_NEW(m_mp) CDXLNode(
+		m_mp, GPOS_NEW(m_mp) CDXLScalarFuncExpr(
+				  m_mp, mdid_func, mdid_return_type, popScFunc->TypeModifier(),
+				  pmdfunc->ReturnsSet(), popScFunc->IsFuncVariadic()));
 
 	// translate children
 	TranslateScalarChildren(pexprFunc, pdxlnFuncExpr);
@@ -6162,25 +6162,25 @@ CTranslatorExprToDXL::PdxlnScArrayCoerceExpr(CExpression *pexprArrayCoerceExpr)
 	CScalarArrayCoerceExpr *popScArrayCoerceExpr =
 		CScalarArrayCoerceExpr::PopConvert(pexprArrayCoerceExpr->Pop());
 
-	IMDId *pmdidElemFunc = popScArrayCoerceExpr->PmdidElementFunc();
-	pmdidElemFunc->AddRef();
 	IMDId *mdid = popScArrayCoerceExpr->MdidType();
 	mdid->AddRef();
 
 	CDXLNode *pdxlnArrayCoerceExpr = GPOS_NEW(m_mp) CDXLNode(
 		m_mp,
 		GPOS_NEW(m_mp) CDXLScalarArrayCoerceExpr(
-			m_mp, pmdidElemFunc, mdid, popScArrayCoerceExpr->TypeModifier(),
-			popScArrayCoerceExpr->IsExplicit(),
+			m_mp, mdid, popScArrayCoerceExpr->TypeModifier(),
 			(EdxlCoercionForm) popScArrayCoerceExpr
 				->Ecf(),  // map Coercion Form directly based on position in enum
 			popScArrayCoerceExpr->Location()));
 
 	// translate child
-	GPOS_ASSERT(1 == pexprArrayCoerceExpr->Arity());
+	GPOS_ASSERT(2 == pexprArrayCoerceExpr->Arity());
 	CExpression *pexprChild = (*pexprArrayCoerceExpr)[0];
+	CExpression *pexprElemExpr = (*pexprArrayCoerceExpr)[1];
 	CDXLNode *child_dxlnode = PdxlnScalar(pexprChild);
+	CDXLNode *elemexpr_dxlnode = PdxlnScalar(pexprElemExpr);
 	pdxlnArrayCoerceExpr->AddChild(child_dxlnode);
+	pdxlnArrayCoerceExpr->AddChild(elemexpr_dxlnode);
 
 	return pdxlnArrayCoerceExpr;
 }
@@ -7392,7 +7392,7 @@ CTranslatorExprToDXL::GetOutputSegIdsArray(CExpression *pexprMotion)
 				CPhysicalMotionGather::PopConvert(pop);
 
 			pdrgpi = GPOS_NEW(m_mp) IntPtrArray(m_mp);
-			INT iSegmentId = m_iMasterId;
+			INT iSegmentId = m_iCoordinatorId;
 
 			if (CDistributionSpecSingleton::EstSegment == popGather->Est())
 			{
@@ -7443,12 +7443,12 @@ CTranslatorExprToDXL::GetInputSegIdsArray(CExpression *pexprMotion)
 		CDistributionSpec::EdtStrictSingleton == pds->Edt())
 	{
 		IntPtrArray *pdrgpi = GPOS_NEW(m_mp) IntPtrArray(m_mp);
-		INT iSegmentId = m_iMasterId;
+		INT iSegmentId = m_iCoordinatorId;
 		CDistributionSpecSingleton *pdss =
 			CDistributionSpecSingleton::PdssConvert(pds);
-		if (!pdss->FOnMaster())
+		if (!pdss->FOnCoordinator())
 		{
-			// non-master singleton is currently fixed to the first segment
+			// non-coordinator singleton is currently fixed to the first segment
 			iSegmentId = *((*m_pdrgpiSegments)[0]);
 		}
 		pdrgpi->Append(GPOS_NEW(m_mp) INT(iSegmentId));

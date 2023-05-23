@@ -22,7 +22,7 @@ Set the server configuration parameter optimizer for the Greenplum Database syst
 2.  Set the values of the server configuration parameters. These Greenplum Database gpconfig utility commands sets the value of the parameters to `on`:
 
     ```
-    $ gpconfig -c optimizer -v on --masteronly
+    $ gpconfig -c optimizer -v on --coordinatoronly
     ```
 
 3.  Restart Greenplum Database. This Greenplum Database gpstop utility command reloads the `postgresql.conf` files of the coordinator and segments without shutting down Greenplum Database.

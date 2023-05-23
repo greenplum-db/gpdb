@@ -169,7 +169,7 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	 *
 	 * For other QE connections, we set "hostaddr". "host" is not used.
 	 */
-	if (segdbDesc->segindex == MASTER_CONTENT_ID &&
+	if (segdbDesc->segindex == COORDINATOR_CONTENT_ID &&
 		IS_QUERY_DISPATCHER())
 	{
 		keywords[nkeywords] = "hostaddr";
@@ -546,7 +546,7 @@ static QENotice *qeNotices_tail = NULL;
  * that we cannot call palloc()!
  *
  * A QENotice struct is created for each incoming Notice, and put in a
- * queue for later processing. The QENotices are allocatd with good old
+ * queue for later processing. The QENotices are allocated with good old
  * malloc()!
  */
 static void

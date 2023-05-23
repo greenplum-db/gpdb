@@ -540,7 +540,7 @@ insert into foo_p values(1), (5), (10);
 drop table foo_p;
 
 -- MPP-3264
--- mix AO with master HEAP and see if copy works
+-- mix AO with coordinator HEAP and see if copy works
 create table foo_p (i int)
 partition by list(i)
 (partition p1 values(1, 2, 3) with (appendonly = true),
@@ -1747,7 +1747,7 @@ PARTITION st_default );
 
 drop table sg_cal_event_silvertail_hour;
 
--- Make sure we inherit master's storage settings
+-- Make sure we inherit coordinator's storage settings
 create table foo_p (i int, j int, k text)
 with (appendonly = true, compresslevel = 5)
 partition by range(j) (start(1) end(10) every(1), default partition def);
@@ -2901,30 +2901,6 @@ group by relname;
 drop table s cascade;
 
 --   MPP-13750 )
-
--- MPP-13806 start
-drop table if exists mpp13806;
- CREATE TABLE mpp13806 (id int, date date, amt decimal(10,2))
- DISTRIBUTED BY (id)
- PARTITION BY RANGE (date)
- ( START (date '2008-01-01') INCLUSIVE
-	END (date '2008-01-05') EXCLUSIVE
-	EVERY (INTERVAL '1 day') );
- 
--- Adding unbound partition right before the start  used to fail
-alter table mpp13806 add partition test end (date '2008-01-01') exclusive;
- 
-drop table if exists mpp13806;
- CREATE TABLE mpp13806 (id int, date date, amt decimal(10,2))
- DISTRIBUTED BY (id)
- PARTITION BY RANGE (date)
- ( START (date '2008-01-01') EXCLUSIVE
-	END (date '2008-01-05') EXCLUSIVE
-	EVERY (INTERVAL '1 day') );
--- For good measure, test the opposite case
-alter table mpp13806 add partition test end (date '2008-01-01') inclusive;
-drop table mpp13806;
--- MPP-13806 end
 
 -- MPP-14471 start
 -- No unenforceable PK/UK constraints!  (UNIQUE INDEXes still allowed; tested above)

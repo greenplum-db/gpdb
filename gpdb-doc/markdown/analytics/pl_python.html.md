@@ -664,7 +664,7 @@ AS $$
   region =[]
   region.append(rv[a]["region"])
   return region
-$$ language plpythonu EXECUTE ON MASTER;
+$$ language plpythonu EXECUTE ON COORDINATOR;
 ```
 
 Running this `SELECT` statement returns the `REGION` column value from the third row of the result set.

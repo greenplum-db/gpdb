@@ -6,10 +6,11 @@ Table partitioning enables supporting very large tables, such as fact tables, by
 
 -   [About Table Partitioning](#topic_tvx_nsz_bt)
 -   [Deciding on a Table Partitioning Strategy](#topic65)
+-   [Choosing the Partitioning Syntax](#choose)
 -   [Creating Partitioned Tables](#topic66)
 -   [Loading Partitioned Tables](#topic73)
 -   [Verifying Your Partition Strategy](#topic74)
--   [Viewing Your Partition Design](#topic76)
+-   [About Viewing Your Partition Design](#topic76)
 -   [Maintaining Partitioned Tables](#topic77)
 
 **Parent topic:** [Defining Database Objects](../ddl/ddl.html)
@@ -22,7 +23,9 @@ Greenplum Database supports:
 
 -   *range partitioning*: division of data based on a numerical range, such as date or price.
 -   *list partitioning*: division of data based on a list of values, such as sales territory or product line.
--   A combination of both types.
+-   *hash partitioning*: division of data based on specifying a modulus and a remainder for each partition. (Each partition holds the rows for which the hash value of the partition key divided by the specified modulus produces the specified remainder.)
+    > **Note** Only the modern partitioning syntax supports hash partitions.
+-   A combination of range and list types.
 
 ![Example Multi-level Partition Design](../graphics/partitions.jpg "Example Multi-level Partition Design")
 
@@ -30,7 +33,7 @@ Greenplum Database supports:
 
 Greenplum Database divides tables into parts \(also known as partitions\) to enable massively parallel processing. Tables are partitioned during `CREATE TABLE` using the `PARTITION BY` \(and optionally the `SUBPARTITION BY`\) clause. Partitioning creates a top-level \(or parent\) table with one or more levels of sub-tables \(or child tables\). Internally, Greenplum Database creates an inheritance relationship between the top-level table and its underlying partitions, similar to the functionality of the `INHERITS` clause of PostgreSQL.
 
-Greenplum uses the partition criteria defined during table creation to create each partition with a distinct `CHECK` constraint, which limits the data that table can contain. The query optimizer uses `CHECK` constraints to determine which table partitions to scan to satisfy a given query predicate.
+Greenplum uses the partition criteria (boundaries) defined during table creation to create each partition with a distinct partition constraint, which limits the data that table can contain. The query optimizer uses partition constraints to determine which table partitions to scan to satisfy a given query predicate.
 
 The Greenplum system catalog stores partition hierarchy information so that rows inserted into the top-level parent table propagate correctly to the child table partitions. To change the partition design or table structure, alter the parent table using `ALTER TABLE` with the `PARTITION` clause.
 
@@ -54,19 +57,47 @@ Partitioning does not improve query performance unless the query optimizer can e
 
 Before settling on a multi-level partitioning strategy, consider a single level partition with bitmap indexes. Indexes slow down data loads, so performance testing with your data and schema is recommended to decide on the best strategy.
 
+## <a id="choose"></a>Choosing the Partitioning Syntax
+
+Greenplum Database 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, referred to as the *classic* syntax. Version 7 also introduces support for PostgreSQL declarative partitioning syntax, the *modern* syntax.
+
+The classic syntax is provided for backwards compatibility with previous Greenplum versions. It is appropriate for a homogenous partition table, where all partitions are at the same leaf level and have the same partition rule.
+
+> **Note** The modern syntax is less specialized and easier to use, and is recommended for new users and new partitioned table definitions.
+
+The classic and modern partitioning syntaxes are alternatives, you choose the one that meets your needs.
+
+If you are familiar with the Greenplum 6 partitioning syntax or already have partitioned tables that were defined using this syntax, you may choose to continue using the classic syntax. (Refer to [About Changes to Table Partitioning in Greenplum 7](about-part-changes.html) for more information about partitioning syntax and behavior changes introduced in version 7.)
+
+The following table provides a feature comparison to help you choose the syntax most appropriate for your data model:
+
+| Feature | Classic Syntax | Modern Syntax |
+|----------|---------------|------------|
+| Heterogeneous partition hierarchy | Not supported. All leaf tables are at the same level. | Supported. Leaf tables are permitted at different levels. You can specify different partitioning rules for individual child tables, including different partition columns and different partitioning strategies. |
+| Expressions in partition key | Not supported. | Supported. |
+| Multi-column range partitioning | Not supported. | Supported. |
+| Multi-column list partitioning | Supported (via composite type). | Not supported. |
+| Hash partitioning | Not supported. | Supported. |
+| Subpartition templating | Supported. The definitions of the parent and child tables are consistent by default. | Not supported. You ensure that the table definitions are consistent. |
+| Partition maintenance | You operate on a child table via the parent, requiring knowledge of the partition hierarchy. | You operate directly on the child table, no knowledge of the partition hierarchy is required. |
+
+> **Important** After creation, you operate on the partition table hierarchy using the `CREATE TABLE` and `ALTER TABLE` clauses identified for the syntax that you chose. VMware does not recommend mixing and matching the classic and modern partitioning syntaxes for partition maintenance operations.
+
+
 ## <a id="topic66"></a>Creating Partitioned Tables 
 
 You partition tables when you create them with `CREATE TABLE`. This topic provides examples of SQL syntax for creating a table with various partition designs.
 
 To partition a table:
 
-1.  Decide on the partition design: date range, numeric range, or list of values.
+1.  Decide on the partition design: date range, numeric range, list of values, hash.
 2.  Choose the column\(s\) on which to partition the table.
 3.  Decide how many levels of partitions you want. For example, you can create a date range partition table by month and then subpartition the monthly partitions by sales region.
 
 -   [Defining Date Range Table Partitions](#topic67)
 -   [Defining Numeric Range Table Partitions](#topic68)
 -   [Defining List Table Partitions](#topic69)
+-   [Defining Hash Table Partitions](#topic69h)
 -   [Defining Multi-level Partitions](#topic70)
 -   [Partitioning an Existing Table](#topic71)
 
@@ -83,7 +114,6 @@ PARTITION BY RANGE (date)
 ( START (date '2016-01-01') INCLUSIVE
    END (date '2017-01-01') EXCLUSIVE
    EVERY (INTERVAL '1 day') );
-
 ```
 
 You can also declare and name each partition individually. For example:
@@ -105,7 +135,6 @@ PARTITION BY RANGE (date)
   PARTITION Nov16 START (date '2016-11-01') INCLUSIVE ,
   PARTITION Dec16 START (date '2016-12-01') INCLUSIVE 
                   END (date '2017-01-01') EXCLUSIVE );
-
 ```
 
 You do not have to declare an `END` value for each partition, only the last one. In this example, `Jan16` ends where `Feb16` starts.
@@ -121,7 +150,6 @@ DISTRIBUTED BY (id)
 PARTITION BY RANGE (year)
 ( START (2006) END (2016) EVERY (1), 
   DEFAULT PARTITION extra ); 
-
 ```
 
 For more information about default partitions, see [Adding a Default Partition](#topic80).
@@ -138,12 +166,28 @@ PARTITION BY LIST (gender)
 ( PARTITION girls VALUES ('F'), 
   PARTITION boys VALUES ('M'), 
   DEFAULT PARTITION other );
-
 ```
 
 > **Note** The current Postgres Planner allows list partitions with multi-column \(composite\) partition keys. A range partition only allows a single column as the partition key. GPORCA does not support composite keys, so you should not use composite partition keys.
 
 For more information about default partitions, see [Adding a Default Partition](#topic80).
+
+### <a id="topic69h"></a>Defining Hash Table Partitions 
+
+> **Note** Only the modern syntax supports hash partitions.
+
+A hash partitioned table uses a hashable column as its partition key column. A hash partition only allows a single column as the partition key. For hash partitions, you must declare a partition specification for every partition \(modulus/remainder combination\) that you want to create. For example:
+
+```
+CREATE TABLE pht (a int, b int, c text) PARTITION BY HASH(c);
+CREATE TABLE pht_p1 PARTITION OF pht FOR VALUES WITH (MODULUS 3, REMAINDER 0);
+CREATE TABLE pht_p2 PARTITION OF pht FOR VALUES WITH (MODULUS 3, REMAINDER 1);
+CREATE TABLE pht_p3 PARTITION OF pht FOR VALUES WITH (MODULUS 3, REMAINDER 2);
+INSERT INTO pht SELECT i, i, to_char(i/50, 'FM0000') FROM generate_series(0, 599, 2) i;
+SELECT 'pht_p1' AS partition, count(*) AS row_count FROM pht_p1
+  UNION ALL SELECT 'pht_p2', count(*) FROM pht_p2
+  UNION ALL SELECT 'pht_p3', count(*) FROM pht_p3;
+```
 
 ### <a id="topic70"></a>Defining Multi-level Partitions 
 
@@ -164,7 +208,6 @@ SUBPARTITION TEMPLATE
    END (date '2012-01-01') EXCLUSIVE
    EVERY (INTERVAL '1 month'), 
    DEFAULT PARTITION outlying_dates );
-
 ```
 
 The following example shows a three-level partition design where the `sales` table is partitioned by `year`, then `month`, then `region`. The `SUBPARTITION TEMPLATE` clauses ensure that each yearly partition has the same subpartition structure. The example declares a `DEFAULT` partition at each level of the hierarchy.
@@ -186,14 +229,13 @@ PARTITION BY RANGE (year)
                DEFAULT SUBPARTITION other_regions )
 ( START (2002) END (2012) EVERY (1), 
   DEFAULT PARTITION outlying_years );
-
 ```
 
 **CAUTION:** When you create multi-level partitions on ranges, it is easy to create a large number of subpartitions, some containing little or no data. This can add many entries to the system tables, which increases the time and memory required to optimize and run queries. Increase the range interval or choose a different partitioning strategy to reduce the number of subpartitions created.
 
 ### <a id="topic71"></a>Partitioning an Existing Table 
 
-Tables can be partitioned only at creation. If you have a table that you want to partition, you must create a partitioned table, load the data from the original table into the new table, drop the original table, and rename the partitioned table with the original table's name. You must also re-grant any table permissions. For example:
+With classic partitioning syntax, tables can be partitioned only at creation. If you have a table that you want to partition, you must create a partitioned table, load the data from the original table into the new table, drop the original table, and rename the partitioned table with the original table's name. You must also re-grant any table permissions. For example:
 
 ```
 CREATE TABLE sales2 (LIKE sales) 
@@ -206,7 +248,6 @@ DROP TABLE sales;
 ALTER TABLE sales2 RENAME TO sales;
 GRANT ALL PRIVILEGES ON sales TO admin;
 GRANT SELECT ON sales TO guest;
-
 ```
 
 > **Note** The `LIKE` clause does not copy over partition structures when creating a new table.
@@ -225,7 +266,6 @@ For information about exchanging a leaf child partition with an external table, 
 
 These are limitations for partitioned tables when a leaf child partition of the table is an external table:
 
--   Queries that run against partitioned tables that contain external table partitions are run with the Postgres Planner.
 -   The external table partition is a read only external table. Commands that attempt to access or modify data in the external table partition return an error. For example:
     -   `INSERT`, `DELETE`, and `UPDATE` commands that attempt to change data in the external table partition return an error.
     -   `TRUNCATE` commands return an error.
@@ -257,9 +297,9 @@ These are limitations for partitioned tables when a leaf child partition of the 
 
 After you create the partitioned table structure, top-level parent tables are empty. Data is routed to the bottom-level child table partitions. In a multi-level partition design, only the subpartitions at the bottom of the hierarchy can contain data.
 
-Rows that cannot be mapped to a child table partition are rejected and the load fails. To avoid unmapped rows being rejected at load time, define your partition hierarchy with a `DEFAULT` partition. Any rows that do not match a partition's `CHECK` constraints load into the `DEFAULT` partition. See [Adding a Default Partition](#topic80).
+Rows that cannot be mapped to a child table partition are rejected and the load fails. To avoid unmapped rows being rejected at load time, define your partition hierarchy with a `DEFAULT` partition. Any rows that do not match a partition's partition constraint loads into the `DEFAULT` partition. See [Adding a Default Partition](#topic80).
 
-At runtime, the query optimizer scans the entire table inheritance hierarchy and uses the `CHECK` table constraints to determine which of the child table partitions to scan to satisfy the query's conditions. The `DEFAULT` partition \(if your hierarchy has one\) is always scanned. `DEFAULT` partitions that contain data slow down the overall scan time.
+At runtime, the query optimizer scans the entire table inheritance hierarchy and uses the table constraints to determine which of the child table partitions to scan to satisfy the query's conditions. The `DEFAULT` partition \(if your hierarchy has one\) is always scanned. `DEFAULT` partitions that contain data slow down the overall scan time.
 
 When you use `COPY` or `INSERT` to load data into a parent table, the data is automatically rerouted to the correct partition, just like a regular table.
 
@@ -274,7 +314,6 @@ For example, suppose a *sales* table is date-range partitioned by month and subp
 ```
 EXPLAIN SELECT * FROM sales WHERE date='01-07-12' AND 
 region='usa';
-
 ```
 
 The query plan for this query should show a table scan of only the following tables:
@@ -292,7 +331,6 @@ Filter: "date"=01-07-12::date AND region='USA'::text
 ->  `Seq Scan on``sales_1_2_prt_usa` sales (cost=0.00..9.87 
 `rows=20` 
       width=40)
-
 ```
 
 Ensure that the query optimizer does not scan unnecessary partitions or subpartitions \(for example, scans of months or regions not specified in the query predicate\), and that scans of the top-level tables return 0-1 rows.
@@ -307,23 +345,23 @@ The following limitations can result in a query plan that shows a non-selective 
 
 -   Selective scanning recognizes `STABLE` and `IMMUTABLE` functions, but does not recognize `VOLATILE` functions within a query. For example, `WHERE` clauses such as `date > CURRENT_DATE` cause the query optimizer to selectively scan partitioned tables, but `time > TIMEOFDAY` does not.
 
-## <a id="topic76"></a>Viewing Your Partition Design 
+## <a id="topic76"></a>About Viewing Your Partition Design 
 
-You can look up information about your partition design using the *[pg\_partitions](../../ref_guide/system_catalogs/pg_partitions.html)* system view. For example, to see the partition design of the *sales* table:
+Partitioning information is stored in the [pg_partitioned_table](../../ref_guide/system_catalogs/pg_partitioned_table.html) catalog, and in additional fields in [pg_class](../../ref_guide/system_catalogs/pg_class.html) (`relispartition` and `relpartbound`).
+
+You can also use the following functions to obtain information about the partitioned tables in the database:
+
+|Name  |  Return Type |   Description |
+|-------------|-----------------|-----------|
+| pg_partition_tree(regclass) | setof record | Lists information about tables or indexes in a partition tree for a given partitioned table or partitioned index, with one row for each partition. Information provided includes the name of the partition, the name of its immediate parent, a `boolean` value indicating if the partition is a leaf, and an `integer` identifying its level in the hierarchy. The value of level begins at `0` for the input table or index in its role as the root of the partition tree, `1` for its partitions, `2` for their partitions, and so on. |
+| pg_partition_ancestors(regclass) | setof regclass | Lists the ancestor relations of the given partition, including the partition itself. |
+| pg_partition_root(regclass) | regclass | Returns the top-most parent of the partition tree to which the given relation belongs. |
+
+For example, to view the partition inheritance structure of the `sales` table:
 
 ```
-SELECT partitionboundary, partitiontablename, partitionname, 
-partitionlevel, partitionrank 
-FROM pg_partitions 
-WHERE tablename='sales';
-
+SELECT * FROM pg_partition_tree( 'sales' );
 ```
-
-The following table and views also show information about partitioned tables.
-
--   *[pg\_partition](../../ref_guide/system_catalogs/pg_partition.html)*- Tracks partitioned tables and their inheritance level relationships.
--   *[pg\_partition\_templates](../../ref_guide/system_catalogs/pg_partition_templates.html)*- Shows the subpartitions created using a subpartition template.
--   *[pg\_partition\_columns](../../ref_guide/system_catalogs/pg_partition_columns.html)* - Shows the partition key columns used in a partition design.
 
 ## <a id="topic77"></a>Maintaining Partitioned Tables 
 
@@ -339,9 +377,9 @@ To maintain a partitioned table, use the `ALTER TABLE` command against the top-l
 -   [Modifying a Subpartition Template](#topic85)
 -   [Exchanging a Leaf Child Partition with an External Table](#topic_yhz_gpn_qs)
 
-> **Important** When defining and altering partition designs, use the given partition name, not the table object name. The given partition name is the `partitionname` column value in the *[pg\_partitions](../../ref_guide/system_catalogs/pg_partitions.html)* system view. Although you can query and load any table \(including partitioned tables\) directly using SQL commands, you can only modify the structure of a partitioned table using the `ALTER TABLE...PARTITION` clauses.
+> **Important** When defining and altering partition designs, use the given partition name, not the table object name. The given partition name is the `relid` column returned by the `pg_partition_tree()` function. Although you can query and load any table \(including partitioned tables\) directly using SQL commands, you can only modify the structure of a partitioned table that you create with classic partitioning syntax using the `ALTER TABLE...PARTITION` clauses.
 
-Partitions are not required to have names. If a partition does not have a name, use one of the following expressions to specify a partition: `PARTITION FOR (value)` or `PARTITION FOR (RANK(number))`.
+Partitions are not required to have names. If a partition does not have a name, use the following expression to identify a partition: `PARTITION FOR (value)`.
 
 For a multi-level partitioned table, you identify a specific partition to change with `ALTER PARTITION` clauses. For each partition level in the table hierarchy that is above the target partition, specify the partition that is related to the target partition in an `ALTER PARTITION` clause. For example, if you have a partitioned table that consists of three levels, year, quarter, and region, this `ALTER TABLE` command exchanges a leaf partition `region` with the table `region_new`.
 
@@ -359,7 +397,6 @@ You can add a partition to a partition design with the `ALTER TABLE` command. If
 ALTER TABLE sales ADD PARTITION 
             START (date '2017-02-01') INCLUSIVE 
             END (date '2017-03-01') EXCLUSIVE;
-
 ```
 
 If you did not use a subpartition template when you created the table, you define subpartitions when adding a partition:
@@ -371,15 +408,13 @@ ALTER TABLE sales ADD PARTITION
       ( SUBPARTITION usa VALUES ('usa'), 
         SUBPARTITION asia VALUES ('asia'), 
         SUBPARTITION europe VALUES ('europe') );
-
 ```
 
 When you add a subpartition to an existing partition, you can specify the partition to alter. For example:
 
 ```
-ALTER TABLE sales ALTER PARTITION FOR (RANK(12))
+ALTER TABLE sales ALTER PARTITION FOR ('2017-02-07'::date)
       ADD PARTITION africa VALUES ('africa');
-
 ```
 
 > **Note** You cannot add a partition to a partition design that has a default partition. You must split the default partition to add a partition. See [Splitting a Partition](#topic84).
@@ -408,7 +443,6 @@ To rename a partitioned child table, rename the top-level parent table. The *<pa
 
 ```
 ALTER TABLE sales RENAME TO globalsales;
-
 ```
 
 Changes the associated table names:
@@ -421,7 +455,6 @@ You can change the name of a partition to make it easier to identify. For exampl
 
 ```
 ALTER TABLE sales RENAME PARTITION FOR ('2016-01-01') TO jan16;
-
 ```
 
 Changes the associated table name as follows:
@@ -440,32 +473,29 @@ You can add a default partition to a partition design with the `ALTER TABLE` com
 
 ```
 ALTER TABLE sales ADD DEFAULT PARTITION other;
-
 ```
 
 If your partition design is multi-level, each level in the hierarchy must have a default partition. For example:
 
 ```
-ALTER TABLE sales ALTER PARTITION FOR (RANK(1)) ADD DEFAULT 
+ALTER TABLE sales ALTER PARTITION FOR ('2017-03-01'::date) ADD DEFAULT 
 PARTITION other;
 
-ALTER TABLE sales ALTER PARTITION FOR (RANK(2)) ADD DEFAULT 
+ALTER TABLE sales ALTER PARTITION FOR ('2017-05-01'::date) ADD DEFAULT 
 PARTITION other;
 
-ALTER TABLE sales ALTER PARTITION FOR (RANK(3)) ADD DEFAULT 
+ALTER TABLE sales ALTER PARTITION FOR (2017-07-01::date) ADD DEFAULT 
 PARTITION other;
-
 ```
 
-If incoming data does not match a partition's `CHECK` constraint and there is no default partition, the data is rejected. Default partitions ensure that incoming data that does not match a partition is inserted into the default partition.
+If incoming data does not match a partition's constraint and there is no default partition, the data is rejected. Default partitions ensure that incoming data that does not match a partition is inserted into the default partition.
 
 ### <a id="topic81"></a>Dropping a Partition 
 
 You can drop a partition from your partition design using the `ALTER TABLE` command. When you drop a partition that has subpartitions, the subpartitions \(and all data in them\) are automatically dropped as well. For range partitions, it is common to drop the older partitions from the range as old data is rolled out of the data warehouse. For example:
 
 ```
-ALTER TABLE sales DROP PARTITION FOR (RANK(1));
-
+ALTER TABLE sales DROP PARTITION FOR ('2017-03-01'::date);
 ```
 
 ### <a id="topic82"></a>Truncating a Partition 
@@ -473,8 +503,7 @@ ALTER TABLE sales DROP PARTITION FOR (RANK(1));
 You can truncate a partition using the `ALTER TABLE` command. When you truncate a partition that has subpartitions, the subpartitions are automatically truncated as well.
 
 ```
-ALTER TABLE sales TRUNCATE PARTITION FOR (RANK(1));
-
+ALTER TABLE sales TRUNCATE PARTITION FOR ('2017-02-01'::date);
 ```
 
 ### <a id="topic83"></a>Exchanging a Partition 
@@ -495,7 +524,6 @@ For example, to split a monthly partition into two with the first partition cont
 ALTER TABLE sales SPLIT PARTITION FOR ('2017-01-01')
 AT ('2017-01-16')
 INTO (PARTITION jan171to15, PARTITION jan1716to31);
-
 ```
 
 If your partition design has a default partition, you must split the default partition to add a partition.
@@ -507,7 +535,6 @@ ALTER TABLE sales SPLIT DEFAULT PARTITION
 START ('2017-01-01') INCLUSIVE 
 END ('2017-02-01') EXCLUSIVE 
 INTO (PARTITION jan17, default partition);
-
 ```
 
 ### <a id="topic85"></a>Modifying a Subpartition Template 
@@ -556,7 +583,6 @@ To remove a subpartition template, use `SET SUBPARTITION TEMPLATE` with empty pa
 
 ```
 ALTER TABLE sales SET SUBPARTITION TEMPLATE ();
-
 ```
 
 ### <a id="topic_yhz_gpn_qs"></a>Exchanging a Leaf Child Partition with an External Table 
@@ -633,7 +659,7 @@ There are four leaf child partitions for the partitioned table. Each leaf child 
 
     The external table becomes the leaf child partition with the table name `sales_1_prt_yr_1` and the old leaf child partition becomes the table `sales_2010_ext`.
 
-    > **Caution** In order to ensure queries against the partitioned table return the correct results, the external table data must be valid against the `CHECK` constraints on the leaf child partition. In this case, the data was taken from the child leaf partition table on which the `CHECK` constraints were defined.
+    > **Caution** In order to ensure queries against the partitioned table return the correct results, the external table data must be valid against the constraints on the leaf child partition.
 
 6.  Drop the table that was rolled out of the partitioned table.
 

@@ -82,9 +82,9 @@ def strcmd(cmd):
     return reduce(lambda x, y: x + ' ' + y, map(lambda x: x.find(' ') > 0 and "'" + x + "'" or x, cmd))
 
 
-def gpssh(cmd, call_verbose=True):
+def gpssh(cmd, verbose):
     c = ['%s/bin/gpssh' % GPHOME]
-    if GV.opt['-V'] and call_verbose:
+    if verbose:
         c.append('-v')
     if GV.opt['-f']:
         c.append('-f')
@@ -326,13 +326,13 @@ def runTeardown():
     for d in GV.opt['-d']:
         dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
     try:
-        gpssh('rm -rf ' + dirs)
+        gpssh('rm -rf ' + dirs, GV.opt['-V'])
     except:
         pass
 
     try:
         if GV.opt['--net']:
-            gpssh(killall(GV.opt['--netserver']))
+            gpssh(killall(GV.opt['--netserver']), GV.opt['-V'])
     except:
         pass
 
@@ -349,7 +349,7 @@ def runSetup():
         # Verify python3 is accessible
         if GV.opt['-v']:
             print('[Info] verify python3 interpreter exists')
-        (ok, out) = gpssh('python3 -c print')
+        (ok, out) = gpssh('python3 -c print', GV.opt['-V'])
         if not ok:
             if not GV.opt['-v']:
                 print(out)
@@ -364,7 +364,7 @@ def runSetup():
             dirs = '%s %s/gpcheckperf_$USER' % (dirs, d)
 
         cmd = 'rm -rf %s ; mkdir -p %s' % (dirs, dirs)
-        (ok, out) = gpssh(cmd)
+        (ok, out) = gpssh(cmd, GV.opt['-V'])
         if not ok:
             print('failed gpssh: %s' % out)
             sys.exit("[Error] unable to make gpcheckperf directory. \n"
@@ -402,7 +402,7 @@ def copyExecOver(fname):
         sys.exit('[Error] command failed: gpsync %s =:%s with output: %s' % (path, target, out))
 
     # chmod +x file
-    (ok, out) = gpssh('chmod a+rx %s' % target)
+    (ok, out) = gpssh('chmod a+rx %s' % target, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: chmod a+rx %s with output: %s' % (target, out))
 
@@ -420,7 +420,7 @@ def parseMultiDDResult(out):
         o = line[i + 2:]
 
 
-        if o.find('multidd total bytes ') > 0:
+        if o.find('multidd total bytes ') >= 0:
             h = line[1:i]
             o = o.split()
             m = re.search("(^\d+)", o[-1])
@@ -429,7 +429,7 @@ def parseMultiDDResult(out):
             bytes = int(m.group(1))
             continue
 
-        if o.find('real') > 0:
+        if o.find('real') >= 0:
             h = line[1:i]
             o = o.split()
             m = re.search("(^\d+.\d+)", o[1])
@@ -458,7 +458,7 @@ def runDiskWriteTest(multidd):
         cmd = cmd + (' -B %d' % GV.opt['-B'])
     if GV.opt['-S']:
         cmd = cmd + (' -S %d' % GV.opt['-S'])
-    (ok, out) = gpssh(cmd)
+    (ok, out) = gpssh(cmd, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     return parseMultiDDResult(out)
@@ -477,7 +477,7 @@ def runDiskReadTest(multidd):
         cmd = cmd + (' -B %d' % GV.opt['-B'])
     if GV.opt['-S']:
         cmd = cmd + (' -S %d' % GV.opt['-S'])
-    (ok, out) = gpssh(cmd)
+    (ok, out) = gpssh(cmd, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     return parseMultiDDResult(out)
@@ -490,7 +490,7 @@ def runStreamTest():
     print('--------------------')
 
     cmd = copyExecOver('stream')
-    (ok, out) = gpssh(cmd)
+    (ok, out) = gpssh(cmd, GV.opt['-V'])
     if not ok:
         sys.exit('[Error] command failed: %s with output: %s' % (cmd, out))
     out = io.StringIO(out)
@@ -512,9 +512,9 @@ def startNetServer():
     for i in range(5):
         if i > 0:
             print('[Warning] retrying with port %d' % port)
-        (ok, out) = gpssh(killall(GV.opt['--netserver']))
+        (ok, out) = gpssh(killall(GV.opt['--netserver']), GV.opt['-V'])
 
-        (ok, out) = gpssh('%s -p %d > /dev/null 2>&1' % (rmtPath, port))
+        (ok, out) = gpssh('%s -p %d > /dev/null 2>&1' % (rmtPath, port), GV.opt['-V'])
         if ok:
             return port
 
@@ -745,8 +745,15 @@ def get_host_map(hostlist):
     seglist = dict()  # segment list
     uniqhosts = dict()  # unique host list
 
-    # get list of hostnames
-    # disabling verbose mode for gpssh as it is adding extra lines of output
+    '''
+     Get hostnames using non-verbose mode since verbose output makes parsing difficult with extra lines as show:
+        Using delaybeforesend 0.05 and prompt_validation_timeout 1.0
+        [Reset ...]
+        [INFO] login sdw2
+        [sdw2] sdw2
+        [INFO] completed successfully
+        [Cleanup...]
+    '''
     rc, out = gpssh('hostname', False)
 
     if not rc:
@@ -760,9 +767,6 @@ def get_host_map(hostlist):
     # get unique hostname list
     for line in out.splitlines():
         seg, host = line.translate(str.maketrans('','','[]')).split()
-        # removing \r and b coming in the output of the command in hostname
-        host = host.replace('\\r\'', '')
-        host = host.replace('b\'', '')
         uniqhosts[host] = seg
 
     # get list of segments associated with each host (can't use gpssh since it de-dupes hosts)
@@ -771,7 +775,7 @@ def get_host_map(hostlist):
 
         proc = None
         try:
-            if GV.opt['-v'] or GV.opt['-V']:
+            if GV.opt['-v']:
                 print('[Info]', strcmd(cmd))
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             out = proc.stdout.read(-1)
@@ -824,8 +828,6 @@ def runNetPerfTestMatrix():
 
 
 def printMatrixResult(result, seglist):
-    if not result:
-        return
     print('Full matrix netperf bandwidth test')
 
     # sum up Rx/Tx rate for each host
@@ -882,8 +884,6 @@ def printMatrixResult(result, seglist):
 
 
 def printNetResult(result):
-    if not result:
-        return
     print('Netperf bisection bandwidth test')
     for h in result:
         print('%s -> %s = %f' % (h[0], h[1], h[6]))
@@ -915,8 +915,6 @@ def printNetResult(result):
 
 
 def printResult(title, result):
-    if not result:
-        return
     totTime = 0
     totBytes = 0
     totMBPS = 0

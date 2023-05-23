@@ -180,15 +180,13 @@ begin;
 insert into addcol6 select i,i from generate_series(1,10)i;
 -- abort the first insert, still should advance gp_fastsequence for this
 -- relation.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
 abort;
 
 -- check gp_fastsequence remains advanced.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
 
@@ -197,8 +195,7 @@ alter table addcol6 add column c float default 1.2;
 select a,c from addcol6 where b > 5 order by a;
 
 -- Lets validate after alter gp_fastsequence reflects correctly.
-SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+SELECT objmod, last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='addcol6'));
 

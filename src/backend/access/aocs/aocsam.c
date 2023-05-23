@@ -36,6 +36,7 @@
 #include "cdb/cdbvars.h"
 #include "fmgr.h"
 #include "miscadmin.h"
+#include "nodes/altertablenodes.h"
 #include "pgstat.h"
 #include "storage/procarray.h"
 #include "storage/smgr.h"
@@ -47,7 +48,6 @@
 #include "utils/relcache.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
-
 
 static AOCSScanDesc aocs_beginscan_internal(Relation relation,
 						AOCSFileSegInfo **seginfo,
@@ -112,6 +112,11 @@ open_all_datumstreamread_segfiles(AOCSScanDesc scan, AOCSFileSegInfo *segInfo)
 		AttrNumber	attno = proj_atts[i];
 
 		open_datumstreamread_segfile(basepath, rel, segInfo, ds[attno], attno);
+
+		/* skip reading block for ANALYZE */
+		if ((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) != 0)
+			continue;
+
 		datumstreamread_block(ds[attno], blockDirectory, attno);
 
 		AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
@@ -326,7 +331,7 @@ initscan_with_colinfo(AOCSScanDesc scan)
 	MemoryContextSwitchTo(oldCtx);
 
 	scan->cur_seg = -1;
-	scan->cur_seg_row = 0;
+	scan->segrowsprocessed = 0;
 
 	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
 
@@ -426,6 +431,46 @@ close_cur_scan_seg(AOCSScanDesc scan)
 		AppendOnlyBlockDirectory_End_forInsert(scan->blockDirectory);
 }
 
+static void
+aocs_blkdirscan_init(AOCSScanDesc scan)
+{
+	if (scan->aocsfetch == NULL)
+	{
+		int natts = RelationGetNumberOfAttributes(scan->rs_base.rs_rd);
+		scan->proj = palloc(natts * sizeof(*scan->proj));
+		MemSet(scan->proj, true, natts * sizeof(*scan->proj));
+
+		scan->aocsfetch = aocs_fetch_init(scan->rs_base.rs_rd,
+										  scan->rs_base.rs_snapshot,
+										  scan->appendOnlyMetaDataSnapshot,
+										  scan->proj);
+	}
+
+	scan->blkdirscan = palloc0(sizeof(AOBlkDirScanData));
+	AOBlkDirScan_Init(scan->blkdirscan, &scan->aocsfetch->blockDirectory);
+}
+
+static void
+aocs_blkdirscan_finish(AOCSScanDesc scan)
+{
+	AOBlkDirScan_Finish(scan->blkdirscan);
+	pfree(scan->blkdirscan);
+	scan->blkdirscan = NULL;
+
+	if (scan->aocsfetch != NULL)
+	{
+		aocs_fetch_finish(scan->aocsfetch);
+		pfree(scan->aocsfetch);
+		scan->aocsfetch = NULL;
+	}
+
+	if (scan->proj != NULL)
+	{
+		pfree(scan->proj);
+		scan->proj = NULL;
+	}
+}
+
 /*
  * aocs_beginrangescan
  *
@@ -435,7 +480,9 @@ AOCSScanDesc
 aocs_beginrangescan(Relation relation,
 					Snapshot snapshot,
 					Snapshot appendOnlyMetaDataSnapshot,
-					int *segfile_no_arr, int segfile_count)
+					int *segfile_no_arr,
+					int segfile_count,
+					bool *proj)
 {
 	AOCSFileSegInfo **seginfo;
 	int			i;
@@ -454,7 +501,7 @@ aocs_beginrangescan(Relation relation,
 								   segfile_count,
 								   snapshot,
 								   appendOnlyMetaDataSnapshot,
-								   NULL,
+								   proj,
 								   0);
 }
 
@@ -506,6 +553,7 @@ aocs_beginscan_internal(Relation relation,
 	AOCSScanDesc	scan;
 	AttrNumber		natts;
 	Oid				visimaprelid;
+	Oid				blkdirrelid;
 
 	scan = (AOCSScanDesc) palloc0(sizeof(AOCSScanDescData));
 	scan->rs_base.rs_rd = relation;
@@ -545,6 +593,12 @@ aocs_beginscan_internal(Relation relation,
 
 	scan->columnScanInfo.ds = NULL;
 
+	if ((flags & SO_TYPE_ANALYZE) != 0)
+	{
+		scan->segfirstrow = 0;
+		scan->targrow = 0;
+	}
+
 	GetAppendOnlyEntryAttributes(RelationGetRelid(relation),
 								 NULL,
 								 NULL,
@@ -552,14 +606,23 @@ aocs_beginscan_internal(Relation relation,
 								 NULL);
 
 	GetAppendOnlyEntryAuxOids(relation,
-							  NULL, NULL,
+							  NULL,
+							  &blkdirrelid,
 							  &visimaprelid);
 
 	if (scan->total_seg != 0)
+	{
 		AppendOnlyVisimap_Init(&scan->visibilityMap,
 							   visimaprelid,
 							   AccessShareLock,
 							   appendOnlyMetaDataSnapshot);
+
+		if ((flags & SO_TYPE_ANALYZE) != 0)
+		{
+			if (OidIsValid(blkdirrelid))
+				aocs_blkdirscan_init(scan);
+		}
+	}
 
 	return scan;
 }
@@ -613,9 +676,403 @@ aocs_endscan(AOCSScanDesc scan)
 	if (scan->total_seg != 0)
 		AppendOnlyVisimap_Finish(&scan->visibilityMap, AccessShareLock);
 
+	if (scan->blkdirscan != NULL)
+		aocs_blkdirscan_finish(scan);
+
 	RelationDecrementReferenceCount(scan->rs_base.rs_rd);
 
 	pfree(scan);
+}
+
+static int
+aocs_locate_target_segment(AOCSScanDesc scan, int64 targrow)
+{
+	int64 rowcount;
+
+	for (int i = scan->cur_seg; i < scan->total_seg; i++)
+	{
+		if (i < 0)
+			continue;
+
+		rowcount = scan->seginfo[i]->total_tupcount;
+		if (rowcount <= 0)
+			continue;
+
+		if (scan->segfirstrow + rowcount - 1 >= targrow)
+		{
+			/* found the target segment */
+			return i;
+		}
+
+		/* continue next segment */
+		scan->segfirstrow += rowcount;
+		scan->segrowsprocessed = 0;
+	}
+
+	/* row is beyond the total number of rows in the relation */
+	return -1;
+}
+
+/*
+ * block directory based get_target_tuple()
+ */
+static bool
+aocs_blkdirscan_get_target_tuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
+{
+	int segno, segidx;
+	int64 rownum = -1;
+	int64 rowsprocessed;
+	AOTupleId aotid;
+	int ncols = scan->columnScanInfo.relationTupleDesc->natts;
+	AppendOnlyBlockDirectory *blkdir = &scan->aocsfetch->blockDirectory;
+
+	Assert(scan->blkdirscan != NULL);
+
+	/* locate the target segment */
+	segidx = aocs_locate_target_segment(scan, targrow);
+	if (segidx < 0)
+		return false;
+
+	/* next starting position in locating segfile */
+	scan->cur_seg = segidx;
+
+	segno = scan->seginfo[segidx]->segno;
+	Assert(segno > InvalidFileSegNumber && segno <= AOTupleId_MaxSegmentFileNum);
+
+	/*
+	 * Note: It is safe to assume that the scan's segfile array and the
+	 * blockdir's segfile array are identical. Otherwise, we should stop
+	 * processing and throw an exception to make the error visible.
+	 */
+	if (blkdir->segmentFileInfo[segidx]->segno != segno)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("segfile array contents in both scan descriptor "
+				 		"and block directory are not identical on "
+						"append-optimized relation '%s'",
+						RelationGetRelationName(blkdir->aoRel))));
+	}
+
+	/*
+	 * Unlike ao_row, we set currentSegmentFileNum for ao_column here
+	 * just for passing the assertion in extract_minipage() called by
+	 * AOBlkDirScan_GetRowNum().
+	 * Since we don't invoke AppendOnlyBlockDirectory_GetCachedEntry()
+	 * for ao_column, it shoule be restored back to the original value
+	 * for AppendOnlyBlockDirectory_GetEntry() working properly.
+	 */
+	int currentSegmentFileNum = blkdir->currentSegmentFileNum;
+	blkdir->currentSegmentFileNum = blkdir->segmentFileInfo[segidx]->segno;
+
+	/* locate the target row by seqscan block directory */
+	for (int col = 0; col < ncols; col++)
+	{
+		/*
+		 * "segfirstrow" should be always pointing to the first row of
+		 * a new segfile, only locate_target_segment could update
+		 * its value.
+		 * 
+		 * "segrowsprocessed" is used for tracking the position of
+		 * processed rows in the current segfile.
+		 */
+		rowsprocessed = scan->segfirstrow + scan->segrowsprocessed;
+
+		if ((scan->rs_base.rs_rd)->rd_att->attrs[col].attisdropped)
+			continue;
+
+		rownum = AOBlkDirScan_GetRowNum(scan->blkdirscan,
+										segno,
+										col,
+										targrow,
+										&rowsprocessed);
+
+		elog(DEBUG2, "AOBlkDirScan_GetRowNum(segno: %d, col: %d, targrow: %ld): "
+			 "[segfirstrow: %ld, segrowsprocessed: %ld, rownum: %ld, cached_mpentry_num: %d]",
+			 segno, col, targrow, scan->segfirstrow, scan->segrowsprocessed, rownum,
+			 blkdir->cached_mpentry_num);
+
+		if (rownum < 0)
+			continue;
+
+		scan->segrowsprocessed = rowsprocessed - scan->segfirstrow;
+
+		/*
+		 * Found a column represented in the block directory.
+		 * Here we just look for the 1st such column, no need
+		 * to read other columns within the same row.
+		 */
+		break;
+	}
+
+	/* restore to the original value as above mentioned */
+	blkdir->currentSegmentFileNum = currentSegmentFileNum;
+
+	if (rownum < 0)
+		return false;
+
+	/* form the target tuple TID */
+	AOTupleIdInit(&aotid, segno, rownum);
+
+	ExecClearTuple(slot);
+
+	/* fetch the target tuple */
+	if(!aocs_fetch(scan->aocsfetch, &aotid, slot))
+		return false;
+
+	/* OK to return this tuple */
+	ExecStoreVirtualTuple(slot);
+	pgstat_count_heap_fetch(scan->rs_base.rs_rd);
+
+	return true;
+}
+
+/*
+ * returns the segfile number in which `targrow` locates  
+ */
+static int
+aocs_getsegment(AOCSScanDesc scan, int64 targrow)
+{
+	int segno, segidx;
+
+	/* locate the target segment */
+	segidx = aocs_locate_target_segment(scan, targrow);
+	if (segidx < 0)
+	{
+		/* done reading all segments */
+		close_cur_scan_seg(scan);
+		scan->cur_seg = -1;
+		return -1;
+	}
+
+	segno = scan->seginfo[segidx]->segno;
+	Assert(segno > InvalidFileSegNumber && segno <= AOTupleId_MaxSegmentFileNum);
+
+	if (segidx > scan->cur_seg)
+	{
+		close_cur_scan_seg(scan);
+		/* adjust cur_seg to fit for open_next_scan_seg() */
+		scan->cur_seg = segidx - 1;
+		if (open_next_scan_seg(scan) >= 0)
+		{
+			/* new segment, make sure segrowsprocessed was reset */
+			Assert(scan->segrowsprocessed == 0);
+		}
+		else
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("Unexpected behavior, failed to open segno %d during scanning AOCO table %s",
+							segno, RelationGetRelationName(scan->rs_base.rs_rd))));
+		}
+	}
+	
+	return segno;
+}
+
+static inline int
+aocs_block_remaining_rows(DatumStreamRead *ds)
+{
+	return (ds->blockRowCount - ds->blockRowsProcessed);
+}
+
+/*
+ * fetches a single column value corresponding to `endrow` (equals to `targrow`)
+ */
+static bool
+aocs_gettuple_column(AOCSScanDesc scan, AttrNumber attno, int64 startrow, int64 endrow, bool chkvisimap, TupleTableSlot *slot)
+{
+	bool isSnapshotAny = (scan->rs_base.rs_snapshot == SnapshotAny);
+	DatumStreamRead *ds = scan->columnScanInfo.ds[attno];
+	int segno = scan->seginfo[scan->cur_seg]->segno;
+	AOTupleId aotid;
+	bool ret = true;
+	int64 rowstoprocess, nrows, rownum;
+	Datum *values;
+	bool *nulls;
+
+	if (ds->blockFirstRowNum <= 0)
+		elog(ERROR, "AOCO varblock->blockFirstRowNum should be greater than zero.");
+
+	Assert(segno > InvalidFileSegNumber && segno <= AOTupleId_MaxSegmentFileNum);
+	Assert(startrow <= endrow);
+
+	rowstoprocess = endrow - startrow + 1;
+	nrows = ds->blockRowsProcessed + rowstoprocess;
+	rownum = ds->blockFirstRowNum + nrows - 1;
+
+	/* form the target tuple TID */
+	AOTupleIdInit(&aotid, segno, rownum);
+
+	if (chkvisimap && !isSnapshotAny && !AppendOnlyVisimap_IsVisible(&scan->visibilityMap, &aotid))
+	{
+		if (slot != NULL)
+			ExecClearTuple(slot);
+		
+		ret = false;
+		/* must update tracking vars before return */
+		goto out;
+	}
+
+	/* rowNumInBlock = rowNum - blockFirstRowNum */
+	datumstreamread_find(ds, rownum - ds->blockFirstRowNum);
+
+	values = slot->tts_values;
+	nulls = slot->tts_isnull;
+
+	datumstreamread_get(ds, &(values[attno]), &(nulls[attno]));
+
+out:
+	/* update rows processed */
+	ds->blockRowsProcessed += rowstoprocess;
+
+	return ret;
+}
+
+/*
+ * fetches all columns of the target tuple corresponding to `targrow`
+ */
+static bool
+aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
+{
+	bool ret = true;
+	int64 rowcount = -1;
+	int64 rowstoprocess;
+	bool chkvisimap = true;
+
+	Assert(scan->cur_seg >= 0);
+	Assert(slot != NULL);
+
+	ExecClearTuple(slot);
+
+	rowstoprocess = targrow - scan->segfirstrow + 1;
+
+	/* read from scan->cur_seg */
+	for (AttrNumber i = 0; i < scan->columnScanInfo.num_proj_atts; i++)
+	{
+		AttrNumber attno = scan->columnScanInfo.proj_atts[i];
+		DatumStreamRead *ds = scan->columnScanInfo.ds[attno];
+		int64 startrow = scan->segfirstrow + scan->segrowsprocessed;
+
+		if (ds->blockRowCount <= 0)
+			; /* haven't read block */
+		else
+		{
+			/* block was read */
+			rowcount = aocs_block_remaining_rows(ds);
+			Assert(rowcount >= 0);
+
+			if (startrow + rowcount - 1 >= targrow)
+			{
+				if (!aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot))
+				{
+					ret = false;
+					/* must update tracking vars before return */
+					goto out;
+				}
+
+				chkvisimap = false;
+				/* haven't finished scanning on current block */
+				continue;
+			}
+			else
+				startrow += rowcount; /* skip scanning remaining rows */
+		}
+
+		/*
+		 * Keep reading block headers until we find the block containing
+		 * the target row.
+		 */
+		while (true)
+		{
+			elog(DEBUG2, "aocs_gettuple(): [targrow: %ld, currow: %ld, diff: %ld, "
+				 "startrow: %ld, rowcount: %ld, segfirstrow: %ld, segrowsprocessed: %ld, nth: %d, "
+				 "blockRowCount: %d, blockRowsProcessed: %d]", targrow, startrow + rowcount - 1,
+				 startrow + rowcount - 1 - targrow, startrow, rowcount, scan->segfirstrow,
+				 scan->segrowsprocessed, datumstreamread_nth(ds), ds->blockRowCount,
+				 ds->blockRowsProcessed);
+
+			if (datumstreamread_block_info(ds))
+			{
+				rowcount = ds->blockRowCount;
+				Assert(rowcount > 0);
+
+				/* new block, reset blockRowsProcessed */
+				ds->blockRowsProcessed = 0;
+
+				if (startrow + rowcount - 1 >= targrow)
+				{
+					/* read a new buffer to consume */
+					datumstreamread_block_content(ds);
+
+					if (!aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot))
+					{
+						ret = false;
+						/* must update tracking vars before return */
+						goto out;
+					}
+
+					chkvisimap = false;
+					/* done this column */
+					break;
+				}
+
+				startrow += rowcount;
+				AppendOnlyStorageRead_SkipCurrentBlock(&ds->ao_read);
+				/* continue next block */
+			}
+			else
+				pg_unreachable(); /* unreachable code */
+		}
+	}
+
+out:
+	/* update rows processed */
+	scan->segrowsprocessed = rowstoprocess;
+
+	if (ret)
+	{
+		ExecStoreVirtualTuple(slot);
+		pgstat_count_heap_getnext(scan->rs_base.rs_rd);
+	}
+
+	return ret;
+}
+
+/*
+ * Given a specific target row number 'targrow' (in the space of all row numbers
+ * physically present in the table, i.e. across all segfiles), scan and return
+ * the corresponding tuple in 'slot'.
+ *
+ * If the tuple is visible, return true. Otherwise, return false.
+ */
+bool
+aocs_get_target_tuple(AOCSScanDesc aoscan, int64 targrow, TupleTableSlot *slot)
+{
+	if (aoscan->columnScanInfo.relationTupleDesc == NULL)
+	{
+		aoscan->columnScanInfo.relationTupleDesc = slot->tts_tupleDescriptor;
+		/* Pin it! ... and of course release it upon destruction / rescan */
+		PinTupleDesc(aoscan->columnScanInfo.relationTupleDesc);
+		initscan_with_colinfo(aoscan);
+	}
+
+	if (aoscan->blkdirscan != NULL)
+		return aocs_blkdirscan_get_target_tuple(aoscan, targrow, slot);
+
+	if (aocs_getsegment(aoscan, targrow) < 0)
+	{
+		/* all done */
+		ExecClearTuple(slot);
+		return false;
+	}
+
+	/*
+	 * Unlike AO_ROW, AO_COLUMN may have different varblocks
+	 * for different columns, so we get per-column tuple directly
+	 * on the way of walking per-column varblock.
+	 */
+	return aocs_gettuple(aoscan, targrow, slot);
 }
 
 bool
@@ -631,6 +1088,9 @@ aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 	AttrNumber	natts;
 
 	Assert(ScanDirectionIsForward(direction));
+
+	/* should not be in ANALYZE - we use a different API */
+	Assert((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) == 0);
 
 	if (scan->columnScanInfo.relationTupleDesc == NULL)
 	{
@@ -659,7 +1119,7 @@ ReadNext:
 				scan->cur_seg = -1;
 				return false;
 			}
-			scan->cur_seg_row = 0;
+			scan->segrowsprocessed = 0;
 		}
 
 		Assert(scan->cur_seg >= 0);
@@ -707,10 +1167,10 @@ ReadNext:
 			}
 		}
 
-		scan->cur_seg_row++;
+		scan->segrowsprocessed++;
 		if (rowNum == INT64CONST(-1))
 		{
-			AOTupleIdInit(&aoTupleId, curseginfo->segno, scan->cur_seg_row);
+			AOTupleIdInit(&aoTupleId, curseginfo->segno, scan->segrowsprocessed);
 		}
 		else
 		{
@@ -719,13 +1179,7 @@ ReadNext:
 
 		if (!isSnapshotAny && !AppendOnlyVisimap_IsVisible(&scan->visibilityMap, &aoTupleId))
 		{
-			/*
-			 * The tuple is invisible.
-			 * In `analyze`, we can simply return false
-			 */
-			if ((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) != 0)
-				return false;
-
+			/* The tuple is invisible */
 			rowNum = INT64CONST(-1);
 			goto ReadNext;
 		}
@@ -916,7 +1370,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 			void	   *toFree2;
 
 			/* write the block up to this one */
-			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
+			datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i);
 			if (itemCount > 0)
 			{
 				/*
@@ -938,8 +1392,7 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 				err = datumstreamwrite_lob(idesc->ds[i],
 										   datum,
 										   &idesc->blockDirectory,
-										   i,
-										   false);
+										   i);
 				Assert(err >= 0);
 
 				/*
@@ -987,7 +1440,7 @@ aocs_insert_finish(AOCSInsertDesc idesc)
 
 	for (i = 0; i < rel->rd_att->natts; ++i)
 	{
-		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i, false);
+		datumstreamwrite_block(idesc->ds[i], &idesc->blockDirectory, i);
 		datumstreamwrite_close_file(idesc->ds[i]);
 	}
 
@@ -1807,23 +2260,39 @@ aocs_end_headerscan(AOCSHeaderScanDesc hdesc)
 }
 
 /*
- * Initialize one datum stream per new column for writing.
+ * Initialize one datum stream per column for writing new files
+ * in an add col/rewrite col operation.
  */
-AOCSAddColumnDesc
-aocs_addcol_init(Relation rel,
-				 int num_newcols)
+AOCSWriteColumnDesc
+aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op)
 {
 	char	   *ct;
 	int32		clvl;
-	int32		blksz;
-	AOCSAddColumnDesc desc;
-	int			i;
-	int			iattr;
+	int32               blksz;
+	AOCSWriteColumnDesc desc;
+	int                 i;
 	StringInfoData titleBuf;
 	bool        checksum;
+	ListCell    *lc;
 
-	desc = palloc(sizeof(AOCSAddColumnDescData));
-	desc->num_newcols = num_newcols;
+	desc = palloc(sizeof(AOCSWriteColumnDescData));
+	desc->newcolvals = NULL;
+	desc->op = op;
+
+	/*
+	 * We filter out the tab->newvals which may contain both of
+	 * ADD COLUMN and ALTER COLUMN newcolvals
+	 * into the column descriptor which will only have filtered list
+	 * corresponding to that particular operation
+	 */
+	foreach(lc, newvals)
+	{
+		NewColumnValue *newval = lfirst(lc);
+		if (op == newval->op)
+			desc->newcolvals = lappend(desc->newcolvals, newval);
+	}
+
+	desc->num_cols_to_write = list_length(desc->newcolvals);
 	desc->rel = rel;
 	desc->cur_segno = -1;
 
@@ -1833,7 +2302,7 @@ aocs_addcol_init(Relation rel,
 	 */
 	StdRdOptions **opts = RelationGetAttributeOptions(rel);
 
-	desc->dsw = palloc(sizeof(DatumStreamWrite *) * desc->num_newcols);
+	desc->dsw = palloc(sizeof(DatumStreamWrite *) * desc->num_cols_to_write);
 
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  NULL,
@@ -1841,22 +2310,28 @@ aocs_addcol_init(Relation rel,
                                  &checksum,
                                  NULL);
 
-	iattr = rel->rd_att->natts - num_newcols;
-	for (i = 0; i < num_newcols; ++i, ++iattr)
+	i = 0;
+	foreach(lc, desc->newcolvals)
 	{
-		Form_pg_attribute attr = TupleDescAttr(rel->rd_att, iattr);
+		NewColumnValue *newval = lfirst(lc);
+		AttrNumber attnum = newval->attnum;
+		Form_pg_attribute attr = TupleDescAttr(rel->rd_att, attnum - 1);
 
 		initStringInfo(&titleBuf);
-		appendStringInfo(&titleBuf, "ALTER TABLE ADD COLUMN new segfile");
+		if (op==AOCSADDCOLUMN)
+			appendStringInfo(&titleBuf, "ALTER TABLE ADD COLUMN new segfile");
+		else
+			appendStringInfo(&titleBuf, "ALTER TABLE REWRITE COLUMN new segfile");
 
-		Assert(opts[iattr]);
-		ct = opts[iattr]->compresstype;
-		clvl = opts[iattr]->compresslevel;
-		blksz = opts[iattr]->blocksize;
+		Assert(opts[attnum - 1]);
+		ct = opts[attnum - 1]->compresstype;
+		clvl = opts[attnum - 1]->compresslevel;
+		blksz = opts[attnum - 1]->blocksize;
 		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, blksz,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
 											   XLogIsNeeded() && RelationNeedsWAL(rel));
+		i++;
 	}
 
 	for (i = 0; i < RelationGetNumberOfAttributes(rel); i++)
@@ -1867,40 +2342,50 @@ aocs_addcol_init(Relation rel,
 }
 
 /*
- * Create new physical segfiles for each newly added column.
+ * Create new physical segfiles for each column being written and initialize
+ * blockDirectory for recording corresponding changes to the table
+ * as part of a column add/rewrite operation.
  */
 void
-aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
-					   AOCSFileSegInfo *seginfo,
-					   char *basepath,
-					   RelFileNodeBackend relfilenode)
+aocs_writecol_newsegfiles(AOCSWriteColumnDesc desc, AOCSFileSegInfo *seginfo)
 {
 	int32		fileSegNo;
-	char		fn[MAXPGPATH];
 	int			i;
+	ListCell 	*lc;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+	char 		*basepath = relpathbackend(desc->rel->rd_node, desc->rel->rd_backend, MAIN_FORKNUM);
+	RelFileNodeBackend rnode;
 
-	/* Column numbers of newly added columns start from here. */
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
+	rnode.node = desc->rel->rd_node;
+	rnode.backend = desc->rel->rd_backend;
 
 	if (desc->dsw[0]->need_close_file)
 	{
-		aocs_addcol_closefiles(desc);
-		AppendOnlyBlockDirectory_End_addCol(&desc->blockDirectory);
+		aocs_writecol_closefiles(desc);
+		AppendOnlyBlockDirectory_End_writeCols(&desc->blockDirectory,
+											   desc->newcolvals);
 	}
-	AppendOnlyBlockDirectory_Init_addCol(&desc->blockDirectory,
-										 appendOnlyMetaDataSnapshot,
-										 (FileSegInfo *) seginfo,
-										 desc->rel,
-										 seginfo->segno,
-										 desc->num_newcols,
-										 true /* isAOCol */ );
-	for (i = 0; i < desc->num_newcols; ++i, ++colno)
+	AppendOnlyBlockDirectory_Init_writeCols(&desc->blockDirectory,
+											appendOnlyMetaDataSnapshot,
+											(FileSegInfo *) seginfo,
+											desc->rel,
+											seginfo->segno,
+											desc->rel->rd_att->natts,
+											true /* isAOCol */ );
+
+	i = 0;
+	foreach(lc, desc->newcolvals)
 	{
+		char		fn[MAXPGPATH];
 		int			version;
+		FileNumber  filenum;
 
 		/* New filenum for the column */
-		FileNumber  filenum = GetFilenumForAttribute(RelationGetRelid(desc->rel), colno + 1);
+		NewColumnValue *newval = lfirst(lc);
+		if (desc->op == AOCSADDCOLUMN)
+			filenum = GetFilenumForAttribute(RelationGetRelid(desc->rel), newval->attnum);
+		else
+			filenum = GetFilenumForRewriteAttribute(RelationGetRelid(desc->rel), newval->attnum);
 
 		/* Always write in the latest format */
 		version = AOSegfileFormatVersion_GetLatest();
@@ -1910,35 +2395,49 @@ aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
 		Assert(strlen(fn) + 1 <= MAXPGPATH);
 		datumstreamwrite_open_file(desc->dsw[i], fn,
 								   0 /* eof */ , 0 /* eof_uncompressed */ ,
-								   &relfilenode, fileSegNo,
+								   &rnode, fileSegNo,
 								   version);
 		desc->dsw[i]->blockFirstRowNum = 1;
+		i++;
 	}
 	desc->cur_segno = seginfo->segno;
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
 
+/*
+ * Close segfiles for each column being written
+ * as part of an add/rewrite column operation.
+ */
 void
-aocs_addcol_closefiles(AOCSAddColumnDesc desc)
+aocs_writecol_closefiles(AOCSWriteColumnDesc desc)
 {
-	int			i;
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
+	int      	colno;
+	ListCell    *lc;
+	int			i = 0;
 
-	for (i = 0; i < desc->num_newcols; ++i)
+	Assert(desc->newcolvals->length == desc->num_cols_to_write);
+
+	foreach(lc, desc->newcolvals)
 	{
-		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
+		NewColumnValue *newval = lfirst(lc);
+		colno = newval->attnum - 1;
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno);
 		datumstreamwrite_close_file(desc->dsw[i]);
+		i++;
 	}
 	/* Update pg_aocsseg_* with eof of each segfile we just closed. */
-	AOCSFileSegInfoAddVpe(desc->rel, desc->cur_segno, desc,
-						  desc->num_newcols, false /* non-empty VPEntry */ );
+	if (desc->cur_segno >= 0)
+		AOCSFileSegInfoWriteVpe(desc->rel,
+							  desc->cur_segno,
+							  desc,
+							  false /* non-empty VPEntry */ );
 }
 
 void
-aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc, int64 firstRowNum)
+aocs_writecol_setfirstrownum(AOCSWriteColumnDesc desc, int64 firstRowNum)
 {
        int                     i;
-       for (i = 0; i < desc->num_newcols; ++i)
+       for (i = 0; i < desc->num_cols_to_write; ++i)
        {
                /*
                 * Next block's first row number.
@@ -1952,44 +2451,46 @@ aocs_addcol_setfirstrownum(AOCSAddColumnDesc desc, int64 firstRowNum)
  * Force writing new varblock in each segfile open for insert.
  */
 void
-aocs_addcol_endblock(AOCSAddColumnDesc desc, int64 firstRowNum)
+aocs_writecol_endblock(AOCSWriteColumnDesc desc, int64 firstRowNum)
 {
-	int			i;
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
-
-	for (i = 0; i < desc->num_newcols; ++i)
+	int	i = 0;
+	ListCell *lc;
+	foreach(lc, desc->newcolvals)
 	{
-		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
+		NewColumnValue *newval = lfirst(lc);
+		int colno = newval->attnum - 1;
+		datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno);
 
 		/*
 		 * Next block's first row number.  In this case, the block being ended
 		 * has less number of rows than its capacity.
 		 */
 		desc->dsw[i]->blockFirstRowNum = firstRowNum;
+		i++;
 	}
 }
 
 /*
- * Insert one new datum for each new column being added.  This is
+ * Insert one new datum for each new column being written.  This is
  * derived from aocs_insert_values().
  */
 void
-aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
+aocs_writecol_insert_datum(AOCSWriteColumnDesc desc, Datum *datums, bool *isnulls)
 {
 	void	   *toFree1;
 	void	   *toFree2;
-	Datum		datum;
-	int			err;
-	int			i;
-	int			itemCount;
+	ListCell    *lc;
 
-	/* first column's number */
-	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
-
-	for (i = 0; i < desc->num_newcols; ++i)
+	int i = 0;
+	foreach(lc, desc->newcolvals)
 	{
-		datum = d[i];
-		err = datumstreamwrite_put(desc->dsw[i], datum, isnull[i], &toFree1);
+		NewColumnValue *newval = lfirst(lc);
+
+		int colno = newval->attnum - 1;
+		Datum datum = datums[colno];
+		bool isnullcol = isnulls[colno];
+		int err = datumstreamwrite_put(desc->dsw[i], datum, isnullcol, &toFree1);
+
 		if (toFree1 != NULL)
 		{
 			/*
@@ -2003,9 +2504,9 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 			 * We have reached max number of datums that can be accommodated
 			 * in current varblock.
 			 */
-			itemCount = datumstreamwrite_nth(desc->dsw[i]);
+			int itemCount = datumstreamwrite_nth(desc->dsw[i]);
 			/* write the block up to this one */
-			datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, i + colno, true);
+			datumstreamwrite_block(desc->dsw[i], &desc->blockDirectory, colno);
 			if (itemCount > 0)
 			{
 				/* Next block's first row number */
@@ -2013,17 +2514,16 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 			}
 
 			/* now write this new item to the new block */
-			err = datumstreamwrite_put(desc->dsw[i], datum, isnull[i],
-									   &toFree2);
+			err = datumstreamwrite_put(desc->dsw[i], datum, isnullcol, &toFree2);
+
 			Assert(toFree2 == NULL);
 			if (err < 0)
 			{
-				Assert(!isnull[i]);
+				Assert(!isnullcol);
 				err = datumstreamwrite_lob(desc->dsw[i],
 										   datum,
 										   &desc->blockDirectory,
-										   i + colno,
-										   true);
+										   colno);
 				Assert(err >= 0);
 
 				/*
@@ -2036,17 +2536,22 @@ aocs_addcol_insert_datum(AOCSAddColumnDesc desc, Datum *d, bool *isnull)
 		}
 		if (toFree1 != NULL)
 			pfree(toFree1);
+		i++;
 	}
 }
 
 void
-aocs_addcol_finish(AOCSAddColumnDesc desc)
+aocs_writecol_finish(AOCSWriteColumnDesc desc)
 {
 	int			i;
+	Oid         blkdirrelid;
+	GetAppendOnlyEntryAuxOids(desc->rel, NULL, &blkdirrelid, NULL);
+	aocs_writecol_closefiles(desc);
 
-	aocs_addcol_closefiles(desc);
-	AppendOnlyBlockDirectory_End_addCol(&desc->blockDirectory);
-	for (i = 0; i < desc->num_newcols; ++i)
+	if (OidIsValid(blkdirrelid))
+		AppendOnlyBlockDirectory_End_writeCols(&desc->blockDirectory,
+											   desc->newcolvals);
+	for (i = 0; i < desc->num_cols_to_write; ++i)
 		destroy_datumstreamwrite(desc->dsw[i]);
 	pfree(desc->dsw);
 	desc->dsw = NULL;
@@ -2075,8 +2580,10 @@ aocs_addcol_emptyvpe(Relation rel,
 			 * VACUUM.  We need to add corresponding tuples with eof=0 for
 			 * each newly added column on QE.
 			 */
-			AOCSFileSegInfoAddVpe(rel, segInfos[i]->segno, NULL,
-								  num_newcols, true /* empty VPEntry */ );
+			AOCSFileSegInfoWriteVpe(rel,
+								  segInfos[i]->segno,
+								  NULL,
+								  true /* empty VPEntry */ );
 		}
 	}
 }

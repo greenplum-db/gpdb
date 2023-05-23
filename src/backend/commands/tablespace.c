@@ -280,7 +280,7 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 				int contentId = pg_atoi(defel->defname + strlen("content"), sizeof(int16), 0);
 
 				/*
-				 * The master validates the content ids are in [0, segCount)
+				 * The coordinator validates the content ids are in [0, segCount)
 				 * before dispatching. We can use primary segment count
 				 * because the number of primary segments can never shrink and
 				 * therefore should not have holes in the content id sequence.
@@ -357,12 +357,13 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	 * Disallow creation of tablespaces named "pg_xxx"; we reserve this
 	 * namespace for system purposes.
 	 */
-	if (!allowSystemTableMods && IsReservedName(stmt->tablespacename))
+	if (!allowSystemTableMods && (IsReservedName(stmt->tablespacename) || IsReservedGpName(stmt->tablespacename)))
 		ereport(ERROR,
 				(errcode(ERRCODE_RESERVED_NAME),
 				 errmsg("unacceptable tablespace name \"%s\"",
 						stmt->tablespacename),
-				 errdetail("The prefix \"pg_\" is reserved for system tablespaces.")));
+				 errdetail("The prefix \"%s\" is reserved for system tablespaces.",
+						GetReservedPrefix(stmt->tablespacename))));
 
 	/*
 	 * If built with appropriate switch, whine when regression-testing
@@ -1364,7 +1365,7 @@ RenameTableSpace(const char *oldname, const char *newname)
 		aclcheck_error(ACLCHECK_NO_PRIV, OBJECT_TABLESPACE, oldname);
 
 	/* Validate new name */
-	if (!allowSystemTableMods && IsReservedName(newname))
+	if (!allowSystemTableMods && (IsReservedName(newname) || IsReservedGpName(newname)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_RESERVED_NAME),

@@ -9,6 +9,7 @@
 #include "access/aomd.h"
 #include "access/appendonlytid.h"
 #include "access/appendonlywriter.h"
+#include "catalog/pg_attribute_encoding.h"
 
 /*
  * ACHTUNG  This module is trickier than you might initially have expected
@@ -18,7 +19,7 @@
  *  combinations here as that is a higher-level test than this unit test.
  */
 
-#define MAX_SEGNO_FILES (MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber)
+#define MAX_SEGNO_FILES (MAX_AOREL_CONCURRENCY * MaxFileNumber)
 typedef struct {
 	bool present[MAX_SEGNO_FILES];
 	bool call_result[MAX_SEGNO_FILES];
@@ -36,8 +37,12 @@ setup_test_structures(aomd_filehandler_callback_ctx *ctx)
 
     /* these files get checked for presence in the foreach() */
     ctx->call_expected[AOTupleId_MultiplierSegmentFileNum] = true;
+    ctx->call_expected[MaxHeapAttributeNumber * AOTupleId_MultiplierSegmentFileNum + AOTupleId_MultiplierSegmentFileNum] = true;
     for (int segno = 1; segno < MAX_AOREL_CONCURRENCY; segno++)
+    {
         ctx->call_expected[segno] = true;
+        ctx->call_expected[MaxHeapAttributeNumber * AOTupleId_MultiplierSegmentFileNum + segno] = true;
+    }
 }
 
 /*
@@ -51,7 +56,10 @@ set_ctx_for_present_file(aomd_filehandler_callback_ctx *ctx, int segno)
 {
 	ctx->present[segno] = true;
 	if (segno < (MAX_SEGNO_FILES - MAX_AOREL_CONCURRENCY))
-		ctx->call_expected[segno + MAX_AOREL_CONCURRENCY] = true;
+    {
+        ctx->call_expected[segno + MAX_AOREL_CONCURRENCY] = true;
+        ctx->call_expected[MAX_AOREL_CONCURRENCY * (MaxHeapAttributeNumber + 1) + segno] = true;
+    }
 }
 
 static int
@@ -105,7 +113,7 @@ test_no_files_present(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, MAX_AOREL_CONCURRENCY);
+    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -121,7 +129,7 @@ test_co_1_column_1_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, MAX_AOREL_CONCURRENCY + 1*1);
+    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 1 * 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -137,7 +145,7 @@ test_co_4_columns_1_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, MAX_AOREL_CONCURRENCY + 4*1);
+    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 4 * 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -156,7 +164,7 @@ test_co_3_columns_2_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, MAX_AOREL_CONCURRENCY + 3*2);
+    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 3 * 2);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -172,7 +180,7 @@ test_co_1_column_127_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, MAX_AOREL_CONCURRENCY + 1*127);
+    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 1 * 127);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -186,10 +194,12 @@ test_co_max_columns_0th_concurrency(void **state)
     for (int col = 0; col < MaxHeapAttributeNumber; col++)
         set_ctx_for_present_file(&ctx, col * MAX_AOREL_CONCURRENCY);
 
+	ctx.call_expected[MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber] = false;
+
     ao_foreach_extent_file(file_callback, &ctx);
 
     /* 0th file already acccounted for, hence the -1 */
-    assert_int_equal(ctx.num_called, (MAX_AOREL_CONCURRENCY-1) + (MaxHeapAttributeNumber * 1 - 1));
+    assert_int_equal(ctx.num_called, (2 * MAX_AOREL_CONCURRENCY - 1) + (MaxHeapAttributeNumber * 2 - 1) - 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -205,10 +215,11 @@ test_co_max_columns_0_1_concurrency(void **state)
         set_ctx_for_present_file(&ctx, col * MAX_AOREL_CONCURRENCY + 1);
     }
 
+	ctx.call_expected[MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber] = false;
     ao_foreach_extent_file(file_callback, &ctx);
 
     /* 0th file already acccount for, hence the -1 */
-    assert_int_equal(ctx.num_called, (MAX_AOREL_CONCURRENCY-1) + (MaxHeapAttributeNumber - 1) * 2);
+    assert_int_equal(ctx.num_called, 2* ((2 * MAX_AOREL_CONCURRENCY - 1) + (MaxHeapAttributeNumber * 2 - 1)) - 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -226,7 +237,7 @@ test_different_number_of_columns_per_concurrency_level(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, MAX_AOREL_CONCURRENCY + 5);
+    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 10);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -240,9 +251,10 @@ test_all_files_present(void **state)
 	memset(ctx.call_expected, true, sizeof(ctx.call_expected));
 
 	ctx.call_expected[0] = false;  /* caller must deal with .0 file */
+	ctx.call_expected[MaxHeapAttributeNumber * AOTupleId_MultiplierSegmentFileNum] = false;  /* caller must deal with this file */
 	ao_foreach_extent_file(file_callback, &ctx);
 
-	assert_int_equal(ctx.num_called, MAX_SEGNO_FILES - 1);
+	assert_int_equal(ctx.num_called, MAX_SEGNO_FILES - 2);
 	assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 
 	return;

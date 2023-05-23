@@ -947,18 +947,12 @@ CDXLOperatorFactory::MakeDXLArrayCoerceExpr(
 {
 	CMemoryPool *mp = dxl_memory_manager->Pmp();
 
-	IMDId *element_func = ExtractConvertAttrValueToMdId(
-		dxl_memory_manager, attrs, EdxltokenElementFunc,
-		EdxltokenScalarArrayCoerceExpr);
 	IMDId *mdid_type = ExtractConvertAttrValueToMdId(
 		dxl_memory_manager, attrs, EdxltokenTypeId,
 		EdxltokenScalarArrayCoerceExpr);
 	INT type_modifier = ExtractConvertAttrValueToInt(
 		dxl_memory_manager, attrs, EdxltokenTypeMod,
 		EdxltokenScalarArrayCoerceExpr, true, default_type_modifier);
-	BOOL is_explicit = ExtractConvertAttrValueToBool(
-		dxl_memory_manager, attrs, EdxltokenIsExplicit,
-		EdxltokenScalarArrayCoerceExpr);
 	ULONG coercion_form = ExtractConvertAttrValueToUlong(
 		dxl_memory_manager, attrs, EdxltokenCoercionForm,
 		EdxltokenScalarArrayCoerceExpr);
@@ -966,9 +960,9 @@ CDXLOperatorFactory::MakeDXLArrayCoerceExpr(
 												EdxltokenLocation,
 												EdxltokenScalarArrayCoerceExpr);
 
-	return GPOS_NEW(mp) CDXLScalarArrayCoerceExpr(
-		mp, element_func, mdid_type, type_modifier, is_explicit,
-		(EdxlCoercionForm) coercion_form, location);
+	return GPOS_NEW(mp)
+		CDXLScalarArrayCoerceExpr(mp, mdid_type, type_modifier,
+								  (EdxlCoercionForm) coercion_form, location);
 }
 
 //---------------------------------------------------------------------------
@@ -1029,6 +1023,10 @@ CDXLOperatorFactory::MakeDXLFuncExpr(CDXLMemoryManager *dxl_memory_manager,
 												   EdxltokenFuncRetSet,
 												   EdxltokenScalarFuncExpr);
 
+	BOOL is_funcvariadic = ExtractConvertAttrValueToBool(
+		dxl_memory_manager, attrs, EdxltokenFuncVariadic,
+		EdxltokenScalarFuncExpr, true, false);
+
 	IMDId *mdid_return_type = ExtractConvertAttrValueToMdId(
 		dxl_memory_manager, attrs, EdxltokenTypeId, EdxltokenScalarFuncExpr);
 
@@ -1036,8 +1034,9 @@ CDXLOperatorFactory::MakeDXLFuncExpr(CDXLMemoryManager *dxl_memory_manager,
 		dxl_memory_manager, attrs, EdxltokenTypeMod, EdxltokenScalarCast, true,
 		default_type_modifier);
 
-	return GPOS_NEW(mp) CDXLScalarFuncExpr(mp, mdid_func, mdid_return_type,
-										   type_modifier, is_retset);
+	return GPOS_NEW(mp)
+		CDXLScalarFuncExpr(mp, mdid_func, mdid_return_type, type_modifier,
+						   is_retset, is_funcvariadic);
 }
 
 //---------------------------------------------------------------------------
@@ -3525,10 +3524,11 @@ CDXLOperatorFactory::ParseRelationDistPolicy(const XMLCh *xml_val)
 	IMDRelation::Ereldistrpolicy rel_distr_policy =
 		IMDRelation::EreldistrSentinel;
 
-	if (0 == XMLString::compareString(
-				 xml_val, CDXLTokens::XmlstrToken(EdxltokenRelDistrMasterOnly)))
+	if (0 ==
+		XMLString::compareString(
+			xml_val, CDXLTokens::XmlstrToken(EdxltokenRelDistrCoordinatorOnly)))
 	{
-		rel_distr_policy = IMDRelation::EreldistrMasterOnly;
+		rel_distr_policy = IMDRelation::EreldistrCoordinatorOnly;
 	}
 	else if (0 == XMLString::compareString(
 					  xml_val, CDXLTokens::XmlstrToken(EdxltokenRelDistrHash)))

@@ -6,7 +6,7 @@
 
 	Objective: For a DML query with an operator that requires a Gather on
 	single host (such as Limit or Aggregate), ORCA chooses to Gather on segment
-	instead of master as for DML queris master node need not be involved at all.
+	instead of coordinator as for DML queris coordinator node need not be involved at all.
 	The test ensures that the optimization framework enforces a Sigleton Segment
 	for such operators. The expected plan should look like:
 	

@@ -70,6 +70,7 @@ typedef struct ResGroupCaps
 	ResGroupCap		cpuHardQuotaLimit;
 	ResGroupCap		cpuSoftPriority;
 	ResGroupCap		memory_limit;
+	volatile ResGroupCap	min_cost;
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -94,6 +95,7 @@ extern double gp_resource_group_cpu_limit;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;
 extern bool gp_resource_group_bypass_catalog_query;
+extern bool gp_resource_group_bypass_direct_dispatch;
 
 /*
  * Non-GUC global variables.
@@ -151,9 +153,9 @@ extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 									const char *buf,
 									int len);
 
-extern bool ShouldAssignResGroupOnMaster(void);
+extern bool ShouldAssignResGroupOnCoordinator(void);
 extern bool ShouldUnassignResGroup(void);
-extern void AssignResGroupOnMaster(void);
+extern void AssignResGroupOnCoordinator(void);
 extern void UnassignResGroup(bool releaseSlot);
 extern void SwitchResGroupOnSegment(const char *buf, int len);
 
@@ -167,6 +169,7 @@ extern void ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 extern void ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
+extern void check_and_unassign_from_resgroup(PlannedStmt* stmt);
 extern uint64 ResourceGroupGetQueryMemoryLimit(void);
 
 /*

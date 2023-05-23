@@ -515,6 +515,25 @@ Feature: expand the cluster by adding more segments
         And gpexpand should print "One or more segments are either down or not in preferred role." to stdout
 
     @gpexpand_no_mirrors
+
+    @gpexpand_segment
+    Scenario: Gpexpand should succeed when there has event trigger
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And the cluster is generated with "1" primaries only
+        And database "gptest" exists
+        And the user runs psql with "-c 'create table t(a int)'" against database "gptest"
+        And create event trigger function
+		And the user runs psql with "-c 'create event trigger log_alter on ddl_command_end execute function notcie_ddl()'" against database "gptest"
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "localhost"
+        When the user runs gpexpand interview to add 1 new segment and 0 new host "ignored.host"
+        Then the number of segments have been saved
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        Then verify that the cluster has 1 new segments
+		And the user runs psql with "-c 'alter table t add column b int'" against database "gptest"
+
     @gpexpand_segment
     Scenario: expand a cluster and verify necessary catalog tables are copied to new segments
         Given the database is not running
@@ -535,3 +554,26 @@ Feature: expand the cluster by adding more segments
         When the user runs "gpcheckcat gptest"
         Then gpcheckcat should return a return code of 0
         And the user runs psql with "-c 'DROP ROLE abc'" against database "gptest"
+
+    @gpexpand_mirrors
+    @gpexpand_segment
+    @gpexpand_verify_catalogs
+    Scenario: expand a cluster that has mirrors and check that gpexpand does not copy extra data directories from master
+        Given the database is not running
+        # need to remove this log because otherwise SCAN_LOG may pick up a previous error/warning in the log
+        And the user runs command "rm -rf ~/gpAdminLogs/gpinitsystem*"
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with mirrors on "cdw" and "sdw1"
+        And database "gptest" exists
+        And the user runs command "analyzedb -d gptest -a"
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "cdw,sdw1"
+        And the number of segments have been saved
+        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors
+        Then verify that the cluster has 4 new segments
+        And verify that the path "db_dumps" in each segment data directory does not exist
+        And verify that the path "gpperfmon/data" in each segment data directory does not exist
+        And verify that the path "gpperfmon/logs" in each segment data directory does not exist
+        And verify that the path "promote" in each segment data directory does not exist
+        And verify that the path "db_analyze" in each segment data directory does not exist

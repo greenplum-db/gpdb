@@ -251,7 +251,7 @@ public:
 		const ULONG ulExecuteAsUser = 0;
 		m_ptabdesc = GPOS_NEW(mp) CTableDescriptor(
 			mp, mdid, CName(&strTableName), convert_hash_to_random,
-			CMDRelationGPDB::EreldistrMasterOnly,
+			CMDRelationGPDB::EreldistrCoordinatorOnly,
 			CMDRelationGPDB::ErelstorageHeap, ulExecuteAsUser,
 			-1, /* lockmode */
 			0 /* UNASSIGNED_QUERYID */);

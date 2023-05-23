@@ -130,9 +130,9 @@ CreateAOAuxiliaryTable(
 
 	/*
 	 * We place auxiliary relation in the pg_aoseg namespace
-	 * even if its master relation is a temp table. There cannot be
+	 * even if its primary relation is a temp table. There cannot be
 	 * any naming collision, and the auxiliary relation will be
-	 * destroyed when its master is, so there is no need to handle
+	 * destroyed when its primary is, so there is no need to handle
 	 * the aovisimap relation as temp.
 	 */
 	aoauxiliary_relid = heap_create_with_catalog(aoauxiliary_relname,
@@ -222,8 +222,8 @@ CreateAOAuxiliaryTable(
 	}
 
 	/*
-	 * Register dependency from the auxiliary table to the master, so that the
-	 * aoseg table will be deleted if the master is.
+	 * Register dependency from the auxiliary table to the primary, so that the
+	 * aoseg table will be deleted if the primary is.
 	 */
 	baseobject.classId = RelationRelationId;
 	baseobject.objectId = relOid;

@@ -52,7 +52,7 @@ private:
 	CMDName *m_mdname;
 
 	// DXL string for object
-	CWStringDynamic *m_dxl_str;
+	CWStringDynamic *m_dxl_str = nullptr;
 
 	CMDExtStatsInfoArray *m_extstats_info_array;
 
@@ -71,7 +71,7 @@ public:
 	CMDName Mdname() const override;
 
 	// DXL string representation of cache object
-	const CWStringDynamic *GetStrRepr() const override;
+	const CWStringDynamic *GetStrRepr() override;
 
 	// serialize relation stats in DXL format given a serializer object
 	void Serialize(gpdxl::CXMLSerializer *) const override;

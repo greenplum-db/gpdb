@@ -6,7 +6,7 @@ You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the s
 
 > **Note** Open source Greenplum Database is available only for Greenplum Database 5 and later.
 
-> **Note** You can upgrade a Greenplum Database 5.28 system directly to Greenplum 6.9 or later using [gpupgrade](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Upgrade/index.html). You cannot upgrade a Greenplum Database 4.3 system directly to Greenplum 6.
+> **Note** You can upgrade a Greenplum Database 5.28.10 system directly to Greenplum 6.24.0 or later using [gpupgrade](https://docs.vmware.com/en/VMware-Greenplum-Upgrade/index.html). You cannot upgrade a Greenplum Database 4.3 system directly to Greenplum 6.
 
 This topic identifies known issues you may encounter when moving data from Greenplum 4.3 to Greenplum 6. You can work around these problems by making needed changes to your Greenplum 4.3 databases so that you can create backups that can be restored successfully to Greenplum 6.
 
@@ -64,7 +64,7 @@ Following are some issues that are known to cause errors when restoring a Greenp
     -   In the `pg_stat_replication` system table, the `procpid` column is renamed to `pid`.
     -   In the `pg_stat_activity` system table, the `procpid` column is renamed to `pid`. The `current_query` column is replaced by two columns: `state` \(the state of the backend\), and `query` \(the last run query, or currently running query if `state` is `active`\).
     -   In the `gp_distribution_policy` system table, the `attrnums` column is renamed to `distkey` and its data type is changed to `int2vector`. A backend function `pg_get_table_distributedby()` was added to get the distribution policy for a table as a string.
-    -   The `__gp_localid` and `__gp_masterid` columns are removed from the `session_level_memory_consumption` system view in Greenplum 6. The underlying external tables and functions are removed from the `gp_toolkit` schema.
+    -   The `__gp_localid` and `__gp_coordinatorid` columns are removed from the `session_level_memory_consumption` system view in Greenplum 6. The underlying external tables and functions are removed from the `gp_toolkit` schema.
     -   Filespaces are removed in Greenplum 6. The `pg_filespace` and `pg_filespace_entry` system tables are removed. Any reference to `pg_filespace` or `pg_filespace_entry` will fail in Greenplum 6.
     -   Restoring a Greenplum 4 backup can fail due to lack of dependency checking in Greenplum 4 catalog tables. For example, restoring a UDF can fail if it references a custom data type that is created later in the backup file.
 -   The `INTO error_table` clause of the `CREATE EXTERNAL TABLE` and `COPY` commands was deprecated in Greenplum 4.3 and is unsupported in Greenplum 5 and 6. Remove this clause from any external table definitions before you create a backup of your Greenplum 4.3 system. The `ERROR_TABLE` parameter of the `gpload` utility load control YAML file must also be removed from any `gpload` YAML files before you run `gpload`.
@@ -121,7 +121,7 @@ Following are some issues that are known to cause errors when restoring a Greenp
 
 ## <a id="backup-and-restore"></a>Backing Up and Restoring a Database 
 
-First use `gpbackup` to create a `--metadata-only` backup from the source Greenplum database and restore it to the Greenplum 6 system. This helps find any additional problems that are not identified in [Preparing Greenplum 4.3 and 5 Databases for Backup](#prep-gpdb4). Refer to the [Greenplum Backup and Restore documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) for syntax and examples for the `gpbackup` and `gprestore` utilities.
+First use `gpbackup` to create a `--metadata-only` backup from the source Greenplum database and restore it to the Greenplum 6 system. This helps find any additional problems that are not identified in [Preparing Greenplum 4.3 and 5 Databases for Backup](#prep-gpdb4). Refer to the [Greenplum Backup and Restore documentation](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html) for syntax and examples for the `gpbackup` and `gprestore` utilities.
 
 Review the `gprestore` log file for error messages and correct any remaining problems in the source Greenplum database.
 
@@ -142,7 +142,7 @@ Recreate any objects you dropped in the Greenplum 4.3 or 5 database to enable mi
 Here are some additional items to consider to complete your migration to Greenplum 6.
 
 -   Greenplum Database 5 and 6 remove automatic casts between the text type and other data types. After you migrate from Greenplum Database version 4.3 to version 6, this changed behavior may impact existing applications and queries. Refer to [About Implicit Text Casting in Greenplum Database](43x_to_5x.html) for information, including a discussion about VMware supported and unsupported workarounds.
--   After migrating data you may need to modify SQL scripts, administration scripts, and user-defined functions as necessary to account for changes in Greenplum Database version 6. Review the [VMware Greenplum 6.0.0 Release Notes](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/6/greenplum-database/GUID-relnotes-release-notes.html#release-6.0.0) for features and changes that may necessitate post-migration tasks.
+-   After migrating data you may need to modify SQL scripts, administration scripts, and user-defined functions as necessary to account for changes in Greenplum Database version 6. Review the [VMware Greenplum 6.0.0 Release Notes](https://docs.vmware.com/en/VMware-Greenplum/6/greenplum-database/relnotes-release-notes.html#release-6.0.0) for features and changes that may necessitate post-migration tasks.
 -   To use the new Greenplum 6 default hash operator classes, use the command `ALTER TABLE <table> SET DISTRIBUTED BY (<key>)` to redistribute tables restored from Greenplum 4.3 or 5 backups. The `gp_use_legacy_hashops` parameter must be set to `off` when you run the command. See [Working With Hash Operator Classes in Greenplum 6](#redistribute) for more information about hash operator classes.
 
 ### <a id="redistribute"></a>Working With Hash Operator Classes in Greenplum 6 

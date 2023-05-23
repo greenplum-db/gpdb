@@ -425,7 +425,7 @@ makeOptions(char **options, char **diff_options)
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
+	qdinfo = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID); 
 	appendStringInfo(&optionsStr, " -c gp_qd_hostname=%s", qdinfo->config->hostip);
 	appendStringInfo(&optionsStr, " -c gp_qd_port=%d", qdinfo->config->port);
 
@@ -663,10 +663,10 @@ getCdbProcessesForQD(int isPrimary)
 
 	if (!isPrimary)
 	{
-		elog(FATAL, "getCdbProcessesForQD: unsupported request for master mirror process");
+		elog(FATAL, "getCdbProcessesForQD: unsupported request for primary mirror process");
 	}
 
-	qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+	qdinfo = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID);
 
 	Assert(qdinfo->config->segindex == -1);
 	Assert(SEGMENT_IS_ACTIVE_PRIMARY(qdinfo));
@@ -675,8 +675,8 @@ getCdbProcessesForQD(int isPrimary)
 	proc = makeNode(CdbProcess);
 
 	/*
-	 * Set QD listener address to the ADDRESS of the master, so the motions that connect to
-	 * the master knows what the interconnect address of the peer is.
+	 * Set QD listener address to the ADDRESS of the coordinator, so the motions that connect to
+	 * the coordinator knows what the interconnect address of the peer is.
 	 */
 	proc->listenerAddr = pstrdup(qdinfo->config->hostip);
 
@@ -1052,7 +1052,7 @@ gp_backend_info(PG_FUNCTION_ARGS)
 		}
 		/* Fake a segment descriptor to represent the current QD backend */
 		SegmentDatabaseDescriptor *qddesc = palloc0(sizeof(SegmentDatabaseDescriptor));
-		qddesc->segment_database_info = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+		qddesc->segment_database_info = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID);
 		qddesc->segindex = -1;
 		qddesc->conn = NULL;
 		qddesc->motionListener = 0;

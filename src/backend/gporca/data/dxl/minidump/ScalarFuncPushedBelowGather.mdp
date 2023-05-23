@@ -71,7 +71,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:GPDBFunc Mdid="0.73743.1.0" Name="add_one" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.73743.1.0" Name="add_one" ReturnsSet="false" Stability="Immutable" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">

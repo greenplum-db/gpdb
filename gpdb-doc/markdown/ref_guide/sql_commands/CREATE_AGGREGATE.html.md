@@ -26,6 +26,7 @@ CREATE [ OR REPLACE ] AGGREGATE <name> ( [ <argmode> ] [ <argname> ] <arg_data_t
     [ , MINITCOND = <minitial_condition> ]
     [ , SORTOP = <sort_operator> ]
     [ , PARALLEL = { SAFE | RESTRICTED | UNSAFE } ]
+    [ , REPSAFE = <boolean> ]
   )
   
   CREATE [ OR REPLACE ] AGGREGATE <name> ( [ [ <argmode> ] [ <argname> ] <arg_data_type> [ , ... ] ]
@@ -39,6 +40,7 @@ CREATE [ OR REPLACE ] AGGREGATE <name> ( [ <argmode> ] [ <argname> ] <arg_data_t
     [ , COMBINEFUNC = <combinefunc> ]
     [ , INITCOND = <initial_condition> ]
     [ , PARALLEL = { SAFE | RESTRICTED | UNSAFE } ]
+    [ , REPSAFE = <boolean> ]
     [ , HYPOTHETICAL ]
   )
   
@@ -65,6 +67,7 @@ CREATE [ OR REPLACE ] AGGREGATE <name> ( [ <argmode> ] [ <argname> ] <arg_data_t
     [ , MFINALFUNC_MODIFY = { READ_ONLY | SHAREABLE | READ_WRITE } ]
     [ , MINITCOND = <minitial_condition> ]
     [ , SORTOP = <sort_operator> ]
+    [ , REPSAFE = <boolean> ]
   )
 ```
 
@@ -121,9 +124,9 @@ Further assumptions are that the aggregate function ignores null inputs, and tha
 
 To be able to create an aggregate function, you must have `USAGE` privilege on the argument types, the state type\(s\), and the return type, as well as `EXECUTE` privilege on the supporting functions.
 
-You can specify `combinefunc` as a method for optimizing aggregate execution. By specifying `combinefunc`, the aggregate can be run in parallel on segments first and then on the master. When a two-level execution is performed, the `sfunc` is run on the segments to generate partial aggregate results, and `combinefunc` is run on the master to aggregate the partial results from segments. If single-level aggregation is performed, all the rows are sent to the master and the `sfunc` is applied to the rows.
+You can specify `combinefunc` as a method for optimizing aggregate execution. By specifying `combinefunc`, the aggregate can be run in parallel on segments first and then on the coordinator. When a two-level execution is performed, the `sfunc` is run on the segments to generate partial aggregate results, and `combinefunc` is run on the coordinator to aggregate the partial results from segments. If single-level aggregation is performed, all the rows are sent to the coordinator and the `sfunc` is applied to the rows.
 
-Single-level aggregation and two-level aggregation are equivalent execution strategies. Either type of aggregation can be implemented in a query plan. When you implement the functions `combinefunc` and `sfunc`, you must ensure that the invocation of the `sfunc` on the segment instances followed by `combinefunc` on the master produce the same result as single-level aggregation that sends all the rows to the master and then applies only the `sfunc` to the rows.
+Single-level aggregation and two-level aggregation are equivalent execution strategies. Either type of aggregation can be implemented in a query plan. When you implement the functions `combinefunc` and `sfunc`, you must ensure that the invocation of the `sfunc` on the segment instances followed by `combinefunc` on the coordinator produce the same result as single-level aggregation that sends all the rows to the coordinator and then applies only the `sfunc` to the rows.
 
 ## <a id="section5"></a>Parameters 
 
@@ -205,6 +208,12 @@ sort\_operator
 
 PARALLEL = { SAFE | RESTRICTED | UNSAFE }
 :   The meanings of `PARALLEL SAFE`, `PARALLEL RESTRICTED`, and `PARALLEL UNSAFE` are the same as in [CREATE FUNCTION](CREATE_FUNCTION.html). An aggregate will not be considered for parallelization if it is marked `PARALLEL UNSAFE` (which is the default!) or `PARALLEL RESTRICTED`. Note that the parallel-safety markings of the aggregate's support functions are not consulted by the planner, only the marking of the aggregate itself.
+
+REPSAFE = boolean
+:   Specifies whether or not the aggregate can be safely executed on replicated slices. An order-agnostic aggregate would be considered safe in this context. The default value is `false`.
+:   Setting `REPSAFE = true` instructs the optimizer to perform additional optimizations that specifically suppress certain broadcast motions.
+
+    > **Caution** Incorrectly setting `REPSAFE = true` for an order-dependent aggregate may produce incorrect results.
 
 HYPOTHETICAL
 :   For ordered-set aggregates only, this flag specifies that the aggregate arguments are to be processed according to the requirements for hypothetical-set aggregates: that is, the last few direct arguments must match the data types of the aggregated \(`WITHIN GROUP`\) arguments. The `HYPOTHETICAL` flag has no effect on run-time behavior, only on parse-time resolution of the data types and collations of the aggregate's arguments.

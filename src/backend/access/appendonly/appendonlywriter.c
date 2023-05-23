@@ -736,7 +736,7 @@ AORelIncrementModCount(Relation parentrel)
 	if (RelationIsAoRows(parentrel))
 	{
 		/*
-		 * Update the master AO segment info table with correct tuple count total
+		 * Update the coordinator AO segment info table with correct tuple count total
 		 */
 		IncrementFileSegInfoModCount(parentrel, segno);
 	}

@@ -3,7 +3,7 @@
   <dxl:Metadata>
     <dxl:MDCast Mdid="3.23.1.0;20.1.0" Name="int8" BinaryCoercible="false" SourceTypeId="0.23.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.481.1.0" CoercePathType="1"/>
     <dxl:MDCast Mdid="3.23.1.0;26.1.0" Name="int" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.26.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
-    <dxl:ArrayCoerceCast Mdid="3.1007.1.0;1022.1.0" Name="float8" CoercePathType="3" BinaryCoercible="false" SourceTypeId="0.1007.1.0" DestinationTypeId="0.1022.1.0" CastFuncId="0.316.1.0" IsExplicit="false" CoercionForm="2" Location="-1"/>
+    <dxl:ArrayCoerceCast Mdid="3.1007.1.0;1022.1.0" Name="float8" CoercePathType="3" BinaryCoercible="false" SourceTypeId="0.1007.1.0" DestinationTypeId="0.1022.1.0" CastFuncId="0.316.1.0" SourceElemTypeId="0.23.1.0" IsExplicit="false" CoercionForm="2" Location="-1"/>
     <dxl:MDScalarComparison Mdid="4.23.1.0;20.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.23.1.0" RightType="0.20.1.0" OperatorMdid="0.416.1.0"/>
     <dxl:RelationStatistics Mdid="2.1234.1.2" Name="T" Rows="1234.123400" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
     <dxl:ColumnStatistics Mdid="1.1234.1.2.1" Name="T.a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">
@@ -44,7 +44,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -64,7 +64,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -95,7 +95,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -132,7 +132,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -144,11 +144,11 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1260.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1260.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
@@ -162,7 +162,7 @@
         <dxl:CheckConstraint Mdid="0.561000.1.0"/>
       </dxl:CheckConstraints>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" ForeignServer="0.91908.1.0">
+    <dxl:Relation Mdid="6.2669066.1.0" Name="intint" IsTemporary="false" StorageType="Foreign" DistributionPolicy="CoordinatorOnly" ForeignServer="0.91908.1.0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -190,6 +190,7 @@
       <dxl:CountAgg Mdid="0.2147.1.0"/>
     </dxl:Type>
     <dxl:Type Mdid="0.23.1.0" Name="int4" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="4" PassByValue="true">
+      <dxl:PartOpfamily Mdid="0.1976.1.0"/>
       <dxl:EqualityOp Mdid="0.96.1.0"/>
       <dxl:InequalityOp Mdid="0.518.1.0"/>
       <dxl:LessThanOp Mdid="0.97.1.0"/>
@@ -231,14 +232,14 @@
         <dxl:Opfamily Mdid="0.3027.1.0"/>
       </dxl:Opfamilies>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.274.1.0" Name="timeofday" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+    <dxl:GPDBFunc Mdid="0.274.1.0" Name="timeofday" ReturnsSet="false" Stability="Volatile" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
       <dxl:ResultType Mdid="0.25.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBAgg Mdid="0.2101.1.0" Name="avg" IsSplittable="true" HashAggCapable="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
       <dxl:IntermediateResultType Mdid="0.17.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:GPDBFunc Mdid="0.17135.1.0" Name="fooro" ReturnsSet="true" Stability="Volatile" DataAccess="ReadsSQLData" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
+    <dxl:GPDBFunc Mdid="0.17135.1.0" Name="fooro" ReturnsSet="true" Stability="Volatile" IsStrict="false" IsNDVPreserving="false" IsAllowedForPS="false">
       <dxl:ResultType Mdid="0.2249.1.0"/>
       <dxl:OutputColumns TypeMdids="0.23.1.0,0.23.1.0"/>
     </dxl:GPDBFunc>
@@ -320,7 +321,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.378429.1.0" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="MasterOnly" Keys="7,1" ForeignServer="0.91908.1.0">
+    <dxl:Relation Mdid="6.378429.1.0" Name="ext_3" IsTemporary="false" StorageType="Foreign" DistributionPolicy="CoordinatorOnly" Keys="7,1" ForeignServer="0.91908.1.0">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -387,7 +388,7 @@
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
           </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">

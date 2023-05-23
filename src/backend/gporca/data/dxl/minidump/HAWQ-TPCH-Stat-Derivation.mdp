@@ -3258,7 +3258,7 @@ ORDER BY s_name;
           <dxl:Opfamily Mdid="0.3022.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.1740.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1740.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.1700.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.11778256.1.1" Name="part_ao_column_none_level0" Rows="2559980032.000000" EmptyRelation="false"/>
@@ -6374,7 +6374,7 @@ ORDER BY s_name;
         </dxl:LogicalJoin>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1863552">
+    <dxl:Plan Id="0" SpaceSize="4053120">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="24583535.993774" Rows="49.989277" Width="65"/>

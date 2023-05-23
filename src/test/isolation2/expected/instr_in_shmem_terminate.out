@@ -16,9 +16,9 @@ CREATE
 GRANT SELECT ON TABLE __gp_localid TO public;
 GRANT
 
-CREATE EXTERNAL WEB TABLE __gp_masterid ( masterid    int ) EXECUTE E'echo $GP_SEGMENT_ID' ON COORDINATOR FORMAT 'TEXT';
+CREATE EXTERNAL WEB TABLE __gp_coordinatorid ( coordinatorid    int ) EXECUTE E'echo $GP_SEGMENT_ID' ON COORDINATOR FORMAT 'TEXT';
 CREATE
-GRANT SELECT ON TABLE __gp_masterid TO public;
+GRANT SELECT ON TABLE __gp_coordinatorid TO public;
 GRANT
 
 CREATE FUNCTION gp_instrument_shmem_detail_f() RETURNS SETOF RECORD AS '$libdir/gp_instrument_shmem', 'gp_instrument_shmem_detail' LANGUAGE C IMMUTABLE;
@@ -26,7 +26,7 @@ CREATE
 GRANT EXECUTE ON FUNCTION gp_instrument_shmem_detail_f() TO public;
 GRANT
 
-CREATE VIEW gp_instrument_shmem_detail AS WITH all_entries AS ( SELECT C.* FROM __gp_localid, gp_instrument_shmem_detail_f() as C ( tmid int4,ssid int4,ccnt int2,segid int2,pid int4 ,nid int2,tuplecount int8,nloops int8,ntuples int8 ) UNION ALL SELECT C.* FROM __gp_masterid, gp_instrument_shmem_detail_f() as C ( tmid int4,ssid int4,ccnt int2,segid int2,pid int4 ,nid int2,tuplecount int8,nloops int8,ntuples int8 )) SELECT tmid, ssid, ccnt,segid, pid, nid, tuplecount, nloops, ntuples FROM all_entries ORDER BY segid;
+CREATE VIEW gp_instrument_shmem_detail AS WITH all_entries AS ( SELECT C.* FROM __gp_localid, gp_instrument_shmem_detail_f() as C ( tmid int4,ssid int4,ccnt int2,segid int2,pid int4 ,nid int2,tuplecount int8,nloops int8,ntuples int8 ) UNION ALL SELECT C.* FROM __gp_coordinatorid, gp_instrument_shmem_detail_f() as C ( tmid int4,ssid int4,ccnt int2,segid int2,pid int4 ,nid int2,tuplecount int8,nloops int8,ntuples int8 )) SELECT tmid, ssid, ccnt,segid, pid, nid, tuplecount, nloops, ntuples FROM all_entries ORDER BY segid;
 CREATE
 
 CREATE TABLE a (id int, c char) DISTRIBUTED BY (id);

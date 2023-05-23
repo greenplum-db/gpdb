@@ -605,7 +605,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 			if (Gp_role != GP_ROLE_EXECUTE)
 			{
 				/*
-				 * Don't allow master to call this in a transaction block. Segments
+				 * Don't allow coordinator to call this in a transaction block. Segments
 				 * are ok as distributed transaction participants.
 				 */
 				PreventInTransactionBlock(isTopLevel, "CREATE TABLESPACE");
@@ -618,7 +618,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 			if (Gp_role != GP_ROLE_EXECUTE)
 			{
 				/*
-				 * Don't allow master to call this in a transaction block.  Segments are ok as
+				 * Don't allow coordinator to call this in a transaction block.  Segments are ok as
 				 * distributed transaction participants.
 				 */
 				PreventInTransactionBlock(isTopLevel, "DROP TABLESPACE");
@@ -675,7 +675,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 			if (Gp_role != GP_ROLE_EXECUTE)
 			{
 				/*
-				 * Don't allow master to call this in a transaction block. Segments
+				 * Don't allow coordinator to call this in a transaction block. Segments
 				 * are ok as distributed transaction participants.
 				 */
 				PreventInTransactionBlock(isTopLevel, "CREATE DATABASE");
@@ -701,7 +701,7 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 				if (Gp_role != GP_ROLE_EXECUTE)
 				{
 					/*
-					 * Don't allow master to call this in a transaction block.  Segments are ok as
+					 * Don't allow coordinator to call this in a transaction block.  Segments are ok as
 					 * distributed transaction participants. 
 					 */
 					PreventInTransactionBlock(isTopLevel, "DROP DATABASE");

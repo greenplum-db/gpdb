@@ -75,7 +75,7 @@ CHECKPOINT
 -----------------
  Success:        
 (1 row)
--- verify master panic happens. The PANIC message does not emit sometimes so
+-- verify coordinator panic happens. The PANIC message does not emit sometimes so
 -- mask it.
 -- start_matchsubs
 -- m/PANIC:  fault triggered, fault name:'exec_simple_query_start' fault type:'panic'\n/

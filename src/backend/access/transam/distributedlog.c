@@ -781,8 +781,8 @@ DistributedLog_Startup(TransactionId oldestActiveXid,
 
 	/*
 	 * In situations where new segments' data directories are copied from the
-	 * master (such as binary upgrade), the distributed logs inherited by the
-	 * segment will be incomplete. This is because master doesn't maintain these
+	 * coordinator (such as binary upgrade), the distributed logs inherited by the
+	 * segment will be incomplete. This is because coordinator doesn't maintain these
 	 * logs past their initial creation. In these cases (and these cases only!),
 	 * we need to initialize and zero out log pages in memory for the range of
 	 * active XIDs.
@@ -790,7 +790,7 @@ DistributedLog_Startup(TransactionId oldestActiveXid,
 	 * TODO: Turn off distributed logging during binary upgrade to avoid the
 	 * issue mentioned above.
 	 */
-	if (IsBinaryUpgrade || ConvertMasterDataDirToSegment)
+	if (IsBinaryUpgrade || ConvertCoordinatorDataDirToSegment)
 	{
 		int currentPage = startPage;
 
