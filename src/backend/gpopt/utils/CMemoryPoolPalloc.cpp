@@ -47,11 +47,6 @@ CMemoryPoolPalloc::NewImpl(const ULONG bytes, const CHAR *, const ULONG,
 
 		void *ptr = gpdb::GPDBMemoryContextAlloc(m_cxt, alloc_size);
 
-		if (NULL == ptr)
-		{
-			return NULL;
-		}
-
 		SArrayAllocHeader *header = static_cast<SArrayAllocHeader *>(ptr);
 
 		header->m_user_size = bytes;

@@ -81,12 +81,6 @@ CMemoryPoolTracker::NewImpl(const ULONG bytes, const CHAR *file,
 
 	void *ptr = clib::Malloc(alloc_size);
 
-	// check if allocation failed
-	if (NULL == ptr)
-	{
-		return NULL;
-	}
-
 	GPOS_OOM_CHECK(ptr);
 
 	// successful allocation: update header information and any memory pool data
