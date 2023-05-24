@@ -55,7 +55,7 @@ Greenplum Database provides the following system views:
 -   [gp_statio_user_indexes](#gp_statio_user_indexes)
 -   [gp_statio_user_sequences](#gp_statio_user_sequences)
 -   [gp_statio_user_tables](#gp_statio_user_tables)
--   [gp-stats](#gp_stats)
+-   [gp_stats](#gp_stats)
 -   [gp_stats_ext](#gp_stats_ext)
 -   [gp_transaction_log](#gp_transaction_log)
 -   [gpexpand.expansion_progress](#gpexpandexpansion_progress)
@@ -505,12 +505,12 @@ The `gp_stat_all_tables` view is a cluster-wide view that displays the [`pg_stat
 |`idx_scan`|bigint| |Number of index scans initiated on this table.|
 |`idx_tup_fetch`|bigint| |Number of live rows fetched by index scans.|
 |`n_tup_ins`|bigint| |Number of rows inserted.|
-`n_tup_upd`|bigint| |Number of rows updated (includes HOT updated rows).|
+|`n_tup_upd`|bigint| |Number of rows updated (includes HOT updated rows).|
 |`n_tup_del`|bigint| |Number of rows deleted.|
 |`n_tup_hot_upd`|bigint| |Number of rows HOT updated (that is, with no separate index update required).|
 |`n_live_tup`|bigint| |Estimated number of live rows.|
 |`n_dead_tup`|bigint| |Estimated number of dead rows.|
-|`n_mod_since_analyze`|bigint|Estimated number of rows modified since this table was last analyzed.|
+|`n_mod_since_analyze`|bigint| |Estimated number of rows modified since this table was last analyzed.|
 |`n_ins_since_vacuum`|bigint| |Estimated number of rows inserted since this table was last vacuumed.|
 |`last_vacuum`|timestamp with time zone| |Last time at which this table was manually vacuumed (not counting `VACUUM FULL`).|
 |`last_autovacuum`|timestamp with time zone| |Last time at which this table was vacuumed by the autovacuum daemon.|
@@ -527,7 +527,8 @@ This system view is summarized in the `gp_stat_all_tables_summary` system view.
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.||`archived_count`|bigint| |Number of WAL files that have been successfully archived.|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`archived_count`|bigint| |Number of WAL files that have been successfully archived.|
 |`last_archived_wal`|text| |Name of the WAL file most recently successfully archived.|
 |`last_archived_time `|timestamp with time zone| |Time of the most recent successful archive operation.|
 |`failed_count`|bigint| |Number of failed attempts for archiving WAL files.|
@@ -541,7 +542,8 @@ This system view is summarized in the `gp_stat_archiver_summary` system view.
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.||`checkpoints_timed`|bigint| |Number of scheduled checkpoints that have been performed.|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`checkpoints_timed`|bigint| |Number of scheduled checkpoints that have been performed.|
 |`checkpoints_req`|bigint| |Number of requested checkpoints that have been performed.|
 |`checkpoint_write_time`|double precision| |Total amount of time that has been spent in the portion of checkpoint processing where files are written to disk, in milliseconds.|
 |`checkpoint_sync_time`|double precision| |Total amount of time that has been spent in the portion of checkpoint processing where files are synchronized to disk, in milliseconds.|
@@ -580,7 +582,7 @@ This system view is summarized in the `gp_stat_bgwriter_summary` system view.
 |`checksum_last_failure`|timestamp with time zone| |Time at which the last data page checksum failure was detected in this database (or on a shared object), or NULL if data checksums are not enabled.|
 |`blk_read_time`|double precision| |Time spent reading data file blocks by backends in this database, in milliseconds (if track_io_timing is enabled, otherwise zero).|
 |`session_time`|double precision| |Time spent by database sessions in this database, in milliseconds (note that statistics are only updated when the state of a session changes, so if sessions have been idle for a long time, this idle time won't be included).|
-|`active_time`|double precision| Time spent executing SQL statements in this database, in milliseconds (this corresponds to the states active and fastpath function call in pg_stat_activity).|
+|`active_time`|double precision| |Time spent executing SQL statements in this database, in milliseconds (this corresponds to the states active and fastpath function call in pg_stat_activity).|
 |`idle_in_transaction_time`|double precision| |Time spent idling while in a transaction in this database, in milliseconds (this corresponds to the states idle in transaction and idle in transaction (aborted) in `gp_stat_activity`)|
 |`sessions`|bigint| |Total number of sessions established to this database.|
 |`sessions_abandoned`|bigint| |Number of database sessions to this database that were terminated because connection to the client was lost.|
@@ -592,6 +594,8 @@ This system view is summarized in the `gp_stat_database_summary` system view.
 
 ## <a id="gp_stat_database_conflicts"></a>gp_stat_database_conflicts
 
+|column|type|references|description|
+|------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
 |`datid`|oid| |OID of a database.|
 |`datname`|name| |Name of this database.|
@@ -604,6 +608,8 @@ This system view is summarized in the `gp_stat_database_summary` system view.
 
 ## <a id="gp_stat_gssapi"></a>gp_stat_gssapi
 
+|column|type|references|description|
+|------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
 |`pid`|integer| |Process ID of a backend.|
 |`gss_authenticated boolean`|boolean| |True if GSSAPI authentication was used for this connection.|
@@ -692,14 +698,14 @@ The `gp_stat_ssl` view is a cluster-wide view that displays the `pg_stat_ssl` in
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`pid`|integer|Process ID of a backend or WAL sender process.|
-|`ssl`|boolean|True if SSL is used on this connection|
-|`version`|text|Version of SSL in use, or `NULL` if SSL is not in use on this connection.|
-|`cipher`|text|Name of SSL cipher in use, or `NULL` if SSL is not in use on this connection.|
-|`bits`|integer|Number of bits in the encryption algorithm used, or `NULL` if SSL is not used on this connection.|
-|`client_dn`|text|Distinguished Name (DN) field from the client certificate used, or `NUL`L if no client certificate was supplied or if SSL is not in use on this connection. This field is truncated if the DN field is longer than `NAMEDATALEN` (64 characters in a standard build).|
-|`client_serial`|numeric|Serial number of the client certificate, or `NULL` if no client certificate was supplied or if SSL is not in use on this connection. The combination of certificate serial number and certificate issuer uniquely identifies a certificate (unless the issuer erroneously reuses serial numbers).|
-|`issuer_dn`|text|DN of the issuer of the client certificate, or `NULL` if no client certificate was supplied or if SSL is not in use on this connection. This field is truncated like `client_dn` is.|
+|`pid`|integer| |Process ID of a backend or WAL sender process.|
+|`ssl`|boolean| |True if SSL is used on this connection|
+|`version`|text| |Version of SSL in use, or `NULL` if SSL is not in use on this connection.|
+|`cipher`|text| |Name of SSL cipher in use, or `NULL` if SSL is not in use on this connection.|
+|`bits`|integer| |Number of bits in the encryption algorithm used, or `NULL` if SSL is not used on this connection.|
+|`client_dn`|text| |Distinguished Name (DN) field from the client certificate used, or `NUL`L if no client certificate was supplied or if SSL is not in use on this connection. This field is truncated if the DN field is longer than `NAMEDATALEN` (64 characters in a standard build).|
+|`client_serial`|numeric| |Serial number of the client certificate, or `NULL` if no client certificate was supplied or if SSL is not in use on this connection. The combination of certificate serial number and certificate issuer uniquely identifies a certificate (unless the issuer erroneously reuses serial numbers).|
+|`issuer_dn`|text| |DN of the issuer of the client certificate, or `NULL` if no client certificate was supplied or if SSL is not in use on this connection. This field is truncated like `client_dn` is.|
 
 ## <a id="gp_stat_subscription"></a>gp_stat_subscription
 
