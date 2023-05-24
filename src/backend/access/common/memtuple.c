@@ -454,6 +454,7 @@ compute_memtuple_size_using_bind(Datum *values,
 		/* We plan to convert to short varlena even if it is not currently */
 		if (bind->flag == MTB_ByRef &&
 			attr->attstorage != 'p' &&
+			!VARATT_IS_EXTERNAL(DatumGetPointer(values[i])) &&
 			(VARATT_IS_SHORT(DatumGetPointer(values[i])) ||
 			VARATT_CAN_MAKE_SHORT(DatumGetPointer(values[i]))))
 		{
