@@ -26,15 +26,10 @@ test: gp_dispatch_keepalives
 # copy form a file with different EOL
 test: copy_eol
 
-# gp_toolkit performs a vacuum and checks that it truncated the relation. That
-# might not happen if other backends are holding transactions open, preventing
-# vacuum from removing dead tuples. And run gp_toolkit early to make some log
-# file related tests (like gp_log_system, etc) faster.
-# Also, gp_log_system could have issue reading partial log that's generated
-# from concurrent test. So anything that uses it needs to be run alone.
 test: disable_autovacuum
-test: gp_toolkit
 # test gp_fastsequence allocation (early in schedule as log grepping is expensive)
+# These tests gp_log_system could have issue reading partial log that's generated
+# from concurrent test. So anything that uses it needs to be run alone.
 test: uao_dml/gp_fastsequence_row
 test: uao_dml/gp_fastsequence_column
 
@@ -170,7 +165,7 @@ test: resource_group_cpuset
 test: resource_group_gucs
 
 # expand_table tests may affect the result of 'gp_explain', keep them below that
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression sysviews_gp
+test: trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression sysviews_gp
 
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types interrupt_holdoff_count
@@ -336,7 +331,6 @@ test: resource_queue_with_rule
 test: bb_memory_quota
 test: qp_resource_queue
 test: resource_queue_function
-test: gp_toolkit_resqueue
 test: resource_manager_restore_to_none
 
 # test dispatch and result handling of gp_log_memory_backend_contexts

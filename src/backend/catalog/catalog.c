@@ -333,12 +333,16 @@ IsReservedName(const char *name)
  * 		tablespace names. We do not reserve it for role names to avoid 
  * 		impact to pre-7.0 users and also because the reason to reserve
  * 		pg_ for role names does not apply to pg_ (see #15259). 
+ *
+ *		As of 7.0 we do not reserve 'gp_toolkit' because it has been made
+ * 		an extension which can be created or dropped by the user.
  */
 bool
 IsReservedGpName(const char *name)
 {
 	/* ugly coding for speed */
-	return name[0] == 'g' && name[1] == 'p' && name[2] == '_';
+	return name[0] == 'g' && name[1] == 'p' && name[2] == '_' && 
+								(strlen(name) < 10 || strcmp("gp_toolkit", name) != 0);
 }
 
 /*
