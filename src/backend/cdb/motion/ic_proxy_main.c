@@ -193,7 +193,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->sockaddr, 0);
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: tcp: fail to bind: %s",
+		elog(PANIC, "ic-proxy: tcp: fail to bind: %s",
 					 uv_strerror(ret));
 		return;
 	}
@@ -202,7 +202,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 					IC_PROXY_BACKLOG, ic_proxy_server_on_new_peer);
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: tcp: fail to listen: %s",
+		elog(PANIC, "ic-proxy: tcp: fail to listen: %s",
 					 uv_strerror(ret));
 		return;
 	}
