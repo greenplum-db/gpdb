@@ -714,15 +714,15 @@ The `gp_stat_subscription` view is a cluster-wide view that displays the `pg_sta
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`subid`|oid|OID of the subscription.|
-|`subname`|name|Name of the subscription.|
-|`pid`|integer|Process ID of the subscription worker process.|
-|`relid`|oid|OID of the relation that the worker is synchronizing; `NULL` for the main apply worker.|
-|`received_lsn`|pg_lsn|Last write-ahead log location received, the initial value of this field being `0`.|
-|`last_msg_send_time`|timestamp with time zone|Send time of last message received from origin WAL sender.|
-|`last_msg_receipt_time`|timestamp with time zone|Receipt time of last message received from origin WAL sender.|
-|`latest_end_lsn`|pg_lsn|Last write-ahead log location reported to origin WAL sender.|
-|`latest_end_time`|timestamp with time zone|Time of last write-ahead log location reported to origin WAL sender.
+|`subid`|oid| |OID of the subscription.|
+|`subname`|name| |Name of the subscription.|
+|`pid`|integer| |Process ID of the subscription worker process.|
+|`relid`|oid| |OID of the relation that the worker is synchronizing; `NULL` for the main apply worker.|
+|`received_lsn`|pg_lsn| |Last write-ahead log location received, the initial value of this field being `0`.|
+|`last_msg_send_time`|timestamp with time zone| |Send time of last message received from origin WAL sender.|
+|`last_msg_receipt_time`|timestamp with time zone| |Receipt time of last message received from origin WAL sender.|
+|`latest_end_lsn`|pg_lsn| |Last write-ahead log location reported to origin WAL sender.|
+|`latest_end_time`|timestamp with time zone| |Time of last write-ahead log location reported to origin WAL sender.
 
 ## <a id="gp_stat_sys_indexes"></a>gp_stat_sys_indexes
 
@@ -741,12 +741,12 @@ The `gp_stat_user_functions` view is a cluster-wide view that displays the `pg_s
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`funcid`|oid|OID of a function.|
-|`schemaname`|name|Name of the schema this function is in.|
-|`funcname`|name|Name of this function.|
-|`calls`|bigint|Number of times this function has been called.|
-|`total_time`|double precision|Total time spent in this function and all other functions called by it, in milliseconds.|
-|`self_time`|double precision|Total time spent in this function itself, not including other functions called by it, in milliseconds.|
+|`funcid`|oid| |OID of a function.|
+|`schemaname`|name| |Name of the schema this function is in.|
+|`funcname`|name| |Name of this function.|
+|`calls`|bigint| |Number of times this function has been called.|
+|`total_time`|double precision| |Total time spent in this function and all other functions called by it, in milliseconds.|
+|`self_time`|double precision| |Total time spent in this function itself, not including other functions called by it, in milliseconds.|
 
 This system view is summarized in the `gp_stat_user_functions_summary` system view.
 
@@ -786,21 +786,21 @@ The `gp_stat_wal_receiver` view is a cluster-wide view that displays the `pg_sta
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`pid`|integer|Process ID of the WAL receiver process.|
-|`status`|text|Activity status of the WAL receiver process.|
-|`receive_start_lsn`|pg_lsn|First write-ahead log location used when WAL receiver is started.|
-|`receive_start_tli`|integer.|First timeline number used when WAL receiver is started.|
-|`written_lsn`|pg_lsn.|Last write-ahead log location already received and written to disk, but not flushed. This should not be used for data integrity checks.|
-|`flushed_lsn`|pg_lsn|Last write-ahead log location already received and flushed to disk, the initial value of this field being the first log location used when WAL receiver is started.|
-|`received_tli`|integer|Timeline number of last write-ahead log location received and flushed to disk, the initial value of this field being the timeline number of the first log location used when WAL receiver is started.|
-|`last_msg_send_time`|timestamp with time zone|Send time of last message received from origin WAL sender.|
-|`last_msg_receipt_time`|timestamp with time zone|Receipt time of last message received from origin WAL sender.|
-|`latest_end_lsn`|pg_lsn|Last write-ahead log location reported to origin WAL sender.|
-|`latest_end_time`|timestamp with time zone|Time of last write-ahead log location reported to origin WAL sender.|
-|`slot_name`|text|Replication slot name used by this WAL receiver.|
-|`sender_host`|text|Host of the PostgreSQL instance this WAL receiver is connected to. This can be a host name, an IP address, or a directory path if the connection is via Unix socket. (The path case can be distinguished because it will always be an absolute path, beginning with `/.`).|
-|`sender_port`|integer|Port number of the PostgreSQL instance this WAL receiver is connected to.|
-|`conninfo`|text|Connection string used by this WAL receiver, with security-sensitive fields obfuscated.|
+|`pid`|integer| |Process ID of the WAL receiver process.|
+|`status`|text| |Activity status of the WAL receiver process.|
+|`receive_start_lsn`|pg_lsn| |First write-ahead log location used when WAL receiver is started.|
+|`receive_start_tli`|integer.| |First timeline number used when WAL receiver is started.|
+|`written_lsn`|pg_lsn.| |Last write-ahead log location already received and written to disk, but not flushed. This should not be used for data integrity checks.|
+|`flushed_lsn`|pg_lsn| |Last write-ahead log location already received and flushed to disk, the initial value of this field being the first log location used when WAL receiver is started.|
+|`received_tli`|integer| |Timeline number of last write-ahead log location received and flushed to disk, the initial value of this field being the timeline number of the first log location used when WAL receiver is started.|
+|`last_msg_send_time`|timestamp with time zone| |Send time of last message received from origin WAL sender.|
+|`last_msg_receipt_time`|timestamp with time zone| |Receipt time of last message received from origin WAL sender.|
+|`latest_end_lsn`|pg_lsn| |Last write-ahead log location reported to origin WAL sender.|
+|`latest_end_time`|timestamp with time zone| |Time of last write-ahead log location reported to origin WAL sender.|
+|`slot_name`|text| |Replication slot name used by this WAL receiver.|
+|`sender_host`|text| |Host of the PostgreSQL instance this WAL receiver is connected to. This can be a host name, an IP address, or a directory path if the connection is via Unix socket. (The path case can be distinguished because it will always be an absolute path, beginning with `/.`).|
+|`sender_port`|integer| |Port number of the PostgreSQL instance this WAL receiver is connected to.|
+|`conninfo`|text| |Connection string used by this WAL receiver, with security-sensitive fields obfuscated.|
 
 ## <a id="gp_stat_xact_all_tables"></a>gp_stat_xact_all_tables
 
@@ -833,13 +833,13 @@ The `gp_statio_all_indexes` view is a cluster-wide view that displays the `pg_st
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`relid`|oid|OID of the table for this index.|
-|`indexrelid`|oid|OID of this index.|
-|`schemaname`|name|Name of the schema containing this index.|
-|`relname`|name|Name of the table for this index.|
-|`indexrelname`|name|Name of this index.|
-|`idx_blks_read`|bigint|Number of disk blocks read from this index.|
-|`idx_blks_hit`|bigint|Number of buffer hits in this index.|
+|`relid`|oid| |OID of the table for this index.|
+|`indexrelid`|oid| |OID of this index.|
+|`schemaname`|name| |Name of the schema containing this index.|
+|`relname`|name| |Name of the table for this index.|
+|`indexrelname`|name| |Name of this index.|
+|`idx_blks_read`|bigint| |Number of disk blocks read from this index.|
+|`idx_blks_hit`|bigint| |Number of buffer hits in this index.|
 
 This system view is summarized in the `gp_statio_all_indexes_summary` system view.
 
@@ -850,11 +850,11 @@ The `gp_statio_all_sequences` view is a cluster-wide view that displays the `pg_
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`relid`|oid|OID of a sequence.|
-|`schemaname`|name|Name of the schema this sequence is in.|
-|`relname`|name|Name of this sequence.|
-|`blks_read`|bigint|Number of disk blocks read from this sequence.|
-|`blks_hit`|bigint|Number of buffer hits in this sequence.|
+|`relid`|oid| |OID of a sequence.|
+|`schemaname`|name| |Name of the schema this sequence is in.|
+|`relname`|name| |Name of this sequence.|
+|`blks_read`|bigint| |Number of disk blocks read from this sequence.|
+|`blks_hit`|bigint| |Number of buffer hits in this sequence.|
 
 This system view is summarized in the `gp_statio_all_sequences_summary` system view.
 
@@ -866,16 +866,16 @@ The `gp_statio_all_tables` view is a cluster-wide view that displays the `pg_sta
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) 
 |reli|oid|OID of a table.|
-|`schemaname`|name|Name of the schema containing this table.|
-|`relname`|name|Name of this table.|
-|`heap_blks_read`|bigint|Number of disk blocks read from this table.|
-|`heap_blks_hit`|bigint|Number of buffer hits in this table.|
-|`idx_blks_read`|bigint|Number of disk blocks read from all indexes on this table.|
-|`idx_blks_hit`|bigint|Number of buffer hits in all indexes on this table.|
-|`toast_blks_read`|bigint.|Number of disk blocks read from this table's TOAST table (if any).|
-|`toast_blks_hit`|bigint|Number of buffer hits in this table's TOAST table (if any).|
-|`tidx_blks_read`|bigint|Number of disk blocks read from this table's TOAST table indexes (if any).|
-|`tidx_blks_hit`|bigint|Number of buffer hits in this table's TOAST table indexes (if any).|
+|`schemaname`|name| |Name of the schema containing this table.|
+|`relname`|name| |Name of this table.|
+|`heap_blks_read`|bigint| |Number of disk blocks read from this table.|
+|`heap_blks_hit`|bigint| |Number of buffer hits in this table.|
+|`idx_blks_read`|bigint| |Number of disk blocks read from all indexes on this table.|
+|`idx_blks_hit`|bigint| |Number of buffer hits in all indexes on this table.|
+|`toast_blks_read`|bigint.| |Number of disk blocks read from this table's TOAST table (if any).|
+|`toast_blks_hit`|bigint| |Number of buffer hits in this table's TOAST table (if any).|
+|`tidx_blks_read`|bigint| |Number of disk blocks read from this table's TOAST table indexes (if any).|
+|`tidx_blks_hit`|bigint| |Number of buffer hits in this table's TOAST table indexes (if any).|
 
 This system view is summarized in the `gp_statio_all_tables_summary` system view.
 
