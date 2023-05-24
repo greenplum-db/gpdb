@@ -109,8 +109,8 @@ The `gp_config` view is a cluster-wide view that displays the `pg_config`informa
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`name`|text|The parameter name.|
-|`setting`|text|The parameter value.|
+|`name`|text| |The parameter name.|
+|`setting`|text| |The parameter value.|
 
 ## <a id="gp_cursors"></a>gp_cursors
 
@@ -177,13 +177,13 @@ The `gp_file_settings` view is a cluster-wide view that displays the `pg_file_se
 |name|type|references|description|
 |----|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`sourcefile`|text|Full path name of the configuration file.|
-|`sourceline`|integer|Line number within the configuration file where the entry appears.|
-|`seqno`|integer|Order in which the entries are processed (1..n).|
-|`name`|text|Configuration parameter name.|
-|`setting`|text|Value to be assigned to the parameter.|
-|`applied`|boolean|True if the value can be applied successfully.|
-|`error`|text|If not null, an error message indicating why this entry could not be applied.|
+|`sourcefile`|text| |Full path name of the configuration file.|
+|`sourceline`|integer| |Line number within the configuration file where the entry appears.|
+|`seqno`|integer| |Order in which the entries are processed (1..n).|
+|`name`|text| |Configuration parameter name.|
+|`setting`|text| |Value to be assigned to the parameter.|
+|`applied`|boolean| |True if the value can be applied successfully.|
+|`error`|text| |If not null, an error message indicating why this entry could not be applied.|
 
 ## <a id="gp_pgdatabase"></a>gp_pgdatabase
 
@@ -204,10 +204,10 @@ The `gp_replication_origin_status` view is a cluster-wide view that displays the
 name|type|references|description|
 |----|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`local_id`|oid|pg_replication_origin.roident	internal node identifier.|
-|`external_id`|text|pg_replication_origin.roname	external node identifier.|
-|`remote_lsn`|pg_lsn|The origin node's LSN up to which data has been replicated.|
-|`local_lsn`|pg_lsn|This node's LSN at which remote_lsn has been replicated. Used to flush commit records before persisting data to disk when using asynchronous commits.|
+|`local_id`|oid|pg_replication_origin.roident|Internal node identifier.|
+|`external_id`|text|pg_replication_origin.roname|External node identifier.|
+|`remote_lsn`|pg_lsn| |The origin node's LSN up to which data has been replicated.|
+|`local_lsn`|pg_lsn| |This node's LSN at which remote_lsn has been replicated. Used to flush commit records before persisting data to disk when using asynchronous commits.|
 
 ## <a id="gp_replication_slots"></a>gp_replication_slots
 
@@ -216,18 +216,18 @@ The `gp_replication_slots` view is a cluster-wide view that displays the `pg_rep
 name|type|references|description|
 |----|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`slot_name`|name|A unique, cluster-wide identifier for the replication slot.|
-|`plugin`|name|The base name of the shared object containing the output plugin this logical slot is using, or null for physical slots.|
-|`slot_type`|text|The slot type - physical or logical.|
+|`slot_name`|name| |A unique, cluster-wide identifier for the replication slot.|
+|`plugin`|name| |The base name of the shared object containing the output plugin this logical slot is using, or null for physical slots.|
+|`slot_type`|text| |The slot type - physical or logical.|
 |`datoid`|oid|pg_database.oid|The OID of the database this slot is associated with, or null. Only logical slots have an associated database.|
 |`database`|text|pg_database.datname|The name of the database this slot is associated with, or null. Only logical slots have an associated database.|
-|`temporary`|boolean|True if this is a temporary replication slot. Temporary slots are not saved to disk and are automatically dropped on error or when the session has finished.|
-|`active`|boolean|True if this slot is currently actively being used.|
-|`active_pid`|integer|The process ID of the session using this slot if the slot is currently actively being used. `NULL` if inactive.|
-|`xmin`|xid|The oldest transaction that this slot needs the database to retain. VACUUM cannot remove tuples deleted by any later transaction.|
-|`catalog_xmin`|xid|The oldest transaction affecting the system catalogs that this slot needs the database to retain. VACUUM cannot remove catalog tuples deleted by any later transaction.|
-|`restart_ls`n|pg_lsn|The address (LSN) of oldest WAL which still might be required by the consumer of this slot and thus won't be automatically removed during checkpoints. `NULL` if the LSN of this slot has never been reserved.|
-|`confirmed_flush_lsn`|pg_lsn|The address (LSN) up to which the logical slot's consumer has confirmed receiving data. Data older than this is not available anymore. NULL for physical slots.|
+|`temporary`|boolean| |True if this is a temporary replication slot. Temporary slots are not saved to disk and are automatically dropped on error or when the session has finished.|
+|`active`|boolean| |True if this slot is currently actively being used.|
+|`active_pid`|integer| |The process ID of the session using this slot if the slot is currently actively being used. `NULL` if inactive.|
+|`xmin`|xid| |The oldest transaction that this slot needs the database to retain. VACUUM cannot remove tuples deleted by any later transaction.|
+|`catalog_xmin`|xid| |The oldest transaction affecting the system catalogs that this slot needs the database to retain. VACUUM cannot remove catalog tuples deleted by any later transaction.|
+|`restart_ls`n|pg_lsn| |The address (LSN) of oldest WAL which still might be required by the consumer of this slot and thus won't be automatically removed during checkpoints. `NULL` if the LSN of this slot has never been reserved.|
+|`confirmed_flush_lsn`|pg_lsn| |The address (LSN) up to which the logical slot's consumer has confirmed receiving data. Data older than this is not available anymore. NULL for physical slots.|
 
 ## <a id="gp_resgroup_config"></a>gp_resgroup_config
 
@@ -393,23 +393,23 @@ The `gp_settings` view is a cluster-wide view that displays the `pg_settings` in
 |name|type|references|description|
 |----|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`name`|text|Runtime configuration parameter name.
-|`setting`|text|Current value of the parameter.|
-|`unit`|text|Implicit unit of the parameter.|
-|`category`|text|Logical group of the parameter.|
-|`short_desc`|text|A brief description of the parameter.
-|`extra_desc`|text|Additional, more detailed, description of the parameter.|
-|`context`|text|Context required to set the parameter's value.|
-|`vartype`|text|Parameter type (bool, enum, integer, real, or string)v
-|`source`|text|Source of the current parameter value.v
-|`min_val`|text|Minimum allowed value of the parameter (null for non-numeric values).|
-|`max_val`|text|Maximum allowed value of the parameter (null for non-numeric values).|
-|`enumvals`|text[]|Permitted values of an enum parameter (null for non-enum values).|
-|`boot_val`|text|Parameter value assumed at server startup if the parameter is not otherwise set.|
-|`reset_val`|text|Value that RESET would reset the parameter to in the current session.|
-|`sourcefile`|text|Configuration file the current value was set in (null for values set from sources other than configuration files, or when examined by a user who is neither a superuser or a member of `pg_read_all_settings`); helpful when using include directives in configuration files.|
-|`sourceline`|integer|Line number within the configuration file the current value was set at (null for values set from sources other than configuration files, or when examined by a user who is neither a superuser or a member of pg_read_all_settings).|
-|`pending_restart`|boolean|`true` if the value has been changed in the configuration file but needs a restart; otherwise `false`.|
+|`name`|text| |Runtime configuration parameter name.
+|`setting`|text| |Current value of the parameter.|
+|`unit`|text| |Implicit unit of the parameter.|
+|`category`|text| |Logical group of the parameter.|
+|`short_desc`|text| |A brief description of the parameter.
+|`extra_desc`|text| |Additional, more detailed, description of the parameter.|
+|`context`|text| |Context required to set the parameter's value.|
+|`vartype`|text| |Parameter type (bool, enum, integer, real, or string)v
+|`source`|text| |Source of the current parameter value.v
+|`min_val`|text| |Minimum allowed value of the parameter (null for non-numeric values).|
+|`max_val`|text| |Maximum allowed value of the parameter (null for non-numeric values).|
+|`enumvals`|text[]| |Permitted values of an enum parameter (null for non-enum values).|
+|`boot_val`|text| |Parameter value assumed at server startup if the parameter is not otherwise set.|
+|`reset_val`|text| |Value that RESET would reset the parameter to in the current session.|
+|`sourcefile`|text| |Configuration file the current value was set in (null for values set from sources other than configuration files, or when examined by a user who is neither a superuser or a member of `pg_read_all_settings`); helpful when using include directives in configuration files.|
+|`sourceline`|integer| |Line number within the configuration file the current value was set at (null for values set from sources other than configuration files, or when examined by a user who is neither a superuser or a member of pg_read_all_settings).|
+|`pending_restart`|boolean| |`true` if the value has been changed in the configuration file but needs a restart; otherwise `false`.|
 
 ## <a id="gp_suboverflowed_backend"></a>gp_suboverflowed_backend
 
