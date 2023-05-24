@@ -225,18 +225,18 @@ CREATE TABLE table_2_cols_dist_c2(c1 text, c2 text) distributed by (c2);
 CREATE TABLE table_3_cols_dist_c1(c1 text, c2 text, c3 text) distributed by (c1);
 CREATE TABLE table_3_cols_dist_c2(c1 text, c2 text, c3 text) distributed by (c2);
 CREATE TABLE table_3_cols_dist_c3(c1 text, c2 text, c3 text) distributed by (c3);
-COPY table_1_col_dist_c1 FROM '/home/gpadmin/workspace/gpdb/src/test/regress/data/copy.data' DELIMITER ',';
+COPY table_1_col_dist_c1 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
 ERROR:  extra data after last expected column
 CONTEXT:  COPY table_1_col_dist_c1, line 1: "1,text1"
-COPY table_2_cols_dist_c1 FROM '/home/gpadmin/workspace/gpdb/src/test/regress/data/copy.data' DELIMITER ',';
-COPY table_2_cols_dist_c2 FROM '/home/gpadmin/workspace/gpdb/src/test/regress/data/copy.data' DELIMITER ',';
-COPY table_3_cols_dist_c1 FROM '/home/gpadmin/workspace/gpdb/src/test/regress/data/copy.data' DELIMITER ',';
+COPY table_2_cols_dist_c1 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+COPY table_2_cols_dist_c2 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+COPY table_3_cols_dist_c1 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
 ERROR:  missing data for column "c3"
 CONTEXT:  COPY table_3_cols_dist_c1, line 1: "1,text1"
-COPY table_3_cols_dist_c2 FROM '/home/gpadmin/workspace/gpdb/src/test/regress/data/copy.data' DELIMITER ',';
+COPY table_3_cols_dist_c2 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
 ERROR:  missing data for column "c3"
 CONTEXT:  COPY table_3_cols_dist_c2, line 1: "1,text1"
-COPY table_3_cols_dist_c3 FROM '/home/gpadmin/workspace/gpdb/src/test/regress/data/copy.data' DELIMITER ',';
+COPY table_3_cols_dist_c3 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
 ERROR:  missing data for column "c3"
 CONTEXT:  COPY table_3_cols_dist_c3, line 1: "1,text1"
 SELECT count(*) FROM table_1_col_dist_c1;
