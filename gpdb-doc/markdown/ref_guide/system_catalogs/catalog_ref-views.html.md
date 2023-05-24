@@ -2,10 +2,16 @@
 
 Greenplum Database provides the following system views:
 
+-   [gp_backend_memory_contexts](#gp_backend_memory_contexts)
+-   [gp_config](#gp_config)
+-   [gp_cursors](#gp_cursors)
 -   [gp_distributed_log](#gp_distributed_log)
 -   [gp_distributed_xacts](#gp_distributed_xacts)
 -   [gp_endpoints](#gp_endpoints)
+-   [gp_file_settings](#gp_file_settings)
 -   [gp_pgdatabase](#gp_pgdatabase)
+-   [gp_replication_origin_status](#gp_replication_origin_status)
+-   [gp_replication_slots](#gp_replication_slots)
 -   [gp_resgroup_config](#gp_resgroup_config)
 -   [gp_resgroup_status](#gp_resgroup_status)
 -   [gp_resgroup_status_per_host](#gp_resgroup_status_per_host)
@@ -13,6 +19,7 @@ Greenplum Database provides the following system views:
 -   [gp_resqueue_status](#gp_resqueue_status)
 -   [gp_segment_endpoints](#gp_segment_endpoints)
 -   [gp_session_endpoints](#gp_session_endpoints)
+-   [gp_settings](#gp_settings)
 -   [gp_suboverflowed_backend](#gp_suboverflowed_backend)
 -   [gp_stat_activity](#gp_stat_activity)
 -   [gp_stat_all_indexes](#gp_stat_all_indexes)
@@ -78,6 +85,48 @@ For more information about the standard system views supported in PostgreSQL and
 -   [Statistics Collector Views](https://www.postgresql.org/docs/12/monitoring-stats.html#MONITORING-STATS-VIEWS)
 -   [The Information Schema](https://www.postgresql.org/docs/12/information-schema.html)
 
+## <a id="gp_backend_memory_contexts"></a>gp_backend_memory_contexts
+
+The `gp_backend_memory_contexts` view is a cluster-wide view that displays the [`pg_backend_memory_contexts`](#pg_backend_memory_contexts) information from every primary segment.
+
+|column|type|references|description|
+|------|----|----------|-----------|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`name`|text| |The name of the memory context.|
+|`ident`|text| |Identification information of the memory context. This field is truncated at 1024 bytes.|
+|`parent`|text| |The name of the parent of this memory context.|
+|`level`|int4| |The distance from `TopMemoryContext` in context tree.|
+|`total_bytes`|int8| |The total number of bytes allocated for this memory context.|
+|`total_nblocks`|int8| |The total number of blocks allocated for this memory context.|
+|`free_bytes`|int8| |Free space in bytes.|
+|`free_chunks`|int8| |The total number of free chunks.|
+|`used_bytes`|int8| |Used space in bytes.|
+
+## <a id="gp_config"></a>gp_config
+
+The `gp_config` view is a cluster-wide view that displays the `pg_config`information from every primary segment.
+
+|column|type|references|description|
+|------|----|----------|-----------|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`name`|text|The parameter name.|
+|`setting`|text|The parameter value.|
+
+## <a id="gp_cursors"></a>gp_cursors
+
+The `gp_cursors` view is a cluster-wide view that displays the [`pg_config`](#pg_cursors) information from every primary segment.
+
+|name|type|references|description|
+|----|----|----------|-----------|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`name`|text| |The name of the cursor.|
+|`statement`|text| |The verbatim query string submitted to declare this cursor.|
+|`is_holdable`|boolean| |`true` if the cursor is holdable \(that is, it can be accessed after the transaction that declared the cursor has committed\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support holdable parallel retrieve cursors, this value is always `false` for such cursors.|
+|`is_binary`|boolean| |`true` if the cursor was declared `BINARY`; `false` otherwise.|
+|`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
+|`creation_time`|timestamptz| |The time at which the cursor was declared.|
+|`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
+
 ## <a id="gp_distributed_log"></a>gp_distributed_log 
 
 The `gp_distributed_log` view contains status information about distributed transactions and their associated local transactions. A distributed transaction is a transaction that involves modifying data on the segment instances. Greenplum's distributed transaction manager ensures that the segments stay in synch. This view allows you to see the status of distributed transactions.
@@ -121,6 +170,21 @@ Endpoints exist only for the duration of the transaction that defines the parall
 |state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
+## <a id="gp_file_settings"></a>gp_file_settings
+
+The `gp_file_settings` view is a cluster-wide view that displays the `pg_file_settings`information from every primary segment.
+
+|name|type|references|description|
+|----|----|----------|-----------|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`sourcefile`|text|Full path name of the configuration file.|
+|`sourceline`|integer|Line number within the configuration file where the entry appears.|
+|`seqno`|integer|Order in which the entries are processed (1..n).|
+|`name`|text|Configuration parameter name.|
+|`setting`|text|Value to be assigned to the parameter.|
+|`applied`|boolean|True if the value can be applied successfully.|
+|`error`|text|If not null, an error message indicating why this entry could not be applied.|
+
 ## <a id="gp_pgdatabase"></a>gp_pgdatabase
 
 The `gp_pgdatabase` view displays the status of Greenplum segment instances and whether they are acting as the mirror or the primary. The Greenplum fault detection and recovery utilities use this view internally to identify failed segments.
@@ -132,6 +196,38 @@ The `gp_pgdatabase` view displays the status of Greenplum segment instances and 
 |`content`|smallint|gp\_segment\_configuration.content|The ID for the portion of data on an instance. A primary segment instance and its mirror will have the same content ID.<br/><br/>For a segment the value is from 0-*N-1*, where *N* is the number of segments in Greenplum Database.<br/><br/>For the coordinator, the value is -1.|
 |`valid`|boolean|gp\_segment\_configuration.mode|Whether or not this instance is up and the mode is either *s* (synchronized) or *n* (not in sync).|
 |`definedprimary`|boolean|gp\_segment\_ configuration.preferred\_role|Whether or not this instance was defined as the primary \(as opposed to the mirror\) at the time the system was initialized.|
+
+## <a id="gp_replication_origin_status"></a>gp_replication_origin_status
+
+The `gp_replication_origin_status` view is a cluster-wide view that displays the `pg_replication_origin_status` information from every primary segment.
+
+name|type|references|description|
+|----|----|----------|-----------|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`local_id`|oid|pg_replication_origin.roident	internal node identifier.|
+|`external_id`|text|pg_replication_origin.roname	external node identifier.|
+|`remote_lsn`|pg_lsn|The origin node's LSN up to which data has been replicated.|
+|`local_lsn`|pg_lsn|This node's LSN at which remote_lsn has been replicated. Used to flush commit records before persisting data to disk when using asynchronous commits.|
+
+## <a id="gp_replication_slots"></a>gp_replication_slots
+
+The `gp_replication_slots` view is a cluster-wide view that displays the `pg_replication_slots` information from every primary segment.
+
+name|type|references|description|
+|----|----|----------|-----------|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`slot_name`|name|A unique, cluster-wide identifier for the replication slot.|
+|`plugin`|name|The base name of the shared object containing the output plugin this logical slot is using, or null for physical slots.|
+|`slot_type`|text|The slot type - physical or logical.|
+|`datoid`|oid|pg_database.oid|The OID of the database this slot is associated with, or null. Only logical slots have an associated database.|
+|`database`|text|pg_database.datname|The name of the database this slot is associated with, or null. Only logical slots have an associated database.|
+|`temporary`|boolean|True if this is a temporary replication slot. Temporary slots are not saved to disk and are automatically dropped on error or when the session has finished.|
+|`active`|boolean|True if this slot is currently actively being used.|
+|`active_pid`|integer|The process ID of the session using this slot if the slot is currently actively being used. `NULL` if inactive.|
+|`xmin`|xid|The oldest transaction that this slot needs the database to retain. VACUUM cannot remove tuples deleted by any later transaction.|
+|`catalog_xmin`|xid|The oldest transaction affecting the system catalogs that this slot needs the database to retain. VACUUM cannot remove catalog tuples deleted by any later transaction.|
+|`restart_ls`n|pg_lsn|The address (LSN) of oldest WAL which still might be required by the consumer of this slot and thus won't be automatically removed during checkpoints. `NULL` if the LSN of this slot has never been reserved.|
+|`confirmed_flush_lsn`|pg_lsn|The address (LSN) up to which the logical slot's consumer has confirmed receiving data. Data older than this is not available anymore. NULL for physical slots.|
 
 ## <a id="gp_resgroup_config"></a>gp_resgroup_config
 
@@ -289,6 +385,31 @@ Endpoints exist only for the duration of the transaction that defines the parall
 |username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
 |state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
+
+## <a id="gp_settings"></a>gp_settings
+
+The `gp_settings` view is a cluster-wide view that displays the `pg_settings` information from every primary segment.
+
+|name|type|references|description|
+|----|----|----------|-----------|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`name`|text|Runtime configuration parameter name.
+|`setting`|text|Current value of the parameter.|
+|`unit`|text|Implicit unit of the parameter.|
+|`category`|text|Logical group of the parameter.|
+|`short_desc`|text|A brief description of the parameter.
+|`extra_desc`|text|Additional, more detailed, description of the parameter.|
+|`context`|text|Context required to set the parameter's value.|
+|`vartype`|text|Parameter type (bool, enum, integer, real, or string)v
+|`source`|text|Source of the current parameter value.v
+|`min_val`|text|Minimum allowed value of the parameter (null for non-numeric values).|
+|`max_val`|text|Maximum allowed value of the parameter (null for non-numeric values).|
+|`enumvals`|text[]|Permitted values of an enum parameter (null for non-enum values).|
+|`boot_val`|text|Parameter value assumed at server startup if the parameter is not otherwise set.|
+|`reset_val`|text|Value that RESET would reset the parameter to in the current session.|
+|`sourcefile`|text|Configuration file the current value was set in (null for values set from sources other than configuration files, or when examined by a user who is neither a superuser or a member of `pg_read_all_settings`); helpful when using include directives in configuration files.|
+|`sourceline`|integer|Line number within the configuration file the current value was set at (null for values set from sources other than configuration files, or when examined by a user who is neither a superuser or a member of pg_read_all_settings).|
+|`pending_restart`|boolean|`true` if the value has been changed in the configuration file but needs a restart; otherwise `false`.|
 
 ## <a id="gp_suboverflowed_backend"></a>gp_suboverflowed_backend
 
