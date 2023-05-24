@@ -1306,6 +1306,21 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 |-----------|-------|-------------------|
 |auto, eager\_free|eager\_free|local, system, superuser, reload|
 
+## <a id="gp_resgroup_memory_query_fixed_mem"></a>gp_resgroup_memory_query_fixed_mem
+
+> **Note** The `gp_resgroup_memory_query_fixed_mem` server configuration parameter is enforced only when resource group-based resource management is active.
+
+Used by Greenplum Database to set the fixed amount of memory reserved for all queries in a resource group. 
+NEED MORE EXPLANATION
+
+ALSO, WHAT IS VALUE RANGE?
+
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| | 0 |local, system, superuser, reload|
+
+
 ## <a id="gp_resource_group_bypass"></a>gp\_resource\_group\_bypass 
 
 > **Note** The `gp_resource_group_bypass` server configuration parameter is enforced only when resource group-based resource management is active.
