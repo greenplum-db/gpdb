@@ -319,6 +319,7 @@ init_datumstream_typeinfo(
 {
 	typeInfo->datumlen = attr->attlen;
 	typeInfo->typid = attr->atttypid;
+	typeInfo->typstorage = attr->attstorage;
 	typeInfo->align = attr->attalign;
 	typeInfo->byval = attr->attbyval;
 }

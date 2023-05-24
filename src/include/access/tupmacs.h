@@ -193,21 +193,4 @@
 		} \
 	} while (0)
 
-#ifndef FRONTEND
-/*
- * Determine if a datum of type oid can be stored in short varlena format.
- * The caller must've checked that it's a pass-by-reference type.
- */
-static inline bool
-value_type_could_short(Pointer ptr, Oid typid)
-{
-	return !VARATT_IS_EXTERNAL(ptr) &&
-		(VARATT_IS_SHORT(ptr) ||
-		 (VARATT_CAN_MAKE_SHORT(ptr) &&
-		  typid != INT2VECTOROID &&
-		  typid != OIDVECTOROID &&
-		  typid < FirstNormalObjectId));
-}
-#endif
-
 #endif
