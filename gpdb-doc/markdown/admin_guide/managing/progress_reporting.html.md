@@ -2,7 +2,7 @@
 
 Greenplum Database can report the progress of `ANALYZE`, `CLUSTER`, `COPY`, `CREATE INDEX`, `REINDEX`, and `VACUUM` commands during command execution, with some caveats. Greeplum can also report the progress of a running base backup (initiated during [gprecoverseg](../../utility_guide/ref/gprecoverseg.html)) or [pg_checksums](../../utility_guide/ref/pg_checksums.html) command invocation, allowing you to monitor the progress of these possibly long-running operations.
 
-Greenplum reports the command progress via ephemeral system views. That is, the views return data only while the operations are running. Two sets of progress reporting views are provided:
+Greenplum reports the command progress via ephemeral system views, which return data only while the operations are running. Two sets of progress reporting views are provided:
 
 - `gp_stat_progress_<command>` - displays the progress of running `<command>` invocations on the coordinator and all segments, with a row per segment instance
 - `gp_stat_progress_<command>_summary` - aggregates `<command>` progress on the coordinator and all segments, and displays one row per running `<command>` invocation
