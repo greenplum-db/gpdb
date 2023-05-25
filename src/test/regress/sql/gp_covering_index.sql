@@ -163,12 +163,13 @@ SELECT a, b, c FROM test_ao WHERE c>42;
 -- Check that the best cover index is chosen for a plan when multiple cover
 -- indexes are available.
 CREATE TABLE test_select_best_cover(a int, b int, c int);
-CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
-CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
-CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
-CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
-CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(a) INCLUDE (b);
 CREATE INDEX i_test_select_best_cover_a_bc ON test_select_best_cover(a) INCLUDE (b, c);
+CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
+CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
+CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
+CREATE INDEX i_test_select_best_cover_b_ac ON test_select_best_cover(b) INCLUDE (a, c);
+CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(b) INCLUDE (a);
+CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
 INSERT INTO test_select_best_cover SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_select_best_cover;
 

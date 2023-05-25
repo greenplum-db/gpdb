@@ -301,12 +301,13 @@ SELECT a, b, c FROM test_ao WHERE c>42;
 CREATE TABLE test_select_best_cover(a int, b int, c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
-CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
-CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
-CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
-CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(a) INCLUDE (b);
 CREATE INDEX i_test_select_best_cover_a_bc ON test_select_best_cover(a) INCLUDE (b, c);
+CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
+CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
+CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
+CREATE INDEX i_test_select_best_cover_b_ac ON test_select_best_cover(b) INCLUDE (a, c);
+CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(b) INCLUDE (a);
+CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
 INSERT INTO test_select_best_cover SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_select_best_cover;
 -- KEYS: [a]    INCLUDED: []
@@ -317,10 +318,10 @@ VACUUM ANALYZE test_select_best_cover;
 -- KEYS: [a]    INCLUDED: [b, c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a FROM test_select_best_cover WHERE a>42;
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Index Only Scan using i_test_select_best_cover_a_bc on test_select_best_cover (actual rows=25 loops=1)
+   ->  Index Only Scan using i_test_select_best_cover_ab on test_select_best_cover (actual rows=25 loops=1)
          Index Cond: (a > 42)
          Heap Fetches: 0
  Optimizer: Postgres query optimizer
@@ -352,10 +353,10 @@ SELECT b FROM test_select_best_cover WHERE b>42;
 -- ORCA_FEATURE_NOT_SUPPORTED: use i_test_select_best_cover_ab
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover WHERE a>42 AND b>42;
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Index Only Scan using i_test_select_best_cover_a_bc on test_select_best_cover (actual rows=25 loops=1)
+   ->  Index Only Scan using i_test_select_best_cover_a_b on test_select_best_cover (actual rows=25 loops=1)
          Index Cond: (a > 42)
          Filter: (b > 42)
          Heap Fetches: 0
