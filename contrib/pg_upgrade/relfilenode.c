@@ -44,8 +44,12 @@ transfer_all_new_tablespaces(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 	 * tablespace path, which matches all tablespaces.  In parallel mode, we
 	 * pass the default tablespace and all user-created tablespaces and let
 	 * those operations happen in parallel.
+	 *
+	 * GPDB: Disable pg_upgrade's broken parallel tablespace transfer to make the rest
+	 * of the parallelism from the --jobs flag usable now to get a performance
+	 * boost.
 	 */
-	if (user_opts.jobs <= 1)
+	if (true) /* (user_opts.jobs <= 1) */
 		parallel_transfer_all_new_dbs(old_db_arr, new_db_arr, old_pgdata,
 									  new_pgdata, NULL);
 	else

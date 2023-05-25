@@ -189,7 +189,12 @@ parallel_transfer_all_new_dbs(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 	transfer_thread_arg *new_arg;
 #endif
 
-	if (user_opts.jobs <= 1)
+	/*
+	 * GPDB: Disable pg_upgrade's broken parallel tablespace transfer to make the rest
+	 * of the parallelism from the --jobs flag usable now to get a performance
+	 * boost.
+	 */
+	if (true) /* (user_opts.jobs <= 1) */
 		transfer_all_new_dbs(old_db_arr, new_db_arr, old_pgdata, new_pgdata, NULL);
 	else
 	{
