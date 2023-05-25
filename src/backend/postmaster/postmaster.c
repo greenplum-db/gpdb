@@ -434,7 +434,7 @@ static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 	 0,
 #endif
 	 BgWorkerStart_RecoveryFinished,
-	 0, /* restart immediately if ic proxy process exits with non-zero code */
+	 BGW_NEVER_RESTART, /* Never restart if ic proxy process exits with non-zero code */
 	 "postgres", "ICProxyMain", 0, {0}, 0,
 	 ICProxyStartRule},
 #endif  /* ENABLE_IC_PROXY */
