@@ -12,6 +12,7 @@ import pwd
 import socket
 import signal
 import uuid
+import pipes
 
 from gppylib.gplog import get_default_logger
 from gppylib.commands.base import *
@@ -478,6 +479,101 @@ def canonicalize(addr):
     if ':' not in addr: return addr
     if '[' in addr: return addr
     return '[' + addr + ']'
+
+
+class Rsync(Command):
+    def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False,
+                 verbose=True, archive_mode=True, checksum=False, delete=False, progress=False,
+                 stats=False, dry_run=False, bwlimit=None, exclude_list=[], ctxt=LOCAL,
+                 remoteHost=None, compress=False, progress_file=None):
+
+        """
+            rsync options:
+                srcFile: source datadir/file
+                        If source is a directory, make sure you add a '/' at the end of its path. When using "/" at the
+                        end of source, rsync will copy the content of the last directory. When not using "/" at the end
+                        of source, rsync will copy the last directory and the content of the directory.
+                dstFile: destination datadir or file that needs to be synced
+                srcHost: source host
+                exclude_list: to exclude specified files and directories to copied or synced with target
+                delete: delete the files on target which do not exist on source
+                checksum: to skip files being synced based on checksum, not modification time and size
+                bwlimit: to control the I/O bandwidth
+                stats: give some file-transfer stats
+                dry_run: perform a trial run with no changes made
+                compress: compress file data during the transfer
+                progress: to show the progress of rsync execution, like % transferred
+        """
+
+        cmd_tokens = [findCmdInPath('rsync')]
+
+        if recursive:
+            cmd_tokens.append('-r')
+
+        if verbose:
+            cmd_tokens.append('-v')
+
+        if archive_mode:
+            cmd_tokens.append('-a')
+
+        # To skip the files based on checksum, not modification time and size
+        if checksum:
+            cmd_tokens.append('-c')
+
+        if progress:
+            cmd_tokens.append('--progress')
+
+        # To show file transfer stats
+        if stats:
+            cmd_tokens.append('--stats')
+
+        if bwlimit is not None:
+            cmd_tokens.append('--bwlimit')
+            cmd_tokens.append(bwlimit)
+
+        if dry_run:
+            cmd_tokens.append('--dry-run')
+
+        if delete:
+            cmd_tokens.append('--delete')
+
+        if compress:
+            cmd_tokens.append('--compress')
+
+        if srcHost:
+            cmd_tokens.append(canonicalize(srcHost) + ":" + srcFile)
+        else:
+            cmd_tokens.append(srcFile)
+
+        if dstHost:
+            cmd_tokens.append(canonicalize(dstHost) + ":" + dstFile)
+        else:
+            cmd_tokens.append(dstFile)
+
+        exclude_str = ["--exclude={} ".format(pattern) for pattern in exclude_list]
+
+        cmd_tokens.extend(exclude_str)
+
+        if progress_file:
+            cmd_tokens.append('> %s 2>&1' % pipes.quote(progress_file))
+
+        cmdStr = ' '.join(cmd_tokens)
+
+        self.command_tokens = cmd_tokens
+
+        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
+
+    # Overriding validate() of Command class to handle few specific return codes of rsync which can be ignored
+    def validate(self, expected_rc=0):
+        """
+            During differential recovery, pg_wal is synced using rsync. During pg_wal sync, some of the xlogtemp files
+            are present on source when rsync builds the list of files to be transferred but are vanished before
+            transferring. In this scenario rsync gives warning "some files vanished before they could be transferred
+            (code 24)". This return code can be ignored in case of rsync command.
+        """
+        if self.results.rc != 24 and self.results.rc != expected_rc:
+            self.logger.debug(self.results)
+            raise ExecutionError("non-zero rc: %d" % self.results.rc, self)
 
 
 class Scp(Command):
