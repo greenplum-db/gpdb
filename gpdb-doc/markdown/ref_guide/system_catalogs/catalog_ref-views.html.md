@@ -79,6 +79,34 @@ Greenplum Database provides the following system views:
 -   [pg_stats_ext](#pg_stats_ext)
 -   session_level_memory_consumption (See [Monitoring a Greenplum System](../../admin_guide/managing/monitor.html#topic_slt_ddv_1q).)
 
+**Summary Views**
+
+For more information on summary views, see [Summary Views](#summary_views), below.
+
+- gp_stat_all_indexes_summary
+- gp_stat_all_tables_summary
+- gp_stat_archiver_summary
+- gp_stat_bgwriter_summary
+- gp_stat_database_summary
+- gp_stat_slru_summary
+- gp_stat_sys_indexes_summary
+- gp_stat_user_functions_summary
+- gp_stat_user_indexes_summary
+- gp_stat_wal_summary
+- gp_stat_xact_all_tables_summary
+- gp_stat_xact_sys_tables_summary
+- gp_stat_xact_user_functions_summary
+- gp_stat_xact_user_tables_summary
+- gp_statio_all_indexes_summary
+- gp_statio_all_sequences_summary
+- gp_statio_all_tables_summary
+- gp_statio_sys_indexes_summary
+- gp_statio_sys_sequences_summary
+- gp_statio_sys_tables_summary
+- gp_statio_user_indexes_summary
+- gp_statio_user_sequences_summary
+- gp_statio_user_tables_summary
+
 For more information about the standard system views supported in PostgreSQL and Greenplum Database, see the following sections of the PostgreSQL documentation:
 
 -   [System Views](https://www.postgresql.org/docs/12/views-overview.html)
@@ -1300,5 +1328,35 @@ The `pg_stats` view provides access to the information stored in the `pg_statist
 |`most_common_base_freqs`|real[]| |A list of the base frequencies of the most common combinations, i.e., product of per-value frequencies. \(Null when `most_common_vals` is.\)|
 
 The maximum number of entries in the array fields can be controlled on a column-by-column basis using the `ALTER TABLE SET STATISTICS` command, or globally by setting the [default\_statistics\_target](../config_params/guc-list.html#default_statistics_target) run-time configuration parameter.
+
+## <a id="summary_views"></a>Summary Views
+
+Greenplum Database includes a number of summary views -- all related to collected statistics -- which aggregate across the Greenplum cluster the metrics reported by their corresponding `gp_` view. For example, `gp_stat_archiver_summary` aggregates the metrics reported by `gp_stat_archiver`. These metrics are reported as sum, average, or last, depending on the column. For more information, see the [summary view code in Github](https://github.com/greenplum-db/gpdb/blob/main/src/backend/catalog/system_views_gp_summary.sql).
+
+The following is a list of summary views:
+
+- gp_stat_all_indexes_summary
+- gp_stat_all_tables_summary
+- gp_stat_archiver_summary
+- gp_stat_bgwriter_summary
+- gp_stat_database_summary
+- gp_stat_slru_summary
+- gp_stat_sys_indexes_summary
+- gp_stat_user_functions_summary
+- gp_stat_user_indexes_summary
+- gp_stat_wal_summary
+- gp_stat_xact_all_tables_summary
+- gp_stat_xact_sys_tables_summary
+- gp_stat_xact_user_functions_summary
+- gp_stat_xact_user_tables_summary
+- gp_statio_all_indexes_summary
+- gp_statio_all_sequences_summary
+- gp_statio_all_tables_summary
+- gp_statio_sys_indexes_summary
+- gp_statio_sys_sequences_summary
+- gp_statio_sys_tables_summary
+- gp_statio_user_indexes_summary
+- gp_statio_user_sequences_summary
+- gp_statio_user_tables_summary
 
 **Parent topic:** [System Catalogs](../system_catalogs/catalog_ref.html)
