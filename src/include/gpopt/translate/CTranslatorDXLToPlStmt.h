@@ -107,8 +107,8 @@ private:
 	};	// SContextIndexVarAttno
 
 	// struct that holds whatever context information the
-	// "fix_upper_expr_mutator_projectSet" mutator routine needs.
-	struct fix_upper_expr_context_projectset
+	// "FixUpperExprMutatorProjectSet" mutator routine needs.
+	struct FixUpperExprContextProjectset
 	{
 		// For a given node,this will contain the targetlist of the lefttree of that node
 		List *m_subplan_tlist;
@@ -117,12 +117,12 @@ private:
 		// with this varno(OUTER_VAR)
 		Index m_newvarno;
 
-		fix_upper_expr_context_projectset(List *subplan_tlist, Index newvarno)
+		FixUpperExprContextProjectset(List *subplan_tlist, Index newvarno)
 			: m_subplan_tlist(subplan_tlist), m_newvarno(newvarno)
 		{
 		}
 
-	};	// fix_upper_expr_context_projectset
+	};	// FixUpperExprContextProjectset
 
 	// memory pool
 	CMemoryPool *m_mp;
@@ -613,8 +613,8 @@ private:
 		CDXLColRefArray *pdrgdxlcrOuterRefs, CDXLTranslateContext *dxltrctxLeft,
 		CDXLTranslateContext *dxltrctxRight);
 
-	static Node *fix_upper_expr_mutator_projectSet(
-		Node *node, fix_upper_expr_context_projectset *context);
+	static Node *FixUpperExprMutatorProjectSet(
+		Node *node, FixUpperExprContextProjectset *context);
 };
 }  // namespace gpdxl
 

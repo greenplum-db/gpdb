@@ -2603,8 +2603,8 @@ gpdb::SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
 {
 	GP_WRAP_START;
 	{
-		return split_pathtarget_at_srfs(root, target, input_target, targets,
-										targets_contain_srfs);
+		split_pathtarget_at_srfs(root, target, input_target, targets,
+								 targets_contain_srfs);
 	}
 	GP_WRAP_END;
 }
