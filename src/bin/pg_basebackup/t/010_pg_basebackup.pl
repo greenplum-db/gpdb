@@ -4,7 +4,7 @@ use Cwd;
 use TestLib;
 use File::Compare;
 use File::Path qw(rmtree);
-use Test::More tests => 48;
+use Test::More tests => 48 + 4;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -278,3 +278,16 @@ command_ok([ 'pg_basebackup', '-D', $gpbackup_test_dir, '--target-gp-dbid', '123
 	'pg_basebackup does not copy over \'backups/\' directory created by gpbackup');
 ok(! -d "$gpbackup_test_dir/backups", 'gpbackup default backup directory should be excluded');
 rmtree($gpbackup_test_dir);
+
+#GPDB: write config files only
+mkdir "$tempdir/backup";
+
+command_fails([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123',
+	                   '--write-conf-files-only', '--write-recovery-conf' ],
+	                   'pg_basebackup --write-conf-files-only fails with --write-recovery-conf');
+
+command_ok([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123', '--write-conf-files-only' ],
+	'pg_basebackup runs with write-conf-files-only');
+ok(-f "$tempdir/backup/internal.auto.conf", 'internal.auto.conf was created');
+ok(-f "$tempdir/backup/recovery.conf", 'recovery.conf was created');
+rmtree("$tempdir/backup");

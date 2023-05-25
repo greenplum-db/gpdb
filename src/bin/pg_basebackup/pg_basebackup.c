@@ -66,6 +66,7 @@ static bool includewal = false;
 static bool streamwal = false;
 static bool fastcheckpoint = false;
 static bool writerecoveryconf = false;
+static bool writeconffilesonly = false;
 static int	standby_message_timeout = 10 * 1000;		/* 10 sec = default */
 static pg_time_t last_progress_report = 0;
 static int32 maxrate = 0;		/* no limit by default */
@@ -245,6 +246,8 @@ usage(void)
 			 "                         (in kB/s, or use suffix \"k\" or \"M\")\n"));
 	printf(_("  -R, --write-recovery-conf\n"
 			 "                         write recovery.conf after backup\n"));
+    printf(_("  -o, --write-conf-files-only\n"
+             "                         write configuration files only\n"));
 	printf(_("  -S, --slot=SLOTNAME    replication slot to use\n"));
 	printf(_("  -T, --tablespace-mapping=OLDDIR=NEWDIR\n"
 	  "                         relocate tablespace in OLDDIR to NEWDIR\n"));
@@ -2216,6 +2219,7 @@ main(int argc, char **argv)
 		{"checkpoint", required_argument, NULL, 'c'},
 		{"max-rate", required_argument, NULL, 'r'},
 		{"write-recovery-conf", no_argument, NULL, 'R'},
+        {"write-conf-files-only", no_argument, NULL, 'o'},
 		{"slot", required_argument, NULL, 'S'},
 		{"tablespace-mapping", required_argument, NULL, 'T'},
 		{"xlog", no_argument, NULL, 'x'},
@@ -2263,7 +2267,7 @@ main(int argc, char **argv)
 
 	num_exclude = 0;
 	num_exclude_from = 0;
-	while ((c = getopt_long(argc, argv, "D:F:r:RT:xX:l:zZ:d:c:h:p:U:s:S:wWvPE:",
+	while ((c = getopt_long(argc, argv, "D:F:o:r:RT:xX:l:zZ:d:c:h:p:U:s:S:wWvPE:",
 							long_options, &option_index)) != -1)
 	{
 		switch (c)
@@ -2284,6 +2288,9 @@ main(int argc, char **argv)
 					exit(1);
 				}
 				break;
+            case 'o':
+                writeconffilesonly = true;
+                break;
 			case 'r':
 				maxrate = parse_max_rate(optarg);
 				break;
@@ -2525,6 +2532,14 @@ main(int argc, char **argv)
 		}
 	}
 
+    if (writeconffilesonly && writerecoveryconf)
+    {
+        fprintf(stderr, _("--write-recovery-conf cannot be used with --write-conf-files-only"));
+        fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
+                progname);
+        exit(1);
+    }
+
 #ifndef HAVE_LIBZ
 	if (compresslevel != 0)
 	{
@@ -2535,11 +2550,27 @@ main(int argc, char **argv)
 	}
 #endif
 
-	/*
-	 * Verify that the target directory exists, or create it. For plaintext
-	 * backups, always require the directory. For tar backups, require it
-	 * unless we are writing to stdout.
-	 */
+    /* To only write recovery.conf and internal.auto.conf files,
+	   one of the usecase is gprecoverseg differential recovery (there can be others in future)
+	*/
+    if (writeconffilesonly)
+    {
+        WriteInternalConfFile();
+        conn = GetConnection();
+        if (!conn)
+            /* Error message already written in GetConnection() */
+            exit(1);
+        GenerateRecoveryConf(conn);
+        WriteRecoveryConf();
+        return 0;
+    }
+
+
+    /*
+     * Verify that the target directory exists, or create it. For plaintext
+     * backups, always require the directory. For tar backups, require it
+     * unless we are writing to stdout.
+     */
 	if (format == 'p' || strcmp(basedir, "-") != 0)
 		verify_dir_is_empty_or_create(basedir);
 
