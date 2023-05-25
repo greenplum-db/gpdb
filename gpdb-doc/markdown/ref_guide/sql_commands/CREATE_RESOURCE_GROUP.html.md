@@ -8,13 +8,14 @@ Defines a new resource group.
 CREATE RESOURCE GROUP <name> WITH (<group_attribute>=<value> [, ... ])
 ```
 
-where group\_attribute is:
+where group_attribute is one of:
 
 ```
 CPU_HARD_QUOTA_LIMIT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
 [ MEMORY_LIMIT=<integer> ]
 [ CPU_SOFT_PRIORITY=<integer> ]
 [ CONCURRENCY=<integer> ]
+[ MIN_COST=<integer> ]
 ```
 
 ## <a id="section3"></a>Description 
@@ -43,9 +44,9 @@ name
 CONCURRENCY integer
 :   Optional. The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The `CONCURRENCY` value must be an integer in the range \[0 .. `max_connections`\]. The default `CONCURRENCY` value for resource groups defined for roles is 20.
 
-:   You must set `CONCURRENCY` to zero \(0\) for resource groups that you create for external components.
+:   You must set `CONCURRENCY` to `0` for resource groups that you create for external components.
 
-:   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to zero \(0\).
+:   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to `0`.
 
 CPU_HARD_QUOTA_LIMIT integer
 :   Optional. The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the `CPU_HARD_QUOTA_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
@@ -60,11 +61,15 @@ CPUSET <coordinator_cores>;<segment_cores>
 :   > **Note** You can configure `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
 
 MEMORY_LIMIT integer
-:   Optional. The total percentage of Greenplum Database memory resources to reserve for this resource group. The minimum memory percentage you can specify for a resource group is 0. The maximum is 100. The default value is 0.
+:   Optional. The amount of memory resources, in MB, to reserve for this resource group. The minimum memory percentage you can specify for a resource group is 0. The maximum is 100. The default value is -1. 
 
 :   When you specify a `MEMORY_LIMIT` of 0, Greenplum Database reserves no memory for the resource group, but uses global shared memory to fulfill all memory requests in the group.
 
 :   The sum of the `MEMORY_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+
+:   If set to `-1`, `MEMORY_LIMIT` takes the value of the `statement_mem` server configuration parameter. 
+
+: If the server configuration parameter `gp_resgroup_memory_query_fixed_mem` is set, its value overrides at the session level the value of `MEMORY_LIMIT`. 
 
 ## <a id="section5"></a>Notes 
 

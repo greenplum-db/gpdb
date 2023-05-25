@@ -8,13 +8,14 @@ Changes the limits of a resource group.
 ALTER RESOURCE GROUP <name> SET <group_attribute> <value>
 ```
 
-where group\_attribute is one of:
+where group_attribute is one of:
 
 ```
 CPU_HARD_QUOTA_LIMIT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
 [ MEMORY_LIMIT=<integer> ]
 [ CPU_SOFT_PRIORITY=<integer> ]
 [ CONCURRENCY=<integer> ]
+[ MIN_COST=<integer> ]
 ```
 
 ## <a id="description"></a>Description 

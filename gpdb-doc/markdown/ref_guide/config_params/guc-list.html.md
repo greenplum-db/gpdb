@@ -1310,16 +1310,13 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 
 > **Note** The `gp_resgroup_memory_query_fixed_mem` server configuration parameter is enforced only when resource group-based resource management is active.
 
-Used by Greenplum Database to set the fixed amount of memory reserved for all queries in a resource group. 
-NEED MORE EXPLANATION
+Specifies a fixed amount of memory reserved for all queries in a resource group. When this parameter is set to `0` -- the default -- the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
 
-ALSO, WHAT IS VALUE RANGE?
-
+While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_query_fixed_mem` overrides that limit at a session level. Thus, you can use this configuration parameter to adjust query memory budget for a particular session, on an ad hoc basis. 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-| | 0 |local, system, superuser, reload|
-
+|0 < integer < INT_MAX| 0 |local, system, superuser, reload|
 
 ## <a id="gp_resource_group_bypass"></a>gp\_resource\_group\_bypass 
 
