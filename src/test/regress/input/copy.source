@@ -279,3 +279,13 @@ DROP TABLE table_2_cols_dist_c2;
 DROP TABLE table_3_cols_dist_c1;
 DROP TABLE table_3_cols_dist_c2;
 DROP TABLE table_3_cols_dist_c3;
+
+-- special case, tables without columns
+CREATE TABLE table_no_cols();
+INSERT INTO table_no_cols DEFAULT VALUES;
+SELECT count(*) FROM table_no_cols;
+COPY table_no_cols TO '@abs_srcdir@/data/copy_no_cols.data' DELIMITER ',';
+COPY table_no_cols FROM '@abs_srcdir@/data/copy_no_cols.data' DELIMITER ',';
+SELECT count(*) FROM table_no_cols;
+COPY table_no_cols FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+DROP TABLE table_no_cols;
