@@ -5167,8 +5167,12 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 			field_strings = cstate->raw_fields;
 		}
 
-		/* check for overflowing fields */
-		if (nfields > 0 && fldct > nfields)
+		/* 
+		 * Check for overflowing fields.
+		 * In QE, attr_count may be equal to 0,
+		 * when all fields is processed in QD.
+		 */
+		if (attr_count >= 0 && fldct > attr_count)
 			ereport(ERROR,
 					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 					 errmsg("extra data after last expected column")));
