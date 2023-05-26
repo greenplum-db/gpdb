@@ -560,20 +560,6 @@ This view is accessible to all users.
 |num\_queued|The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
 |num\_executed|The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
 |total\_queue\_duration|The total time any transaction was queued since the Greenplum Database cluster was last started.|
-|memory\_usage|The real-time memory usage of the resource group on each Greenplum Database segment's host.|
-
-The `memory_usage` field is a JSON-formatted, key:value string. The string contents differ depending upon the type of resource group. For each resource group that you assign to a role \(default memory auditor `vmtracker`\), this string identifies the used and available fixed and shared memory quota allocations on each segment. The key is segment id. The values are memory values displayed in MB units. The following example shows `memory_usage` column output for a single segment for a resource group that you assign to a role:
-
-```
-
-"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "shared_used":0, "shared_available":16}
-```
-
-For each resource group that you assign to an external component, the `memory_usage` JSON-formatted string identifies the memory used and the memory limit on each segment. The following example shows `memory_usage` column output for an external component resource group for a single segment:
-
-```
-"1":{"used":11, "limit_granted":15}
-```
 
 ### <a id="perhost"></a>gp\_resgroup\_status\_per\_host 
 
@@ -616,6 +602,18 @@ For each resource group that you assign to an external component, the `memory_us
 "1":{"used":11, "limit_granted":15}
 ```
 
+The `memory_usage` field is a JSON-formatted, key:value string. The string contents differ depending upon the type of resource group. For each resource group that you assign to a role \(default memory auditor `vmtracker`\), this string identifies the used and available fixed and shared memory quota allocations on each segment. The key is segment id. The values are memory values displayed in MB units. The following example shows `memory_usage` column output for a single segment for a resource group that you assign to a role:
+
+```
+
+"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "shared_used":0, "shared_available":16}
+```
+
+For each resource group that you assign to an external component, the `memory_usage` JSON-formatted string identifies the memory used and the memory limit on each segment. The following example shows `memory_usage` column output for an external component resource group for a single segment:
+
+```
+"1":{"used":11, "limit_granted":15}
+```
 
 ## <a id="topic26"></a>Checking Resource Queue Activity and Status 
 
