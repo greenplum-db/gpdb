@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 from gppylib.db import dbconn
+from gppylib.db.catalog import RemoteQueryCommand
+from gppylib import gplog
+
+logger = gplog.get_default_logger()
 
 # get tablespace locations
 def get_tablespace_locations(all_hosts, mirror_data_directory):
@@ -40,3 +44,27 @@ def get_tablespace_locations(all_hosts, mirror_data_directory):
         for r in res:
             tablespace_locations.append(r)
     return tablespace_locations
+
+
+def get_segment_tablespace_locations(primary_hostname, primary_port):
+    """
+        to get user defined tablespace locations for a specific primary segment. This function is called by
+        gprecoverseg --differential to get the tablespace locations by connecting to primary while mirror is down.
+        Above function get_tablespace_locations() can't be used as it takes mirror (failed segment) data_dir
+        as parameter and it is called before mirrors are moved to new location by gpmovemirrors.
+        :param primary_hostname: string type primary hostname
+        :param primary_port: int type primary segment port
+        :return: list of tablespace locations
+        """
+    sql = "SELECT distinct(tblspc_loc) FROM ( SELECT oid FROM pg_tablespace WHERE spcname NOT IN " \
+          "('pg_default', 'pg_global')) AS q,LATERAL gp_tablespace_location(q.oid);"
+    try:
+        query = RemoteQueryCommand("Get segment tablespace locations", sql, primary_hostname, primary_port)
+        query.run()
+    except Exception as e:
+        raise Exception("Failed to get segment tablespace locations for segment with host {} and port {} : {}".format(
+            primary_hostname, primary_port, str(e)))
+
+    logger.debug("Successfully got tablespace locations for segment with host {}, port {}".
+                 format(primary_hostname, primary_port))
+    return query.get_results()

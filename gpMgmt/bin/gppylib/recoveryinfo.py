@@ -13,7 +13,7 @@ class RecoveryInfo(object):
     Note: we don't have target hostname, since an object of this class will be accessed by the target host directly
     """
     def __init__(self, target_datadir, target_port, target_segment_dbid, source_hostname, source_port,
-                 is_full_recovery, progress_file):
+                 source_datadir, is_full_recovery, is_differential_recovery, progress_file):
         self.target_datadir = target_datadir
         self.target_port = target_port
         self.target_segment_dbid = target_segment_dbid
@@ -21,7 +21,11 @@ class RecoveryInfo(object):
         # FIXME: use address instead of hostname ?
         self.source_hostname = source_hostname
         self.source_port = source_port
+        # source data directory is required in case of differential recovery
+        # When doing rsync from source to target
+        self.source_datadir = source_datadir
         self.is_full_recovery = is_full_recovery
+        self.is_differential_recovery = is_differential_recovery
         self.progress_file = progress_file
 
     def __str__(self):
@@ -51,7 +55,11 @@ def build_recovery_info(mirrors_to_build):
         target_segment = to_recover.getFailoverSegment() or to_recover.getFailedSegment()
 
         # FIXME: move the progress file naming to gpsegrecovery
-        process_name = 'pg_basebackup' if to_recover.isFullSynchronization() else 'pg_rewind'
+        process_name = 'pg_rewind'
+        if to_recover.isFullSynchronization():
+            process_name = 'pg_basebackup'
+        elif to_recover.isDifferentialSynchronization():
+            process_name = 'rsync'
         progress_file = '{}/{}.{}.dbid{}.out'.format(gplog.get_logger_dir(), process_name, timestamp,
                                                      target_segment.getSegmentDbId())
 
@@ -60,8 +68,8 @@ def build_recovery_info(mirrors_to_build):
         recovery_info_by_host[hostname].append(RecoveryInfo(
             target_segment.getSegmentDataDirectory(), target_segment.getSegmentPort(),
             target_segment.getSegmentDbId(), source_segment.getSegmentHostName(),
-            source_segment.getSegmentPort(), to_recover.isFullSynchronization(),
-            progress_file))
+            source_segment.getSegmentPort(), source_segment.getSegmentDataDirectory(),
+            to_recover.isFullSynchronization(), to_recover.isDifferentialSynchronization(), progress_file))
     return recovery_info_by_host
 
 

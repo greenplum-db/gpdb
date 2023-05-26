@@ -5,6 +5,7 @@ from gppylib import recoveryinfo
 from gppylib.commands.base import Command, WorkerPool, CommandResult, ExecutionError
 from gppylib.db import dbconn
 from recovery_base import RecoveryBase, set_recovery_cmd_results
+from gppylib.commands.pg import removePostmasterPid
 
 #FIXME remove this class
 class ValidationException(Exception):
@@ -52,7 +53,7 @@ class SetupForIncrementalRecovery(Command):
         # tries to start the failed segment in single-user
         # mode. It should be safe to remove the postmaster.pid
         # file since we do not expect the failed segment to be up.
-        self.remove_postmaster_pid()
+        removePostmasterPid(self.recovery_info.target_datadir)
 
 
 class ValidationForFullRecovery(Command):
@@ -97,6 +98,24 @@ class ValidationForFullRecovery(Command):
             os.makedirs(self.recovery_info.target_datadir, 0o700)
 
 
+class SetupForDifferentialRecovery(Command):
+    def __init__(self, name, recovery_info, logger):
+        self.name = name
+        self.recovery_info = recovery_info
+        cmdStr = ''
+        Command.__init__(self, self.name, cmdStr)
+        self.logger = logger
+        self.error_type = recoveryinfo.RecoveryErrorType.VALIDATION_ERROR
+
+    @set_recovery_cmd_results
+    def run(self):
+        # If the postmaster.pid still exists and another process
+        # is actively using that pid, differential recovery will fail
+        # when it tries to start the failed segment in single-user
+        # mode. It should be safe to remove the postmaster.pid
+        # file since we do not expect the failed segment to be up.
+        removePostmasterPid(self.recovery_info.target_datadir)
+
 
 #FIXME we may not need this class
 class SegSetupRecovery(object):
@@ -116,6 +135,10 @@ class SegSetupRecovery(object):
                                                 recovery_info=seg_recovery_info,
                                                 forceoverwrite=forceoverwrite,
                                                 logger=logger)
+            elif seg_recovery_info.is_differential_recovery:
+                cmd = SetupForDifferentialRecovery(name='Setup for differential recovery',
+                                                   recovery_info=seg_recovery_info,
+                                                   logger=logger)
             else:
                 cmd = SetupForIncrementalRecovery(name='Setup for pg_rewind', recovery_info=seg_recovery_info,
                                                   logger=logger)
