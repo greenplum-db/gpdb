@@ -1316,7 +1316,7 @@ While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_que
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 < integer < INT_MAX| 0 |local, system, superuser, reload|
+|0 < integer < INT_MAX| 0 |coordinator, session, user|
 
 ## <a id="gp_resource_group_bypass"></a>gp\_resource\_group\_bypass 
 
