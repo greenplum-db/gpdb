@@ -240,7 +240,7 @@ destroy_curlhandle(curlhandle_t *h)
 			CURLMcode e = curl_multi_remove_handle(multi_handle, h->handle);
 
 			if (CURLM_OK != e)
-				elog(LOG, "internal error curl_multi_remove_handle (%d - %s)", e, curl_easy_strerror(e));
+				elog(LOG, "internal error curl_multi_remove_handle (%d - %s)", e, curl_multi_strerror(e));
 			h->in_multi_handle = false;
 		}
 
