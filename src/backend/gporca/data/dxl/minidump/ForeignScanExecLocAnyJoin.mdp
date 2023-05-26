@@ -24,9 +24,9 @@
 	) SERVER loopback OPTIONS (schema_name 'public', table_name 'gp_any', mpp_execute 'any');
 
 	CREATE TABLE foo (a int);
-	explain select * from gp_any;
 
-	test=# explain select * from foo, gp_any where foo.a=gp_any.a;
+	explain select * from foo, gp_any where foo.a=gp_any.a;
+
                                   QUERY PLAN
 	-------------------------------------------------------------------------------
 	 Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=12)

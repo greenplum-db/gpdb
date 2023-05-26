@@ -531,8 +531,8 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// If it's a foreign table, but not an external table
 	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE && gp_policy == nullptr)
 	{
-		// for foreign tables, we need to convert from the foreign table's execution locaiton,
-		// to an Orca distribution spec. We do this maping in `GetForeignRelDistribution`
+		// for foreign tables, we need to convert from the foreign table's execution location,
+		// to an Orca distribution spec. We do this mapping in `GetForeignRelDistribution`
 		ForeignTable *ft = GetForeignTable(rel->rd_id);
 		dist = GetForeignRelDistribution(ft);
 	}
