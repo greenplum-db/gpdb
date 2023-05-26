@@ -8,10 +8,13 @@ import pipes
 
 from gppylib.gplog import *
 from gppylib.gparray import *
+from gppylib.db import dbconn
+from contextlib import closing
 from base import *
 from unix import *
 from gppylib.commands.base import *
 from gppylib.commands.gp import RECOVERY_REWIND_APPNAME
+from pygresql import pg
 
 logger = get_default_logger()
 
@@ -153,6 +156,98 @@ def killPgProc(db,procname,signal):
     cmd=Kill.remote("kill "+procname,procPID,signal,hostname)
     return (parentPID,procPID)
 
+
+class PgReplicationSlot:
+    """
+    PgReplicationSlot have utility function related to replication slot
+    """
+    def __init__(self, host, port, slot_name):
+        """
+        @param host
+        @param port
+        @param slot_name
+        """
+        self.host = host
+        self.port = port
+        self.name = slot_name
+
+    def slot_exists(self):
+        count = -1
+        logger.debug('Checking if slot {} exists for host:{}, port:{}'.format(self.name, self.host, self.port))
+        sql = "SELECT count(*) FROM pg_catalog.pg_replication_slots WHERE slot_name = '{}'". format(self.name)
+        try:
+            dburl = dbconn.DbURL(hostname=self.host, port=self.port)
+            with closing(dbconn.connect(dburl, utility=True, encoding='UTF8')) as conn:
+                count = dbconn.execSQLForSingleton(conn, sql)
+        except Exception as ex:
+            raise Exception("Failed to query pg_replication_slots for host:{}, port:{}: {}".
+                            format(self.host, self.port, str(ex)))
+
+        if count == 0:
+            logger.debug("Slot {} does not exist for host:{}, port:{}".
+                         format(self.name, self.host, self.port))
+            return False
+
+        return True
+
+    def drop_slot(self):
+        logger.debug("Dropping slot {} for host:{}, port:{}".format(self.name, self.host, self.port))
+        sql = "SELECT pg_drop_replication_slot('{}');".format(self.name)
+        try:
+            dburl = dbconn.DbURL(hostname=self.host, port=self.port)
+            with closing(dbconn.connect(dburl, utility=True, encoding='UTF8')) as conn:
+                dbconn.execSQL(conn, sql)
+        except pg.DatabaseError as e:
+            # one of the case can be where slot is present but currently in active state
+            logger.exception("Failed to query pg_drop_replication_slot for host:{}, port:{}: {}".
+                             format(self.host, self.port, str(e)))
+            return False
+        except Exception as ex:
+            raise Exception("Failed to drop replication slot for host:{}, port:{} : {}".
+                            format(self.host, self.port, str(ex)))
+
+        logger.debug("Successfully dropped replication slot {} for host:{}, port:{}".
+                     format(self.name, self.host, self.port))
+
+        return True
+
+    def create_slot(self):
+        """
+        Execute query SELECT pg_create_physical_replication_slot('slot_name') to
+        create replication slot. pg_create_physical_replication_slot function can take two parameters:
+
+        first parameter slot_name:
+            Required, name of the replication slot
+
+        Optional second parameter immediately_reserve boolean:
+            when true, specifies that the LSN for this replication slot be reserved immediately;
+            otherwise the LSN is reserved on first connection from a streaming replication client.
+
+            Second parameter is passed 'True' as we don't want any XLOG to get deleted from start backup
+            point till mirror is created and connects to the primary. As if XLOG gets deleted -
+            mirror creates and connects and will fail with missing XLOG. We will have to recreate the
+            XLOG.
+        """
+
+        logger.debug("Creating slot {} for host:{}, port:{}".format(self.name, self.host, self.port))
+        sql = "SELECT pg_create_physical_replication_slot('{}', true);".format(self.name)
+        try:
+            dburl = dbconn.DbURL(hostname=self.host, port=self.port)
+            with closing(dbconn.connect(dburl, utility=True, encoding='UTF8')) as conn:
+                dbconn.execSQL(conn, sql)
+        except pg.DatabaseError as e:
+            logger.exception("Failed to query pg_create_physical_replication_slot for host:{}, port:{}: {}".
+                             format(self.host, self.port, str(e)))
+            return False
+        except Exception as ex:
+            raise Exception("Failed to create replication slot for host:{}, port:{} : {}".
+                            format(self.host, self.port, str(ex)))
+
+        logger.debug("Successfully created replication slot {} for host:{}, port:{}".
+                     format(self.name, self.host, self.port))
+        return True
+
+
 class PgControlData(Command):
     def __init__(self, name, datadir, ctxt=LOCAL, remoteHost=None):
         self.datadir = datadir
@@ -207,8 +302,8 @@ class PgRewind(Command):
 
 class PgBaseBackup(Command):
     def __init__(self, target_datadir, source_host, source_port, replication_slot_name=None,
-                 excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0,
-                 progress_file=None, recovery_mode=True):
+                 excludePaths=[], ctxt=LOCAL, remoteHost=None, writeconffilesonly=False, forceoverwrite=False,
+                 target_gp_dbid=0, progress_file=None, recovery_mode=True):
         cmd_tokens = ['pg_basebackup', '-c', 'fast']
         cmd_tokens.append('-D')
         cmd_tokens.append(target_datadir)
@@ -218,31 +313,37 @@ class PgBaseBackup(Command):
         cmd_tokens.append(source_port)
         cmd_tokens.extend(self._xlog_arguments(replication_slot_name))
 
-        if forceoverwrite:
-            cmd_tokens.append('--force-overwrite')
+        # In case of differential recovery, this flag is used to only write recovery.conf
+        # and internal.auto.conf files to target data directory.
+        if writeconffilesonly:
+            cmd_tokens.append('--write-conf-files-only')
 
-        if recovery_mode:
-            cmd_tokens.append('--write-recovery-conf')
+        else:
+            if forceoverwrite:
+                cmd_tokens.append('--force-overwrite')
+
+            if recovery_mode:
+                cmd_tokens.append('--write-recovery-conf')
+
+            # We exclude certain unnecessary directories from being copied as they will greatly
+            # slow down the speed of gpinitstandby if containing a lot of data
+            if excludePaths is None or len(excludePaths) == 0:
+                cmd_tokens.append('-E')
+                cmd_tokens.append('./db_dumps')
+                cmd_tokens.append('-E')
+                cmd_tokens.append('./gpperfmon/data')
+                cmd_tokens.append('-E')
+                cmd_tokens.append('./gpperfmon/logs')
+                cmd_tokens.append('-E')
+                cmd_tokens.append('./promote')
+            else:
+                for path in excludePaths:
+                    cmd_tokens.append('-E')
+                    cmd_tokens.append(path)
 
         # This is needed to handle Greenplum tablespaces
         cmd_tokens.append('--target-gp-dbid')
         cmd_tokens.append(str(target_gp_dbid))
-
-        # We exclude certain unnecessary directories from being copied as they will greatly
-        # slow down the speed of gpinitstandby if containing a lot of data
-        if excludePaths is None or len(excludePaths) == 0:
-            cmd_tokens.append('-E')
-            cmd_tokens.append('./db_dumps')
-            cmd_tokens.append('-E')
-            cmd_tokens.append('./gpperfmon/data')
-            cmd_tokens.append('-E')
-            cmd_tokens.append('./gpperfmon/logs')
-            cmd_tokens.append('-E')
-            cmd_tokens.append('./promote')
-        else:
-            for path in excludePaths:
-                cmd_tokens.append('-E')
-                cmd_tokens.append(path)
 
         cmd_tokens.append('--progress')
         cmd_tokens.append('--verbose')
