@@ -38,32 +38,47 @@ name
 :   The name of the resource group to alter.
 
 CONCURRENCY integer
-:   The maximum number of concurrent transactions, including active and idle transactions, that are permitted for resource groups that you assign to roles. Any transactions submitted after the `CONCURRENCY` value limit is reached are queued. When a running transaction completes, the earliest queued transaction is run.
+:   The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The `CONCURRENCY` value must be an integer in the range \[0 .. `max_connections`\]. The default `CONCURRENCY` value for resource groups defined for roles is 20.
 
-:   The `CONCURRENCY` value must be an integer in the range \[0 .. `max_connections`\]. The default `CONCURRENCY` value for a resource group that you create for roles is 20.
+:   You must set `CONCURRENCY` to `0` for resource groups that you create for external components.
 
-:   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to zero \(0\).
-
-:   If you alter the `cpu_hard_quota_limit` of a resource group in which you previously configured a `CPUSET`, `CPUSET` is deactivated, the reserved CPU cores are returned to Greenplum Database, and `CPUSET` is set to -1.
+:   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to `0`.
 
 CPU_HARD_QUOTA_LIMIT integer
-:   The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the `CPU_HARD_QUOTA_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+:   The percentage of the maximum available CPU resources that the resource group can use. The value range is `1-100`. 
+
+The sum of the `CPU_HARD_QUOTA_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+
+CPU_SOFT_PRIORITY integer
+:   The scheduling priority of the current group. The value range is `1-500`, the default is `100. 
 
 CPUSET <coordinator_cores>;<segment_cores>
-:   The CPU cores to reserve for this resource group on the coordinator host and segment hosts. The CPU cores that you specify in must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
-:   Specify cores as a comma-separated list of single core numbers or core intervals. Define the coordinator host cores first, followed by segment host cores, and separate the two with a semicolon. You must enclose the full core configuration in single quotes. For example, '1;1,3-4' configures core 1 for the coordinator host, and cores 1, 3, and 4 for the segment hosts.
+:   `CPUSET` identifies the CPU cores to reserve for this resource group on the coordinator host and on segment hosts. The CPU cores that you specify must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
-:   If you alter the `CPUSET` value of a resource group for which you previously configured a `cpu_hard_quota_limit`, `cpu_hard_quota_limit` is deactivated, the reserved CPU resources are returned to Greenplum Database, and `cpu_hard_quota_limit` is set to -1.
+:   > **Note** You must specify either `CPU_HARD_QUOTA_LIMIT` or `CPUSET` when you create a resource group, but not both.
 
-:   You can alter `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
+:   Specify cores as a comma-separated list of single core numbers or core number intervals. Define the coordinator host cores first, followed by segment host cores, and separate the two with a semicolon. You must enclose the full core configuration in single quotes. For example, '1;1,3-4' configures core 1 for the coordinator host, and cores 1, 3, and 4 for the segment hosts.
+
+:   > **Note** You can configure `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
 
 MEMORY_LIMIT integer
-:   The percentage of Greenplum Database memory resources to reserve for this resource group. The minimum memory percentage for a resource group is 0. The maximum is 100. The default value is 0.
+:   The maximum available memory, in MB, to reserve for this resource group. This value determines the total amount of memory that all worker processes within a resource group can consume on a segment host during query execution. 
 
-:   When `MEMORY_LIMIT` is 0, Greenplum Database reserves no memory for the resource group, but uses global shared memory to fulfill all memory requests in the group.
+:   The minimum memory percentage you can specify for a resource group is `0`. The maximum is `100`. The default value is `-1`. 
 
-:   The sum of the `MEMORY_LIMIT`s of all resource groups defined in the Greenplum Database cluster must not exceed 100. If this sum is less than 100, Greenplum Database allocates any unreserved memory to a resource group global shared memory pool.
+:   When you specify a `MEMORY_LIMIT` of `0` or `-1`, `MEMORY LIMIT` takes the value of the `statement_mem` server configuration parameter. 
+
+:   The sum of the `MEMORY_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+
+:   > **Note** If the server configuration parameter `gp_resgroup_memory_query_fixed_mem` is set, its value overrides at the session level the value of `MEMORY_LIMIT`.
+
+MIN_COST integer
+:   The limit on the cost of the query plan generated by a query in this resource group. When the query plan cost of the query is less than this value, the query will be unassigned from the resource group to which it belongs. 
+
+This means that low-cost queries will execute more quickly, as they are not subject to concurrency constraints. 
+
+The value range is `0-500`. The default value is `0`, which means that the cost is not used to bypass the query. 
 
 ## <a id="notes"></a>Notes 
 

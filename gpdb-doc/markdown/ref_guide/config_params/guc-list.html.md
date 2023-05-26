@@ -1310,7 +1310,7 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 
 > **Note** The `gp_resgroup_memory_query_fixed_mem` server configuration parameter is enforced only when resource group-based resource management is active.
 
-Specifies a fixed amount of memory reserved for all queries in a resource group. When this parameter is set to `0` -- the default -- the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
+Specifies a fixed amount of memory -- in MB -- reserved for all queries in a resource group **for the scope of a session**. When this parameter is set to `0` -- the default -- the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
 
 While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_query_fixed_mem` overrides that limit at a session level. Thus, you can use this configuration parameter to adjust query memory budget for a particular session, on an ad hoc basis. 
 
@@ -1392,9 +1392,17 @@ Cancel a transaction queued in a resource group that waits longer than the speci
 
 Identifies the resource management scheme currently enabled in the Greenplum Database cluster. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
 
+- `none` - Configures Greenplum Database to not use any resource manager. This is the default.
+
+- `group` - Configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v1 version of Linux cgroup functionality. 
+
+- `group-v2` - Configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v2 version of Linux cgroup functionality. 
+
+- `queue` - Configures Greenplum Database to use resource queues. 
+
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none, group-v1, group-v2, queue|none|local, system, restart|
+|none, group, group-v2, queue|none|local, system, restart|
 
 ## <a id="gp_resqueue_memory_policy"></a>gp\_resqueue\_memory\_policy 
 
@@ -2933,13 +2941,6 @@ Allocates segment host memory per query. The amount of memory allocated with thi
 *If you are using resource groups to control resource allocation in your Greenplum Database cluster*:
 
 -   Greenplum Database uses `statement_mem` to control query memory usage when the resource group `MEMORY_SPILL_RATIO` is set to 0.
--   You can use the following calculation to estimate a reasonable `statement_mem` value:
-
-    ```
-    rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments
-    statement_mem = rg_perseg_mem / max_expected_concurrent_queries
-    ```
-
 
 *If you are using resource queues to control resource allocation in your Greenplum Database cluster*:
 
