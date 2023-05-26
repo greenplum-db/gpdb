@@ -510,7 +510,7 @@ class GpMirrorListToBuild:
     def _run_recovery(self, action_name, recovery_info_by_host, gpEnv):
         completed_recovery_results = self._do_recovery(recovery_info_by_host, gpEnv)
         recovery_results = RecoveryResult(action_name, completed_recovery_results, self.__logger)
-        recovery_results.print_bb_rewind_update_and_start_errors()
+        recovery_results.print_bb_rewind_differential_update_and_start_errors()
 
         self._remove_progress_files(recovery_info_by_host, recovery_results)
         return recovery_results
