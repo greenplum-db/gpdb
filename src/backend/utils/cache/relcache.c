@@ -3094,9 +3094,6 @@ RelationBuildLocalRelation(const char *relname,
 	 *
 	 * In GPDB, the table's logical OID is allocated in the master, and might
 	 * already be in use as a relfilenode of an existing relation in a segment.
-	 *
-	 * In binary upgrade mode, however, use the OID also as the relfilenode.
-	 * pg_upgrade gets confused if they don't match.
 	 */
 	rel->rd_rel->relisshared = shared_relation;
 

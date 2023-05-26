@@ -685,9 +685,6 @@ GetNewRelFileNode(Oid reltablespace, Relation pg_class, char relpersistence)
 		/* Generate the Relfilenode */
 		rnode.node.relNode = GetNewSegRelfilenode();
 
-		if (!IsOidAcceptable(rnode.node.relNode))
-			continue;
-
 		collides = GpCheckRelFileCollision(rnode);
 
 		if (!collides && rnode.node.spcNode != GLOBALTABLESPACE_OID)
