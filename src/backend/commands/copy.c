@@ -5529,7 +5529,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 		/* 
 		 * Check for overflowing fields.
 		 * In QE, attr_count may be equal to 0,
-		 * when all fields is processed in the QD.
+		 * when all fields are processed in the QD.
 		 */
 		if (attr_count >= 0 && fldct > attr_count)
 			ereport(ERROR,

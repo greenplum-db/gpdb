@@ -244,7 +244,7 @@ select * from parted_copytest where b = 2;
 
 drop table parted_copytest;
 
--- check COPY `ON COORDINATOR` behavior
+-- check COPY behavior
 -- there are 2 fields in copy.data
 -- table_1_col_dist_c1: 1 col in table < 2 fields in file
 -- table_2_cols_dist_c1 and
