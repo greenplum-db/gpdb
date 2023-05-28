@@ -218,3 +218,27 @@ COPY table_no_cols FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
 ERROR:  extra data after last expected column
 CONTEXT:  COPY table_no_cols, line 1: "1,text1"
 DROP TABLE table_no_cols;
+-- special case, tables with oids
+CREATE TABLE table_with_oids(c1 text, c2 text) WITH OIDS;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
+COPY table_with_oids FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+COPY table_with_oids FROM '@abs_srcdir@/data/copy.data' WITH OIDS DELIMITER ',';
+ERROR:  missing data for column "c2"
+CONTEXT:  COPY table_with_oids, line 1: "1,text1"
+COPY table_with_oids TO '@abs_srcdir@/data/copy_with_oids.data' WITH OIDS DELIMITER ',';
+COPY table_with_oids FROM '@abs_srcdir@/data/copy_with_oids.data' WITH OIDS DELIMITER ',';
+SELECT count(*) FROM table_with_oids;
+ count 
+-------
+     2
+(1 row)
+
+SELECT * FROM table_with_oids;
+ c1 |  c2   
+----+-------
+ 1  | text1
+ 1  | text1
+(2 rows)
+
+DROP TABLE table_with_oids;

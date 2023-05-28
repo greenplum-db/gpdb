@@ -210,3 +210,13 @@ COPY table_no_cols FROM '@abs_srcdir@/data/copy_no_cols.data' DELIMITER ',';
 SELECT count(*) FROM table_no_cols;
 COPY table_no_cols FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
 DROP TABLE table_no_cols;
+
+-- special case, tables with oids
+CREATE TABLE table_with_oids(c1 text, c2 text) WITH OIDS;
+COPY table_with_oids FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+COPY table_with_oids FROM '@abs_srcdir@/data/copy.data' WITH OIDS DELIMITER ',';
+COPY table_with_oids TO '@abs_srcdir@/data/copy_with_oids.data' WITH OIDS DELIMITER ',';
+COPY table_with_oids FROM '@abs_srcdir@/data/copy_with_oids.data' WITH OIDS DELIMITER ',';
+SELECT count(*) FROM table_with_oids;
+SELECT * FROM table_with_oids;
+DROP TABLE table_with_oids;
