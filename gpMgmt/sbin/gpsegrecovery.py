@@ -12,7 +12,7 @@ from gppylib.commands.gp import SegmentStart
 from gppylib.gparray import Segment
 from gppylib.commands.gp import ModifyConfSetting
 from gppylib.db.catalog import RemoteQueryCommand
-from gppylib.programs.clsRecoverSegment_triples import is_backup_in_progress
+from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
 from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_locations
 
 

@@ -7,6 +7,7 @@
 """
 import copy
 
+import os
 import dbconn
 from  gppylib import gplog
 from  pygresql import pg
