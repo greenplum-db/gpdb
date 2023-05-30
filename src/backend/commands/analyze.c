@@ -500,8 +500,6 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	Bitmapset **colLargeRowIndexes;
 	double     *colLargeRowLength;
 	bool		sample_needed;
-	HeapTuple	ctup;
-	Form_pg_class pgcform;
 
 	if (inh)
 		ereport(elevel,
@@ -1004,31 +1002,40 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	 * Update pages/tuples stats in pg_class ... but not if we're doing
 	 * inherited stats.
 	 *
-	 * GPDB: Corrdinator node does not store relation data or metadata. That
+	 * GPDB: Coordinator node does not store relation data or metadata. That
 	 * includes visibility map information. Instead, relevant info is gathered
 	 * through dispatch requests. In this case, after vacuum is dispatched then
-	 * relallvisible is aggregated and stored in pg_class. Corrdinator node
+	 * relallvisible is aggregated and stored in pg_class. Coordinator node
 	 * should look there for relallvisible.
 	 */
 	if (!inh)
 	{
 		BlockNumber relallvisible;
 
-		if (Gp_role != GP_ROLE_DISPATCH)
-		{
-			if (RelationStorageIsAO(onerel))
-				relallvisible = 0;
-			else
-				visibilitymap_count(onerel, &relallvisible, NULL);
-		}
+		if (RelationStorageIsAO(onerel))
+			relallvisible = 0;
 		else
 		{
-			ctup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(onerel->rd_id));
-			if (!HeapTupleIsValid(ctup))
-				elog(ERROR, "pg_class entry for relid %u vanished during analyzing",
-					 onerel->rd_id);
-			pgcform = (Form_pg_class) GETSTRUCT(ctup);
-			relallvisible = pgcform->relallvisible;
+			if (Gp_role != GP_ROLE_DISPATCH)
+				visibilitymap_count(onerel, &relallvisible, NULL);
+			else
+			{
+				/*
+				 * On the QD, retrieve the value of relallvisible from
+				 * pg_class, which was aggregated from the QEs and updated
+				 * earlier in vacuum_rel().
+				 */
+				HeapTuple	ctup;
+				Form_pg_class pgcform;
+
+				ctup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(onerel->rd_id));
+				if (!HeapTupleIsValid(ctup))
+					elog(ERROR, "pg_class entry for relid %u vanished during analyzing",
+						 onerel->rd_id);
+				pgcform = (Form_pg_class) GETSTRUCT(ctup);
+				relallvisible = pgcform->relallvisible;
+				heap_freetuple(ctup);
+			}
 		}
 
 		vac_update_relstats(onerel,
