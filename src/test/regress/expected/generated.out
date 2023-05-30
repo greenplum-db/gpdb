@@ -866,7 +866,7 @@ INSERT INTO gtest26 (a) VALUES (-2), (0), (3);
 INFO:  gtest2: BEFORE: new = (-2,,)  (seg0 127.0.1.1:7002 pid=179471)
 INFO:  gtest4: AFTER: new = (-2,-4,)  (seg0 127.0.1.1:7002 pid=179471)
 alter table gtest26 drop column distkey;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 UPDATE gtest26 SET a = a * -2;
 INFO:  gtest1: BEFORE: old = (-2,-4)  (seg0 127.0.1.1:7002 pid=179471)
 INFO:  gtest1: BEFORE: new = (4,)  (seg0 127.0.1.1:7002 pid=179471)

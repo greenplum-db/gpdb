@@ -367,7 +367,7 @@ insert into bar values(1,1);
 alter table foo drop column x;
 -- fail
 alter table bar drop column x;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 drop table if exists foo;
 drop table if exists foo1;
 NOTICE:  table "foo1" does not exist, skipping

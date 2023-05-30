@@ -1309,7 +1309,7 @@ ERROR:  relation "nosuchtable" does not exist
 create table atacc1 (a int4 not null, b int4, c int4 not null, d int4);
 insert into atacc1 values (1, 2, 3, 4);
 alter table atacc1 drop a;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 alter table atacc1 drop a;
 ERROR:  column "a" of relation "atacc1" does not exist
 -- SELECTs
@@ -1584,7 +1584,7 @@ drop table atacc1;
 create table parent (a int, b int, c int);
 insert into parent values (1, 2, 3);
 alter table parent drop a;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 create table child (d varchar(255)) inherits (parent);
 NOTICE:  table has parent, setting distribution columns to match parent table
 insert into child values (12, 13, 'testing');
@@ -1694,9 +1694,9 @@ ERROR:  cannot drop inherited column "b"
 alter table only dropColumn drop column e;
 alter table dropColumnChild drop column c;
 alter table dropColumn drop column a;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 create table renameColumn (a int);
 create table renameColumnChild (b int) inherits (renameColumn);
 NOTICE:  table has parent, setting distribution columns to match parent table
@@ -1732,7 +1732,7 @@ alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 -- should work
 alter table p1 drop column f1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 -- c1.f1 is still there, but no longer inherited
 select f1 from c1;
  f1 
@@ -1740,7 +1740,7 @@ select f1 from c1;
 (0 rows)
 
 alter table c1 drop column f1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 select f1 from c1;
 ERROR:  column "f1" does not exist
 LINE 1: select f1 from c1;
@@ -1755,8 +1755,8 @@ NOTICE:  table has parent, setting distribution columns to match parent table
 alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 alter table p1 drop column f1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 -- c1.f1 is dropped now, since there is no local definition for it
 select f1 from c1;
 ERROR:  column "f1" does not exist
@@ -1772,10 +1772,10 @@ NOTICE:  table has parent, setting distribution columns to match parent table
 alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 alter table only p1 drop column f1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 -- c1.f1 is NOT dropped, but must now be considered non-inherited
 alter table c1 drop column f1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1 (f1 int, f2 int);
@@ -1786,10 +1786,10 @@ NOTICE:  merging column "f1" with inherited definition
 alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 alter table only p1 drop column f1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 -- c1.f1 is still there, but no longer inherited
 alter table c1 drop column f1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1(id int, name text);
