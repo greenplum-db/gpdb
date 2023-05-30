@@ -410,6 +410,12 @@ resources:
   source:
     tag: latest
   {% if os_type == "rhel8" or os_type == "rhel9" %}
+    repository: gcr.io/data-gpdb-private-images/gpdb7-rhel8-build
+    tag: dev
+    username: _json_key
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
+
+  {% if os_type == "rhel8" %}
     repository: gcr.io/data-gpdb-private-images/gpdb7-[[ os_type ]]-build
     username: _json_key
     password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))

@@ -1175,6 +1175,11 @@ if test "$with_zstd" = yes; then
   PKG_CHECK_MODULES([ZSTD], [libzstd >= 1.1.1])
 fi
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 77e25c7322 (Remove libquicklz from GP7 build system)
 #
 # Realtime library
 #
@@ -1422,6 +1427,10 @@ failure.  It is possible the compiler isn't looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
 fi
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 77e25c7322 (Remove libquicklz from GP7 build system)
 if test "$enable_ic_proxy" = yes; then
   AC_CHECK_LIB(uv, uv_default_loop, [],
                [AC_MSG_ERROR([libuv library not found, it is required by --enable-ic-proxy.])])
