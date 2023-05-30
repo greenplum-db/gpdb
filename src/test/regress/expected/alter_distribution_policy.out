@@ -570,24 +570,63 @@ select * from atsdb;
  j  | t  | n  
 ----+----+----
   2 | 3  |  4
-  3 | 4  |  5
-  4 | 5  |  6
-  5 | 6  |  7
-  6 | 7  |  8
-  7 | 8  |  9
-  8 | 9  | 10
   9 | 10 | 11
- 10 | 11 | 12
  11 | 12 | 13
  12 | 13 | 14
- 13 | 14 | 15
+ 21 | 22 | 23
+  4 | 5  |  6
+  7 | 8  |  9
+  8 | 9  | 10
+ 10 | 11 | 12
  14 | 15 | 16
  15 | 16 | 17
  16 | 17 | 18
- 17 | 18 | 19
  18 | 19 | 20
  19 | 20 | 21
  20 | 21 | 22
+  3 | 4  |  5
+  5 | 6  |  7
+  6 | 7  |  8
+ 13 | 14 | 15
+ 17 | 18 | 19
+(20 rows)
+
+select * from distcheck where rel = 'atsdb';
+ rel | attname 
+-----+---------
+(0 rows)
+
+drop table atsdb;
+-- check DROP TYPE..CASCADE updates distribution policy to random if
+-- any a dist key column is dropped for multi key distribution key columns
+create domain int_new as int;
+create table atsdb (i int_new, j int, t text, n numeric) distributed by (i, j);
+insert into atsdb select i, i+1, i+2, i+3 from generate_series(1, 20) i;
+drop type int_new cascade;
+NOTICE:  drop cascades to table atsdb column i
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+select * from atsdb;
+ j  | t  | n  
+----+----+----
+  4 | 5  |  6
+  7 | 8  |  9
+  8 | 9  | 10
+ 10 | 11 | 12
+ 14 | 15 | 16
+ 15 | 16 | 17
+ 16 | 17 | 18
+ 18 | 19 | 20
+ 19 | 20 | 21
+ 20 | 21 | 22
+  3 | 4  |  5
+  5 | 6  |  7
+  6 | 7  |  8
+ 13 | 14 | 15
+ 17 | 18 | 19
+  2 | 3  |  4
+  9 | 10 | 11
+ 11 | 12 | 13
+ 12 | 13 | 14
  21 | 22 | 23
 (20 rows)
 
@@ -702,6 +741,132 @@ select * from atsdb order by 1, 2, 3;
 (18 rows)
 
 drop table atsdb;
+-- check distribution correctly cascaded for inherited tables
+create table dropColumnCascade (a int, b int, e int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table dropColumnCascadeChild (c int) inherits (dropColumnCascade);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table dropColumnCascadeAnother (d int) inherits (dropColumnCascadeChild);
+NOTICE:  table has parent, setting distribution columns to match parent table
+insert into dropColumnCascadeAnother select i,i,i from generate_series(1,10)i;
+alter table dropColumnCascade drop column a;
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+select * from distcheck where rel like 'dropcolumnicascade%';
+ rel | attname 
+-----+---------
+(0 rows)
+
+drop table dropColumnCascade cascade;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table dropcolumncascadechild
+drop cascades to table dropcolumncascadeanother
+-- check DROP TYPE..CASCADE for dist key type for inherited tables
+-- distribution should be set to randomly for base and inherited tables
+create domain int_new as int;
+create table dropColumnCascade (a int_new, b int, e int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table dropColumnCascadeChild (c int) inherits (dropColumnCascade);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table dropColumnCascadeAnother (d int) inherits (dropColumnCascadeChild);
+NOTICE:  table has parent, setting distribution columns to match parent table
+insert into dropColumnCascadeAnother select i,i,i from generate_series(1,10)i;
+drop type int_new cascade;
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to table dropcolumncascade column a
+drop cascades to table dropcolumncascadechild column a
+drop cascades to table dropcolumncascadeanother column a
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+select * from distcheck where rel like 'dropcolumncascade%';
+ rel | attname 
+-----+---------
+(0 rows)
+
+drop table dropColumnCascade cascade;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table dropcolumncascadechild
+drop cascades to table dropcolumncascadeanother
+-- Test corner cases in dropping distkey as inherited columns
+create table p1 (f1 int, f2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table c1 (f1 int not null) inherits(p1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+NOTICE:  merging column "f1" with inherited definition
+alter table p1 drop column f1;
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+-- only p1 is randomly distributed, c1 is still distributed by c1.f1
+select * from distcheck where rel in ('p1', 'c1');
+ rel | attname 
+-----+---------
+ c1  | f1
+(1 row)
+
+alter table c1 drop column f1;
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+-- both c1 and p1 randomly distributed
+select * from distcheck where rel in ('p1', 'c1');
+ rel | attname 
+-----+---------
+(0 rows)
+
+drop table p1 cascade;
+NOTICE:  drop cascades to table c1
+create table p1 (f1 int, f2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table c1 () inherits(p1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+alter table only p1 drop column f1;
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+-- only p1 is randomly distributed, c1 is still distributed by c1.f1
+select * from distcheck where rel in ('p1', 'c1');
+ rel | attname 
+-----+---------
+ c1  | f1
+(1 row)
+
+drop table p1 cascade;
+NOTICE:  drop cascades to table c1
+-- check DROP TYPE..CASCADE for dist key type for inherited tables
+-- distribution should be set to randomly for base and inherited tables
+create domain int_new as int;
+create table p1 (f1 int_new, f2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table c1 (f1 int_new not null) inherits(p1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+NOTICE:  merging column "f1" with inherited definition
+create table p1_inh (f1 int_new, f2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table c1_inh () inherits(p1_inh);
+NOTICE:  table has parent, setting distribution columns to match parent table
+drop type int_new cascade;
+NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to table p1 column f1
+drop cascades to table c1 column f1
+drop cascades to table p1_inh column f1
+drop cascades to table c1_inh column f1
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+-- all above tables set to randomly distributed
+select * from distcheck where rel in ('p1', 'c1');
+ rel | attname 
+-----+---------
+(0 rows)
+
+drop table p1 cascade;
+NOTICE:  drop cascades to table c1
+drop table p1_inh cascade;
+NOTICE:  drop cascades to table c1_inh
 drop view distcheck;
 -- MPP-5452
 -- Should succeed

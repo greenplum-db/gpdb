@@ -2175,6 +2175,41 @@ RemoveAttributeById(Oid relid, AttrNumber attnum)
 		/* We don't want to keep stats for it anymore */
 		attStruct->attstattarget = 0;
 
+		/* Update distribution policy for dropped distribution column */
+		if (GpPolicyIsHashPartitioned(rel->rd_cdbpolicy))
+		{
+			int            ia = 0;
+
+			for (ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
+			{
+				if (attnum == rel->rd_cdbpolicy->attrs[ia])
+				{
+					MemoryContext oldcontext;
+					GpPolicy *policy;
+
+					/* force a random distribution */
+					rel->rd_cdbpolicy->nattrs = 0;
+
+					oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
+					policy = GpPolicyCopy(rel->rd_cdbpolicy);
+					MemoryContextSwitchTo(oldcontext);
+
+					/*
+					 * replace policy first in catalog and then assign to
+					 * rd_cdbpolicy to make sure we have intended policy in relcache
+					 * even with relcache invalidation. Otherwise rd_cdbpolicy can
+					 * become invalid soon after assignment.
+					 */
+					GpPolicyReplace(RelationGetRelid(rel), policy);
+					rel->rd_cdbpolicy = policy;
+					if (Gp_role != GP_ROLE_EXECUTE)
+						ereport(NOTICE,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+									errmsg("dropping a column that is part of the distribution policy forces a NULL distribution policy")));
+				}
+			}
+		}
+
 		/*
 		 * Change the column name to something that isn't likely to conflict
 		 */

@@ -8654,6 +8654,34 @@ analyze non_part2;
 EXPLAIN (costs off) SELECT * FROM ds_main, non_part2 WHERE ds_main.c = non_part2.e AND a IN ( SELECT a FROM non_part1) order by a;
 SELECT * FROM ds_main, non_part2 WHERE ds_main.c = non_part2.e AND a IN ( SELECT a FROM non_part1) order by a;
 
+-- Test for dropping distribution column via DROP TYPE..CASCADE
+-- ensure the distribution policy for the table is updated
+-- and the DML queries on the table work as expected for both
+-- partitioned and non-partitioned tables
+CREATE DOMAIN int_new AS int;
+CREATE TABLE dist_key_dropped (a int_new, b int) DISTRIBUTED BY(a);
+CREATE TABLE dist_key_dropped_pt (a int_new, b int) DISTRIBUTED BY(a)
+PARTITION BY RANGE(b)
+  (PARTITION p1 START(0) END(5),
+   PARTITION p2 START(6) END(10));
+INSERT INTO dist_key_dropped VALUES(1, 1);
+INSERT INTO dist_key_dropped VALUES(2, 2);
+INSERT INTO dist_key_dropped_pt VALUES(1, 1);
+INSERT INTO dist_key_dropped_pt VALUES(2, 6);
+DROP TYPE int_new CASCADE;
+\d dist_key_dropped
+\d dist_key_dropped_pt
+\d dist_key_dropped_pt_1_prt_p1
+\d dist_key_dropped_pt_1_prt_p2
+INSERT INTO dist_key_dropped VALUES(10);
+INSERT INTO dist_key_dropped_pt VALUES(7);
+UPDATE dist_key_dropped SET b=11 where b=1;
+UPDATE dist_key_dropped_pt SET b=2 where b=1;
+SELECT * FROM dist_key_dropped;
+SELECT * FROM dist_key_dropped_pt;
+DELETE FROM dist_key_dropped WHERE b=2;
+DELETE FROM dist_key_dropped_pt WHERE b=6;
+
 -- As of this writing, pg_dump creates an invalid dump for some of the tables
 -- here. See https://github.com/greenplum-db/gpdb/issues/3598. So we must drop
 -- the tables, or the pg_upgrade test fails.
