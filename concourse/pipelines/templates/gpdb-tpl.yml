@@ -554,7 +554,7 @@ resources:
     versioned_file: ((pipeline-name))/bin_gpdb_clients_windows/greenplum-clients-x86_64.tar.gz
 {% endif %}
 
-{% if os_type != default_os_type and pipeline_target == "prod" %}
+{% if os_type != compile_platform and pipeline_target == "prod" %}
 - name: reduced-frequency-trigger
   type: time
   source:

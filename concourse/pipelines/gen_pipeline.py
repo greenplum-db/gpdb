@@ -335,7 +335,7 @@ def main():
         print("You can only use one of --output or --user.")
         exit(1)
 
-    if args.pipeline_target == 'prod' and not args.directed_release:
+    if args.pipeline_target == 'prod' and not args.directed_release and args.os_type not in ["rocky9", "oel9", "rhel9"]:
         args.test_sections = [
             'ICW',
             'CLI',
