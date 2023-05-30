@@ -170,6 +170,31 @@ main(int argc, char **argv)
 	copy_clog_xlog_xid();
 
 	/*
+	 * GPDB: This used to be right before syncing the data directory to disk
+	 * but is needed here before create_new_objects() due to our usage of a
+	 * preserved oid list. When creating new objects on the target cluster,
+	 * objects that do not have a preassigned oid will try to get a new oid
+	 * from the oid counter. This works in upstream Postgres but can be slow
+	 * in GPDB because the new oid is checked against the preserved oid
+	 * list. If the new oid is in the preserved oid list, a new oid is
+	 * generated from the oid counter until a valid oid is found. In
+	 * production scenarios, it would be very common to have a very, very
+	 * large preserved oid list and starting the oid counter from
+	 * FirstNormalObjectId (16384) would make object creation slower than
+	 * usual near the beginning of pg_restore. To prevent pg_restore
+	 * performance degradation from so many invalid new oids from the oid
+	 * counter, bump the oid counter to what the source cluster has via
+	 * pg_resetxlog. If the preserved oid list logic is removed from
+	 * pg_upgrade, move this step back to where it was before.
+	 */
+	prep_status("Setting next OID for new cluster");
+	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
+			  "\"%s/pg_resetxlog\" --binary-upgrade -o %u \"%s\"",
+			  new_cluster.bindir, old_cluster.controldata.chkpnt_nxtoid,
+			  new_cluster.pgdata);
+	check_ok();
+
+	/*
 	 * In upgrading from GPDB4, copy the pg_distributedlog over in vanilla.
 	 * The assumption that this works needs to be verified
 	 */
@@ -244,19 +269,6 @@ main(int argc, char **argv)
 
 		stop_postmaster(false);
 	}
-
-	/*
-	 * Assuming OIDs are only used in system tables, there is no need to
-	 * restore the OID counter because we have not transferred any OIDs from
-	 * the old system, but we do it anyway just in case.  We do it late here
-	 * because there is no need to have the schema load use new oids.
-	 */
-	prep_status("Setting next OID for new cluster");
-	exec_prog(UTILITY_LOG_FILE, NULL, true, true,
-			  "\"%s/pg_resetxlog\" --binary-upgrade -o %u \"%s\"",
-			  new_cluster.bindir, old_cluster.controldata.chkpnt_nxtoid,
-			  new_cluster.pgdata);
-	check_ok();
 
 	/* For non-master segments, uniquify the system identifier. */
 	if (!is_greenplum_dispatcher_mode())
