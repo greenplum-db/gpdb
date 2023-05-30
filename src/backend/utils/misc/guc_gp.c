@@ -3918,7 +3918,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_resgroup_memory_query_fixed_mem,
 		0, 0, INT_MAX,
-		NULL, NULL, NULL
+		gpvars_check_rg_query_fixed_mem, NULL, NULL
 	},
 
 	{

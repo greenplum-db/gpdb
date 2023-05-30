@@ -583,6 +583,22 @@ gpvars_check_statement_mem(int *newval, void **extra, GucSource source)
 }
 
 /*
+ * gpvars_check_rg_query_fixed_mem
+ */
+bool
+gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source)
+{
+	if (*newval >= max_statement_mem)
+	{
+		GUC_check_errmsg("Invalid input for gp_resgroup_memory_query_fixed_mem, must be less than max_statement_mem (%d kB)",
+						 max_statement_mem);
+		return false;
+	}
+
+	return true;
+}
+
+/*
  * increment_command_count
  *	  Increment gp_command_count. If the new command count is 0 or a negative number, reset it to 1.
  *	  And keep MyProc->queryCommandId synced with gp_command_count.
