@@ -644,7 +644,7 @@ class CommandNotFoundException(Exception):
 
 def findCmdInPath(cmd):
     # ---------------command path--------------------
-    CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
+    CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/usr/local/bin', '/bin',
                '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
     CMDPATH = CMDPATH + os.environ['PATH'].split(os.pathsep)
 
