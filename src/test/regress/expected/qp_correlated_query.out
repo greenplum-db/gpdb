@@ -3846,6 +3846,21 @@ select * from t1 where 0 < (select count(*) from generate_series(1, a), t1);
 reset optimizer_enforce_subplans;
 DROP TABLE IF EXISTS t1;
 DROP TABLE IF EXISTS supplier;
+-------------------------------------------------------------------------------------------------------------
+-- Planner should fail due to skip-level correlation not supported. Query should not cause segfault on ORCA
+-------------------------------------------------------------------------------------------------------------
+create table skip_correlated_t1(a int, b int) distributed by (a);
+create table skip_correlated_t2(a int, b int) distributed by (a);
+create table skip_correlated_t3(a int, b int) distributed by (a);
+create table skip_correlated_t4(a int, b int) distributed by (a);
+explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 left join skip_correlated_t3 on (EXISTS ( select skip_correlated_t1.b from skip_correlated_t2))));
+ERROR:  correlated subquery with skip-level correlations is not supported
+explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 inner join skip_correlated_t3 on skip_correlated_t2.a=skip_correlated_t3.a left join skip_correlated_t4 on (EXISTS (select skip_correlated_t1.b from skip_correlated_t2))));
+ERROR:  correlated subquery with skip-level correlations is not supported
+drop table skip_correlated_t1;
+drop table skip_correlated_t2;
+drop table skip_correlated_t3;
+drop table skip_correlated_t4;
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
