@@ -125,12 +125,10 @@ static List *formIdleSegmentIdList(void);
 
 static bool param_walker(Node *node, ParamWalkerContext *context);
 static Oid	findParamType(List *params, int paramid);
-static Bitmapset *getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
-										  List **paramExecTypes);
+static Bitmapset *getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm);
 static SerializedParams *serializeParamsForDispatch(QueryDesc *queryDesc,
 													ParamListInfo externParams,
 													ParamExecData *execParams,
-													List *paramExecTypes,
 													Bitmapset *sendParams);
 
 
@@ -145,8 +143,6 @@ static SerializedParams *serializeParamsForDispatch(QueryDesc *queryDesc,
  * 'sendParams' indicates which parameters are included and 'execParams'
  * contains their values. 'paramExecTypes' is a list indexed by paramid,
  * containing the datatype OID of each parameter.
- * GPDB_11_MERGE_FIXME: In PostgreSQL v11, we have paramExecTypes in
- * PlannedStmt, so it will no longer be necessary to pass it as a param.
  *
  * If cancelOnError is true, then any dispatching error, a cancellation
  * request from the client, or an error from any of the associated QEs,
@@ -185,7 +181,6 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 {
 	PlannedStmt *stmt;
 	bool		is_SRI = false;
-	List	   *paramExecTypes;
 	Bitmapset  *sendParams;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
@@ -245,11 +240,11 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 	 * values that need to be included with the query. Then serialize them,
 	 * and also any PARAM_EXTERN parameters.
 	 */
-	sendParams = getExecParamsToDispatch(stmt, execParams, &paramExecTypes);
+	sendParams = getExecParamsToDispatch(stmt, execParams);
 	queryDesc->ddesc->paramInfo =
 		serializeParamsForDispatch(queryDesc,
 								   queryDesc->params,
-								   execParams, paramExecTypes, sendParams);
+								   execParams, sendParams);
 
 	/*
 	 * Cursor queries and bind/execute path queries don't run on the
@@ -1467,7 +1462,6 @@ static SerializedParams *
 serializeParamsForDispatch(QueryDesc *queryDesc,
 						   ParamListInfo externParams,
 						   ParamExecData *execParams,
-						   List *paramExecTypes,
 						   Bitmapset *sendParams)
 {
 	SerializedParams *result = makeNode(SerializedParams);
@@ -1516,7 +1510,7 @@ serializeParamsForDispatch(QueryDesc *queryDesc,
 	/* materialize Exec params */
 	if (!bms_is_empty(sendParams))
 	{
-		int			numExecParams = list_length(paramExecTypes);
+		int			numExecParams = list_length(queryDesc->plannedstmt->paramExecTypes);
 		int			x;
 
 		result->nExecParams = numExecParams;
@@ -1527,7 +1521,7 @@ serializeParamsForDispatch(QueryDesc *queryDesc,
 		{
 			ParamExecData *prm = &execParams[x];
 			SerializedParamExecData *sprm = &result->execParams[x];
-			Oid			ptype = list_nth_oid(paramExecTypes, x);
+			Oid			ptype = list_nth_oid(queryDesc->plannedstmt->paramExecTypes, x);
 
 			sprm->value = prm->value;
 			sprm->isnull = prm->isnull;
@@ -1562,8 +1556,7 @@ serializeParamsForDispatch(QueryDesc *queryDesc,
  * in the EState->es_param_exec_vals array.
  */
 static Bitmapset *
-getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
-						List **paramExecTypes)
+getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm)
 {
 	ParamWalkerContext context;
 	int			i;
@@ -1573,7 +1566,6 @@ getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
 
 	if (nIntPrm == 0)
 	{
-		*paramExecTypes = NIL;
 		return NULL;
 	}
 	Assert(intPrm != NULL);		/* So there must be some internal parameters. */
@@ -1610,12 +1602,10 @@ getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
 	 * Now set the bit corresponding to each init plan param. Use the datatype
 	 * info harvested above.
 	 */
-	*paramExecTypes = NIL;
 	for (i = 0; i < nIntPrm; i++)
 	{
 		Oid			paramType = findParamType(context.params, i);
 
-		*paramExecTypes = lappend_oid(*paramExecTypes, paramType);
 		if (paramType != InvalidOid)
 		{
 			sendParams = bms_add_member(sendParams, i);
