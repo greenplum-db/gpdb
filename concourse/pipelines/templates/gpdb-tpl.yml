@@ -404,7 +404,7 @@ resources:
     - gpdb-doc/*
     - README*
 
-{% if os_type == default_os_type or (os_type != default_os_type and "ICW" in test_sections) %}
+{% if os_type == compile_platform or (os_type != compile_platform and "ICW" in test_sections) %}
 - name: gpdb7-[[ os_type ]]-build
   type: registry-image
   source:
@@ -416,7 +416,9 @@ resources:
   {% else %}
     repository: gcr.io/data-gpdb-public-images/gpdb7-[[ os_type ]]-build
   {% endif %}
-{% else %}
+{% endif %}
+
+{% if os_type != compile_platform %}
 - name: gpdb7-[[ compile_platform ]]-build
   type: registry-image
   source:
@@ -1795,9 +1797,15 @@ jobs:
         params:
           file: "release_candidates/server-rc-*el8*.tar.gz"
       {% endif %}
+      {% if os_type == default_os_type %}
       - put: bin_gpdb_clients_rc
         params:
           file: "release_candidates/clients-rc-*el8*.tar.gz"
+      {% else %}
+      - put: bin_gpdb_clients_rc
+        params:
+          file: "release_candidates/clients-rc-*el9*.tar.gz"
+      {% endif %}
 {% endif %}
 {% if os_type == compile_platform %}
       - put: server_src_rc
