@@ -2769,7 +2769,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resource_group_bypass", PGC_USERSET, RESOURCES,
+		{"gp_resource_group_bypass", PGC_SUSET, RESOURCES,
 			gettext_noop("If the value is true, the query in this session will not be limited by resource group."),
 			NULL
 		},

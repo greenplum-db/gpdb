@@ -19,6 +19,12 @@ SET ROLE role_bypass;
 SET
 CREATE TABLE t_bypass(a int) distributed by (a);
 CREATE
+
+-- gp_resource_group_bypass can only be set by super user
+-- below set statement will error out
+set gp_resource_group_bypass = 1;
+ERROR:  permission denied to set parameter "gp_resource_group_bypass"
+
 RESET ROLE;
 RESET
 
