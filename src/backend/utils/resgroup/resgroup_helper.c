@@ -459,6 +459,12 @@ pg_resgroup_move_query(PG_FUNCTION_ARGS)
 
 		groupId = get_resgroup_oid(groupName, false);
 		sessionId = GetSessionIdByPid(pid);
+
+		if (groupId == SYSTEMRESGROUP_OID)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							(errmsg("cannot move a process to the system_group"))));
+
 		if (sessionId == -1)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
