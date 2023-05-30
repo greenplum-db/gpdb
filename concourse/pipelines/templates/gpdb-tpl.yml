@@ -478,12 +478,21 @@ resources:
     ref: d1d3a143cf1804552afedaa3be0ad54c14986605
 {% endif %}
 
+{% if os_type == "ubuntu20.04" %}
+- name: gpdb_package_ubuntu20.04
+  type: gcs
+  source:
+    bucket: pivotal-gpdb-concourse-resources-intermediates-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: gpdb-package-testing/deb_gpdb_ubuntu20.04/greenplum-db-6-ubuntu20.04-amd64.deb
+{% else %}
 - name: previous_gpdb
   type: pivnet
   source:
     api_token: ((pivotal-gpdb-pivnet-api-token))
     product_slug: pivotal-gpdb
     product_version: ((pivotal-gpdb-pivnet-product-version))
+{% endif %}
 
 {% if os_type == "oel8" or os_type == "rhel8"  %}
 - name: gpdb6-[[ default_os_type ]]-build
@@ -989,12 +998,14 @@ jobs:
       - get: gpdb_src
         trigger: true
         passed: [compile_gpdb_[[ compile_platform ]]]
+      {% if os_type == "ubuntu20.04" %}
+      - get: gpdb_package
+        resource: gpdb_package_ubuntu20.04
+      {% else %}
       - get: gpdb_package
         resource: previous_gpdb
         params:
-          {% if os_type == "ubuntu20.04" %}
-          globs: [greenplum-db-6*-ubuntu18.04-amd64.deb]
-          {% elif os_type == "rocky8" %}
+          {% if os_type == "rocky8" %}
           globs: [greenplum-db-6*-rhel8-x86_64.rpm]
           {% elif os_type == "oel8" %}
           globs: [greenplum-db-6*-rhel8-x86_64.rpm]
@@ -1005,6 +1016,7 @@ jobs:
           {% else %}
           globs: [greenplum-db-6*-[[ dist ]]-x86_64.rpm]
           {% endif %}
+      {% endif %}
       - get: gpdb6-[[ compile_platform ]]-build
   - task: generate_previous_bin_gpdb
     file: gpdb_src/concourse/tasks/extract_package.yml
