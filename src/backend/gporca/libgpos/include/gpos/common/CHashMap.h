@@ -300,9 +300,9 @@ public:
 	}
 
 	bool
-	is_empty() const
+	IsEmpty() const
 	{
-		return(nullptr == m_chains || nullptr == *m_chains);
+		return (nullptr == m_chains || nullptr == *m_chains);
 	}
 };	// class CHashMap
 

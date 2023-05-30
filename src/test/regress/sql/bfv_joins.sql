@@ -179,7 +179,7 @@ full outer join fjtest_c on (s.aid = cid);
 -- Test for unsupported syntax of Full outer join in Orca.
 --
 --start_ignore
-drop table foo;
+drop table if exists foo;
 --end_ignore
 CREATE TABLE foo(col1 int, col2 boolean);
 CREATE STATISTICS IF NOT EXISTS s0 (mcv) ON col2, col1 FROM foo;
