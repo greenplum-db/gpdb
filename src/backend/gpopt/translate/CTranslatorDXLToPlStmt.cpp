@@ -3491,8 +3491,6 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 
 		temp_plan_project_set->targetlist = target_list_entry;
 
-		temp_plan_project_set->qual = result_node_plan->qual;
-
 		// Creating the links between all the nested ProjectSet nodes
 		if (nullptr == project_set_parent_plan)
 		{
