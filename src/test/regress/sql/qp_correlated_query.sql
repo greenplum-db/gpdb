@@ -787,7 +787,13 @@ create table skip_correlated_t2(a int, b int) distributed by (a);
 create table skip_correlated_t3(a int, b int) distributed by (a);
 create table skip_correlated_t4(a int, b int) distributed by (a);
 explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 left join skip_correlated_t3 on (EXISTS ( select skip_correlated_t1.b from skip_correlated_t2))));
+explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 left join skip_correlated_t3 on (EXISTS (select 1 from skip_correlated_t2 where a > skip_correlated_t1.b))));
 explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 inner join skip_correlated_t3 on skip_correlated_t2.a=skip_correlated_t3.a left join skip_correlated_t4 on (EXISTS (select skip_correlated_t1.b from skip_correlated_t2))));
+
+---------------------------------------------------------------------------------------------------
+-- Query should not cause segfault on ORCA.Will fallback to planner as no plan is computed by ORCA
+---------------------------------------------------------------------------------------------------
+explain select * from skip_correlated_t1 where (EXISTS (select skip_correlated_t2.a from skip_correlated_t2 left join skip_correlated_t3 on skip_correlated_t3.a =ALL(select skip_correlated_t1.a from skip_correlated_t2)));
 drop table skip_correlated_t1;
 drop table skip_correlated_t2;
 drop table skip_correlated_t3;
