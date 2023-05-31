@@ -1565,9 +1565,8 @@ getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm)
 	Bitmapset  *sendParams = NULL;
 
 	if (nIntPrm == 0)
-	{
 		return NULL;
-	}
+	
 	Assert(intPrm != NULL);		/* So there must be some internal parameters. */
 
 	/*
