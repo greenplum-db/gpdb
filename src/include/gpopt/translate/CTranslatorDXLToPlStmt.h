@@ -113,12 +113,8 @@ private:
 		// For a given node,this will contain the targetlist of the lefttree of that node
 		List *m_subplan_tlist;
 
-		// If a matching subplan output expression is found, a new VAR will be created
-		// with this varno(OUTER_VAR)
-		Index m_newvarno;
-
-		FixUpperExprContextProjectset(List *subplan_tlist, Index newvarno)
-			: m_subplan_tlist(subplan_tlist), m_newvarno(newvarno)
+		FixUpperExprContextProjectset(List *subplan_tlist)
+			: m_subplan_tlist(subplan_tlist)
 		{
 		}
 

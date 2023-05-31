@@ -15650,3 +15650,6 @@ select generate_series(1,a) as output,b,c from test_srf;
 explain verbose select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
 select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
 drop table test_srf;
+
+-- Below query giving incorrect output with ORCA.Works fine on planner.Github Issue #15644
+SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;

@@ -3384,8 +3384,10 @@ RequiresResultNode(const CDXLNode *project_list_dxlnode)
 Plan *
 CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 {
-	// GPDB_12_MERGE_FIXME: had we generated a DXLProjectSet in ORCA we wouldn't
-	// have needed to be defensive here...
+	// ORCA_FEATURE_NOT_SUPPORTED: The Project Set nodes don't support a qual in the
+	// planned statement.Just being defensive here for the case when the result dxl
+	// node has a set returning function in the project list and also a qual.In that
+	// case will not create a ProjectSet node and will fall back to planner.
 	if ((*result_dxlnode)[EdxlresultIndexFilter]->Arity() > 0)
 	{
 		GPOS_RAISE(
@@ -3566,8 +3568,7 @@ CTranslatorDXLToPlStmt::MutateFuncExprToVarProjectSet(Plan *final_plan)
 			Node *newexpr;
 
 
-			FixUpperExprContextProjectset context(subplan->targetlist,
-												  OUTER_VAR);
+			FixUpperExprContextProjectset context(subplan->targetlist);
 
 			newexpr =
 				FixUpperExprMutatorProjectSet((Node *) tle->expr, &context);
@@ -3616,7 +3617,7 @@ CTranslatorDXLToPlStmt::FixUpperExprMutatorProjectSet(
 	}
 
 	newvar = SearchTlistForNonVarProjectset(
-		(Expr *) node, context->m_subplan_tlist, context->m_newvarno);
+		(Expr *) node, context->m_subplan_tlist, OUTER_VAR);
 	if (newvar)
 	{
 		return (Node *) newvar;
