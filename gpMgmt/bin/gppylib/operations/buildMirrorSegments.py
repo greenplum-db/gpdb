@@ -437,8 +437,8 @@ class GpMirrorListToBuild:
                                                        remoteHost=targetHostname)
         return None
 
-    def _get_remove_cmd(self, cmd, target_host):
-        return base.Command("remove file", "rm -f {}".format(pipes.quote(cmd)), ctxt=base.REMOTE, remoteHost=target_host)
+    def _get_remove_cmd(self, remove_file, target_host):
+        return base.Command("remove file", "rm -f {}".format(pipes.quote(remove_file)), ctxt=base.REMOTE, remoteHost=target_host)
 
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, suppressErrorCheck=False, progressCmds=[]):
         for cmd in cmds:
