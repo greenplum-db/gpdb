@@ -2938,10 +2938,6 @@ Determines whether ordinary string literals \('...'\) treat backslashes literall
 
 Allocates segment host memory per query. The amount of memory allocated with this parameter cannot exceed [max\_statement\_mem](#max_statement_mem) or the memory limit on the resource queue or resource group through which the query was submitted. If additional memory is required for a query, temporary spill files on disk are used.
 
-*If you are using resource groups to control resource allocation in your Greenplum Database cluster*:
-
--   Greenplum Database uses `statement_mem` to control query memory usage when the resource group `MEMORY_SPILL_RATIO` is set to 0.
-
 *If you are using resource queues to control resource allocation in your Greenplum Database cluster*:
 
 -   When [gp\_resqueue\_memory\_policy](#gp_resqueue_memory_policy) =auto, `statement_mem` and resource queue memory limits control query memory usage.
