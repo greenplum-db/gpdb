@@ -69,7 +69,7 @@ CPUSET <coordinator_cores>;<segment_cores>
 MEMORY_LIMIT integer
 :   Optional. The maximum available memory, in MB, to reserve for this resource group. This value determines the total amount of memory that all worker processes within a resource group can consume on a segment host during query execution. 
 
-:   The minimum memory percentage you can specify for a resource group is `0`. The default value is `-1`. 
+:   The minimum memory quantity you can specify for a resource group is `0`. The default value is `-1`. 
 
 :   When you specify a `MEMORY_LIMIT` of `-1`, `MEMORY LIMIT` takes the value of the `statement_mem` server configuration parameter. 
 

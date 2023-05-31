@@ -151,32 +151,33 @@ The `gp_toolkit.gp_resgroup_config` view allows administrators to see the curren
 
 ## <a id="gp_resgroup_status"></a>gp_resgroup_status
 
-The `gp_toolkit.gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.
+The `gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.
 
-> **Note** The `gp_resgroup_status` view is valid only when resource group-based resource management is active.
+> **Note** Resource groups use the Linux control groups \(cgroups\) configured on the host systems. The cgroups are used to manage host system resources. When resource groups use cgroups that are as part of a nested set of cgroups, resource group limits are relative to the parent cgroup allotment. For information about nested cgroups and Greenplum Database resource group limits, see [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic8339intro).
 
-|column|type|references|description|
-|------|----|----------|-----------|
-|`rsgname`|name|pg\_resgroup.rsgname|The name of the resource group.|
-|`groupid`|oid|pg\_resgroup.oid|The ID of the resource group.|
-|`num_running`|integer| |The number of transactions currently running in the resource group.|
-|`num_queueing`|integer| |The number of currently queued transactions for the resource group.|
-|`num_queued`|integer| |The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the `num_queueing`.|
-|`num_executed`|integer| |The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the `num_running`.|
-|`total_queue_duration`|interval| |The total time any transaction was queued since the Greenplum Database cluster was last started.|
-|`cpu_usage`|json| |A set of key-value pairs. For each segment instance \(the key\), the value is the real-time, per-segment instance CPU core usage by a resource group. The value is the sum of the percentages \(as a decimal value\) of CPU cores that are used by the resource group for the segment instance.|
-|`memory_usage`|json| |The real-time memory usage of the resource group on each Greenplum Database segment's host.|
+This view is accessible to all users.
 
-The `memory_usage` field is a JSON-formatted, key:value string. The string contents differ depending upon the type of resource group. For each resource group that you assign to a role \(default memory auditor `vmtracker`\), this string identifies the used and available fixed and shared memory quota allocations on each segment. The key is segment id. The values are memory values displayed in MB units. The following example shows `memory_usage` column output for a single segment for a resource group that you assign to a role:
+|Column|Description|
+|------|-----------|
+|rsgname|The name of the resource group.|
+|groupid|The ID of the resource group.|
+|num\_running|The number of transactions currently running in the resource group.|
+|num\_queueing|The number of currently queued transactions for the resource group.|
+|num\_queued|The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
+|num\_executed|The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
+|total\_queue\_duration|The total time any transaction was queued since the Greenplum Database cluster was last started.|
+|cpu_usage|A float value. For each segment instance (the key), the value is the real-time, per-segment instance CPU core usage by a resource group. The value is the sum of the percentages (as a decimal value) of CPU cores that are used by the resource group for the segment instance.|
 
-```
-"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "shared_used":0, "shared_available":16}
-```
-
-For each resource group that you assign to an external component, the `memory_usage` JSON-formatted string identifies the memory used and the memory limit on each segment. The following example shows `memory_usage` column output for an external component resource group for a single segment:
+Sample output for the `gp_resgroup_status` view:
 
 ```
-"1":{"used":11, "limit_granted":15}
+select * from gp_toolkit.gp_resgroup_status;
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration | cpu_usage
+---------------+---------+-------------+--------------+------------+------------------------------------------------------------------------
+ default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  | {'-1': 0.0, '0': 0.0, '1': 0.0, '2': 0.0}
+ admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  | {'-1': 0.33, '0': 0.12, '1': 0.09, '2': 0.05}
+ system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  | {'-1': 0.09, '0': 0.08, '1': 0.08, '2': 0.08}
+(3 rows)
 ```
 
 ## <a id="gp_resgroup_status_per_host"></a>gp_resgroup_status_per_host
@@ -187,39 +188,24 @@ Memory amounts are specified in MBs.
 
 > **Note** The `gp_resgroup_status_per_host` view is valid only when resource group-based resource management is active.
 
-|column|type|references|description|
-|------|----|----------|-----------|
-|`rsgname`|name|pg\_resgroup.rsgname|The name of the resource group.|
-|`groupid`|oid|pg\_resgroup.oid|The ID of the resource group.|
-|`hostname`|text|gp\_segment\_configuration.hostname|The hostname of the segment host.|
-|`cpu`|numeric| |The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages \(as a decimal value\) of the CPU cores that are used by the resource group on the host.|
-|`cpu_usage`|json| |A set of key-value pairs. For each segment instance \(the key\), the value is the real-time, per-segment instance CPU core usage by a resource group. The value is the sum of the percentages \(as a decimal value\) of CPU cores that are used by the resource group for the segment instance.|
-|`memory_usage`|json| |The real-time memory usage of the resource group on each Greenplum Database segment's host.|
-|`memory_used`|integer| |The real-time memory usage of the resource group on the host. This total includes resource group fixed and shared memory. It also includes global shared memory used by the resource group.|
-|`memory_available`|integer| |The unused fixed and shared memory for the resource group that is available on the host. This total does not include available resource group global shared memory.|
-|`memory_quota_used`|integer| |The real-time fixed memory usage for the resource group on the host.|
-|`memory_quota_available`|integer| |The fixed memory available to the resource group on the host.|
-|`memory_shared_used`|integer| |The group shared memory used by the resource group on the host. If any global shared memory is used by the resource group, this amount is included in the total as well.|
-|`memory_shared_available`|integer| |The amount of group shared memory available to the resource group on the host. Resource group global shared memory is not included in this total.|
+|Column|Description|
+|------|-----------|
+|`rsgname`|The name of the resource group.|
+|`groupid`|The ID of the resource group.|
+|`hostname`|The hostname of the segment host.|
+|`cpu_usage`|A float value. The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages (as a float value) of the CPU cores that are used by the resource group on the host.|
+|`memory_usage`|The real-time memory usage of the resource group on each Greenplum Database segment's host.|
 
-The `cpu_usage` field is a JSON-formatted, key:value string that identifies, for each resource group, the per-segment instance CPU core usage. The key is the segment id. The value is the sum of the percentages \(as a decimal value\) of the CPU cores used by the segment instance's resource group on the segment host; the maximum value is 1.00. The total CPU usage of all segment instances running on a host should not exceed the `gp_resource_group_cpu_limit`. Example `cpu_usage` column output:
+Sample output for the `gp_resgroup_status_per_host` view:
 
 ```
-{"-1":0.01, "0":0.31, "1":0.31}
-```
-
-In the example, segment `0` and segment `1` are running on the same host; their CPU usage is the same.
-
-The `memory_usage` field is also a JSON-formatted, key:value string. The string contents differ depending upon the type of resource group. For each resource group that you assign to a role \(default memory auditor `vmtracker`\), this string identifies the used and available fixed and shared memory quota allocations on each segment. The key is segment id. The values are memory values displayed in MB units. The following example shows `memory_usage` column output for a single segment for a resource group that you assign to a role:
-
-```
-"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "shared_used":0, "shared_available":16}
-```
-
-For each resource group that you assign to an external component, the `memory_usage` JSON-formatted string identifies the memory used and the memory limit on each segment. The following example shows `memory_usage` column output for an external component resource group for a single segment:
-
-```
-"1":{"used":11, "limit_granted":15}
+select * from gp_toolkit.gp_resgroup_status_per_host;
+ rsgname       | groupid | hostname | cpu_usage | memory_usage
+---------------+---------+----------+-----------+--------------
+ admin_group   | 6438    | zero     | 0.07      | 91.92
+ default_group | 6437    | zero     | 0.00      | 0.00
+ system_group  | 6441    | zero     | 0.02      | 53.04
+(3 rows)
 ```
 
 ## <a id="gp_resqueue_status"></a>gp_resqueue_status
