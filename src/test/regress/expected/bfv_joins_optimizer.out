@@ -3262,37 +3262,10 @@ full outer join fjtest_c on (s.aid = cid);
 drop table foo;
 ERROR:  table "foo" does not exist
 --end_ignore
-CREATE TABLE foo(col1 int, col2 boolean);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE foo (col1 int, col2 boolean) DISTRIBUTED BY (col1);
 CREATE STATISTICS IF NOT EXISTS s0 (mcv) ON col2, col1 FROM foo;
 INSERT INTO foo VALUES('1', true);
---start_ignore
-VACUUM VERBOSE ANALYZE foo;
-INFO:  vacuuming "bfv_joins.foo"  (seg0 127.0.0.1:7002 pid=9918)
-INFO:  "foo": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages  (seg0 127.0.0.1:7002 pid=9918)
-DETAIL:  0 dead row versions cannot be removed yet, oldest xmin: 1275
-There were 0 unused item identifiers.
-Skipped 0 pages due to buffer pins, 0 frozen pages.
-0 pages are entirely empty.
-CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s.
-INFO:  vacuuming "bfv_joins.foo"  (seg2 127.0.0.1:7004 pid=9919)
-INFO:  "foo": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages  (seg2 127.0.0.1:7004 pid=9919)
-DETAIL:  0 dead row versions cannot be removed yet, oldest xmin: 1227
-There were 0 unused item identifiers.
-Skipped 0 pages due to buffer pins, 0 frozen pages.
-0 pages are entirely empty.
-CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s.
-INFO:  vacuuming "bfv_joins.foo"  (seg1 127.0.0.1:7003 pid=9917)
-INFO:  "foo": found 0 removable, 1 nonremovable row versions in 1 out of 1 pages  (seg1 127.0.0.1:7003 pid=9917)
-DETAIL:  0 dead row versions cannot be removed yet, oldest xmin: 1263
-There were 0 unused item identifiers.
-Skipped 0 pages due to buffer pins, 0 frozen pages.
-0 pages are entirely empty.
-CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s.
-INFO:  analyzing "bfv_joins.foo"
-INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(17441, 10000, 'f');
---end_ignore
+ANALYZE foo;
 SELECT 1 FROM foo t1 FULL JOIN foo t2 ON t2.col2;
 ERROR:  FULL JOIN is only supported with merge-joinable or hash-joinable join conditions
 -- Do not push down any implied predicates to the Left Outer Join
