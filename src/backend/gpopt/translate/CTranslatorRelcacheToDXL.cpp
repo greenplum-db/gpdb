@@ -532,9 +532,11 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE && gp_policy == nullptr)
 	{
 		// for foreign tables, we need to convert from the foreign table's execution location,
-		// to an Orca distribution spec. We do this mapping in `GetForeignRelDistribution`
+		// to an Orca distribution spec. We do this mapping in `GetDistributionFromForeignRelExecLocation`.
+		// the distribution here represents the execution location of the fdw, which is
+		// then mapped to Orca's distribution spec
 		ForeignTable *ft = GetForeignTable(rel->rd_id);
-		dist = GetForeignRelDistribution(ft);
+		dist = GetDistributionFromForeignRelExecLocation(ft);
 	}
 	else
 	{
@@ -803,8 +805,26 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 // Foreign relations don't store their distribution policy in GpPolicy,
 // so we need to extract it separately from the ForeignTable itself.
 // maps foreign table's execution location to Orca distribution policy
+// FTEXECLOCATION_COORDINATOR: maps to a coordinator-only distribution. That is,
+// this table must be executed on the coordinator
+//
+// FTEXECLOCATION_ANY: maps to a universal distribution. This is still a
+// foreign table that exists in a single location, but can be accessed/executed
+// from either the coordinator, a single segment, or even multiple segments
+// depending on costing. However, in the case of multiple segments, the overall
+// distribution spec still expects only a single copy of the data. This can be
+// achieved by joining with a distribted table on the hash key for example. The
+// "ANY" execution location (and universal distribution spec) is treated
+// identically to a "generate_series" function. This is similar to a replicated
+// spec, it can also be executed on the coordinator.
+//
+// FTEXECLOCATION_ALL_SEGMENTS: maps to a random distribution. "ALL SEGMENTS"
+// indicates that each segment is getting a separate subset of the data, most
+// likely from a distributed source. There is no assumption about the
+// distribution of this data, so we must assume it is randomly distributed.
 IMDRelation::Ereldistrpolicy
-CTranslatorRelcacheToDXL::GetForeignRelDistribution(ForeignTable *ft)
+CTranslatorRelcacheToDXL::GetDistributionFromForeignRelExecLocation(
+	ForeignTable *ft)
 {
 	IMDRelation::Ereldistrpolicy dist = IMDRelation::EreldistrSentinel;
 	switch (ft->exec_location)

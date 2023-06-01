@@ -350,8 +350,8 @@ public:
 	// get the distribution policy of the relation
 	static IMDRelation::Ereldistrpolicy GetRelDistribution(GpPolicy *gp_policy);
 
-	static IMDRelation::Ereldistrpolicy GetForeignRelDistribution(
-		ForeignTable *ft);
+	static IMDRelation::Ereldistrpolicy
+	GetDistributionFromForeignRelExecLocation(ForeignTable *ft);
 };
 }  // namespace gpdxl
 

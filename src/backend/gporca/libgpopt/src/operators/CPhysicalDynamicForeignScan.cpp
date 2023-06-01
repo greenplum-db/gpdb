@@ -37,14 +37,14 @@ CPhysicalDynamicForeignScan::CPhysicalDynamicForeignScan(
 	ULONG ulOriginOpId, ULONG scan_id, CColRefArray *pdrgpcrOutput,
 	CColRef2dArray *pdrgpdrgpcrParts, IMdIdArray *partition_mdids,
 	ColRefToUlongMapArray *root_col_mapping_per_part, OID foreign_server_oid,
-	IMDRelation::Ereldistrpolicy dist)
+	IMDRelation::Ereldistrpolicy exec_location)
 
 
 	: CPhysicalDynamicScan(mp, ptabdesc, ulOriginOpId, pnameAlias, scan_id,
 						   pdrgpcrOutput, pdrgpdrgpcrParts, partition_mdids,
 						   root_col_mapping_per_part),
 	  m_foreign_server_oid(foreign_server_oid),
-	  m_dist(dist)
+	  m_exec_location(exec_location)
 {
 	// we need to overwrite the distribution spec for DynamicForeignGets, as
 	// the partition table can have one distribution, but the distribution for the
@@ -52,20 +52,20 @@ CPhysicalDynamicForeignScan::CPhysicalDynamicForeignScan(
 	// allowed for foreign partitions
 	m_pds->Release();
 	// if this table is coordinator only, set the distribution as strict singleton
-	if (m_dist == IMDRelation::EreldistrCoordinatorOnly)
+	if (m_exec_location == IMDRelation::EreldistrCoordinatorOnly)
 	{
 		m_pds = GPOS_NEW(mp) CDistributionSpecStrictSingleton(
 			CDistributionSpecSingleton::EstCoordinator);
 	}
 	// if the table can be executed on either a segment or coordinator, set it as universal
-	else if (m_dist == IMDRelation::EreldistrUniversal)
+	else if (m_exec_location == IMDRelation::EreldistrUniversal)
 	{
 		m_pds = GPOS_NEW(mp) CDistributionSpecUniversal();
 	}
 	// if the distribution is set to "all segments", it is set to a random distribution
 	else
 	{
-		GPOS_ASSERT(m_dist == IMDRelation::EreldistrRandom);
+		GPOS_ASSERT(m_exec_location == IMDRelation::EreldistrRandom);
 		m_pds = GPOS_NEW(mp) CDistributionSpecRandom();
 	}
 }

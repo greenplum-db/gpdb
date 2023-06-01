@@ -207,11 +207,12 @@ CXformExpandDynamicGetWithForeignPartitions::Transform(CXformContext *pxfctxt,
 		{
 			pdrgpcrNew = CUtils::PdrgpcrCopy(mp, popGet->PdrgpcrOutput());
 		}
-		CLogicalDynamicForeignGet *dynamicForeignGet =
-			GPOS_NEW(mp) CLogicalDynamicForeignGet(
-				mp, new_alias, popGet->Ptabdesc(), popGet->ScanId(), pdrgpcrNew,
-				popGet->PdrgpdrgpcrPart(), part_oid_array,
-				foreign_server.m_foreign_server_oid, foreign_server.m_dist);
+		CLogicalDynamicForeignGet *dynamicForeignGet = GPOS_NEW(mp)
+			CLogicalDynamicForeignGet(mp, new_alias, popGet->Ptabdesc(),
+									  popGet->ScanId(), pdrgpcrNew,
+									  popGet->PdrgpdrgpcrPart(), part_oid_array,
+									  foreign_server.m_foreign_server_oid,
+									  foreign_server.m_exec_location);
 		CExpression *pexprDynamicForeignGet =
 			GPOS_NEW(mp) CExpression(mp, dynamicForeignGet);
 

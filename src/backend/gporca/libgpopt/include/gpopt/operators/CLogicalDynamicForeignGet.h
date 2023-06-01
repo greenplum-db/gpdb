@@ -28,7 +28,7 @@ class CLogicalDynamicForeignGet : public CLogicalDynamicGetBase
 private:
 	OID m_foreign_server_oid;
 
-	IMDRelation::Ereldistrpolicy m_dist;
+	IMDRelation::Ereldistrpolicy m_exec_location;
 
 public:
 	CLogicalDynamicForeignGet(const CLogicalDynamicForeignGet &) = delete;
@@ -42,7 +42,7 @@ public:
 							  CColRef2dArray *pdrgpdrgpcrPart,
 							  IMdIdArray *partition_mdids,
 							  OID foreign_server_oid,
-							  IMDRelation::Ereldistrpolicy dist);
+							  IMDRelation::Ereldistrpolicy exec_location);
 
 	// ident accessors
 
@@ -76,7 +76,7 @@ public:
 	IMDRelation::Ereldistrpolicy
 	DistributionType() const
 	{
-		return m_dist;
+		return m_exec_location;
 	}
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties

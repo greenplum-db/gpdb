@@ -27,10 +27,12 @@ struct SForeignServer
 {
 	ULONG m_foreign_server_oid;
 
-	IMDRelation::Ereldistrpolicy m_dist;
+	IMDRelation::Ereldistrpolicy m_exec_location;
 
-	SForeignServer(ULONG foreign_server_oid, IMDRelation::Ereldistrpolicy dist)
-		: m_foreign_server_oid(foreign_server_oid), m_dist(dist)
+	SForeignServer(ULONG foreign_server_oid,
+				   IMDRelation::Ereldistrpolicy exec_location)
+		: m_foreign_server_oid(foreign_server_oid),
+		  m_exec_location(exec_location)
 	{
 	}
 };
@@ -45,7 +47,7 @@ static BOOL
 FEqualSForeignServer(const SForeignServer *fs1, const SForeignServer *fs2)
 {
 	return fs1->m_foreign_server_oid == fs2->m_foreign_server_oid &&
-		   fs1->m_dist == fs2->m_dist;
+		   fs1->m_exec_location == fs2->m_exec_location;
 }
 
 // hash maps ULONG -> array of ULONGs
