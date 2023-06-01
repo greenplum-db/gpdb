@@ -10,7 +10,7 @@ Synopsis
 gprecoverseg [-p <new_recover_host>[,...]]
              |-i <recover_config_file> 
              [-d <master_data_directory>]
-             [-B <batch_size>] [-b <segment_batch_size>]
+             [-B <batch_size>] [-b <segment_batch_size>] [--differential]
              [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
 
 
@@ -137,6 +137,12 @@ Optional. Perform a full copy of the active segment instance
 in order to recover the failed segment. The default is to 
 only copy over the incremental changes that occurred while 
 the segment was down.
+
+--differential
+
+Optional. Perform a differential copy of the active segment instance
+in order to recover the failed segment. The default is to only copy
+over the incremental changes that occurred while the segment was down.
 
 
 -i <recover_config_file>
