@@ -3295,8 +3295,8 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 
 //--------------------------------------------------------------------------------------
 // If the top level is not a function returning set then we need to check if the
-// project element contains any SRF's deep down the tree.If we found any SRF's at
-// lower levels then we will require a result node on top of ProjectSet node.Eg
+// project element contains any SRF's deep down the tree. If we found any SRF's at
+// lower levels then we will require a result node on top of ProjectSet node. Eg
 // <dxl:ProjElem ColId="1" Alias="abs">
 //		  <dxl:FuncExpr FuncId="0.1397.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
 //			<dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
@@ -3328,8 +3328,8 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 
 //--------------------------------------------------------------------------------------
 // This method is required to check if we need a result node on top of ProjectSet
-// node.If the project element contains SRF on top then we don't require a result
-// node.Eg
+// node. If the project element contains SRF on top then we don't require a result
+// node. Eg
 //  <dxl:ProjElem ColId="1" Alias="generate_series">
 //		 <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
 //		   ...
@@ -3338,7 +3338,7 @@ ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
 //			 </dxl:FuncExpr>
 //			 ...
 //		 </dxl:FuncExpr>
-// Here we have a FuncExpr which returns a set on top.So we don't require a result
+// Here we have a FuncExpr which returns a set on top. So we don't require a result
 // node on top of ProjectSet node.
 //-------------------------------------------------------------------------------------
 static BOOL
@@ -3385,8 +3385,8 @@ Plan *
 CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 {
 	// ORCA_FEATURE_NOT_SUPPORTED: The Project Set nodes don't support a qual in the
-	// planned statement.Just being defensive here for the case when the result dxl
-	// node has a set returning function in the project list and also a qual.In that
+	// planned statement. Just being defensive here for the case when the result dxl
+	// node has a set returning function in the project list and also a qual. In that
 	// case will not create a ProjectSet node and will fall back to planner.
 	if ((*result_dxlnode)[EdxlresultIndexFilter]->Arity() > 0)
 	{
@@ -3425,7 +3425,7 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 												 BOOL &will_require_result_node)
 {
 	// Method split_pathtarget_at_srfs will split the given PathTarget into multiple
-	// levels to position SRFs safely.This list will hold the splited PathTarget
+	// levels to position SRFs safely. This list will hold the splited PathTarget
 	// created by split_pathtarget_at_srfs method.
 	List *targets_with_srf = NIL;
 
@@ -3448,13 +3448,13 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 
 	// If the PathTarget created from Result node's targetlist does not contain any
 	// set returning functions then split_pathtarget_at_srfs method will return the
-	// same PathTarget back.In this case a ProjectSet node is not required.
+	// same PathTarget back. In this case a ProjectSet node is not required.
 	if (1 == gpdb::ListLength(targets_with_srf))
 	{
 		return nullptr;
 	}
 
-	// Do we require a result node to be attached on top of ProjectSet node.
+	// Do we require a result node to be attached on top of ProjectSet node?
 	will_require_result_node =
 		RequiresResultNode((*result_dxlnode)[EdxlresultIndexProjList]);
 
@@ -3475,8 +3475,8 @@ CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
 
 		// If a Result node is required on top of a ProjectSet node then the last element
 		// of PathTarget list created by split_pathtarget_at_srfs method will contain the
-		// PathTarget of the result node.Since result node is already created
-		// before,breaking out from the loop. If a result node is not required on top of a
+		// PathTarget of the result node. Since result node is already created
+		// before, breaking out from the loop. If a result node is not required on top of a
 		// ProjectSet node, continue to create a ProjectSet node.
 		if (will_require_result_node &&
 			targets_with_srf_list_length == list_cell_pos)
@@ -3551,6 +3551,11 @@ SetupAliasParameter(const BOOL will_require_result_node,
 	}
 }
 
+//-------------------------------------------------------------------------------
+// This method is used to convert the FUNCEXPR present in upper level
+// Result/ProjectSet nodes targetlist to VAR nodes which reference the FUNCEXPR
+// present in the leftree plan targetlist.
+//-------------------------------------------------------------------------------
 void
 CTranslatorDXLToPlStmt::MutateFuncExprToVarProjectSet(Plan *final_plan)
 {
@@ -3635,9 +3640,9 @@ CTranslatorDXLToPlStmt::FixUpperExprMutatorProjectSet(
 //
 //	@doc:
 //		Translate DXL result node into GPDB result plan node and create Project Set
-//      plan node if SRV are present.The current approach is to create a Project Set
+//      plan node if SRV are present. The current approach is to create a Project Set
 //      plan node from a result dxl node as it already contains the info to create a
-//      project set node from it.But it's not the best approach.The better approach
+//      project set node from it. But it's not the best approach. The better approach
 //      will be to actually create a new Clogical node to handle the set returning
 //      functions and then creating CPhysical, dxl and plan nodes.
 //
