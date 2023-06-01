@@ -68,8 +68,6 @@ private:
 		return (m_is_duplicate_sensitive || !pds->m_is_duplicate_sensitive);
 	}
 
-	BOOL FDistributionSpecHashedOnlyOnGpSegmentId() const;
-
 	// private copy ctor
 	CDistributionSpecHashed(const CDistributionSpecHashed &);
 

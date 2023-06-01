@@ -1701,6 +1701,44 @@ select c, count(*) from t where a = 1 group by 1 order by 1;
  10 |     1
 (10 rows)
 
+-- Test if Motion is placed between the "group by clauses"
+drop table if exists t;
+set optimizer_force_multistage_agg to on;
+create table t(a int, b int, c int) distributed by (a);
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+analyze t;
+explain (costs off) select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  GroupAggregate
+         Group Key: gp_segment_id
+         ->  Sort
+               Sort Key: gp_segment_id
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: gp_segment_id
+                     ->  Result
+                           ->  GroupAggregate
+                                 Group Key: gp_segment_id
+                                 ->  Sort
+                                       Sort Key: gp_segment_id, b
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                             Hash Key: b
+                                             ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+ count | gp_segment_id 
+-------+---------------
+    10 |             1
+(1 row)
+
+set optimizer_force_multistage_agg to off;
+drop table t;
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

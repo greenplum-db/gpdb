@@ -969,19 +969,22 @@ INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 (3 rows)
 
 explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
-                    QUERY PLAN                     
----------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
    ->  GroupAggregate
          Group Key: gp_segment_id
          ->  Sort
                Sort Key: gp_segment_id
-               ->  Seq Scan on t_test_dd_via_segid
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: gp_segment_id
+                     ->  Seq Scan on t_test_dd_via_segid
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(9 rows)
 
 select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
  gp_segment_id | count 
 ---------------+-------
              0 |     3

@@ -175,19 +175,6 @@ CDistributionSpecHashed::StripEquivColumns(CMemoryPool *mp)
 }
 
 
-BOOL
-CDistributionSpecHashed::FDistributionSpecHashedOnlyOnGpSegmentId() const
-{
-	const ULONG length = m_pdrgpexpr->Size();
-	COperator *pop = (*(m_pdrgpexpr))[0]->Pop();
-
-	return length == 1 && pop->Eopid() == COperator::EopScalarIdent &&
-		   CScalarIdent::PopConvert(pop)->Pcr()->IsSystemCol() &&
-		   CScalarIdent::PopConvert(pop)->Pcr()->Name().Equals(
-			   CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName));
-}
-
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CDistributionSpecHashed::FSatisfies
@@ -225,24 +212,6 @@ CDistributionSpecHashed::FSatisfies(const CDistributionSpec *pds) const
 
 	const CDistributionSpecHashed *pdsHashed =
 		dynamic_cast<const CDistributionSpecHashed *>(pds);
-
-	// Assumes that 'this' distribution spec is based on the underlying table
-	// structure, whereas 'pds' distribution spec is based on the query
-	// structure. Given that table based distribution spec is derived from
-	// distribution columns, 'this' distribution spec should never satisfy
-	// FDistributionSpecHashedOnlyOnGpSegmentId().
-	if (pdsHashed->FDistributionSpecHashedOnlyOnGpSegmentId())
-	{
-		// If there exist HashSpecEquivExprs(), then we deny the match in order
-		// to prevent incorrectly removing a REDISTRIBUTE MOTION. For example,
-		// in the following query:
-		//
-		// SELECT * FROM t t1, t t2 WHERE t1.gp_segment_id=t2.id;
-		if (NULL == pdsHashed->HashSpecEquivExprs())
-		{
-			return true;
-		}
-	}
 
 	return FMatchSubset(pdsHashed);
 }
