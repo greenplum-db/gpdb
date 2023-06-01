@@ -560,17 +560,16 @@ This view is accessible to all users.
 |num\_queued|The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
 |num\_executed|The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
 |total\_queue\_duration|The total time any transaction was queued since the Greenplum Database cluster was last started.|
-|cpu_usage|A float value. For each segment instance (the key), the value is the real-time, per-segment instance CPU core usage by a resource group. The value is the sum of the percentages (as a decimal value) of CPU cores that are used by the resource group for the segment instance.|
 
 Sample output for the `gp_resgroup_status` view:
 
 ```
 select * from gp_toolkit.gp_resgroup_status;
- rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration | cpu_usage
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration |
 ---------------+---------+-------------+--------------+------------+------------------------------------------------------------------------
- default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  | {'-1': 0.0, '0': 0.0, '1': 0.0, '2': 0.0}
- admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  | {'-1': 0.33, '0': 0.12, '1': 0.09, '2': 0.05}
- system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  | {'-1': 0.09, '0': 0.08, '1': 0.08, '2': 0.08}
+ default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  |
+ admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  |
+ system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  |
 (3 rows)
 ```
 
