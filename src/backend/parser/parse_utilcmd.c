@@ -1234,11 +1234,13 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 
 	/*
 	 * GPDB_12_MERGE_FIXME:
-	 * 		This is wrong and creates unspecified behaviour when multiple like
+	 * 		This is not ideal and introduces limitations when multiple like
 	 * 		clauses are present in the statement.
 	 *
 	 *		Try to use a unified interface for encoding handling in a manner
 	 *		similar to CREATE/ALTER commands.
+	 *		For more details see:
+	 *		https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/mOPeBxFm43w
 	 */
 	/*
 	 * If STORAGE is included, we need to copy over the table storage params
@@ -1259,6 +1261,14 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 			int32		blocksize = -1;
 			int16		compresslevel = 0;
 			NameData	compresstype;
+
+			if (stmt->accessMethod != NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("LIKE %s INCLUDING STORAGE is not allowed because the access method of table %s is already set to %s",
+								RelationGetRelationName(relation), cxt->relation->relname, stmt->accessMethod)),
+						 errdetail("Multiple INCLUDING STORAGE clauses of append-optimized tables are not allowed.\n"
+								   "Single INCLUDING STORAGE clause of append-optimized table is also not allowed if access method is explicitly specified."));
 
 			GetAppendOnlyEntryAttributes(relation->rd_id,&blocksize,
 																	&compresslevel,&checksum,&compresstype);

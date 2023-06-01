@@ -86,3 +86,24 @@ WHERE c.table_name = 't_comments_b';
 
 DROP TABLE t_comments_a;
 DROP TABLE t_comments_b;
+
+-- Verify INCLUDING STORAGE of an append_optimized table errors out when table AM is explicitly specified
+CREATE TABLE t_aorow (b text) USING ao_row WITH (compresstype=zstd,compresslevel=5,blocksize=65536);
+-- Disallow INCLUDING STORAGE when table AM is explicitly specified w/ a different table AM
+CREATE TABLE t_like_aorow_use_heap (LIKE t_aorow INCLUDING STORAGE) USING heap;
+CREATE TABLE t_like_aorow_use_aocol (LIKE t_aorow INCLUDING STORAGE) USING ao_column;
+CREATE TABLE t_like_aorow_use_aocol (LIKE t_aorow INCLUDING STORAGE) WITH (appendonly=true, orientation=column);
+-- Disallow INCLUDING STORAGE even if table AM is explicitly specified w/ the same table AM
+-- This seems silly, but it's the same behavior as 6X.
+CREATE TABLE t_like_aorow_use_aorow (LIKE t_aorow INCLUDING STORAGE) USING ao_row;
+CREATE TABLE t_like_aorow_use_aorow (LIKE t_aorow INCLUDING STORAGE) WITH (appendonly=true, orientation=row);
+
+-- Verify multiple INCLUDING STORAGE clauses with append-optimized tables are not allowed
+CREATE TABLE t_aorow_2 (b text) USING ao_row WITH (compresstype=zstd,compresslevel=5,blocksize=65536);
+-- ERROR even if the two source tables have same AM and encoding options.
+CREATE TABLE t_like_ao_ao_storage (LIKE t_aorow INCLUDING STORAGE, LIKE t_aorow_2 INCLUDING STORAGE);
+-- Mix heap and AO AMs are still allowed. The new table takes the AO tables' AM and encoding options.
+-- This is not intuitive, but it is the same behavior as 6X.
+CREATE TABLE t_heap (a text) USING heap WITH (fillfactor = 50);
+CREATE TABLE t_like_ao_heap_storage (LIKE t_aorow INCLUDING STORAGE, LIKE t_heap INCLUDING STORAGE);
+\d+ t_like_ao_heap_storage
