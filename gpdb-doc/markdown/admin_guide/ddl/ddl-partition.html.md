@@ -260,7 +260,7 @@ A primary key or unique constraint on a partitioned table must contain all the p
 
 Tables created with the `DISTRIBUTED REPLICATED` distribution policy cannot be partitioned.
 
-GPORCA, the Greenplum next generation query optimizer, does not support uniform multi-level partitioned tables. If GPORCA is enabled \(the default\) and the partitioned table is multi-level, Greenplum Database runs queries against the table with the Postgres Planner.
+GPORCA, the Greenplum next generation query optimizer, does not support multi-level partitioned tables. If GPORCA is enabled \(the default\) and the partitioned table is multi-level, Greenplum Database runs queries against the table with the Postgres Planner.
 
 For information about exchanging a leaf child partition with an external table, see [Exchanging a Leaf Child Partition with an External Table](#topic_yhz_gpn_qs).
 
