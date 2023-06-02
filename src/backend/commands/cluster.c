@@ -1454,8 +1454,14 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 								   indstate);
 		CatalogCloseIndexes(indstate);
 
-		/* increment counter to reflect the changes */
-		CommandCounterIncrement();
+		/*
+		 * Increment counter to reflect the AM change as the caller might soon
+		 * build the new relation descriptor which expects consistent AM and aux
+		 * tables. This shouldn't be needed for other cases as of now, especially
+		 * not for critical catalogs such as pg_attribute. 
+		 */
+		if (relform1->relam != relform2->relam)
+			CommandCounterIncrement();
 	}
 	else
 	{
