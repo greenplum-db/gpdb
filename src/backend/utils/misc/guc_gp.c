@@ -79,7 +79,6 @@
 static bool check_optimizer(bool *newval, void **extra, GucSource source);
 static bool check_verify_gpfdists_cert(bool *newval, void **extra, GucSource source);
 static bool check_dispatch_log_stats(bool *newval, void **extra, GucSource source);
-static bool check_gp_hashagg_default_nbatches(int *newval, void **extra, GucSource source);
 static bool check_gp_workfile_compression(bool *newval, void **extra, GucSource source);
 
 /* Helper function for guc setter */
@@ -3722,28 +3721,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_hashagg_groups_per_bucket", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Target density of hashtable used by Hashagg during execution"),
-			gettext_noop("A smaller value will tend to produce larger hashtables, which increases agg performance"),
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_hashagg_groups_per_bucket,
-		5, 1, 25,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hashagg_default_nbatches", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Default number of batches for hashagg's (re-)spilling phases."),
-			gettext_noop("Must be a power of two."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_hashagg_default_nbatches,
-		32, 4, 1048576,
-		check_gp_hashagg_default_nbatches, NULL, NULL
-	},
-
-	{
 		{"gp_motion_slice_noop", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Make motion nodes in certain slices noop"),
 			gettext_noop("Make motion nodes noop, to help analyze performance"),
@@ -4998,21 +4975,6 @@ check_dispatch_log_stats(bool *newval, void **extra, GucSource source)
 			return false;
 	}
 	return true;
-}
-
-bool
-check_gp_hashagg_default_nbatches(int *newval, void **extra, GucSource source)
-{
-	/* Must be a power of two */
-	if (0 == (*newval & (*newval - 1)))
-	{
-		return true;
-	}
-	else
-	{
-		GUC_check_errmsg("gp_hashagg_default_nbatches must be a power of two");
-		return false;
-	}
 }
 
 /*
