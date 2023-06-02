@@ -10,6 +10,7 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
           And the tablespace is valid
+          And the database segments are in execute mode
 
         Given another tablespace is created with data
          When the user runs "gprecoverseg -ra"
@@ -17,6 +18,7 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And the tablespace is valid
           And the other tablespace is valid
+          And the database segments are in execute mode
       Examples:
         | scenario     | args               |
         | incremental  | -a                 |
@@ -646,6 +648,7 @@ Feature: gprecoverseg tests
     Then gprecoverseg should return a return code of 0
     And the segments are synchronized
     And the tablespace is valid
+    And the database segments are in execute mode
 
     Given another tablespace is created with data
     When the user runs "gprecoverseg -ra"
@@ -653,6 +656,7 @@ Feature: gprecoverseg tests
     And the segments are synchronized
     And the tablespace is valid
     And the other tablespace is valid
+    And the database segments are in execute mode
     Examples:
         | scenario     | args               |
         | incremental  | -a                 |

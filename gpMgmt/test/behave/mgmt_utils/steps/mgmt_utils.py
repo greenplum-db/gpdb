@@ -4139,3 +4139,28 @@ def impl(context):
     else:
         return
 
+@then('the database segments are in execute mode')
+def impl(context):
+    # Get primary up segments details except coordinator/standby
+    # A mirror segment always returns same error message if segment is in execute mode and utility mode
+    # So not checking for mirror segments if in execute mode
+    with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
+        sql = "SELECT dbid, hostname, port  FROM gp_segment_configuration WHERE content > -1 and status = 'u' and role = 'p'"
+        rows = dbconn.execSQL(conn, sql).fetchall()
+
+        if len(rows) <= 0:
+            raise Exception("Found no entries in gp_segment_configuration table")
+    # Check for each primary segment
+    for row in rows:
+        dbid = row[0]
+        hostname = row[1].strip()
+        portnum = row[2]
+        cmd = "psql -d template1 -p {0} -h {1} -c \";\"".format(portnum, hostname)
+        run_command(context, cmd)
+        # If node is in execute mode, psql shoud return 2 and the print one of the following error message:
+        # For a primary segment: "psql: error: FATAL:  connections to primary segments are not allowed"
+        if context.ret_code == 2 and \
+            "FATAL:  connections to primary segments are not allowed"  in context.error_message:
+            continue
+        else:
+            raise Exception("segment process not running in execute mode for DBID:{0}".format(dbid))

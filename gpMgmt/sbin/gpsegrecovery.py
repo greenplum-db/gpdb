@@ -296,7 +296,7 @@ def start_segment(recovery_info, logger, era):
         , numContentsInCluster=0
         , era=era
         , mirrormode="mirror"
-        , utilityMode=True)
+        , utilityMode=False)
     logger.info(str(cmd))
     cmd.run(validateAfter=True)
 
