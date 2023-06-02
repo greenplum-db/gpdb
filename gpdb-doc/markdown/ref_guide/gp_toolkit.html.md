@@ -583,7 +583,7 @@ The [gp\_resgroup\_status\_per\_host](system_catalogs/catalog_ref-views.html#gp_
 |`groupid`|The ID of the resource group.|
 |`hostname`|The hostname of the segment host.|
 |`cpu_usage`|The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages (as a float value) of the CPU cores that are used by the resource group on the host.|
-|`memory_usage`|The real-time memory usage of the resource group on each Greenplum Database segment's host.|
+|`memory_usage`|The real-time memory usage of the resource group on each Greenplum Database segment's host, in MB.|
 
 Sample output for the `gp_resgroup_status_per_host` view:
 

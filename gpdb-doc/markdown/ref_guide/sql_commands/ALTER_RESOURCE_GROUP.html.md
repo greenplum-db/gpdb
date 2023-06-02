@@ -47,8 +47,6 @@ CONCURRENCY integer
 CPU_HARD_QUOTA_LIMIT integer
 :   The percentage of the maximum available CPU resources that the resource group can use. The value range is `1-100`. 
 
-The sum of the `CPU_HARD_QUOTA_LIMIT` values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
-
 CPU_SOFT_PRIORITY integer
 :   The scheduling priority of the current group. The value range is `1-500`, the default is `100. 
 
