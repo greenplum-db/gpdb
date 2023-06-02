@@ -1552,7 +1552,7 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars, List *rtable)
  *		select c1 from t1 where c1 NOT IN (select c2 from t2);
  *						(to)
  *		select c1 from t1 left anti semi join (select 0 as zero, c2 from t2) foo
- *						  ON (c1 = c2) IS NOT FALSE where zero is NULL;
+ *						  ON (c1 != c2) IS NOT FALSE where zero is NULL;
  *
  * The pseudoconstant column zero is needed to correctly pipe in the NULLs
  * from the subselect upstream.
