@@ -2340,9 +2340,6 @@ static int setup_write(request_t* r)
  * 1) a GET or PUT request. or,
  * 2) the body of a PUT request (the raw data from client).
  *
- * this is controller by 'is_request' as follows:
- * -- if set to true, use the callback function 'do_read_request'.
- * -- if set to false, use the callback function 'do_read_body'.
  */
 static int setup_read(request_t* r)
 {
