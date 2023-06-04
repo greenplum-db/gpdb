@@ -150,7 +150,12 @@ order by gp_segment_id;
 -- re-allow connections to avoid downstream pg_upgrade --check test error
 alter database limitdb2 with allow_connections = true;
 -- remove rule from pg_hba.conf for connlimit_test_user
+SELECT version() ILIKE '%apple%' AS bsd_sed \gset
+\if :bsd_sed
+\! sed -i '' '$ d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\else
 \! sed -i '$ d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\endif
 select pg_reload_conf();
  pg_reload_conf 
 ----------------

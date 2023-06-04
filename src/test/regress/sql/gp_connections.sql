@@ -7,7 +7,12 @@ drop user if exists user_disallowed_via_local;
 create user user_disallowed_via_local with login;
 
 -- cleanup previous settings if any
+SELECT version() ILIKE '%apple%' AS bsd_sed \gset
+\if :bsd_sed
+\! sed -i '' '/user_disallowed_via_local/d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
+\else
 \! sed -i '/user_disallowed_via_local/d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
+\endif
 -- allow it to login via the [tcp] protocol
 \! echo 'host all user_disallowed_via_local samenet trust' | tee -a $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
 -- disallow it to login via the [local] protocol
@@ -29,7 +34,11 @@ create temp table t1_of_user_disallowed_via_local(c1 int);
 select * from t1_of_user_disallowed_via_local, pg_sleep(0);
 
 -- cleanup settings if any
+\if :bsd_sed
+\! sed -i '' '/user_disallowed_via_local/d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
+\else
 \! sed -i '/user_disallowed_via_local/d' $COORDINATOR_DATA_DIRECTORY/pg_hba.conf;
+\endif
 
 --
 -- Segment connection tests
