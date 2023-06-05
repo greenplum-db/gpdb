@@ -76,7 +76,7 @@ Refer to [gpmapreduce.yaml](../../../utility_guide/ref/gpmapreduce-yaml.html) fo
 
 In this example, you create a MapReduce job that processes text documents and reports on the number of occurrences of certain keywords in each document. The documents and keywords are stored in separate Greenplum Database tables that you create as part of the exercise.
 
-This example MapReduce job utilizes the untrusted `plpythonu` language; as such, you must run the job as a user with Greenplum Database administrative privileges.
+This example MapReduce job utilizes the untrusted `plpython3u` language; as such, you must run the job as a user with Greenplum Database administrative privileges.
 
 1.  Log in to the Greenplum Database coordinator host as the `gpadmin` administrative user and set up your environment. For example:
 
@@ -100,7 +100,7 @@ This example MapReduce job utilizes the untrusted `plpythonu` language; as such,
 4.  Register the PL/Python language in the database. For example:
 
     ```
-    mapredex_db=> CREATE EXTENSION plpythonu;
+    mapredex_db=> CREATE EXTENSION plpython3u;
     ```
 
 5.  Create the `documents` table and add some data to the table. For example:

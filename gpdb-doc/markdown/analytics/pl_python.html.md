@@ -158,7 +158,7 @@ CREATE FUNCTION composite_type_as_list()
   RETURNS type_record[]
 AS $$              
   return [[('first', 1), ('second', 1)], [('first', 2), ('second', 2)], [('first', 3), ('second', 3)]];
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 SELECT * FROM composite_type_as_list();
                                composite_type_as_list                           
@@ -356,7 +356,7 @@ As part of the Greenplum Database installation, the `gpadmin` user environment i
 which python
 ```
 
-The command returns the location of the Python installation. All Greenplum installations include Python 2.7 installed as `$GPHOME/ext/python` and Python 3.9 installed as `$GPHOME/ext/python3.9`:
+The command returns the location of the Python installation. All Greenplum installations include Python 3.9 installed as `$GPHOME/ext/python3.9`:
 
 ```
 which python3.9
@@ -368,7 +368,7 @@ When running shell commands on remote hosts with `gpssh`, specify the `-s` optio
 gpssh -s -f gpdb_hosts which python
 ```
 
-To display the list of currently installed Python 2.7 modules, run this command.
+To display the list of currently installed Python modules, run this command.
 
 ```
 python -c "help('modules')"
@@ -448,16 +448,7 @@ You can use `gpssh` to run the command on the Greenplum Database hosts.
 
 For information about these and other Python packages, see [References](#topic12).
 
-### <a id="pip39"></a>Installing Python Packages for Python 3.9
-
-By default, `greenplum_path.sh` changes the `PYTHONPATH` and `PYTHONHOME` environment variables for use with the installed Python 2.7 environment. In order to install modules using `pip` with Python 3.9, you must first `unset` those parameters. For example to install `numpy` and `scipy` for Python 3.9:
-
-```
-gpssh -s -f gpdb_hosts
-=> unset PYTHONHOME
-=> unset PYTHONPATH
-=> $GPHOME/ext/python3.9 -m pip install numpy scipy
-```
+### <a id="pip39"></a>Installing Python Packages to a Non-Standard Location
 
 You can optionally install Python 3.9 modules to a non-standard location by using the `--prefix` option with `pip`. For example:
 

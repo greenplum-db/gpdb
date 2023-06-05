@@ -186,7 +186,7 @@ $BODY$
 
     p.wait()
 $BODY$
-LANGUAGE plpythonu VOLATILE;
+LANGUAGE plpythoneu VOLATILE;
 ```
 
 When this `SELECT` command is run by the gpadmin user, the `analyzedb` utility performs an analyze operation on the table `public.mytable` that is in the database `mytest`.
@@ -198,7 +198,7 @@ SELECT analyzedb('-d mytest -t public.mytable') ;
 > **Note** To create a PL/Python function, the PL/Python procedural language must be registered as a language in the database. For example, this `CREATE LANGUAGE` command run as gpadmin registers PL/Python as an untrusted language:
 
 ```
-CREATE LANGUAGE plpythonu;
+CREATE LANGUAGE plpython3u;
 ```
 
 ## <a id="seealso"></a>See Also 
