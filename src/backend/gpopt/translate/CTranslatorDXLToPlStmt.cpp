@@ -3572,11 +3572,8 @@ CTranslatorDXLToPlStmt::MutateFuncExprToVarProjectSet(Plan *final_plan)
 			TargetEntry *tle = (TargetEntry *) lfirst(l);
 			Node *newexpr;
 
-
-			FixUpperExprContextProjectset context(subplan->targetlist);
-
-			newexpr =
-				FixUpperExprMutatorProjectSet((Node *) tle->expr, &context);
+			newexpr = FixUpperExprMutatorProjectSet((Node *) tle->expr,
+													subplan->targetlist);
 			tle = gpdb::FlatCopyTargetEntry(tle);
 			tle->expr = (Expr *) newexpr;
 			output_targetlist = lappend(output_targetlist, tle);
@@ -3611,8 +3608,7 @@ SearchTlistForNonVarProjectset(Expr *node, List *itlist, Index newvarno)
 }
 
 Node *
-CTranslatorDXLToPlStmt::FixUpperExprMutatorProjectSet(
-	Node *node, FixUpperExprContextProjectset *context)
+CTranslatorDXLToPlStmt::FixUpperExprMutatorProjectSet(Node *node, List *context)
 {
 	Var *newvar;
 
@@ -3621,8 +3617,7 @@ CTranslatorDXLToPlStmt::FixUpperExprMutatorProjectSet(
 		return nullptr;
 	}
 
-	newvar = SearchTlistForNonVarProjectset(
-		(Expr *) node, context->m_subplan_tlist, OUTER_VAR);
+	newvar = SearchTlistForNonVarProjectset((Expr *) node, context, OUTER_VAR);
 	if (newvar)
 	{
 		return (Node *) newvar;
