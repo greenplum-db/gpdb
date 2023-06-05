@@ -513,16 +513,6 @@ LockDatabaseFrozenIds(LOCKMODE lockmode)
 	(void) LockAcquire(&tag, lockmode, false, false);
 }
 
-void
-UnLockDatabaseFrozenIds(LOCKMODE lockmode)
-{
-	LOCKTAG		tag;
-
-	SET_LOCKTAG_DATABASE_FROZEN_IDS(tag, MyDatabaseId);
-
-	LockRelease(&tag, lockmode, false);
-}
-
 /*
  *		LockPage
  *

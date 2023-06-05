@@ -524,7 +524,6 @@ extern bool gp_adjust_selectivity_for_outerjoins;
  * Target density for hash-node (HJ).
  */
 extern int gp_hashjoin_tuples_per_bucket;
-extern int gp_hashagg_groups_per_bucket;
 
 /*
  * Damping of selectivities of clauses which pertain to the same base
@@ -622,11 +621,6 @@ extern int gp_segworker_relative_priority;
 
 /*  Max size of dispatched plans; 0 if no limit */
 extern int gp_max_plan_size;
-
-/* The default number of batches to use when the hybrid hashed aggregation
- * algorithm (re-)spills in-memory groups to disk.
- */
-extern int gp_hashagg_default_nbatches;
 
 /* Get statistics for partitioned parent from a child */
 extern bool 	gp_statistics_pullup_from_child_partition;
