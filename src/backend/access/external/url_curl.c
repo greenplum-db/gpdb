@@ -1702,11 +1702,53 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		elog(ERROR, "gpfdist error: unknown meta type %d", type);
 	}
 
-	/* read data block */
-	if (bufsz > file->block.datalen)
-		bufsz = file->block.datalen;
+	int left_bytes = file->in.top - file->in.bot;
 
-	fill_buffer(file, bufsz);
+	if (file->zstd)
+	{
+		/* 'lastsize' is the number of bytes required for next decompression.
+		 * 'left_bytes' is the number of bytes remained in 'file->in.ptr'.
+		 * If left_bytes is less than 'lastsize', the next decompression
+		 * can't complete in a decompression operation. Thus, when 
+		 * 'file->lastsize > left_bytes', we need more bytes and fill_buffer is called.
+		 * 
+		 * When the condition 'file->block.datalen == len' is met, a new
+		 * request just start. In this case lastsize is an init value, and 
+		 * cannot provide the information about how many bytes required
+		 * to finish the first frame decompression. In this case, enough
+		 * bytes(more than ZSTD_DStreamInSize() returning) should be filled
+		 * into 'file->in.ptr' to ensure that the first decompression 
+		 * completing.
+		 */
+		if (file->lastsize > left_bytes || file->block.datalen == len)
+		{
+#ifdef USE_ZSTD
+			int wantsz = ZSTD_DStreamInSize() - left_bytes;
+			fill_buffer(file, wantsz);
+			/* Gpfdist could be aborted unexpectedly. Thus gpdb would recieve the partial data, which 
+			 * is unable to be decompressed correctly. In this case, gpdb will report a decompression
+			 * error. However, the error is not the real cause of the abortion. So we add a judge here,
+			 * to check if gpdb get enough data to decompress. The missing data means the network problem.
+			 */
+			left_bytes = (file->in.top - file->in.bot);
+			if (file->lastsize > left_bytes && file->block.datalen)
+			{
+				ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("connection to gpfdist error: stream ends unexpectedly")));
+			}
+#endif
+		}
+	} 
+	else 
+	{
+		/* read data block */
+		if (bufsz > file->block.datalen)
+			bufsz = file->block.datalen;
+
+		fill_buffer(file, bufsz);
+	}
+	
 	n = file->in.top - file->in.bot;
 
 	/* if gpfdist closed connection prematurely or died catch it here */
