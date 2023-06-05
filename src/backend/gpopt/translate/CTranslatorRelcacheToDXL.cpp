@@ -3022,6 +3022,28 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 					GPOS_WSZ_LIT(
 						"Use optimizer_enable_foreign_table to enable Orca with foreign partitions"));
 			}
+
+			// Fall back to planner if there is a foreign partition using the greenplum_fdw
+			// this FDW does some coordinator specific setup and fdw_private populating
+			// in ExecInit* to work with parallel cursors. This must run on the coordinator,
+			// but in Orca is run on the segments. We likely can't use Orca's dynamic scan
+			// approach for this case
+			CWStringConst str_greenplum_fdw(GPOS_WSZ_LIT("greenplum_fdw"));
+			CAutoMemoryPool amp;
+			CMemoryPool *mp = amp.Pmp();
+			CWStringDynamic *fdw_name_str =
+				CDXLUtils::CreateDynamicStringFromCharArray(
+					mp, gpdb::GetRelFdwName(oid));
+
+			if (fdw_name_str->Equals(&str_greenplum_fdw))
+			{
+				GPOS_DELETE(fdw_name_str);
+				GPOS_RAISE(
+					gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+					GPOS_WSZ_LIT(
+						"Queries with partitions of greenplum_fdw are not supported"));
+			}
+			GPOS_DELETE(fdw_name_str);
 			continue;
 		}
 		all_foreign = false;

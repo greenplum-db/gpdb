@@ -2572,4 +2572,18 @@ gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
 	GP_WRAP_END;
 }
 
+char *
+gpdb::GetRelFdwName(Oid reloid)
+{
+	GP_WRAP_START;
+	{
+		Oid fs_id = GetForeignServerIdByRelId(reloid);
+		ForeignServer *fs = GetForeignServer(fs_id);
+		ForeignDataWrapper *fdw = GetForeignDataWrapper(fs->fdwid);
+		return fdw->fdwname;
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
 // EOF
