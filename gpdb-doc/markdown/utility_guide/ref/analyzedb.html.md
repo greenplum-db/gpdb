@@ -186,7 +186,7 @@ $BODY$
 
     p.wait()
 $BODY$
-LANGUAGE plpythoneu VOLATILE;
+LANGUAGE plpython3u VOLATILE;
 ```
 
 When this `SELECT` command is run by the gpadmin user, the `analyzedb` utility performs an analyze operation on the table `public.mytable` that is in the database `mytest`.

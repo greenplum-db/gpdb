@@ -33,10 +33,10 @@ RESTRICT
 
 ## <a id="section5"></a>Examples 
 
-To drop the transform for type `hstore` and language `plpythoneu`:
+To drop the transform for type `hstore` and language `plpython3u`:
 
 ``` sql
-DROP TRANSFORM FOR hstore LANGUAGE plpythoneu;
+DROP TRANSFORM FOR hstore LANGUAGE plpython3u;
 ```
 
 ## <a id="section6"></a>Compatibility 
