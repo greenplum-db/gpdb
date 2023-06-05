@@ -18,7 +18,7 @@
 -- setup
 --
 
-CREATE OR REPLACE VIEW rg_name_view AS SELECT S.rsgname, C.concurrency FROM gp_toolkit.gp_resgroup_config C, gp_toolkit.gp_resgroup_status S WHERE C.groupid = S.groupid AND C.groupname != 'default_group' AND C.groupname != 'admin_group' AND C.groupname != 'system_group' ORDER BY C.groupid;
+CREATE OR REPLACE VIEW rg_name_view AS SELECT S.groupname, C.concurrency FROM gp_toolkit.gp_resgroup_config C, gp_toolkit.gp_resgroup_status S WHERE C.groupid = S.groupid AND C.groupname != 'default_group' AND C.groupname != 'admin_group' AND C.groupname != 'system_group' ORDER BY C.groupid;
 CREATE
 
 -- TODO: need to cleanup all existing resgroups
@@ -33,7 +33,7 @@ CREATE
 ALTER  RESOURCE GROUP rgNameTest01 SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname      | concurrency 
+ groupname    | concurrency 
 --------------+-------------
  rgnametest01 | 2           
 (1 row)
@@ -44,7 +44,7 @@ CREATE
 ALTER  RESOURCE GROUP __rg_name_test_01__ SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname             | concurrency 
+ groupname           | concurrency 
 ---------------------+-------------
  __rg_name_test_01__ | 2           
 (1 row)
@@ -63,7 +63,7 @@ CREATE
 ALTER  RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789 SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname                                                         | concurrency 
+ groupname                                                       | concurrency 
 -----------------------------------------------------------------+-------------
  max012345678901234567890123456789012345678901234567890123456789 | 2           
 (1 row)
@@ -75,7 +75,7 @@ CREATE
 ALTER  RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789are SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname                                                         | concurrency 
+ groupname                                                       | concurrency 
 -----------------------------------------------------------------+-------------
  max012345678901234567890123456789012345678901234567890123456789 | 2           
 (1 row)
@@ -89,7 +89,7 @@ CREATE
 ALTER  RESOURCE GROUP "newlines s p a c e s t	a	b	s" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname                      | concurrency 
+ groupname                    | concurrency 
 ------------------------------+-------------
  newlines
 s p a c e s
@@ -103,7 +103,7 @@ CREATE
 ALTER  RESOURCE GROUP "!#$%&`()*+,-./:;<=>?@[]^_{|}~" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname                       | concurrency 
+ groupname                     | concurrency 
 -------------------------------+-------------
  !#$%&`()*+,-./:;<=>?@[]^_{|}~ | 2           
 (1 row)
@@ -115,7 +115,7 @@ CREATE
 ALTER  RESOURCE GROUP "'' are 2 single quotation marks" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname                         | concurrency 
+ groupname                       | concurrency 
 ---------------------------------+-------------
  '' are 2 single quotation marks | 2           
 (1 row)
@@ -126,7 +126,7 @@ CREATE
 ALTER  RESOURCE GROUP """ is 1 double quotation mark" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname                      | concurrency 
+ groupname                    | concurrency 
 ------------------------------+-------------
  " is 1 double quotation mark | 2           
 (1 row)
@@ -139,7 +139,7 @@ CREATE
 ALTER  RESOURCE GROUP "0 as prefix" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname     | concurrency 
+ groupname   | concurrency 
 -------------+-------------
  0 as prefix | 2           
 (1 row)
@@ -150,7 +150,7 @@ CREATE
 ALTER  RESOURCE GROUP " leading space" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname        | concurrency 
+ groupname      | concurrency 
 ----------------+-------------
   leading space | 2           
 (1 row)
@@ -163,7 +163,7 @@ CREATE
 ALTER  RESOURCE GROUP "\\ are two backslashes" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname                | concurrency 
+ groupname              | concurrency 
 ------------------------+-------------
  \\ are two backslashes | 2           
 (1 row)
@@ -183,7 +183,7 @@ ALTER
 ALTER  RESOURCE GROUP "\u0072\u0067\u0031" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname            | concurrency 
+ groupname          | concurrency 
 --------------------+-------------
  \o162\o147\o61     | 2           
  \x72\x67\x31       | 2           
@@ -207,9 +207,9 @@ CREATE
 ALTER  RESOURCE GROUP U&"\0441\043B\043E\043D" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- слон    | 2           
+ groupname | concurrency 
+-----------+-------------
+ слон      | 2           
 (1 row)
 DROP   RESOURCE GROUP U&"\0441\043B\043E\043D";
 DROP
@@ -219,9 +219,9 @@ CREATE
 ALTER  RESOURCE GROUP "rg1" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- rg1     | 2           
+ groupname | concurrency 
+-----------+-------------
+ rg1       | 2           
 (1 row)
 DROP   RESOURCE GROUP "rg1";
 DROP
@@ -232,9 +232,9 @@ CREATE
 ALTER  RESOURCE GROUP "资源组" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- 资源组     | 2           
+ groupname | concurrency 
+-----------+-------------
+ 资源组       | 2           
 (1 row)
 DROP   RESOURCE GROUP 资源组;
 DROP
@@ -243,7 +243,7 @@ CREATE
 ALTER  RESOURCE GROUP "リソース・グループ" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname   | concurrency 
+ groupname | concurrency 
 -----------+-------------
  リソース・グループ | 2           
 (1 row)
@@ -254,9 +254,9 @@ CREATE
 ALTER  RESOURCE GROUP "자원그룹" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- 자원그룹    | 2           
+ groupname | concurrency 
+-----------+-------------
+ 자원그룹      | 2           
 (1 row)
 DROP   RESOURCE GROUP 자원그룹;
 DROP
@@ -274,7 +274,7 @@ ALTER
 ALTER  RESOURCE GROUP "RG_NAME_TEST" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname      | concurrency 
+ groupname    | concurrency 
 --------------+-------------
  RG_NAME_TEST | 2           
  rg_name_test | 2           
@@ -291,9 +291,9 @@ CREATE
 ALTER  RESOURCE GROUP "None" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- None    | 2           
+ groupname | concurrency 
+-----------+-------------
+ None      | 2           
 (1 row)
 DROP   RESOURCE GROUP "None";
 DROP
@@ -302,9 +302,9 @@ CREATE
 ALTER  RESOURCE GROUP "NONE" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- NONE    | 2           
+ groupname | concurrency 
+-----------+-------------
+ NONE      | 2           
 (1 row)
 DROP   RESOURCE GROUP "NONE";
 DROP
@@ -313,7 +313,7 @@ CREATE
 ALTER  RESOURCE GROUP "DEFAULT_GROup" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname       | concurrency 
+ groupname     | concurrency 
 ---------------+-------------
  DEFAULT_GROup | 2           
 (1 row)
@@ -324,7 +324,7 @@ CREATE
 ALTER  RESOURCE GROUP "ADMIN_GROUP" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname     | concurrency 
+ groupname   | concurrency 
 -------------+-------------
  ADMIN_GROUP | 2           
 (1 row)
@@ -336,9 +336,9 @@ CREATE
 ALTER  RESOURCE GROUP "with" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- with    | 2           
+ groupname | concurrency 
+-----------+-------------
+ with      | 2           
 (1 row)
 DROP   RESOURCE GROUP "with";
 DROP
@@ -347,9 +347,9 @@ CREATE
 ALTER  RESOURCE GROUP "WITH" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- WITH    | 2           
+ groupname | concurrency 
+-----------+-------------
+ WITH      | 2           
 (1 row)
 DROP   RESOURCE GROUP "WITH";
 DROP
@@ -358,9 +358,9 @@ CREATE
 ALTER  RESOURCE GROUP "group" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- group   | 2           
+ groupname | concurrency 
+-----------+-------------
+ group     | 2           
 (1 row)
 DROP   RESOURCE GROUP "group";
 DROP
@@ -369,9 +369,9 @@ CREATE
 ALTER  RESOURCE GROUP "create" SET concurrency 2;
 ALTER
 SELECT * FROM rg_name_view;
- rsgname | concurrency 
----------+-------------
- create  | 2           
+ groupname | concurrency 
+-----------+-------------
+ create    | 2           
 (1 row)
 DROP   RESOURCE GROUP "create";
 DROP

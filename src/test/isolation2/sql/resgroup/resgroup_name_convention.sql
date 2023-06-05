@@ -19,7 +19,7 @@
 --
 
 CREATE OR REPLACE VIEW rg_name_view AS
-	SELECT S.rsgname, C.concurrency
+	SELECT S.groupname, C.concurrency
 	FROM gp_toolkit.gp_resgroup_config C, gp_toolkit.gp_resgroup_status S
 	WHERE C.groupid = S.groupid
 	  AND C.groupname != 'default_group'
