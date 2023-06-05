@@ -99,7 +99,7 @@ typedef struct
 				eof;			/* error & eof flags */
 	int			gp_proto;
 	
-	int 			zstd;			/* if gpfdist zstd compress is enabled, it equals 1 */
+	int 			zstd;			/* if gpfdist zstd compression is enabled, it equals 1 */
 	int 			lastsize;		/* Recording the compressed data size */
 	
 	char	   		*http_response;
@@ -1638,10 +1638,11 @@ decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 {
 	
 	size_t ret;
-	/* Ret indicates the number of bytes of next data frame to be decompressed.
-	 * And if an error occur in ZSTD_decompressStream, ret will be a error number.
-	 * If ZSTD_isError is true, the ret is a error number.
-	 * The content of the error can be got by ZSTD_getErrorName..
+	/* 
+	 * The return value ret indicates the number of bytes of next data frame to be decompressed.
+	 * And if an error occurs in ZSTD_decompressStream, ret will be an error number.
+	 * If ZSTD_isError is true, the ret is an error number.
+	 * The content of the error can be got by ZSTD_getErrorName.
 	 */
 	ret = ZSTD_decompressStream(ctx, bout, bin);
 
@@ -1839,19 +1840,20 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 
 	if (file->zstd)
 	{
-		/* 'lastsize' is the number of bytes required for next decompression.
+		/* 
+		 * 'lastsize' is the number of bytes required for next decompression.
 		 * 'left_bytes' is the number of bytes remained in 'file->in.ptr'.
-		 * If left_bytes is less than 'lastsize', the next decompression
+		 * If 'left_bytes' is less than 'lastsize', the next decompression
 		 * can't complete in a decompression operation. Thus, when 
-		 * 'file->lastsize > left_bytes', we need more bytes and fill_buffer is called.
+		 * 'file->lastsize > left_bytes', we need more bytes and fill_buffer() is called.
 		 * 
 		 * When the condition 'file->block.datalen == len' is met, a new
-		 * request just start. In this case lastsize is an init value, and 
-		 * cannot provide the information about how many bytes required
+		 * request just starts. In this case, lastsize is an init value, and 
+		 * can not provide the information about how many bytes required
 		 * to finish the first frame decompression. In this case, enough
-		 * bytes(more than ZSTD_DStreamInSize() returning) should be filled
+		 * bytes (more than ZSTD_DStreamInSize() returning) should be filled
 		 * into 'file->in.ptr' to ensure that the first decompression 
-		 * completing.
+		 * will complete successfully.
 		 */
 		if (file->lastsize > left_bytes || file->block.datalen == len)
 		{
@@ -1884,7 +1886,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	
 	n = file->in.top - file->in.bot;
 
-	/* if gpfdist closed connection prematurely or died catch it here */
+	/* if gpfdist closed connection prematurely or died, catch it here */
 	if (n == 0 && !file->eof)
 	{
 		file->error = 1;
@@ -1905,11 +1907,12 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	if (file->zstd && file->curl->zstd_dctx && !file->eof)
 	{
 		int ret;
-		/* It is absolutely to put the decompression code in a loop.
+		/* 
+		 * I think it is correct to put the decompression code in a loop.
 		 * Since not every call of decompress_zstd_data will get data into bout.
 		 * However, even thought there is no data in bout, the call of 
 		 * decompress_zstd_data is neccersary for following decompression.
-		 * If a empty buf is returned to gpdb, the error will occur. 
+		 * If an empty buf is returned to gpdb, the error will occur. 
 		 * So the loop ensures that we push forward the decompression until there 
 		 * is data in bout.
 		 */
