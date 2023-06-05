@@ -996,15 +996,10 @@ externalgettup_custom(FileScanDesc scan)
 			 * to track the progress of the current processing, which can indicate the 
 			 * start and end positions of a line. Unfortunately, cursor operations may 
 			 * not be reliable across all formatters. If the cursor remains unchanged, 
-			 * GPDB will store all remaining data in fmt_databuf into line_buf.
+			 * GPDB will not write any data into error log.
 			 */
 
 			int line_len = formatter->fmt_databuf.cursor - line_begin;
-			if ( line_len == 0 && 
-				formatter->fmt_databuf.len > formatter->fmt_databuf.cursor)
-			{
-				line_len = formatter->fmt_databuf.len - line_begin;
-			}
 
 			/*
 			 * Examine the function results. If an error was caught we
@@ -1016,20 +1011,19 @@ externalgettup_custom(FileScanDesc scan)
 				switch (formatter->fmt_notification)
 				{
 					case FMT_NONE:
-
 						/* got a tuple back */
 						tuple = formatter->fmt_tuple;
-						
 						if (pstate->cdbsreh)
 						{
 							pstate->cdbsreh->processed++;
 							resetStringInfo(&pstate->line_buf);
 							/* 
-							 * Cursor is the start of next row, and row_size is the size of last row. 
-							 * So the start of last row is cursor minus row_size.
+							 * Copy the data into pstate->line_buf in case that the error
+							 * occurs during the following phases.
 							 */
-							char *src =  formatter->fmt_databuf.data + line_begin;
-							appendBinaryStringInfo(&pstate->line_buf, src, line_len);
+							appendBinaryStringInfo(&pstate->line_buf, 
+													formatter->fmt_databuf.data + line_begin, 
+													line_len);
 						}
 
 						MemoryContextReset(formatter->fmt_perrow_ctx);
