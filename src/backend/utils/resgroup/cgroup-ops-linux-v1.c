@@ -970,9 +970,8 @@ setcpulimit_v1(Oid group, int cpu_hard_limit)
 
 	if (cpu_hard_limit > 0)
 	{
-		int64 periods = get_cfs_period_us_v1(component);
 		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us",
-				   periods * cgroupSystemInfoV1.ncores * cpu_hard_limit / 100);
+				   system_cfs_quota_us * cpu_hard_limit * gp_resource_group_cpu_limit / 100);
 	}
 	else
 	{

@@ -244,3 +244,17 @@ SELECT groupname,cpu_hard_quota_limit,cpuset FROM gp_toolkit.gp_resgroup_config 
 ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 10;
 SELECT groupname,cpu_hard_quota_limit,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
+
+-- test set cpu_hard_quota_limit to high value when gp_resource_group_cpu_limit is low
+-- start_ignore
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.5;
+!\retcode gpstop -ari;
+-- end_ignore
+0: CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10);
+0: ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 100;
+0: DROP RESOURCE GROUP rg_test_group;
+-- start_ignore
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.9; 
+!\retcode gpstop -ari;
+-- end_ignore
+
