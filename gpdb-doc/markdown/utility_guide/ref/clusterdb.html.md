@@ -16,13 +16,11 @@ clusterdb -V | --version
 
 ## <a id="section3"></a>Description 
 
-XXX To cluster a table means to physically reorder a table on disk according to an index so that index scan operations can access data on disk in a somewhat sequential order, thereby improving index seek performance for queries that use that index.
+To cluster a table means to physically reorder a table on disk according to an index. Clustering is a one-time operation: when the table is subsequently updated, the changes are not clustered. That is, no attempt is made to store new or updated rows according to their index order.
 
 The `clusterdb` utility will find any tables in a database that have previously been clustered with the `CLUSTER` SQL command, and clusters them again on the same index that was last used. Tables that have never been clustered are not affected.
 
 `clusterdb` is a wrapper around the SQL command [CLUSTER](../../ref_guide/sql_commands/CLUSTER.html). There is no effective difference between clustering databases via this utility and via other methods for accessing the server.
-
-XXX If you do need to order a table in this way to improve your query performance, use a `CREATE TABLE AS` statement to reorder the table on disk rather than using `CLUSTER`. If you do 'cluster' a table in this way, then `clusterdb` would not be relevant.
 
 ## <a id="section4"></a>Options 
 
