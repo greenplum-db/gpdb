@@ -356,11 +356,13 @@ def main():
         pipeline_file_suffix = suggested_git_branch()
         if args.user != getpass.getuser():
             pipeline_file_suffix = args.user
+        pipeline_file_suffix = pipeline_file_suffix.replace("/", "_")
         default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '-' + args.os_type + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     if args.directed_release:
         pipeline_file_suffix = suggested_git_branch()
+        pipeline_file_suffix = pipeline_file_suffix.replace("/", "_")
         default_dev_output_filename = pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
