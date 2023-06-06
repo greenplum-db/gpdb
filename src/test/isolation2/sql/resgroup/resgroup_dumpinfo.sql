@@ -8,7 +8,6 @@ CREATE LANGUAGE plpython3u;
 CREATE FUNCTION dump_test_check() RETURNS bool
 as $$
 import json
-import pg
 
 def validate(json_obj, segnum):
    array = json_obj.get("info")
@@ -44,24 +43,22 @@ def validate(json_obj, segnum):
 
    return True
 
-conn = pg.connect(dbname="postgres")
-
-r = conn.query("select count(*) from gp_segment_configuration where  role = 'p';")
-n = r.getresult()[0][0]
+r = plpy.execute("select count(*) from gp_segment_configuration where  role = 'p';")
+n = r[0]['count']
 
 # The pg_resgroup_get_status_kv() function must output valid result in CTAS
 # and simple select queries
 
-r = conn.query("select value from pg_resgroup_get_status_kv('dump');")
-json_text =  r.getresult()[0][0]
+r = plpy.execute("select value from pg_resgroup_get_status_kv('dump');")
+json_text =  r[0]['value']
 json_obj = json.loads(json_text)
 if not validate(json_obj, n):
    return False
 
-conn.query("""CREATE TEMPORARY TABLE t_pg_resgroup_get_status_kv AS
+plpy.execute("""CREATE TEMPORARY TABLE t_pg_resgroup_get_status_kv AS
               SELECT * FROM pg_resgroup_get_status_kv('dump');""")
-r = conn.query("SELECT value FROM t_pg_resgroup_get_status_kv;")
-json_text =  r.getresult()[0][0]
+r = plpy.execute("SELECT value FROM t_pg_resgroup_get_status_kv;")
+json_text = r[0]['value']
 json_obj = json.loads(json_text)
 
 return validate(json_obj, n)
