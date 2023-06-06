@@ -779,25 +779,93 @@ reset optimizer_enforce_subplans;
 DROP TABLE IF EXISTS t1;
 DROP TABLE IF EXISTS supplier;
 
--------------------------------------------------------------------------------------------------------------
--- Planner should fail due to skip-level correlation not supported. Query should not cause segfault on ORCA
--------------------------------------------------------------------------------------------------------------
-create table skip_correlated_t1(a int, b int) distributed by (a);
-create table skip_correlated_t2(a int, b int) distributed by (a);
-create table skip_correlated_t3(a int, b int) distributed by (a);
-create table skip_correlated_t4(a int, b int) distributed by (a);
-explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 left join skip_correlated_t3 on (EXISTS ( select skip_correlated_t1.b from skip_correlated_t2))));
-explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 left join skip_correlated_t3 on (EXISTS (select 1 from skip_correlated_t2 where a > skip_correlated_t1.b))));
-explain select * from skip_correlated_t1 where (EXISTS ( select skip_correlated_t2.a from skip_correlated_t2 inner join skip_correlated_t3 on skip_correlated_t2.a=skip_correlated_t3.a left join skip_correlated_t4 on (EXISTS (select skip_correlated_t1.b from skip_correlated_t2))));
+--------------------------------------------------------------------------------
+-- Planner should fail due to skip-level correlation not supported. Query should
+-- not cause segfault on ORCA. Currently ORCA is falling back to planner which
+-- is undesired. Github Issue #15693
+--------------------------------------------------------------------------------
+CREATE TABLE skip_correlated_t1 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
 
----------------------------------------------------------------------------------------------------
--- Query should not cause segfault on ORCA.Will fallback to planner as no plan is computed by ORCA
----------------------------------------------------------------------------------------------------
-explain select * from skip_correlated_t1 where (EXISTS (select skip_correlated_t2.a from skip_correlated_t2 left join skip_correlated_t3 on skip_correlated_t3.a =ALL(select skip_correlated_t1.a from skip_correlated_t2)));
-drop table skip_correlated_t1;
-drop table skip_correlated_t2;
-drop table skip_correlated_t3;
-drop table skip_correlated_t4;
+CREATE TABLE skip_correlated_t2 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+
+CREATE TABLE skip_correlated_t3 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+
+CREATE TABLE skip_correlated_t4 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON EXISTS (
+        SELECT skip_correlated_t1.b
+        FROM skip_correlated_t2
+    )
+);
+
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON (
+        EXISTS (
+            SELECT 1
+            FROM skip_correlated_t2
+            WHERE a > skip_correlated_t1.b
+        )
+        )
+);
+
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             INNER JOIN skip_correlated_t3 ON skip_correlated_t2.a = skip_correlated_t3.a
+             LEFT JOIN skip_correlated_t4 ON (
+        EXISTS (
+            SELECT skip_correlated_t1.b
+            FROM skip_correlated_t2
+        )
+        )
+);
+
+--------------------------------------------------------------------------------
+-- Query should not cause segfault on ORCA. Will fallback to planner as no plan
+-- is computed by ORCA. Github Issue #15693
+--------------------------------------------------------------------------------
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON skip_correlated_t3.a = ALL (
+        SELECT skip_correlated_t1.a
+        FROM skip_correlated_t2
+    )
+);
+
+DROP TABLE skip_correlated_t1;
+DROP TABLE skip_correlated_t2;
+DROP TABLE skip_correlated_t3;
+DROP TABLE skip_correlated_t4;
 
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql

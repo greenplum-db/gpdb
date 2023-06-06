@@ -575,18 +575,7 @@ CJoinStatsProcessor::DeriveJoinStats(CMemoryPool *mp,
 	IStatistics *join_stats = CJoinStatsProcessor::CalcAllJoinStats(
 		mp, statistics_array, local_expr, exprhdl.Pop());
 
-
-	// If expr_with_outer_refs is a CScalarConst and the join operator is
-	// CLogicalNAryJoin then outer references stats will not be derived.This is
-	// because it will lead to a crash.When the query contains a left join or a
-	// cascading of left and inner joins, the join operator will be CLogicalNAryJoin
-	// and the CScalarNAryJoinPredList will contain the ON predicates for inner joins
-	// and left joins as its children.So if expr_with_outer_refs is a CScalarConst and
-	// not CScalarNAryJoinPredList then it will lead to a crash while accessing the
-	// children of CScalarConst.
-	if (exprhdl.HasOuterRefs() && 0 < stats_ctxt->Size() &&
-		!(exprhdl.Pop()->Eopid() == COperator::EopLogicalNAryJoin &&
-		  CUtils::FScalarConstTrue(expr_with_outer_refs)))
+	if (exprhdl.HasOuterRefs() && 0 < stats_ctxt->Size())
 	{
 		// derive stats based on outer references
 		IStatistics *stats = DeriveStatsWithOuterRefs(
