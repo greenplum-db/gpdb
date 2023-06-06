@@ -47,17 +47,6 @@ class ForeignKeyCheck:
         if catname in COORDINATOR_ONLY_TABLES:
             return
 
-        # GPDB_12_MERGE_FIXME: Left outer join query generated below
-        # joins pg_rewrite and pg_attribute on ev_class == attrelid.
-        # This reports false positives (presence of null tuples) for
-        # the case when a view is defined with no columns.  The query
-        # should ideally exclude such views by adding
-        # pg_class.relnatts to the join.  But that's not possible
-        # without significantly changing the existing query generation
-        # logic.
-        if catname == 'pg_rewrite':
-            return
-
         # skip shared/non-shared tables
         if self.shared_option:
             if re.match("none", self.shared_option, re.I) and isShared:

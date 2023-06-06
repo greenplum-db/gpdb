@@ -2265,6 +2265,13 @@ def impl(context, tabletype, tablename, dbname):
 def impl(context, tabletype, table_name, dbname):
     create_partition(context, tablename=table_name, storage_type=tabletype, dbname=dbname, with_data=True)
 
+@given('there is a view without columns in "{dbname}"')
+@then('there is a view without columns in "{dbname}"')
+@when('there is a view without columns in "{dbname}"')
+def impl(context, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+        dbconn.execSQL(conn, "create view v_no_cols as select;")
+        conn.commit()
 
 @then('read pid from file "{filename}" and kill the process')
 @when('read pid from file "{filename}" and kill the process')

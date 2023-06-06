@@ -294,6 +294,7 @@ Feature: gpcheckcat tests
         Given database "fkey_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
         And there is a "heap" table "gpadmin_tbl" in "fkey_db" with data
+        And there is a view without columns in "fkey_db"
         When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_class" with key "oid" in the database "fkey_db"
         Then the user runs "gpcheckcat -E -R missing_extraneous fkey_db"
         And gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_class" to stdout
