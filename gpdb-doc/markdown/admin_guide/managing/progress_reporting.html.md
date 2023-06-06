@@ -1,20 +1,20 @@
 # Monitoring Long-Running Operations
 
-Greenplum Database can report the progress of `ANALYZE`, `CLUSTER`, `COPY`, `CREATE INDEX`, `REINDEX`, and `VACUUM` commands during command execution, with some caveats. Greeplum can also report the progress of a running base backup (initiated during [gprecoverseg](../../utility_guide/ref/gprecoverseg.html)) or [pg_checksums](../../utility_guide/ref/pg_checksums.html) command invocation, allowing you to monitor the progress of these possibly long-running operations.
+Greenplum Database can report the progress of `ANALYZE`, `CLUSTER`, `COPY`, `CREATE INDEX`, `REINDEX`, and `VACUUM` commands during command execution. Greenplum can also report the progress of a running base backup (initiated during [gprecoverseg](../../utility_guide/ref/gprecoverseg.html)) command invocation, allowing you to monitor the progress of these possibly long-running operations.
 
 Greenplum reports the command progress via ephemeral system views, which return data only while the operations are running. Two sets of progress reporting views are provided:
 
 - `gp_stat_progress_<command>` - displays the progress of running `<command>` invocations on the coordinator and all segments, with a row per segment instance
 - `gp_stat_progress_<command>_summary` - aggregates `<command>` progress on the coordinator and all segments, and displays one row per running `<command>` invocation
 
-Greeplum reports progress in phases, where the phases are specific to the command. For example, `acquiring sample rows` is an analyze progress phase, while `building index` is an index creation progress phase. Greenplum reports the progress for both heap and AO/CO tables. For most commands, heap and AO/CO table progress is reported together. For vacuum and cluster operations, Greenplum reports heap and AO/CO table progress in separate phases.
+Greenplum reports progress in phases, where the phases are specific to the command. For example, `acquiring sample rows` is an analyze progress phase, while `building index` is an index creation progress phase. Greenplum reports the progress for both heap and AO/CO tables. For most commands, heap and AO/CO table share the same phases. For vacuum and cluster operations, Greenplum reports heap and AO/CO table progress in separate phases.
 
 
 ## <a id="analyze_progress"></a>ANALYZE Progress Reporting
 
 The [gp_stat_progress_analyze](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_analyze) system view reports the progress of running `ANALYZE` and `analyzedb` operations. The view displays a row per segment instance that is currently servicing an analyze operation.
 
-For each active analyze operation, the `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_analyze`, and shares the same schema as this view.
+For each active analyze operation, the `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_analyze`.
 
 The table below describes how to interpret the phase-specific information reported in the views:
 
@@ -30,9 +30,9 @@ The table below describes how to interpret the phase-specific information report
 
 ## <a id="cluster_progress"></a>CLUSTER and VACUUM FULL Progress Reporting
 
-The [gp_stat_progress_cluster](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_cluster) system view reports the progress of running `CLUSTER`, `clusterdb`, and `VACUUM FULL` operations. (`VACUUM FULL` is similar to `CLUSTER` in that Greenplum performs a re-write of the table.) The view displays a row per segment instance that is currently servicing any of the mentioned commands.
+The [gp_stat_progress_cluster](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_cluster) system view reports the progress of running `CLUSTER`, `clusterdb`, and `VACUUM FULL` (on a heap table) operations. (`VACUUM FULL` on a heap table is similar to `CLUSTER` in that Greenplum performs a re-write of the table.) The view displays a row per segment instance that is currently servicing any of the mentioned commands.
 
-For each active cluster or vacuum full operation, the `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_cluster`, and shares the same schema as this view.
+For each active cluster or vacuum full operation, the `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_cluster`.
 
 ### <a id="cluster_progress_heap"></a>Heap Table Cluster Phases
 
@@ -67,9 +67,9 @@ The table below describes how to interpret the *AO/CO table* phase-specific info
 
 The [gp_stat_progress_copy](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_copy) system view reports the progress of running `COPY` operations. The view displays a row per segment instance that is currently servicing a copy operation.
 
-For each active copy operation, the `gp_stat_progress_copy_summary` aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_copy`, and shares the same schema as this view.
+For each active copy operation, the `gp_stat_progress_copy_summary` aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_copy`.
 
-You can also use these views to monitor the data movement progress of utilities that use `COPY` under the hood, such as XXX.
+You can also use these views to monitor the data movement progress of utilities that use `COPY` under the hood, such as `gpbackup/gprestore`.
 
 Greenplum Database calculates the `bytes_processed`, `bytes_total`, `tuples_processed`, and `tuples_excluded` column values differently for the `gp_stat_progress_copy_summary` view depending on the type of table and type of `COPY` operation. The table below identifies the table types, the types of `COPY` operations, and which of `sum()` or `average()` Greenplum Database uses to calculate the final value:
 
@@ -87,7 +87,7 @@ Greenplum uses `sum()` for `COPY TO` with replicated tables, as the actual copy 
 
 The [gp_stat_progress_create_index](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_create_index) system view reports the progress of running `CREATE INDEX` and `REINDEX` operations. The view displays a row per segment instance that is currently servicing either command.
 
-For each active index operation, the `gp_stat_progress_create_index_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_create_index`, and shares the same schema as this view. 
+For each active index operation, the `gp_stat_progress_create_index_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_create_index`.
 
 The table below describes how to interpret the phase-specific information reported in the views:
 
@@ -108,13 +108,13 @@ Greenplum Database skips several phases because it does not support concurrent i
 
 ## <a id="vacuum_progress"></a>VACUUM Progress Reporting
 
-The [gp_stat_progress_vacuum](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_vacuum) system view reports the progress of running `VACUUM` and `vacuumdb` operations. The view displays a row per segment instance that is currently servicing a vacuum operation.
+The [gp_stat_progress_vacuum](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_vacuum) system view reports the progress of running `VACUUM` and `vacuumdb` operations on AO/CO and heap tables, and `VACUUM FULL` operations on AO/CO tables. The view displays a row per segment instance that is currently servicing a vacuum operation.
 
-For each active vacuum operation, the `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_vacuum`, and shares the same schema as this view.
+For each active vacuum operation, the `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_vacuum`.
 
-(Regular `VACUUM` modifies the table in place. `VACUUM FULL` rewrites the table as does a `CLUSTER` operation. For information about progress reporting for `VACUUM FULL`, see [CLUSTER and VACUUM FULL Progress Reporting](#cluster_progress).)
+(Regular `VACUUM` modifies the table in place. `VACUUM FULL` on a heap table rewrites the table as does a `CLUSTER` operation. For information about progress reporting for `VACUUM FULL` on a heap table, see [CLUSTER and VACUUM FULL Progress Reporting](#cluster_progress).)
 
-In Greenplum Database, an AO/CO table vacuum behaves differently than a heap table vacuum. Because Greenplum stores the logical EOF for each segment file, it does not need to scan physical blocks after the logical EOF, so Greenplum can truncate them. Due to this difference, Greenplum reports vacuum progress on heap and AO/CO tables using different phases.
+In Greenplum Database, an AO/CO table vacuum behaves differently than a heap table vacuum. Because Greenplum stores the logical EOF for each segment file, it does not need to scan physical blocks after the logical EOF, so Greenplum can truncate them. Greenplum always rewrites data into new segment files to get rid of dead tuples for AO/CO tables, and so performs the same operations for both `VACUUM FULL` and `VACUUM`. Due to these difference, Greenplum reports vacuum progress on heap and AO/CO tables using different phases.
 
 ### <a id="vacuum_progress_heap"></a>Heap Table Vacuum Phases
 
@@ -138,16 +138,16 @@ The table below describes how to interpret the *AO/CO table* phase-specific info
 |-----|-----------|
 | `initializing` | `VACUUM` is preparing to begin scanning AO/CO tables. This phase is expected to be very brief. |
 | `vacuuming indexes` | For AO/CO tables, the `vacuuming indexes` phase is a sub-phase that may occur during both `append-optimized pre-cleanup` and `append-optimized post-cleanup` phases if the relation has an index and there are invisible awaiting-drop segment files. |
-| `append-optimized pre-cleanup` | XXX |
-| `append-optimized compact` | XXX |
-| `append-optimized post-cleanup` | XXX |
+| `append-optimized pre-cleanup` | `VACUUM` is performing pre-cleanup of the AO/CO table; this includes recycling `AWAITING_DROP` segments that are no longer visible to anyone from previous `VACUUM` operations, and truncating all live segment files to their logcial EOFs. Use `heap_blks_vacuumed` and `index_vacuum_count` to monitor the progress. |
+| `append-optimized compact` | `VACUUM` is vacuuming (or "compacting") the AO/CO table by scanning the segment files and rewriting only the surviving tuples into new segment files. Use `heap_blks_scanned` and `num_dead_tuples` to monitor the progress. |
+| `append-optimized post-cleanup` | `VACUUM` is performing post-cleanup of the AO/CO table; this includes recycling old segments that are no longer visible after the "compact" phase, and truncating all live segment files to their logcial EOFs. Use `heap_blks_vacuumed` and `index_vacuum_count` to monitor the progress. |
 
 
 ## <a id="basebackup_progress"></a>Base Backup Progress Reporting
 
-The [gp_stat_progress_basebackup](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_basebackup) system view reports the progress of running base backup operations, as is performed by `gpcoverseg`. The view displays a row per segment instance that is currently servicing replication commands.
+The [gp_stat_progress_basebackup](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_basebackup) system view reports the progress of running base backup operations, as is performed by `gprecoverseg`. The view displays a row per segment instance that is currently servicing replication commands.
 
-For each active base backup operation, the `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_basebackup`, and shares the same schema as this view.
+For each active base backup operation, the `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_basebackup`.
 
 The table below describes how to interpret the phase-specific information reported in the views:
 
@@ -160,10 +160,6 @@ The table below describes how to interpret the phase-specific information report
 | `waiting for wal archiving to finish` | The WAL sender process is currently performing `pg_backup_stop` to finish the backup, and waiting for all the WAL files required for the base backup to be successfully archived. The backup ends when this phase is completed. |
 | `transferring wal files` | The WAL sender process is currently transferring all WAL logs generated during the backup. This phase may occur after `waiting for wal archiving to finish` phase. The backup ends when this phase is completed. |
 
-
-## <a id="pg_checksums_progress"></a>pg_checksums Progress Reporting
-
-To obtain run-time progress when enabling, disabling, or checking data checksums in a database, you can provide the `-P/--progress` option to the [pg_checksums](../../utility_guide/ref/pg_checksums.html) Greenplum Database utility command.
 
 ## <a id="realtime_progress"></a>Example: Viewing Real-Time Command Progress
 

@@ -517,7 +517,7 @@ The `gp_stat_activity` view is a cluster-wide view that displays the [`pg_stat_a
 
 The `gp_stat_progress_analyze` view is a cluster-wide view that displays the [pg_stat_progress_analyze](https://www.postgresql.org/docs/15/progress-reporting.html#ANALYZE-PROGRESS-REPORTING) information from every primary segment for all currently-running `ANALYZE` operations.
 
-The `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_analyze`, and shares the same schema as this view.
+The `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_analyze`.
 
 |Column|Type|Description|
 |------|----|-----------|
@@ -539,7 +539,7 @@ The `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Data
 
 The `gp_stat_progress_basebackup` view is a cluster-wide view that displays the [pg_stat_progress_basebackup](https://www.postgresql.org/docs/15/progress-reporting.html#BASEBACKUP-PROGRESS-REPORTING) information from every primary segment for all currently-running base backup operations (`gprecoverseg`).
 
-The `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_basebackup`, and shares the same schema as this view.
+The `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_basebackup`.
 
 |Column|Type|Description|
 |------|----|-----------|
@@ -553,9 +553,9 @@ The `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum D
 
 ### <a id="gp_stat_progress_cluster"></a>gp_stat_progress_cluster
 
-The `gp_stat_progress_cluster` view is a cluster-wide view that displays the [pg_stat_progress_cluster](https://www.postgresql.org/docs/15/progress-reporting.html#CLUSTER-PROGRESS-REPORTING) information from every primary segment for all currently-running `CLUSTER` and `VACUUM FULL` operations.
+The `gp_stat_progress_cluster` view is a cluster-wide view that displays the [pg_stat_progress_cluster](https://www.postgresql.org/docs/15/progress-reporting.html#CLUSTER-PROGRESS-REPORTING) information from every primary segment for all currently-running `CLUSTER` and `VACUUM FULL` (on a heap table) operations.
 
-The `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_cluster`, and shares the same schema as this view.
+The `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_cluster`.
 
 |Column|Type|Description|
 |------|----|-----------|
@@ -567,8 +567,8 @@ The `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Data
 | `command` | text | The name of the command that is running. Either `CLUSTER` or `VACUUM FULL`. |
 | `phase` | text | Current processing phase. Refer to [CLUSTER and VACUUM FULL Progress Reporting](../../admin_guide/managing/progress_reporting.html#cluster_progress) for detailed information about the phases. |
 | `cluster_index_relid` | oid | If the table is being scanned using an index, this is the object identifier of the index being used; otherwise, it is zero. This field is not applicable to AO/CO tables. |
-| `heap_tuples_scanned` | bigint | *Heap tables*: Number of heap tuples scanned. This counter only advances when the phase is `seq scanning heap`, `index scanning heap`, or `writing new heap`.</br></bra>*AO/CO tables*: Greenplum counts only the number of live tuples scanned. |
-| `heap_tuples_written` | bigint | Number of heap tuples written. This counter only advances when the phase is `seq scanning heap`, `index scanning heap`, or `writing new heap`. |
+| `heap_tuples_scanned` | bigint | Number of heap tuples scanned. This counter only advances when the phase is `seq scanning append-optimized` or `seq scanning heap`, `index scanning heap`, or `writing new heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
+| `heap_tuples_written` | bigint | Number of heap tuples written. This counter only advances when the phase is `seq scanning heap`, `index scanning heap`, `writing new append-optimized`, or `writing new heap`. |
 | `heap_blks_total` | bigint | Total number of heap blocks in the table. This number is reported as of the beginning of `seq scanning heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
 | `heap_blks_scanned` | bigint | Number of heap blocks scanned. This counter only advances when the phase is `seq scanning heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
 | `index_rebuild_count` | bigint | Number of indexes rebuilt. This counter only advances when the phase is `rebuilding index`, and is not applicable to AO/CO tables. |
@@ -577,7 +577,7 @@ The `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Data
 
 The `gp_stat_progress_copy` view is a cluster-wide view that displays the [pg_stat_progress_copy](https://www.postgresql.org/docs/15/progress-reporting.html#COPY-PROGRESS-REPORTING) information from every primary segment for all currently-running `COPY` operations.
 
-The `gp_stat_progress_copy_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_copy`, and shares the same schema as this view.
+The `gp_stat_progress_copy_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_copy`.
 
 |Column|Type|Description|
 |------|----|-----------|
@@ -597,7 +597,7 @@ The `gp_stat_progress_copy_summary` view aggregates across the Greenplum Databas
 
 The `gp_stat_progress_create_index` view is a cluster-wide view that displays the [pg_stat_progress_create_index](https://www.postgresql.org/docs/15/progress-reporting.html#CREATE-INDEX-PROGRESS-REPORTING) information from every primary segment for all currently-running `CREATE INDEX` and `REINDEX` operations.
 
-The `gp_stat_progress_create_index_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_create_index`, and shares the same schema as this view.
+The `gp_stat_progress_create_index_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_create_index`.
 
 |Column|Type|Description|
 |------|----|-----------|
@@ -623,7 +623,7 @@ The `gp_stat_progress_create_index_summary` view aggregates across the Greenplum
 
 The `gp_stat_progress_vacuum` view is a cluster-wide view that displays the [pg_stat_progress_vacuum](https://www.postgresql.org/docs/15/progress-reporting.html#VACUUM-PROGRESS-REPORTING) information from every primary segment for all currently-running `VACUUM` and `vacuumdb` operations.
 
-The `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_vacuum`, and shares the same schema as this view.
+The `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_vacuum`.
 
 |Column|Type|Description|
 |------|----|-----------|
@@ -634,9 +634,9 @@ The `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Datab
 | `relid` | oid | The object identifier of the table being vacuumed. |
 | `phase` | text | Current processing phase of vacuum. Refer to [VACUUM Progress Reporting](../../admin_guide/managing/progress_reporting.html#vacuum_progress) for detailed information about the phases. |
 | `heap_blks_total` | bigint | *Heap tables*: Total number of heap blocks in the table. This number is reported as of the beginning of the scan; blocks added later will not be (and need not be) visited by this `VACUUM`.</br></br>*AO/CO tables*<sup>1</sup>: Collected at the beginning of the `append-optimized pre-cleanup` phase by adding up the on-disk file sizes of all segment files of the relation, and converting the size into the number of heap-equivalent blocks. The value should not change while `VACUUM` progresses. |
-| `heap_blks_scanned` | bigint | *Heap tables*: Number of heap blocks scanned. Because the visibility map is used to optimize scans, some blocks will be skipped without inspection; skipped blocks are included in this total, so that this number will eventually become equal to `heap_blks_total` when the vacuum is complete. This counter only advances when the phase is `scanning heap`. </br></br> *AO/CO tables*:<sup>1</sup> Collected during the `append-optimized compact` phase. For `ao_row` tables, updated every time Greenplum finishes scanning a segment file. For `ao_column` tables, updated every time Greenplum moves a tuple. `heap_blks_scanned` can be less than or equal to `heap_blks_total` at the end of the `VACUUM` operation because Greenplum does not need to scan blocks after the logical EOF of a segment file. |
-| `heap_blks_vacuumed` | bigint | *Heap tables*: Number of heap blocks vacuumed. Unless the table has no indexes, this counter only advances when the phase is `vacuuming heap`. Blocks that contain no dead tuples are skipped, so the counter may sometimes skip forward in large increments. </br></br> *AO/CO tables*<sup>1</sup>: Collected when Greenplum truncates a segment file, which may happen during both `append-optimized pre-cleanup` and `append-optimized post-cleanup` phases. Because Greenplum Database truncates physical blocks after the logical EOF in a segment file, `heap_blks_vacuumed` may be either smaller or larger than `heap_blks_scanned`. |
-| `index_vacuum_count` | bigint | *Heap tables*: Number of completed index vacuum cycles. </br></br> *AO/CO tables*: Collected when Greenplum recycles a dead segment file, which may happen both, or neither, during `append-optimized pre-cleanup` phase and `append-optimized post-cleanup phase`. |
+| `heap_blks_scanned` | bigint | *Heap tables*: Number of heap blocks scanned. Because the visibility map is used to optimize scans, some blocks will be skipped without inspection; skipped blocks are included in this total, so that this number will eventually become equal to `heap_blks_total` when the vacuum is complete. This counter only advances when the phase is `scanning heap`. </br></br> *AO/CO tables*:<sup>1</sup> The counter only advances when the phase is `append-optimized compact`. For `ao_row` tables, updated every time Greenplum finishes scanning a segment file. For `ao_column` tables, updated every time Greenplum moves a tuple. `heap_blks_scanned` can be less than or equal to `heap_blks_total` at the end of the `VACUUM` operation because Greenplum does not need to scan blocks after the logical EOF of a segment file. |
+| `heap_blks_vacuumed` | bigint | *Heap tables*: Number of heap blocks vacuumed. Unless the table has no indexes, this counter only advances when the phase is `vacuuming heap`. Blocks that contain no dead tuples are skipped, so the counter may sometimes skip forward in large increments. </br></br> *AO/CO tables*<sup>1</sup>: The counter advances when Greenplum truncates a segment file, which may happen during both `append-optimized pre-cleanup` and `append-optimized post-cleanup` phases. Because Greenplum Database truncates physical blocks after the logical EOF in a segment file, `heap_blks_vacuumed` may be either smaller or larger than `heap_blks_scanned`. |
+| `index_vacuum_count` | bigint | *Heap tables*: Number of completed index vacuum cycles. </br></br> *AO/CO tables*: Collected when Greenplum recycles a dead segment file, which may happen both, any, or neither, during `append-optimized pre-cleanup` phase and `append-optimized post-cleanup phase`. |
 | `max_dead_tuples` | bigint | *Heap tables*: Number of dead tuples that we can store before needing to perform an index vacuum cycle, based on [maintenance_work_mem](../config_params/guc-list.html#maintenance_work_mem). </br></br> *AO/CO tables*: Collected at the beginning of the `append-optimized pre-cleanup` phase, this is the total number of tuples before the logical EOF of all segment files. The value should not change while `VACUUM` progresses. |
 | `num_dead_tuples` | bigint | *Heap tables*: Number of dead tuples collected since the last index vacuum cycle. </br></br> *AO/CO tables*: Collected during `append-optimized compact` phase. For `ao_row` tables, updated every time Greenplum discares a dead tuple. For `ao_column` tables, updated every time Greenplum moves a live tuple, and also when the number of dead tuples advances. |
 
@@ -1023,6 +1023,5 @@ The following is a list of summary views:
 - gp_statio_user_indexes_summary
 - gp_statio_user_sequences_summary
 - gp_statio_user_tables_summary
-
 
 **Parent topic:** [System Catalogs](../system_catalogs/catalog_ref.html)
