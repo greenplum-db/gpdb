@@ -340,7 +340,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="11">
+    <dxl:Plan Id="0" SpaceSize="7">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6.315570" Rows="1999.980000" Width="4"/>
@@ -369,7 +369,7 @@
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:Partitions/>
-          <dxl:IndexDescriptor Mdid="7.41040.1.0" IndexName="idx_9_include_cols"/>
+          <dxl:IndexDescriptor Mdid="7.41045.1.0" IndexName="idx_0_include_cols"/>
           <dxl:TableDescriptor Mdid="6.41037.1.0" TableName="t1" LockMode="1">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="c1" TypeMdid="0.23.1.0" ColWidth="4"/>

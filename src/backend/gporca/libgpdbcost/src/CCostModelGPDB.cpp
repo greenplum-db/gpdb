@@ -1588,15 +1588,29 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 
 	CDouble dRowsIndex = pci->Rows();
 
+	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
+	// cost per index row. Account for that cost in dCostPerIndexRow.
+	CColumnDescriptorArray *indexIncludedArray = nullptr;
 	ULONG ulIndexKeys = 1;
 	if (COperator::EopPhysicalIndexScan == op_id)
 	{
 		ulIndexKeys = CPhysicalIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
+		indexIncludedArray = CPhysicalIndexScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
 	}
 	else
 	{
 		ulIndexKeys =
 			CPhysicalDynamicIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
+		indexIncludedArray = CPhysicalDynamicIndexScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
+	}
+	ULONG ulIncludedColWidth = 0;
+	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
+	{
+		ulIncludedColWidth += (*indexIncludedArray)[ul]->Width();
 	}
 
 	// TODO: 2014-02-01
@@ -1610,7 +1624,8 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 	// when we sum-up children cost
 
 	CDouble dCostPerIndexRow = ulIndexKeys * dIndexFilterCostUnit +
-							   dTableWidth * dIndexScanTupCostUnit;
+							   dTableWidth * dIndexScanTupCostUnit +
+							   ulIncludedColWidth * dIndexScanTupCostUnit;
 	return CCost(pci->NumRebinds() *
 				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor));
 }
