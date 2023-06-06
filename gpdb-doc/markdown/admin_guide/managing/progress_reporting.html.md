@@ -174,9 +174,3 @@ EOF
 host$ watch -n 0.5 "psql -af viewer.sql"
 ```
 
-## <a id="limitations"></a>Limitations and Known Issues
-
-Progress reporting in Greenplum Database has these known issues and limitations:
-
-- ANY???
-
