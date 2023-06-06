@@ -11,7 +11,7 @@ With Greenplum Database, fault tolerance and data availability is achieved with:
 -   [Hardware level RAID storage protection](#raid)
 -   [Data storage checksums](#checksums)
 -   [Greenplum segment mirroring](#segment_mirroring)
--   [Coordinator mirroring](#master_mirroring)
+-   [Coordinator mirroring](#coordinator_mirroring)
 -   [Dual clusters](#dual_clusters)
 -   [Database backup and restore](#backup_restore)
 
@@ -60,9 +60,9 @@ Greenplum Database stores data in multiple segment instances, each of which is a
 
 The mirror instance for each segment is usually initialized with the `gpinitsystem` utility or the `gpexpand` utility. As a best practice, the mirror runs on a different host than the primary instance to protect from a single machine failure. There are different strategies for assigning mirrors to hosts. When choosing the layout of the primaries and mirrors, it is important to consider the failure scenarios to ensure that processing skew is minimized in the case of a single machine failure.
 
-## <a id="master_mirroring"></a>Coordinator Mirroring 
+## <a id="coordinator_mirroring"></a>Coordinator Mirroring 
 
-There are two coordinator instances in a highly available cluster, a *primary* and a *standby*. As with segments, the coordinator and standby should be deployed on different hosts so that the cluster can tolerate a single host failure. Clients connect to the primary coordinator and queries can be run only on the primary coordinator. The standby coordinator is kept up to date with the primary coordinator using Write-Ahead Logging \(WAL\)-based streaming replication. See [Overview of Coordinator Mirroring](g-overview-of-master-mirroring.html).
+There are two coordinator instances in a highly available cluster, a *primary* and a *standby*. As with segments, the coordinator and standby should be deployed on different hosts so that the cluster can tolerate a single host failure. Clients connect to the primary coordinator and queries can be run only on the primary coordinator. The standby coordinator is kept up to date with the primary coordinator using Write-Ahead Logging \(WAL\)-based streaming replication. See [Overview of Coordinator Mirroring](g-overview-of-coordinator-mirroring.html).
 
 If the coordinator fails, the administrator runs the `gpactivatestandby` utility to have the standby coordinator take over as the new primary coordinator. You can configure a virtual IP address for the coordinator and standby so that client programs do not have to switch to a different network address when the current coordinator changes. If the coordinator host fails, the virtual IP address can be swapped to the actual acting coordinator.
 
@@ -92,7 +92,7 @@ For information about using `gpbackup` and `gprestore`, see [VMware Greenplum Ba
 
 -   **[Overview of Segment Mirroring](../../highavail/topics/g-overview-of-segment-mirroring.html)**  
 
--   **[Overview of Coordinator Mirroring](../../highavail/topics/g-overview-of-master-mirroring.html)**  
+-   **[Overview of Coordinator Mirroring](../../highavail/topics/g-overview-of-coordinator-mirroring.html)**  
 
 
 **Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)

@@ -595,18 +595,6 @@ gpdb::FuncStability(Oid funcid)
 }
 
 char
-gpdb::FuncDataAccess(Oid funcid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_proc */
-		return func_data_access(funcid);
-	}
-	GP_WRAP_END;
-	return '\0';
-}
-
-char
 gpdb::FuncExecLocation(Oid funcid)
 {
 	GP_WRAP_START;
@@ -760,6 +748,18 @@ gpdb::GetAttStats(Oid relid, AttrNumber attnum)
 	}
 	GP_WRAP_END;
 	return nullptr;
+}
+
+int32
+gpdb::GetAttAvgWidth(Oid relid, AttrNumber attnum)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_statistic */
+		return get_attavgwidth(relid, attnum);
+	}
+	GP_WRAP_END;
+	return 0;
 }
 
 List *
@@ -1795,6 +1795,17 @@ gpdb::GetDistributionPolicy(Relation rel)
 {
 	GP_WRAP_START;
 	{
+		// external tables are a special case, and we need to manually build
+		// the GpPolicy struct which contains the external table's distribution
+		if (rel_is_external_table(rel->rd_id))
+		{
+			return GpPolicyFetch(rel->rd_id);
+		}
+		// we determine the distribution at a later point for foreign tables
+		else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+		{
+			return nullptr;
+		}
 		/* catalog tables: pg_class */
 		return relation_policy(rel);
 	}

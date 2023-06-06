@@ -228,9 +228,6 @@ select sp_parallel_restricted(unique1) from tenk1
  Settings: optimizer=on, parallel_setup_cost=0, parallel_tuple_cost=0
 (11 rows)
 
--- start_ignore
--- GPDB_12_MERGE_FIXME: None default collation fallback
--- end_ignore
 -- test parallel plan when group by expression is in target list.
 explain (costs off)
 	select length(stringu1) from tenk1 group by length(stringu1);
@@ -279,13 +276,15 @@ explain (costs off)
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  HashAggregate
+   ->  Finalize HashAggregate
          Group Key: (sp_parallel_restricted(unique1))
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: (sp_parallel_restricted(unique1))
-               ->  Seq Scan on tenk1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(7 rows)
+               ->  Streaming Partial HashAggregate
+                     Group Key: sp_parallel_restricted(unique1)
+                     ->  Seq Scan on tenk1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 -- test prepared statement
 prepare tenk1_count(integer) As select  count((unique1)) from tenk1 where hundred > $1;

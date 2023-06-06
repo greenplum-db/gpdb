@@ -253,16 +253,16 @@ execute attribute_encoding_check('part_relopt%');
 -----------------+---------+---------+---------------------------------------------------------
  part_relopt     | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
  part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | a       |    1601 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_1   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
  part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
- part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | a       |    1601 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_2_1 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | a       |    1601 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_2_2 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | a       |    1601 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
+ part_relopt_3   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Check double edit on same column
@@ -273,15 +273,15 @@ execute attribute_encoding_check('part_relopt%');
  part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Check double edit of same option
@@ -293,15 +293,15 @@ execute attribute_encoding_check('part_relopt%');
  part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Check double edit of same column different options
@@ -311,16 +311,16 @@ execute attribute_encoding_check('part_relopt%');
 -----------------+---------+---------+-----------------------------------------------------
  part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
  part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | a       |    1601 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_1   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
  part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=7,blocksize=32768}
- part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | a       |    1601 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_2_1 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | a       |    1601 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_2_2 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | a       |    1601 | {compresstype=zlib,compresslevel=7,blocksize=32768}
+ part_relopt_3   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 ALTER TABLE part_relopt ALTER COLUMN a SET ENCODING (compresstype=zlib, compresslevel=5);
@@ -330,15 +330,15 @@ execute attribute_encoding_check('part_relopt%');
  part_relopt     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_1   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_1   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_1   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2_1 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_1 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_1 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_2_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_2_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_2_2 | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt_3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt_3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
+ part_relopt_3   | b       |    1602 | {compresstype=zlib,compresslevel=5,blocksize=32768}
 (12 rows)
 
 -- Data is intact
@@ -371,8 +371,8 @@ ALTER TABLE aoco_relopt ALTER COLUMN a SET ENCODING (compresstype=rle_type, comp
 execute attribute_encoding_check('aoco_relopt%');
    relname   | attname | filenum |                       attoptions                        
 -------------+---------+---------+---------------------------------------------------------
- aoco_relopt | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
- aoco_relopt | b       |       2 | {compresstype=zlib,blocksize=32768,compresslevel=5}
+ aoco_relopt | a       |    1601 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ aoco_relopt | b       |    1602 | {compresstype=zlib,blocksize=32768,compresslevel=5}
 (2 rows)
 
 DROP TABLE aoco_relopt;
@@ -476,7 +476,7 @@ execute attribute_encoding_check('part_relopt3%');
 ----------------+---------+---------+-----------------------------------------------------
  part_relopt3   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt3   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1 | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=3}
+ part_relopt3_1 | a       |    1601 | {compresstype=zlib,blocksize=32768,compresslevel=3}
  part_relopt3_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2 | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt3_2 | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
@@ -488,11 +488,11 @@ execute attribute_encoding_check('part_relopt3%');
 ------------------+---------+---------+-----------------------------------------------------
  part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=3}
+ part_relopt3_1   | a       |    1601 | {compresstype=zlib,blocksize=32768,compresslevel=3}
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=zlib,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
@@ -502,11 +502,11 @@ execute attribute_encoding_check('part_relopt3%');
 ------------------+---------+---------+---------------------------------------------------------
  part_relopt3     | a       |       1 | {compresstype=zlib,compresslevel=5,blocksize=32768}
  part_relopt3     | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_1   | a       |       1 | {compresstype=zlib,blocksize=32768,compresslevel=3}
+ part_relopt3_1   | a       |    1601 | {compresstype=zlib,blocksize=32768,compresslevel=3}
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=1}
+ part_relopt3_2_1 | a       |    1601 | {compresslevel=1,compresstype=rle_type,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
@@ -520,7 +520,7 @@ execute attribute_encoding_check('part_relopt3%');
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=rle_type,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
@@ -541,7 +541,7 @@ execute attribute_encoding_check('part_relopt3%');
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=rle_type,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
@@ -568,7 +568,7 @@ execute attribute_encoding_check('part_relopt3%');
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=rle_type,compresslevel=4,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=rle_type,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
@@ -583,14 +583,14 @@ execute attribute_encoding_check('part_relopt3%');
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=3,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=rle_type,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 -- altering when changing am to heap should error out for root partition
 ALTER TABLE part_relopt3 SET ACCESS METHOD heap, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
 ERROR:  ALTER COLUMN SET ENCODING operation is only applicable to AOCO tables
-DETAIL:  New access method for "part_relopt3" is not AOCO
+DETAIL:  New access method for "part_relopt3" is not ao_column
 execute attribute_encoding_check('part_relopt3%');
      relname      | attname | filenum |                       attoptions                        
 ------------------+---------+---------+---------------------------------------------------------
@@ -600,14 +600,14 @@ execute attribute_encoding_check('part_relopt3%');
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=3,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=rle_type,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
 -- altering when changing am to heap should error out for child partition
 ALTER TABLE part_relopt3_2_1 SET ACCESS METHOD heap, ALTER COLUMN a SET ENCODING (compresslevel=4, compresstype=rle_type);
 ERROR:  ALTER COLUMN SET ENCODING operation is only applicable to AOCO tables
-DETAIL:  New access method for "part_relopt3_2_1" is not AOCO
+DETAIL:  New access method for "part_relopt3_2_1" is not ao_column
 execute attribute_encoding_check('part_relopt3%');
      relname      | attname | filenum |                       attoptions                        
 ------------------+---------+---------+---------------------------------------------------------
@@ -617,7 +617,7 @@ execute attribute_encoding_check('part_relopt3%');
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=zlib,compresslevel=3,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=zlib,compresslevel=5,blocksize=32768}
- part_relopt3_2_1 | a       |       1 | {compresstype=rle_type,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=rle_type,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
@@ -628,13 +628,13 @@ ALTER TABLE part_relopt3 SET ACCESS METHOD ao_column, ALTER COLUMN a SET ENCODIN
 execute attribute_encoding_check('part_relopt3%');
      relname      | attname | filenum |                     attoptions                      
 ------------------+---------+---------+-----------------------------------------------------
- part_relopt3     | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3     | a       |       1 | {compresslevel=4,compresstype=zlib,blocksize=32768}
  part_relopt3     | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_1   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | a       |       1 | {compresslevel=4,compresstype=zlib,blocksize=32768}
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_2   | a       |       1 | {compresslevel=4,compresstype=zlib,blocksize=32768}
  part_relopt3_2   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2_1 | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |       1 | {compresslevel=4,compresstype=zlib,blocksize=32768}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 
@@ -646,11 +646,11 @@ execute attribute_encoding_check('part_relopt3%');
 ------------------+---------+---------+-----------------------------------------------------
  part_relopt3     | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
  part_relopt3     | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_1   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_1   | a       |    1601 | {compresstype=none,blocksize=32768,compresslevel=4}
  part_relopt3_1   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
  part_relopt3_2   | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
  part_relopt3_2   | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
- part_relopt3_2_1 | a       |       1 | {compresstype=none,blocksize=32768,compresslevel=4}
+ part_relopt3_2_1 | a       |    1601 | {compresstype=none,blocksize=32768,compresslevel=4}
  part_relopt3_2_1 | b       |       2 | {compresstype=none,blocksize=32768,compresslevel=0}
 (8 rows)
 

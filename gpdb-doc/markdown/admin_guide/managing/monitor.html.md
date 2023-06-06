@@ -12,7 +12,7 @@ Also, be sure to review [Recommended Monitoring and Maintenance Tasks](../monito
 
 ## <a id="topic2"></a>Monitoring Database Activity and Performance 
 
-VMware Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site.
+VMware Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Greenplum-Command-Center/index.html) web site.
 
 ## <a id="topic3"></a>Monitoring System State 
 
@@ -277,7 +277,7 @@ Tracking the amount of memory used by a server process or a long-running query c
 
 ### <a id="topic_memcontext_view"></a>About the pg_backend_memory_contexts View
 
-To display the memory usage of all active memory contexts in the server process attached to the current session, use the [pg_backend_memory_contexts](../../ref_guide/system_catalogs/pg_backend_memory_contexts.html) system view. This view is restricted to superusers, but access may be granted to other roles.
+To display the memory usage of all active memory contexts in the server process attached to the current session, use the [pg_backend_memory_contexts](../../ref_guide/system_catalogs/catalog_ref-views.html#pg_backend_memory_contexts) system view. This view is restricted to superusers, but access may be granted to other roles.
 
 ``` sql
 SELECT * FROM pg_backend_memory_contexts;

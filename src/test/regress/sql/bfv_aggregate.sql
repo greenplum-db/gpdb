@@ -227,6 +227,7 @@ insert into mtup1 values
 -- from exceeding the limit in GPDB7 with that plan(a MinimalTuple has a limit of 1600
 -- columns). So set the parameter to off to prevent error happens.
 set gp_enable_multiphase_agg=off;
+set optimizer_force_multistage_agg=off;
 
 
 select c0, c1, array_length(ARRAY[
@@ -1367,6 +1368,7 @@ select c0, c1, array_length(ARRAY[
  SUM(c4 % 5670), SUM(c4 % 5671)], 1)
 from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
 
+reset optimizer_force_multistage_agg;
 reset gp_enable_multiphase_agg;
 
 -- MPP-29042 Multistage aggregation plans should have consistent targetlists in
@@ -1469,6 +1471,40 @@ explain (costs off)
 select 1, median(col1) from group_by_const group by 1;
 select 1, median(col1) from group_by_const group by 1;
 
+-- ORCA should pick singlestage-agg plan when multistage-agg guc is true
+-- and distribution type is universal/replicated
+
+set optimizer_force_multistage_agg to on;
+
+create table t1_replicated(a int, b int, c float, d float) distributed replicated;
+create table t2_replicated(a int, b int) distributed replicated;
+
+explain select distinct b from t1_replicated;
+explain select sum(a), avg(b) from t1_replicated;
+explain select count(distinct b)  from t1_replicated group by a;
+explain select a, sum(mc) from (select a, b, max(c) mc from t1_replicated group by a,b) t group by a;
+explain SELECT t1.a, sum(c) from t1_replicated as t1 join t2_replicated as t2 on t1.a = t2.a group by t1.a;
+explain select count(a) from t1_replicated where c < (select sum(b) from t2_replicated);
+
+explain SELECT DISTINCT g%10 FROM generate_series(0, 100) g;
+explain select count(*) from generate_series(0, 100) g;
+explain select g%10 as c1, sum(g::numeric)as c2, count(*) as c3 from generate_series(1, 99) g group by g%10;
+
+reset optimizer_force_multistage_agg;
+
+-- Test if Motion is placed between the "group by clauses"
+drop table if exists t;
+create table t(a int, b int, c int) distributed by (a);
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+analyze t;
+
+explain (costs off) select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+
+drop table t;
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

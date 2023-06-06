@@ -136,7 +136,7 @@ RESET SESSION AUTHORIZATION;
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
 
---- u2 is not able to see u1's endpoints on master
+--- u2 is not able to see u1's endpoints on coordinator
 1: SET SESSION AUTHORIZATION u2;
 1: SELECT * from gp_get_endpoints();
 

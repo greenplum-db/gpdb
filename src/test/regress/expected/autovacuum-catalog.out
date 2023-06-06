@@ -4,6 +4,7 @@ CREATE DATABASE av_catalog;
 \c av_catalog
 -- speed up test
 ALTER SYSTEM SET autovacuum_naptime = 5;
+ALTER SYSTEM SET autovacuum_vacuum_threshold = 50;
 -- start_ignore
 \! gpstop -u;
 20230207:20:52:47:298674 gpstop:ajrdevbox:ajr-[INFO]:-Starting gpstop with args: -u
@@ -41,6 +42,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
 (1 row)
 
 ALTER SYSTEM RESET autovacuum_naptime;
+ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 -- start_ignore
 \! gpstop -u;
 20230207:20:52:59:298805 gpstop:ajrdevbox:ajr-[INFO]:-Starting gpstop with args: -u

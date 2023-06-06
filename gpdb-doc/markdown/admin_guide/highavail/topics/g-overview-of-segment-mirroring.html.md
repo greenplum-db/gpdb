@@ -15,7 +15,7 @@ When Greenplum Database detects a primary segment failure, the WAL replication p
 These Greenplum Database system catalog tables contain mirroring and replication information.
 
 -   The catalog table [gp\_segment\_configuration](../../../ref_guide/system_catalogs/gp_segment_configuration.html) contains the current configuration and state of primary and mirror segment instances and the coordinator and standby coordinator instance.
--   The catalog view [gp\_stat\_replication](../../../ref_guide/system_catalogs/gp_stat_replication.html) contains replication statistics of the `walsender` processes that are used for Greenplum Database coordinator and segment mirroring.
+-   The catalog view [gp_stat_replication](../../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_replication) contains replication statistics of the `walsender` processes that are used for Greenplum Database coordinator and segment mirroring.
 
 ## <a id="mirror_configs"></a>About Segment Mirroring Configurations 
 

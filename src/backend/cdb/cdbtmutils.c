@@ -148,9 +148,9 @@ DtxContextToString(DtxContext context)
 		case DTX_CONTEXT_LOCAL_ONLY:
 			return "Local Only";
 		case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-			return "Master Distributed-Capable";
+			return "Coordinator Distributed-Capable";
 		case DTX_CONTEXT_QD_RETRY_PHASE_2:
-			return "Master Retry Phase 2";
+			return "Coordinator Retry Phase 2";
 		case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
 			return "Segment Entry DB Singleton";
 		case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:

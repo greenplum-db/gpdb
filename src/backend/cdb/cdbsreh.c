@@ -701,7 +701,7 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 
 	/*
 	 * Read error log, probably on segments.  We don't check Gp_role, however,
-	 * in case master also wants to read the file.
+	 * in case coordinator also wants to read the file.
 	 */
 	if (context->fp)
 	{
@@ -860,7 +860,7 @@ gp_read_persistent_error_log(PG_FUNCTION_ARGS)
 
 	/*
 	 * Read error log, probably on segments.  We don't check Gp_role, however,
-	 * in case master also wants to read the file.
+	 * in case coordinator also wants to read the file.
 	 */
 	if (context->fp)
 	{
@@ -1129,8 +1129,8 @@ TruncateErrorLog(text *relname, bool persistent)
 }
 
 /*
- * Delete error log of the specified relation.  This returns true from master
- * iif all segments and master find the relation.
+ * Delete error log of the specified relation.  This returns true from coordinator
+ * iif all segments and coordinator find the relation.
  */
 Datum
 gp_truncate_error_log(PG_FUNCTION_ARGS)
@@ -1144,8 +1144,8 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 
 /*
  * Delete persistent error log of the specified relation.
- * This returns true from master iif all segments and
- * master find the relation.
+ * This returns true from coordinator iif all segments and
+ * coordinator find the relation.
  */
 Datum
 gp_truncate_persistent_error_log(PG_FUNCTION_ARGS)

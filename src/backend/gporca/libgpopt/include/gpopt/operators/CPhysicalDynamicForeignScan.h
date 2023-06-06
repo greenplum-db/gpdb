@@ -24,7 +24,7 @@ class CPhysicalDynamicForeignScan : public CPhysicalDynamicScan
 private:
 	OID m_foreign_server_oid;
 
-	BOOL m_is_coordinator_only;
+	IMDRelation::Ereldistrpolicy m_exec_location;
 
 public:
 	CPhysicalDynamicForeignScan(const CPhysicalDynamicForeignScan &) = delete;
@@ -35,7 +35,7 @@ public:
 		ULONG ulOriginOpId, ULONG scan_id, CColRefArray *pdrgpcrOutput,
 		CColRef2dArray *pdrgpdrgpcrParts, IMdIdArray *partition_mdids,
 		ColRefToUlongMapArray *root_col_mapping_per_part,
-		OID foreign_server_oid, BOOL is_coordinator_only);
+		OID foreign_server_oid, IMDRelation::Ereldistrpolicy exec_location);
 
 
 	EOperatorId
@@ -67,10 +67,11 @@ public:
 		return m_foreign_server_oid;
 	}
 
-	BOOL
-	IsCoordinatorOnly() const
+	// This is the execution location of the foreign table. See
+	IMDRelation::Ereldistrpolicy
+	DistributionType() const
 	{
-		return m_is_coordinator_only;
+		return m_exec_location;
 	}
 	//-------------------------------------------------------------------------------------
 	// Derived Plan Properties

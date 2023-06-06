@@ -602,14 +602,33 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage)
 				pg_strncasecmp(strval, SOPT_COMPTYPE, soptLen) == 0)
 			{
 				foundComptype = true;
-
 				/*
 				 * Record "none" as compresstype in reloptions if it was
 				 * explicitly specified in WITH clause.
+				 *
+				 * If "quicklz" was explicitly specified in WITH clause and
+				 * gp_quicklz_fallback=true, record "zstd" as compresstype
+				 * if available, else record AO_DEFAULT_USABLE_COMPRESSTYPE
 				 */
+				char* compresstype;
+
+				if (opts->compresstype[0])
+				{
+					if (gp_quicklz_fallback && pg_strcasecmp(opts->compresstype, "quicklz"))				
+#ifdef USE_ZSTD
+						compresstype = "zstd";
+#else
+						compresstype = AO_DEFAULT_USABLE_COMPRESSTYPE;
+#endif				
+					else
+						compresstype = opts->compresstype;
+				}
+				else
+					compresstype = "none";
+
 				d = CStringGetTextDatum(psprintf("%s=%s",
 												 SOPT_COMPTYPE,
-												 (opts->compresstype[0] ? opts->compresstype : "none")));
+												 compresstype));
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
@@ -897,9 +916,25 @@ validate_and_adjust_options(StdRdOptions *result,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("unknown compresstype \"%s\"",
 							comptype_opt->values.string_val)));
-		for (i = 0; i < strlen(comptype_opt->values.string_val); i++)
-			result->compresstype[i] = pg_tolower(comptype_opt->values.string_val[i]);
-		result->compresstype[i] = '\0';
+		/*
+		 * GPDB7 has dropped support for quicklz.
+		 * If compresstype passed the above validity check, we want to fallback to using
+		 * "zstd" as compresstype if available, else the default usable compresstype.
+		 */
+		if (pg_strcasecmp(comptype_opt->values.string_val, "quicklz") == 0)
+		{
+#ifdef USE_ZSTD
+			StrNCpy(result->compresstype, "zstd", NAMEDATALEN);
+#else
+			StrNCpy(result->compresstype, AO_DEFAULT_USABLE_COMPRESSTYPE, NAMEDATALEN);
+#endif
+		}
+		else
+		{
+			for (i = 0; i < strlen(comptype_opt->values.string_val); i++)
+				result->compresstype[i] = pg_tolower(comptype_opt->values.string_val[i]);
+			result->compresstype[i] = '\0';
+		}
 	}
 
 	/* compression level */
@@ -969,27 +1004,6 @@ validate_and_adjust_options(StdRdOptions *result,
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 							 errmsg("compresslevel=%d is out of range for zstd (should be in the range 1 to 19)",
-									result->compresslevel)));
-
-				result->compresslevel = setDefaultCompressionLevel(result->compresstype);
-			}
-		}
-
-		if (result->compresstype[0] &&
-			(pg_strcasecmp(result->compresstype, "quicklz") == 0))
-		{
-#ifndef HAVE_LIBQUICKLZ
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("QuickLZ library is not supported by this build"),
-					 errhint("Compile with --with-quicklz to use QuickLZ compression.")));
-#endif
-			if (result->compresslevel != 1)
-			{
-				if (validate)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("compresslevel=%d is out of range for quicklz (should be 1)",
 									result->compresslevel)));
 
 				result->compresslevel = setDefaultCompressionLevel(result->compresstype);
@@ -1496,9 +1510,10 @@ List *
 transformStorageEncodingClause(List *aocoColumnEncoding, bool validate)
 {
 	ListCell   *lc;
-	DefElem	   *dl;
+	DefElem	   *dl = NULL;
+	int c = 0;
 
-	foreach(lc, aocoColumnEncoding)
+	foreach_with_count(lc, aocoColumnEncoding, c)
 	{
 		dl = (DefElem *) lfirst(lc);
 		if (pg_strncasecmp(dl->defname, SOPT_CHECKSUM, strlen(SOPT_CHECKSUM)) == 0)
@@ -1507,6 +1522,27 @@ transformStorageEncodingClause(List *aocoColumnEncoding, bool validate)
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("\"%s\" is not a column specific option",
 							SOPT_CHECKSUM)));
+		}
+		/* 
+		 * For compresstype, the value must be modified from the value passed
+		 * into the encoding clause if gp_quicklz_fallback is enabled and "quicklz"
+		 * is specified. The value will instead fallback to "zstd" if available, else
+		 * the default usable compresstype.
+		 */
+		if (pg_strncasecmp(dl->defname, SOPT_COMPTYPE, strlen(SOPT_COMPTYPE)) == 0
+				&& gp_quicklz_fallback)
+		{
+			char *name = defGetString(dl);
+			if (pg_strcasecmp(name, "quicklz") == 0)
+			{
+#ifdef USE_ZSTD
+				char *compresstype = "zstd";
+#else
+				char *compresstype = AO_DEFAULT_USABLE_COMPRESSTYPE;
+#endif
+				dl = makeDefElem("compresstype", (Node *) makeString(compresstype), -1);
+			}
+				list_nth_replace(aocoColumnEncoding, c, dl);
 		}
 	}
 
@@ -1537,7 +1573,7 @@ transformStorageEncodingClause(List *aocoColumnEncoding, bool validate)
  * This is called by transformColumnEncoding() in a loop but stenc should be
  * quite small in practice.
  */
-static ColumnReferenceStorageDirective *
+ColumnReferenceStorageDirective *
 find_crsd(const char *column, List *stenc)
 {
 	ListCell *lc;
@@ -1721,14 +1757,18 @@ List* transformColumnEncoding(Relation rel, List *colDefs, List *stenc, List *wi
  * Update the corresponding ColumnReferenceStorageDirective clause
  * in a list of such clauses: current_encodings.
  *
- * return whether current_encodings was modified
- * (either existing changed or new crsd added for new column)
+ * If anything is really updated (either existing one is changed or
+ * a new crsd is added), set is_updated to true. Otherwise false.
+ *
+ * Return the updated or original current_encodings.
  */
-bool
-updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new_crsd)
+List*
+updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new_crsd, bool *is_updated)
 {
 	ListCell *lc_current;
 	ColumnReferenceStorageDirective *crsd = NULL;
+
+	Assert(is_updated);
 	foreach(lc_current, current_encodings)
 	{
 		ColumnReferenceStorageDirective *current_crsd = (ColumnReferenceStorageDirective *) lfirst(lc_current);
@@ -1744,7 +1784,7 @@ updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new
 	{
 		ListCell *lc1;
 		List *merged_encodings = NIL;
-		bool is_changed = false;
+		*is_updated = false;
 
 		/*
 		 * Create a new list of encodings merging the existing and new values.
@@ -1765,7 +1805,7 @@ updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new
 					(strcmp(defGetString(el1), defGetString(el2)) != 0))
 				{
 					current_updated  = true;
-					is_changed       = true;
+					*is_updated       = true;
 					merged_encodings = lappend(merged_encodings, copyObject(el2));
 				}
 			}
@@ -1786,7 +1826,6 @@ updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new
 		 */
 		list_free_deep(crsd->encoding);
 		crsd->encoding = merged_encodings;
-		return is_changed;
 	}
 	else
 	{
@@ -1796,9 +1835,10 @@ updateEncodingList(List *current_encodings, ColumnReferenceStorageDirective *new
 		 */
 
 		new_crsd->encoding = transformStorageEncodingClause(new_crsd->encoding, true);
-		lappend(current_encodings, new_crsd);
-		return true;
+		current_encodings = lappend(current_encodings, new_crsd);
+		*is_updated = true;
 	}
+	return current_encodings;
 }
 
 /*

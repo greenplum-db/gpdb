@@ -67,7 +67,7 @@ You can use system monitoring utilities such as `ps`, `top`, `iostat`, `vmstat`,
 
 You can create and use the Greenplum Database *session\_level\_memory\_consumption* view that provides information about the current memory utilization and idle time for sessions that are running queries on Greenplum Database. For information about the view, see [Viewing Session Memory Usage Information](managing/monitor.html).
 
-The optional VMware Greenplum Command Center web-based user interface graphically displays query and system utilization metrics. See the [Greenplum Command Center Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site for procedures to enable Greenplum Command Center.
+The optional VMware Greenplum Command Center web-based user interface graphically displays query and system utilization metrics. See the [Greenplum Command Center Documentation](https://docs.vmware.com/en/VMware-Greenplum-Command-Center/index.html) web site for procedures to enable Greenplum Command Center.
 
 ## <a id="topic7"></a>Troubleshooting Problem Queries 
 
@@ -110,7 +110,7 @@ con6 /gpdata/*/log/gpdb*.csv' > seglog.out
 
 ### <a id="topic9"></a>Gathering Information for VMware Customer Support 
 
-The Greenplum Magic Tool \(GPMT\) can run diagnostics and collect information from a Greenplum Database system. You can then send the information to VMware Customer Support to aid in the diagnosis of Greenplum Database errors or system failures.
+The `gpsupport` tool can run diagnostics and collect information from a Greenplum Database system. You can then send the information to VMware Customer Support to aid in the diagnosis of Greenplum Database errors or system failures.
 
-The `gpmt` utility command is available in the `bin` directory of your Greenplum Database installation. See [gpmt](../utility_guide/ref/gpmt.html) for usage information.
+The `gpsupport` utility command is available in the `bin` directory of your Greenplum Database installation. See [gpsupport](../utility_guide/ref/gpsupport.html) for usage information.
 

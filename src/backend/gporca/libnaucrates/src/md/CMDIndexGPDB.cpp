@@ -65,9 +65,6 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	GPOS_ASSERT_IMP(IMDIndex::EmdindBitmap == index_type,
 					nullptr != mdid_item_type && mdid_item_type->IsValid());
 	GPOS_ASSERT(nullptr != mdid_opfamilies_array);
-
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -81,7 +78,10 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 CMDIndexGPDB::~CMDIndexGPDB()
 {
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_mdid->Release();
 	CRefCount::SafeRelease(m_mdid_item_type);
 	m_index_key_cols_array->Release();
@@ -90,6 +90,16 @@ CMDIndexGPDB::~CMDIndexGPDB()
 	CRefCount::SafeRelease(m_child_index_oids);
 }
 
+const CWStringDynamic *
+CMDIndexGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDIndexGPDB::MDId
@@ -401,7 +411,13 @@ BOOL
 CMDIndexGPDB::IsCompatible(const IMDScalarOp *md_scalar_op, ULONG key_pos) const
 {
 	GPOS_ASSERT(nullptr != md_scalar_op);
-	GPOS_ASSERT(key_pos < m_mdid_opfamilies_array->Size());
+
+	// In cover indexes the non-key "payload" should not be considered
+	// compatible with a predicate
+	if (key_pos >= m_mdid_opfamilies_array->Size())
+	{
+		return false;
+	}
 
 	// check if the index opfamily for the key at the given position is one of
 	// the families the scalar comparison belongs to

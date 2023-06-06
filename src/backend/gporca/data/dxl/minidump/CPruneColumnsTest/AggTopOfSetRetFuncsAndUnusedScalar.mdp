@@ -63,7 +63,7 @@ explain select count(*) from (select generate_series(1, 10) i) t1, (select 1 j) 
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBAgg Mdid="0.2803.1.0" Name="count" IsSplittable="true" HashAggCapable="true">
@@ -126,7 +126,7 @@ explain select count(*) from (select generate_series(1, 10) i) t1, (select 1 j) 
         </dxl:LogicalJoin>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="3">
+    <dxl:Plan Id="0" SpaceSize="6">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="1.000000" Width="8"/>

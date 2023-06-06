@@ -37,7 +37,7 @@ If you do not intend to run queries on partitioned tables with GPORCA \(setting 
 2.  Set the values of the server configuration parameters. These Greenplum Database `gpconfig` utility commands sets the value of the parameters to `off`:
 
     ```
-    $ gpconfig -c optimizer_analyze_root_partition -v off --masteronly
+    $ gpconfig -c optimizer_analyze_root_partition -v off --coordinatoronly
     ```
 
 3.  Restart Greenplum Database. This Greenplum Database `gpstop` utility command reloads the `postgresql.conf` files of the coordinator and segments without shutting down Greenplum Database.

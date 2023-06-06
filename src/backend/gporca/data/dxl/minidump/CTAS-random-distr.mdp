@@ -121,10 +121,10 @@
         <dxl:DistrOpfamilies/>
         <dxl:DistrOpclasses/>
       </dxl:CTASRelation>
-      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.939.1.0" Name="generate_series" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.939.1.0" Name="generate_series" ReturnsSet="true" Stability="Stable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.1184.1.0"/>
       </dxl:GPDBFunc>
     </dxl:Metadata>

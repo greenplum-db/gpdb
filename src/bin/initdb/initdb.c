@@ -164,6 +164,7 @@ static char *cdb_init_d_dir;
 static char *features_file;
 static char *system_views_file;
 static char *system_views_gp_file;
+static char *system_views_gp_summary_file;
 static bool success = false;
 static bool made_new_pgdata = false;
 static bool found_existing_pgdata = false;
@@ -1723,6 +1724,19 @@ setup_sysviews(FILE *cmdfd)
 	PG_CMD_PUTS("\n\n");
 
 	free(sysviews_setup);
+
+	/* system_views_gp_summary.sql */
+	sysviews_setup = readfile(system_views_gp_summary_file);
+
+	for (line = sysviews_setup; *line != NULL; line++)
+	{
+		PG_CMD_PUTS(*line);
+		free(*line);
+	}
+
+	PG_CMD_PUTS("\n\n");
+
+	free(sysviews_setup);
 }
 
 /*
@@ -2093,7 +2107,15 @@ setup_cdb_schema(FILE *cmdfd)
 		int			namelen = strlen(file->d_name);
 
 		if (namelen > 4 &&
-			strcmp(".sql", file->d_name + namelen - 4) == 0)
+			strcmp(".sql", file->d_name + namelen - 4) == 0 &&
+			/*
+			 * Since 7X, we do not load gp_toolkit.sql anymore but will run
+			 * CREATE EXTENSION gp_toolkit to do the same thing. But existing
+			 * installation could still have gp_toolkit.sql until e.g. uninstallation
+			 * or a major version upgrade. Ignore that file in any cases.
+			 * XXX: should be no longer needed after 8X.
+			 */
+			(namelen < 14 || strcmp("gp_toolkit.sql", file->d_name) != 0))
 		{
 			scriptnames = pg_realloc(scriptnames,
 									 sizeof(char *) * (nscripts + 1));
@@ -2165,6 +2187,15 @@ static void
 load_plpgsql(FILE *cmdfd)
 {
 	PG_CMD_PUTS("CREATE EXTENSION plpgsql;\n\n");
+}
+
+/*
+ * GPDB: load external table support
+ */
+static void
+load_exttable(FILE *cmdfd)
+{
+	PG_CMD_PUTS("CREATE EXTENSION gp_exttable_fdw;\n\n");
 }
 
 /*
@@ -2870,6 +2901,7 @@ setup_data_file_paths(void)
 	set_input(&features_file, "sql_features.txt");
 	set_input(&system_views_file, "system_views.sql");
 	set_input(&system_views_gp_file, "system_views_gp.sql");
+	set_input(&system_views_gp_summary_file, "system_views_gp_summary.sql");
 
 	set_input(&cdb_init_d_dir, "cdb_init.d");
 
@@ -2903,6 +2935,7 @@ setup_data_file_paths(void)
 	check_input(features_file);
 	check_input(system_views_file);
 	check_input(system_views_gp_file);
+	check_input(system_views_gp_summary_file);
 }
 
 
@@ -3260,6 +3293,8 @@ initialize_data_directory(void)
 	setup_schema(cmdfd);
 
 	load_plpgsql(cmdfd);
+
+	load_exttable(cmdfd);
 
 	/* sets up the Greenplum Database admin schema */
 	setup_cdb_schema(cmdfd);

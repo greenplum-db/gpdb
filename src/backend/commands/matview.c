@@ -38,6 +38,7 @@
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
 #include "parser/parse_relation.h"
 #include "pgstat.h"
 #include "rewrite/rewriteHandler.h"
@@ -448,6 +449,21 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	if (list_length(rewritten) != 1)
 		elog(ERROR, "unexpected rewrite result for REFRESH MATERIALIZED VIEW");
 	query = (Query *) linitial(rewritten);
+	/*
+	 * In GPDB, the refresh clause is dispatched to segments when execute the query plan.
+	 * But for WITH NO DATA option, it's effectively like a TRUNCATE, so it doesn't need
+	 * to take a long time to run the query.
+	 *
+	 * Add a constant-FALSE to the qual to simulate a plan like this, dispatch the refresh
+	 * clause without run the long query:
+	 * Motion
+	 * 	Result  (cost=0.00..0.01 rows=1 width=0)
+	 * 	  One-Time Filter: false
+	 * Planner create the motion node on the top according to the matview's distribution
+	 * policy in the query->intoPolicy.
+	 */
+	if (refreshClause->skipData)
+		query->jointree->quals = (Node *) makeBoolConst(false, false);
 
 	/* Check for user-requested abort. */
 	CHECK_FOR_INTERRUPTS();

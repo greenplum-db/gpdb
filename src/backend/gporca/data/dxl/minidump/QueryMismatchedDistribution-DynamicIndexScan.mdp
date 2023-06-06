@@ -765,13 +765,13 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Index Mdid="0.1695490.1.0" Name="pt2_idx_1_prt_1" IsClustered="false" IndexType="B-tree" KeyColumns="2" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.1695490.1.0" Name="pt2_idx_1_prt_1" IsClustered="false" IndexType="B-tree" KeyColumns="2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -885,7 +885,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
         </dxl:LogicalSelect>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="16">
+    <dxl:Plan Id="0" SpaceSize="20">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6.000302" Rows="1.000000" Width="12"/>

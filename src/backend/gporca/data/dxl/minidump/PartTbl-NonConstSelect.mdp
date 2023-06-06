@@ -165,7 +165,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.91298.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.91298.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.1095.1.0" Name="&lt;" ComparisonType="LT">
@@ -197,7 +197,7 @@
       <dxl:ColumnStatistics Mdid="1.29434.1.1.2" Name="l_suppkey" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.29434.1.1.11" Name="l_commitdate" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.29434.1.1.10" Name="l_shipdate" Width="8.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Stable" IsStrict="false">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.29434.1.1.21" Name="tableoid" Width="4.000000"/>

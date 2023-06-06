@@ -287,6 +287,7 @@ CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation(
 	 */
 	if (clauses_attnums->Size() < 2)
 	{
+		clauses_attnums->Release();
 		return;
 	}
 
@@ -297,6 +298,7 @@ CExtendedStatsProcessor::ApplyCorrelatedStatsToScaleFactorFilterCalculation(
 
 	if (!stat)
 	{
+		clauses_attnums->Release();
 		return;
 	}
 

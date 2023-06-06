@@ -18,7 +18,7 @@
  * because it became a requirement for all tables to have the same physical
  * contents on both the primary and mirror segments.  To resolve this the
  * information is now passed to each segment on startup based on the
- * gp_segment_configuration (stored on the master only), and each segment
+ * gp_segment_configuration (stored on the coordinator only), and each segment
  * has a file in its datadirectory (gp_dbid) that uniquely identifies the
  * segment.
  *

@@ -509,9 +509,9 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 	/*
 	 * We don't eliminate aliens if we don't have an MPP plan
-	 * or we are executing on master.
+	 * or we are executing on coordinator.
 	 *
-	 * TODO: eliminate aliens even on master, if not EXPLAIN ANALYZE
+	 * TODO: eliminate aliens even on coordinator, if not EXPLAIN ANALYZE
 	 */
 	estate->eliminateAliens = execute_pruned_plan && estate->es_sliceTable && estate->es_sliceTable->hasMotions && (Gp_role == GP_ROLE_EXECUTE);
 

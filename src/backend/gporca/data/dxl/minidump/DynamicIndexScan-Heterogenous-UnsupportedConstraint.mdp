@@ -94,7 +94,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.318877.1.1.7" Name="cmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.318877.1.1.6" Name="xmax" Width="4.000000"/>
-      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -160,10 +160,10 @@
       </dxl:GPDBScalarOp>
       <dxl:ColumnStatistics Mdid="1.318877.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.318877.1.1.4" Name="xmin" Width="4.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Index Mdid="0.318973.1.0" Name="test_orders_2_1_prt_orders_1_ind" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.318973.1.0" Name="test_orders_2_1_prt_orders_1_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

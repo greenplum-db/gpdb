@@ -966,7 +966,7 @@
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:Index Mdid="0.32957.1.0" Name="foo_1_prt_1_dist_a_part_d_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0,3" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.32957.1.0" Name="foo_1_prt_1_dist_a_part_d_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0,3" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.12738.1.0"/>
           <dxl:Opfamily Mdid="0.12738.1.0"/>

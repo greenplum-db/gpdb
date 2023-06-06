@@ -40,8 +40,8 @@ endfunction()
 # GPDB_12_MERGE_FIXME: casts on part column no longer supported!
 # CPartTableLossyCastTest
 
-# GPDB_12_MERGE_FIXME: re-add the following tests to CArrayCmpTest once the
-# duplicate predicate issue is fixed
+# ORCA_FEATURE_NOT_SUPPORTED: re-add the following tests to CArrayCmpTest once the
+# PexprConvert2In preprocessing step is enabled
 # IN-ArrayCmp
 # NOT-IN-ArrayCmp
 
@@ -58,7 +58,8 @@ InSubqWithPrjListOuterRefNoInnerRefColumnIn InSubqWithPrjListOuterRefNoInnerRefC
 NestedInSubqWithPrjListOuterRefNoInnerRef  InEqualityJoin Correlated-SemiJoin
 CorrelatedSemiJoin-True CorrelatedIN-LeftSemiJoin-True CorrelatedIN-LeftSemiNotIn-True
 InSubqWithPrjListOuterRefNoInnerRefColumnPlusConstIn CorrelatedIN-LeftSemiJoin-Limit
-CorrelatedLeftSemiNLJoinWithLimit PushFilterToSemiJoinLeftChild SubqOuterReferenceInClause;
+CorrelatedLeftSemiNLJoinWithLimit PushFilterToSemiJoinLeftChild SubqOuterReferenceInClause
+SemiJoinDPE;
 
 CAntiSemiJoinTest:
 AntiSemiJoin2Select-1 AntiSemiJoin2Select-2 NOT-IN-NotNullBoth NOT-IN-NullInner NOT-IN-NullOuter
@@ -243,6 +244,9 @@ PartTbl-SPE-DynamicTableScan-Range-Cost5 PartTbl-SPE-DynamicTableScan-List-Cost1
 PartTbl-SPE-DynamicTableScan-List-Cost2 PartTbl-SPE-DynamicTableScan-List-Cost3
 PartTbl-SPE-DynamicTableScan-List-Cost4 PartTbl-SPE-DynamicTableScan-List-Cost5;
 
+CPartTblSPEBoolTest:
+PartTbl-SPE-Boolean1 PartTbl-SPE-Boolean2;
+
 CSetop1Test:
 ValueScanWithDuplicateAndSelfComparison PushGbBelowNaryUnionAll
 PushGbBelowNaryUnion-1 PushGbBelowNaryUnion-2 MS-UnionAll-1
@@ -281,7 +285,8 @@ LeftJoinPruning LeftJoinPruningOuterQuery LeftJoinPruningInnerQuery LeftJoinPrun
 COuterJoin2Test:
 LOJ-IsNullPred Select-Proj-OuterJoin OuterJoin-With-OuterRefs Join-Disj-Subqs
 EffectOfLocalPredOnJoin EffectOfLocalPredOnJoin2 EffectOfLocalPredOnJoin3
-LeftJoin-UnsupportedFilter-Cardinality LeftOuter2InnerUnionAllAntiSemiJoin;
+LeftJoin-UnsupportedFilter-Cardinality LeftOuter2InnerUnionAllAntiSemiJoin
+LOJ-With-Single-Pred-On-Outer LOJ_NULLTEST-On-SelfCheck-Pred;
 
 COuterJoin3Test:
 LOJ_IDF_no_convert_outer_ref_predicate_with_NULL
@@ -345,7 +350,7 @@ InsertNonSingleton NonSingleton TaintedReplicatedAgg TaintedReplicatedWindowAgg 
 InsertReplicatedIntoSerialHashDistributedTable TaintedReplicatedTablesCTE ReplicatedTableWithAggNoMotion;
 
 CDqaTest:
-NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute;
+NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute DistinctQueryWithMotions;
 
 CMCVCardinalityTest:
 BpCharMCVCardinalityEquals BpCharMCVCardinalityGreaterThan
@@ -382,8 +387,11 @@ OrderedAggUsingGroupColumnInDirectArg OrderedAgg_multiple_samecol OrderedAgg_wit
 OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_with_nonconst_fraction
 OrderedAgg_skewed_data;
 
+CoverintIndexTest:
+CoveringIndex-1 CoveringIndex-2 CoveringIndex-3;
+
 CForeignPartTest:
-ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE
+ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

@@ -29,6 +29,18 @@ CREATE FOREIGN TABLE text_csv_all (
     word1 text, word2 text
 ) SERVER file_server
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/text<SEGID>.csv', mpp_execute 'all segments');
+EXPLAIN SELECT * FROM text_csv_all ORDER BY word1;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+   Merge Key: word1
+   ->  Sort  (cost=0.00..431.00 rows=1 width=16)
+         Sort Key: word1
+         ->  Foreign Scan on text_csv_all  (cost=0.00..431.00 rows=1 width=16)
+               Foreign File: @abs_srcdir@/data/text<SEGID>.csv
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
 SELECT * FROM text_csv_all ORDER BY word1;
  word1 | word2 
 -------+-------

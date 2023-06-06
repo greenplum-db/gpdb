@@ -371,7 +371,7 @@ explain select * from R where b::int8=5::int8;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:MDScalarComparison Mdid="4.23.1.0;20.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.23.1.0" RightType="0.20.1.0" OperatorMdid="0.15.1.0"/>
-      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDCast Mdid="3.23.1.0;20.1.0" Name="int8" BinaryCoercible="false" SourceTypeId="0.23.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.481.1.0" CoercePathType="1"/>

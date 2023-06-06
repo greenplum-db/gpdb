@@ -240,19 +240,6 @@ extern MemoryContext GenerationContextCreate(MemoryContext parent,
 extern void AllocSetTransferAccounting(MemoryContext context,
 									   MemoryContext new_parent);
 
-/* mpool.c */
-typedef struct MPool MPool;
-extern MPool *mpool_create_with_context(MemoryContext parent, MemoryContext context);
-
-#define mpool_create(parent, name) \
-	(mpool_create_with_context((parent), AllocSetContextCreate((parent), (name), ALLOCSET_DEFAULT_SIZES)))
-
-extern void *mpool_alloc(MPool *mpool, Size size);
-extern void mpool_reset(MPool *mpool);
-extern void mpool_delete(MPool *mpool);
-extern uint64 mpool_total_bytes_allocated(MPool *mpool);
-extern uint64 mpool_bytes_used(MPool *mpool);
-
 /*
  * Recommended default alloc parameters, suitable for "ordinary" contexts
  * that might hold quite a lot of data.

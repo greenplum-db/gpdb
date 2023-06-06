@@ -22,6 +22,7 @@
 #ifndef ALTERTABLENODES_H
 #define ALTERTABLENODES_H
 
+#include "cdb/cdbaocsam.h"
 /*
  * GPDB: Moved here from tablecmds.c
  *
@@ -32,7 +33,7 @@
  * plus any child tables that are affected).  We save lists of subcommands
  * to apply to this table (possibly modified by parse transformation steps);
  * these lists will be executed in Phase 2.  If a Phase 3 step is needed,
- * necessary information is stored in the constraints and newvals lists.
+ * necessary information is stored in the constraints and newcolvals lists.
  *
  * Phase 2 is divided into multiple passes; subcommands are executed in
  * a pass determined by subcommand type.
@@ -48,8 +49,9 @@
 #define AT_PASS_COL_ATTRS		5	/* set other column attributes */
 #define AT_PASS_ADD_INDEX		6	/* ADD indexes */
 #define AT_PASS_ADD_CONSTR		7	/* ADD constraints, defaults */
-#define AT_PASS_MISC			8	/* other stuff */
-#define AT_NUM_PASSES			9
+#define AT_PASS_SET_ENCODING		8	/* ALTER COLUMN SET ENCODING. Note: if you are going to reorder the macros, this has to be after ALTER COLUMN TYPE. */
+#define AT_PASS_MISC			9	/* other stuff */
+#define AT_NUM_PASSES			10
 
 typedef struct AlteredTableInfo
 {
@@ -117,6 +119,8 @@ typedef struct NewColumnValue
 	Expr	   *expr;			/* expression to compute */
 	ExprState  *exprstate;		/* execution state */
 	bool		is_generated;	/* is it a GENERATED expression? */
+	List 		*new_encoding; 	/* new column encoding options */
+	AOCSWriteColumnOperation op;/* operation being performed */
 } NewColumnValue;
 
 #endif							/* ALTERTABLENODES_H */

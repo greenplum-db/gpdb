@@ -177,7 +177,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.3100.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.3100.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" IsStrict="false">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">

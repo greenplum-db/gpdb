@@ -22,9 +22,9 @@ select force_mirrors_to_catch_up();
 select count(*)=0 as result from
   (select db_dirs(oid) from pg_database where datname = 'dowell') as foo;
 
-\! psql -d dowell -c "create table test1(a int, b text)"
-\! psql -d dowell -c "insert into test1 values (1, '111'), (2, '222'), (3, '333')"
-\! psql -d dowell -c "select * from test1" 
+\! psql -d dowell -Xc "create table test1(a int, b text)"
+\! psql -d dowell -Xc "insert into test1 values (1, '111'), (2, '222'), (3, '333')"
+\! psql -d dowell -Xc "select * from test1" 
 
 drop database dowell;
 

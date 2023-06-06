@@ -1257,7 +1257,7 @@ cached_plan_cost(CachedPlan *plan, bool include_planner)
  * In GPDB, this function has one extra parameters: intoClause.
  * If 'intoClause' is given, the plan is to be used as part of a
  * CREATE TABLE AS statement. That affects the distribution of the output rows:
- * we cannot reuse a generic plan that fetches all the output rows into master.
+ * we cannot reuse a generic plan that fetches all the output rows into coordinator.
  * They should be distributed to the correct segments according to the
  * distribution policy of the target table, instead. A non-NULL intoClause
  * therefore also forces the plan to be re-planned on next call.

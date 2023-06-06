@@ -8,7 +8,7 @@ Normally, there is one entry, with `stainherit = false`, for each table column t
 
 Since different kinds of statistics may be appropriate for different kinds of data, `pg_statistic` is designed not to assume very much about what sort of statistics it stores. Only extremely general statistics \(such as nullness\) are given dedicated columns in `pg_statistic`. Everything else is stored in slots, which are groups of associated columns whose content is identified by a code number in one of the slot's columns.
 
-`pg_statistic` should not be readable by the public, since even statistical information about a table's contents should be considered sensitive. \(Example: minimum and maximum values of a salary column\). [pg\_stats](pg_stats.html) is a publicly readable view on `pg_statistic` that only exposes information about those tables that are readable by the current user.
+`pg_statistic` should not be readable by the public, since even statistical information about a table's contents should be considered sensitive. \(Example: minimum and maximum values of a salary column\). [pg\_stats](catalog_ref-views.html#pg_stats) is a publicly readable view on `pg_statistic` that only exposes information about those tables that are readable by the current user.
 
 XXX
 > **Caution** Diagnostic tools such as `gpsd` and `minirepro` collect sensitive information from `pg_statistic`, such as histogram boundaries, in a clear, readable form. Always review the output files of these utilities to ensure that the contents are acceptable for transport outside of the database in your organization.

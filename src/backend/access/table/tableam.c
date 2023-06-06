@@ -209,7 +209,7 @@ table_index_fetch_tuple_check(Relation rel,
 	 * overhead is significant for AO/CO relations. For details, please refer to
 	 * table_index_unique_check().
 	 */
-	if (RelationIsAppendOptimized(rel))
+	if (RelationStorageIsAO(rel))
 		return table_index_unique_check(rel, tid, snapshot, all_dead);
 
 	slot = table_slot_create(rel, NULL);

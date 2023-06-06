@@ -15,7 +15,7 @@ $(recurse)
 PROGRAMS= analyzedb gpactivatestandby gpaddmirrors gpcheckcat gpcheckperf \
 	gpcheckresgroupimpl gpconfig gpdeletesystem gpexpand gpinitstandby \
 	gpinitsystem gpload gpload.py gplogfilter gpmovemirrors \
-	gppkg gprecoverseg gpreload gpsync gpsd gpssh gpssh-exkeys gpstart \
+	gprecoverseg gpreload gpsync gpsd gpssh gpssh-exkeys gpstart \
 	gpstate gpstop minirepro gpmemwatcher gpmemreport gpcheckresgroupv2impl
 
 installdirs:
@@ -184,6 +184,6 @@ clean distclean:
 	rm -f analyzedbc gpactivatestandbyc gpaddmirrorsc gpcheckcatc \
 		  gpcheckperfc gpcheckresgroupimplc gpchecksubnetcfgc gpconfigc \
 		  gpdeletesystemc gpexpandc gpinitstandbyc gplogfilterc gpmovemirrorsc \
-		  gppkgc gprecoversegc gpreloadc gpscpc gpsyncc gpsdc gpssh-exkeysc gpsshc \
+		  gprecoversegc gpreloadc gpscpc gpsyncc gpsdc gpssh-exkeysc gpsshc \
 		  gpstartc gpstatec gpstopc minireproc gpcheckresgroupv2implc
 	rm -f gpconfig_modules/gucs_disallowed_in_file.txt

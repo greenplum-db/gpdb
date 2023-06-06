@@ -9,15 +9,15 @@
 #include <unistd.h>
 #include "libpq-fe.h"
 
-#define MASTER_CONNECT_INDEX -1
+#define COORDINATOR_CONNECT_INDEX -1
 
 static void
-finish_conn_nicely(PGconn *master_conn, PGconn *endpoint_conns[], size_t endpoint_conns_num)
+finish_conn_nicely(PGconn *coordinator_conn, PGconn *endpoint_conns[], size_t endpoint_conns_num)
 {
 	int			i;
 
-	if (master_conn)
-		PQfinish(master_conn);
+	if (coordinator_conn)
+		PQfinish(coordinator_conn);
 
 	for (i = 0; i < endpoint_conns_num; i++)
 	{
@@ -42,7 +42,7 @@ check_prepare_conn(PGconn *conn, const char *dbName, int conn_idx)
 		exit(1);
 	}
 
-	if (conn_idx == MASTER_CONNECT_INDEX)
+	if (conn_idx == COORDINATOR_CONNECT_INDEX)
 	{
 		/*
 		 * Set always-secure search path, so malicous users can't take
@@ -66,8 +66,8 @@ exec_sql_without_resultset(PGconn *conn, const char *sql, int conn_idx)
 {
 	PGresult   *res1;
 
-	if (conn_idx == MASTER_CONNECT_INDEX)
-		printf("\nExec SQL on Master:\n\t> %s\n", sql);
+	if (conn_idx == COORDINATOR_CONNECT_INDEX)
+		printf("\nExec SQL on Coordinator:\n\t> %s\n", sql);
 	else
 		printf("\nExec SQL on EndPoint[%d]:\n\t> %s\n", conn_idx, sql);
 
@@ -99,8 +99,8 @@ exec_sql_with_resultset_in_extended_query_protocol(PGconn *conn, const char *sql
 
 	paramValues[0] = "0";
 
-	if (conn_idx == MASTER_CONNECT_INDEX)
-		printf("\nExec SQL on Master:\n\t> %s\n", sql);
+	if (conn_idx == COORDINATOR_CONNECT_INDEX)
+		printf("\nExec SQL on Coordinator:\n\t> %s\n", sql);
 	else
 		printf("\nExec SQL on EndPoint[%d]:\n\t> %s\n", conn_idx, sql);
 
@@ -186,8 +186,8 @@ exec_sql_with_resultset(PGconn *conn, const char *sql, int conn_idx)
 	int			i,
 				j;
 
-	if (conn_idx == MASTER_CONNECT_INDEX)
-		printf("\nExec SQL on Master:\n\t> %s\n", sql);
+	if (conn_idx == COORDINATOR_CONNECT_INDEX)
+		printf("\nExec SQL on Coordinator:\n\t> %s\n", sql);
 	else
 		printf("\nExec SQL on EndPoint[%d]:\n\t> %s\n", conn_idx, sql);;
 
@@ -217,9 +217,9 @@ exec_sql_with_resultset(PGconn *conn, const char *sql, int conn_idx)
 	return 0;
 }
 
-/* this function is in the master connection */
+/* this function is in the coordinator connection */
 static int
-exec_check_parallel_cursor(PGconn *master_conn, int isCheckFinish)
+exec_check_parallel_cursor(PGconn *coordinator_conn, int isCheckFinish)
 {
 	int			result = 0;
 	PGresult   *res1;
@@ -230,12 +230,12 @@ exec_check_parallel_cursor(PGconn *master_conn, int isCheckFinish)
 	/* call wait mode monitor UDF and it will wait for finish retrieving. */
 	if (!isCheckFinish)
 	{
-		result = exec_sql_with_resultset(master_conn, check_sql, MASTER_CONNECT_INDEX);
+		result = exec_sql_with_resultset(coordinator_conn, check_sql, COORDINATOR_CONNECT_INDEX);
 	}
 	else
 	{
-		printf("\nExec SQL on Master:\n\t> %s\n", check_sql);
-		res1 = PQexec(master_conn, check_sql);
+		printf("\nExec SQL on Coordinator:\n\t> %s\n", check_sql);
+		res1 = PQexec(coordinator_conn, check_sql);
 		if (PQresultStatus(res1) != PGRES_TUPLES_OK)
 		{
 			fprintf(stderr, "\"%s\" didn't return tuples properly\n", check_sql);
@@ -277,7 +277,7 @@ main(int argc, char **argv)
 	int			i;
 	int			retVal;			/* return value for this func */
 
-	PGconn	   *master_conn,
+	PGconn	   *coordinator_conn,
 			  **endpoint_conns = NULL;
 	size_t		endpoint_conns_num = 0;
 	char	  **tokens = NULL,
@@ -314,24 +314,24 @@ main(int argc, char **argv)
 	pgtty = NULL;				/* debugging tty for the backend */
 
 	/* make a connection to the database */
-	master_conn = PQsetdb(pghost, pgport, pgoptions, pgtty, dbName);
-	check_prepare_conn(master_conn, dbName, MASTER_CONNECT_INDEX);
+	coordinator_conn = PQsetdb(pghost, pgport, pgoptions, pgtty, dbName);
+	check_prepare_conn(coordinator_conn, dbName, COORDINATOR_CONNECT_INDEX);
 
 	/* do some preparation for test */
-	if (exec_sql_without_resultset(master_conn, "DROP TABLE IF EXISTS public.tab_parallel_cursor;", MASTER_CONNECT_INDEX) != 0)
+	if (exec_sql_without_resultset(coordinator_conn, "DROP TABLE IF EXISTS public.tab_parallel_cursor;", COORDINATOR_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
-	if (exec_sql_without_resultset(master_conn, "CREATE TABLE public.tab_parallel_cursor AS SELECT id FROM pg_catalog.generate_series(1,100) id;", MASTER_CONNECT_INDEX) != 0)
+	if (exec_sql_without_resultset(coordinator_conn, "CREATE TABLE public.tab_parallel_cursor AS SELECT id FROM pg_catalog.generate_series(1,100) id;", COORDINATOR_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
 
 	/*
 	 * start a transaction block because PARALLEL RETRIEVE CURSOR only support
 	 * WITHOUT HOLD option
 	 */
-	if (exec_sql_without_resultset(master_conn, "BEGIN;", MASTER_CONNECT_INDEX) != 0)
+	if (exec_sql_without_resultset(coordinator_conn, "BEGIN;", COORDINATOR_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
 
 	/* declare PARALLEL RETRIEVE CURSOR for this table */
-	if (exec_sql_without_resultset(master_conn, "DECLARE myportal PARALLEL RETRIEVE CURSOR FOR select * from public.tab_parallel_cursor;", MASTER_CONNECT_INDEX) != 0)
+	if (exec_sql_without_resultset(coordinator_conn, "DECLARE myportal PARALLEL RETRIEVE CURSOR FOR select * from public.tab_parallel_cursor;", COORDINATOR_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
 
 	/*
@@ -340,7 +340,7 @@ main(int argc, char **argv)
 	const char *sql1 = "select hostname,port,auth_token,endpointname from pg_catalog.gp_get_endpoints() where cursorname='myportal';";
 
 	printf("\nExec SQL on the coordinator:\n\t> %s\n", sql1);
-	res1 = PQexec(master_conn, sql1);
+	res1 = PQexec(coordinator_conn, sql1);
 	if (PQresultStatus(res1) != PGRES_TUPLES_OK)
 	{
 		fprintf(stderr, "Cannot get the endpoint information for cursor myportal\n");
@@ -393,10 +393,10 @@ main(int argc, char **argv)
 
 		/*
 		 * Run nowait mode monitor UDF to check the parallel retrieve cursor
-		 * status at specific time in master connection, so that if any error
+		 * status at specific time in coordinator connection, so that if any error
 		 * occurs, it will detect ASAP.
 		 */
-		if (exec_check_parallel_cursor(master_conn, 0))
+		if (exec_check_parallel_cursor(coordinator_conn, 0))
 		{
 			fprintf(stderr, "Error during check the PARALLEL RETRIEVE CURSOR\n");
 			goto LABEL_ERR;
@@ -418,18 +418,18 @@ main(int argc, char **argv)
 	}
 
 	/* Check the status returns finished */
-	if (exec_check_parallel_cursor(master_conn, 1))
+	if (exec_check_parallel_cursor(coordinator_conn, 1))
 	{
 		fprintf(stderr, "Error during check the PARALLEL RETRIEVE CURSOR\n");
 		goto LABEL_ERR;
 	}
 
 	/* close the cursor */
-	if (exec_sql_without_resultset(master_conn, "CLOSE myportal;", MASTER_CONNECT_INDEX) != 0)
+	if (exec_sql_without_resultset(coordinator_conn, "CLOSE myportal;", COORDINATOR_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
 
 	/* end the transaction */
-	if (exec_sql_without_resultset(master_conn, "END;", MASTER_CONNECT_INDEX) != 0)
+	if (exec_sql_without_resultset(coordinator_conn, "END;", COORDINATOR_CONNECT_INDEX) != 0)
 		goto LABEL_ERR;
 
 	/*
@@ -446,7 +446,7 @@ main(int argc, char **argv)
 
 		query = "SELECT oid FROM pg_catalog.pg_proc WHERE proname LIKE 'mod' "
 			"AND prosrc LIKE 'int4mod'";
-		res = PQexec(master_conn, query);
+		res = PQexec(coordinator_conn, query);
 		if (res == NULL)
 		{
 			printf("Failed in executing SQL: %s \n", query);
@@ -469,7 +469,7 @@ main(int argc, char **argv)
 		}
 
 		/*
-		 * Calculate the mod of argv[0] and argv[1], mod(10, 3) via master
+		 * Calculate the mod of argv[0] and argv[1], mod(10, 3) via coordinator
 		 * connection, can get the correct result.
 		 */
 		argv[0].isint = 1;
@@ -480,7 +480,7 @@ main(int argc, char **argv)
 		argv[1].len = 4;
 		argv[1].u.integer = 3;
 
-		res = PQfn(master_conn, foid, &ret, &result_len, 1, argv, 2);
+		res = PQfn(coordinator_conn, foid, &ret, &result_len, 1, argv, 2);
 		if (PQresultStatus(res) == PGRES_COMMAND_OK)
 		{
 			PQclear(res);
@@ -518,7 +518,7 @@ LABEL_ERR:
 
 LABEL_FINISH:
 	/* close the connections to the database and cleanup */
-	finish_conn_nicely(master_conn, endpoint_conns, endpoint_conns_num);
+	finish_conn_nicely(coordinator_conn, endpoint_conns, endpoint_conns_num);
 
 	if (tokens)
 	{

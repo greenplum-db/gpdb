@@ -6162,25 +6162,25 @@ CTranslatorExprToDXL::PdxlnScArrayCoerceExpr(CExpression *pexprArrayCoerceExpr)
 	CScalarArrayCoerceExpr *popScArrayCoerceExpr =
 		CScalarArrayCoerceExpr::PopConvert(pexprArrayCoerceExpr->Pop());
 
-	IMDId *pmdidElemFunc = popScArrayCoerceExpr->PmdidElementFunc();
-	pmdidElemFunc->AddRef();
 	IMDId *mdid = popScArrayCoerceExpr->MdidType();
 	mdid->AddRef();
 
 	CDXLNode *pdxlnArrayCoerceExpr = GPOS_NEW(m_mp) CDXLNode(
 		m_mp,
 		GPOS_NEW(m_mp) CDXLScalarArrayCoerceExpr(
-			m_mp, pmdidElemFunc, mdid, popScArrayCoerceExpr->TypeModifier(),
-			popScArrayCoerceExpr->IsExplicit(),
+			m_mp, mdid, popScArrayCoerceExpr->TypeModifier(),
 			(EdxlCoercionForm) popScArrayCoerceExpr
 				->Ecf(),  // map Coercion Form directly based on position in enum
 			popScArrayCoerceExpr->Location()));
 
 	// translate child
-	GPOS_ASSERT(1 == pexprArrayCoerceExpr->Arity());
+	GPOS_ASSERT(2 == pexprArrayCoerceExpr->Arity());
 	CExpression *pexprChild = (*pexprArrayCoerceExpr)[0];
+	CExpression *pexprElemExpr = (*pexprArrayCoerceExpr)[1];
 	CDXLNode *child_dxlnode = PdxlnScalar(pexprChild);
+	CDXLNode *elemexpr_dxlnode = PdxlnScalar(pexprElemExpr);
 	pdxlnArrayCoerceExpr->AddChild(child_dxlnode);
+	pdxlnArrayCoerceExpr->AddChild(elemexpr_dxlnode);
 
 	return pdxlnArrayCoerceExpr;
 }

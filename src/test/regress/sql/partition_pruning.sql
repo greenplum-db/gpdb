@@ -8,11 +8,6 @@
 -- updating, as the system improves.
 --
 
--- GPDB_12_MERGE_FIXME: Many of these queries are no longer able to constraint
--- exclusion, like we used to on GPDB 6. Not sure what we should do about it.
--- See https://github.com/greenplum-db/gpdb/issues/10287.
--- In GPDB6 this case is partition pruned, but the result is wrong,
--- in MAIN branch it is not partition pruned, but has right result.
 -- Create test table with two partitions, for values equal to '1' and values equal to '2'.
 create table parttab (n numeric, t text)
   partition by list (n)(partition one values ('1'), partition two values('2'));
@@ -852,5 +847,107 @@ explain analyze select * from bar where j>2.8;
 explain analyze select * from bar where j is distinct from 5.6;
 -- 8 parts: NULL is shared with others on p1. So, all 8 parts.
 explain analyze select * from bar where j is distinct from NULL;
+
+
+-- Table partitioned by boolean column
+CREATE TABLE pt_bool_tab
+(
+  col1 int,
+  col2 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 values(true),
+  partition part2 values(false)
+);
+
+INSERT INTO pt_bool_tab SELECT i, true FROM generate_series(1,3)i;
+INSERT INTO pt_bool_tab SELECT i, false FROM generate_series(1,2)i;
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS true;
+SELECT * FROM pt_bool_tab WHERE col2 IS true;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS false;
+SELECT * FROM pt_bool_tab WHERE col2 IS false;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NULL;
+SELECT * FROM pt_bool_tab WHERE col2 IS NULL;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS unknown;
+SELECT * FROM pt_bool_tab WHERE col2 IS unknown;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT true;
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT true;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT false;
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT false;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT unknown;
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT unknown;
+EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS NOT NULL;
+SELECT * FROM pt_bool_tab WHERE col2 IS NOT NULL;
+
+CREATE TABLE pt_bool_tab_df
+(
+  col1 int,
+  col2 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 values(true),
+  partition part2 values(false),
+  default partition def
+);
+
+INSERT INTO pt_bool_tab_df SELECT i, true FROM generate_series(1,3)i;
+INSERT INTO pt_bool_tab_df SELECT i, false FROM generate_series(1,2)i;
+INSERT INTO pt_bool_tab_df SELECT i, NULL FROM generate_series(1,1)i;
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS true;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS true;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS false;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS false;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NULL;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NULL;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS unknown;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS unknown;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT true;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT true;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT false;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT false;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT unknown;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT unknown;
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT NULL;
+SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT NULL;
+
+
+CREATE TABLE pt_bool_tab_null
+(
+  col1 int,
+  col2 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+  partition part1 values(true),
+  partition part2 values(false),
+  partition part3 values(null)
+);
+INSERT INTO pt_bool_tab_null SELECT i, true FROM generate_series(1,3)i;
+INSERT INTO pt_bool_tab_null SELECT i, false FROM generate_series(1,2)i;
+INSERT INTO pt_bool_tab_null SELECT i, NULL FROM generate_series(1,1)i;
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS true;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS true;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS false;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS false;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NULL;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NULL;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS unknown;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS unknown;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT true;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT true;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT false;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT false;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT unknown;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT unknown;
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT NULL;
+SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT NULL;
 
 RESET ALL;

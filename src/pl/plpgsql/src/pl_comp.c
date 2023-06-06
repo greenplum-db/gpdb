@@ -1799,6 +1799,7 @@ PLpgSQL_type *
 plpgsql_parse_wordrowtype(char *ident)
 {
 	Oid			classOid;
+	Oid			typOid;
 
 	/*
 	 * Look up the relation.  Note that because relation rowtypes have the
@@ -1813,8 +1814,16 @@ plpgsql_parse_wordrowtype(char *ident)
 				(errcode(ERRCODE_UNDEFINED_TABLE),
 				 errmsg("relation \"%s\" does not exist", ident)));
 
+	/* Some relkinds lack type OIDs */
+	typOid = get_rel_type_id(classOid);
+	if (!OidIsValid(typOid))
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("relation \"%s\" does not have a composite type",
+						ident)));
+
 	/* Build and return the row type struct */
-	return plpgsql_build_datatype(get_rel_type_id(classOid), -1, InvalidOid,
+	return plpgsql_build_datatype(typOid, -1, InvalidOid,
 								  makeTypeName(ident));
 }
 
@@ -1827,6 +1836,7 @@ PLpgSQL_type *
 plpgsql_parse_cwordrowtype(List *idents)
 {
 	Oid			classOid;
+	Oid			typOid;
 	RangeVar   *relvar;
 	MemoryContext oldCxt;
 
@@ -1846,10 +1856,18 @@ plpgsql_parse_cwordrowtype(List *idents)
 						  -1);
 	classOid = RangeVarGetRelid(relvar, NoLock, false);
 
+	/* Some relkinds lack type OIDs */
+	typOid = get_rel_type_id(classOid);
+	if (!OidIsValid(typOid))
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("relation \"%s\" does not have a composite type",
+						strVal(lsecond(idents)))));
+
 	MemoryContextSwitchTo(oldCxt);
 
 	/* Build and return the row type struct */
-	return plpgsql_build_datatype(get_rel_type_id(classOid), -1, InvalidOid,
+	return plpgsql_build_datatype(typOid, -1, InvalidOid,
 								  makeTypeNameFromNameList(idents));
 }
 

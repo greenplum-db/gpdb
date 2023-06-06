@@ -752,7 +752,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 	LOCALTIME LOCALTIMESTAMP LOCATION LOCK_P LOCKED LOGGED
 
 	MAPPING MATCH MATERIALIZED MAXVALUE MEMORY_LIMIT
-	METHOD MINUTE_P MINVALUE MODE MONTH_P MOVE
+	METHOD MINUTE_P MINVALUE MIN_COST MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NO NONE
 	NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF
@@ -1033,6 +1033,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
 			%nonassoc MEMORY_LIMIT
+			%nonassoc MIN_COST
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
 			%nonassoc MISSING
@@ -1621,6 +1622,10 @@ OptResourceGroupElem:
 			| MEMORY_LIMIT SignedIconst
 				{
 					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
+				}
+			| MIN_COST SignedIconst
+				{
+					$$ = makeDefElem("min_cost", (Node *) makeInteger($2), @1);
 				}
 		;
 
@@ -10468,18 +10473,30 @@ common_func_opt_item:
 			| NO SQL_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("none"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"NO SQL\" acts as no operation.")));
 				}
 			| CONTAINS SQL_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("contains"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"CONTAINS SQL DATA\" acts as no operation.")));
 				}
 			| READS SQL_P DATA_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("reads"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"READS SQL DATA\" acts as no operation.")));
 				}
 			| MODIFIES SQL_P DATA_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("modifies"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"MODIFIES SQL DATA\" acts as no operation.")));
 				}
 			| EXECUTE ON ANY
 				{
@@ -18150,6 +18167,7 @@ unreserved_keyword:
 			| LOCATION
 			| LOCK_P
 			| LOCKED
+            | LOG_P
 			| LOGGED
 			| MAPPING
 			| MASTER
@@ -18160,6 +18178,7 @@ unreserved_keyword:
 			| METHOD
 			| MINUTE_P
 			| MINVALUE
+			| MIN_COST
 			| MISSING
 			| MODE
 			| MODIFIES
@@ -18640,6 +18659,7 @@ PartitionIdentKeyword: ABORT_P
 			| LOG_P
 			| OUTER_P
 			| VERBOSE
+			| MIN_COST
 			;
 
 /* Column identifier --- keywords that can be column, table, etc names.
@@ -18734,7 +18754,6 @@ type_func_name_keyword:
 			| JOIN
 			| LEFT
 			| LIKE
-			| LOG_P
 			| NATURAL
 			| NOTNULL
 			| OUTER_P

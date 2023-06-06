@@ -56,7 +56,7 @@ private:
 	CDXLNode *m_dxl_node;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 public:
 	// ctor
@@ -88,11 +88,7 @@ public:
 	}
 
 	// DXL string for check constraint
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// the scalar expression of the check constraint
 	CExpression *GetCheckConstraintExpr(

@@ -31,6 +31,7 @@ Each data type has an external representation determined by its input and output
 |jsonb| |1 byte + binary string|json of any length in a decomposed binary format|variable unlimited length|
 |lseg| |32 bytes|\(\(x1,y1\),\(x2,y2\)\)|line segment in the plane - not allowed in distribution key columns.|
 |macaddr| |6 bytes| |MAC addresses|
+|macaddr8| |8 bytes| |MAC addresses (EUI-64 format)|
 |money| |8 bytes|-92233720368547758.08 to +92233720368547758.07|currency amount|
 |path<sup>1</sup>| |16+16n bytes|\[\(x1,y1\),...\]|geometric path in the plane - not allowed in distribution key columns.|
 |point| |16 bytes|\(x,y\)|geometric point in the plane - not allowed in distribution key columns.|

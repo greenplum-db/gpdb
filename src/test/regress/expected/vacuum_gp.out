@@ -270,6 +270,25 @@ VACUUM ANALYZE s_priv_test.t_priv_table;
 DROP SCHEMA s_priv_test CASCADE;
 NOTICE:  drop cascades to table s_priv_test.t_priv_table
 DROP ROLE r_priv_test;
+-- Check how reltuples/relpages/relallvisible are updated on a table, on
+-- VACUUM ANALYZE.
+set gp_autostats_mode='none';
+CREATE TABLE vacuum_gp (a int) DISTRIBUTED BY (a);
+INSERT INTO vacuum_gp SELECT i FROM generate_series(1, 12)i;
+SELECT relname, reltuples, relpages, relallvisible FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp%';
+  relname  | reltuples | relpages | relallvisible 
+-----------+-----------+----------+---------------
+ vacuum_gp |         0 |        0 |             0
+(1 row)
+
+VACUUM ANALYZE vacuum_gp;
+SELECT relname, reltuples, relpages, relallvisible FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp%';
+  relname  | reltuples | relpages | relallvisible 
+-----------+-----------+----------+---------------
+ vacuum_gp |        12 |        3 |             3
+(1 row)
+
+reset gp_autostats_mode;
 -- Check how reltuples/relpages are updated on a partitioned table, on
 -- VACUUM and ANALYZE.
 set gp_autostats_mode='none';
@@ -316,8 +335,8 @@ CREATE SEQUENCE s_serial START 100;
 VACUUM (ANALYZE, VERBOSE) s_serial;
 WARNING:  skipping "s_serial" --- cannot vacuum non-tables or special system tables
 DROP SEQUENCE s_serial;
-VACUUM gp_toolkit.__gp_log_master_ext;
-WARNING:  skipping "__gp_log_master_ext" --- cannot vacuum non-tables or special system tables
+VACUUM gp_toolkit.__gp_log_coordinator_ext;
+WARNING:  skipping "__gp_log_coordinator_ext" --- cannot vacuum non-tables or special system tables
 -- Vacuum related access control tests (Issue: https://github.com/greenplum-db/gpdb/issues/9001)
 -- Given a non-super-user role
 CREATE ROLE non_super_user_vacuum;

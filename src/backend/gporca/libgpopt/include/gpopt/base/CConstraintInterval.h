@@ -113,6 +113,15 @@ private:
 	static CConstraintInterval *PciIntervalFromScalarNullTest(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref);
 
+	// create interval from scalar boolean test
+	static CConstraintInterval *PciIntervalFromScalarBooleanTest(
+		CMemoryPool *mp, CExpression *pexpr, CColRef *colref);
+
+	// create interval from bool scalar ident
+	static CConstraintInterval *PciIntervalFromScalarIdent(CMemoryPool *mp,
+														   CColRef *colref,
+														   BOOL infer_nulls_as);
+
 	// creates a range like [x,x] where x is a constant
 	static CRangeArray *PciRangeFromColConstCmp(CMemoryPool *mp,
 												IMDType::ECmpType cmp_type,

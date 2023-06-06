@@ -126,9 +126,6 @@ CATALOG(pg_proc,1255,ProcedureRelationId) BKI_BOOTSTRAP BKI_ROWTYPE_OID(81,Proce
 	/* access permissions */
 	aclitem		proacl[1] BKI_DEFAULT(_null_);
 
-	/* data access indicator (GPDB specific) */
-	char		prodataaccess BKI_DEFAULT(n);
-
 	 /* EXECUTE ON ANY or SEGMENTS (GPDB specific) */
 	char		proexeclocation BKI_DEFAULT(a);
 
@@ -149,12 +146,6 @@ FOREIGN_KEY(prorettype REFERENCES pg_type(oid));
  * ----------------
  */
 typedef FormData_pg_proc *Form_pg_proc;
-
-/*
- * TODO: It would be nice if we could default prodataaccess to 'c' for all
- * SQL-language functions. But the process_col_defaults.pl script isn't
- * currently smart enough for that.
- */
 
 #ifdef EXPOSE_TO_CLIENT_CODE
 
@@ -181,10 +172,10 @@ typedef FormData_pg_proc *Form_pg_proc;
 /*
  * Symbolic values for proparallel column: these indicate whether a function
  * can be safely be run in a parallel backend, during parallelism but
- * necessarily in the master, or only in non-parallel mode.
+ * necessarily in the leader, or only in non-parallel mode.
  */
-#define PROPARALLEL_SAFE		's' /* can run in worker or master */
-#define PROPARALLEL_RESTRICTED	'r' /* can run in parallel master only */
+#define PROPARALLEL_SAFE		's' /* can run in worker or leader */
+#define PROPARALLEL_RESTRICTED	'r' /* can run in parallel leader only */
 #define PROPARALLEL_UNSAFE		'u' /* banned while in parallel mode */
 
 /*
@@ -197,15 +188,6 @@ typedef FormData_pg_proc *Form_pg_proc;
 #define PROARGMODE_INOUT	'b'
 #define PROARGMODE_VARIADIC 'v'
 #define PROARGMODE_TABLE	't'
-
-/*
- * Symbolic values for prodataaccess column: these provide a hint regarding
- * what kind of statements are included in the function.
- */
-#define PRODATAACCESS_NONE		'n'
-#define PRODATAACCESS_CONTAINS	'c'
-#define PRODATAACCESS_READS		'r'
-#define PRODATAACCESS_MODIFIES	'm'
 
 #define PROEXECLOCATION_ANY		'a'
 #define PROEXECLOCATION_COORDINATOR	'c'
@@ -242,7 +224,6 @@ extern ObjectAddress ProcedureCreate(const char *procedureName,
 									 Oid prosupport,
 									 float4 procost,
 									 float4 prorows,
-									 char prodataaccess,
 									 char proexeclocation);
 
 extern bool function_parse_error_transpose(const char *prosrc);

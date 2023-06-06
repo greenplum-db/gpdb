@@ -22,7 +22,6 @@ from gppylib.operations.buildMirrorSegments import get_recovery_progress_file, g
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpCoordinatorEnvironment
 from gppylib.utils import TableLogger
-from gppylib.commands.gp import get_coordinatordatadir
 
 logger = gplog.get_default_logger()
 
@@ -682,15 +681,18 @@ class GpSystemStateProgram:
 
         self.__addClusterDownWarning(gpArray, data)
 
-        recovery_progress_file = get_recovery_progress_file(gplog)
-        segments_under_recovery = self._parse_recovery_progress_data(data, recovery_progress_file, gpArray)
-        gprecoverseg_lock_dir = os.path.join(get_coordinatordatadir() + '/gprecoverseg.lock')
-        if segments_under_recovery and os.path.exists(gprecoverseg_lock_dir):
-            logger.info("----------------------------------------------------")
-            logger.info("Segments in recovery")
-            logSegments(segments_under_recovery, False, [VALUE_RECOVERY_TYPE, VALUE_RECOVERY_COMPLETED_BYTES, VALUE_RECOVERY_TOTAL_BYTES,
-                                                          VALUE_RECOVERY_PERCENTAGE])
-            exitCode = 1
+        # Check if gprecoverseg process is running. We do not want to
+        # show the progress if the gprecoverseg process is not running.
+        if gp.is_gprecoverseg_running():
+            recovery_progress_file = get_recovery_progress_file(gplog)
+            segments_under_recovery = self._parse_recovery_progress_data(data, recovery_progress_file, gpArray)
+
+            if segments_under_recovery:
+                logger.info("----------------------------------------------------")
+                logger.info("Segments in recovery")
+                logSegments(segments_under_recovery, False, [VALUE_RECOVERY_TYPE, VALUE_RECOVERY_COMPLETED_BYTES, VALUE_RECOVERY_TOTAL_BYTES,
+                                                            VALUE_RECOVERY_PERCENTAGE])
+                exitCode = 1
 
         # final output -- no errors, then log this message
         if exitCode == 0:

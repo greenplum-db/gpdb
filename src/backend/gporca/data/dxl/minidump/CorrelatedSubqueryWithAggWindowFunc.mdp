@@ -186,14 +186,14 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
         <dxl:ResultType Mdid="0.1700.1.0"/>
         <dxl:IntermediateResultType Mdid="0.17.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:GPDBFunc Mdid="0.1718.1.0" Name="numeric_eq" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1718.1.0" Name="numeric_eq" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBAgg Mdid="0.2108.1.0" Name="sum" IsSplittable="true" HashAggCapable="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:GPDBFunc Mdid="0.1740.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1740.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.1700.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>

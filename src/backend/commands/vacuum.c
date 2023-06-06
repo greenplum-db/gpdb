@@ -75,13 +75,6 @@
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 
-
-typedef struct VacuumStatsContext
-{
-	List		*updated_stats;
-	int			nsegs;
-} VacuumStatsContext;
-
 /*
  * GUC parameters
  */
@@ -110,9 +103,6 @@ static VacOptTernaryValue get_vacopt_ternary_value(DefElem *def);
 static void dispatchVacuum(VacuumParams *params, Oid relid,
 						   VacuumStatsContext *ctx);
 static List *vacuum_params_to_options_list(VacuumParams *params);
-static void vacuum_combine_stats(VacuumStatsContext *stats_context,
-								 CdbPgResults *cdb_pgresults);
-static void vac_update_relstats_from_list(VacuumStatsContext *stats_context);
 
 /*
  * Primary entry point for manual VACUUM and ANALYZE commands
@@ -542,10 +532,23 @@ vacuum(List *relations, VacuumParams *params,
 	if ((params->options & VACOPT_VACUUM) && !IsAutoVacuumWorkerProcess())
 	{
 		/*
-		 * Update pg_database.datfrozenxid, and truncate pg_xact if possible.
-		 * (autovacuum.c does this for itself.)
+		 * GPDB vacuums an Append-Optimized table in multiple sub phases, update
+		 * pg_database.datfrozenxid in the last phase (VACOPT_AO_POST_CLEANUP_PHASE)
+		 * as an ending task of the whole VACUUM operation, intead of doing it in very
+		 * sub phase.
+		 * 
+		 * More important, phase VACOPT_AO_COMPACT_PHASE requires two-phase commit
+		 * which could introduce distributed deadlock if acquiring DatabaseFrozenIds lock
+		 * in the case of multiple VACUUM sessions in the same database.
 		 */
-		vac_update_datfrozenxid();
+		if (!(params->options & (VACOPT_AO_PRE_CLEANUP_PHASE | VACOPT_AO_COMPACT_PHASE)))
+		{
+			/*
+			 * Update pg_database.datfrozenxid, and truncate pg_xact if possible.
+			 * (autovacuum.c does this for itself.)
+			 */
+			vac_update_datfrozenxid();
+		}
 	}
 
 	/*
@@ -1462,7 +1465,7 @@ vac_update_relstats(Relation relation,
 
 	/*
 	 * In GPDB, all the data is stored in the segments, and the
-	 * relpages/reltuples in the master reflect the sum of the values in
+	 * relpages/reltuples in the coordinator reflect the sum of the values in
 	 * all the segments. In VACUUM, don't overwrite relpages/reltuples with
 	 * the values we counted in the QD node itself. We will dispatch the
 	 * VACUUM to the segments after processing the QD node, and we will
@@ -1526,7 +1529,7 @@ vac_update_relstats(Relation relation,
 		{
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
-			Assert(RelationIsAppendOptimized(relation));
+			Assert(RelationStorageIsAO(relation));
 			num_tuples = 0;
 		}
 
@@ -1567,8 +1570,8 @@ vac_update_relstats(Relation relation,
 		dirty = true;
 	}
 
-	elog(DEBUG2, "Vacuum oid=%u pages=%d tuples=%f",
-		 relid, pgcform->relpages, pgcform->reltuples);
+	elog(DEBUG2, "Vacuum oid=%u pages=%d tuples=%f allvisible pages=%d",
+		 relid, pgcform->relpages, pgcform->reltuples, pgcform->relallvisible);
 
 	/* Apply DDL updates, but not inside an outer transaction (see above) */
 
@@ -1820,10 +1823,7 @@ vac_update_datfrozenxid(void)
 
 	/* chicken out if bogus data found */
 	if (bogus)
-	{
-		LockDatabaseFrozenIds(ExclusiveLock);
 		return;
-	}
 
 	Assert(TransactionIdIsNormal(newFrozenXid));
 	Assert(MultiXactIdIsValid(newMinMulti));
@@ -1892,14 +1892,6 @@ vac_update_datfrozenxid(void)
 	if (dirty || ForceTransactionIdLimitUpdate())
 		vac_truncate_clog(newFrozenXid, newMinMulti,
 						  lastSaneFrozenXid, lastSaneMinMulti);
-
-	// GPDB_12_12_MERGE_FIXME: @(interma) upstream lock it in the **whole** tranaction (released by ResourceOwnerRelease())
-	// https://github.com/greenplum-db/gpdb-postgres-merge/commit/30e68a2abb3890c3292ff0b2422a7ea04d62acdd#
-	// 
-	// But in GP, it will cause deadlock in QEs, details: GPSERVER-370
-	// So I tried to release it at the end of this function.
-	// But it may be risks, need to understand upstream commit deeper.
-	UnLockDatabaseFrozenIds(ExclusiveLock);
 }
 
 
@@ -2295,7 +2287,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	else
 		toast_relid = InvalidOid;
 
-	if (RelationIsAppendOptimized(onerel))
+	if (RelationStorageIsAO(onerel))
 	{
 		/*
 		 * GPDB: AO tables should never be passed into vacuum_rel if the
@@ -2390,7 +2382,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		return false;
 	}
 
-	is_appendoptimized = RelationIsAppendOptimized(onerel);
+	is_appendoptimized = RelationStorageIsAO(onerel);
 	is_toast = (onerel->rd_rel->relkind == RELKIND_TOASTVALUE);
 
 	if (ao_vacuum_phase && !(is_appendoptimized || is_toast))
@@ -2529,7 +2521,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 
 	/*
 	 * If the relation has a secondary toast rel, vacuum that too while we
-	 * still hold the session lock on the master table.  Note however that
+	 * still hold the session lock on the main table.  Note however that
 	 * "analyze" will not get done on the toast table.  This is good, because
 	 * the toaster always uses hardcoded index access and statistics are
 	 * totally unimportant for toast relations.
@@ -2604,7 +2596,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	}
 
 	/*
-	 * Now release the session-level lock on the master table.
+	 * Now release the session-level lock on the main table.
 	 */
 	UnlockRelationIdForSession(&onerelid, lmode);
 
@@ -2786,7 +2778,7 @@ dispatchVacuum(VacuumParams *params, Oid relid, VacuumStatsContext *ctx)
 								GetAssignedOidsForDispatch(),
 								&cdb_pgresults);
 
-	vacuum_combine_stats(ctx, &cdb_pgresults);
+	vacuum_combine_stats(ctx, &cdb_pgresults, vac_context);
 
 	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 }
@@ -2891,9 +2883,12 @@ vacuum_params_to_options_list(VacuumParams *params)
  * the final stats for QD relations.
  *
  * Note that the mirrorResults is ignored by this function.
+ * context: Perform any additional memory allocation necessary.
  */
-static void
-vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresults)
+void
+vacuum_combine_stats(VacuumStatsContext *stats_context,
+					 CdbPgResults *cdb_pgresults,
+					 MemoryContext context)
 {
 	int			result_no;
 	MemoryContext old_context;
@@ -2954,7 +2949,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 		{
 			Assert(pgresult->extraslen == sizeof(VPgClassStats));
 
-			old_context = MemoryContextSwitchTo(vac_context);
+			old_context = MemoryContextSwitchTo(context);
 			pgclass_stats_combo = palloc(sizeof(VPgClassStatsCombo));
 			memcpy(pgclass_stats_combo, pgresult->extras, pgresult->extraslen);
 			pgclass_stats_combo->count = 1;
@@ -2969,7 +2964,7 @@ vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults *cdb_pgresu
 /*
  * Update relpages/reltuples of all the relations in the list.
  */
-static void
+void
 vac_update_relstats_from_list(VacuumStatsContext *stats_context)
 {
 	List *updated_stats = stats_context->updated_stats;

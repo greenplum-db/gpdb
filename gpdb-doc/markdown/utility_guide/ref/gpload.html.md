@@ -98,60 +98,60 @@ The basic structure of a load control file is:
 
 ```
 ---
-[VERSION](#cfversion): 1.0.0.1
-[DATABASE](#cfdatabase): <db_name>
-[USER](#cfuser): <db_username>
-[HOST](#cfhost): <coordinator_hostname>
-[PORT](#cfport): <coordinator_port>
-[GPLOAD](#cfgpload):
-   [INPUT](#cfinput):
-    - [SOURCE](#cfsource):
-         [LOCAL\_HOSTNAME](#cfsourcelocalname):
+VERSION: 1.0.0.1
+DATABASE: <db_name>
+USER: <db_username>
+HOST: <coordinator_hostname>
+PORT: <coordinator_port>
+GPLOAD:
+   INPUT:
+    - SOURCE:
+         LOCAL_HOSTNAME:
            - <hostname_or_ip>
-         [PORT](#cfsourceport): <http_port>
-       | [PORT\_RANGE](#cfversion): [<start_port_range>, <end_port_range>]
-         [FILE](#cfsourcefile): 
+         PORT: <http_port>
+       | PORT_RANGE: [<start_port_range>, <end_port_range>]
+         FILE: 
            - </path/to/input_file>
-         [SSL](#cfsourcessl): true | false
-         [CERTIFICATES\_PATH](#cfsourcecertificatespath): </path/to/certificates>
-    - [FULLY\_QUALIFIED\_DOMAIN\_NAME](#fqdn): true | false
-    - [COLUMNS](#cfcolumns):
+         SSL: true | false
+         CERTIFICATES_PATH: </path/to/certificates>
+    - FULLY_QUALIFIED_DOMAIN_NAME: true | false
+    - COLUMNS:
            - <field_name>: <data_type>
-    - [TRANSFORM](#cftransform): '<transformation>'
-    - [TRANSFORM\_CONFIG](#cftransformconfig): '<configuration-file-path>' 
-    - [MAX\_LINE\_LENGTH](#cfmaxlinelength): <integer> 
-    - [FORMAT](#cfformat): text | csv
-    - [DELIMITER](#cfdelimiter): '<delimiter_character>'
-    - [ESCAPE](#cfescape): '<escape_character>' | 'OFF'
-    - [NEWLINE](#newline): 'LF' | 'CR' | 'CRLF'
-    - [NULL\_AS](#cfnullas): '<null_string>'
-    - [FILL\_MISSING\_FIELDS](#cfillfields): true | false
-    - [FORCE\_NOT\_NULL](#cfforcenotnull): true | false
-    - [QUOTE](#cfquote): '<csv_quote_character>'
-    - [HEADER](#cfheader): true | false
-    - [ENCODING](#cfencoding): <database_encoding>
-    - [ERROR\_LIMIT](#cferrorlimit): <integer>
-    - [LOG\_ERRORS](#cferrorlog): true | false
-   [EXTERNAL](#cfexternal):
-      - [SCHEMA](#cfschema): <schema> | '%'
-   [OUTPUT](#cfoutput):
-    - [TABLE](#cftable): <schema.table_name>
-    - [MODE](#cfmode): insert | update | merge
-    - [MATCH\_COLUMNS](#cfmatchcolumns):
+    - TRANSFORM: '<transformation>'
+    - TRANSFORM_CONFIG: '<configuration-file-path>' 
+    - MAX_LINE_LENGTH: <integer> 
+    - FORMAT: text | csv
+    - DELIMITER: '<delimiter_character>'
+    - ESCAPE: '<escape_character>' | 'OFF'
+    - NEWLINE: 'LF' | 'CR' | 'CRLF'
+    - NULL_AS: '<null_string>'
+    - FILL_MISSING_FIELDS: true | false
+    - FORCE_NOT_NULL: true | false
+    - QUOTE: '<csv_quote_character>'
+    - HEADER: true | false
+    - ENCODING: <database_encoding>
+    - ERROR_LIMIT: <integer>
+    - LOG_ERRORS: true | false
+   EXTERNAL:
+      - SCHEMA: <schema> | '%'
+   OUTPUT:
+    - TABLE: <schema.table_name>
+    - MODE: insert | update | merge
+    - MATCH_COLUMNS:
            - <target_column_name>
-    - [UPDATE\_COLUMNS](#cfupdatecolumns):
+    - UPDATE_COLUMNS:
            - <target_column_name>
-    - [UPDATE\_CONDITION](#cfupdatecondition): '<boolean_condition>'
-    - [MAPPING](#cfmapping):
+    - UPDATE_CONDITION: '<boolean_condition>'
+    - MAPPING:
               <target_column_name>: <source_column_name> | '<expression>'
-   [PRELOAD](#cfpreload):
-    - [TRUNCATE](#cftruncate): true | false
-    - [REUSE\_TABLES](#cfreusetables): true | false
-    - [STAGING\_TABLE](#cfstagetbl): <external_table_name>
-    - [FAST\_MATCH](#cffastmatch): true | false
-   [SQL](#cfsql):
-    - [BEFORE](#cfbefore): "<sql_command>"
-    - [AFTER](#cfafter): "<sql_command>"
+   PRELOAD:
+    - TRUNCATE: true | false
+    - REUSE_TABLES: true | false
+    - STAGING_TABLE: <external_table_name>
+    - FAST_MATCH: true | false
+   SQL:
+    - BEFORE: "<sql_command>"
+    - AFTER: "<sql_command>"
 ```
 
 VERSION
@@ -319,7 +319,7 @@ GPLOAD
 
     UPDATE - Updates the `UPDATE_COLUMNS` of the target table where the rows have `MATCH_COLUMNS` attribute values equal to those of the input data, and the optional `UPDATE_CONDITION` is true. `UPDATE` is not supported if the target table column name is a reserved keyword, has capital letters, or includes any character that requires quotes \(" "\) to identify the column.
 
-    MERGE - Inserts new rows and updates the `UPDATE_COLUMNS` of existing rows where `FOOBAR` attribute values are equal to those of the input data, and the optional `MATCH_COLUMNS` is true. New rows are identified when the `MATCH_COLUMNS` value in the source data does not have a corresponding value in the existing data of the target table. In those cases, the **entire row** from the source file is inserted, not only the `MATCH` and `UPDATE` columns. If there are multiple new `MATCH_COLUMNS` values that are the same, only one new row for that value will be inserted. Use `UPDATE_CONDITION` to filter out the rows to discard. `MERGE` is not supported if the target table column name is a reserved keyword, has capital letters, or includes any character that requires quotes \(" "\) to identify the column.
+    MERGE - Inserts new rows and updates the `UPDATE_COLUMNS` of existing rows where attribute values are equal to those of the input data, and the optional `MATCH_COLUMNS` is true. New rows are identified when the `MATCH_COLUMNS` value in the source data does not have a corresponding value in the existing data of the target table. In those cases, the **entire row** from the source file is inserted, not only the `MATCH` and `UPDATE` columns. If there are multiple new `MATCH_COLUMNS` values that are the same, only one new row for that value will be inserted. Use `UPDATE_CONDITION` to filter out the rows to discard. `MERGE` is not supported if the target table column name is a reserved keyword, has capital letters, or includes any character that requires quotes \(" "\) to identify the column.
 
     MATCH\_COLUMNS
     :   Required if `MODE` is `UPDATE` or `MERGE`. Specifies the column\(s\) to use as the join condition for the update. The attribute value in the specified target column\(s\) must be equal to that of the corresponding source data column\(s\) in order for the row to be updated in the target table.

@@ -67,6 +67,11 @@ static void doAbortInDoubt(char *gid);
 static bool doNotifyCommittedInDoubt(char *gid);
 static void AbortOrphanedPreparedTransactions(void);
 
+bool IsDtxRecoveryProcess()
+{
+	return getpid() == DtxRecoveryPID();
+}
+
 static bool
 doNotifyCommittedInDoubt(char *gid)
 {
@@ -136,7 +141,7 @@ recoverTM(void)
 	 * still possible there are residual QE processes but it's better than doing
 	 * nothing.
 	 *
-	 * We just do this when there was abnormal shutdown on master or standby
+	 * We just do this when there was abnormal shutdown on primary or standby
 	 * promote, else mostly there should not have residual QE processes.
 	 */
 	if (*shmCleanupBackends)
@@ -483,7 +488,7 @@ redoDistributedCommitRecord(DistributedTransactionId gxid)
 							max_tm_gxacts, gxid, *shmNumCommittedGxacts, gxact_array.data),
 					 errdetail("It should not happen. Temporarily increase "
 							   "max_connections (need postmaster reboot) on "
-							   "the postgres (master or standby) to work "
+							   "the postgres (primary or standby) to work "
 							   "around this issue and then report a bug")));
 		}
 
@@ -648,7 +653,7 @@ DtxRecoveryMain(Datum main_arg)
 
 	/*
 	 * Normally we check with interval gp_dtx_recovery_interval, but sometimes
-	 * we want to be more frequent in a period, e.g. just after master panic.
+	 * we want to be more frequent in a period, e.g. just after primary panic.
 	 * We do not use a guc to control the period, instead hardcode 12 times
 	 * with inteval 5 seconds simply.
 	 */

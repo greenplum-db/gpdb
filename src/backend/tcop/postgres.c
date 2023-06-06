@@ -3592,10 +3592,10 @@ CdbProgramErrorHandler(SIGNAL_ARGS)
 	if (!pthread_equal(main_tid, pthread_self()))
 	{
 #ifndef _WIN32
-		write_stderr("\nUnexpected internal error: Master %d received signal %d in worker thread %lu (forwarding signal to main thread)\n\n",
+		write_stderr("\nUnexpected internal error: Coordinator %d received signal %d in worker thread %lu (forwarding signal to main thread)\n\n",
 					 MyProcPid, postgres_signal_arg, (unsigned long)pthread_self());
 #else
-		write_stderr("\nUnexpected internal error: Master %d received signal %d in worker thread %lu (forwarding signal to main thread)\n\n",
+		write_stderr("\nUnexpected internal error: Coordinator %d received signal %d in worker thread %lu (forwarding signal to main thread)\n\n",
 					 MyProcPid, postgres_signal_arg, (unsigned long)pthread_self().p);
 #endif
 		/* Only forward if the main thread isn't quick-dying. */
@@ -3621,7 +3621,7 @@ CdbProgramErrorHandler(SIGNAL_ARGS)
 
 
     if (Gp_role == GP_ROLE_DISPATCH)
-        pts = "Master process";
+        pts = "Coordinator process";
     else if (Gp_role == GP_ROLE_EXECUTE)
         pts = "Segment process";
     else
@@ -4494,13 +4494,13 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 
 			case 'M':
 				/* Undocumented flag used for mutating a directory that was a copy of a
-				 * master data directory and needs to now be a segment directory. Only
+				 * coordinator data directory and needs to now be a segment directory. Only
 				 * use on the first time the segment is started, and only use in
 				 * utility mode, as changes will be destructive, and will assume that
 				 * the segment has never participated in a distributed
 				 * transaction.*/
 				if (secure)
-					ConvertMasterDataDirToSegment = true;
+					ConvertCoordinatorDataDirToSegment = true;
 				break;
 
 			case 'm':

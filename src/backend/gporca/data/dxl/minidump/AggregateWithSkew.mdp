@@ -650,7 +650,7 @@ group by b;
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="32">
+    <dxl:Plan Id="0" SpaceSize="34">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="912.990667" Rows="2000000.000000" Width="12"/>

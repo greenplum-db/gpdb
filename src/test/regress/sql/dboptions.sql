@@ -3,11 +3,24 @@
 --
 
 -- Test CONNECTION LIMIT
+
+-- create a regular user as superusers are exempt from limits
+create user connlimit_test_user;
+-- add created user to pg_hba.conf
+\! echo "local    all         connlimit_test_user         trust" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+select pg_reload_conf();
+
 create database limitdb connection limit 1;
 select -1 as gp_segment_id, datconnlimit from pg_database where datname='limitdb'
 union
 select gp_segment_id, datconnlimit from gp_dist_random('pg_database') where datname='limitdb'
 order by gp_segment_id;
+
+-- Ensure that the db connection limit is not enforced on the segment. We check
+-- this by ensuring that a multi-slice plan, exceeding the connection limit on
+-- the segment can execute.
+\! psql limitdb -U connlimit_test_user -Xc 'create table tbl(i int);'
+\! psql limitdb -U connlimit_test_user -Xc 'select count(*) from tbl t1, tbl t2;'
 
 alter database limitdb connection limit 2;
 select -1 as gp_segment_id, datconnlimit from pg_database where datname='limitdb'
@@ -17,14 +30,8 @@ order by gp_segment_id;
 
 alter database limitdb with connection limit 0;
 
--- create a regular user as superusers are exempt from limits
-create user connlimit_test_user;
--- add superuser to pg_hba.conf
-\! echo "local    all         connlimit_test_user         trust" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
-select pg_reload_conf();
-
 -- should fail, because the connection limit is 0
-\! psql limitdb -c "select 'connected'" -U connlimit_test_user
+\! psql limitdb -Xc "select 'connected'" -U connlimit_test_user
 
 -- Test ALLOW_CONNECTIONS
 create database limitdb2 allow_connections = true;
@@ -40,7 +47,7 @@ select gp_segment_id, datconnlimit, datallowconn from gp_dist_random('pg_databas
 order by gp_segment_id;
 
 -- should fail, as we have disallowed connections
-\! psql limitdb2 -c "select 'connected'" -U connlimit_test_user
+\! psql limitdb2 -Xc "select 'connected'" -U connlimit_test_user
 
 -- Test IS_TEMPLATE
 create database templatedb is_template=true;

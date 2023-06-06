@@ -70,6 +70,11 @@ protected:
 	static ColRefToUlongMapArray *ConstructRootColMappingPerPart(
 		CMemoryPool *mp, CColRefArray *root_cols, IMdIdArray *partition_mdids);
 
+	using ColNameToIndexMap =
+		CHashMap<const CWStringConst, ULONG, CWStringConst::HashValue,
+				 CWStringConst::Equals, CleanupNULL<const CWStringConst>,
+				 CleanupDelete<ULONG>>;
+
 public:
 	// ctors
 	explicit CLogicalDynamicGetBase(CMemoryPool *mp);

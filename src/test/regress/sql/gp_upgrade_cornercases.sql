@@ -63,7 +63,9 @@ DROP DATABASE IF EXISTS upgrade_recreated_public;
 CREATE DATABASE upgrade_recreated_public;
 \c upgrade_recreated_public
 
-DROP SCHEMA public;
+-- Some extensions are pre-baked into template1, hence the new database has
+-- them under public. Remove them too by cascade.
+DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 
 CREATE TABLE public.t();

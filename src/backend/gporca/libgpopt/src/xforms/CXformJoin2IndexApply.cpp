@@ -124,8 +124,7 @@ CXformJoin2IndexApply::CreateHomogeneousIndexApplyAlternatives(
 		CreateHomogeneousBtreeIndexApplyAlternatives(
 			mp, joinOp, pexprOuter, pexprInner, pexprScalar, origJoinPred,
 			nodesToInsertAboveIndexGet, endOfNodesToInsertAboveIndexGet,
-			ptabdescInner, pcrsScalarExpr, outer_refs, pcrsReqd, ulIndices,
-			pxfres);
+			ptabdescInner, pcrsScalarExpr, outer_refs, ulIndices, pxfres);
 	}
 	else
 	{
@@ -156,8 +155,7 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives(
 	CExpression *origJoinPred, CExpression *nodesToInsertAboveIndexGet,
 	CExpression *endOfNodesToInsertAboveIndexGet,
 	CTableDescriptor *ptabdescInner, CColRefSet *pcrsScalarExpr,
-	CColRefSet *outer_refs, CColRefSet *pcrsReqd, ULONG ulIndices,
-	CXformResult *pxfres)
+	CColRefSet *outer_refs, ULONG ulIndices, CXformResult *pxfres)
 {
 	// array of expressions in the scalar expression
 	CExpressionArray *pdrgpexpr =
@@ -176,8 +174,8 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives(
 		CreateAlternativesForBtreeIndex(
 			mp, joinOp, pexprOuter, pexprInner, origJoinPred,
 			nodesToInsertAboveIndexGet, endOfNodesToInsertAboveIndexGet,
-			md_accessor, pdrgpexpr, pcrsScalarExpr, outer_refs, pcrsReqd,
-			pmdrel, pmdindex, pxfres);
+			md_accessor, pdrgpexpr, pcrsScalarExpr, outer_refs, pmdrel,
+			pmdindex, pxfres);
 	}
 
 	//clean-up
@@ -200,12 +198,12 @@ CXformJoin2IndexApply::CreateAlternativesForBtreeIndex(
 	CExpression *nodesToInsertAboveIndexGet,
 	CExpression *endOfNodesToInsertAboveIndexGet, CMDAccessor *md_accessor,
 	CExpressionArray *pdrgpexprConjuncts, CColRefSet *pcrsScalarExpr,
-	CColRefSet *outer_refs, CColRefSet *pcrsReqd, const IMDRelation *pmdrel,
-	const IMDIndex *pmdindex, CXformResult *pxfres)
+	CColRefSet *outer_refs, const IMDRelation *pmdrel, const IMDIndex *pmdindex,
+	CXformResult *pxfres)
 {
 	CExpression *pexprLogicalIndexGet = CXformUtils::PexprLogicalIndexGet(
 		mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexprConjuncts,
-		pcrsReqd, pcrsScalarExpr, outer_refs, pmdindex, pmdrel);
+		pcrsScalarExpr, outer_refs, pmdindex, pmdrel);
 	if (nullptr != pexprLogicalIndexGet)
 	{
 		// second child has residual predicates, create an apply of outer and inner

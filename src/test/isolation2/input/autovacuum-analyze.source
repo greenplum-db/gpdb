@@ -1,9 +1,10 @@
 -- Enable auto-ANALYZE only on AUTOVACUUM launcher. When set `autovacuum` to
--- true on Master, the launcher will take care of databases' analyze job on Master.
+-- true on Coordinator, the launcher will take care of databases' analyze job on Coordinator.
 -- VACUUM anti-XID wraparounds of 'template0' is not changed.
 
 -- Speed up test.
 ALTER SYSTEM SET autovacuum_naptime = 5;
+ALTER SYSTEM SET autovacuum_vacuum_threshold = 50;
 select * from pg_reload_conf();
 
 --
@@ -18,7 +19,7 @@ select * from pg_reload_conf();
 -- Prepare the table to be ANALYZEd
 1: CREATE TABLE anatest (id bigint);
 
--- Track report gpstat on master
+-- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anatest', 1, -1, 0, 1);
 -- Track that we have updated the attributes stats in pg_statistic when finished
 SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'anatest', 1, -1, 0, 1);
@@ -27,7 +28,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
 
 1&: INSERT INTO anatest select i from generate_series(1, 1000) as i;
 
--- Wait until report pgstat on master
+-- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 
@@ -54,7 +55,7 @@ select relpages, reltuples from pg_class where oid = 'anatest'::regclass;
 -- Prepare the table to be ANALYZEd
 1: CREATE TABLE rankpart (id int, rank int, product int) DISTRIBUTED BY (id) PARTITION BY RANGE (rank) ( START (1) END (10) EVERY (2), DEFAULT PARTITION extra );
 
--- Track report gpstat on master
+-- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'rankpart_1_prt_extra', 1, -1, 0, 1);
 -- Track that we have updated the attributes stats in pg_statistic when finished
 SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'rankpart_1_prt_5', 1, -1, 0, 1);
@@ -64,7 +65,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
 -- No data inserted into rankpart_1_prt_6
 1&: insert into rankpart select i, i % 8, i from generate_series(1, 1000)i;
 
--- Wait until report pgstat on master
+-- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 
@@ -103,7 +104,7 @@ select relpages, reltuples from pg_class where oid = 'rankpart'::regclass;
 
 1: CREATE TABLE anaabort(id int);
 
--- Track report gpstat on master
+-- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anaabort', 1, -1, 0, 1);
 -- Suspend the autovacuum worker from analyze before
 SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'anaabort', 1, -1, 0, 1);
@@ -114,7 +115,7 @@ SELECT gp_inject_fault('auto_vac_worker_abort', 'skip', '', '', 'anaabort', 1, -
 
 1&: INSERT INTO anaabort select i from generate_series(1, 1000) as i;
 
--- Wait until report pgstat on master
+-- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 
@@ -261,5 +262,6 @@ select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_ta
 
 -- Reset GUCs.
 ALTER SYSTEM RESET autovacuum_naptime;
+ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 select * from pg_reload_conf();
 

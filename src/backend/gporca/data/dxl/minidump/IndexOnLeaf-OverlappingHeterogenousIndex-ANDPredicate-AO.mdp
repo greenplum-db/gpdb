@@ -79,7 +79,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.30100.1.0" Name="idx_p1_cd" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="0,1,2,3,4,5,6">
+      <dxl:Index Mdid="0.30100.1.0" Name="idx_p1_cd" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -262,7 +262,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.30066.1.0" Name="idx_root_cd_1_prt_p1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2,3" IncludedColumns="0,1,2,3,4,5,6">
+      <dxl:Index Mdid="0.30066.1.0" Name="idx_root_cd_1_prt_p1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2,3" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

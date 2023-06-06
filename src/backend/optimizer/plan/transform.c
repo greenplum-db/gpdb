@@ -109,7 +109,7 @@ normalize_query(Query *query)
 /**
  * Mutator that walks the query tree and replaces single row returning volatile (sirv) functions with a more complicated
  * construct so that it may be evaluated in a initplan subsequently. Reason for this is that this sirv function may perform
- * DDL/DML/dispatching and it can do all this only if it is evaluated on the master as an initplan. See MPP-12635 for details.
+ * DDL/DML/dispatching and it can do all this only if it is evaluated on the coordinator as an initplan. See MPP-12635 for details.
  */
 static Node *replace_sirv_functions_mutator(Node *node, void *context)
 {

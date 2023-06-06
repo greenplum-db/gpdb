@@ -1697,8 +1697,7 @@ INSERT INTO rewrite_test_ao VALUES (NULL);
 INSERT INTO rewrite_test_co VALUES ('something');
 INSERT INTO rewrite_test_co VALUES (NULL);
 
--- Testing all three AMs. But note that, the comments are for the heap table ('rewrite_test')
--- For AO table, always rewrite table in ADD COLUMN (see the FIXME in ATExecAddColumn())
+-- Testing all three AMs.
 -- For AOCO table, never table rewrite (just need to write new column)
 
 -- empty[12] don't need rewrite, but notempty[12]_rewrite will force one
@@ -3153,3 +3152,10 @@ drop table atown_part;
 reset role;
 drop role atown_r1;
 drop role atown_r2;
+
+CREATE TABLE IF NOT EXISTS table_issue_15494(c0 boolean NULL);
+ALTER TABLE table_issue_15494 ALTER c0 SET DEFAULT (6>5) IS NULL;
+DROP TABLE table_issue_15494;
+CREATE TABLE IF NOT EXISTS table_issue_15494(c0 boolean);
+ALTER TABLE table_issue_15494 ALTER c0 SET DEFAULT ((1.5::FLOAT) NOTNULL);
+DROP TABLE table_issue_15494;

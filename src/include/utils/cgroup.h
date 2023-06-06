@@ -63,6 +63,7 @@ typedef enum
 	CGROUP_COMPONENT_CPU			= 0,
 	CGROUP_COMPONENT_CPUACCT,
 	CGROUP_COMPONENT_CPUSET,
+	CGROUP_COMPONENT_MEMORY,
 
 	CGROUP_COMPONENT_COUNT,
 } CGroupComponentType;
@@ -213,6 +214,9 @@ typedef void (*setcpupriority_function) (Oid group, int cpu_soft_priority);
 /* Get the cpu usage of the OS group. */
 typedef int64 (*getcpuusage_function) (Oid group);
 
+/* Get the memory usage of the OS group. Return memory usage in bytes */
+typedef int64 (*getmemoryusage_function) (Oid group);
+
 /* Get the cpuset configuration of a cgroup. */
 typedef void (*getcpuset_function) (Oid group, char *cpuset, int len);
 
@@ -248,6 +252,7 @@ typedef struct CGroupOpsRoutine
 	setcpupriority_function	setcpupriority;
 
 	getcpuusage_function 	getcpuusage;
+	getmemoryusage_function	getmemoryusage;
 
 	getcpuset_function 		getcpuset;
 	setcpuset_function		setcpuset;

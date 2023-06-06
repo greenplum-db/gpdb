@@ -69,7 +69,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" DataAccess="ReadsSQLData" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.66829.1.1.3" Name="xmin" Width="4.000000"/>
@@ -119,7 +119,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.317.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.317.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.66829.1.1.8" Name="gp_segment_id" Width="4.000000"/>

@@ -182,8 +182,7 @@ COptimizationContext::FOptimize(CMemoryPool *mp, CGroupExpression *pgexprParent,
 
 	if (CUtils::FPhysicalAgg(pop))
 	{
-		return FOptimizeAgg(mp, pgexprParent, pgexprChild, pocChild,
-							ulSearchStages);
+		return FOptimizeAgg(pgexprParent, pgexprChild);
 	}
 
 	if (CUtils::FNLJoin(pop))
@@ -291,16 +290,11 @@ COptimizationContext::FOptimizeSort(CMemoryPool *,		 // mp
 //
 //---------------------------------------------------------------------------
 BOOL
-COptimizationContext::FOptimizeAgg(CMemoryPool *mp,
-								   CGroupExpression *,	// pgexprParent
-								   CGroupExpression *pgexprAgg,
-								   COptimizationContext *poc,
-								   ULONG ulSearchStages)
+COptimizationContext::FOptimizeAgg(CGroupExpression *,	// pgexprParent
+								   CGroupExpression *pgexprAgg)
 {
 	GPOS_ASSERT(nullptr != pgexprAgg);
-	GPOS_ASSERT(nullptr != poc);
 	GPOS_ASSERT(CUtils::FPhysicalAgg(pgexprAgg->Pop()));
-	GPOS_ASSERT(0 < ulSearchStages);
 
 	if (GPOS_FTRACE(EopttraceForceExpandedMDQAs))
 	{
@@ -314,22 +308,6 @@ COptimizationContext::FOptimizeAgg(CMemoryPool *mp,
 		}
 	}
 
-	if (!GPOS_FTRACE(EopttraceForceMultiStageAgg))
-	{
-		// no preference for multi-stage agg, we always proceed with optimization
-		return true;
-	}
-
-	// otherwise, we need to avoid optimizing node unless it is a multi-stage agg
-	COptimizationContext *pocFound =
-		pgexprAgg->Pgroup()->PocLookupBest(mp, ulSearchStages, poc->Prpp());
-	if (nullptr != pocFound && pocFound->FHasMultiStageAggPlan())
-	{
-		// context already has a multi-stage agg plan, optimize child only if it is also a multi-stage agg
-		return CPhysicalAgg::PopConvert(pgexprAgg->Pop())->FMultiStage();
-	}
-
-	// child context has no plan yet, return true
 	return true;
 }
 

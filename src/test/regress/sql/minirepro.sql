@@ -27,7 +27,7 @@ analyze minirepro_foo;
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
 
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 -- end_ignore
 
 select
@@ -86,7 +86,7 @@ analyze minirepro_foo;
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
 
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 -- end_ignore
 
 select
@@ -148,7 +148,7 @@ update pg_statistic set stavalues3='{"hello", "''world''"}'::text[] where starel
 drop table minirepro_foo; -- this should also delete the pg_statistic tuple for minirepro_foo
 
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 -- end_ignore
 
 select stavalues3 from pg_statistic where starelid='minirepro_foo'::regclass;
@@ -173,7 +173,7 @@ drop table minirepro_foo;
 -- corrupted stats for pg_tablespace. But, that shouldn't matter too much?
 
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 -- end_ignore
 
 select
@@ -237,7 +237,7 @@ analyze minirepro_foo;
 drop table minirepro_foo; -- this will also delete the tuples from pg_statistic_ext and pg_statistic_ext_data
 
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 -- end_ignore
 
 -- Verify that correlated stats are updated
@@ -281,7 +281,7 @@ drop table minirepro_foo;
 drop table minirepro_bar;
 
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 -- end_ignore
 
 -- Verify that correlated stats are updated

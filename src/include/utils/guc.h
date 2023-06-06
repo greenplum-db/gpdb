@@ -244,8 +244,8 @@ typedef enum
 
 /* GPDB speific */
 #define GUC_DISALLOW_USER_SET  0x00200000 /* Do not allow this GUC to be set by the user */
-#define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between master and primary */
-#define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between master and primary */
+#define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between coordinator and primary */
+#define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between coordinator and primary */
 
 /* GUC lists for gp_guc_list_init().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
@@ -516,6 +516,12 @@ extern bool optimizer_sample_plans;
 extern int	optimizer_plan_id;
 extern int	optimizer_samples_number;
 
+/* Optimizer Just In Time (JIT) compilation related GUCs*/
+extern  bool	optimizer_jit_enabled;
+extern  double  optimizer_jit_above_cost;
+extern  double  optimizer_jit_inline_above_cost;
+extern  double  optimizer_jit_optimize_above_cost;
+
 /* Cardinality estimation related GUCs used by the Optimizer */
 extern bool optimizer_extract_dxl_stats;
 extern bool optimizer_extract_dxl_stats_all_nodes;
@@ -588,6 +594,8 @@ extern bool	optimizer_partition_selection_log;
 extern char  *gp_auth_time_override_str;
 
 extern char  *gp_default_storage_options;
+
+extern bool gp_quicklz_fallback;
 
 /* copy GUC */
 extern bool gp_enable_segment_copy_checking;
@@ -798,6 +806,7 @@ extern const char *gpvars_show_gp_resource_manager_policy(void);
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source);
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
+extern bool gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source);
 extern int guc_name_compare(const char *namea, const char *nameb);
 extern void DispatchSyncPGVariable(struct config_generic * gconfig);
 

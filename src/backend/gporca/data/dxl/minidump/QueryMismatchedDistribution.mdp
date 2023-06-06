@@ -442,10 +442,10 @@ explain select i, count(j) from pt2 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -524,7 +524,7 @@ explain select i, count(j) from pt2 group by i;
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="8">
+    <dxl:Plan Id="0" SpaceSize="10">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000131" Rows="1.000000" Width="12"/>

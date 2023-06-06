@@ -5,7 +5,7 @@
  *    Interconnect Proxy Peer
  *
  * A peer lives in the proxy bgworker and connects to a proxy on an other
- * segment.  When there are N segments, including the master, a proxy bgworker
+ * segment.  When there are N segments, including the coordinator, a proxy bgworker
  * needs to connect to all the other (N - 1) segments, the same amount of peers
  * are needed, too.
  *

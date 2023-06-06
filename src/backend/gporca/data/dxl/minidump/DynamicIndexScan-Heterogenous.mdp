@@ -67,7 +67,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.17040.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.17040.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2249.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.2278.1.0" Name="void" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -87,7 +87,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.27119.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.27119.1.1.4" Name="cmin" Width="4.000000"/>
-      <dxl:Index Mdid="0.27323.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.27323.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -99,7 +99,7 @@
           <dxl:Partition Mdid="6.27323005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.2732323.1.0" Name="p2_ind" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.2732323.1.0" Name="p2_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -180,7 +180,7 @@
         <dxl:Commutator Mdid="0.525.1.0"/>
         <dxl:InverseOp Mdid="0.521.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.17077.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.17077.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.525.1.0" Name="&gt;=" ComparisonType="GEq">

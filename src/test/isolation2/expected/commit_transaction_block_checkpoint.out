@@ -37,7 +37,7 @@ COMMIT
 1U<:  <... completed>
 CHECKPOINT
 
--- TEST 2: block checkpoint on master
+-- TEST 2: block checkpoint on coordinator
 
 -- pause the CommitTransaction right before persistent table cleanup after
 -- notifyCommittedDtxTransaction()
@@ -63,7 +63,7 @@ select gp_wait_until_triggered_fault('onephase_transaction_commit', 1, 1);
  Success:                      
 (1 row)
 
--- do checkpoint on master in utility mode, and it should block
+-- do checkpoint on coordinator in utility mode, and it should block
 -1U&: checkpoint;  <waiting ...>
 
 -- resume the 2PC

@@ -10,171 +10,31 @@ create function func1(int, int) returns int as
 $$
   select $1 + $2;
 $$ language sql immutable contains sql;
--- check prodataaccess column in pg_proc
-select proname, prodataaccess from pg_proc where proname = 'func1';
- proname | prodataaccess 
----------+---------------
- func1   | c
-(1 row)
-
--- check prodataaccess in pg_attribute
-select relname, attname, attlen from pg_class c, pg_attribute
-where attname = 'prodataaccess' and attrelid = c.oid and c.relname = 'pg_proc';
- relname |    attname    | attlen 
----------+---------------+--------
- pg_proc | prodataaccess |      1
-(1 row)
-
+NOTICE:  specifying "CONTAINS SQL DATA" acts as no operation.
 create function func2(a anyelement, b anyelement, flag bool)
 returns anyelement as
 $$
   select $1 + $2;
 $$ language sql reads sql data;
--- check prodataaccess column in pg_proc
-select proname, prodataaccess from pg_proc where proname = 'func2';
- proname | prodataaccess 
----------+---------------
- func2   | r
-(1 row)
-
+NOTICE:  specifying "READS SQL DATA" acts as no operation.
 create function func3() returns oid as
 $$
   select oid from pg_class where relname = 'pg_type';
 $$ language sql modifies sql data volatile;
--- check prodataaccess column in pg_proc
-select proname, prodataaccess from pg_proc where proname = 'func3';
- proname | prodataaccess 
----------+---------------
- func3   | m
-(1 row)
-
--- check default value of prodataaccess
-drop function func1(int, int);
-create function func1(int, int) returns varchar as $$
-declare
-	v_name varchar(20) DEFAULT 'zzzzz';
-begin
-	select relname from pg_class into v_name where oid=$1;
-	return v_name;
-end;
-$$ language plpgsql READS SQL DATA;
-select proname, proargnames, prodataaccess from pg_proc where proname = 'func1';
- proname | proargnames | prodataaccess 
----------+-------------+---------------
- func1   |             | r
-(1 row)
-
-create function func4(int, int) returns int as
-$$
-  select $1 + $2;
-$$ language sql CONTAINS SQL;
--- check prodataaccess column
-select proname, proargnames, prodataaccess from pg_proc where proname = 'func4';
- proname | proargnames | prodataaccess 
----------+-------------+---------------
- func4   |             | c
-(1 row)
-
--- change prodataaccess option
-create or replace function func4(int, int) returns int as
-$$
-  select $1 + $2;
-$$ language sql modifies sql data;
-select proname, proargnames, prodataaccess from pg_proc where proname = 'func4';
- proname | proargnames | prodataaccess 
----------+-------------+---------------
- func4   |             | m
-(1 row)
-
--- upper case language name
-create or replace function func5(int) returns int as
-$$
-  select $1;
-$$ language SQL;
--- check prodataaccess column
-select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';
- proname | proargnames | prodataaccess 
----------+-------------+---------------
- func5   |             | c
-(1 row)
-
+NOTICE:  specifying "MODIFIES SQL DATA" acts as no operation.
 -- alter function with data access
-alter function func5(int) reads sql data;
--- check prodataaccess column
-select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';
- proname | proargnames | prodataaccess 
----------+-------------+---------------
- func5   |             | r
-(1 row)
-
+alter function func3() reads sql data;
+NOTICE:  specifying "READS SQL DATA" acts as no operation.
 -- alter function with data access
-alter function func5(int) modifies sql data;
--- check prodataaccess column
-select proname, proargnames, prodataaccess from pg_proc where proname = 'func5';
- proname | proargnames | prodataaccess 
----------+-------------+---------------
- func5   |             | m
-(1 row)
-
+alter function func3() modifies sql data;
+NOTICE:  specifying "MODIFIES SQL DATA" acts as no operation.
 -- alter function with data access
-alter function func5(int) no sql;
-ERROR:  conflicting options
-HINT:  A SQL function cannot specify NO SQL.
+alter function func3() no sql;
+NOTICE:  specifying "NO SQL" acts as no operation.
 -- alter function with data access
-alter function func5(int) volatile contains sql;
-alter function func5(int) immutable reads sql data;
-ERROR:  conflicting options
-HINT:  IMMUTABLE conflicts with READS SQL DATA.
-alter function func5(int) immutable modifies sql data;
-ERROR:  conflicting options
-HINT:  IMMUTABLE conflicts with MODIFIES SQL DATA.
--- data_access indicators for plpgsql
-drop function func1(int, int);
-create or replace function func1(int, int) returns varchar as $$
-declare
-	v_name varchar(20) DEFAULT 'zzzzz';
-begin
-	select relname from pg_class into v_name where oid=$1;
-	return v_name;
-end;
-$$ language plpgsql reads sql data;
-select proname, proargnames, prodataaccess from pg_proc where proname = 'func1';
- proname | proargnames | prodataaccess 
----------+-------------+---------------
- func1   |             | r
-(1 row)
-
--- check conflicts
-drop function func1(int, int);
-create function func1(int, int) returns int as
-$$
-  select $1 + $2;
-$$ language sql immutable no sql;
-ERROR:  conflicting options
-HINT:  A SQL function cannot specify NO SQL.
-create function func1(int, int) returns int as
-$$
-  select $1 + $2;
-$$ language sql immutable reads sql data;
-ERROR:  conflicting options
-HINT:  IMMUTABLE conflicts with READS SQL DATA.
--- stable function with modifies data_access
-create table bar (c int, d int);
-create function func1_mod_int_stb(x int) returns int as $$
-begin
-	update bar set d = d+1 where c = $1;
-	return $1 + 1;
-end
-$$ language plpgsql stable modifies sql data;
-select * from func1_mod_int_stb(5) order by 1;
-ERROR:  UPDATE is not allowed in a non-volatile function
-CONTEXT:  SQL statement "update bar set d = d+1 where c = $1"
-PL/pgSQL function func1_mod_int_stb(integer) line 3 at SQL statement
-drop function func2(anyelement, anyelement, bool);
+alter function func3() volatile contains sql;
+NOTICE:  specifying "CONTAINS SQL DATA" acts as no operation.
 drop function func3();
-drop function func4(int, int);
-drop function func5(int);
-drop function func1_mod_int_stb(int);
 -- Test EXECUTE ON [ANY | COORDINATOR | ALL SEGMENTS ]
 CREATE TABLE srf_testtab (t text) DISTRIBUTED BY (t);
 INSERT INTO srf_testtab VALUES ('foo 0');
@@ -386,50 +246,50 @@ explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
 
 -- Test ALTER FUNCTION, and that \df displays the EXECUTE ON correctly
 \df+ test_srf
-                                                                                                 List of functions
- Schema |   Name   | Result data type | Argument data types | Type | Data access | Execute on | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
---------+----------+------------------+---------------------+------+-------------+------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | func | no sql      | any        | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          | begin               +| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          |   return next 'foo';+| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          | end;                +| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          |                      | 
+                                                                                          List of functions
+ Schema |   Name   | Result data type | Argument data types | Type | Execute on | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+------+------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | func | any        | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          | begin               +| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          |   return next 'foo';+| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          | end;                +| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON COORDINATOR;
 \df+ test_srf
-                                                                                                 List of functions
- Schema |   Name   | Result data type | Argument data types | Type | Data access | Execute on  | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
---------+----------+------------------+---------------------+------+-------------+-------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | func | no sql      | coordinator | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
-        |          |                  |                     |      |             |             |            |          |             |          |                   |          | begin               +| 
-        |          |                  |                     |      |             |             |            |          |             |          |                   |          |   return next 'foo';+| 
-        |          |                  |                     |      |             |             |            |          |             |          |                   |          | end;                +| 
-        |          |                  |                     |      |             |             |            |          |             |          |                   |          |                      | 
+                                                                                          List of functions
+ Schema |   Name   | Result data type | Argument data types | Type | Execute on  | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+------+-------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | func | coordinator | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
+        |          |                  |                     |      |             |            |          |             |          |                   |          | begin               +| 
+        |          |                  |                     |      |             |            |          |             |          |                   |          |   return next 'foo';+| 
+        |          |                  |                     |      |             |            |          |             |          |                   |          | end;                +| 
+        |          |                  |                     |      |             |            |          |             |          |                   |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON ALL SEGMENTS;
 \df+ test_srf
-                                                                                                  List of functions
- Schema |   Name   | Result data type | Argument data types | Type | Data access |  Execute on  | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
---------+----------+------------------+---------------------+------+-------------+--------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | func | no sql      | all segments | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
-        |          |                  |                     |      |             |              |            |          |             |          |                   |          | begin               +| 
-        |          |                  |                     |      |             |              |            |          |             |          |                   |          |   return next 'foo';+| 
-        |          |                  |                     |      |             |              |            |          |             |          |                   |          | end;                +| 
-        |          |                  |                     |      |             |              |            |          |             |          |                   |          |                      | 
+                                                                                           List of functions
+ Schema |   Name   | Result data type | Argument data types | Type |  Execute on  | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+------+--------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | func | all segments | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
+        |          |                  |                     |      |              |            |          |             |          |                   |          | begin               +| 
+        |          |                  |                     |      |              |            |          |             |          |                   |          |   return next 'foo';+| 
+        |          |                  |                     |      |              |            |          |             |          |                   |          | end;                +| 
+        |          |                  |                     |      |              |            |          |             |          |                   |          |                      | 
 (1 row)
 
 alter function test_srf() EXECUTE ON ANY;
 \df+ test_srf
-                                                                                                 List of functions
- Schema |   Name   | Result data type | Argument data types | Type | Data access | Execute on | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
---------+----------+------------------+---------------------+------+-------------+------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
- public | test_srf | SETOF text       |                     | func | no sql      | any        | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          | begin               +| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          |   return next 'foo';+| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          | end;                +| 
-        |          |                  |                     |      |             |            |            |          |             |          |                   |          |                      | 
+                                                                                          List of functions
+ Schema |   Name   | Result data type | Argument data types | Type | Execute on | Volatility | Parallel |    Owner    | Security | Access privileges | Language |     Source code      | Description 
+--------+----------+------------------+---------------------+------+------------+------------+----------+-------------+----------+-------------------+----------+----------------------+-------------
+ public | test_srf | SETOF text       |                     | func | any        | immutable  | unsafe   | srftestuser | invoker  |                   | plpgsql  |                     +| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          | begin               +| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          |   return next 'foo';+| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          | end;                +| 
+        |          |                  |                     |      |            |            |          |             |          |                   |          |                      | 
 (1 row)
 
 DROP FUNCTION test_srf();

@@ -590,79 +590,6 @@ CREATE VIEW pg_stat_all_tables AS
     WHERE C.relkind IN ('r', 't', 'm', 'o', 'b', 'M')
     GROUP BY C.oid, N.nspname, C.relname;
 
--- Gather data from segments on user tables, and use data on coordinator on system tables.
-
-CREATE VIEW gp_stat_all_tables_summary AS
-SELECT
-    s.relid,
-    s.schemaname,
-    s.relname,
-    m.seq_scan,
-    m.seq_tup_read,
-    m.idx_scan,
-    m.idx_tup_fetch,
-    m.n_tup_ins,
-    m.n_tup_upd,
-    m.n_tup_del,
-    m.n_tup_hot_upd,
-    m.n_live_tup,
-    m.n_dead_tup,
-    m.n_mod_since_analyze,
-    s.last_vacuum,
-    s.last_autovacuum,
-    s.last_analyze,
-    s.last_autoanalyze,
-    s.vacuum_count,
-    s.autovacuum_count,
-    s.analyze_count,
-    s.autoanalyze_count
-FROM
-    (SELECT
-         allt.relid,
-         allt.schemaname,
-         allt.relname,
-         case when d.policytype = 'r' then (sum(seq_scan)/d.numsegments)::bigint else sum(seq_scan) end seq_scan,
-         case when d.policytype = 'r' then (sum(seq_tup_read)/d.numsegments)::bigint else sum(seq_tup_read) end seq_tup_read,
-         case when d.policytype = 'r' then (sum(idx_scan)/d.numsegments)::bigint else sum(idx_scan) end idx_scan,
-         case when d.policytype = 'r' then (sum(idx_tup_fetch)/d.numsegments)::bigint else sum(idx_tup_fetch) end idx_tup_fetch,
-         case when d.policytype = 'r' then (sum(n_tup_ins)/d.numsegments)::bigint else sum(n_tup_ins) end n_tup_ins,
-         case when d.policytype = 'r' then (sum(n_tup_upd)/d.numsegments)::bigint else sum(n_tup_upd) end n_tup_upd,
-         case when d.policytype = 'r' then (sum(n_tup_del)/d.numsegments)::bigint else sum(n_tup_del) end n_tup_del,
-         case when d.policytype = 'r' then (sum(n_tup_hot_upd)/d.numsegments)::bigint else sum(n_tup_hot_upd) end n_tup_hot_upd,
-         case when d.policytype = 'r' then (sum(n_live_tup)/d.numsegments)::bigint else sum(n_live_tup) end n_live_tup,
-         case when d.policytype = 'r' then (sum(n_dead_tup)/d.numsegments)::bigint else sum(n_dead_tup) end n_dead_tup,
-         case when d.policytype = 'r' then (sum(n_mod_since_analyze)/d.numsegments)::bigint else sum(n_mod_since_analyze) end n_mod_since_analyze,
-         max(last_vacuum) as last_vacuum,
-         max(last_autovacuum) as last_autovacuum,
-         max(last_analyze) as last_analyze,
-         max(last_autoanalyze) as last_autoanalyze,
-         max(vacuum_count) as vacuum_count,
-         max(autovacuum_count) as autovacuum_count,
-         max(analyze_count) as analyze_count,
-         max(autoanalyze_count) as autoanalyze_count
-     FROM
-         gp_dist_random('pg_stat_all_tables') allt
-         inner join pg_class c
-               on allt.relid = c.oid
-         left outer join gp_distribution_policy d
-              on allt.relid = d.localoid
-     WHERE
-        relid >= 16384
-        and (
-            d.localoid is not null
-            or c.relkind in ('o', 'b', 'M')
-            )
-     GROUP BY allt.relid, allt.schemaname, allt.relname, d.policytype, d.numsegments
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_tables
-     WHERE
-             relid < 16384) m, pg_stat_all_tables s
-WHERE m.relid = s.relid;
 
 CREATE VIEW pg_stat_xact_all_tables AS
     SELECT
@@ -696,11 +623,6 @@ CREATE VIEW pg_stat_xact_sys_tables AS
 
 CREATE VIEW pg_stat_user_tables AS
     SELECT * FROM pg_stat_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
-          schemaname !~ '^pg_toast';
-
-CREATE VIEW gp_stat_user_tables_summary AS
-    SELECT * FROM gp_stat_all_tables_summary
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
@@ -760,44 +682,6 @@ CREATE VIEW pg_stat_all_indexes AS
             LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
     WHERE C.relkind IN ('r', 't', 'm', 'o', 'b', 'M');
 
--- Gather data from segments on user tables, and use data on coordinator on system tables.
-
-CREATE VIEW gp_stat_all_indexes_summary AS
-SELECT
-    s.relid,
-    s.indexrelid,
-    s.schemaname,
-    s.relname,
-    s.indexrelname,
-    m.idx_scan,
-    m.idx_tup_read,
-    m.idx_tup_fetch
-FROM
-    (SELECT
-         relid,
-         indexrelid,
-         schemaname,
-         relname,
-         indexrelname,
-         sum(idx_scan) as idx_scan,
-         sum(idx_tup_read) as idx_tup_read,
-         sum(idx_tup_fetch) as idx_tup_fetch
-     FROM
-         gp_dist_random('pg_stat_all_indexes')
-     WHERE
-             relid >= 16384
-     GROUP BY relid, indexrelid, schemaname, relname, indexrelname
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_indexes
-     WHERE
-             relid < 16384) m, pg_stat_all_indexes s
-WHERE m.relid = s.relid;
-
 CREATE VIEW pg_stat_sys_indexes AS
     SELECT * FROM pg_stat_all_indexes
     WHERE schemaname IN ('pg_catalog', 'information_schema', 'pg_aoseg') OR
@@ -805,11 +689,6 @@ CREATE VIEW pg_stat_sys_indexes AS
 
 CREATE VIEW pg_stat_user_indexes AS
     SELECT * FROM pg_stat_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
-          schemaname !~ '^pg_toast';
-
-CREATE VIEW gp_stat_user_indexes_summary AS
-    SELECT * FROM gp_stat_all_indexes_summary
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
@@ -917,12 +796,20 @@ CREATE VIEW pg_stat_replication AS
         JOIN pg_stat_get_wal_senders() AS W ON (S.pid = W.pid)
         LEFT JOIN pg_authid AS U ON (S.usesysid = U.oid);
 
+CREATE FUNCTION gp_stat_get_coordinator_replication() RETURNS SETOF RECORD AS
+$$
+    SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
+    FROM pg_catalog.pg_stat_replication
+$$
+LANGUAGE SQL EXECUTE ON COORDINATOR;
+
+-- keep for backwards compatibility. prefer *coordinator* function
 CREATE FUNCTION gp_stat_get_master_replication() RETURNS SETOF RECORD AS
 $$
     SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
     FROM pg_catalog.pg_stat_replication
 $$
-LANGUAGE SQL EXECUTE ON MASTER;
+LANGUAGE SQL EXECUTE ON COORDINATOR;
 
 CREATE FUNCTION gp_stat_get_segment_replication() RETURNS SETOF RECORD AS
 $$
@@ -940,7 +827,7 @@ LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
 -- This view has an additional column than pg_stat_replication so cannot be generated using system_views_gp.in
 CREATE VIEW gp_stat_replication AS
     SELECT *, pg_catalog.gp_replication_error() AS sync_error
-    FROM pg_catalog.gp_stat_get_master_replication() AS R
+    FROM pg_catalog.gp_stat_get_coordinator_replication() AS R
     (gp_segment_id integer, pid integer, usesysid oid,
      usename name, application_name text, client_addr inet, client_hostname text,
      client_port integer, backend_start timestamptz, backend_xmin xid, state text,
@@ -1509,6 +1396,8 @@ CREATE VIEW pg_stat_progress_copy AS
         S.relid AS relid,
         CASE S.param5 WHEN 1 THEN 'COPY FROM'
                       WHEN 2 THEN 'COPY TO'
+                      WHEN 3 THEN 'COPY FROM ON SEGMENT'
+                      WHEN 4 THEN 'COPY TO ON SEGMENT'
                       END AS command,
         CASE S.param6 WHEN 1 THEN 'FILE'
                       WHEN 2 THEN 'PROGRAM'
@@ -1557,6 +1446,44 @@ REVOKE ALL ON pg_subscription FROM public;
 GRANT SELECT (subdbid, subname, subowner, subenabled, subslotname, subpublications)
     ON pg_subscription TO public;
 
+-------------------------------------------------------------------
+-- GPDB legacy cluster-wise segment view
+-------------------------------------------------------------------
+CREATE OR REPLACE VIEW gp_pgdatabase AS 
+    SELECT *
+      FROM gp_pgdatabase() AS L(dbid smallint, isprimary boolean, content smallint, valid boolean, definedprimary boolean);
+
+GRANT SELECT ON gp_pgdatabase TO PUBLIC;
+
+------------------------------------------------------------------
+-- GPDB distributed transaction related views
+------------------------------------------------------------------
+CREATE OR REPLACE VIEW gp_distributed_xacts AS 
+    SELECT *
+      FROM gp_distributed_xacts() AS L(distributed_xid xid, state text, gp_session_id int, xmin_distributed_snapshot xid);
+
+GRANT SELECT ON gp_distributed_xacts TO PUBLIC;
+
+
+CREATE OR REPLACE VIEW gp_transaction_log AS 
+    SELECT *
+      FROM gp_transaction_log() AS L(segment_id smallint, dbid smallint, transaction xid, status text);
+
+GRANT SELECT ON gp_transaction_log TO PUBLIC;
+
+CREATE OR REPLACE VIEW gp_distributed_log AS 
+    SELECT *
+      FROM gp_distributed_log() AS L(segment_id smallint, dbid smallint, distributed_xid xid, status text, local_transaction xid);
+
+GRANT SELECT ON gp_distributed_log TO PUBLIC;
+
+------------------------------------------------------------------
+-- GPDB view for aggregating the backends information of subtransactions overflowed
+------------------------------------------------------------------
+CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
+  SELECT -1, gp_get_suboverflowed_backends()
+UNION ALL
+  SELECT gp_segment_id, gp_get_suboverflowed_backends() FROM gp_dist_random('gp_id') order by 1;
 
 --
 -- We have a few function definitions in here, too.
@@ -1871,6 +1798,9 @@ $$
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
 
+------------------------------------------------------------------
+-- GPDB endpoint related views and functions
+------------------------------------------------------------------
 CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
 									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),
 									  OUT port int, OUT username text, OUT state text,
@@ -1893,8 +1823,3 @@ CREATE VIEW pg_catalog.gp_segment_endpoints AS
 CREATE VIEW pg_catalog.gp_session_endpoints AS
     SELECT * FROM pg_catalog.gp_get_session_endpoints();
 
--- Dispatch and Aggregate the backends information of subtransactions overflowed
-CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
-  SELECT -1, gp_get_suboverflowed_backends()
-UNION ALL
-  SELECT gp_segment_id, gp_get_suboverflowed_backends() FROM gp_dist_random('gp_id') order by 1;

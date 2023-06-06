@@ -109,7 +109,7 @@
           <dxl:Opfamily Mdid="0.10009.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBAgg Mdid="0.2108.1.0" Name="sum" IsSplittable="true" HashAggCapable="true">

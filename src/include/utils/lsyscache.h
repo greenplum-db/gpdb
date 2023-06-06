@@ -152,7 +152,6 @@ extern char func_volatile(Oid funcid);
 extern char func_parallel(Oid funcid);
 extern char get_func_prokind(Oid funcid);
 extern bool get_func_leakproof(Oid funcid);
-extern char func_data_access(Oid funcid);
 extern char func_exec_location(Oid funcid);
 extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);

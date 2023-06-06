@@ -76,33 +76,33 @@
 1:SELECT * FROM crash_vacuum_in_appendonly_insert ORDER BY a,b;
 
 --
--- Setup tables to test crash at different points on master now
+-- Setup tables to test crash at different points on coordinator now
 --
--- for crash_master_before_cleanup_phase
+-- for crash_coordinator_before_cleanup_phase
 2:set default_table_access_method = ao_row;
 2:show default_table_access_method;
-2:DROP TABLE IF EXISTS crash_master_before_cleanup_phase CASCADE;
-2:CREATE TABLE crash_master_before_cleanup_phase (a INT, b INT, c CHAR(20));
-2:CREATE INDEX crash_master_before_cleanup_phase_index ON crash_master_before_cleanup_phase(b);
-2:INSERT INTO crash_master_before_cleanup_phase SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
-2:DELETE FROM crash_master_before_cleanup_phase WHERE a < 4;
+2:DROP TABLE IF EXISTS crash_coordinator_before_cleanup_phase CASCADE;
+2:CREATE TABLE crash_coordinator_before_cleanup_phase (a INT, b INT, c CHAR(20));
+2:CREATE INDEX crash_coordinator_before_cleanup_phase_index ON crash_coordinator_before_cleanup_phase(b);
+2:INSERT INTO crash_coordinator_before_cleanup_phase SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
+2:DELETE FROM crash_coordinator_before_cleanup_phase WHERE a < 4;
 
 -- suspend at intended points
-2:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'panic', '', '', 'crash_master_before_cleanup_phase', 1, -1, 0, 1);
-2:VACUUM crash_master_before_cleanup_phase;
+2:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'panic', '', '', 'crash_coordinator_before_cleanup_phase', 1, -1, 0, 1);
+2:VACUUM crash_coordinator_before_cleanup_phase;
 
 -- reset faults as protection incase tests failed and panic didn't happen
 4:SELECT gp_inject_fault('compaction_before_cleanup_phase', 'reset', 1);
 
 -- perform post crash validation checks
--- for crash_master_before_cleanup_phase
-4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
-4:INSERT INTO crash_master_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
-4:UPDATE crash_master_before_cleanup_phase SET b = b+10 WHERE a=25;
-4:SELECT * FROM crash_master_before_cleanup_phase ORDER BY a,b;
-4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
-4:VACUUM crash_master_before_cleanup_phase;
-4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
-4:INSERT INTO crash_master_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
-4:UPDATE crash_master_before_cleanup_phase SET b = b+10 WHERE a=26;
-4:SELECT * FROM crash_master_before_cleanup_phase ORDER BY a,b;
+-- for crash_coordinator_before_cleanup_phase
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_coordinator_before_cleanup_phase');
+4:INSERT INTO crash_coordinator_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
+4:UPDATE crash_coordinator_before_cleanup_phase SET b = b+10 WHERE a=25;
+4:SELECT * FROM crash_coordinator_before_cleanup_phase ORDER BY a,b;
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_coordinator_before_cleanup_phase');
+4:VACUUM crash_coordinator_before_cleanup_phase;
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_coordinator_before_cleanup_phase');
+4:INSERT INTO crash_coordinator_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
+4:UPDATE crash_coordinator_before_cleanup_phase SET b = b+10 WHERE a=26;
+4:SELECT * FROM crash_coordinator_before_cleanup_phase ORDER BY a,b;

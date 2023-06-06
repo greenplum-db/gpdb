@@ -62,21 +62,30 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	if (Gp_role != GP_ROLE_DISPATCH)
 	{
 		pg_ltoa(qdPostmasterPort, result);
+		extvar->GP_COORDINATOR_PORT = result;
+		extvar->GP_COORDINATOR_HOST = qdHostname;
 		extvar->GP_MASTER_PORT = result;
 		extvar->GP_MASTER_HOST = qdHostname;
 	}
 	else
 	{
 		CdbComponentDatabaseInfo *qdinfo =
-				cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+				cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID);
 
 		pg_ltoa(qdinfo->config->port, result);
+		extvar->GP_COORDINATOR_PORT = result;
 		extvar->GP_MASTER_PORT = result;
 
 		if (qdinfo->config->hostip != NULL)
+		{
+			extvar->GP_COORDINATOR_HOST = pstrdup(qdinfo->config->hostip);
 			extvar->GP_MASTER_HOST = pstrdup(qdinfo->config->hostip);
+		}
 		else
+		{
+			extvar->GP_COORDINATOR_HOST = pstrdup(qdinfo->config->hostname);
 			extvar->GP_MASTER_HOST = pstrdup(qdinfo->config->hostname);
+		}
 	}
 
 	if (MyProcPort)

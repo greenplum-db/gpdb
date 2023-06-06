@@ -92,7 +92,7 @@
         <dxl:SumAgg Mdid="0.2114.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.17952.1.0" Name="index_17952" IsClustered="false" KeyColumns="1" IncludedColumns="1">
+      <dxl:Index Mdid="0.17952.1.0" Name="index_17952" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

@@ -72,6 +72,14 @@ ERROR:  resource group "non_exist_group" does not exist
 ALTER ROLE rg_test_role RESOURCE GROUP admin_group;
 ERROR:  only superuser can be assigned to admin resgroup
 
+--cannot create or put role in system_group, should error out
+CREATE ROLE r_test_system_group RESOURCE GROUP system_group;
+ERROR:  assigning to system resgroup is not allowed
+CREATE ROLE r_test_system_group;
+CREATE
+ALTER ROLE r_test_system_group RESOURCE GROUP system_group;
+ERROR:  assigning to system resgroup is not allowed
+
 CREATE ROLE rg_test_role1 RESOURCE GROUP non_exist_group;
 ERROR:  resource group "non_exist_group" does not exist
 -- nonsuper user should not be assigned to admin group
@@ -82,6 +90,8 @@ ERROR:  only superuser can be assigned to admin resgroup
 DROP ROLE rg_test_role;
 DROP
 DROP ROLE rg_test_role_super;
+DROP
+DROP ROLE r_test_system_group;
 DROP
 
 -- ----------------------------------------------------------------------
@@ -94,11 +104,11 @@ ERROR:  resource group "rg_test_group" does not exist
 --end_ignore
 
 SELECT * FROM gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit 
----------+---------------+-------------+----------------------+-------------------+--------+--------------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           
- 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           
- 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
+ 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      
+ 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           | 500      
 (3 rows)
 
 -- negative

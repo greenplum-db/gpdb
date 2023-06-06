@@ -290,7 +290,7 @@ static split_rollup_data *make_new_rollups_for_hash_grouping_set(PlannerInfo *ro
 																 Path *path,
 																 grouping_sets_data *gd);
 
-static void compute_jit_flags(PlannedStmt* pstmt);
+static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca);
 
 /*****************************************************************************
  *
@@ -349,15 +349,15 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	instr_time		endtime;
 
 	/*
-	 * Use ORCA only if it is enabled and we are in a master QD process.
+	 * Use ORCA only if it is enabled and we are in a coordinator QD process.
 	 *
 	 * ORCA excels in complex queries, most of which will access distributed
 	 * tables. We can't run such queries from the segments slices anyway because
 	 * they require dispatching a query within another - which is not allowed in
 	 * GPDB (see querytree_safe_for_qe()). Note that this restriction also
-	 * applies to non-QD master slices.  Furthermore, ORCA doesn't currently
+	 * applies to non-QD coordinator slices.  Furthermore, ORCA doesn't currently
 	 * support pl/<lang> statements (relevant when they are planned on the segments).
-	 * For these reasons, restrict to using ORCA on the master QD processes only.
+	 * For these reasons, restrict to using ORCA on the coordinator QD processes only.
 	 *
 	 * PARALLEL RETRIEVE CURSOR is not supported by ORCA yet.
 	 */
@@ -370,12 +370,23 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
+#ifdef USE_ORCA
 		result = optimize_query(parse, cursorOptions, boundParams);
+#else
+		/* Make sure this branch is not taken in builds using --disable-orca. */
+		Assert(false);
+		/* Keep compilers quiet in case the build used --disable-orca. */
+		result = NULL;
+#endif
 
 		/* decide jit state */
 		if (result)
 		{
-			compute_jit_flags(result);
+			/*
+			 * True in the following call means we are
+			 * setting Jit flags for Optimizer
+			 */
+			compute_jit_flags(result, true /* use_gporca */);
 		}
 
 		if (gp_log_optimization_time)
@@ -746,7 +757,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->stmt_len = parse->stmt_len;
 
 	/* GPDB: JIT flags are set in wrapper function */
-	compute_jit_flags(result);
+	/* False in the following call means that we are setting Jit flags for planner */
+	compute_jit_flags(result, false /* use_gporca */);
 
 	if (glob->partition_directory != NULL)
 		DestroyPartitionDirectory(glob->partition_directory);
@@ -2088,7 +2100,7 @@ inheritance_planner(PlannerInfo *root)
 	else
 	{
 		/*
-		 * Put back the final adjusted rtable into the master copy of the
+		 * Put back the final adjusted rtable into the original copy of the
 		 * Query.  (We mustn't do this if we found no non-excluded children,
 		 * since we never saved an adjusted rtable at all.)
 		 */
@@ -2097,7 +2109,7 @@ inheritance_planner(PlannerInfo *root)
 		root->simple_rel_array = save_rel_array;
 		root->append_rel_array = save_append_rel_array;
 
-		/* Must reconstruct master's simple_rte_array, too */
+		/* Must reconstruct original's simple_rte_array, too */
 		root->simple_rte_array = (RangeTblEntry **)
 			palloc0((list_length(final_rtable) + 1) * sizeof(RangeTblEntry *));
 		rti = 1;
@@ -2759,28 +2771,9 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		 * The conflict with UPDATE|DELETE is implemented by locking the entire
 		 * table in ExclusiveMode. More details please refer docs.
 		 */
-		/*
-		 * GPDB_96_MERGE_FIXME: since we now process this in the path
-		 * context, it's much simpler than before, please kindly
-		 * revisit this, I'm not quite sure here.
-		 */
 		if (parse->rowMarks)
 		{
-			ListCell   *lc;
-			List   *newmarks = NIL;
-
 			if (parse->canOptSelectLockingClause)
-			{
-				foreach(lc, root->rowMarks)
-				{
-					PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
-
-					rc->canOptSelectLockingClause = true;
-					newmarks = lappend(newmarks, rc);
-				}
-			}
-
-			if (newmarks)
 			{
 				/*
 				 * Greenplum specific behavior:
@@ -8612,26 +8605,66 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
  * planner and ORCA. Please move any future code added to standard_planner() too.
  *
  * Decide JIT settings for the given plan and record them in PlannedStmt.jitFlags.
+ *
+ * Since the costing model of ORCA and Planner are different
+ * (Planner cost usually higher), setting the JIT flags based on the
+ * common JIT costing GUCs could lead to false triggering of JIT.
+ *
+ * To prevent this situation, separate  costing GUCs are created
+ * for Optimizer and used here for setting the JIT flags.
+ *
  */
-static void compute_jit_flags(PlannedStmt* pstmt)
+static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
 {
 	Plan* top_plan = pstmt->planTree;
-
 	pstmt->jitFlags = PGJIT_NONE;
 
-	if (jit_enabled && jit_above_cost >= 0 &&
-		top_plan->total_cost > jit_above_cost)
+	/*
+	 * Common variables to hold values for optimizer or planner
+	 * based on function call.
+	 */
+	bool jit_on;
+	double above_cost;
+	double inline_above_cost;
+	double optimize_above_cost;
+
+	if (use_gporca)
+	{
+
+		/*
+		 * True means, we have to set values for ORCA.
+		 */
+		jit_on = optimizer_jit_enabled;
+		above_cost = optimizer_jit_above_cost;
+		inline_above_cost = optimizer_jit_inline_above_cost;
+		optimize_above_cost = optimizer_jit_optimize_above_cost;
+	}
+	else
+	{
+
+		/*
+		 * False means, we have to set values for Planner.
+		 */
+		jit_on = jit_enabled;
+		above_cost = jit_above_cost;
+		inline_above_cost = jit_inline_above_cost;
+		optimize_above_cost = jit_optimize_above_cost;
+
+	}
+
+	if (jit_on && above_cost >= 0 &&
+		top_plan->total_cost > above_cost)
 	{
 		pstmt->jitFlags |= PGJIT_PERFORM;
 
 		/*
 		 * Decide how much effort should be put into generating better code.
 		 */
-		if (jit_optimize_above_cost >= 0 &&
-			top_plan->total_cost > jit_optimize_above_cost)
+		if (optimize_above_cost >= 0 &&
+			top_plan->total_cost > optimize_above_cost)
 			pstmt->jitFlags |= PGJIT_OPT3;
-		if (jit_inline_above_cost >= 0 &&
-			top_plan->total_cost > jit_inline_above_cost)
+		if (inline_above_cost >= 0 &&
+			top_plan->total_cost > inline_above_cost)
 			pstmt->jitFlags |= PGJIT_INLINE;
 
 		/*

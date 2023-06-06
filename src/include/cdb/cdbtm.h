@@ -119,7 +119,7 @@ typedef enum
 {
 	/**
 	 * There is no distributed transaction.  This is the initial state and,
-	 *   for utility mode connections or master-only queries, the only state.
+	 *   for utility mode connections or coordinator-only queries, the only state.
 	 *
 	 * It is also the state to which the QD and QE return to between transactions.
 	 */
@@ -283,6 +283,8 @@ extern slock_t *shmGxidGenLock;
 #endif
 extern DistributedTransactionId *shmCommittedGxidArray;
 extern volatile int *shmNumCommittedGxacts;
+
+extern bool IsDtxRecoveryProcess(void);
 
 extern char *DtxStateToString(DtxState state);
 extern char *DtxProtocolCommandToString(DtxProtocolCommand command);

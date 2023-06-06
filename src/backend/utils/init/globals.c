@@ -92,7 +92,7 @@ char		postgres_exec_path[MAXPGPATH];	/* full path to backend */
 
 BackendId	MyBackendId = InvalidBackendId;
 
-BackendId	ParallelMasterBackendId = InvalidBackendId;
+BackendId	ParallelLeaderBackendId = InvalidBackendId;
 
 Oid			MyDatabaseId = InvalidOid;
 
@@ -122,12 +122,12 @@ bool		IsUnderPostmaster = false;
 bool		IsBinaryUpgrade = false;
 bool		IsBackgroundWorker = false;
 
-/* Greenplum seeds the creation of a segment from a copy of the master segment
+/* Greenplum seeds the creation of a segment from a copy of the coordinator segment
  * directory.  However, the first time the segment starts up small adjustments
  * need to be made to complete the transformation to a segment directory, and
  * these changes will be triggered by this global.
  */
-bool		ConvertMasterDataDirToSegment = false;
+bool		ConvertCoordinatorDataDirToSegment = false;
 
 bool		ExitOnAnyError = false;
 
@@ -162,7 +162,7 @@ int			max_parallel_workers = 8;
 int			MaxBackends = 0;
 
 int			VacuumCostPageHit = 1;	/* GUC parameters for vacuum */
-int			VacuumCostPageMiss = 10;
+int			VacuumCostPageMiss = 2;
 int			VacuumCostPageDirty = 20;
 int			VacuumCostLimit = 200;
 double		VacuumCostDelay = 0;

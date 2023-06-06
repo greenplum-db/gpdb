@@ -99,7 +99,7 @@ private:
 	IMDId *m_mdid_count;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// type name and id
 	static CWStringConst m_str;
@@ -118,11 +118,7 @@ public:
 	~CMDTypeBoolGPDB() override;
 
 	// accessors
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// type id
 	IMDId *MDId() const override;

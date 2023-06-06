@@ -113,6 +113,13 @@ static const PermItem perm_items_cpuset[] =
 	{ CGROUP_COMPONENT_CPUSET, "cpuset.mems", R_OK | W_OK },
 	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
 };
+static const PermItem perm_items_memory[] =
+{
+		{ CGROUP_COMPONENT_MEMORY, "", R_OK | W_OK | X_OK },
+		{ CGROUP_COMPONENT_MEMORY, "cgroup.procs", R_OK | W_OK },
+		{ CGROUP_COMPONENT_MEMORY, "memory.usage_in_bytes", R_OK },
+		{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
+};
 
 /*
  * just for cpuset check, same as the cpuset Permlist in permlists
@@ -142,6 +149,8 @@ static const PermList permlists[] =
 	 */
 	{ perm_items_cpuset, CGROUP_CPUSET_IS_OPTIONAL,
 		&gp_resource_group_enable_cgroup_cpuset},
+
+	{ perm_items_memory, false, NULL },
 
 	{ NULL, false, NULL }
 };
@@ -639,6 +648,7 @@ createcgroup_v1(Oid group)
 
 	if (!createDir(group, CGROUP_COMPONENT_CPU) ||
 		!createDir(group, CGROUP_COMPONENT_CPUACCT) ||
+		!createDir(group, CGROUP_COMPONENT_MEMORY) ||
 		(gp_resource_group_enable_cgroup_cpuset &&
 		 !createDir(group, CGROUP_COMPONENT_CPUSET)))
 	{
@@ -750,6 +760,8 @@ attachcgroup_v1(Oid group, int pid, bool is_cpuset_enabled)
 			   "cgroup.procs", pid);
 	writeInt64(group, BASEDIR_GPDB, CGROUP_COMPONENT_CPUACCT,
 			   "cgroup.procs", pid);
+	writeInt64(group, BASEDIR_GPDB, CGROUP_COMPONENT_MEMORY,
+			   "cgroup.procs", pid);
 
 	if (gp_resource_group_enable_cgroup_cpuset)
 	{
@@ -765,10 +777,6 @@ attachcgroup_v1(Oid group, int pid, bool is_cpuset_enabled)
 					   CGROUP_COMPONENT_CPUSET, "cgroup.procs", pid);
 		}
 	}
-
-	/*
-	 * Do not assign the process to cgroup/memory for now.
-	 */
 
 	currentGroupIdInCGroup = group;
 }
@@ -908,6 +916,7 @@ destroycgroup_v1(Oid group, bool migrate)
 {
 	if (!deleteDir(group, CGROUP_COMPONENT_CPU, "cpu.shares", migrate, detachcgroup_v1) ||
 		!deleteDir(group, CGROUP_COMPONENT_CPUACCT, NULL, migrate, detachcgroup_v1) ||
+		!deleteDir(group, CGROUP_COMPONENT_MEMORY, NULL, migrate, detachcgroup_v1) ||
 		(gp_resource_group_enable_cgroup_cpuset &&
 		 !deleteDir(group, CGROUP_COMPONENT_CPUSET, NULL, migrate, detachcgroup_v1)))
 	{
@@ -1087,6 +1096,15 @@ convertcpuusage_v1(int64 usage, int64 duration)
 	return percent;
 }
 
+/* Get the memory usage of the OS group. Return memory usage in bytes */
+static int64
+getmemoryusage_v1(Oid group)
+{
+	CGroupComponentType component = CGROUP_COMPONENT_MEMORY;
+
+	return readInt64(group, BASEDIR_GPDB, component, "memory.usage_in_bytes");
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.getcgroupname = getcgroupname_v1,
 		.probecgroup = probecgroup_v1,
@@ -1109,6 +1127,8 @@ static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.setcpuset = setcpuset_v1,
 
 		.convertcpuusage = convertcpuusage_v1,
+
+		.getmemoryusage = getmemoryusage_v1,
 };
 
 CGroupOpsRoutine *get_group_routine_v1(void)

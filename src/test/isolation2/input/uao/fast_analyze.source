@@ -1,0 +1,349 @@
+--
+-- Test AO/CO sampling method.
+--
+-- These tests ensure that we achieve our ANALYZE targets for AO/CO tables.
+--
+CREATE TABLE fast_analyze_@amname@_1(i int, j int) USING @amname@ DISTRIBUTED BY (j);
+
+-- Stats target info shows that we will sample 300 * (100) rows.
+SHOW default_statistics_target;
+SELECT attstattarget FROM pg_attribute
+  WHERE attrelid = 'fast_analyze_@amname@_1'::regclass AND attname IN ('i', 'j');
+
+--------------------------------------------------------------------------------
+-- Scenario 1:
+-- We have MORE than 300 * default_statistics_target = 30k rows for a 2 int table,
+-- spread across 3 segments, with no aborted rows [2 subcases -> blkdir and
+-- non-blkdir].
+-- Expectation: We have collected 30k live rows.
+--------------------------------------------------------------------------------
+
+-- (a) Without blkdir subcase
+
+-- Insert 10.5k rows in each QE.
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+1: INSERT INTO fast_analyze_@amname@_1 SELECT i, 2 FROM generate_series(1, 10500) i;
+2: INSERT INTO fast_analyze_@amname@_1 SELECT i, 1 FROM generate_series(1, 10500) i;
+3: INSERT INTO fast_analyze_@amname@_1 SELECT i, 5 FROM generate_series(1, 10500) i;
+1: COMMIT;
+2: COMMIT;
+3: COMMIT;
+
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_1;
+
+-- We have sampled 10k live rows.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+-- (b) With blkdir subcase
+
+CREATE INDEX ON fast_analyze_@amname@_1(i);
+
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_1;
+
+-- We have sampled 10k live rows from each QE.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+--------------------------------------------------------------------------------
+-- Scenario 2:
+-- We have LESS than 300 * default_statistics_target = 30k rows for a 2 int table,
+-- spread across 3 segments, with no aborted rows [2 subcases -> blkdir and
+-- non-blkdir].
+-- Expectation: We have collected number of live rows = total tupcount of table.
+--------------------------------------------------------------------------------
+
+CREATE TABLE fast_analyze_@amname@_2(i int, j int) USING @amname@ DISTRIBUTED BY (j);
+
+-- (a) Without blkdir subcase
+
+-- Insert 10 rows in each QE.
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+1: INSERT INTO fast_analyze_@amname@_2 SELECT i, 2 FROM generate_series(1, 10) i;
+2: INSERT INTO fast_analyze_@amname@_2 SELECT i, 1 FROM generate_series(1, 10) i;
+3: INSERT INTO fast_analyze_@amname@_2 SELECT i, 5 FROM generate_series(1, 10) i;
+1: COMMIT;
+2: COMMIT;
+3: COMMIT;
+
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_2;
+
+-- We have sampled 10 live rows from each QE.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+-- (b) With blkdir subcase
+
+CREATE INDEX ON fast_analyze_@amname@_2(i);
+
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_2;
+
+-- We have sampled 10 live rows from each QE.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+--------------------------------------------------------------------------------
+-- Scenario 3:
+-- We have ALL aborted rows [2 subcases -> blkdir and non-blkdir].
+-- Expectation: We have not sampled any live rows.
+--------------------------------------------------------------------------------
+
+CREATE TABLE fast_analyze_@amname@_3(i int, j int) USING @amname@ DISTRIBUTED BY (j);
+
+-- (a) Without blkdir subcase
+
+-- Insert 10 rows in each QE.
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+1: INSERT INTO fast_analyze_@amname@_3 SELECT i, 2 FROM generate_series(1, 10) i;
+2: INSERT INTO fast_analyze_@amname@_3 SELECT i, 1 FROM generate_series(1, 10) i;
+3: INSERT INTO fast_analyze_@amname@_3 SELECT i, 5 FROM generate_series(1, 10) i;
+1: ABORT;
+2: ABORT;
+3: ABORT;
+
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_3;
+
+-- We have not sampled any live rows on any QE.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+-- (b) With blkdir subcase
+
+CREATE INDEX ON fast_analyze_@amname@_3(i);
+
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_3;
+
+-- We have not sampled any live rows on any QE.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+--------------------------------------------------------------------------------
+-- Scenario 4:
+-- We have ALL deleted rows [2 subcases -> blkdir and non-blkdir].
+-- Expectation: We have not collected any live rows.
+--------------------------------------------------------------------------------
+
+CREATE TABLE fast_analyze_@amname@_4(i int, j int) USING @amname@ DISTRIBUTED BY (j);
+
+-- (a) Without blkdir subcase
+
+-- Insert 10 rows in each QE.
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+1: INSERT INTO fast_analyze_@amname@_4 SELECT i, 2 FROM generate_series(1, 10) i;
+2: INSERT INTO fast_analyze_@amname@_4 SELECT i, 1 FROM generate_series(1, 10) i;
+3: INSERT INTO fast_analyze_@amname@_4 SELECT i, 5 FROM generate_series(1, 10) i;
+1: COMMIT;
+2: COMMIT;
+3: COMMIT;
+-- Delete all rows.
+DELETE FROM fast_analyze_@amname@_4;
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_4;
+
+-- We have not sampled any live rows on any QE.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+-- (b) With blkdir subcase
+
+CREATE INDEX ON fast_analyze_@amname@_4(i);
+
+SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+ANALYZE fast_analyze_@amname@_4;
+
+-- We have not sampled any live rows on any QE.
+SELECT gp_inject_fault('returned_sample_row', 'status', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+SELECT gp_inject_fault('returned_sample_row', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+DROP TABLE fast_analyze_@amname@_1;
+DROP TABLE fast_analyze_@amname@_2;
+DROP TABLE fast_analyze_@amname@_3;
+DROP TABLE fast_analyze_@amname@_4;
+
+--
+-- The following tests ensure fast analyze function to work
+-- with multi-segfiles tables under concurrent inserts.
+--
+
+create table analyze_@amname@ (id int, a int, b inet, c inet) using @amname@ with (compresstype=zlib, compresslevel=3);
+
+insert into analyze_@amname@ select 2, i, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' ||
+  (i%255)::text))::inet, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' ||
+  (i%255)::text))::inet from generate_series(1,30000)i;
+
+insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+-- test ANALYZE after concurrent inserts commit
+
+1: begin;
+1: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+2: begin;
+2: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+3: begin;
+3: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+4: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+5: analyze analyze_@amname@;
+
+1: commit;
+2: commit;
+3: abort;
+
+1: analyze analyze_@amname@;
+
+-- test aoblkdir based ANALYZE
+
+create index on analyze_@amname@(id);
+
+1: begin;
+1: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+2: begin;
+2: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+3: begin;
+3: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+4: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
+
+5: analyze analyze_@amname@;
+
+1: commit;
+2: commit;
+3: abort;
+
+1: analyze analyze_@amname@;
+
+drop table analyze_@amname@;
+
+-- test more data and stability, note, it could take a little long time
+
+create table analyze_@amname@_2 (id int, a int, b inet, c inet) using @amname@ with (compresstype=zlib, compresslevel=3);
+insert into analyze_@amname@_2 select 2, i, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' ||
+  (i%255)::text))::inet, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' ||
+  (i%255)::text))::inet from generate_series(1,1000)i;
+
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+1: begin;
+1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+1: commit;
+
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+
+1: begin;
+1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+1: abort;
+
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+
+-- test with aoblkdir
+
+create index on analyze_@amname@_2(a);
+
+1: begin;
+1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+1: commit;
+
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+
+1: begin;
+1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
+
+1: abort;
+
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+1: analyze analyze_@amname@_2;
+
+drop table analyze_@amname@_2;

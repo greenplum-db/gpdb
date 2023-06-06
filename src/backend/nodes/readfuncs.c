@@ -50,6 +50,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/readfuncs.h"
 
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbgang.h"
 #include "nodes/altertablenodes.h"
 #include "utils/builtins.h"
@@ -1012,6 +1013,8 @@ _readNewColumnValue(void)
 	READ_NODE_FIELD(expr);
 	/* can't serialize exprstate */
 	READ_BOOL_FIELD(is_generated);
+	READ_NODE_FIELD(new_encoding);
+	READ_ENUM_FIELD(op, AOCSWriteColumnOperation);
 
 	READ_DONE();
 }
@@ -3485,7 +3488,6 @@ _readPlanRowMark(void)
 	READ_ENUM_FIELD(strength, LockClauseStrength);
 	READ_ENUM_FIELD(waitPolicy, LockWaitPolicy);
 	READ_BOOL_FIELD(isParent);
-	READ_BOOL_FIELD(canOptSelectLockingClause);
 
 	READ_DONE();
 }

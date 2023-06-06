@@ -207,7 +207,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.3953.1.0" Name="json_extract_path_text" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.3953.1.0" Name="json_extract_path_text" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.114.1.0" Name="json" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsComposite="false" IsTextRelated="false" IsFixedLength="false" Length="-1" PassByValue="false">

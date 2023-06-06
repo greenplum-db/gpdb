@@ -294,14 +294,15 @@ analyze test_mode;
 prepare test_mode_pp (int) as select count(*) from test_mode where a = $1;
 -- up to 5 executions, custom plan is used
 explain (costs off) execute test_mode_pp(2);
-                        QUERY PLAN                        
-----------------------------------------------------------
- Aggregate
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Index Scan using test_mode_a_idx on test_mode
-               Index Cond: (a = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
-(5 rows)
+         ->  Partial Aggregate
+               ->  Index Scan using test_mode_a_idx on test_mode
+                     Index Cond: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 -- force generic plan
 set plan_cache_mode to force_generic_plan;
@@ -350,26 +351,28 @@ execute test_mode_pp(1); -- 5x
 
 -- we should now get a really bad plan
 explain (costs off) execute test_mode_pp(2);
-         QUERY PLAN          
------------------------------
- Aggregate
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Index Scan using test_mode_a_idx on test_mode
-               Index Cond: (a = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
-(5 rows)
+         ->  Partial Aggregate
+               ->  Index Scan using test_mode_a_idx on test_mode
+                     Index Cond: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 -- but we can force a custom plan
 set plan_cache_mode to force_custom_plan;
 explain (costs off) execute test_mode_pp(2);
-                        QUERY PLAN                        
-----------------------------------------------------------
- Aggregate
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Index Scan using test_mode_a_idx on test_mode
-               Index Cond: (a = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
-(5 rows)
+         ->  Partial Aggregate
+               ->  Index Scan using test_mode_a_idx on test_mode
+                     Index Cond: (a = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
 
 drop table test_mode;
 --

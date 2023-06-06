@@ -174,7 +174,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
         <dxl:OpFunc Mdid="0.177.1.0"/>
         <dxl:Commutator Mdid="0.551.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.701.1.0" Name="float8" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="8" PassByValue="true">

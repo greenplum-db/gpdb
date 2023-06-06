@@ -1,25 +1,19 @@
 select * from gp_toolkit.gp_resgroup_config where groupname='default_group';
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit 
----------+---------------+-------------+----------------------+-------------------+--------+--------------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
 (1 row)
 
-select rsgname , groupid , num_running , num_queueing , num_queued , num_executed , cpu_usage->'-1' as qd_cpu_usage from gp_toolkit.gp_resgroup_status where rsgname='default_group';
- rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | qd_cpu_usage 
----------------+---------+-------------+--------------+------------+--------------+--------------
- default_group | 6437    | 0           | 0            | 0          | 0            | 0            
+select rsgname , groupid , num_running , num_queueing , num_queued , num_executed from gp_toolkit.gp_resgroup_status where rsgname='default_group';
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed 
+---------------+---------+-------------+--------------+------------+--------------
+ default_group | 6437    | 0           | 0            | 0          | 0            
 (1 row)
 
-select rsgname , groupid , cpu from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 and role='p' where rsgname='default_group';
- rsgname       | groupid | cpu  
----------------+---------+------
- default_group | 6437    | 0.00 
-(1 row)
-
-select rsgname , groupid , segment_id , cpu from gp_toolkit.gp_resgroup_status_per_segment where rsgname='default_group' and segment_id=-1;
- rsgname       | groupid | segment_id | cpu  
----------------+---------+------------+------
- default_group | 6437    | -1         | 0.00 
+select rsgname , groupid , cpu_usage , memory_usage from gp_toolkit.gp_resgroup_status_per_host s join gp_segment_configuration c on s.hostname=c.hostname and c.content=-1 and role='p' where rsgname='default_group';
+ rsgname       | groupid | cpu_usage | memory_usage 
+---------------+---------+-----------+--------------
+ default_group | 6437    | 0.00      | 0.00         
 (1 row)
 
 select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
@@ -33,11 +27,11 @@ select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
 
 -- start_ignore
 select * from gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit 
----------+---------------+-------------+----------------------+-------------------+--------+--------------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           
- 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           
- 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           
+ groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
+ 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      
+ 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           | 500      
 (3 rows)
 select * from gp_toolkit.gp_resgroup_status;
  rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration | cpu_usage                                     
@@ -47,26 +41,10 @@ select * from gp_toolkit.gp_resgroup_status;
  system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  | {'-1': 0.09, '0': 0.08, '1': 0.08, '2': 0.08} 
 (3 rows)
 select * from gp_toolkit.gp_resgroup_status_per_host;
- rsgname       | groupid | hostname | cpu  
----------------+---------+----------+------
- admin_group   | 6438    | zero     | 0.15 
- default_group | 6437    | zero     | 0.00 
- system_group  | 6441    | zero     | 0.05 
+ rsgname       | groupid | hostname | cpu_usage | memory_usage 
+---------------+---------+----------+-----------+--------------
+ admin_group   | 6438    | zero     | 0.07      | 91.92        
+ default_group | 6437    | zero     | 0.00      | 0.00         
+ system_group  | 6441    | zero     | 0.02      | 53.04        
 (3 rows)
-select * from gp_toolkit.gp_resgroup_status_per_segment;
- rsgname       | groupid | hostname | segment_id | cpu  
----------------+---------+----------+------------+------
- admin_group   | 6438    | zero     | -1         | 0.25 
- admin_group   | 6438    | zero     | 0          | 0.11 
- admin_group   | 6438    | zero     | 1          | 0.11 
- admin_group   | 6438    | zero     | 2          | 0.07 
- default_group | 6437    | zero     | -1         | 0.00 
- default_group | 6437    | zero     | 0          | 0.00 
- default_group | 6437    | zero     | 1          | 0.00 
- default_group | 6437    | zero     | 2          | 0.00 
- system_group  | 6441    | zero     | -1         | 0.06 
- system_group  | 6441    | zero     | 0          | 0.05 
- system_group  | 6441    | zero     | 1          | 0.05 
- system_group  | 6441    | zero     | 2          | 0.05 
-(12 rows)
 -- end_ignore

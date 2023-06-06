@@ -342,7 +342,7 @@ GetForeignColumnOptions(Oid relid, AttrNumber attnum);</code></pre></td>
 
 ## <a id="topic5"></a>Greenplum Database Considerations 
 
-A Greenplum Database user can specify the `mpp_execute` option when they create or alter a foreign table, foreign server, or foreign data wrapper. A Greenplum Database-compatible foreign-data wrapper examines the `mpp_execute` option value and uses it to determine where to request or send data - from the `master` \(the default\), `any` \(master or any one segment\), or `all segments` (parallel read/write).
+A Greenplum Database user can specify the `mpp_execute` option when they create or alter a foreign table, foreign server, or foreign data wrapper. A Greenplum Database-compatible foreign-data wrapper examines the `mpp_execute` option value and uses it to determine where to request or send data - from the `coordinator` \(the default\), `any` \(coordinator or any one segment\), or `all segments` (parallel read/write).
 
 Greenplum Database supports all `mpp_execute` settings for a scan.
 
@@ -368,7 +368,7 @@ else if (table->exec_location == FTEXECLOCATION_COORDINATOR)
 } 
 ```
 
-If the foreign table was not created with an `mpp_execute` option setting, the `mpp_execute` setting of the foreign server, and then the foreign data wrapper, is probed and used. If none of the foreign-data-related objects has an `mpp_execute` setting, the default setting is `master`.
+If the foreign table was not created with an `mpp_execute` option setting, the `mpp_execute` setting of the foreign server, and then the foreign data wrapper, is probed and used. If none of the foreign-data-related objects has an `mpp_execute` setting, the default setting is `coordinator`.
 
 If a foreign-data wrapper supports `mpp_execute 'all'`, it will implement a policy that matches Greenplum segments to data. So as not to duplicate data retrieved from the remote, the FDW on each segment must be able to establish which portion of the data is their responsibility. An FDW may use the segment identifier and the number of segments to help make this determination. The following code snippet demonstrates how a foreign-data wrapper may retrieve the segment number and total number of segments:
 

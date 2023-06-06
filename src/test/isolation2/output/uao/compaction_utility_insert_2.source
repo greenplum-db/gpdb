@@ -24,7 +24,7 @@ INSERT 1
  0     | 2        | 1     
  1     | 1        | 1     
 (2 rows)
--- We know that the master does update its tupcount yet
+-- We know that the coordinator does update its tupcount yet
 SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
  segno | tupcount | state 
 -------+----------+-------

@@ -20,7 +20,7 @@ RETURNS int AS $$
 $$ LANGUAGE sql;
 
 -- In some of the testcases the execution order of two background queries
--- must be enforced not only on master but also on segments, for example
+-- must be enforced not only on coordinator but also on segments, for example
 -- in below case the order of 10 and 20 on segments results in different
 -- waiting relations:
 --
@@ -49,18 +49,18 @@ SELECT segid(2,10) is not null;
 
 --enable GDD
 
--- table to just store the master's data directory path on segment.
+-- table to just store the coordinator's data directory path on segment.
 CREATE TABLE datadir(a int, dir text);
 INSERT INTO datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
 
 ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 ALTER SYSTEM SET gp_global_deadlock_detector_period TO 5;
 
--- Use utility session on seg 0 to restart master. This way avoids the
+-- Use utility session on seg 0 to restart coordinator. This way avoids the
 -- situation where session issuing the restart doesn't disappear
 -- itself.
 1U:SELECT pg_ctl(dir, 'restart') from datadir;
--- Start new session on master to make sure it has fully completed
+-- Start new session on coordinator to make sure it has fully completed
 -- recovery and up and running again.
 1: SHOW gp_enable_global_deadlock_detector;
 1: SHOW gp_global_deadlock_detector_period;

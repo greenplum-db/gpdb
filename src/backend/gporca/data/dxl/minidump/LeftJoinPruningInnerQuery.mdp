@@ -88,7 +88,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16419.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Index Mdid="7.16436.1.0" Name="t1joinpruning_pkey" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="7.16436.1.0" Name="t1joinpruning_pkey" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -165,7 +165,7 @@
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:Index Mdid="7.16424.1.0" Name="idx2" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,2,3" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13">
+      <dxl:Index Mdid="7.16424.1.0" Name="idx2" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,2,3" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
@@ -312,7 +312,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="7.16422.1.0" Name="idx1" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13">
+      <dxl:Index Mdid="7.16422.1.0" Name="idx1" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

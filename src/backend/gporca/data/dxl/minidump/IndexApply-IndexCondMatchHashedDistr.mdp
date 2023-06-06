@@ -230,7 +230,7 @@
       <dxl:ColumnStatistics Mdid="1.3373352.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.3373352.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
-      <dxl:Index Mdid="0.9385692.1.0" Name="index_ri" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.9385692.1.0" Name="index_ri" IsClustered="false" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

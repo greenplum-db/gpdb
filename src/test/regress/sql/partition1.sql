@@ -1267,6 +1267,18 @@ select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 
 alter table mpp13806 add partition test1 start (date '2007-12-31') inclusive end (date '2008-01-01') exclusive;
 select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
 
+drop table if exists mpp13806;
+ CREATE TABLE mpp13806 (id int, date date, amt decimal(10,2))
+ DISTRIBUTED BY (id)
+ PARTITION BY RANGE (date)
+ ( START (date '2008-01-01') EXCLUSIVE
+	END (date '2008-01-05') EXCLUSIVE
+	EVERY (INTERVAL '1 day') );
+-- For good measure, test the opposite case
+alter table mpp13806 add partition test end (date '2008-01-01') inclusive;
+select relname, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp13806%';
+drop table mpp13806;
+
 
 --
 -- Create two tables mpp14613_range (range partitioned) and

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use TestLib;
-use Test::More tests => 11;
+use Test::More tests => 13;
 
 use FindBin;
 use lib $FindBin::RealBin;
@@ -35,13 +35,12 @@ sub run_test
 	# To create hole for generating UPDATE_WORD and UPDATE_WORDS wal
 	# records.
 	master_psql("VACUUM verbose tb1");
-	# make sure vacuum worked GPDB_12_MERGE_FIXME: not sure why vacuum
-	# is not working here. Investigate and fix it.
-# 	check_query(
-# 		'SET gp_select_invisible to on; SELECT COUNT(*) FROM tb1',
-# 		qq(64
-# ),
-# 		'table content after vacuum');
+	# make sure vacuum worked
+ 	check_query(
+ 		'SET gp_select_invisible to on; SELECT COUNT(*) FROM tb1',
+ 		qq(64
+),
+ 		'table content after vacuum');
 
 	# each insert serves the purpose to generate the specific wal record
 	# type for bitmap.

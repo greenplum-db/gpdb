@@ -94,11 +94,11 @@ class GlobalShellExecutor(object):
         self.initfile_prefix = initfile_prefix
         self.v_cnt = 0
         # open pseudo-terminal to interact with subprocess
-        self.master_fd, self.slave_fd = pty.openpty()
+        self.primary_fd, self.subsidiary_fd = pty.openpty()
         self.sh_proc = subprocess.Popen(['/bin/bash', '--noprofile', '--norc', '--noediting', '-i'],
-                                        stdin=self.slave_fd,
-                                        stdout=self.slave_fd,
-                                        stderr=self.slave_fd,
+                                        stdin=self.subsidiary_fd,
+                                        stdout=self.subsidiary_fd,
+                                        stderr=self.subsidiary_fd,
                                         start_new_session=True,
                                         universal_newlines=True)
         self.bash_log_file = open("%s.log" % self.initfile_prefix, "w+")
@@ -129,22 +129,22 @@ class GlobalShellExecutor(object):
     def __run_command(self, sh_cmd):
         # Strip extra new lines
         sh_cmd = sh_cmd.rstrip()
-        os.write(self.master_fd, sh_cmd.encode()+b'\n')
+        os.write(self.primary_fd, sh_cmd.encode()+b'\n')
 
         output = ""
         while self.sh_proc.poll() is None:
             # If times out, consider it as an fatal error.
-            r, _, e = select.select([self.master_fd], [], [self.master_fd], 30)
+            r, _, e = select.select([self.primary_fd], [], [self.primary_fd], 30)
             if e:
                 # Terminate the shell when we get any output from stderr
-                o = os.read(self.master_fd, 10240)
+                o = os.read(self.primary_fd, 10240)
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 self.terminate(True)
                 raise GlobalShellExecutor.ExecutionError("Error happened to the bash process, see %s for details." % self.bash_log_file.name)
 
             if r:
-                o = os.read(self.master_fd, 10240).decode()
+                o = os.read(self.primary_fd, 10240).decode()
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 output += o
@@ -591,7 +591,7 @@ class SQLIsolationExecutor(object):
 
     def get_all_primary_contentids(self, dbname):
         """
-        Retrieves all primary content IDs (including the master). Intended for
+        Retrieves all primary content IDs (including the coordinator). Intended for
         use by *U queries.
         """
         if not dbname:
@@ -852,11 +852,11 @@ class SQLIsolationTestCase:
            followed by U (for utility-mode connections) or R (for retrieve-mode
            connection). In 'U' mode or 'R' mode, the
            content-id can alternatively be an asterisk '*' to perform a
-           utility-mode/retrieve-mode query on the master and all primary segments.
+           utility-mode/retrieve-mode query on the coordinator and all primary segments.
            If you want to create multiple connections to the same content-id, just
            increase N in: "content-id + {gpdb segment node number} * N",
            e.g. if gpdb cluster segment number is 3, then:
-           (1) the master utility connections can be: -1U, -4U, -7U;
+           (1) the coordinator utility connections can be: -1U, -4U, -7U;
            (2) the seg0 connections can be: 0U, 3U, 6U;
            (3) the seg1 connections can be: 1U, 4U, 7U;
            (4) the seg2 connections can be: 2U, 5U, 8U;
@@ -986,7 +986,7 @@ class SQLIsolationTestCase:
 
         Some tests are easier to write if it's possible to modify a system
         catalog across the *entire* cluster. To perform a utility-mode query on
-        all segments and the master, you can use *U commands:
+        all segments and the coordinator, you can use *U commands:
 
         *U: SET allow_system_table_mods = true;
         *U: UPDATE pg_catalog.<table> SET <column> = <value> WHERE <cond>;

@@ -3374,16 +3374,14 @@ where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
                      Hash Key: (3)
                      ->  Hash Join
                            Hash Cond: (t1.unique2 = (11))
-                           ->  Bitmap Heap Scan on tenk1 t1
-                                 Recheck Cond: (unique2 < 42)
-                                 ->  Bitmap Index Scan on tenk1_unique2
-                                       Index Cond: (unique2 < 42)
+                           ->  Index Scan using tenk1_unique2 on tenk1 t1
+                                 Index Cond: (unique2 < 42)
                            ->  Hash
                                  ->  Broadcast Motion 1:3  (slice3; segments: 1)
                                        ->  Seq Scan on int4_tbl i1
                                              Filter: ((11 < 42) AND (f1 = 0))
  Optimizer: Postgres query optimizer
-(19 rows)
+(17 rows)
 
 select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
   tenk1 t1
@@ -3849,16 +3847,14 @@ select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
                      Hash Key: b.thousand
                      ->  Seq Scan on tenk1 b
                ->  Hash
-                     ->  Bitmap Heap Scan on tenk1 a
-                           Recheck Cond: (unique2 < 10)
-                           ->  Bitmap Index Scan on tenk1_unique2
-                                 Index Cond: (unique2 < 10)
+                     ->  Index Scan using tenk1_unique2 on tenk1 a
+                           Index Cond: (unique2 < 10)
          ->  Hash
                ->  Broadcast Motion 3:3  (slice3; segments: 3)
                      ->  Index Scan using tenk1_unique2 on tenk1 c
                            Index Cond: (unique2 = 44)
  Optimizer: Postgres query optimizer
-(19 rows)
+(17 rows)
 
 select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
   from tenk1 a left join tenk1 b on b.thousand = a.unique1                        left join tenk1 c on c.unique2 = coalesce(b.twothousand, a.twothousand)

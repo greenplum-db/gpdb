@@ -32,8 +32,7 @@ using namespace gpdxl;
 CMDFunctionGPDB::CMDFunctionGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 								 IMDId *result_type_mdid,
 								 IMdIdArray *mdid_array, BOOL ReturnsSet,
-								 EFuncStbl func_stability,
-								 EFuncDataAcc func_data_access, BOOL is_strict,
+								 EFuncStbl func_stability, BOOL is_strict,
 								 BOOL is_ndv_preserving, BOOL is_allowed_for_PS)
 	: m_mp(mp),
 	  m_mdid(mdid),
@@ -42,18 +41,14 @@ CMDFunctionGPDB::CMDFunctionGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	  m_mdid_types_array(mdid_array),
 	  m_returns_set(ReturnsSet),
 	  m_func_stability(func_stability),
-	  m_func_data_access(func_data_access),
 	  m_is_strict(is_strict),
 	  m_is_ndv_preserving(is_ndv_preserving),
 	  m_is_allowed_for_PS(is_allowed_for_PS)
 {
 	GPOS_ASSERT(m_mdid->IsValid());
 	GPOS_ASSERT(EfsSentinel > func_stability);
-	GPOS_ASSERT(EfdaSentinel > func_data_access);
 
 	InitDXLTokenArrays();
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -70,9 +65,22 @@ CMDFunctionGPDB::~CMDFunctionGPDB()
 	m_mdid_type_result->Release();
 	CRefCount::SafeRelease(m_mdid_types_array);
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 }
 
+const CWStringDynamic *
+CMDFunctionGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDFunctionGPDB::InitDXLTokenArrays
@@ -88,13 +96,6 @@ CMDFunctionGPDB::InitDXLTokenArrays()
 	m_dxl_func_stability_array[EfsImmutable] = EdxltokenGPDBFuncImmutable;
 	m_dxl_func_stability_array[EfsStable] = EdxltokenGPDBFuncStable;
 	m_dxl_func_stability_array[EfsVolatile] = EdxltokenGPDBFuncVolatile;
-
-	// data access
-	m_dxl_data_access_array[EfdaNoSQL] = EdxltokenGPDBFuncNoSQL;
-	m_dxl_data_access_array[EfdaContainsSQL] = EdxltokenGPDBFuncContainsSQL;
-	m_dxl_data_access_array[EfdaReadsSQLData] = EdxltokenGPDBFuncReadsSQLData;
-	m_dxl_data_access_array[EfdaModifiesSQLData] =
-		EdxltokenGPDBFuncModifiesSQLData;
 }
 
 //---------------------------------------------------------------------------
@@ -229,9 +230,6 @@ CMDFunctionGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncStability),
 		GetFuncStabilityStr());
 	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncDataAccess),
-		GetFuncDataAccessStr());
-	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncStrict), m_is_strict);
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenGPDBFuncNDVPreserving),
@@ -287,27 +285,6 @@ CMDFunctionGPDB::GetFuncStabilityStr() const
 	return nullptr;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDFunctionGPDB::GetFuncDataAccessStr
-//
-//	@doc:
-//		String representation of function data access
-//
-//---------------------------------------------------------------------------
-const CWStringConst *
-CMDFunctionGPDB::GetFuncDataAccessStr() const
-{
-	if (EfdaSentinel > m_func_data_access)
-	{
-		return CDXLTokens::GetDXLTokenStr(
-			m_dxl_data_access_array[m_func_data_access]);
-	}
-
-	GPOS_ASSERT(!"Unrecognized function data access setting");
-	return nullptr;
-}
-
 #ifdef GPOS_DEBUG
 
 //---------------------------------------------------------------------------
@@ -338,8 +315,6 @@ CMDFunctionGPDB::DebugPrint(IOstream &os) const
 	os << "Returns set: " << return_set_str->GetBuffer() << std::endl;
 
 	os << "Function is " << GetFuncStabilityStr()->GetBuffer() << std::endl;
-
-	os << "Data access: " << GetFuncDataAccessStr()->GetBuffer() << std::endl;
 
 	const CWStringConst *is_strict =
 		IsStrict() ? CDXLTokens::GetDXLTokenStr(EdxltokenTrue)

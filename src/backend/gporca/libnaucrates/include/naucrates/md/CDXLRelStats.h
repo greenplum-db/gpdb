@@ -58,7 +58,7 @@ private:
 	BOOL m_empty;
 
 	// DXL string for object
-	CWStringDynamic *m_dxl_str;
+	CWStringDynamic *m_dxl_str = nullptr;
 
 	// number of blocks (not always up to-to-date)
 	ULONG m_relpages;
@@ -82,7 +82,7 @@ public:
 	CMDName Mdname() const override;
 
 	// DXL string representation of cache object
-	const CWStringDynamic *GetStrRepr() const override;
+	const CWStringDynamic *GetStrRepr() override;
 
 	// number of rows
 	CDouble Rows() const override;

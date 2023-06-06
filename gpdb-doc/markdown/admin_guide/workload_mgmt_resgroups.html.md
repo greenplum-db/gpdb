@@ -270,7 +270,7 @@ Using VMware Greenplum Command Center, an administrator can create and manage re
 
 Workload management assignment rules assign transactions to different resource groups based on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the transaction to the role's default resource group.
 
-Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) for more information about creating and managing resource groups and workload management rules.
+Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Greenplum-Command-Center/index.html) for more information about creating and managing resource groups and workload management rules.
 
 ## <a id="topic71717999"></a>Configuring and Using Resource Groups 
 
@@ -521,7 +521,7 @@ Monitoring the status of your resource groups and queries may involve the follow
 
 ### <a id="topic221"></a>Viewing Resource Group Limits 
 
-The [gp\_resgroup\_config](../ref_guide/system_catalogs/gp_resgroup_config.html) `gp_toolkit` system view displays the current limits for a resource group. To view the limits of all resource groups:
+The [gp\_resgroup\_config](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resgroup_config) `gp_toolkit` system view displays the current limits for a resource group. To view the limits of all resource groups:
 
 ```
 =# SELECT * FROM gp_toolkit.gp_resgroup_config;
@@ -546,15 +546,6 @@ The [gp\_resgroup\_status\_per\_host](../ref_guide/gp_toolkit.html) `gp_toolkit`
 
 ```
 
-#### <a id="topic23b"></a>Viewing Resource Group CPU/Memory Usage Per Segment 
-
-The [gp\_resgroup\_status\_per\_segment](../ref_guide/gp_toolkit.html) `gp_toolkit` system view enables you to view the real-time CPU and memory usage of a resource group on a per-segment, per-host basis. To view this information:
-
-```
-=# SELECT * FROM gp_toolkit.gp_resgroup_status_per_segment;
-
-```
-
 ### <a id="topic25"></a>Viewing the Resource Group Assigned to a Role 
 
 To view the resource group-to-role assignments, perform the following query on the [pg\_roles](../ref_guide/system_catalogs/pg_roles.html) and [pg\_resgroup](../ref_guide/system_catalogs/pg_resgroup.html) system catalog tables:
@@ -567,7 +558,7 @@ To view the resource group-to-role assignments, perform the following query on t
 
 ### <a id="topic252525"></a>Viewing a Resource Group's Running and Pending Queries 
 
-To view a resource group's running queries, pending queries, and how long the pending queries have been queued, examine the [pg\_stat\_activity](../ref_guide/system_catalogs/pg_stat_activity.html) system catalog table:
+To view a resource group's running queries, pending queries, and how long the pending queries have been queued, examine the [pg\_stat\_activity](../ref_guide/system_catalogs/catalog_ref-views.html#pg_stat_activity) system catalog table:
 
 ```
 =# SELECT query, waiting, rsgname, rsgqueueduration 

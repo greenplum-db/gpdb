@@ -119,7 +119,7 @@ WHERE a = c AND
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.49180.1.0" Name="yolo" ReturnsSet="false" Stability="Immutable" DataAccess="ContainsSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.49180.1.0" Name="yolo" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Relation Mdid="6.49181.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">

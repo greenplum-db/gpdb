@@ -521,12 +521,6 @@ SendTuple(MotionLayerState *mlStates,
 	return rc;
 }
 
-TupleChunkListItem
-get_eos_tuplechunklist(void)
-{
-	return s_eos_chunk_data;
-}
-
 /*
  * Sends a token to all peer Motion Nodes, indicating that this motion
  * node has no more tuples to send out.
@@ -1244,7 +1238,7 @@ statRecvTuple(MotionNodeEntry *pMNEntry, ChunkSorterEntry *pCSEntry)
 }
 
 /*
- * Return true if the record cache should be sent to master
+ * Return true if the record cache should be sent to coordinator
  */
 static bool
 ShouldSendRecordCache(MotionConn *conn, SerTupInfo *pSerInfo)

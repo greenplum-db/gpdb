@@ -35,19 +35,6 @@ CPhysicalForeignScan::CPhysicalForeignScan(CMemoryPool *mp,
 										   CColRefArray *pdrgpcrOutput)
 	: CPhysicalTableScan(mp, pnameAlias, ptabdesc, pdrgpcrOutput)
 {
-	// if this table is coordinator only, then keep the original distribution spec.
-	if (IMDRelation::EreldistrCoordinatorOnly == ptabdesc->GetRelDistribution())
-	{
-		return;
-	}
-
-	// otherwise, override the distribution spec for foreign table
-	if (m_pds)
-	{
-		m_pds->Release();
-	}
-
-	m_pds = GPOS_NEW(mp) CDistributionSpecRandom();
 }
 
 //---------------------------------------------------------------------------

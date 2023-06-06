@@ -583,6 +583,13 @@ if test "$GCC" = yes -a "$ICC" = no; then
   if test -n "$NOT_THE_CFLAGS"; then
     CFLAGS="$CFLAGS -Wno-compound-token-split-by-macro"
   fi
+  # Similarly remove clang 15+'s deprecated-non-prototype, as it warns about
+  # tree-walking APIs that we can't reasonably change in the back branches.
+  NOT_THE_CFLAGS=""
+  PGAC_PROG_CC_VAR_OPT(NOT_THE_CFLAGS, [-Wdeprecated-non-prototype])
+  if test -n "$NOT_THE_CFLAGS"; then
+    CFLAGS="$CFLAGS -Wno-deprecated-non-prototype"
+  fi
   # Similarly disable useless truncation warnings from gcc 8+
   NOT_THE_CFLAGS=""
   PGAC_PROG_CC_VAR_OPT(NOT_THE_CFLAGS, [-Wformat-truncation])
@@ -633,6 +640,9 @@ if test "$with_llvm" = yes ; then
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, BITCODE_CFLAGS, [-fexcess-precision=standard])
   PGAC_PROG_VARCXX_VARFLAGS_OPT(CLANGXX, BITCODE_CXXFLAGS, [-fexcess-precision=standard])
 
+  PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, BITCODE_CFLAGS, [-Xclang -no-opaque-pointers])
+  PGAC_PROG_VARCXX_VARFLAGS_OPT(CLANGXX, BITCODE_CXXFLAGS, [-Xclang -no-opaque-pointers])
+
   NOT_THE_CFLAGS=""
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wunused-command-line-argument])
   if test -n "$NOT_THE_CFLAGS"; then
@@ -642,6 +652,11 @@ if test "$with_llvm" = yes ; then
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wcompound-token-split-by-macro])
   if test -n "$NOT_THE_CFLAGS"; then
     BITCODE_CFLAGS="$BITCODE_CFLAGS -Wno-compound-token-split-by-macro"
+  fi
+  NOT_THE_CFLAGS=""
+  PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wdeprecated-non-prototype])
+  if test -n "$NOT_THE_CFLAGS"; then
+    BITCODE_CFLAGS="$BITCODE_CFLAGS -Wno-deprecated-non-prototype"
   fi
   NOT_THE_CFLAGS=""
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wformat-truncation])
@@ -1161,13 +1176,6 @@ if test "$with_zstd" = yes; then
 fi
 
 #
-# quicklz
-#
-PGAC_ARG_BOOL(with, quicklz, no,
-              [build with QuickLZ support (requires quicklz library)])
-AC_SUBST(with_quicklz)
-
-#
 # Realtime library
 #
 PGAC_ARG_BOOL(with, rt, yes,
@@ -1412,11 +1420,6 @@ if test "$with_zlib" = yes; then
 If you have zlib already installed, see config.log for details on the
 failure.  It is possible the compiler isn't looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
-fi
-
-if test "$with_quicklz" = yes; then
-  AC_CHECK_LIB(quicklz, qlz_compress, [],
-               [AC_MSG_ERROR([quicklz library not found.])])
 fi
 
 if test "$enable_ic_proxy" = yes; then
@@ -1743,11 +1746,6 @@ fi
 # Check for bzlib.h
 if test "$with_libbz2" = yes ; then
   AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
-fi
-
-# Check for quicklz.h
-if test "$with_quicklz" = yes; then
-  AC_CHECK_HEADER(quicklz.h, [], [AC_MSG_ERROR([header file <quicklz.h> is required for QuickLZ support])])
 fi
 
 if test "$with_gssapi" = yes ; then

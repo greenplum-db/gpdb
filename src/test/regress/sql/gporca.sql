@@ -3489,6 +3489,27 @@ insert into ts_tbl select to_timestamp('99991231'::text, 'YYYYMMDD'::text) from 
 analyze ts_tbl;
 explain select * from ts_tbl where ts = to_timestamp('99991231'::text, 'YYYYMMDD'::text);
 
+-- Test ORCA support for implicit array coerce cast
+-- ORCA should generate a valid plan passing along the cast function as part of ArrayCoerceExpr
+-- While execution thin insert query fails due to the mismatch of column length.
+create table array_coerce_foo (a int, b varchar(2)[]);
+create table array_coerce_bar (a int, b varchar(10)[]);
+
+insert into array_coerce_bar values (1, ARRAY['abcde']);
+explain insert into array_coerce_foo select * from array_coerce_bar;
+insert into array_coerce_foo select * from array_coerce_bar;
+
+-- These testcases will fallback to postgres when "PexprConvert2In" is enabled if
+-- underlying issues are not fixed
+create table baz (a int,b int);
+explain select baz.* from baz where
+baz.a=1 OR
+baz.b = 1 OR baz.b = 2 OR baz.b = 3 OR baz.b = 4 OR baz.b = 5 OR baz.b = 6 OR baz.b = 7 OR baz.b = 8 OR baz.b = 9 OR baz.b = 10 OR
+baz.b = 11 OR baz.b = 12 OR baz.b = 13 OR baz.b = 14 OR baz.b = 15 OR baz.b = 16 OR baz.b = 17 OR baz.b = 18 OR baz.b = 19 OR baz.b = 20;
+drop table baz;
+create table baz ( a varchar);
+explain select * from baz where baz.a::bpchar='b' or baz.a='c';
+drop table baz;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;

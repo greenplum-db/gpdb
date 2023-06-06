@@ -190,6 +190,16 @@ VACUUM ANALYZE s_priv_test.t_priv_table;
 DROP SCHEMA s_priv_test CASCADE;
 DROP ROLE r_priv_test;
 
+-- Check how reltuples/relpages/relallvisible are updated on a table, on
+-- VACUUM ANALYZE.
+set gp_autostats_mode='none';
+CREATE TABLE vacuum_gp (a int) DISTRIBUTED BY (a);
+INSERT INTO vacuum_gp SELECT i FROM generate_series(1, 12)i;
+SELECT relname, reltuples, relpages, relallvisible FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp%';
+VACUUM ANALYZE vacuum_gp;
+SELECT relname, reltuples, relpages, relallvisible FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp%';
+reset gp_autostats_mode;
+
 -- Check how reltuples/relpages are updated on a partitioned table, on
 -- VACUUM and ANALYZE.
 set gp_autostats_mode='none';
@@ -208,7 +218,7 @@ reset gp_autostats_mode;
 CREATE SEQUENCE s_serial START 100;
 VACUUM (ANALYZE, VERBOSE) s_serial;
 DROP SEQUENCE s_serial;
-VACUUM gp_toolkit.__gp_log_master_ext;
+VACUUM gp_toolkit.__gp_log_coordinator_ext;
 
 -- Vacuum related access control tests (Issue: https://github.com/greenplum-db/gpdb/issues/9001)
 -- Given a non-super-user role

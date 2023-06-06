@@ -16,7 +16,6 @@
 extern "C" {
 #include "postgres.h"
 
-#include "access/external.h"
 #include "access/heapam.h"
 #include "catalog/heap.h"
 #include "catalog/namespace.h"
@@ -529,7 +528,20 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	// get distribution policy
 	GpPolicy *gp_policy = gpdb::GetDistributionPolicy(rel.get());
-	dist = GetRelDistribution(gp_policy);
+	// If it's a foreign table, but not an external table
+	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE && gp_policy == nullptr)
+	{
+		// for foreign tables, we need to convert from the foreign table's execution location,
+		// to an Orca distribution spec. We do this mapping in `GetDistributionFromForeignRelExecLocation`.
+		// the distribution here represents the execution location of the fdw, which is
+		// then mapped to Orca's distribution spec
+		ForeignTable *ft = GetForeignTable(rel->rd_id);
+		dist = GetDistributionFromForeignRelExecLocation(ft);
+	}
+	else
+	{
+		dist = GetRelDistribution(gp_policy);
+	}
 
 	// get distribution columns
 	if (IMDRelation::EreldistrHash == dist)
@@ -632,7 +644,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		// translate the default column value
 		CDXLNode *dxl_default_col_val = nullptr;
 
-		if (!att->attisdropped && !rel->rd_att->attrs[ul].attgenerated)
+		if (!att->attisdropped && !att->attgenerated)
 		{
 			dxl_default_col_val = GetDefaultColumnValue(
 				mp, md_accessor, rel->rd_att, att->attnum);
@@ -641,46 +653,41 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		ULONG col_len = gpos::ulong_max;
 		CMDIdGPDB *mdid_col =
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, att->atttypid);
-		HeapTuple stats_tup = gpdb::GetAttStats(rel->rd_id, ul + 1);
 
-		// Column width priority:
-		// 1. If there is average width kept in the stats for that column, pick that value.
-		// 2. If not, if it is a fixed length text type, pick the size of it. E.g if it is
-		//    varchar(10), assign 10 as the column length.
-		// 3. Else if it not dropped and a fixed length type such as int4, assign the fixed
-		//    length.
-		// 4. Otherwise, assign it to default column width which is 8.
-		if (HeapTupleIsValid(stats_tup))
+		// if the type is of a known fixed width, just use that. If attlen is -1,
+		// it is variable length, and if -2, it is a null-terminated string
+		if (att->attlen > 0)
 		{
-			Form_pg_statistic form_pg_stats =
-				(Form_pg_statistic) GETSTRUCT(stats_tup);
-
-			// column width
-			col_len = form_pg_stats->stawidth;
-			gpdb::FreeHeapTuple(stats_tup);
-		}
-		else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
-				  mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) &&
-				 (VARHDRSZ < att->atttypmod))
-		{
-			col_len = (ULONG) att->atttypmod - VARHDRSZ;
+			col_len = att->attlen;
 		}
 		else
 		{
-			DOUBLE width = CStatistics::DefaultColumnWidth.Get();
-			col_len = (ULONG) width;
+			// This is expensive, but luckily we don't need it for most types
+			int32 avg_width = gpdb::GetAttAvgWidth(rel->rd_id, ul + 1);
 
-			if (!att->attisdropped)
+			// Column width priority for non-fixed width:
+			// 1. If there is average width kept in the stats for that column, pick that value.
+			// 2. If not, if it is a fixed length text type, pick the size of it. E.g if it is
+			//    varchar(10), assign 10 as the column length.
+			// 3. Otherwise, assign it to default column width which is 8.
+			if (avg_width > 0)
 			{
-				IMDType *md_type =
-					CTranslatorRelcacheToDXL::RetrieveType(mp, mdid_col);
-				if (md_type->IsFixedLength())
-				{
-					col_len = md_type->Length();
-				}
-				md_type->Release();
+				col_len = avg_width;
+			}
+			else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
+					  mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) &&
+					 (VARHDRSZ < att->atttypmod))
+			{
+				col_len = (ULONG) att->atttypmod - VARHDRSZ;
+			}
+			else
+			{
+				DOUBLE width = CStatistics::DefaultColumnWidth.Get();
+				col_len = (ULONG) width;
 			}
 		}
+
+
 
 		CMDColumn *md_col = GPOS_NEW(mp)
 			CMDColumn(md_colname, att->attnum, mdid_col, att->atttypmod,
@@ -794,6 +801,52 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 			   GPOS_WSZ_LIT("unrecognized distribution policy"));
 	return IMDRelation::EreldistrSentinel;
 }
+
+// Foreign relations don't store their distribution policy in GpPolicy,
+// so we need to extract it separately from the ForeignTable itself.
+// maps foreign table's execution location to Orca distribution policy
+// FTEXECLOCATION_COORDINATOR: maps to a coordinator-only distribution. That is,
+// this table must be executed on the coordinator
+//
+// FTEXECLOCATION_ANY: maps to a universal distribution. This is still a
+// foreign table that exists in a single location, but can be accessed/executed
+// from either the coordinator, a single segment, or even multiple segments
+// depending on costing. However, in the case of multiple segments, the overall
+// distribution spec still expects only a single copy of the data. This can be
+// achieved by joining with a distribted table on the hash key for example. The
+// "ANY" execution location (and universal distribution spec) is treated
+// identically to a "generate_series" function. This is similar to a replicated
+// spec, it can also be executed on the coordinator.
+//
+// FTEXECLOCATION_ALL_SEGMENTS: maps to a random distribution. "ALL SEGMENTS"
+// indicates that each segment is getting a separate subset of the data, most
+// likely from a distributed source. There is no assumption about the
+// distribution of this data, so we must assume it is randomly distributed.
+IMDRelation::Ereldistrpolicy
+CTranslatorRelcacheToDXL::GetDistributionFromForeignRelExecLocation(
+	ForeignTable *ft)
+{
+	IMDRelation::Ereldistrpolicy dist = IMDRelation::EreldistrSentinel;
+	switch (ft->exec_location)
+	{
+		case FTEXECLOCATION_COORDINATOR:
+			dist = IMDRelation::EreldistrCoordinatorOnly;
+			break;
+		case FTEXECLOCATION_ANY:
+			dist = IMDRelation::EreldistrUniversal;
+			break;
+		case FTEXECLOCATION_ALL_SEGMENTS:
+			dist = IMDRelation::EreldistrRandom;
+			break;
+		default:
+			GPOS_RAISE(
+				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				GPOS_WSZ_LIT("Unrecognized foreign distribution policy"));
+	}
+
+	return dist;
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -983,18 +1036,28 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	// extract the position of the key columns
 	index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
+	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
 		INT attno = form_pg_index->indkey.values[i];
 		GPOS_ASSERT(0 != attno && "Index expressions not supported");
 
-		index_key_cols_array->Append(
-			GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		// key columns are indexed [0, indnkeyatts)
+		if (i < form_pg_index->indnkeyatts)
+		{
+			index_key_cols_array->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
+		// include columns are indexed [indnkeyatts, indnatts)
+		else
+		{
+			included_cols->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
 	}
 	mdid_rel->Release();
 
-	ULongPtrArray *included_cols = ComputeIncludedCols(mp, md_rel);
 	mdid_index->AddRef();
 	IMdIdArray *op_families_mdids = RetrieveIndexOpFamilies(mp, mdid_index);
 
@@ -1017,34 +1080,6 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::ComputeIncludedCols
-//
-//	@doc:
-//		Compute the included columns in an index
-//
-//---------------------------------------------------------------------------
-ULongPtrArray *
-CTranslatorRelcacheToDXL::ComputeIncludedCols(CMemoryPool *mp,
-											  const IMDRelation *md_rel)
-{
-	// TODO: 3/19/2012; currently we assume that all the columns
-	// in the table are available from the index.
-
-	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
-	const ULONG num_included_cols = md_rel->ColumnCount();
-	for (ULONG ul = 0; ul < num_included_cols; ul++)
-	{
-		if (!md_rel->GetMdCol(ul)->IsDropped())
-		{
-			included_cols->Append(GPOS_NEW(mp) ULONG(ul));
-		}
-	}
-
-	return included_cols;
 }
 
 
@@ -1372,7 +1407,6 @@ void
 CTranslatorRelcacheToDXL::LookupFuncProps(
 	OID func_oid,
 	IMDFunction::EFuncStbl *stability,	// output: function stability
-	IMDFunction::EFuncDataAcc *access,	// output: function datya access
 	BOOL *is_strict,					// output: is function strict?
 	BOOL *is_ndv_preserving,			// output: preserves NDVs of inputs
 	BOOL *returns_set,					// output: does function return set?
@@ -1381,13 +1415,11 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 )
 {
 	GPOS_ASSERT(nullptr != stability);
-	GPOS_ASSERT(nullptr != access);
 	GPOS_ASSERT(nullptr != is_strict);
 	GPOS_ASSERT(nullptr != is_ndv_preserving);
 	GPOS_ASSERT(nullptr != returns_set);
 
 	*stability = GetFuncStability(gpdb::FuncStability(func_oid));
-	*access = GetEFuncDataAccess(gpdb::FuncDataAccess(func_oid));
 
 	if (gpdb::FuncExecLocation(func_oid) != PROEXECLOCATION_ANY)
 	{
@@ -1463,18 +1495,17 @@ CTranslatorRelcacheToDXL::RetrieveFunc(CMemoryPool *mp, IMDId *mdid)
 	}
 
 	IMDFunction::EFuncStbl stability = IMDFunction::EfsImmutable;
-	IMDFunction::EFuncDataAcc access = IMDFunction::EfdaNoSQL;
 	BOOL is_strict = true;
 	BOOL returns_set = true;
 	BOOL is_ndv_preserving = true;
 	BOOL is_allowed_for_PS = false;
-	LookupFuncProps(func_oid, &stability, &access, &is_strict,
-					&is_ndv_preserving, &returns_set, &is_allowed_for_PS);
+	LookupFuncProps(func_oid, &stability, &is_strict, &is_ndv_preserving,
+					&returns_set, &is_allowed_for_PS);
 
 	mdid->AddRef();
 	CMDFunctionGPDB *md_func = GPOS_NEW(mp) CMDFunctionGPDB(
 		mp, mdid, mdname, result_type_mdid, arg_type_mdids, returns_set,
-		stability, access, is_strict, is_ndv_preserving, is_allowed_for_PS);
+		stability, is_strict, is_ndv_preserving, is_allowed_for_PS);
 
 	return md_func;
 }
@@ -1677,43 +1708,6 @@ CTranslatorRelcacheToDXL::GetFuncStability(CHAR c)
 	}
 
 	return efuncstbl;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::GetEFuncDataAccess
-//
-//	@doc:
-//		Get function data access property from the GPDB character representation
-//
-//---------------------------------------------------------------------------
-CMDFunctionGPDB::EFuncDataAcc
-CTranslatorRelcacheToDXL::GetEFuncDataAccess(CHAR c)
-{
-	CMDFunctionGPDB::EFuncDataAcc access = CMDFunctionGPDB::EfdaSentinel;
-
-	switch (c)
-	{
-		case 'n':
-			access = CMDFunctionGPDB::EfdaNoSQL;
-			break;
-		case 'c':
-			access = CMDFunctionGPDB::EfdaContainsSQL;
-			break;
-		case 'r':
-			access = CMDFunctionGPDB::EfdaReadsSQLData;
-			break;
-		case 'm':
-			access = CMDFunctionGPDB::EfdaModifiesSQLData;
-			break;
-		case 's':
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("unknown data access"));
-		default:
-			GPOS_ASSERT(!"Invalid data access property");
-	}
-
-	return access;
 }
 
 //---------------------------------------------------------------------------
@@ -2087,11 +2081,13 @@ CTranslatorRelcacheToDXL::RetrieveCast(CMemoryPool *mp, IMDId *mdid)
 	{
 		case COERCION_PATH_ARRAYCOERCE:
 		{
+			IMDId *src_elem_mdid = GPOS_NEW(mp)
+				CMDIdGPDB(IMDId::EmdidGeneral, gpdb::GetElementType(src_oid));
 			return GPOS_NEW(mp) CMDArrayCoerceCastGPDB(
 				mp, mdid, mdname, mdid_src, mdid_dest, is_binary_coercible,
 				GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, cast_fn_oid),
 				IMDCast::EmdtArrayCoerce, default_type_modifier, false,
-				EdxlcfImplicitCast, -1);
+				EdxlcfImplicitCast, -1, src_elem_mdid);
 		}
 		break;
 		case COERCION_PATH_FUNC:
@@ -2506,7 +2502,6 @@ CTranslatorRelcacheToDXL::RetrievePartKeysAndTypes(CMemoryPool *mp,
 {
 	GPOS_ASSERT(nullptr != rel);
 
-	// FIXME: isn't it faster to check rel.rd_partkey?
 	if (!rel->rd_partdesc)
 	{
 		// not a partitioned table
@@ -2705,12 +2700,6 @@ BOOL
 CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 {
 	HeapTupleData *tup = index_rel->rd_indextuple;
-
-	// covering index -- it has INCLUDE (...) columns
-	if (index_rel->rd_index->indnatts > index_rel->rd_index->indnkeyatts)
-	{
-		return false;
-	}
 
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&

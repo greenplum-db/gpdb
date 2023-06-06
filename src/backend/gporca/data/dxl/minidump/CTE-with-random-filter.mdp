@@ -256,7 +256,7 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
         <dxl:SumAgg Mdid="0.2111.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.729127.1.1.7" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
@@ -344,7 +344,7 @@ explain with t as (select * from foo) select count(*) from t where random() < 0.
         </dxl:LogicalGroupBy>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2">
+    <dxl:Plan Id="0" SpaceSize="3">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000716" Rows="1.000000" Width="8"/>

@@ -1,6 +1,6 @@
 -- Test this scenario:
--- mirror has latency replaying the WAL from the primary, the master is reset
--- from PANIC, master will start the DTX recovery process to recover the
+-- mirror has latency replaying the WAL from the primary, the coordinator is reset
+-- from PANIC, coordinator will start the DTX recovery process to recover the
 -- in-progress two-phase transactions. 
 -- The FTS process should be able to continue probe and 'sync off' the mirror
 -- while the 'dtx recovery' process is hanging recovering distributed transactions.
@@ -26,9 +26,9 @@
 
 -- stop mirror
 3: SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content=0 AND role = 'm';
--- trigger master reset
+-- trigger coordinator reset
 3: select gp_inject_fault('exec_simple_query_start', 'panic', current_setting('gp_dbid')::smallint);
--- verify master panic happens. The PANIC message does not emit sometimes so
+-- verify coordinator panic happens. The PANIC message does not emit sometimes so
 -- mask it.
 -- start_matchsubs
 -- m/PANIC:  fault triggered, fault name:'exec_simple_query_start' fault type:'panic'\n/
@@ -36,7 +36,7 @@
 -- end_matchsubs
 3: select 1;
 
--- wait for master finish crash recovery
+-- wait for coordinator finish crash recovery
 -1U: select wait_until_standby_in_state('streaming');
 
 -- wait for FTS to 'sync off' the mirror, meanwhile, dtx recovery process will

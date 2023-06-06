@@ -51,7 +51,7 @@ These commands lower the priority of all tables to `10` and then assign a rank o
 
 During the table redistribution process you can query the expansion schema to view:
 
--   a current progress summary, the estimated rate of table redistribution, and the estimated time to completion. Use *[gpexpand.expansion\_progress](../../ref_guide/system_catalogs/gpexpand_expansion_progress.html)*, as described in [Viewing Expansion Status](#topic32).
+-   a current progress summary, the estimated rate of table redistribution, and the estimated time to completion. Use *[gpexpand.expansion\_progress](../../ref_guide/system_catalogs/catalog_ref-views.html#gpexpandexpansion_progress)*, as described in [Viewing Expansion Status](#topic32).
 -   per-table status information, using *[gpexpand.status\_detail](../../ref_guide/system_catalogs/gp_expansion_tables.html)*. See [Viewing Table Status](#topic33).
 
 See also [Monitoring the Cluster Expansion State](expand-initialize.html) for information about monitoring the overall expansion progress with the `gpstate` utility.

@@ -551,7 +551,7 @@ ic_proxy_server_main(void)
 	uv_signal_init(&ic_proxy_server_loop, &ic_proxy_server_signal_int);
 	uv_signal_start(&ic_proxy_server_signal_int, ic_proxy_server_on_signal, SIGINT);
 
-	/* on master */
+	/* on coordinator */
 	uv_signal_init(&ic_proxy_server_loop, &ic_proxy_server_signal_term);
 	uv_signal_start(&ic_proxy_server_signal_term, ic_proxy_server_on_signal, SIGTERM);
 
@@ -576,8 +576,7 @@ ic_proxy_server_main(void)
 	BackgroundWorkerUnblockSignals();
 
 	/*
-	 * return non-zero value so we are restarted by the postmaster, but this
-	 * behavior can be controled by calling ic_proxy_server_quit()
+	 * return non-zero value so we are restarted by the postmaster 
 	 */
 	ic_proxy_server_exit_code = 1;
 	uv_run(&ic_proxy_server_loop, UV_RUN_DEFAULT);

@@ -2951,7 +2951,7 @@ index_update_stats(Relation rel,
 		 * GPDB: In theory, it is possible to support index only scans with AO
 		 * tables, but disable them for now by setting relallvisible to 0.
 		 */
-		if (rd_rel->relkind != RELKIND_INDEX && !RelationIsAppendOptimized(rel))
+		if (rd_rel->relkind != RELKIND_INDEX && !RelationStorageIsAO(rel))
 			visibilitymap_count(rel, &relallvisible, NULL);
 		else					/* don't bother for indexes */
 			relallvisible = 0;
@@ -3962,7 +3962,7 @@ reindex_relation(Oid relid, int flags, int options)
 			 get_namespace_name(RelationGetNamespace(rel)),
 			 RelationGetRelationName(rel));
 
-	relIsAO = RelationIsAppendOptimized(rel);
+	relIsAO = RelationStorageIsAO(rel);
 
 	toast_relid = rel->rd_rel->reltoastrelid;
 
@@ -4054,28 +4054,28 @@ reindex_relation(Oid relid, int flags, int options)
 
 	/*
 	 * If the relation has a secondary toast rel, reindex that too while we
-	 * still hold the lock on the master table.
+	 * still hold the lock on the main table.
 	 */
 	if ((flags & REINDEX_REL_PROCESS_TOAST) && OidIsValid(toast_relid))
 		result |= reindex_relation(toast_relid, flags, options);
 
 	/*
 	 * If an AO rel has a secondary segment list rel, reindex that too while we
-	 * still hold the lock on the master table.
+	 * still hold the lock on the primary table.
 	 */
 	if (OidIsValid(aoseg_relid))
 		result |= reindex_relation(aoseg_relid, 0, options);
 
 	/*
 	 * If an AO rel has a secondary block directory rel, reindex that too while we
-	 * still hold the lock on the master table.
+	 * still hold the lock on the primary table.
 	 */
 	if (OidIsValid(aoblkdir_relid))
 		result |= reindex_relation(aoblkdir_relid, 0, options);
 
 	/*
 	 * If an AO rel has a secondary visibility map rel, reindex that too while we
-	 * still hold the lock on the master table.
+	 * still hold the lock on the primary table.
 	 */
 	if (OidIsValid(aovisimap_relid))
 		result |= reindex_relation(aovisimap_relid, 0, options);

@@ -123,14 +123,14 @@ struct ReindexIndexCallbackState
 
 /*
  * Helper function, to check indcheckxmin for an index on all segments, and
- * set it on the master if it was set on any segment.
+ * set it on the coordinator if it was set on any segment.
  *
  * If CREATE INDEX creates a "broken" HOT chain, the new index must not be
  * used by new queries, with an old snapshot, that would need to see the old
  * values. See src/backend/access/heap/README.HOT. This is enforced by
  * setting indcheckxmin in the pg_index row. In GPDB, we use the pg_index
- * row in the master for planning, but all the data is stored in the
- * segments, so indcheckxmin must be set in the master, if it's set in any
+ * row in the coordinator for planning, but all the data is stored in the
+ * segments, so indcheckxmin must be set in the coordinator, if it's set in any
  * of the segments.
  */
 static void
@@ -181,7 +181,7 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
 	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 	/*
-	 * If indcheckxmin was set on any segment, also set it in the master.
+	 * If indcheckxmin was set on any segment, also set it in the coordinator.
 	 */
 	if (indcheckxmin_set_in_any_segment)
 	{
@@ -733,7 +733,7 @@ DefineIndex(Oid relationId,
 	 * we can use the same lock as heap tables.
 	 */
 	rel = table_open(relationId, NoLock);
-	if (RelationIsAppendOptimized(rel))
+	if (RelationStorageIsAO(rel))
 	{
 		GetAppendOnlyEntryAuxOids(rel, NULL, &blkdirrelid, NULL);
 
@@ -851,7 +851,7 @@ DefineIndex(Oid relationId,
 	 *
 	 * Note: This code duplicates code in tablecmds.c
 	 *
-	 * MPP-8238 : inconsistent tablespaces between segments and master. In the
+	 * MPP-8238 : inconsistent tablespaces between segments and coordinator. In the
 	 * QD, store the resolved tablespace name in the command, so that it's
 	 * dispatched. In QE, skip the check for 'partitioned': because we got
 	 * the value from the QD, it should be ok.
@@ -1733,7 +1733,7 @@ DefineIndex(Oid relationId,
 									NULL);
 		SetUserIdAndSecContext(save_userid, save_sec_context);
 
-		/* Set indcheckxmin in the master, if it was set on any segment */
+		/* Set indcheckxmin in the coordinator, if it was set on any segment */
 		if (!indexInfo->ii_BrokenHotChain)
 			cdb_sync_indcheckxmin_with_segments(indexRelationId);
 	}
