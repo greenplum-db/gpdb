@@ -1273,10 +1273,11 @@ split_pathtarget_at_srfs(PlannerInfo *root,
 			}
 
 			/*
-			 * This check is specific for ORCA. ORCA calls split_pathtarget_at_srfs function
-			 * for creation of ProjectSet nodes during planned statement translation with
-			 * PlannerInfo as NULL. So having this check prevents a crash in
-			 * set_pathtarget_cost_width.
+			 * This check is specific for ORCA. ORCA calls
+			 * split_pathtarget_at_srfs function for creation of
+			 * ProjectSet nodes during planned statement
+			 * translation with PlannerInfo as NULL. So having this
+			 * check prevents a crash in set_pathtarget_cost_width.
 			 */
 			if (root != NULL)
 				set_pathtarget_cost_width(root, ntarget);
