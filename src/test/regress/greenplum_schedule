@@ -26,15 +26,10 @@ test: gp_dispatch_keepalives
 # copy form a file with different EOL
 test: copy_eol
 
-# gp_toolkit performs a vacuum and checks that it truncated the relation. That
-# might not happen if other backends are holding transactions open, preventing
-# vacuum from removing dead tuples. And run gp_toolkit early to make some log
-# file related tests (like gp_log_system, etc) faster.
-# Also, gp_log_system could have issue reading partial log that's generated
-# from concurrent test. So anything that uses it needs to be run alone.
 test: disable_autovacuum
-test: gp_toolkit
 # test gp_fastsequence allocation (early in schedule as log grepping is expensive)
+# These tests gp_log_system could have issue reading partial log that's generated
+# from concurrent test. So anything that uses it needs to be run alone.
 test: uao_dml/gp_fastsequence_row
 test: uao_dml/gp_fastsequence_column
 
@@ -48,7 +43,9 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
+# run separately, because checks for reltuples and results vary in-presence of concurrent transactions
+test: cluster_gp
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types gp_index combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
 test: gp_lock
 test: gp_tablespace_with_faults
@@ -159,6 +156,9 @@ test: vacuum_gp
 # background analyze may affect pgstat
 test: pg_stat
 test: bfv_partition qp_misc_rio
+# 'gp_covering_index' concurrent vacuum (e.g. autovacuum) can effect plan due
+# to race-condition fetching relallvisible.
+test: gp_covering_index
 test: pgstat_qd_tabstat
 # dispatch should always run seperately from other cases.
 test: dispatch
@@ -168,10 +168,10 @@ test: resource_group_cpuset
 test: resource_group_gucs
 
 # expand_table tests may affect the result of 'gp_explain', keep them below that
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression sysviews_gp
+test: trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression sysviews_gp
 
 # direct dispatch tests
-test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
+test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types interrupt_holdoff_count
 
 test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache part_external_table
 # Run minirepro separately to avoid concurrent deletes erroring out the internal pg_dump call
@@ -334,7 +334,6 @@ test: resource_queue_with_rule
 test: bb_memory_quota
 test: qp_resource_queue
 test: resource_queue_function
-test: gp_toolkit_resqueue
 test: resource_manager_restore_to_none
 
 # test dispatch and result handling of gp_log_memory_backend_contexts

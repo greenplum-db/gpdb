@@ -68,6 +68,7 @@ do { \
 extern int64 GetFastSequences(Oid objid, int64 objmod, int64 numSequences);
 
 extern int64 ReadLastSequence(Oid objid, int64 objmod);
+extern void ReadAllLastSequences(Oid objid, int64 *seqs);
 
 /*
  * RemoveFastSequenceEntry
@@ -80,6 +81,6 @@ extern int64 ReadLastSequence(Oid objid, int64 objmod);
  * If the given valid objid does not have an entry in
  * gp_fastsequence, this function errors out.
  */
-extern void RemoveFastSequenceEntry(Oid objid);
+extern void RemoveFastSequenceEntry(Oid relid, Oid objid);
 
 #endif

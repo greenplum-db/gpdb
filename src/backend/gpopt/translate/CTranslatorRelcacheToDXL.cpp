@@ -16,7 +16,6 @@
 extern "C" {
 #include "postgres.h"
 
-#include "access/external.h"
 #include "access/heapam.h"
 #include "catalog/heap.h"
 #include "catalog/namespace.h"
@@ -529,7 +528,20 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	// get distribution policy
 	GpPolicy *gp_policy = gpdb::GetDistributionPolicy(rel.get());
-	dist = GetRelDistribution(gp_policy);
+	// If it's a foreign table, but not an external table
+	if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE && gp_policy == nullptr)
+	{
+		// for foreign tables, we need to convert from the foreign table's execution location,
+		// to an Orca distribution spec. We do this mapping in `GetDistributionFromForeignRelExecLocation`.
+		// the distribution here represents the execution location of the fdw, which is
+		// then mapped to Orca's distribution spec
+		ForeignTable *ft = GetForeignTable(rel->rd_id);
+		dist = GetDistributionFromForeignRelExecLocation(ft);
+	}
+	else
+	{
+		dist = GetRelDistribution(gp_policy);
+	}
 
 	// get distribution columns
 	if (IMDRelation::EreldistrHash == dist)
@@ -790,6 +802,52 @@ CTranslatorRelcacheToDXL::GetRelDistribution(GpPolicy *gp_policy)
 	return IMDRelation::EreldistrSentinel;
 }
 
+// Foreign relations don't store their distribution policy in GpPolicy,
+// so we need to extract it separately from the ForeignTable itself.
+// maps foreign table's execution location to Orca distribution policy
+// FTEXECLOCATION_COORDINATOR: maps to a coordinator-only distribution. That is,
+// this table must be executed on the coordinator
+//
+// FTEXECLOCATION_ANY: maps to a universal distribution. This is still a
+// foreign table that exists in a single location, but can be accessed/executed
+// from either the coordinator, a single segment, or even multiple segments
+// depending on costing. However, in the case of multiple segments, the overall
+// distribution spec still expects only a single copy of the data. This can be
+// achieved by joining with a distribted table on the hash key for example. The
+// "ANY" execution location (and universal distribution spec) is treated
+// identically to a "generate_series" function. This is similar to a replicated
+// spec, it can also be executed on the coordinator.
+//
+// FTEXECLOCATION_ALL_SEGMENTS: maps to a random distribution. "ALL SEGMENTS"
+// indicates that each segment is getting a separate subset of the data, most
+// likely from a distributed source. There is no assumption about the
+// distribution of this data, so we must assume it is randomly distributed.
+IMDRelation::Ereldistrpolicy
+CTranslatorRelcacheToDXL::GetDistributionFromForeignRelExecLocation(
+	ForeignTable *ft)
+{
+	IMDRelation::Ereldistrpolicy dist = IMDRelation::EreldistrSentinel;
+	switch (ft->exec_location)
+	{
+		case FTEXECLOCATION_COORDINATOR:
+			dist = IMDRelation::EreldistrCoordinatorOnly;
+			break;
+		case FTEXECLOCATION_ANY:
+			dist = IMDRelation::EreldistrUniversal;
+			break;
+		case FTEXECLOCATION_ALL_SEGMENTS:
+			dist = IMDRelation::EreldistrRandom;
+			break;
+		default:
+			GPOS_RAISE(
+				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				GPOS_WSZ_LIT("Unrecognized foreign distribution policy"));
+	}
+
+	return dist;
+}
+
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorRelcacheToDXL::RetrieveRelDistributionCols
@@ -978,18 +1036,28 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	// extract the position of the key columns
 	index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
+	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
 		INT attno = form_pg_index->indkey.values[i];
 		GPOS_ASSERT(0 != attno && "Index expressions not supported");
 
-		index_key_cols_array->Append(
-			GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		// key columns are indexed [0, indnkeyatts)
+		if (i < form_pg_index->indnkeyatts)
+		{
+			index_key_cols_array->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
+		// include columns are indexed [indnkeyatts, indnatts)
+		else
+		{
+			included_cols->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
 	}
 	mdid_rel->Release();
 
-	ULongPtrArray *included_cols = ComputeIncludedCols(mp, md_rel);
 	mdid_index->AddRef();
 	IMdIdArray *op_families_mdids = RetrieveIndexOpFamilies(mp, mdid_index);
 
@@ -1012,34 +1080,6 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::ComputeIncludedCols
-//
-//	@doc:
-//		Compute the included columns in an index
-//
-//---------------------------------------------------------------------------
-ULongPtrArray *
-CTranslatorRelcacheToDXL::ComputeIncludedCols(CMemoryPool *mp,
-											  const IMDRelation *md_rel)
-{
-	// TODO: 3/19/2012; currently we assume that all the columns
-	// in the table are available from the index.
-
-	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
-	const ULONG num_included_cols = md_rel->ColumnCount();
-	for (ULONG ul = 0; ul < num_included_cols; ul++)
-	{
-		if (!md_rel->GetMdCol(ul)->IsDropped())
-		{
-			included_cols->Append(GPOS_NEW(mp) ULONG(ul));
-		}
-	}
-
-	return included_cols;
 }
 
 
@@ -2661,12 +2701,6 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 {
 	HeapTupleData *tup = index_rel->rd_indextuple;
 
-	// covering index -- it has INCLUDE (...) columns
-	if (index_rel->rd_index->indnatts > index_rel->rd_index->indnkeyatts)
-	{
-		return false;
-	}
-
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&
 		   gpdb::HeapAttIsNull(tup, Anum_pg_index_indpred) &&
@@ -2988,6 +3022,28 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 					GPOS_WSZ_LIT(
 						"Use optimizer_enable_foreign_table to enable Orca with foreign partitions"));
 			}
+
+			// Fall back to planner if there is a foreign partition using the greenplum_fdw
+			// this FDW does some coordinator specific setup and fdw_private populating
+			// in ExecInit* to work with parallel cursors. This must run on the coordinator,
+			// but in Orca is run on the segments. We likely can't use Orca's dynamic scan
+			// approach for this case
+			CWStringConst str_greenplum_fdw(GPOS_WSZ_LIT("greenplum_fdw"));
+			CAutoMemoryPool amp;
+			CMemoryPool *mp = amp.Pmp();
+			CWStringDynamic *fdw_name_str =
+				CDXLUtils::CreateDynamicStringFromCharArray(
+					mp, gpdb::GetRelFdwName(oid));
+
+			if (fdw_name_str->Equals(&str_greenplum_fdw))
+			{
+				GPOS_DELETE(fdw_name_str);
+				GPOS_RAISE(
+					gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+					GPOS_WSZ_LIT(
+						"Queries with partitions of greenplum_fdw are not supported"));
+			}
+			GPOS_DELETE(fdw_name_str);
 			continue;
 		}
 		all_foreign = false;

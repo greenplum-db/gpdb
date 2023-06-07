@@ -817,10 +817,10 @@ SELECT * FROM rewrite_optimization_aoco_parent;
  segno |                   rel                    |  amname   |     aoco_add_col_optimized     
 -------+------------------------------------------+-----------+--------------------------------
     -1 | rewrite_optimization_aoco_parent         | ao_column | ADD COLUMN optimized for table
-    -1 | rewrite_optimization_aoco_parent_1_prt_1 | ao_row    | full table rewritten
+    -1 | rewrite_optimization_aoco_parent_1_prt_1 | ao_row    | ADD COLUMN optimized for table
     -1 | rewrite_optimization_aoco_parent_1_prt_2 | heap      | ADD COLUMN optimized for table
      0 | rewrite_optimization_aoco_parent         | ao_column | ADD COLUMN optimized for table
-     0 | rewrite_optimization_aoco_parent_1_prt_1 | ao_row    | full table rewritten
+     0 | rewrite_optimization_aoco_parent_1_prt_1 | ao_row    | ADD COLUMN optimized for table
      0 | rewrite_optimization_aoco_parent_1_prt_2 | heap      | ADD COLUMN optimized for table
 (6 rows)
 
@@ -859,10 +859,10 @@ SELECT * FROM rewrite_optimization_heap_parent;
  segno |                   rel                    |  amname   |     aoco_add_col_optimized     
 -------+------------------------------------------+-----------+--------------------------------
     -1 | rewrite_optimization_heap_parent         | heap      | ADD COLUMN optimized for table
-    -1 | rewrite_optimization_heap_parent_1_prt_1 | ao_row    | full table rewritten
+    -1 | rewrite_optimization_heap_parent_1_prt_1 | ao_row    | ADD COLUMN optimized for table
     -1 | rewrite_optimization_heap_parent_1_prt_2 | ao_column | ADD COLUMN optimized for table
      0 | rewrite_optimization_heap_parent         | heap      | ADD COLUMN optimized for table
-     0 | rewrite_optimization_heap_parent_1_prt_1 | ao_row    | full table rewritten
+     0 | rewrite_optimization_heap_parent_1_prt_1 | ao_row    | ADD COLUMN optimized for table
      0 | rewrite_optimization_heap_parent_1_prt_2 | ao_column | ADD COLUMN optimized for table
 (6 rows)
 

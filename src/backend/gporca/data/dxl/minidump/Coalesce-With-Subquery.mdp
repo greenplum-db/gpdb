@@ -165,12 +165,12 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.2698.1.0" Name="pg_tablespace_spcname_index" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14">
+      <dxl:Index Mdid="0.2698.1.0" Name="pg_tablespace_spcname_index" IsClustered="false" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2672.1.0" Name="pg_database_oid_index" IsClustered="false" KeyColumns="12" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18">
+      <dxl:Index Mdid="0.2672.1.0" Name="pg_database_oid_index" IsClustered="false" KeyColumns="12" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
@@ -339,12 +339,12 @@
       <dxl:GPDBFunc Mdid="0.1597.1.0" Name="pg_encoding_to_char" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.19.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Index Mdid="0.2697.1.0" Name="pg_tablespace_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14">
+      <dxl:Index Mdid="0.2697.1.0" Name="pg_tablespace_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2671.1.0" Name="pg_database_datname_index" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18">
+      <dxl:Index Mdid="0.2671.1.0" Name="pg_database_datname_index" IsClustered="false" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>

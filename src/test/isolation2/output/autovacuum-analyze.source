@@ -5,6 +5,8 @@
 -- Speed up test.
 ALTER SYSTEM SET autovacuum_naptime = 5;
 ALTER
+ALTER SYSTEM SET autovacuum_vacuum_threshold = 50;
+ALTER
 select * from pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -627,6 +629,8 @@ select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_ta
 
 -- Reset GUCs.
 ALTER SYSTEM RESET autovacuum_naptime;
+ALTER
+ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 ALTER
 select * from pg_reload_conf();
  pg_reload_conf 

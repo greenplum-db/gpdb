@@ -9,9 +9,11 @@ from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_
 from gppylib.parseutils import line_reader, check_values, canonicalize_address
 from gppylib.utils import checkNotNone, normalizeAndValidateInputPath
 from gppylib.gparray import GpArray, Segment
+from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
 from gppylib.commands.gp import RECOVERY_REWIND_APPNAME
 
 logger = gplog.get_default_logger()
+
 
 def get_segments_with_running_basebackup():
     """
@@ -211,6 +213,7 @@ class RecoveryTriplets(abc.ABC):
 
         failed_segments_with_running_basebackup = []
         failed_segments_with_running_pgrewind = []
+        failed_segments_in_backup_mode = []
         segments_with_running_basebackup = get_segments_with_running_basebackup()
 
         for req in requests:
@@ -229,13 +232,18 @@ class RecoveryTriplets(abc.ABC):
             if peer is None:
                 raise Exception("No peer found for dbid {}. liveSegment is None".format(failed_segment_dbid))
             peer_contentid = peer.getSegmentContentId()
-            
+
             if peer_contentid in segments_with_running_basebackup:
                 failed_segments_with_running_basebackup.append(peer_contentid)
                 continue
 
             if is_pg_rewind_running(peer.getSegmentHostName(), peer.getSegmentPort()):
                 failed_segments_with_running_pgrewind.append(peer_contentid)
+                continue
+
+            # if source server(peer) is already in backup, we can not start recovery of the failed segment
+            if is_seg_in_backup_mode(peer.getSegmentHostName(), peer.getSegmentPort()):
+                failed_segments_in_backup_mode.append(peer_contentid)
                 continue
 
             # TODO: These 2 cases have different behavior which might be confusing to the user.
@@ -271,6 +279,11 @@ class RecoveryTriplets(abc.ABC):
             logger.warning(
                 "Found pg_rewind running for segments with contentIds %s, skipping recovery of these segments" % (
                     failed_segments_with_running_pgrewind))
+
+        if len(failed_segments_in_backup_mode) > 0:
+            logger.warning(
+                "Found differential recovery running for segments with contentIds %s, skipping recovery of these segments" % (
+                    failed_segments_in_backup_mode))
 
         return triplets
 

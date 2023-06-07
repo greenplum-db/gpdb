@@ -2217,15 +2217,6 @@ LockRelease(const LOCKTAG *locktag, LOCKMODE lockmode, bool sessionLock)
 	 */
 	locallock->lockCleared = false;
 
-	/*
-	 * At this point we can no longer suppose we are clear of invalidation
-	 * messages related to this lock.  Although we'll delete the LOCALLOCK
-	 * object before any intentional return from this routine, it seems worth
-	 * the trouble to explicitly reset lockCleared right now, just in case
-	 * some error prevents us from deleting the LOCALLOCK.
-	 */
-	locallock->lockCleared = false;
-
 	/* Attempt fast release of any lock eligible for the fast path. */
 	if (EligibleForRelationFastPath(locktag, lockmode) &&
 		FastPathLocalUseCount > 0)

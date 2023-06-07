@@ -111,8 +111,8 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	pdrgpcrOutput->AddRef();
 
-	CColRefSet *matched_cols =
-		CXformUtils::PcrsIndexKeys(mp, pdrgpcrOutput, pmdindex, pmdrel);
+	CColRefSet *matched_cols = CXformUtils::PcrsIndexKeysAndIncludes(
+		mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CColRefSet *output_cols = GPOS_NEW(mp) CColRefSet(mp);
 
 	// An index only scan is allowed iff each used output column reference also

@@ -32,6 +32,7 @@ CREATE FOREIGN TABLE text_csv_all (
     word1 text, word2 text
 ) SERVER file_server
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/text<SEGID>.csv', mpp_execute 'all segments');
+EXPLAIN SELECT * FROM text_csv_all ORDER BY word1;
 SELECT * FROM text_csv_all ORDER BY word1;
 CREATE FOREIGN TABLE text_csv_any_from_server (
     word1 text, word2 text

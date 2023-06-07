@@ -125,6 +125,26 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Extra" to stdout
         And gpcheckcat should print "Table miss_attr_db4.public.heap_table.1" to stdout
 
+    Scenario: gpcheckcat should report inconsistent pg_fastsequence.lastrownums values with gp_fastsequence
+        Given database "errorneous_lastrownums" is dropped and recreated
+        And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_row; insert into errlastrownum select * from generate_series(1,100);""
+        And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 0
+        When the user runs sql "set allow_system_table_mods=on; update gp_fastsequence set last_sequence = 0 where last_sequence > 0;" in "errorneous_lastrownums" on first primary segment
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: ao_lastrownums" to stdout
+        Given database "errorneous_lastrownums" is dropped and recreated
+        And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_row; insert into errlastrownum select * from generate_series(1,10);""
+        And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 0
+        Then the user runs sql "set allow_system_table_mods=on; delete from gp_fastsequence where last_sequence > 0;" in "errorneous_lastrownums" on first primary segment
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: ao_lastrownums" to stdout
+
     Scenario: gpcheckcat should report and repair owner errors and produce timestamped repair scripts
         Given database "owner_db1" is dropped and recreated
         And database "owner_db2" is dropped and recreated
@@ -155,6 +175,27 @@ Feature: gpcheckcat tests
         And the user runs "dropdb owner_db2"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    Scenario: gpcheckcat should report and repair owner errors on appendonly tables and its indexes
+        Given database "owner_db" is dropped and recreated
+          And the path "gpcheckcat.repair.*" is removed from current working directory
+          And there is a "ao" table "public.gpadmin_ao_tbl" in "owner_db" with data
+          And the user runs "psql owner_db -c "CREATE INDEX gpadmin_ao_tbl_idx on gpadmin_ao_tbl (column1);""
+          And the user runs sql "alter table gpadmin_ao_tbl OWNER TO wolf" in "owner_db" on first primary segment
+         Then psql should return a return code of 0
+
+        When the user runs "gpcheckcat -R owner owner_db"
+         Then gpcheckcat should return a return code of 3
+         Then the path "gpcheckcat.repair.*" is found in cwd "1" times
+
+        When the user runs all the repair scripts in the dir "gpcheckcat.repair.*"
+          And the path "gpcheckcat.repair.*" is removed from current working directory
+          And the user runs "gpcheckcat -R owner owner_db"
+         Then Then gpcheckcat should return a return code of 0
+         Then the path "gpcheckcat.repair.*" is found in cwd "0" times
+
+        And the user runs "dropdb owner_db"
+        And the path "gpcheckcat.repair.*" is removed from current working directory
+        
     Scenario: gpcheckcat should report and repair invalid constraints
         Given database "constraint_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
@@ -253,6 +294,7 @@ Feature: gpcheckcat tests
         Given database "fkey_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
         And there is a "heap" table "gpadmin_tbl" in "fkey_db" with data
+        And there is a view without columns in "fkey_db"
         When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_class" with key "oid" in the database "fkey_db"
         Then the user runs "gpcheckcat -E -R missing_extraneous fkey_db"
         And gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_class" to stdout

@@ -101,7 +101,6 @@ ProcedureCreate(const char *procedureName,
 				Oid prosupport,
 				float4 procost,
 				float4 prorows,
-				char prodataaccess,
 				char proexeclocation)
 {
 	Oid			retval;
@@ -374,7 +373,6 @@ ProcedureCreate(const char *procedureName,
 	else
 		nulls[Anum_pg_proc_proconfig - 1] = true;
 	/* proacl will be determined later */
-	values[Anum_pg_proc_prodataaccess - 1] = CharGetDatum(prodataaccess);
 	values[Anum_pg_proc_proexeclocation - 1] = CharGetDatum(proexeclocation);
 
 	rel = table_open(ProcedureRelationId, RowExclusiveLock);

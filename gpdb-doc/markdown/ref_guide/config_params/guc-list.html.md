@@ -73,7 +73,7 @@ Specifies a fraction of the table size to add to [`autovacuum_vacuum_threshold`]
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-| floating point (%) | 0.2 |local, system, reload|
+| floating point (%) | 0.05 |local, system, reload|
 
 ## <a id="autovacuum_vacuum_threshold"></a>autovacuum_vacuum_threshold
 
@@ -81,7 +81,7 @@ Specifies the minimum number of updated or deleted tuples needed to trigger a `V
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-| 0 < integer < INT_MAX | 50 |local, system, reload|
+| 0 < integer < INT_MAX | 500 |local, system, reload|
 
 ## <a id="backslash_quote"></a>backslash\_quote 
 

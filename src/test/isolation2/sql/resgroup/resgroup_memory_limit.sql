@@ -50,6 +50,11 @@ CREATE ROLE role_memory_test RESOURCE GROUP rg_memory_test;
 1: RESET gp_resgroup_memory_query_fixed_mem;
 
 1: RESET ROLE;
+
+-- gp_resgroup_memory_query_fixed_mem cannot larger than max_statement_mem
+show max_statement_mem;
+set gp_resgroup_memory_query_fixed_mem ='2048MB';
+
 -- clean
 DROP FUNCTION func_memory_test(text);
 DROP TABLE t_memory_limit;

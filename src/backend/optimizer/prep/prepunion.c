@@ -488,11 +488,6 @@ generate_recursion_path(SetOperationStmt *setOp, PlannerInfo *root,
 	 * SegmentGeneral, the result of the join may end up having a different
 	 * locus.
 	 *
-	 * GPDB_96_MERGE_FIXME: On coordinator, before the merge, more complicated
-	 * logic was added in commit ad6a6067d9 to make the loci on the WorkTableScan
-	 * and the RecursiveUnion correct. That was largely reverted as part of the
-	 * merge, and things seem to be working with this much simpler thing, but
-	 * I'm not sure if the logic is 100% correct now.
 	 */
 	if (CdbPathLocus_IsSegmentGeneral(lpath->locus))
 	{
@@ -827,39 +822,6 @@ generate_nonunion_paths(SetOperationStmt *op, PlannerInfo *root,
 			|| Gp_role == GP_ROLE_EXECUTE ) /* MPP-2928 */
 	{
 		optype = PSETOP_SEQUENTIAL_QD;
-	}
-
-	if ( optype == PSETOP_PARALLEL_PARTITIONED )
-	{
-		/*
-		 * CDB: Collocate non-distinct tuples prior to sort or hash. We must
-		 * put the Redistribute nodes below the Append, otherwise we lose
-		 * the order of the firstFlags.
-		 */
-		ListCell   *pathcell;
-		ListCell   *tlistcell;
-		List	   *newpathlist = NIL;
-
-		forboth(pathcell, pathlist, tlistcell, tlist_list)
-		{
-			Path	   *subpath = (Path *) lfirst(pathcell);
-			List	   *subtlist = (List *) lfirst(tlistcell);
-#if 0
-			/* GPDB_96_MERGE_FIXME */
-			/*
-			 * If the subplan already has a Motion at the top, peel it off
-			 * first, so that we don't have a Motion on top of a Motion.
-			 * That would be silly. I wish we could be smarter and not
-			 * create such a Motion in the first place, but it's too late
-			 * for that here.
-			 */
-			while (IsA(subpath, Motion))
-				subpath = subpath->lefttree;
-#endif
-			newpathlist = lappend(newpathlist,
-								  make_motion_hash_all_targets(root, subpath, subtlist));
-		}
-		pathlist = newpathlist;
 	}
 
 	/*

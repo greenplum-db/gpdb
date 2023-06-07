@@ -59,6 +59,16 @@ RESET
 
 1: RESET ROLE;
 RESET
+
+-- gp_resgroup_memory_query_fixed_mem cannot larger than max_statement_mem
+show max_statement_mem;
+ max_statement_mem 
+-------------------
+ 2000MB            
+(1 row)
+set gp_resgroup_memory_query_fixed_mem ='2048MB';
+ERROR:  Invalid input for gp_resgroup_memory_query_fixed_mem, must be less than max_statement_mem (2048000 kB)
+
 -- clean
 DROP FUNCTION func_memory_test(text);
 DROP

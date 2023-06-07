@@ -1383,7 +1383,7 @@ get_ao_distribution(PG_FUNCTION_ARGS)
 		/*
 		 * verify this is an AO relation
 		 */
-		if (!RelationIsAppendOptimized(parentrel))
+		if (!RelationStorageIsAO(parentrel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("'%s' is not an append-only relation",

@@ -577,10 +577,16 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 		Oid			rsgid;
 
 		rsgid = get_resgroup_oid(resgroup, false);
+
 		if (rsgid == ADMINRESGROUP_OID && !issuper)
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("only superuser can be assigned to admin resgroup")));
+
+		if (rsgid == SYSTEMRESGROUP_OID)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("assigning to system resgroup is not allowed")));
 
 		ResGroupCheckForRole(rsgid);
 
@@ -1301,10 +1307,17 @@ AlterRole(AlterRoleStmt *stmt)
 		}
 
 		rsgid = get_resgroup_oid(resgroup, false);
+
 		if (rsgid == ADMINRESGROUP_OID && !bWas_super)
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("only superuser can be assigned to admin resgroup")));
+
+		if (rsgid == SYSTEMRESGROUP_OID)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("assigning to system resgroup is not allowed")));
+
 		ResGroupCheckForRole(rsgid);
 		new_record[Anum_pg_authid_rolresgroup - 1] =
 			ObjectIdGetDatum(rsgid);

@@ -7,7 +7,6 @@ To run queries optimally with GPORCA, consider the query criteria closely.
 Ensure the following criteria are met:
 
 -   The table does not contain multi-column partition keys.
--   The multi-level partitioned table is a uniform multi-level partitioned table. See [About Uniform Multi-level Partitioned Tables](query-piv-uniform-part-tbl.html).
 -   The server configuration parameter `optimizer_enable_coordinator_only_queries` is set to `on` when running against coordinator only tables such as the system table *pg\_attribute*. For information about the parameter, see the *Greenplum Database Reference Guide*.
 
     > **Note** Enabling this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.

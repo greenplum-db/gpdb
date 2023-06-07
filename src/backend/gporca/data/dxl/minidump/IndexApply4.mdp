@@ -271,7 +271,7 @@
         <dxl:OpFunc Mdid="0.177.1.0"/>
         <dxl:Commutator Mdid="0.551.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.1369110.1.0" Name="index_yj" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.1369110.1.0" Name="index_yj" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

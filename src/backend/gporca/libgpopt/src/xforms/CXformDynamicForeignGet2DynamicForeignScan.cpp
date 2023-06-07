@@ -96,7 +96,7 @@ CXformDynamicForeignGet2DynamicForeignScan::Transform(CXformContext *pxfctxt,
 				mp, pname, ptabdesc, popGet->UlOpId(), popGet->ScanId(),
 				pdrgpcrOutput, pdrgpdrgpcrPart, popGet->GetPartitionMdids(),
 				popGet->GetRootColMappingPerPart(),
-				popGet->GetForeignServerOid(), popGet->IsCoordinatorOnly()));
+				popGet->GetForeignServerOid(), popGet->DistributionType()));
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);
 }

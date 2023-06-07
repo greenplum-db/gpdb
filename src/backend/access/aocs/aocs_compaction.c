@@ -309,7 +309,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		/*
 		 * Report that we are now scanning and compacting segment files.
 		 */
-		curr_num_dead_tuples = scanDesc->cur_seg_row + 1 - moved_tupleCount;
+		curr_num_dead_tuples = scanDesc->segrowsprocessed + 1 - moved_tupleCount;
 		if (curr_num_dead_tuples > prev_num_dead_tuples)
 		{
 			pgstat_progress_update_param(PROGRESS_VACUUM_NUM_DEAD_TUPLES,
@@ -326,7 +326,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		}
 	}
 	/* Accumulate total number dead tuples */
-	vacrelstats->num_dead_tuples += scanDesc->cur_seg_row - moved_tupleCount;
+	vacrelstats->num_dead_tuples += scanDesc->segrowsprocessed - moved_tupleCount;
 
 	MarkAOCSFileSegInfoAwaitingDrop(aorel, compact_segno);
 

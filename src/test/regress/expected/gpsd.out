@@ -205,7 +205,7 @@ Please review output file to ensure it is within corporate policy to transport t
 drop database gpsd_db_ext_data;
 create database gpsd_db_ext_data;
 -- start_ignore
-\! psql -f data/gpsd_db_ext_data.sql gpsd_db_ext_data
+\! psql -Xf data/gpsd_db_ext_data.sql gpsd_db_ext_data
 SET
 SET
 SET

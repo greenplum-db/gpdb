@@ -101,7 +101,7 @@ WHERE c.oid < 16384 AND
 ORDER BY 1, 2;
          relname          |      attname       |   atttypid   
 --------------------------+--------------------+--------------
- gp_configuration_history | desc               | text
+ gp_configuration_history | description        | text
  gp_version_at_initdb     | productversion     | text
  pg_attribute             | attacl             | aclitem[]
  pg_attribute             | attfdwoptions      | text[]

@@ -43,11 +43,11 @@ def impl(context, contents):
                                                "preferred_role = '%s'" % (content, preferred_role))
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             num_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND "
-                                                     "gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
+                                                     "description LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
         context.original_config_history_info[key] = num_tuples
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             context.original_config_history_backout_count = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE "
-                                                     "gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';")
+                                                     "description LIKE 'gprecoverseg: segment config for backout%%';")
 
 
 
@@ -217,7 +217,7 @@ def impl(context, utility, output, segment_type):
 def impl(context, utility, recovery_type, content_ids):
     if content_ids == "None":
         return
-    if recovery_type not in ("incremental", "full", "start"):
+    if recovery_type not in ("incremental", "full", "differential","start"):
         raise Exception("Expected recovery_type to be 'incremental', 'full' or 'start, but found '%s'." % recovery_type)
     content_list = [int(c) for c in content_ids.split(',')]
 
@@ -230,6 +230,9 @@ def impl(context, utility, recovery_type, content_ids):
             expected = r'hostname: {}; port: {}; logfile: {}/gpAdminLogs/pg_{}.\d{{8}}_\d{{6}}.dbid{}.out; recoverytype: {}'.format(
                 segment.getSegmentHostName(), segment.getSegmentPort(), os.path.expanduser("~"),
                 'rewind' if recovery_type == 'incremental' else 'basebackup', segment.getSegmentDbId(), recovery_type)
+        if recovery_type == 'differential':
+            expected = r'hostname: {}; port: {}; logfile: {}/gpAdminLogs/rsync.\d{{8}}_\d{{6}}.dbid{}.out; recoverytype: {}'.format(
+                segment.getSegmentHostName(), segment.getSegmentPort(), os.path.expanduser("~"),segment.getSegmentDbId(), recovery_type)
         elif recovery_type == 'start':
             expected = r'hostname: {}; port: {}; datadir: {}'.format(segment.getSegmentHostName(), segment.getSegmentPort(),
                                                                      segment.getSegmentDataDirectory())
@@ -294,8 +297,11 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
     elif recovery_type == 'full':
         print_msg = 'pg_basebackup: error: could not access directory' #TODO also assert for the directory location here
         logfile_name = 'pg_basebackup*'
+    elif recovery_type == 'differential':
+        print_msg = 'rsync error:'
+        logfile_name = 'rsync*'
     else:
-        raise Exception("Expected recovery_type to be 'incremental', 'full' but found '%s'." % recovery_type)
+        raise Exception("Expected recovery_type to be 'incremental', 'full', 'differential' but found '%s'." % recovery_type)
     context.execute_steps('''
     Then gprecoverseg should return a return code of {return_code}
     And user can start transactions
@@ -305,10 +311,17 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
     And gprecoverseg should print "{recovery_type}" errors to stdout for content {content_ids}
     And gpAdminLogs directory has "{logfile_name}" files on respective hosts only for content {content_ids}
     And verify that mirror on content {content_ids} is down
-    And gprecoverseg should print "gprecoverseg failed. Please check the output" to stdout
     And gprecoverseg should not print "Segments successfully recovered" to stdout
     '''.format(return_code=return_code, print_msg=print_msg, content_ids=content_ids, recovery_type=recovery_type,
                logfile_name=logfile_name))
+
+    if recovery_type == 'differential':
+        context.execute_steps('''Then gprecoverseg should print "gprecoverseg differential recovery failed. Please check the gpsegrecovery.py log file and rsync log file for more details." to stdout
+        ''')
+
+    else:
+        context.execute_steps('''
+                    Then gprecoverseg should print "gprecoverseg failed. Please check the output" to stdout''')
 
 
 @when('check if start failed for contents {content_ids} during full recovery for {utility}')
@@ -593,7 +606,7 @@ def impl(context, seg, contents):
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             dbid = dbconn.querySingleton(conn, "SELECT dbid FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, role))
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
-            actual_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
+            actual_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND description LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
 
         original_tuples = context.original_config_history_info["{}_{}".format(content, role)]
         if actual_tuples != original_tuples + 1: # Running the backout script should have inserted exactly 1 entry
@@ -605,7 +618,7 @@ def impl(context, seg, contents):
 def impl(context, expected_additional_entries):
     with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
         actual_backout_entries = int(dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE "
-                                                             "gp_configuration_history.desc LIKE "
+                                                             "description LIKE "
                                                              "'gprecoverseg: segment config for backout%%';"))
     expected_total_entries = int(context.original_config_history_backout_count) + int(expected_additional_entries)
     if actual_backout_entries != expected_total_entries:

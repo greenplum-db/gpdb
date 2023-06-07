@@ -1626,6 +1626,21 @@ def createTempDirectoryName(coordinatorDataDirectory, tempDirPrefix):
                                 datetime.datetime.now().strftime('%m%d%Y'),
                                 os.getpid())
 
+"""
+Check if gprecoverseg process is running or not by
+reading the PID file inside gprecoverseg.lock directory.
+Returns True if the process is running or False otherwise.
+"""
+def is_gprecoverseg_running():
+    gprecoverseg_pidfile = os.path.join(get_coordinatordatadir(), 'gprecoverseg.lock', 'PID')
+    try:
+        with open(gprecoverseg_pidfile) as pidfile:
+            gprecoverseg_pid = pidfile.read()
+    except Exception:
+        return False
+
+    return check_pid(gprecoverseg_pid)
+
 #-------------------------------------------------------------------------
 class GpRecoverSeg(Command):
    """

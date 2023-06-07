@@ -188,7 +188,7 @@ brininsert(Relation idxRel, Datum *values, bool *nulls,
 	 */
 	origHeapBlk = ItemPointerGetBlockNumber(heaptid);
 	heapBlk = brin_range_start_blk(origHeapBlk,
-								   RelationIsAppendOptimized(heapRel),
+								   RelationStorageIsAO(heapRel),
 								   pagesPerRange);
 
 	/*
@@ -204,7 +204,7 @@ brininsert(Relation idxRel, Datum *values, bool *nulls,
 	 * So, we can safely position the revmap iterator at the end of the chain
 	 * (instead of traversing the chain unnecessarily from the front).
 	 */
-	if (RelationIsAppendOptimized(heapRel))
+	if (RelationStorageIsAO(heapRel))
 		brinRevmapAOPositionAtEnd(revmap, AOSegmentGet_blockSequenceNum(heapBlk));
 
 	for (;;)
@@ -496,7 +496,7 @@ bringetbitmap(IndexScanDesc scan, Node **bmNodeP)
 	BlockNumber endblknum = sequences[i].startblknum + sequences[i].nblocks;
 	int			currseq = AOSegmentGet_blockSequenceNum(startblknum);
 
-	if (RelationIsAppendOptimized(heapRel))
+	if (RelationStorageIsAO(heapRel))
 		brinRevmapAOPositionAtStart(opaque->bo_rmAccess, currseq);
 
 	for (heapBlk = startblknum; heapBlk < endblknum; heapBlk += opaque->bo_pagesPerRange)
@@ -792,7 +792,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	BlockNumber pagesPerRange;
 	bool		isAO;
 
-	isAO = RelationIsAppendOptimized(heap);
+	isAO = RelationStorageIsAO(heap);
 	/*
 	 * We expect to be called exactly once for any index relation.
 	 */
@@ -810,7 +810,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	LockBuffer(meta, BUFFER_LOCK_EXCLUSIVE);
 
 	brin_metapage_init(BufferGetPage(meta), BrinGetPagesPerRange(index),
-					   BRIN_CURRENT_VERSION, RelationIsAppendOptimized(heap));
+					   BRIN_CURRENT_VERSION, RelationStorageIsAO(heap));
 	MarkBufferDirty(meta);
 
 	if (RelationNeedsWAL(index))
@@ -1052,7 +1052,7 @@ brin_summarize_range_internal(PG_FUNCTION_ARGS)
 		SetUserIdAndSecContext(heapRel->rd_rel->relowner,
 							   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 		save_nestlevel = NewGUCNestLevel();
-		if (RelationIsAppendOptimized(heapRel) && heapBlk64 != BRIN_ALL_BLOCKRANGES)
+		if (RelationStorageIsAO(heapRel) && heapBlk64 != BRIN_ALL_BLOCKRANGES)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1431,7 +1431,7 @@ summarize_range(IndexInfo *indexInfo, BrinBuildState *state, Relation heapRel,
 		 * Fortunately, this should occur infrequently.
 		 */
 
-		if (endblknum != heapNumBlks && RelationIsAppendOptimized(heapRel))
+		if (endblknum != heapNumBlks && RelationStorageIsAO(heapRel))
 		{
 			/*
 			 * GPDB: We bail and don't summarize the final partial range if we
@@ -1596,7 +1596,7 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		Assert(numSequences == 1);
 
 		startBlk = brin_range_start_blk(pageRange,
-										RelationIsAppendOptimized(heapRel),
+										RelationStorageIsAO(heapRel),
 										pagesPerRange);
 		endBlk = Min(sequences[i].nblocks, startBlk + pagesPerRange);
 		if (startBlk > endBlk)
@@ -1608,7 +1608,7 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		}
 	}
 
-	if (RelationIsAppendOptimized(heapRel))
+	if (RelationStorageIsAO(heapRel))
 		brinRevmapAOPositionAtStart(revmap,
 									AOSegmentGet_blockSequenceNum(startBlk));
 
@@ -1645,7 +1645,7 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 				Assert(!indexInfo);
 				state = initialize_brin_buildstate(index, revmap,
 												   pagesPerRange,
-												   RelationIsAppendOptimized(heapRel));
+												   RelationStorageIsAO(heapRel));
 				indexInfo = BuildIndexInfo(index);
 			}
 			summarize_range(indexInfo, state, heapRel, startBlk, endBlk);

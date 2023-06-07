@@ -10,7 +10,7 @@ This table is populated only on the coordinator. This table is defined in the `p
 |------|----|----------|-----------|
 |`time`|timestamp with time zone| |Timestamp for the event recorded.|
 |`dbid`|smallint|gp\_segment\_configuration.dbid|System-assigned ID. The unique identifier of a segment \(or coordinator\) instance.|
-|`desc`|text| |Text description of the event.|
+|`description`|text| |Text description of the event.|
 
 For information about `gprecoverseg` and `gpinitsystem`, see the Greenplum Database Utility Guide.
 

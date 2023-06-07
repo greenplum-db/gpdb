@@ -270,7 +270,7 @@ ORDER BY 1 asc ;
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.16032679.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_1" IsClustered="false" IndexType="B-tree" KeyColumns="0,4" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11">
+      <dxl:Index Mdid="0.16032679.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_1" IsClustered="false" IndexType="B-tree" KeyColumns="0,4" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
@@ -626,7 +626,7 @@ ORDER BY 1 asc ;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Index Mdid="0.16032698.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_3" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11">
+      <dxl:Index Mdid="0.16032698.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_3" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

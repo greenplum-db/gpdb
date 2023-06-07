@@ -1148,7 +1148,7 @@ ldelete:;
 	/*
 	 * Disallow DELETE triggers on a split UPDATE. See comments in ExecInsert().
 	 */
-	if (!RelationIsAppendOptimized(resultRelationDesc) && !splitUpdate)
+	if (!RelationStorageIsAO(resultRelationDesc) && !splitUpdate)
 	{
 		ExecARDeleteTriggers(estate, resultRelInfo, tupleid, oldtuple,
 							 ar_delete_trig_tcs);
@@ -1567,7 +1567,7 @@ lreplace:;
 				 * AO case, as visimap update within same command happens at end
 				 * of command.
 				 */
-				if (!RelationIsAppendOptimized(resultRelationDesc) &&
+				if (!RelationStorageIsAO(resultRelationDesc) &&
 					tmfd.cmax != estate->es_output_cid)
 					ereport(ERROR,
 							(errcode(ERRCODE_TRIGGERED_DATA_CHANGE_VIOLATION),
@@ -1677,7 +1677,7 @@ lreplace:;
 
 	/* AFTER ROW UPDATE Triggers */
 	/* GPDB: AO and AOCO tables don't support triggers */
-	if (!RelationIsAppendOptimized(resultRelationDesc))
+	if (!RelationStorageIsAO(resultRelationDesc))
 		ExecARUpdateTriggers(estate, resultRelInfo, tupleid, oldtuple, slot,
 						 recheckIndexes,
 						 mtstate->operation == CMD_INSERT ?

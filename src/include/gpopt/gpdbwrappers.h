@@ -645,6 +645,8 @@ Oid GetForeignServerId(Oid reloid);
 
 void GPDBLockRelationOid(Oid reloid, int lockmode);
 
+char *GetRelFdwName(Oid reloid);
+
 }  //namespace gpdb
 
 #define ForEach(cell, l) \

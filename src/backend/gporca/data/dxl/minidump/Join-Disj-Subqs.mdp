@@ -62,7 +62,7 @@ OR
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.6029.1.0" Name="pg_authid_rolresqueue_index" IsClustered="false" IndexType="B-tree" KeyColumns="11" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24">
+      <dxl:Index Mdid="0.6029.1.0" Name="pg_authid_rolresqueue_index" IsClustered="false" IndexType="B-tree" KeyColumns="11" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
@@ -721,12 +721,12 @@ OR
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Index Mdid="0.2677.1.0" Name="pg_authid_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="18" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24">
+      <dxl:Index Mdid="0.2677.1.0" Name="pg_authid_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="18" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2676.1.0" Name="pg_authid_rolname_index" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24">
+      <dxl:Index Mdid="0.2676.1.0" Name="pg_authid_rolname_index" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>

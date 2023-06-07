@@ -47,7 +47,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.507751.1.0" Name="ao_j" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5">
+      <dxl:Index Mdid="0.507751.1.0" Name="ao_j" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

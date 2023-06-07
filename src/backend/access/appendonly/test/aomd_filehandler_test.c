@@ -38,6 +38,7 @@ setup_test_structures(aomd_filehandler_callback_ctx *ctx)
     /* these files get checked for presence in the foreach() */
     ctx->call_expected[AOTupleId_MultiplierSegmentFileNum] = true;
     ctx->call_expected[MaxHeapAttributeNumber * AOTupleId_MultiplierSegmentFileNum + AOTupleId_MultiplierSegmentFileNum] = true;
+    ctx->call_expected[MaxHeapAttributeNumber * AOTupleId_MultiplierSegmentFileNum] = true;
     for (int segno = 1; segno < MAX_AOREL_CONCURRENCY; segno++)
     {
         ctx->call_expected[segno] = true;
@@ -105,6 +106,19 @@ file_callback(int segno, void *ctx) {
 	return myctx->present[segno];
 }
 
+/*
+ * This is the "base" number of the calls we expect when there's no file present (i.e. they are always called).
+ * This consists of these number groups:
+ *   1. The pair number of the base reilfilenode (i.e. no extension), which is AOTupleId_MultiplierSegmentFileNum * MaxHeapAttributeNumber
+ *   2. Numbers in the first concurrency level which are 1 ... 127.
+ *   3. The pair numbers of the first concurrency level, which are (AOTupleId_MultiplierSegmentFileNum * MaxHeapAttributeNumber +1 ... +127). 
+ *   4. The first number and its pair number in the second concurrency level, which are 128 and AOTupleId_MultiplierSegmentFileNum * MaxHeapAttributeNumber + 128.
+ *		Since neither of these numbers are present, we will stop here.
+ * Adding them together: 1 + 127 + 127 + 2 = 257
+ */
+#define EXPECTED_BASE_NUM_CALLS 	257
+
+/* no file present */
 static void
 test_no_files_present(void **state)
 {
@@ -113,7 +127,7 @@ test_no_files_present(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY);
+    assert_int_equal(ctx.num_called, EXPECTED_BASE_NUM_CALLS);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -129,7 +143,7 @@ test_co_1_column_1_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 1 * 1);
+    assert_int_equal(ctx.num_called, EXPECTED_BASE_NUM_CALLS + 2 * 1 * 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -145,7 +159,7 @@ test_co_4_columns_1_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 4 * 1);
+    assert_int_equal(ctx.num_called, EXPECTED_BASE_NUM_CALLS + 2 * 4 * 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -164,7 +178,7 @@ test_co_3_columns_2_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 3 * 2);
+    assert_int_equal(ctx.num_called, EXPECTED_BASE_NUM_CALLS + 2 * 3 * 2);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -180,7 +194,7 @@ test_co_1_column_127_concurrency(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 2 * 1 * 127);
+    assert_int_equal(ctx.num_called, EXPECTED_BASE_NUM_CALLS + 2 * 1 * 127);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -194,12 +208,10 @@ test_co_max_columns_0th_concurrency(void **state)
     for (int col = 0; col < MaxHeapAttributeNumber; col++)
         set_ctx_for_present_file(&ctx, col * MAX_AOREL_CONCURRENCY);
 
-	ctx.call_expected[MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber] = false;
-
     ao_foreach_extent_file(file_callback, &ctx);
 
     /* 0th file already acccounted for, hence the -1 */
-    assert_int_equal(ctx.num_called, (2 * MAX_AOREL_CONCURRENCY - 1) + (MaxHeapAttributeNumber * 2 - 1) - 1);
+    assert_int_equal(ctx.num_called, (EXPECTED_BASE_NUM_CALLS - 1) + (MaxHeapAttributeNumber * 2 - 1) - 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -215,11 +227,10 @@ test_co_max_columns_0_1_concurrency(void **state)
         set_ctx_for_present_file(&ctx, col * MAX_AOREL_CONCURRENCY + 1);
     }
 
-	ctx.call_expected[MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber] = false;
     ao_foreach_extent_file(file_callback, &ctx);
 
     /* 0th file already acccount for, hence the -1 */
-    assert_int_equal(ctx.num_called, 2* ((2 * MAX_AOREL_CONCURRENCY - 1) + (MaxHeapAttributeNumber * 2 - 1)) - 1);
+    assert_int_equal(ctx.num_called, EXPECTED_BASE_NUM_CALLS + 2*(MAX_AOREL_CONCURRENCY -1 + MaxHeapAttributeNumber*2 - 1) - 1);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -237,7 +248,7 @@ test_different_number_of_columns_per_concurrency_level(void **state)
 
     ao_foreach_extent_file(file_callback, &ctx);
 
-    assert_int_equal(ctx.num_called, 2 * MAX_AOREL_CONCURRENCY + 10);
+    assert_int_equal(ctx.num_called, EXPECTED_BASE_NUM_CALLS + 10);
     assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 }
 
@@ -251,10 +262,9 @@ test_all_files_present(void **state)
 	memset(ctx.call_expected, true, sizeof(ctx.call_expected));
 
 	ctx.call_expected[0] = false;  /* caller must deal with .0 file */
-	ctx.call_expected[MaxHeapAttributeNumber * AOTupleId_MultiplierSegmentFileNum] = false;  /* caller must deal with this file */
 	ao_foreach_extent_file(file_callback, &ctx);
 
-	assert_int_equal(ctx.num_called, MAX_SEGNO_FILES - 2);
+	assert_int_equal(ctx.num_called, MAX_SEGNO_FILES - 1);
 	assert_int_equal(compareSegnoFiles(ctx.call_expected, ctx.call_result), 0);
 
 	return;

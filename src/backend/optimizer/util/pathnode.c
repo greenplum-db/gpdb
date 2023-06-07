@@ -3257,6 +3257,37 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 						  Relids required_outer)
 {
 	Path	   *pathnode = makeNode(Path);
+	CdbPathLocus result;
+
+	/*
+	 * Between Recursive union plannode node and WorkTableScan plannode
+	 * there must be no Motion nodes because the execution of WorkTableScan
+	 * depends on the Recursive union's data structure.
+	 *
+	 * To avoid Motion nodes, we set the locus of the WorkTableScan to Strewn
+	 * for certain cases. For example, if the locus of the non-recursive path of
+	 * the CTE is Hashed, we need to set the locus of the WorkTableScan to Strewn
+	 * instead of Hashed. Otherwise, if the WorkTableScan is part of a JOIN, we
+	 * could end up redistribute the other side (always inner side for now) of
+	 * the JOIN with incorrect hash keys.
+	 */
+	if (ctelocus.locustype == CdbLocusType_Entry)
+		CdbPathLocus_MakeEntry(&result);
+	else if (ctelocus.locustype == CdbLocusType_SingleQE)
+		CdbPathLocus_MakeSingleQE(&result, ctelocus.numsegments);
+	else if (ctelocus.locustype == CdbLocusType_General)
+		CdbPathLocus_MakeGeneral(&result);
+	else if (ctelocus.locustype == CdbLocusType_OuterQuery)
+		CdbPathLocus_MakeOuterQuery(&result);
+	else if (ctelocus.locustype == CdbLocusType_SegmentGeneral)
+	{
+		/* See comments in set_worktable_pathlist */
+		elog(ERROR,
+			 "worktable scan path can never have "
+			 "segmentgeneral locus.");
+	}
+	else
+		CdbPathLocus_MakeStrewn(&result, ctelocus.numsegments);
 
 	pathnode->pathtype = T_WorkTableScan;
 	pathnode->parent = rel;
@@ -3268,7 +3299,7 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_workers = 0;
 	pathnode->pathkeys = NIL;	/* result is always unordered */
 
-	pathnode->locus = ctelocus;
+	pathnode->locus = result;
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
 	pathnode->sameslice_relids = rel->relids;

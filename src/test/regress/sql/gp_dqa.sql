@@ -140,6 +140,7 @@ CREATE TABLE fact_route_aggregation
 ) DISTRIBUTED BY (device_id);
 
 insert into fact_route_aggregation select generate_series(1,700),generate_series(200,300),generate_series(300,400), generate_series(400,500),generate_series(500,600),generate_series(600,700);
+analyze fact_route_aggregation;
 
 CREATE TABLE dim_devices
 (      
@@ -178,9 +179,11 @@ create table t2_mdqa(a int, b int, c varchar);
 
 insert into t1_mdqa select i % 5 , i % 10, i || 'value' from generate_series(1, 20) i;
 insert into t1_mdqa select i % 5 , i % 10, i || 'value' from generate_series(1, 20) i;
+analyze t1_mdqa;
 
 insert into t2_mdqa select i % 10 , i % 5, i || 'value' from generate_series(1, 20) i;
 insert into t2_mdqa select i % 10 , i % 5, i || 'value' from generate_series(1, 20) i;
+analyze t2_mdqa;
 
 -- simple mdqa
 select count(distinct t1.a), count(distinct t2.b), t1.c, t2.c from t1_mdqa t1, t2_mdqa t2 where t1.c = t2.c group by t1.c, t2.c order by t1.c;
@@ -214,6 +217,8 @@ create table gp_dqa_s (d int, e int, f int);
 
 insert into gp_dqa_r  select i , i %10, i%5 from generate_series(1,20) i;
 insert into gp_dqa_s select i, i %15, i%10 from generate_series(1,30) i;
+analyze gp_dqa_r;
+analyze gp_dqa_s;
 
 select a, d, count(distinct b) as c1, count(distinct c) as c2 from gp_dqa_r, gp_dqa_s where ( e = a ) group by d, a order by a,d;
 
@@ -270,6 +275,8 @@ create table gp_dqa_t2 (a int, c int) distributed by (a);
 
 insert into gp_dqa_t1 select i , i %5 from generate_series(1,10) i;
 insert into gp_dqa_t2 select i , i %4 from generate_series(1,10) i;
+analyze gp_dqa_t1;
+analyze gp_dqa_t2;
 
 select distinct A.a, sum(distinct A.b), count(distinct B.c) from gp_dqa_t1 A left join gp_dqa_t2 B on (A.a = B.a) group by A.a order by A.a;
 
@@ -324,6 +331,8 @@ create table dqa_f2(x int, y int, z int) distributed by (x);
 
 insert into dqa_f1 select i%17, i%5 , i%3 from generate_series(1,1000) i;
 insert into dqa_f2 select i % 13, i % 5 , i % 11 from generate_series(1,1000) i;
+analyze dqa_f1;
+analyze dqa_f2;
 
 select sum(distinct a) filter (where a > 0), sum(distinct b) filter (where a > 0) from dqa_f1;
 
@@ -372,6 +381,7 @@ select count(distinct a), sum(b), sum(c) from dqa_f1;
 -- multi DQA with primary key
 create table dqa_unique(a int, b int, c int, d int, primary key(a, b));
 insert into dqa_unique select i%3, i%5, i%7, i%9 from generate_series(1, 10) i;
+analyze dqa_unique;
 
 explain(verbose on, costs off) select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
 select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
@@ -379,6 +389,7 @@ select count(distinct a), count(distinct d), c from dqa_unique group by a, b;
 -- multi DQA with type conversions
 create table dqa_f3(a character varying, b bigint) distributed by (a);
 insert into dqa_f3 values ('123', 2), ('213', 0), ('231', 2), ('312', 0), ('321', 2), ('132', 1), ('4', 0);
+analyze dqa_f3;
 
 -- Case 1: When converting the type of column 'a' from 'VARCHAR' to 'TEXT' in DQA expression, instead of generating a new column '(a)::text'
 -- by TupleSplit, we can reference the column 'a' as part of hash-key in Redistribute-Motion directly, since the conversion is binary-compatible.
@@ -445,6 +456,7 @@ drop table multiagg2;
 set optimizer_force_multistage_agg=on;
 create table num_table(id int, a bigint, b int, c numeric);
 insert into num_table values(1,1,1,1),(2,2,2,2),(3,3,3,3);
+analyze num_table;
 
 -- count(distinct a) is a simple aggregation
 -- sum(b) is a split aggregation
@@ -568,6 +580,7 @@ create table dqa_f4(a int, b int, c int);
 insert into dqa_f4 values(null, null, null);
 insert into dqa_f4 values(1, 1, 1);
 insert into dqa_f4 values(2, 2, 2);
+analyze dqa_f4;
 
 select count(distinct a), count(distinct b) from dqa_f4 group by c;
 

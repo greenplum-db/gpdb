@@ -1697,8 +1697,7 @@ INSERT INTO rewrite_test_ao VALUES (NULL);
 INSERT INTO rewrite_test_co VALUES ('something');
 INSERT INTO rewrite_test_co VALUES (NULL);
 
--- Testing all three AMs. But note that, the comments are for the heap table ('rewrite_test')
--- For AO table, always rewrite table in ADD COLUMN (see the FIXME in ATExecAddColumn())
+-- Testing all three AMs.
 -- For AOCO table, never table rewrite (just need to write new column)
 
 -- empty[12] don't need rewrite, but notempty[12]_rewrite will force one

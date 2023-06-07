@@ -497,6 +497,43 @@ join baz on varchar_3=text_any;
 select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
 join baz on varchar_3=text_any;
 
+--
+-- Test case for Hash Join rescan after squelched without hashtable built
+-- See https://github.com/greenplum-db/gpdb/pull/15590
+--
+--- Lateral Join
+set from_collapse_limit = 1;
+set join_collapse_limit = 1;
+select 1 from pg_namespace  join lateral
+    (select * from aclexplode(nspacl) x join pg_authid  on x.grantee = pg_authid.oid where rolname = current_user) z on true limit 1;
+reset from_collapse_limit;
+reset join_collapse_limit;
+
+--- NestLoop index join
+create table l_table (a int,  b int) distributed replicated;
+create index l_table_idx on l_table(a);
+create table r_table1 (ra1 int,  rb1 int) distributed replicated;
+create table r_table2 (ra2 int,  rb2 int) distributed replicated;
+insert into l_table select i % 10 , i from generate_series(1, 10000) i;
+insert into r_table1 select i, i from generate_series(1, 1000) i;
+insert into r_table2 values(11, 11), (1, 1) ;
+analyze l_table;
+analyze r_table1;
+analyze r_table2;
+
+set optimizer to off;
+set enable_nestloop to on;
+set enable_bitmapscan to off;
+explain select * from r_table2 where ra2 in ( select a from l_table join r_table1 on b = rb1);
+select * from r_table2 where ra2 in ( select a from l_table join r_table1 on b = rb1);
+
+reset optimizer;
+reset enable_nestloop;
+reset enable_bitmapscan;
+drop table l_table;
+drop table r_table1;
+drop table r_table2;
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

@@ -1040,7 +1040,6 @@ group by rollup(ten);
 (11 rows)
 
 -- More rescan tests
--- start_ignore
 select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, count(*) from onek group by cube(four,ten)) s on true order by v.a,four,ten;
  a | a | four | ten | count 
 ---+---+------+-----+-------
@@ -1115,7 +1114,7 @@ select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, co
  2 | 2 |      |   9 |   100
  2 | 2 |      |     |  1000
 (70 rows)
--- end_ignore
+
 select array(select row(v.a,s1.*) from (select two,four, count(*) from onek group by cube(two,four) order by two,four) s1) from (values (1),(2)) v(a);
                                                                         array                                                                         
 ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1735,8 +1734,6 @@ SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,(
 
 COMMIT;
 -- More rescan tests
--- start_ignore
--- GPDB_95_MERGE_FIXME: the lateral query with grouping sets do not make right plans
 select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, count(*) from onek group by cube(four,ten)) s on true order by v.a,four,ten;
  a | a | four | ten | count 
 ---+---+------+-----+-------
@@ -1812,7 +1809,6 @@ select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, co
  2 | 2 |      |     |  1000
 (70 rows)
 
--- end_ignore
 select array(select row(v.a,s1.*) from (select two,four, count(*) from onek group by cube(two,four) order by two,four) s1) from (values (1),(2)) v(a);
                                                                         array                                                                         
 ------------------------------------------------------------------------------------------------------------------------------------------------------

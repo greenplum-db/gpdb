@@ -32,7 +32,7 @@ There should be just a handful of pipelines in this directory:
   [pipelines/templates/gpdb-tpl.yml](pipelines/templates/gpdb-tpl.yml)
   should be edited and the utility
   [pipelines/gen_pipeline.py](pipelines/gen_pipeline.py) should be
-  used to generate production and developer pipeliens. Please review
+  used to generate production and developer pipelines. Please review
   the pipelines [README.md](pipelines/README.md) for additional
   information.
 * `dev_generate_installer.yml` which compiles and generates an installer for
