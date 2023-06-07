@@ -246,10 +246,6 @@ $$ LANGUAGE plpython3u;
 
 0: CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$
     import subprocess
-    import time
-    import re
-
-    pt = re.compile(r'con(\d+)')
 
     sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid
     result = plpy.execute(sql)
