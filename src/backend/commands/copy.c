@@ -5178,7 +5178,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 			if (attr_count >= 0 && (fldct - 1) > attr_count)
 				ereport(ERROR,
 						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						errmsg("extra data after last expected column")));
+						errmsg("extra data after last expected column when doing copy with oid")));
 		}
 		else 
 		{
