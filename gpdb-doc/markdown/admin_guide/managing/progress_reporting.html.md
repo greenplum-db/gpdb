@@ -1,6 +1,6 @@
 # Monitoring Long-Running Operations
 
-Greenplum Database can report the progress of `ANALYZE`, `CLUSTER`, `COPY`, `CREATE INDEX`, `REINDEX`, and `VACUUM` commands during command execution. Greenplum can also report the progress of a running base backup (initiated during [gprecoverseg](../../utility_guide/ref/gprecoverseg.html)) command invocation, allowing you to monitor the progress of these possibly long-running operations.
+Greenplum Database can report the progress of `ANALYZE`, `CLUSTER`, `COPY`, `CREATE INDEX`, `REINDEX`, and `VACUUM` commands during command execution. Greenplum can also report the progress of a running base backup (initiated during [gprecoverseg -F](../../utility_guide/ref/gprecoverseg.html)) command invocation, allowing you to monitor the progress of these possibly long-running operations.
 
 Greenplum reports the command progress via ephemeral system views, which return data only while the operations are running. Two sets of progress reporting views are provided:
 
@@ -112,9 +112,9 @@ The [gp_stat_progress_vacuum](../../ref_guide/system_catalogs/catalog_ref-views.
 
 For each active vacuum operation, the `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_vacuum`.
 
-(Regular `VACUUM` modifies the table in place. `VACUUM FULL` on a heap table rewrites the table as does a `CLUSTER` operation. For information about progress reporting for `VACUUM FULL` on a heap table, see [CLUSTER and VACUUM FULL Progress Reporting](#cluster_progress).)
+Regular `VACUUM` modifies a heap table in place. `VACUUM FULL` on a heap table rewrites the table as does a `CLUSTER` operation. For information about progress reporting for `VACUUM FULL` on a heap table, see [CLUSTER and VACUUM FULL Progress Reporting](#cluster_progress).
 
-In Greenplum Database, an AO/CO table vacuum behaves differently than a heap table vacuum. Because Greenplum stores the logical EOF for each segment file, it does not need to scan physical blocks after the logical EOF, so Greenplum can truncate them. Greenplum always rewrites data into new segment files to get rid of dead tuples for AO/CO tables, and so performs the same operations for both `VACUUM FULL` and `VACUUM`. Due to these difference, Greenplum reports vacuum progress on heap and AO/CO tables using different phases.
+In Greenplum Database, an AO/CO table vacuum behaves differently than a heap table vacuum. Because Greenplum stores the logical EOF for each segment file, it does not need to scan physical blocks after the logical EOF, so Greenplum can truncate them. Greenplum always rewrites data into new segment files to get rid of dead tuples for AO/CO tables, and performs the same operations for both `VACUUM FULL` and `VACUUM`. Due to these difference, Greenplum reports vacuum progress on heap and AO/CO tables using different phases.
 
 ### <a id="vacuum_progress_heap"></a>Heap Table Vacuum Phases
 
@@ -145,7 +145,7 @@ The table below describes how to interpret the *AO/CO table* phase-specific info
 
 ## <a id="basebackup_progress"></a>Base Backup Progress Reporting
 
-The [gp_stat_progress_basebackup](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_basebackup) system view reports the progress of running base backup operations, as is performed by `gprecoverseg`. The view displays a row per segment instance that is currently servicing replication commands.
+The [gp_stat_progress_basebackup](../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_progress_basebackup) system view reports the progress of running base backup operations, as is performed by `gprecoverseg -F` (full recovery). The view displays a row per segment instance that is currently servicing replication commands.
 
 For each active base backup operation, the `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_basebackup`.
 
