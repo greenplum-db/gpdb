@@ -174,9 +174,11 @@ EOF
 host$ watch -n 0.5 "psql -af viewer.sql"
 ```
 
-## <a id="limitations"></a>Limitations and Known Issues
+## <a id="consider"></a>Additional Considerations
 
-Progress reporting in Greenplum Database has these known issues and limitations:
+Take note of these additional considerations related to progress reporting in Greenplum Database:
 
-- ANY???
+- Progress phases and their interpretation of attributes are slightly different for AO/AOCO tables and heap tables for the `CREATE INDEX/REINDEX`, `VACUUM`, and `CLUSTER` operations. Refer to the individual command topics for more information.
+- The progress views for an `ANALYZE` operation on a partitioned table display the progress of each individual leaf partition. Greenplum does not currently provide a measure of the combined progress of all partitions.
+- Greenplum does not support the `CLUSTER` operation on a partitioned table.
 
