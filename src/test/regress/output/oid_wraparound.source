@@ -84,7 +84,7 @@ SELECT gp_set_next_oid_segments(16384);
 (3 rows)
 
 -- We expect the QE to increment once to 16385 and the QD should
--- fast-forward to 16388. The QD could possibly fast-forward to 16389
+-- fast-forward to 16391. The QD could possibly fast-forward to 16392
 -- if the pg_type heap page was not pruned for dead pg_type entry for
 -- oid_wraparound_table relation which will result in Oid 16386
 -- collision.
@@ -103,7 +103,7 @@ SELECT gp_get_next_oid_segments();
 (3 rows)
 
 CREATE TABLE oid_wraparound_table_other AS SELECT 1 AS a;
-SELECT gp_get_next_oid_master() in (16388, 16389);
+SELECT gp_get_next_oid_master() in (16391, 16392);
  ?column? 
 ----------
  t

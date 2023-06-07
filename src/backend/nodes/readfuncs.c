@@ -1013,6 +1013,7 @@ _readNewColumnValue(void)
 	READ_NODE_FIELD(expr);
 	/* can't serialize exprstate */
 	READ_BOOL_FIELD(is_generated);
+	READ_NODE_FIELD(new_encoding);
 	READ_ENUM_FIELD(op, AOCSWriteColumnOperation);
 
 	READ_DONE();

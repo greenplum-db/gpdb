@@ -67,11 +67,12 @@ extern List **RelationGetUntransformedAttributeOptions(Relation rel);
 
 extern Datum transform_lastrownums(int64 *lastrownums);
 extern void add_attribute_encoding_entry(Oid relid, AttrNumber attnum, FileNumber filenum, Datum lastrownums, Datum attoptions);
+extern void update_attribute_encoding_entry(Oid relid, AttrNumber attnum, FileNumber newfilenum, Datum newlastrownums, Datum newattoptions);
 extern void AddCOAttributeEncodings(Oid relid, List *attr_encodings);
 extern void RemoveAttributeEncodingsByRelid(Oid relid);
 extern void CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_attno);
 extern void UpdateAttributeEncodings(Oid relid, List *new_attr_encodings);
-extern void UpdateFilenumForAttnum(Oid relid, AttrNumber attnum, FileNumber newfilenum);
+extern void UpdateOrAddAttributeEncodings(Relation rel, List *new_attr_encodings);
 extern void ClearAttributeEncodingLastrownums(Oid relid);
 extern FileNumber GetFilenumForAttribute(Oid relid, AttrNumber attnum);
 extern FileNumber GetFilenumForRewriteAttribute(Oid relid, AttrNumber attnum);

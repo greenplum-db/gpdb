@@ -541,6 +541,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenRelDistrHash, GPOS_WSZ_LIT("Hash")},
 		{EdxltokenRelDistrRandom, GPOS_WSZ_LIT("Random")},
 		{EdxltokenRelDistrReplicated, GPOS_WSZ_LIT("Replicated")},
+		{EdxltokenRelDistrUniversal, GPOS_WSZ_LIT("Universal")},
 		{EdxltokenConvertHashToRandom, GPOS_WSZ_LIT("ConvertHashToRandom")},
 
 		{EdxltokenRelDistrOpfamilies, GPOS_WSZ_LIT("DistrOpfamilies")},

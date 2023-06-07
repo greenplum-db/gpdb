@@ -49,8 +49,9 @@
 #define AT_PASS_COL_ATTRS		5	/* set other column attributes */
 #define AT_PASS_ADD_INDEX		6	/* ADD indexes */
 #define AT_PASS_ADD_CONSTR		7	/* ADD constraints, defaults */
-#define AT_PASS_MISC			8	/* other stuff */
-#define AT_NUM_PASSES			9
+#define AT_PASS_SET_ENCODING		8	/* ALTER COLUMN SET ENCODING. Note: if you are going to reorder the macros, this has to be after ALTER COLUMN TYPE. */
+#define AT_PASS_MISC			9	/* other stuff */
+#define AT_NUM_PASSES			10
 
 typedef struct AlteredTableInfo
 {
@@ -118,6 +119,7 @@ typedef struct NewColumnValue
 	Expr	   *expr;			/* expression to compute */
 	ExprState  *exprstate;		/* execution state */
 	bool		is_generated;	/* is it a GENERATED expression? */
+	List 		*new_encoding; 	/* new column encoding options */
 	AOCSWriteColumnOperation op;/* operation being performed */
 } NewColumnValue;
 

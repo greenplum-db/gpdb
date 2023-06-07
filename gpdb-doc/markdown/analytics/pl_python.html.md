@@ -18,17 +18,13 @@ PL/Python is a loadable procedural language. With the Greenplum Database PL/Pyth
 
 You can run PL/Python code blocks as anonymous code blocks. See the [DO](../ref_guide/sql_commands/DO.html) command in the *Greenplum Database Reference Guide*.
 
-The Greenplum Database PL/Python extensions are installed by default with Greenplum Database. Two extensions are provided:
-
-- `plpythonu` supports developing functions using Python 2.7. Greenplum Database installs a version of Python 2.7 for `plpythonu` at `$GPHOME/ext/python`.
-- `plpython3u`, introduced with Greenplum 6.22, supports developing functions using Python 3.9. Greenplum Database installs a compatible Python at `$GPHOME/ext/python3.9`.
+The Greenplum Database PL/Python extension is installed by default with Greenplum Database. `plpython3u`, introduced with Greenplum 6.22, supports developing functions using Python 3.9. Greenplum Database installs a compatible Python at `$GPHOME/ext/python3.9`.
 
 ### <a id="topic3"></a>Greenplum Database PL/Python Limitations 
 
 -   Greenplum Database does not support PL/Python triggers.
 -   PL/Python is available only as a Greenplum Database untrusted language.
 -   Updatable cursors \(`UPDATE...WHERE CURRENT OF` and `DELETE...WHERE CURRENT OF`\) are not supported.
--   Within a single Greenplum session, all PL/Python functions must be called using either `plpythonu` or `plpython3u`. You must start a new session before you can call a function created with different PL/Python version (for example, in order to call a `plpythonu` function after calling a `plpython3u` function, or vice versa).
 
 ## <a id="topic4"></a>Enabling and Removing PL/Python support 
 
@@ -36,17 +32,9 @@ The PL/Python language is installed with Greenplum Database. To create and run a
 
 ### <a id="topic5"></a>Enabling PL/Python Support 
 
-Greenplum installs compatible versions of Python 2.7 and 3.9 in `$GPHOME/ext`.
+Greenplum installs a compatible version of Python 3.9 in `$GPHOME/ext`.
 
-For each database that requires its use, register the PL/Python language with the SQL command `CREATE EXTENSION`. Separate extensions are provided for Python 2.7 and Python 3.9 support, and you can install either or both extensions to a database. 
-
-Because PL/Python is an untrusted language, only superusers can register PL/Python with a database. 
-
-For example, run this command as the `gpadmin` user to register PL/Python with Python 2.7 support in the database named `testdb`:
-
-```
-$ psql -d testdb -c 'CREATE EXTENSION plpythonu;'
-```
+For each database that requires its use, register the PL/Python language with the SQL command `CREATE EXTENSION`. Because PL/Python is an untrusted language, only superusers can register PL/Python with a database. 
 
 Run this command as the `gpadmin` user to register PL/Python with Python 3.9 support:
 
@@ -58,11 +46,6 @@ PL/Python is registered as an untrusted language.
 
 ### <a id="topic6"></a>Removing PL/Python Support 
 
-For a database that no longer requires the PL/Python language, remove support for PL/Python with the SQL command `DROP EXTENSION`. Because PL/Python is an untrusted language, only superusers can remove support for the PL/Python language from a database. For example, running this command as the `gpadmin` user removes support for PL/Python for Python 2.7 from the database named `testdb`:
-
-```
-$ psql -d testdb -c 'DROP EXTENSION plpythonu;'
-```
 
 Run this command as the `gpadmin` user to remove support for PL/Python for Python 3.9:
 
@@ -101,7 +84,7 @@ CREATE OR REPLACE FUNCTION pybool_func(a int) RETURNS boolean AS $$
         return True
     else:
         return False
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 SELECT pybool_func(-1);
 
@@ -123,7 +106,7 @@ CREATE FUNCTION return_py_int_array()
   RETURNS int[]
 AS $$
   return [1, 11, 21, 31]
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 SELECT return_py_int_array();
  return_py_int_array 
@@ -142,7 +125,7 @@ CREATE FUNCTION return_multidim_py_array(x int4[])
 AS $$
   plpy.info(x, type(x))
   return x
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 SELECT * FROM return_multidim_py_array(ARRAY[[1,2,3], [4,5,6]]);
 INFO:  ([[1, 2, 3], [4, 5, 6]], <type 'list'>)
@@ -173,7 +156,7 @@ CREATE FUNCTION composite_type_as_list()
   RETURNS type_record[]
 AS $$              
   return [[('first', 1), ('second', 1)], [('first', 2), ('second', 2)], [('first', 3), ('second', 3)]];
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 SELECT * FROM composite_type_as_list();
                                composite_type_as_list                           
@@ -202,7 +185,7 @@ AS $$
   # return tuple containing lists as composite types
   # all other combinations work also
   return ( {"how": how, "who": "World"}, {"how": how, "who": "Greenplum"} )
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 select greet('hello');
        greet
@@ -276,7 +259,7 @@ CREATE FUNCTION usesavedplan() RETURNS trigger AS $$
 
   # rest of function
 
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 ```
 
 ### <a id="topic_s3d_vc4_xt"></a>Handling Python Errors and Messages 
@@ -321,7 +304,7 @@ You can pass back output parameters of a PL/Python procedure in the same way tha
 ``` sql
 CREATE PROCEDURE python_triple(INOUT a integer, INOUT b integer) AS $$
 return (a * 3, b * 3)
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 CALL python_triple(5, 10);
 ```
@@ -334,7 +317,7 @@ Here is an example:
 
 ``` sql
 CREATE PROCEDURE transaction_test1()
-LANGUAGE plpythonu
+LANGUAGE plpython3u
 AS $$
 for i in range(0, 10):
     plpy.execute("INSERT INTO test1 (a) VALUES (%d)" % i)
@@ -353,13 +336,12 @@ A transaction cannot be ended when an explicit subtransaction is active.
 
 When you install a Python module for development with PL/Python, the Greenplum Database Python environment must have the module added to it across all segment hosts and mirror hosts in the cluster. When expanding Greenplum Database, you must add the Python modules to the new segment hosts. 
 
-Greenplum Database provides a collection of data science-related Python modules that you can use to easily develop PL/Python functions in Greenplum. The modules are provided as two `.gppkg` format files that can be installed into a Greenplum cluster using the `gppkg` utility, with one package supporting development with Python 2.7 and the other supporting development with Python 3.9. See [Python Data Science Module Packages](/oss/install_guide/install_python_dsmod.html) for installation instructions and descriptions of the provided modules.
+Greenplum Database provides a collection of data science-related Python modules that you can use to easily develop PL/Python functions in Greenplum. The modules are provided as two `.gppkg` format files that can be installed into a Greenplum cluster using the `gppkg` utility, with one package supporting development with Python 3.9. See [Python Data Science Module Packages](/oss/install_guide/install_python_dsmod.html) for installation instructions and descriptions of the provided modules.
 
 To develop with modules that are not part of th Python Data Science Module packages, you can use Greenplum utilities such as `gpssh` and `gpsync` to run commands or copy files to all hosts in the Greenplum cluster. These sections describe how to use those utilities to install and use additional Python modules:
 
 -   [Verifying the Python Environment](#about_python_env)
 -   [Installing Python pip](#topic_yx3_yjq_rt)
--   [Installing Python Packages for Python 2.7](#topic_g4j_hmt_ycb)
 -   [Installing Python Packages for Python 3.9](#pip39)
 -   [Building and Installing Python Modules Locally](#topic_j53_5jq_rt)
 -   [Testing Installed Python Modules](#topic_e4p_gcw_vt)
@@ -372,7 +354,7 @@ As part of the Greenplum Database installation, the `gpadmin` user environment i
 which python
 ```
 
-The command returns the location of the Python installation. All Greenplum installations include Python 2.7 installed as `$GPHOME/ext/python` and Python 3.9 installed as `$GPHOME/ext/python3.9`:
+The command returns the location of the Python installation. All Greenplum installations include Python 3.9 installed as `$GPHOME/ext/python3.9`:
 
 ```
 which python3.9
@@ -384,7 +366,7 @@ When running shell commands on remote hosts with `gpssh`, specify the `-s` optio
 gpssh -s -f gpdb_hosts which python
 ```
 
-To display the list of currently installed Python 2.7 modules, run this command.
+To display the list of currently installed Python modules, run this command.
 
 ```
 python -c "help('modules')"
@@ -403,12 +385,6 @@ $
 ### <a id="topic_yx3_yjq_rt"></a>Installing Python pip 
 
 The Python utility `pip` installs Python packages that contain Python modules and other resource files from versioned archive files.
-
-Run this command to install `pip` for Python 2.7:
-
-```
-python -m ensurepip --default-pip
-```
 
 For Python 3.9, use:
 ```
@@ -454,9 +430,6 @@ The utility displays the output from each host.
 
 For more information about installing Python packages, see [https://packaging.python.org/tutorials/installing-packages/](https://packaging.python.org/tutorials/installing-packages/).
 
-### <a id="topic_g4j_hmt_ycb"></a>Installing Python Packages for Python 2.7 
-
-After installing `pip`, you can install Python packages. This command installs the `numpy` and `scipy` packages for Python 2.7:
 
 ```
 python -m pip install --user numpy scipy
@@ -473,16 +446,7 @@ You can use `gpssh` to run the command on the Greenplum Database hosts.
 
 For information about these and other Python packages, see [References](#topic12).
 
-### <a id="pip39"></a>Installing Python Packages for Python 3.9
-
-By default, `greenplum_path.sh` changes the `PYTHONPATH` and `PYTHONHOME` environment variables for use with the installed Python 2.7 environment. In order to install modules using `pip` with Python 3.9, you must first `unset` those parameters. For example to install `numpy` and `scipy` for Python 3.9:
-
-```
-gpssh -s -f gpdb_hosts
-=> unset PYTHONHOME
-=> unset PYTHONPATH
-=> $GPHOME/ext/python3.9 -m pip install numpy scipy
-```
+### <a id="pip39"></a>Installing Python Packages to a Non-Standard Location
 
 You can optionally install Python 3.9 modules to a non-standard location by using the `--prefix` option with `pip`. For example:
 
@@ -543,10 +507,8 @@ as $$
       return 'SUCCESS'
   except ImportError, e:
       return 'FAILURE'
-$$ language plpythonu;
+$$ language plpython3u;
 ```
-
-(If you are using Python 3.9, replace `plpythonu` with `plpython3u` in the above command.)
 
 Create a table that contains data on each Greenplum Database segment instance. Depending on the size of your Greenplum Database installation, you might need to generate more data to ensure data is distributed to all segment instances.
 
@@ -616,7 +578,7 @@ AS $$
   if a > b:
      return a
   return b
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 ```
 
 You can use the `STRICT` property to perform the null handling instead of using the two conditional statements.
@@ -625,7 +587,7 @@ You can use the `STRICT` property to perform the null handling instead of using 
 CREATE FUNCTION pymax (a integer, b integer) 
   RETURNS integer AS $$ 
 return max(a,b) 
-$$ LANGUAGE plpythonu STRICT ;
+$$ LANGUAGE plpython3u STRICT ;
 ```
 
 You can run the user-defined function `pymax` with `SELECT` command. This example runs the UDF and shows the output.
@@ -664,7 +626,7 @@ AS $$
   region =[]
   region.append(rv[a]["region"])
   return region
-$$ language plpythonu EXECUTE ON COORDINATOR;
+$$ language plpython3u EXECUTE ON COORDINATOR;
 ```
 
 Running this `SELECT` statement returns the `REGION` column value from the third row of the result set.
@@ -690,7 +652,7 @@ DO $$
   rv = plpy.execute("SELECT * FROM sales ORDER BY id", 5)
   region = rv[myval]["region"]
   plpy.notice("region is %s" % region)
-$$ language plpythonu;
+$$ language plpython3u;
 ```
 
 ## <a id="topic12"></a>References 

@@ -6,7 +6,8 @@
  *
  */
 
-BEGIN;
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+\echo Use "CREATE EXTENSION gp_toolkit" to load this file. \quit
 
 CREATE SCHEMA gp_toolkit;
 
@@ -157,9 +158,6 @@ AS
         AND content >= 0;
 
 GRANT SELECT ON TABLE gp_toolkit.__gp_number_of_segments TO public;
-
-
-CREATE EXTENSION gp_exttable_fdw;
 
 --------------------------------------------------------------------------------
 -- log-reading external tables and views
@@ -2610,9 +2608,5 @@ CREATE OR REPLACE VIEW gp_toolkit.gp_column_size_summary AS (
 GRANT SELECT ON gp_toolkit.gp_column_size_summary TO public;
 
 --------------------------------------------------------------------------------
-
--- Finalize install
-COMMIT;
-
 
 -- EOF

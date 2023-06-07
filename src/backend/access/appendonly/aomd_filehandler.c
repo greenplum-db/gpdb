@@ -88,7 +88,21 @@ ao_foreach_extent_file(ao_extent_callback callback, void *ctx)
 	concurrency[0] = 0;
 	concurrencySize = 1;
 
-	/* discover any remaining concurrency levels */
+	/* 
+	 * As we'll see later, we will exhaustively check file extensions that are based
+	 * on a combination of all possible segno and filenum except for the base file
+	 * (segno=0, filenum=0) as that is not an extension.
+	 * But we still need to check (segno=0, filenum=1600) (i.e. .204800) which is the
+	 * "pair" extension for the base file. That is not going to be covered by the for
+	 * loops below. Check it now.
+	 */
+	callback(MaxHeapAttributeNumber * AOTupleId_MultiplierSegmentFileNum, ctx);
+
+	/*
+	 * Discover any remaining concurrency levels.
+	 * This checks all combinations of (segno > 0, filenum = 0) for an AO table, and
+	 * additionally (segno > 0, filenum = 1600) for an CO table.
+	 */
 	for (segno = 1; segno < MAX_AOREL_CONCURRENCY; segno++)
 	{
 		/* For AOCO tables, each column has two possible file segnos from
@@ -103,6 +117,10 @@ ao_foreach_extent_file(ao_extent_callback callback, void *ctx)
 		concurrencySize++;
 	}
 
+	/*
+	 * Now based on the concurrency levels, discover the rest of file extensions.
+	 * This should only be relevant to CO tables.
+	 */
 	for (int index = 0; index < concurrencySize; index++)
 	{
 		for (filenum = 1; filenum < MaxHeapAttributeNumber; filenum++)

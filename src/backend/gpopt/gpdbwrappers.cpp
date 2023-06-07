@@ -1795,6 +1795,17 @@ gpdb::GetDistributionPolicy(Relation rel)
 {
 	GP_WRAP_START;
 	{
+		// external tables are a special case, and we need to manually build
+		// the GpPolicy struct which contains the external table's distribution
+		if (rel_is_external_table(rel->rd_id))
+		{
+			return GpPolicyFetch(rel->rd_id);
+		}
+		// we determine the distribution at a later point for foreign tables
+		else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+		{
+			return nullptr;
+		}
 		/* catalog tables: pg_class */
 		return relation_policy(rel);
 	}

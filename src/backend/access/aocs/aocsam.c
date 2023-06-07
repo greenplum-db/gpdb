@@ -22,6 +22,7 @@
 #include "access/appendonlywriter.h"
 #include "access/heapam.h"
 #include "access/hio.h"
+#include "access/reloptions.h"
 #include "catalog/catalog.h"
 #include "catalog/gp_fastsequence.h"
 #include "catalog/index.h"
@@ -36,12 +37,14 @@
 #include "cdb/cdbappendonlystoragewrite.h"
 #include "cdb/cdbvars.h"
 #include "executor/executor.h"
+#include "commands/defrem.h"
 #include "fmgr.h"
 #include "miscadmin.h"
 #include "nodes/altertablenodes.h"
 #include "pgstat.h"
 #include "storage/procarray.h"
 #include "storage/smgr.h"
+#include "utils/builtins.h"
 #include "utils/datumstream.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
@@ -2275,14 +2278,14 @@ aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op)
 	int                 i;
 	StringInfoData titleBuf;
 	bool        checksum;
-	ListCell    *lc;
+	ListCell    *lc, *lc2;
 
 	desc = palloc(sizeof(AOCSWriteColumnDescData));
 	desc->newcolvals = NULL;
 	desc->op = op;
 
 	/*
-	 * We filter out the tab->newvals which may contain both of
+	 * We filter out the newvals which may contain both of
 	 * ADD COLUMN and ALTER COLUMN newcolvals
 	 * into the column descriptor which will only have filtered list
 	 * corresponding to that particular operation
@@ -2298,19 +2301,16 @@ aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op)
 	desc->rel = rel;
 	desc->cur_segno = -1;
 
-	/*
-	 * Rewrite catalog phase of alter table has updated catalog with info for
-	 * new columns, which is available through rel.
-	 */
+	/* Get existing attribute options. */
 	StdRdOptions **opts = RelationGetAttributeOptions(rel);
 
 	desc->dsw = palloc(sizeof(DatumStreamWrite *) * desc->num_cols_to_write);
 
-    GetAppendOnlyEntryAttributes(rel->rd_id,
-                                 NULL,
-                                 NULL,
-                                 &checksum,
-                                 NULL);
+	GetAppendOnlyEntryAttributes(rel->rd_id,
+							NULL,
+							NULL,
+							&checksum,
+							NULL);
 
 	i = 0;
 	foreach(lc, desc->newcolvals)
@@ -2318,6 +2318,9 @@ aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op)
 		NewColumnValue *newval = lfirst(lc);
 		AttrNumber attnum = newval->attnum;
 		Form_pg_attribute attr = TupleDescAttr(rel->rd_att, attnum - 1);
+		char *compresstype = NULL;
+		int compresslevel = -1;
+		int blocksize = -1;
 
 		initStringInfo(&titleBuf);
 		if (op==AOCSADDCOLUMN)
@@ -2325,10 +2328,30 @@ aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op)
 		else
 			appendStringInfo(&titleBuf, "ALTER TABLE REWRITE COLUMN new segfile");
 
+		/* check any new encoding options, use those if applicable, otherwise use existing ones */
+		foreach(lc2, newval->new_encoding)
+		{
+			DefElem *e = lfirst(lc2);
+			Assert (e->defname);
+
+			/* we should've already transformed and validated the options in phase 2 */
+			if (pg_strcasecmp("compresstype", e->defname) == 0)
+				compresstype = defGetString(e);
+			else if (pg_strcasecmp("compresslevel", e->defname) == 0)
+				compresslevel = pg_strtoint32(defGetString(e));
+			else if (pg_strcasecmp("blocksize", e->defname) == 0)
+				blocksize = pg_strtoint32(defGetString(e));
+			else
+				/* shouldn't happen, but throw a nice error message instead of Assert */
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("unrecognized column encoding option \'%s\' for column \'%s\'",
+								e->defname, attr->attname.data)));
+		}
 		Assert(opts[attnum - 1]);
-		ct = opts[attnum - 1]->compresstype;
-		clvl = opts[attnum - 1]->compresslevel;
-		blksz = opts[attnum - 1]->blocksize;
+		ct = compresstype == NULL ? opts[attnum - 1]->compresstype : compresstype;
+		clvl = compresslevel == -1 ? opts[attnum - 1]->compresslevel : compresslevel;
+		blksz = blocksize == -1 ? opts[attnum - 1]->blocksize : blocksize;
 		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, blksz,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
@@ -3196,7 +3219,7 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 					AttrNumber     colno   = newval->attnum - 1;
 					AppendOnlyBlockDirectory_DeleteSegmentFile(&idesc->blockDirectory,
 															   colno,
-															   segi + 1,
+															   segInfos[segi]->segno,
 															   snapshot);
 				}
 			}
@@ -3218,14 +3241,26 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 		ExecDropSingleTupleTableSlot(newslot);
 	}
 
-	/* Update the filenum value for the column entry in pg_attribute_encoding */
+	/* Update the filenum and any encoding options in pg_attribute_encoding */
 	foreach(l, newvals)
 	{
+		Datum newattoptions = (Datum)0;
 		NewColumnValue *ex = lfirst(l);
+
 		if (ex->op == AOCSADDCOLUMN)
 			continue;
 		newfilenum = GetFilenumForRewriteAttribute(RelationGetRelid(rel), ex->attnum);
-		UpdateFilenumForAttnum(RelationGetRelid(rel), ex->attnum, newfilenum);
+		/* get the attoptions string to be stored in pg_attribute_encoding */
+		if (ex->new_encoding)
+		{
+			newattoptions = transformRelOptions(PointerGetDatum(NULL),
+											ex->new_encoding,
+											NULL,
+											NULL,
+											true,
+											false);
+		}
+		update_attribute_encoding_entry(RelationGetRelid(rel), ex->attnum, newfilenum, 0/*lastrownums*/, newattoptions);
 	}
 
 	/* Re-index the ones that contain the columns we just rewrote */

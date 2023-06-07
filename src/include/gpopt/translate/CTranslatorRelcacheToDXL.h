@@ -25,6 +25,7 @@ extern "C" {
 
 #include "access/tupdesc.h"
 #include "catalog/gp_distribution_policy.h"
+#include "foreign/foreign.h"
 }
 
 #include "naucrates/dxl/gpdb_types.h"
@@ -348,6 +349,9 @@ public:
 
 	// get the distribution policy of the relation
 	static IMDRelation::Ereldistrpolicy GetRelDistribution(GpPolicy *gp_policy);
+
+	static IMDRelation::Ereldistrpolicy
+	GetDistributionFromForeignRelExecLocation(ForeignTable *ft);
 };
 }  // namespace gpdxl
 
