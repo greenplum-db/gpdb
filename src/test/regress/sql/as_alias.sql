@@ -49,8 +49,8 @@ SELECT 1 one FROM test_having WHERE 1/a = 1 HAVING 1 < 2;
 SELECT 1 AS "one_%^" FROM test_having WHERE 1/a = 1 HAVING 1 < 2;
 SELECT 1 "one_%^" FROM test_having WHERE 1/a = 1 HAVING 1 < 2;
 
-SELECT c AS "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c;
-SELECT c "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c;
+SELECT c AS "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c COLLATE "C";
+SELECT c "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c COLLATE "C";
 
 SELECT 1 AS one WHERE 1 IN (SELECT 1);
 SELECT 1 one WHERE 1 IN (SELECT 1);

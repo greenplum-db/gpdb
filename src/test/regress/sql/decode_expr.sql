@@ -760,7 +760,7 @@ order by locid, country_code;
 
 \d+ decode_view;
 
-select * from decode_view order by region, country_code;
+select * from decode_view order by region COLLATE "C", country_code;
 
 --
 

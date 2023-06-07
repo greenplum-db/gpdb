@@ -159,18 +159,18 @@ SELECT 1 "one_%^" FROM test_having WHERE 1/a = 1 HAVING 1 < 2;
       1
 (1 row)
 
-SELECT c AS "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c;
+SELECT c AS "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c COLLATE "C";
    C+1    | max 
 ----------+-----
- bbbb     |   5
  XXXX     |   0
+ bbbb     |   5
 (2 rows)
 
-SELECT c "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c;
+SELECT c "C+1", max(a) AS MAX FROM test_having GROUP BY c HAVING count(*) > 2 OR min(a) = max(a)  ORDER BY c COLLATE "C";
    C+1    | max 
 ----------+-----
- bbbb     |   5
  XXXX     |   0
+ bbbb     |   5
 (2 rows)
 
 SELECT 1 AS one WHERE 1 IN (SELECT 1);
