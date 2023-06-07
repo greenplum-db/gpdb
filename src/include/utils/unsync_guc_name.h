@@ -559,7 +559,3 @@
 		"xmlbinary",
 		"xmloption",
 		"max_slot_wal_keep_size",
-		"optimizer_jit",
-		"optimizer_jit_above_cost",
-		"optimizer_jit_inline_above_cost",
-		"optimizer_jit_optimize_above_cost",
