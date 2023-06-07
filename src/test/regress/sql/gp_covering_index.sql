@@ -31,7 +31,6 @@ SELECT b FROM test_basic_cover_index WHERE a>42 AND b>42;
 -- Test CTE with cover indexes
 --
 -- Check that CTE over scan with cover index and cover index over cte both work
--- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS
@@ -40,7 +39,6 @@ WITH cte AS
 )
 SELECT b FROM cte WHERE b%2=0;
 
--- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS

@@ -536,7 +536,6 @@
                           <dxl:TableDescriptor Mdid="6.32780.1.1" TableName="x">
                             <dxl:Columns>
                               <dxl:Column ColId="47" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="48" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="49" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                               <dxl:Column ColId="50" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                               <dxl:Column ColId="51" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>

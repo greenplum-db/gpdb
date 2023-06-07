@@ -548,9 +548,6 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
                       <dxl:Columns>
                         <dxl:Column ColId="17" Attno="1" ColName="a1" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="15" Attno="2" ColName="a2" TypeMdid="0.701.1.0" ColWidth="8"/>
-                        <dxl:Column ColId="18" Attno="3" ColName="a3" TypeMdid="0.1186.1.0" ColWidth="16"/>
-                        <dxl:Column ColId="19" Attno="4" ColName="a4" TypeMdid="0.1114.1.0" ColWidth="8"/>
-                        <dxl:Column ColId="20" Attno="5" ColName="a5" TypeMdid="0.1184.1.0" ColWidth="8"/>
                         <dxl:Column ColId="21" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
                         <dxl:Column ColId="22" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
                         <dxl:Column ColId="23" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
@@ -672,9 +669,6 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
                         <dxl:Columns>
                           <dxl:Column ColId="57" Attno="1" ColName="a1" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="55" Attno="2" ColName="a2" TypeMdid="0.701.1.0" ColWidth="8"/>
-                          <dxl:Column ColId="58" Attno="3" ColName="a3" TypeMdid="0.1186.1.0" ColWidth="16"/>
-                          <dxl:Column ColId="59" Attno="4" ColName="a4" TypeMdid="0.1114.1.0" ColWidth="8"/>
-                          <dxl:Column ColId="60" Attno="5" ColName="a5" TypeMdid="0.1184.1.0" ColWidth="8"/>
                           <dxl:Column ColId="61" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
                           <dxl:Column ColId="62" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
                           <dxl:Column ColId="63" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
