@@ -251,6 +251,8 @@ test: idle_gang_cleaner
 
 test: ao_index_build_progress
 test: analyze_progress
+test: appendonly_analyze_progress
+test: aoco_analyze_progress
 test: copy_progress
 
 test: segwalrep/die_commit_pending_replication

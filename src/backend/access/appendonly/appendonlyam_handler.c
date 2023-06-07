@@ -1440,6 +1440,9 @@ static int
 appendonly_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 							   int targrows, double *totalrows, double *totaldeadrows)
 {
+	FileSegTotals	*fileSegTotals;
+	BlockNumber		totalBlocks;
+	BlockNumber     blksdone = 0;
 	int		numrows = 0;	/* # number of rows sampled */
 	double	liverows = 0;	/* # live rows seen */
 	double	deadrows = 0;	/* # dead rows seen */
@@ -1454,6 +1457,16 @@ appendonly_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	int64 totaldeadtupcount = 0;
 	if (aoscan->aos_total_segfiles > 0 )
 		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aoscan->visibilityMap);
+
+	/*
+	 * Get the total number of blocks for the table
+	 */
+	fileSegTotals = GetSegFilesTotals(onerel,
+										   aoscan->appendOnlyMetaDataSnapshot);
+	totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
+	pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_TOTAL,
+								 totalBlocks);
+
 	/*
      * The conversion from int64 to double (53 significant bits) is safe as the
 	 * AOTupleId is 48bits, the max value of totalrows is never greater than
@@ -1479,6 +1492,18 @@ appendonly_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 		}
 		else
 			deadrows++;
+
+		/*
+		 * Even though we now do row based sampling,
+		 * we can still report in terms of blocks processed using ratio of
+		 * rows scanned / target rows on totalblocks in the table.
+		 * For e.g., if we have 1000 blocks in the table and we are sampling 100 rows,
+		 * and if 10 rows are done, we can say that 100 blocks are done.
+		 */
+		blksdone = (totalBlocks * (double) (liverows + deadrows)) / targrows ;
+		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
+									 blksdone);
+		SIMPLE_FAULT_INJECTOR("analyze_block");
 
 		ExecClearTuple(slot);
 	}
