@@ -1310,7 +1310,7 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 
 > **Note** The `gp_resgroup_memory_query_fixed_mem` server configuration parameter is enforced only when resource group-based resource management is active.
 
-Specifies a fixed amount of memory -- in MB -- reserved for all queries in a resource group **for the scope of a session**. When this parameter is set to `0` -- the default -- the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
+Specifies a fixed amount of memory, in MB, reserved for all queries in a resource group **for the scope of a session**. When this parameter is set to `0`, the default, the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
 
 While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_query_fixed_mem` overrides that limit at a session level. Thus, you can use this configuration parameter to adjust query memory budget for a particular session, on an ad hoc basis. 
 
@@ -1392,13 +1392,13 @@ Cancel a transaction queued in a resource group that waits longer than the speci
 
 Identifies the resource management scheme currently enabled in the Greenplum Database cluster. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
 
-- `none` - Configures Greenplum Database to not use any resource manager. This is the default.
+- `none` - configures Greenplum Database to not use any resource manager. This is the default.
 
-- `group` - Configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v1 version of Linux cgroup functionality. 
+- `group` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v1 version of Linux cgroup functionality. 
 
-- `group-v2` - Configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v2 version of Linux cgroup functionality. 
+- `group-v2` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v2 version of Linux cgroup functionality. 
 
-- `queue` - Configures Greenplum Database to use resource queues. 
+- `queue` - configures Greenplum Database to use resource queues. 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

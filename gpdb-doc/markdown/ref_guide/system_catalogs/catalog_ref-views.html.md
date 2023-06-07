@@ -157,22 +157,22 @@ The `gp_resgroup_status` view allows administrators to see status and activity f
 
 This view is accessible to all users.
 
-|Column|Description|
-|------|-----------|
-|rsgname|The name of the resource group.|
-|groupid|The ID of the resource group.|
-|num\_running|The number of transactions currently running in the resource group.|
-|num\_queueing|The number of currently queued transactions for the resource group.|
-|num\_queued|The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
-|num\_executed|The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
-|total\_queue\_duration|The total time any transaction was queued since the Greenplum Database cluster was last started.|
+|column|type|references|description|
+|------|----|----------|-----------|
+|rsgname|name| pg_resgroup.rsgname|The name of the resource group.|
+|groupid|oid|pg_resgroup.oid|The ID of the resource group.|
+|num\_running|integer| |The number of transactions currently running in the resource group.|
+|num\_queueing|integer| |The number of currently queued transactions for the resource group.|
+|num\_queued|integer| |The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
+|num\_executed|integer| |The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
+|total\_queue\_duration|interval| |The total time any transaction was queued since the Greenplum Database cluster was last started.|
 
 Sample output for the `gp_resgroup_status` view:
 
 ```
 select * from gp_toolkit.gp_resgroup_status;
- rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration | cpu_usage
----------------+---------+-------------+--------------+------------+------------------------------------------------------------------------
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration |
+---------------+---------+-------------+--------------+------------+-------------------------------------
  default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  |
  admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  |
  system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  |
@@ -187,13 +187,13 @@ Memory amounts are specified in MBs.
 
 > **Note** The `gp_resgroup_status_per_host` view is valid only when resource group-based resource management is active.
 
-|Column|Description|
-|------|-----------|
-|`rsgname`|The name of the resource group.|
-|`groupid`|The ID of the resource group.|
-|`hostname`|The hostname of the segment host.|
-|`cpu_usage`|A float value. The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages of the CPU cores that are used by the resource group on the host.|
-|`memory_usage`|The real-time memory usage of the resource group on each Greenplum Database segment's host, in MB.|
+|column|type|references|description|
+|------|----|----------|-----------|
+|rsgname|name| pg_resgroup.rsgname|The name of the resource group.|
+|groupid|oid|pg_resgroup.oid|The ID of the resource group.|
+|`hostname`|text|gp_segment_configuration.hostname|The hostname of the segment host.|
+|`cpu_usage`|float| |The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages of the CPU cores that are used by the resource group on the host.|
+|`memory_usage`|float| |The real-time memory usage of the resource group on each Greenplum Database segment's host, in MB.|
 
 Sample output for the `gp_resgroup_status_per_host` view:
 
@@ -232,7 +232,7 @@ The `gp_segment_endpoints` view lists the endpoints created in the QE for all ac
 
 Endpoints exist only for the duration of the transaction that defines the parallel retrieve cursor, or until the cursor is closed.
 
-|name|type|references|description|
+|column|type|references|description|
 |----|----|----------|-----------|
 |auth\_token|text| |The authentication token for the retrieve session.|
 |databaseid|oid| |The identifier of the database in which the parallel retrieve cursor was created.|
@@ -251,7 +251,7 @@ The `gp_session_endpoints` view lists the endpoints created for all active paral
 
 Endpoints exist only for the duration of the transaction that defines the parallel retrieve cursor, or until the cursor is closed.
 
-|name|type|references|description|
+|column|type|references|description|
 |----|----|----------|-----------|
 |gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
 |auth\_token|text| |The authentication token for a retrieve session.|
