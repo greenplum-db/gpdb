@@ -292,6 +292,32 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 }
 
 /*
+ * Similar to SetNextFileSegForRead(), except that we explicitly specify the
+ * seg to be read (via 'fsInfoIdx', an index into the scan's segfile array).
+ *
+ * We return true if we are successfully able to open the target segment.
+ *
+ * Since SetNextFileSegForRead() opens the next segment starting from
+ * aoscan->aos_segfiles_processed, skipping empty/awaiting-drop segs, we also
+ * check if the seg opened isn't the one we targeted. If it isn't, then the
+ * target seg was empty/awaiting-drop, and we return false.
+ */
+static bool
+SetSegFileForRead(AppendOnlyScanDesc aoscan, int fsInfoIdx)
+{
+	Assert(fsInfoIdx >= 0 && fsInfoIdx < aoscan->aos_total_segfiles);
+
+	/*
+	 * Advance aos_segfiles_processed pointer to target segment, so that it
+	 * is considered as the "next" segment.
+	 */
+	aoscan->aos_segfiles_processed = fsInfoIdx;
+
+	return SetNextFileSegForRead(aoscan) &&
+		(aoscan->aos_segfiles_processed - fsInfoIdx == 1);
+}
+
+/*
  * errcontext_appendonly_insert_block_user_limit
  *
  * Add an errcontext() line showing the table name but little else because this is a user
@@ -1932,6 +1958,41 @@ appendonly_rescan(TableScanDesc scan, ScanKey key,
 	 * reinitialize scan descriptor
 	 */
 	initscan(aoscan, key);
+}
+
+/*
+ * Position an AO scan to start from a segno specified by the 'fsInfoIdx' in
+ * the scan's segfile array, and offset specified by blkdir entry 'dirEntry'.
+ *
+ * If we are unable to position the scan, we return false.
+ */
+bool
+appendonly_positionscan(AppendOnlyScanDesc aoscan,
+						AppendOnlyBlockDirectoryEntry *dirEntry,
+						int fsInfoIdx)
+{
+	int64 	beginFileOffset = dirEntry->range.fileOffset;
+	int64 	afterFileOffset = dirEntry->range.afterFileOffset;
+
+	Assert(dirEntry);
+
+	if (!SetSegFileForRead(aoscan, fsInfoIdx))
+	{
+		/* target segment is empty/awaiting-drop */
+		return false;
+	}
+
+	if (beginFileOffset > aoscan->storageRead.logicalEof)
+	{
+		/* position maps to a hole at the end of the segfile */
+		return false;
+	}
+
+	AppendOnlyStorageRead_SetTemporaryStart(&aoscan->storageRead,
+											beginFileOffset,
+											afterFileOffset);
+
+	return true;
 }
 
 /* ----------------

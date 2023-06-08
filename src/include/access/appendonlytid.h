@@ -94,6 +94,15 @@ typedef struct AOTupleId
  */
 #define AOHeapBlockGet_startHeapBlock(heapBlk)	((heapBlk) & 0xFE000000)
 
+/*
+ * Get the theoretical starting row number for a give logical heap block. All
+ * logical heap blocks can consume up to AO_MAX_TUPLES_PER_HEAP_BLOCK row
+ * numbers (either densely/sparsely). The very first block in an aoseg is an
+ * exception: it can consume up to (AO_MAX_TUPLES_PER_HEAP_BLOCK - 1) row
+ * numbers. So, we take a Max with 1 to account for that case.
+ */
+#define AOHeapBlockGet_startRowNum(heapBlk) \
+	Max((((heapBlk) - AOHeapBlockGet_startHeapBlock((heapBlk))) * AO_MAX_TUPLES_PER_HEAP_BLOCK), 1)
 #define AOSegmentGet_blockSequenceNum(heapBlk)	(AOSegmentGet_segno((heapBlk)))
 #define InvalidBlockSequenceNum (-1)
 

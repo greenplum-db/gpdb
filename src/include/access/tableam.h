@@ -1790,6 +1790,9 @@ table_index_build_scan(Relation table_rel,
  * When "anyvisible" mode is requested, all tuples visible to any transaction
  * are indexed and counted as live, including those inserted or deleted by
  * transactions that are still in progress.
+ *
+ * GPDB: For a partial range scan, the caller needs to guarantee that the range
+ * [start_blockno, start_blockno + numblocks) lies in a single BlockSequence.
  */
 static inline double
 table_index_build_range_scan(Relation table_rel,
