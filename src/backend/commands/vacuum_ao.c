@@ -178,6 +178,8 @@ ao_vacuum_rel_pre_cleanup(Relation onerel, VacuumParams *params, BufferAccessStr
 	};
 	int64		initprog_val[3];
 
+	Assert(RelationStorageIsAO(onerel));
+
 	if (options & VACOPT_VERBOSE)
 		elevel = INFO;
 	else
@@ -265,7 +267,7 @@ ao_vacuum_rel_post_cleanup(Relation onerel, VacuumParams *params, BufferAccessSt
 	 * 
 	 * 4. Update statistics.
 	 */
-	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(RelationStorageIsAO(onerel));
 	Assert(vacrelstats != NULL);
 
 	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
@@ -329,7 +331,7 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 		   Gp_role == GP_ROLE_UTILITY ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER);
-	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(RelationStorageIsAO(onerel));
 	Assert(vacrelstats != NULL);
 
 	if (options & VACOPT_VERBOSE)
@@ -693,7 +695,7 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	AppendOnlyVisimap visimap;
 	Oid			visimaprelid;
 
-	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAO(aorel));
 
 	relname = RelationGetRelationName(aorel);
 

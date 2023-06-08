@@ -74,7 +74,7 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno, AOVacuumRelStats
 	int32		fileSegNo;
 	File		fd;
 
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 
 	if (Debug_appendonly_print_compaction)
 		elog(LOG, "Drop segment file: segno %d", segno);
@@ -229,7 +229,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel, int segno, int64 segeof, AOVa
 	int32		fileSegNo;
 	char		filenamepath[MAXPGPATH];
 
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 
 	relname = RelationGetRelationName(aorel);
 
@@ -397,7 +397,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	int64		heap_blks_scanned = 0;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 	Assert(insertDesc);
 
 	compact_segno = fsinfo->segno;
@@ -649,6 +649,8 @@ AppendOptimizedCollectDeadSegments(Relation aorel)
 static inline void
 AppendOptimizedDropDeadSegment(Relation aorel, int segno, AOVacuumRelStats *vacrelstats)
 {
+	Assert(RelationStorageIsAO(aorel));
+
 	if (RelationIsAoRows(aorel))
 	{
 		AppendOnlyCompaction_DropSegmentFile(aorel, segno, vacrelstats);
@@ -793,7 +795,7 @@ AppendOnlyCompact(Relation aorel,
 	FileSegInfo *fsinfo;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 
 	relname = RelationGetRelationName(aorel);

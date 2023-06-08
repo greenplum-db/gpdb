@@ -7577,7 +7577,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	/*
 	 * Add a pg_attribute_encoding entry for ao_row tables, containing the last row numbers of each segfile.
 	 */
-	if (RelationIsAoRows(rel) && rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+	if (RelationStorageIsAoRows(rel))
 	{
 		Oid 	segrelid;
 		int64 	lastrownums[MAX_AOREL_CONCURRENCY];

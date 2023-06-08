@@ -366,8 +366,6 @@ GetAllFileSegInfo(Relation parentrel,
 		elog(ERROR, "could not find pg_aoseg aux table for AO table \"%s\"",
 			 RelationGetRelationName(parentrel));
 
-	Assert(RelationIsAoRows(parentrel));
-
 	if (segrelidptr != NULL)
 		*segrelidptr = segrelid;
 
@@ -625,8 +623,6 @@ ClearFileSegInfo(Relation parentrel, int segno)
 
 	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
-	Assert(RelationIsAoRows(parentrel));
-
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Clear seg file info: segno %d table '%s'",
 		   segno,
@@ -761,9 +757,9 @@ UpdateFileSegInfo_internal(Relation parentrel,
 	bool		isNull;
 	Oid segrelid;
 
+	Assert(RelationStorageIsAoRows(parentrel));
 	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
 
-	Assert(RelationIsAoRows(parentrel));
 	Assert(newState >= AOSEG_STATE_USECURRENT && newState <= AOSEG_STATE_AWAITING_DROP);
 
 	/*
@@ -964,8 +960,6 @@ GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	bool		isNull;
 	Oid			segrelid;
 
-	Assert(RelationIsAoRows(parentrel));
-
 	result = (FileSegTotals *) palloc0(sizeof(FileSegTotals));
 
 	GetAppendOnlyEntryAuxOids(parentrel, &segrelid, NULL, NULL);
@@ -1081,10 +1075,10 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 		context->aoRelOid = aoRelOid;
 
 		aocsRel = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAoRows(aocsRel))
+		if (!RelationStorageIsAoRows(aocsRel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("'%s' is not an append-only row relation",
+					 errmsg("Relation '%s' does not have appendoptimized row-oriented storage",
 							RelationGetRelationName(aocsRel))));
 
 		GetAppendOnlyEntryAuxOids(aocsRel, &segrelid, NULL, NULL);
@@ -1233,10 +1227,10 @@ gp_aoseg(PG_FUNCTION_ARGS)
 		context->aoRelOid = aoRelOid;
 
 		aocsRel = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAoRows(aocsRel))
+		if (!RelationStorageIsAoRows(aocsRel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("'%s' is not an append-only row relation",
+					 errmsg("Relation '%s' does not have appendoptimized row-oriented storage",
 							RelationGetRelationName(aocsRel))));
 
 		GetAppendOnlyEntryAuxOids(aocsRel, &segrelid, NULL, NULL);
