@@ -385,7 +385,6 @@ max_prepared_transactions = 250		# can be 0 or more
 #cpu_tuple_cost = 0.01			# same scale as above
 #cpu_index_tuple_cost = 0.005		# same scale as above
 #cpu_operator_cost = 0.0025		# same scale as above
-# GPDB_96_MERGE_FIXME: figure out the appropriate values for the parallel gucs
 #parallel_tuple_cost = 0.1		# same scale as above
 #parallel_setup_cost = 1000.0	# same scale as above
 
