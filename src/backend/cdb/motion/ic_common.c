@@ -254,7 +254,7 @@ void
 CleanUpMotionLayerIPC(void)
 {
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG3, "Cleaning Up Motion Layer IPC...");
+		elog(LOG, "Cleaning Up Motion Layer IPC...");
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
 		Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
@@ -482,7 +482,7 @@ DeregisterReadInterest(ChunkTransportState *transportStates,
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 	{
-		elog(DEBUG3, "Interconnect finished receiving "
+		elog(LOG, "Interconnect finished receiving "
 			 "from seg%d slice%d %s pid=%d sockfd=%d; %s",
 			 conn->remoteContentId,
 			 pEntry->sendSlice->sliceIndex,

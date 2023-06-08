@@ -1193,7 +1193,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	{
 		Assert(interconnect_address && strlen(interconnect_address) > 0);
 		hints.ai_flags |= AI_NUMERICHOST;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				  (errmsg("getaddrinfo called with unicast address: %s",
 						  interconnect_address)));
 	}
@@ -1201,7 +1201,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	{
 		Assert(interconnect_address == NULL);
 		hints.ai_flags |= AI_PASSIVE;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				  (errmsg("getaddrinfo called with wildcard address")));
 	}
 
@@ -1237,13 +1237,13 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 			continue;
 #endif
 
-		ereportif(++tries > 1 && gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(++tries > 1 && gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				  errmsg("trying another address for UDP interconnect socket"));
 
 		ic_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 		if (ic_socket == PGINVALID_SOCKET)
 		{
-			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 					(errcode_for_socket_access(),
 						errmsg("could not create UDP interconnect socket: %m")));
 			continue;
@@ -1255,7 +1255,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		 */
 		if (bind(ic_socket, addr->ai_addr, addr->ai_addrlen) < 0)
 		{
-			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 					(errcode_for_socket_access(),
 						errmsg("could not bind UDP interconnect socket: %m")));
 			closesocket(ic_socket);
@@ -1266,7 +1266,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		/* Call getsockname() to eventually obtain the assigned ephemeral port */
 		if (getsockname(ic_socket, (struct sockaddr *) &listenerAddr, &listenerAddrlen) < 0)
 		{
-			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 					(errcode_for_socket_access(),
 						errmsg("could not get address of socket for UDP interconnect: %m")));
 			closesocket(ic_socket);
@@ -2135,7 +2135,7 @@ setUDPSocketBufferSize(int ic_socket, int buffer_type)
 	option_len = sizeof(curr_size);
 	while (setsockopt(ic_socket, SOL_SOCKET, buffer_type, (const char *) &curr_size, option_len) < 0)
 	{
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				  (errmsg("UDP-IC: setsockopt %s failed to set buffer size = %d bytes: %m",
 						  buffer_type == SO_SNDBUF ? "send": "receive",
 						  curr_size)));
@@ -2144,7 +2144,7 @@ setUDPSocketBufferSize(int ic_socket, int buffer_type)
 			return -1;
 	}
 
-	ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			  (errmsg("UDP-IC: socket %s current buffer size = %d bytes",
 					  buffer_type == SO_SNDBUF ? "send": "receive",
 					  curr_size)));
@@ -2602,7 +2602,7 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 	recvSlice = &transportStates->sliceTable->slices[sendSlice->parentIndex];
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG1, "Interconnect seg%d slice%d setting up sending motion node",
+		elog(LOG, "Interconnect seg%d slice%d setting up sending motion node",
 			 GpIdentity.segindex, sendSlice->sliceIndex);
 
 	pEntry = createChunkTransportState(transportStates,
@@ -2836,7 +2836,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 	}
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		ereport(DEBUG1, (errmsg("Interconnect connecting to seg%d slice%d %s "
+		ereport(LOG, (errmsg("Interconnect connecting to seg%d slice%d %s "
 								"pid=%d sockfd=%d",
 								conn->remoteContentId,
 								pEntry->recvSlice->sliceIndex,
@@ -2856,7 +2856,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 	conn->conn_info.dstContentId = conn->cdbProc->contentid;
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG1, "setupOutgoingUDPConnection: node %d route %d srccontent %d dstcontent %d: %s",
+		elog(LOG, "setupOutgoingUDPConnection: node %d route %d srccontent %d dstcontent %d: %s",
 			 pEntry->motNodeId, conn->route, GpIdentity.segindex, conn->cdbProc->contentid, conn->remoteHostAndPort);
 
 	conn->conn_info.srcListenerPort = (Gp_listener_port >> 16) & 0x0ffff;
@@ -3044,7 +3044,7 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 			if (prune_id < sliceTable->ic_instance_id)
 			{
 				if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-					elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
+					elog(LOG, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
 				pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, prune_id);
 			}
 		}
@@ -3063,7 +3063,7 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 		numProcs = list_length(aSlice->primaryProcesses);
 
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG1, "Setup recving connections: my slice %d, childId %d",
+			elog(LOG, "Setup recving connections: my slice %d, childId %d",
 				 mySlice->sliceIndex, childId);
 
 		pEntry = createChunkTransportState(interconnect_context, aSlice, mySlice, numProcs);
@@ -3168,7 +3168,7 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 	}
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		ereport(DEBUG1, (errmsg("SetupUDPInterconnect will activate "
+		ereport(LOG, (errmsg("SetupUDPInterconnect will activate "
 								"%d incoming, %d outgoing routes for ic_instancce_id %d. "
 								"Listening on ports=%d/%d sockfd=%d.",
 								expectedTotalIncoming, expectedTotalOutgoing, sliceTable->ic_instance_id,
@@ -3268,7 +3268,7 @@ freeDisorderedPackets(MotionConn *conn)
 		if (buf != NULL)
 		{
 			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "CLEAR Out-of-order PKT: conn %p pkt [seq %d] for node %d route %d, [head seq] %d queue size %d, queue head %d queue tail %d", conn, buf->seq, buf->motNodeId, conn->route, conn->conn_info.seq - conn->pkt_q_size, conn->pkt_q_size, conn->pkt_q_head, conn->pkt_q_tail);
+				elog(LOG, "CLEAR Out-of-order PKT: conn %p pkt [seq %d] for node %d route %d, [head seq] %d queue size %d, queue head %d queue tail %d", conn, buf->seq, buf->motNodeId, conn->route, conn->conn_info.seq - conn->pkt_q_size, conn->pkt_q_size, conn->pkt_q_head, conn->pkt_q_tail);
 
 			/* return the buffer into the free list. */
 			putRxBufferToFreeList(&rx_buffer_pool, buf);
@@ -3359,27 +3359,21 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 	{
 		int			elevel = 0;
 
-		if (hasErrors || !transportStates->activated)
-		{
-			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elevel = LOG;
-			else
-				elevel = DEBUG1;
-		}
-		else if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elevel = DEBUG4;
+		ereport(elevel, (errmsg("Interconnect seg%d slice%d cleanup state: "
+								"%s; setup was %s",
+								GpIdentity.segindex, mySlice->sliceIndex,
+								hasErrors ? "hasErrors" : "normal",
+								transportStates->activated ? "completed" : "exited")));
 
-		if (elevel)
-			ereport(elevel, (errmsg("Interconnect seg%d slice%d cleanup state: "
-									"%s; setup was %s",
-									GpIdentity.segindex, mySlice->sliceIndex,
-									hasErrors ? "hasErrors" : "normal",
-									transportStates->activated ? "completed" : "exited")));
+		if (hasErrors ||
+			!transportStates->activated ||
+			gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+			elevel = LOG;
+		else
+			elevel = DEBUG1;
 
 		/* if setup did not complete, log the slicetable */
-		if (!transportStates->activated &&
-			gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog_node_display(DEBUG3, "local slice table", transportStates->sliceTable, true);
+		elog_node_display(elevel, "local slice table", transportStates->sliceTable, true);
 	}
 
 	/*
@@ -3403,7 +3397,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 
 		/* cleanup a Sending motion node. */
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG1, "Interconnect seg%d slice%d closing connections to slice%d (%d peers)",
+			elog(LOG, "Interconnect seg%d slice%d closing connections to slice%d (%d peers)",
 				 GpIdentity.segindex, mySlice->sliceIndex, mySlice->parentIndex,
 				 list_length(parentSlice->primaryProcesses));
 
@@ -3484,7 +3478,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 			Assert(pEntry);
 
 			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "Interconnect closing connections from slice%d",
+				elog(LOG, "Interconnect closing connections from slice%d",
 					 aSlice->sliceIndex);
 			isReceiver = true;
 
@@ -3616,7 +3610,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 	}
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG4, "TeardownUDPIFCInterconnect successful");
+		elog(LOG, "TeardownUDPIFCInterconnect successful");
 
 	RESUME_INTERRUPTS();
 }
@@ -3797,7 +3791,7 @@ receiveChunksUDPIFCLoop(ChunkTransportState *pTransportStates, ChunkTransportSta
 
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		{
-			elog(DEBUG5, "waiting (timed) on route %d %s", rx_control_info.mainWaitingState.waitingRoute,
+			elog(LOG, "waiting (timed) on route %d %s", rx_control_info.mainWaitingState.waitingRoute,
 				 (rx_control_info.mainWaitingState.waitingRoute == ANY_ROUTE ? "(any route)" : ""));
 		}
 
@@ -3810,7 +3804,7 @@ receiveChunksUDPIFCLoop(ChunkTransportState *pTransportStates, ChunkTransportSta
 		 */
 		int rc = WaitEventSetWait(waitset, MAIN_THREAD_COND_TIMEOUT_MS, rEvents, nevent, WAIT_EVENT_INTERCONNECT);
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG && rc == 0)
-			elog(DEBUG2, "receiveChunksUDPIFC(): WaitEventSetWait timeout after %d ms", MAIN_THREAD_COND_TIMEOUT_MS);
+			elog(LOG, "receiveChunksUDPIFC(): WaitEventSetWait timeout after %d ms", MAIN_THREAD_COND_TIMEOUT_MS);
 
 		/* check the potential errors in rx thread. */
 		checkRxThreadError();
@@ -4685,7 +4679,7 @@ handleStopMsgs(ChunkTransportState *transportStates, ChunkTransportStateEntry *p
 
 			/* now ready to actually send */
 			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "handleStopMsgs: node %d route %d, seq %d", motionId, i, conn->conn_info.seq);
+				elog(LOG, "handleStopMsgs: node %d route %d, seq %d", motionId, i, conn->conn_info.seq);
 
 			/* place it into the send queue */
 			icBufferListAppend(&conn->sndQueue, conn->curBuff);
@@ -5565,7 +5559,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 	getChunkTransportState(transportStates, motNodeID, &pEntry);
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG1, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
+		elog(LOG, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
 			 GpIdentity.segindex, motNodeID, pEntry->recvSlice->sliceIndex);
 
 	/*
@@ -5586,7 +5580,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 		if (conn->stillActive)
 		{
 			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "sent eos to route %d tuplecount %d seq %d flags 0x%x stillActive %s icId %d %d",
+				elog(LOG, "sent eos to route %d tuplecount %d seq %d flags 0x%x stillActive %s icId %d %d",
 					 conn->route, conn->tupleCount, conn->conn_info.seq,
 					 conn->conn_info.flags, (conn->stillActive ? "true" : "false"),
 					 conn->conn_info.icId, conn->msgSize);
@@ -5661,7 +5655,7 @@ SendEosUDPIFC(ChunkTransportState *transportStates,
 	}
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG1, "SendEosUDPIFC leaving, activeCount %d", activeCount);
+		elog(LOG, "SendEosUDPIFC leaving, activeCount %d", activeCount);
 }
 
 /*
@@ -5687,7 +5681,7 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 	pthread_mutex_lock(&ic_control_info.lock);
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG1, "Interconnect needs no more input from slice%d; notifying senders to stop.",
+		elog(LOG, "Interconnect needs no more input from slice%d; notifying senders to stop.",
 			 motNodeID);
 
 	for (i = 0; i < pEntry->numConns; i++)
@@ -5707,7 +5701,7 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 				 * so we're done
 				 */
 				if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-					elog(DEBUG1, "do sendstop: already have queued EOS packet, we're done. node %d route %d",
+					elog(LOG, "do sendstop: already have queued EOS packet, we're done. node %d route %d",
 						 motNodeID, i);
 
 				conn->stillActive = false;
@@ -5749,12 +5743,12 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 					sendAck(conn, UDPIC_FLAGS_STOP | UDPIC_FLAGS_ACK | UDPIC_FLAGS_CAPACITY | conn->conn_info.flags, seq, seq);
 
 					if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-						elog(DEBUG1, "sent stop message. node %d route %d seq %d", motNodeID, i, seq);
+						elog(LOG, "sent stop message. node %d route %d seq %d", motNodeID, i, seq);
 				}
 				else
 				{
 					if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-						elog(DEBUG1, "first packet did not arrive yet. don't sent stop message. node %d route %d",
+						elog(LOG, "first packet did not arrive yet. don't sent stop message. node %d route %d",
 							 motNodeID, i);
 				}
 			}
@@ -5980,16 +5974,15 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 
 	if (conn->stopRequested && conn->stillActive)
 	{
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG && DEBUG5 >= log_min_messages)
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			write_log("rx_thread got packet on active connection marked stopRequested. "
 					  "(flags 0x%x) node %d route %d pkt seq %d conn seq %d",
 					  pkt->flags, pkt->motNodeId, conn->route, pkt->seq, conn->conn_info.seq);
 
 		/* can we update stillActive ? */
-		if (DEBUG2 >= log_min_messages)
-			if (!(pkt->flags & UDPIC_FLAGS_STOP) &&
-				!(pkt->flags & UDPIC_FLAGS_EOS))
-				write_log("stop requested but no stop flag on return packet ?!");
+		if (!(pkt->flags & UDPIC_FLAGS_STOP) &&
+			!(pkt->flags & UDPIC_FLAGS_EOS))
+			write_log("stop requested but no stop flag on return packet ?!");
 
 		if (pkt->flags & UDPIC_FLAGS_EOS)
 			conn->conn_info.flags |= UDPIC_FLAGS_EOS;
@@ -6002,8 +5995,7 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 		/* we only update stillActive if eos has been sent by peer. */
 		if (pkt->flags & UDPIC_FLAGS_EOS)
 		{
-			if (DEBUG2 >= log_min_messages)
-				write_log("stop requested and acknowledged by sending peer");
+			write_log("stop requested and acknowledged by sending peer");
 			conn->stillActive = false;
 		}
 
@@ -6027,8 +6019,7 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 	if (!conn->stillActive)
 	{
 		/* peer may have dropped ack */
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE &&
-			DEBUG1 >= log_min_messages)
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
 			write_log("received on inactive connection node %d route %d (seq %d pkt->seq %d)",
 					  pkt->motNodeId, conn->route, conn->conn_info.seq, pkt->seq);
 		if (conn->conn_info.seq < pkt->seq)

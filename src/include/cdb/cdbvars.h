@@ -417,10 +417,10 @@ extern uint32 gp_interconnect_id;
 typedef enum GpVars_Verbosity
 {
 	GPVARS_VERBOSITY_UNDEFINED = 0,
-    GPVARS_VERBOSITY_OFF,
+	GPVARS_VERBOSITY_OFF,
 	GPVARS_VERBOSITY_TERSE,
 	GPVARS_VERBOSITY_VERBOSE,
-    GPVARS_VERBOSITY_DEBUG,
+	GPVARS_VERBOSITY_DEBUG,
 } GpVars_Verbosity;
 
 /* Enable single-slice single-row inserts. */
@@ -439,10 +439,7 @@ extern bool gp_enable_direct_dispatch;
  * "OFF"     -> only errors are logged
  * "TERSE"   -> terse logging of routine events, e.g. creation of new qExecs
  * "VERBOSE" -> gang allocation per command is logged
- * "DEBUG"   -> additional events are logged at severity level DEBUG1 to DEBUG5
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
+ * "DEBUG"   -> additional events are logged
  */
 extern int gp_log_gang;
 
@@ -453,10 +450,7 @@ extern int gp_log_gang;
  * "OFF"     -> only errors are logged
  * "TERSE"   -> terse logging of routine events
  * "VERBOSE" -> more messages
- * "DEBUG"   -> additional events are logged at severity level DEBUG1 to DEBUG5
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
+ * "DEBUG"   -> additional events are logged
  */
 extern int gp_log_fts;
 
@@ -467,10 +461,7 @@ extern int gp_log_fts;
  * "OFF"     -> connection errors are logged
  * "TERSE"   -> terse logging of routine events, e.g. successful connections
  * "VERBOSE" -> most interconnect setup events are logged
- * "DEBUG"   -> additional events are logged at severity level DEBUG1 to DEBUG5.
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
+ * "DEBUG"   -> additional events are logged
  */
 extern int gp_log_interconnect;
 

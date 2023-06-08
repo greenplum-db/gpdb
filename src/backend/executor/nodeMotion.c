@@ -356,7 +356,7 @@ execMotionUnsortedReceiver(MotionState *node)
 	{
 #ifdef CDB_MOTION_DEBUG
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG4, "motionID=%d saw end of stream", motion->motionID);
+			elog(LOG, "motionID=%d saw end of stream", motion->motionID);
 #endif
 		Assert(node->numTuplesFromAMS == node->numTuplesToParent);
 		Assert(node->numTuplesFromChild == 0);

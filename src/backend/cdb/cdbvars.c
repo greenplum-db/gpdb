@@ -452,59 +452,14 @@ show_gp_role(void)
 }
 
 
-
 /* --------------------------------------------------------------------------------------------------
  * Logging
  */
 
-
-/*
- * gp_log_gangs (string)
- *
- * Should creation, reallocation and cleanup of gangs of QE processes be logged?
- * "OFF"	 -> only errors are logged
- * "TERSE"	 -> terse logging of routine events, e.g. creation of new qExecs
- * "VERBOSE" -> gang allocation per command is logged
- * "DEBUG"	 -> additional events are logged at severity level DEBUG1 to DEBUG5
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
- */
 int gp_log_gang;
-
-/*
- * gp_log_fts (string)
- *
- * What kind of messages should the fault-prober log ?
- * "OFF"	 -> only errors are logged
- * "TERSE"	 -> terse logging of routine events
- * "VERBOSE" -> gang allocation per command is logged
- * "DEBUG"	 -> additional events are logged at severity level DEBUG1 to DEBUG5
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
- */
 int gp_log_fts;
-
-/*
- * gp_log_interconnect (string)
- *
- * Should connections between internal processes be logged?  (qDisp/qExec/etc)
- * "OFF"	 -> connection errors are logged
- * "TERSE"	 -> terse logging of routine events, e.g. successful connections
- * "VERBOSE" -> most interconnect setup events are logged
- * "DEBUG"	 -> additional events are logged at severity level DEBUG1 to DEBUG5.
- *
- * The messages that are enabled by the TERSE and VERBOSE settings are
- * written with a severity level of LOG.
- */
 int gp_log_interconnect;
 
-/*
- * gpvars_check_gp_resource_manager_policy
- * gpvars_assign_gp_resource_manager_policy
- * gpvars_show_gp_resource_manager_policy
- */
 bool
 gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource source)
 {

@@ -754,7 +754,7 @@ EndMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool flushCommLa
 				gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 			{
 				/* Print chunk-sorter entry statistics. */
-				elog(DEBUG4, "Chunk-sorter entry [route=%d,node=%d] statistics:\n"
+				elog(LOG, "Chunk-sorter entry [route=%d,node=%d] statistics:\n"
 					 "\tAvailable Tuples High-Watermark: " UINT64_FORMAT,
 					 i, pMNEntry->motion_node_id,
 					 pMNEntry->stat_tuples_available_hwm);

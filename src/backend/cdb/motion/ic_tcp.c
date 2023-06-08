@@ -161,7 +161,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	{
 		Assert(interconnect_address && strlen(interconnect_address) > 0);
 		hints.ai_flags |= AI_NUMERICHOST;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				  (errmsg("getaddrinfo called with unicast address: %s",
 						  interconnect_address)));
 	}
@@ -169,7 +169,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	{
 		Assert(interconnect_address == NULL);
 		hints.ai_flags |= AI_PASSIVE;
-		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				  (errmsg("getaddrinfo called with wildcard address")));
 	}
 
@@ -517,7 +517,7 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 		transportStates->aggressiveRetry = false;
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG4, "Interconnect seg%d slice%d setting up sending motion node (aggressive retry is %s)",
+		elog(LOG, "Interconnect seg%d slice%d setting up sending motion node (aggressive retry is %s)",
 			 GpIdentity.segindex, sendSlice->sliceIndex,
 			 (transportStates->aggressiveRetry ? "active" : "inactive"));
 
@@ -674,7 +674,7 @@ setupOutgoingConnection(ChunkTransportState *transportStates, ChunkTransportStat
 				 errdetail("%s: %m", "fcntl(O_NONBLOCK)")));
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		ereport(DEBUG1, (errmsg("Interconnect connecting to seg%d slice%d %s "
+		ereport(LOG, (errmsg("Interconnect connecting to seg%d slice%d %s "
 								"pid=%d sockfd=%d",
 								conn->remoteContentId,
 								pEntry->recvSlice->sliceIndex,
@@ -1236,7 +1236,7 @@ acceptIncomingConnection(void)
 	}
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG4, "Interconnect got incoming connection "
+		elog(LOG, "Interconnect got incoming connection "
 			 "from remote=%s to local=%s sockfd=%d",
 			 conn->remoteHostAndPort, conn->localHostAndPort, newsockfd);
 
@@ -1411,7 +1411,7 @@ SetupTCPInterconnect(EState *estate)
 						  errhint("Try enlarging the gp_interconnect_tcp_listener_backlog GUC value and OS net.core.somaxconn parameter")));
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		ereport(DEBUG1, (errmsg("SetupInterconnect will activate "
+		ereport(LOG, (errmsg("SetupInterconnect will activate "
 								"%d incoming, %d outgoing routes.  "
 								"Listening on port=%d sockfd=%d.",
 								expectedTotalIncoming, expectedTotalOutgoing,
@@ -1646,7 +1646,7 @@ SetupTCPInterconnect(EState *estate)
 
 			elapsed_ms = gp_get_elapsed_ms(&startTime);
 
-			ereport(DEBUG1, (errmsg("SetupInterconnect+" UINT64_FORMAT
+			ereport(LOG, (errmsg("SetupInterconnect+" UINT64_FORMAT
 									"ms:   select()  "
 									"Interest: %s.  timeout=" UINT64_FORMAT "ms "
 									"outgoing_fail=%d iteration=%d",
@@ -1673,8 +1673,6 @@ SetupTCPInterconnect(EState *estate)
 			(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE &&
 			 n != expectedTotalIncoming + expectedTotalOutgoing))
 		{
-			int elevel = (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG) ? DEBUG1 : LOG;
-
 			initStringInfo(&logbuf);
 			if (n > 0)
 			{
@@ -1685,7 +1683,7 @@ SetupTCPInterconnect(EState *estate)
 			}
 			else
 				appendStringInfoString(&logbuf, n < 0 ? "error" : "timeout");
-			ereport(elevel, (errmsg("SetupInterconnect+" UINT64_FORMAT "ms:   select()  %s",
+			ereport(LOG, (errmsg("SetupInterconnect+" UINT64_FORMAT "ms:   select()  %s",
 									elapsed_ms, logbuf.data)));
 			pfree(logbuf.data);
 			MemSet(&logbuf, 0, sizeof(logbuf));
@@ -1844,7 +1842,7 @@ SetupTCPInterconnect(EState *estate)
 	if (list_length(interconnect_context->incompleteConns) != 0)
 	{
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG2, "Incomplete connections after known connections done, cleaning %d",
+			elog(LOG, "Incomplete connections after known connections done, cleaning %d",
 				 list_length(interconnect_context->incompleteConns));
 
 		while ((cell = list_head(interconnect_context->incompleteConns)) != NULL)
@@ -1923,27 +1921,21 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 	{
 		int			elevel = 0;
 
-		if (hasErrors || !transportStates->activated)
-		{
-			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elevel = LOG;
-			else
-				elevel = DEBUG1;
-		}
-		else if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elevel = DEBUG4;
+		ereport(LOG, (errmsg("Interconnect seg%d slice%d cleanup state: "
+								"%s; setup was %s",
+								GpIdentity.segindex, mySlice->sliceIndex,
+								hasErrors ? "error" : "normal",
+								transportStates->activated ? "completed" : "exited")));
 
-		if (elevel)
-			ereport(elevel, (errmsg("Interconnect seg%d slice%d cleanup state: "
-									"%s; setup was %s",
-									GpIdentity.segindex, mySlice->sliceIndex,
-									hasErrors ? "error" : "normal",
-									transportStates->activated ? "completed" : "exited")));
+		if (hasErrors ||
+			!transportStates->activated ||
+			gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+			elevel = LOG;
+		else
+			elevel = DEBUG1;
 
 		/* if setup did not complete, log the slicetable */
-		if (!transportStates->activated &&
-			gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog_node_display(DEBUG3, "local slice table", transportStates->sliceTable, true);
+		elog_node_display(elevel, "local slice table", transportStates->sliceTable, true);
 	}
 
 	/*
@@ -1961,7 +1953,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 	 */
 	if (transportStates->incompleteConns &&
 		gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG2, "Found incomplete conn. length %d", list_length(transportStates->incompleteConns));
+		elog(LOG, "Found incomplete conn. length %d", list_length(transportStates->incompleteConns));
 
 	/*
 	 * These are connected inbound peers that we haven't dealt with quite yet
@@ -2008,7 +2000,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 	{
 		/* cleanup a Sending motion node. */
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG3, "Interconnect seg%d slice%d closing connections to slice%d",
+			elog(LOG, "Interconnect seg%d slice%d closing connections to slice%d",
 				 GpIdentity.segindex, mySlice->sliceIndex, mySlice->parentIndex);
 
 		getChunkTransportState(transportStates, mySlice->sliceIndex, &pEntry);
@@ -2043,7 +2035,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 		getChunkTransportState(transportStates, aSlice->sliceIndex, &pEntry);
 
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			elog(DEBUG3, "Interconnect closing connections from slice%d",
+			elog(LOG, "Interconnect closing connections from slice%d",
 				 aSlice->sliceIndex);
 
 		/*
@@ -2138,7 +2130,7 @@ TeardownTCPInterconnect(ChunkTransportState *transportStates, bool hasErrors)
 
 #ifdef AMS_VERBOSE_LOGGING
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG4, "TeardownInterconnect successful");
+		elog(LOG, "TeardownInterconnect successful");
 #endif
 }
 
@@ -2500,7 +2492,7 @@ doSendStopMessageTCP(ChunkTransportState *transportStates, int16 motNodeID)
 	Assert(pEntry);
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG3, "Interconnect needs no more input from slice%d; notifying senders to stop.",
+		elog(LOG, "Interconnect needs no more input from slice%d; notifying senders to stop.",
 			 motNodeID);
 
 	/*
@@ -2752,7 +2744,7 @@ SendEosTCP(ChunkTransportState *transportStates,
 	getChunkTransportState(transportStates, motNodeID, &pEntry);
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		elog(DEBUG3, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
+		elog(LOG, "Interconnect seg%d slice%d sending end-of-stream to slice%d",
 			 GpIdentity.segindex, motNodeID, pEntry->recvSlice->sliceIndex);
 
 	/*

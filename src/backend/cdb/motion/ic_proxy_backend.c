@@ -154,7 +154,7 @@ ic_proxy_backend_on_read_hello_ack(uv_stream_t *stream, ssize_t nread, const uv_
 		/* UV_EOF is expected */
 		if (nread == UV_EOF)
 		{
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "ic-proxy: backend %s: received EOF while receiving HELLO ACK.",
 				   ic_proxy_key_to_str(&backend->key));
 		}
@@ -186,7 +186,7 @@ ic_proxy_backend_on_read_hello_ack(uv_stream_t *stream, ssize_t nread, const uv_
 	/* sanity check: drop the packet with incorrect magic number */
 	if (!ic_proxy_pkt_is_valid(pkt))
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			"ic-proxy: backend %s: received %s, dropping the invalid package (magic number mismatch)",
 					ic_proxy_key_to_str(&backend->key), ic_proxy_pkt_to_str(pkt));
 		return;
@@ -244,7 +244,7 @@ ic_proxy_backend_on_sent_hello(uv_write_t *req, int status)
 
 	if (status < 0)
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: backend %s: backend failed to send HELLO: %s",
 					 ic_proxy_key_to_str(&backend->key), uv_strerror(status));
 		uv_close((uv_handle_t *) &backend->pipe, ic_proxy_backend_on_close);
@@ -252,7 +252,7 @@ ic_proxy_backend_on_sent_hello(uv_write_t *req, int status)
 	}
 
 	/* receive hello ack */
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: backend %s: backend connected, receiving HELLO ACK",
 				 ic_proxy_key_to_str(&backend->key));
 
@@ -300,7 +300,7 @@ ic_proxy_backend_on_connected(uv_connect_t *conn, int status)
 	if (status < 0)
 	{
 		/* the proxy might just not get ready yet, retry later */
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: backend %s: backend failed to connect: %s",
 					 ic_proxy_key_to_str(&backend->key), uv_strerror(status));
 
@@ -317,7 +317,7 @@ ic_proxy_backend_on_connected(uv_connect_t *conn, int status)
 		return;
 	}
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: backend %s: backend connected, sending HELLO message.",
 				 ic_proxy_key_to_str(&backend->key));
 

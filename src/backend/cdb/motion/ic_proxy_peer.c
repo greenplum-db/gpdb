@@ -220,7 +220,7 @@ ic_proxy_peer_register(ICProxyPeer *peer)
 		else
 		{
 			/* This is an actual placeholder */
-			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 				   "ic-proxy: %s(state=0x%08x): found my placeholder %s(state=0x%08x)",
 						 peer->name, peer->state,
 						 placeholder->name, placeholder->state);
@@ -290,13 +290,13 @@ ic_proxy_peer_on_data_pkt(void *opaque, const void *data, uint16 size)
 	const ICProxyPkt *pkt = data;
 	ICProxyPeer *peer = opaque;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
 
 	/* sanity check: drop the packet with incorrect magic number */
 	if (!ic_proxy_pkt_is_valid(pkt))
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
 					peer->name, ic_proxy_pkt_to_str(pkt));
 		return;
@@ -386,7 +386,7 @@ ic_proxy_peer_free(ICProxyPeer *peer)
 {
 	ListCell   *cell;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: freeing", peer->name);
 
 	foreach(cell, peer->reqs)
@@ -513,7 +513,7 @@ ic_proxy_peer_on_sent_hello_ack(void *opaque, const ICProxyPkt *pkt, int status)
 
 	peer->state |= IC_PROXY_PEER_STATE_SENT_HELLO_ACK;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: start receiving DATA", peer->name);
 
 	/* it's unlikely that the ibuf is non-empty, but clear it for sure */
@@ -547,7 +547,7 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	/* sanity check: drop the packet with incorrect magic number */
 	if (!ic_proxy_pkt_is_valid(pkt))
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
 					peer->name, ic_proxy_pkt_to_str(pkt));
 		return;
@@ -568,7 +568,7 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	 */
 	ic_proxy_peer_register(peer);
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: received %s, sending HELLO ACK",
 				 peer->name, ic_proxy_pkt_to_str(pkt));
 
@@ -635,7 +635,7 @@ ic_proxy_peer_read_hello(ICProxyPeer *peer)
 	if (peer->state & IC_PROXY_PEER_STATE_RECEIVING_HELLO)
 		return;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: waiting for HELLO", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_RECEIVING_HELLO;
@@ -680,7 +680,7 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	/* sanity check: drop the packet with incorrect magic number */
 	if (!ic_proxy_pkt_is_valid(pkt))
 	{
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
 					peer->name, ic_proxy_pkt_to_str(pkt));
 		return;
@@ -694,7 +694,7 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 		elog(ERROR, "ic-proxy: %s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
 
 	peer->state |= IC_PROXY_PEER_STATE_RECEIVED_HELLO_ACK;
@@ -708,7 +708,7 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	 */
 	ic_proxy_peer_handle_out_cache(peer);
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: start receiving DATA", peer->name);
 
 	/* now it's time to receive the normal data */
@@ -769,7 +769,7 @@ ic_proxy_peer_on_sent_hello(void *opaque, const ICProxyPkt *pkt, int status)
 		return;
 	}
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: waiting for HELLO ACK", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_SENT_HELLO;
@@ -803,7 +803,7 @@ ic_proxy_peer_on_connected(uv_connect_t *conn, int status)
 		return;
 	}
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: connected, sending HELLO", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_CONNECTED;
@@ -850,7 +850,7 @@ ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
 	peer->state |= IC_PROXY_PEER_STATE_CONNECTING;
 
 	uv_ip4_name(dest, name, sizeof(name));
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: connecting to %s:%d",
 				 peer->name, name, ntohs(dest->sin_port));
 
@@ -881,7 +881,7 @@ ic_proxy_peer_disconnect(ICProxyPeer *peer)
 	if (!(peer->state & IC_PROXY_PEER_STATE_CONNECTING))
 		return;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: disconnecting", peer->name);
 	ic_proxy_peer_shutdown(peer);
 }
@@ -897,7 +897,7 @@ ic_proxy_peer_route_data(ICProxyPeer *peer, ICProxyPkt *pkt,
 	{
 		ICProxyDelay *delay;
 
-		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 			   "ic-proxy: %s: caching outgoing %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
@@ -949,7 +949,7 @@ ic_proxy_peer_handle_out_cache(ICProxyPeer *peer)
 	if (peer->reqs == NIL)
 		return;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: trying to consume the %d cached outgoing pkts",
 				 peer->name, list_length(peer->reqs));
 
@@ -969,7 +969,7 @@ ic_proxy_peer_handle_out_cache(ICProxyPeer *peer)
 		ic_proxy_free(delay);
 	}
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG,
 		   "ic-proxy: %s: consumed %d cached pkts",
 				 peer->name, list_length(reqs) - list_length(peer->reqs));
 

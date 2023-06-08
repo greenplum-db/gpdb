@@ -573,7 +573,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 				elog_node_display(DEBUG3, "slice table", estate->es_sliceTable, true);
 
 			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "seg%d executing slice%d under root slice%d",
+				elog(LOG, "seg%d executing slice%d under root slice%d",
 					 GpIdentity.segindex,
 					 LocallyExecutingSliceIndex(estate),
 					 RootSliceIndex(estate));
