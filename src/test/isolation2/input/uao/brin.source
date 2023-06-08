@@ -195,9 +195,40 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 --------------------------------------------------------------------------------
 -- Specific range summarization
 --------------------------------------------------------------------------------
+CREATE TABLE brin_ao_specific_@amname@(i int) USING @amname@;
+CREATE INDEX ON brin_ao_specific_@amname@ USING brin(i) WITH (pages_per_range=1);
 
--- We don't allow specific range summarization for AO tables at the moment.
-SELECT brin_summarize_range('brin_ao_summarize_@amname@_i_idx', 1);
+1: BEGIN;
+2: BEGIN;
+-- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
+1: SELECT populate_pages('brin_ao_specific_@amname@', 1, tid '(33554435, 0)');
+-- Insert 2 blocks of data on 1 QE, in 1 aoseg; 1 block full, 1 block with 1 tuple.
+2: SELECT populate_pages('brin_ao_specific_@amname@', 1, tid '(67108865, 0)');
+1: COMMIT;
+2: COMMIT;
+
+-- Should be able to summarize all following blocks across the 2 aosegs.
+SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 33554432);
+SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 33554433);
+SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
+SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 67108864);
+
+-- Summarization of a block falling beyond the end of aoseg1 should be a no-op.
+SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 33554436);
+-- Summarization of a block falling in aoseg0 should be a no-op (as aoseg0 doesn't exist).
+SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 1);
+-- Summarization of a block falling in aoseg3 should be a no-op (as aoseg3 doesn't exist).
+SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
+
+-- Sanity: Only the ranges successfully summarized above should show up.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_specific_@amname@_i_idx', blkno)) FROM
+  generate_series(0, nblocks('brin_ao_specific_@amname@_i_idx') - 1) blkno;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_specific_@amname@_i_idx', 1))
+  WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_specific_@amname@_i_idx', 3))
+  WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2),
+  'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
 
 --------------------------------------------------------------------------------
 -- Test summarization of last partial range.

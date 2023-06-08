@@ -1860,6 +1860,9 @@ table_relation_size(Relation rel, ForkNumber forkNumber)
 /*
  * GPDB: Returns the block sequences contained in this relation. See
  * BlockSequence for details. Currently used by BRIN.
+ *
+ * Out of all theoretically possible block sequences, we only return the ones
+ * that currently exist for the relation.
  */
 static inline BlockSequence *
 table_relation_get_block_sequences(Relation rel, int *numSequences)
@@ -1868,8 +1871,12 @@ table_relation_get_block_sequences(Relation rel, int *numSequences)
 }
 
 /*
- * GPDB: Determines the block sequence in which the supplied block number falls.
+ * GPDB: Determines the block sequence in which the logical heap 'blkNumber' falls.
  * See BlockSequence for details. Currently used by BRIN.
+ *
+ * If the specified logical 'blkNumber' doesn't fall into the range of an
+ * existing BlockSequence, the BlockSequence is expected to contain the correct
+ * startblknum with nblocks = 0.
  */
 static inline void
 table_relation_get_block_sequence(Relation rel,
