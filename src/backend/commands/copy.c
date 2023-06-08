@@ -5531,7 +5531,7 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 		 * GPDB: Change below condition compared to upstream to 
 		 * greater than or equal to 0 as in QE, 
 		 * attr_count may be equal to 0, 
-		 * when all fields are processed in the QD."
+		 * when all fields are processed in the QD.
 		 */
 		if (fldct > attr_count)
 			ereport(ERROR,
