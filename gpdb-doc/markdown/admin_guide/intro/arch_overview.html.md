@@ -54,7 +54,7 @@ The standby coordinator is kept up to date by a transaction log replication proc
 
 Since the coordinator does not contain any user data, only the system catalog tables need to be synchronized between the primary and backup copies. When these tables are updated, changes automatically copy over to the standby coordinator so it is always synchronized with the primary.
 
-![Coordinator Mirroring in Greenplum Database](../graphics/standby_master.jpg "Coordinator Mirroring in Greenplum Database")
+![Coordinator Mirroring in Greenplum Database](../graphics/standby_coordinator.jpg "Coordinator Mirroring in Greenplum Database")
 
 ## <a id="arch_segments"></a>About the Greenplum Segments 
 

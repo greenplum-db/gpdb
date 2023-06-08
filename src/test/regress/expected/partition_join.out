@@ -420,8 +420,11 @@ SELECT sum(t1.a), avg(t1.a), sum(t1.b), avg(t1.b) FROM prt1 t1 WHERE NOT EXISTS 
 (1 row)
 
 -- lateral reference
--- GPDB_12_MERGE_FIXME: this is failing in GPDB. Known issue, there were similar
--- failures in other LATERAL tests before the v12 merge.
+-- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED
+-- If lateral_relids of RelOptInfo for a inner path is not null, the inner path needs
+-- params of outer path. So We can not add motion above inner path.
+-- however, in left join, outer path can not be replicated. We can not generate path for left join,
+-- So hit the error: could not devise a query plan for the given query.
 EXPLAIN (COSTS OFF)
 SELECT * FROM prt1 t1 LEFT JOIN LATERAL
 			  (SELECT t2.a AS t2a, t3.a AS t3a, least(t1.a,t2.a,t3.b) FROM prt1 t2 JOIN prt2 t3 ON (t2.a = t3.b)) ss
@@ -2025,8 +2028,11 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM (SELECT * FROM prt1_l WHERE prt1_l.b = 0) t1 
 (16 rows)
 
 -- lateral partitionwise join
--- GPDB_12_MERGE_FIXME: this is failing in GPDB. Known issue, there were similar
--- failures in other LATERAL tests before the v12 merge.
+-- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED
+-- If lateral_relids of RelOptInfo for a inner path is not null, the inner path needs
+-- params of outer path. So We can not add motion above inner path.
+-- however, in left join, outer path can not be replicated. We can not generate path for left join,
+-- So hit the error: could not devise a query plan for the given query.
 EXPLAIN (COSTS OFF)
 SELECT * FROM prt1_l t1 LEFT JOIN LATERAL
 			  (SELECT t2.a AS t2a, t2.c AS t2c, t2.b AS t2b, t3.b AS t3b, least(t1.a,t2.a,t3.b) FROM prt1_l t2 JOIN prt2_l t3 ON (t2.a = t3.b AND t2.c = t3.c)) ss

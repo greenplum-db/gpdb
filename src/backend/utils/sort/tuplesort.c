@@ -3253,6 +3253,7 @@ tuplesort_get_stats(Tuplesortstate *state,
 		stats->spaceType = SORT_SPACE_TYPE_MEMORY;
 		stats->spaceUsed = (state->allowedMem - state->availMem + 1023) / 1024;
 	}
+
 	if (state->instrument)
 	{
 		stats->workmemused = state->instrument->workmemused;

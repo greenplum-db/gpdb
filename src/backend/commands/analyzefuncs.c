@@ -20,6 +20,7 @@
 #include "miscadmin.h"
 #include "funcapi.h"
 #include "utils/syscache.h"
+#include "utils/faultinjector.h"
 
 /**
  * Statistics related parameters.
@@ -205,6 +206,15 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 
 		ctx->index = 0;
 		ctx->summary_sent = false;
+		/*
+		 * we only get sample data from segindex 0 for replicated table
+		 */
+		if (Gp_role == GP_ROLE_EXECUTE && GpPolicyIsReplicated(onerel->rd_cdbpolicy)
+									   && GpIdentity.segindex > 0)
+		{
+			ctx->index = ctx->num_sample_rows;
+			ctx->summary_sent = true;
+		}
 
 		MemoryContextSwitchTo(oldcontext);
 	}
@@ -286,6 +296,8 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		res = heap_form_tuple(outDesc, outvalues, outnulls);
 
 		ctx->index++;
+
+		SIMPLE_FAULT_INJECTOR("returned_sample_row");
 
 		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(res));
 	}

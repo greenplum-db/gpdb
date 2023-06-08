@@ -643,14 +643,14 @@ drop table ccddl;
 create table ccddl (i int42) with(appendonly = true, orientation=row);
 alter type int42 set default encoding (compresstype=RLE_TYPE);
 alter table ccddl add column j int42 default '1'::int42;
--- No results are returned from the attribute encoding check, as compression with rle is not supported for row tables
+-- No attoptions are shown from the attribute encoding check, as compression with rle is not supported for row tables
 execute ccddlcheck;
 drop table ccddl;
 
 create table ccddl (i int42) with(appendonly = true);
 alter type int42 set default encoding (compresstype=RLE_TYPE);
 alter table ccddl add column j int42 default '1'::int42;
--- No results are returned from the attribute encoding check, as compression with rle is not supported for heap tables
+-- No attoptions are shown from the attribute encoding check, as compression with rle is not supported for row tables
 execute ccddlcheck;
 drop table ccddl;
 

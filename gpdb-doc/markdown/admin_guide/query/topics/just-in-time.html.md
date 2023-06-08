@@ -70,11 +70,11 @@ The JIT workflow can also handle executor fault tolerance: if JIT fails to load 
 
 ## <a id="topic4"></a>Examples
 
-In the examples below, the configuration parameter `jit_above_cost` was modified so it would trigger JIT compilation. The use of JIT affects the cost of the plan, which can or cannot be bigger than the potential savings. JIT was used, but inlining and expensive optimization were not. If `jit_inline_above_cost` or `jit_optimize_above_cost` were also lowered, they could be triggered.
+In the examples below, the configuration parameter `jit_above_cost` was modified so it would trigger JIT compilation. Note that the use of JIT might add more overhead than the potential savings. JIT was used, but inlining and expensive optimization were not. If `jit_inline_above_cost` or `jit_optimize_above_cost` were also lowered, they could be triggered.
 
-You may enable the configuration parameter [gp_explain_jit](../../../ref_guide/config_params/guc-list.html#gp_explain_jit) to display summarized JIT information from all query executions when running the `EXPLAIN` command. You must turn disable it when running regression tests
+You may enable the configuration parameter [gp_explain_jit](../../../ref_guide/config_params/guc-list.html#gp_explain_jit) to display summarized JIT information from all query executions when running the `EXPLAIN` command. You must turn it off when running regression tests.
 
-Note that the output from `EXPLAIN` provides information on JIT such as the slice average timing spent in JIT, what segment the maximum vector comes from, or how many JIT functions are created and total time spent in JIT tasks. This information can be helpful when tuning JIT or debugging a timing problem. Set the configuration parameters `log_min_messages`, `client_min_messages` to `DEBUG 5` to view this information.
+Note that the output from `EXPLAIN` provides information on JIT such as the slice average timing spent in JIT, what segment the maximum vector comes from, or how many JIT functions are created and total time spent in JIT tasks. This information can be helpful when tuning JIT or debugging a timing problem. Run `EXPLAIN (ANALYZE, VERBOSE)` to view this information.
 
 With Postgres Planner:
 

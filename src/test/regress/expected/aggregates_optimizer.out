@@ -1267,9 +1267,13 @@ explain (costs off) select a,c from t1 group by a,c,d;
                Sort Key: a, c, d
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: a, c, d
-                     ->  Seq Scan on t1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(9 rows)
+                     ->  GroupAggregate
+                           Group Key: a, c, d
+                           ->  Sort
+                                 Sort Key: a, c, d
+                                 ->  Seq Scan on t1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 -- Test removal across multiple relations
 explain (costs off) select *

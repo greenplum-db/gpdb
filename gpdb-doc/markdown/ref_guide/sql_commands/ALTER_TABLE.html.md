@@ -30,8 +30,7 @@ ALTER TABLE [IF EXISTS] [ONLY] <name> SET
    | DISTRIBUTED REPLICATED 
 
 ALTER TABLE <name>
-   [ ALTER PARTITION { <partition_name> | FOR (RANK(<number>)) 
-   | FOR (<value>) } [...] ] <partition_action>
+   [ ALTER PARTITION { <partition_name> | FOR (<value>) } [...] ] <partition_action>
 
 where <action> is one of:
                         
@@ -86,18 +85,15 @@ where partition\_action is one of:
   ALTER DEFAULT PARTITION
   DROP DEFAULT PARTITION [IF EXISTS]
   DROP PARTITION [IF EXISTS] { <partition_name> | 
-      FOR (RANK(<number>)) | FOR (<value>) } [CASCADE]
+      FOR (<value>) } [CASCADE]
   TRUNCATE DEFAULT PARTITION
-  TRUNCATE PARTITION { <partition_name> | FOR (RANK(<number>)) | 
-      FOR (<value>) }
+  TRUNCATE PARTITION { <partition_name> | FOR (<value>) }
   RENAME DEFAULT PARTITION TO <new_partition_name>
-  RENAME PARTITION { <partition_name> | FOR (RANK(<number>)) | 
-      FOR (<value>) } TO <new_partition_name>
+  RENAME PARTITION { <partition_name> | FOR (<value>) } TO <new_partition_name>
   ADD DEFAULT PARTITION <name> [ ( <subpartition_spec> ) ]
   ADD PARTITION [<partition_name>] <partition_element>
      [ ( <subpartition_spec> ) ]
-  EXCHANGE PARTITION { <partition_name> | FOR (RANK(<number>)) | 
-       FOR (<value>) } WITH TABLE <table_name>
+  EXCHANGE PARTITION { <partition_name> | FOR (<value>) } WITH TABLE <table_name>
         [ WITH | WITHOUT VALIDATION ]
   EXCHANGE DEFAULT PARTITION WITH TABLE <table_name>
    [ WITH | WITHOUT VALIDATION ]
@@ -108,8 +104,7 @@ where partition\_action is one of:
         END([<datatype>] <range_value>) [INCLUSIVE | EXCLUSIVE] }
     [ INTO ( PARTITION <new_partition_name>, 
              PARTITION <default_partition_name> ) ]
-  SPLIT PARTITION { <partition_name> | FOR (RANK(<number>)) | 
-     FOR (<value>) } AT (<value>) 
+  SPLIT PARTITION { <partition_name> | FOR (<value>) } AT (<value>) 
     [ INTO (PARTITION <partition_name>, PARTITION <partition_name>)]  
 ```
 
@@ -204,7 +199,7 @@ Although you can specify the table's access method using the <code>appendoptimiz
 
     > **Note** GPORCA supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
 
-    Changing a column data type requires a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
+    Changing a column data type may require a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
 
 -   **SET/DROP DEFAULT** — Sets or removes the default value for a column. Default values only apply in subsequent `INSERT` or `UPDATE` commands; they do not cause rows already in the table to change.
 -   **SET/DROP NOT NULL** — Changes whether a column is marked to allow null values or to reject null values. You can only use `SET NOT NULL` when the column contains no null values.
@@ -275,8 +270,6 @@ ONLY
 
 name
 :   The name \(possibly schema-qualified\) of an existing table to alter. If `ONLY` is specified, only that table is altered. If `ONLY` is not specified, the table and all its descendant tables \(if any\) are updated.
-
-    > **Note** Constraints can only be added to an entire table, not to a partition. Because of that restriction, the name parameter can only contain a table name, not a partition name.
 
 column\_name
 :   Name of a new or existing column. Note that Greenplum Database distribution key columns must be treated with special care. Altering or dropping these columns can change the distribution policy for the table.
@@ -369,9 +362,9 @@ ADD PARTITION
 
 :   **VALUES** - For list partitions, defines the value\(s\) that the partition will contain.
 
-:   **START** - For range partitions, defines the starting range value for the partition. By default, start values are `INCLUSIVE`. For example, if you declared a start date of '`2016-01-01`', then the partition would contain all dates greater than or equal to '`2016-01-01`'. Typically the data type of the `START` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
+:   **START** - For range partitions, defines the starting range value for the partition. By default, start values are `INCLUSIVE`. For example, if you declared a start date of '`2016-01-01`', then the partition would contain all dates greater than or equal to '`2016-01-01`'. The data type of the `START` expression must support a suitable `+` operator, for example `timestamp` or `integer` (not `float` or `text`) if it is defined with the `EXCLUSIVE` keyword. Typically the data type of the `START` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
 
-:   **END** - For range partitions, defines the ending range value for the partition. By default, end values are `EXCLUSIVE`. For example, if you declared an end date of '`2016-02-01`', then the partition would contain all dates less than but not equal to '`2016-02-01`'. Typically the data type of the `END` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
+:   **END** - For range partitions, defines the ending range value for the partition. By default, end values are `EXCLUSIVE`. For example, if you declared an end date of '`2016-02-01`', then the partition would contain all dates less than but not equal to '`2016-02-01`'. The data type of the `END` expression must support a suitable `+` operator, for example `timestamp` or `integer` (not `float` or `text`) if it is defined with the `INCLUSIVE` keyword. Typically the data type of the `END` expression is the same type as the partition key column. If that is not the case, then you must explicitly cast to the intended data type.
 
 :   **WITH** - Sets the table storage options for a partition. For example, you may want older partitions to be append-optimized tables and newer partitions to be regular heap tables. See [CREATE TABLE](CREATE_TABLE.html) for a description of the storage options.
 
@@ -384,15 +377,13 @@ EXCHANGE \[DEFAULT\] PARTITION
 
 :   **WITH TABLE** table\_name - The name of the table you are swapping into the partition design. You can exchange a table where the table data is stored in the database. For example, the table is created with the `CREATE TABLE` command. The table must have the same number of columns, column order, column names, column types, and distribution policy as the parent table.
 
-:   With the `EXCHANGE PARTITION` clause, you can also exchange a readable external table \(created with the `CREATE EXTERNAL TABLE` command\) into the partition hierarchy in the place of an existing leaf child partition. If you specify a readable external table, you must also specify the `WITHOUT VALIDATION` clause to skip table validation against the `CHECK` constraint of the partition you are exchanging.
+:   With the `EXCHANGE PARTITION` clause, you can also exchange a readable external table \(created with the `CREATE EXTERNAL TABLE` command\) into the partition hierarchy in the place of an existing leaf child partition.
 
 :   Exchanging a leaf child partition with an external table is not supported if the partitioned table contains a column with a check constraint or a `NOT NULL` constraint.
 
 :   You cannot exchange a partition with a replicated table. Exchanging a partition with a partitioned table or a child partition of a partitioned table is not supported.
 
-:   **WITH** \| **WITHOUT VALIDATION** - Validates that the data in the table matches the `CHECK` constraint of the partition you are exchanging. The default is to validate the data against the `CHECK` constraint.
-
-    > **Caution** If you specify the `WITHOUT VALIDATION` clause, you must ensure that the data in table that you are exchanging for an existing child leaf partition is valid against the `CHECK` constraints on the partition. Otherwise, queries against the partitioned table might return incorrect results.
+:   **WITH** \| **WITHOUT VALIDATION** - No-op (always validate the data against the partition constraint).
 
 SET SUBPARTITION TEMPLATE
 :   Modifies the subpartition template for an existing partition. After a new subpartition template is set, all new partitions added will have the new subpartition design \(existing partitions are not modified\).
@@ -416,10 +407,7 @@ SPLIT PARTITION
 :   **INTO** - Allows you to specify names for the two new partitions created by the split.
 
 partition\_name
-:   The given name of a partition. The given partition name is the `partitionname` column value in the *[pg\_partitions](../system_catalogs/catalog_ref-views.html#pg_partitions)* system view.
-
-FOR \(RANK\(number\)\)
-:   For range partitions, the rank of the partition in the range.
+:   The given name of a partition. You can obtain the the table names of the leaf partitions of a partitioned table using the `pg_partition_tree() function.
 
 FOR \('value'\)
 :   Specifies a partition by declaring a value that falls within the partition boundary specification. If the value declared with `FOR` matches to both a partition and one of its subpartitions \(for example, if the value is a date and the table is partitioned by month and then by day\), then `FOR` will operate on the first level where a match is found \(for example, the monthly partition\). If your intent is to operate on a subpartition, you must declare so as follows: `ALTER TABLE name ALTER PARTITION FOR ('2016-10-01') DROP PARTITION FOR ('2016-10-01');`
@@ -438,7 +426,7 @@ This table lists the `ALTER TABLE` operations that require a table rewrite when 
 
 |Operation \(See Note\)|Append-Optimized, Column-Oriented|Append-Optimized|Heap|
 |----------------------|---------------------------------|----------------|----|
-|`ALTER COLUMN TYPE`|Yes|Yes|Yes|
+|`ALTER COLUMN TYPE`|No|Yes|Yes|
 |`ADD COLUMN`|No|Yes|Yes|
 | `ALTER COLUMN SET ENCODING`|Yes|N/A|N/A|
 
@@ -458,7 +446,7 @@ The `USING` option of `SET DATA TYPE` can actually specify any expression involv
 
 If a table is partitioned or has any descendant tables, it is not permitted to add, rename, or change the type of a column, or rename an inherited constraint in the parent table without doing the same to the descendants. This ensures that the descendants always have columns matching the parent.
 
-To see the structure of a partitioned table, you can use the view [pg\_partitions](../system_catalogs/catalog_ref-views.html#pg_partitions). This view can help identify the particular partitions you may want to alter.
+Use the `pg_partition_tree()` function to view the structure of a partitioned table. This function returns the partition hierarchy, and can help you identify the particular partitions you may want to alter.
 
 A recursive `DROP COLUMN` operation will remove a descendant table's column only if the descendant does not inherit that column from any other parents and never had an independent definition of the column. A nonrecursive `DROP COLUMN` \(`ALTER TABLE ONLY ... DROP COLUMN`\) never removes any descendant columns, but instead marks them as independently defined rather than inherited.
 
@@ -613,12 +601,6 @@ Rename a partition:
 ```
 ALTER TABLE sales RENAME PARTITION FOR ('2016-01-01') TO 
 jan08;
-```
-
-Drop the first \(oldest\) partition in a range sequence:
-
-```
-ALTER TABLE sales DROP PARTITION FOR (RANK(1));
 ```
 
 Exchange a table into your partition design:

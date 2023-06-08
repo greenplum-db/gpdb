@@ -484,7 +484,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           <dxl:UpperBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAJGVjY2JjODdlNGI1Y2UyZmUyODMwOGZkOWYyYTdiYWYz" LintValue="162161524"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.26855161.1.0" Name="y_idx_1_prt_def" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.26855161.1.0" Name="y_idx_1_prt_def" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
@@ -495,10 +495,10 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           </dxl:Comparison>
         </dxl:PartConstraint>
       </dxl:Index>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.26854909.1.1.10" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>

@@ -1612,6 +1612,7 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 				{
 					mapred_plist_t *newitem;
 					int i;
+					size_t len;
 
 					/* Destroy any previous default values we setup */
 					mapred_destroy_plist(&obj->u.input.columns);
@@ -1627,10 +1628,12 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 
 						/* Add the column to the list */
 						newitem = mapred_malloc(sizeof(mapred_plist_t));
-						newitem->name = mapred_malloc(strlen(name)+1);
-						strncpy(newitem->name, name, strlen(name)+1);
-						newitem->type = mapred_malloc(strlen(type)+1);
-						strncpy(newitem->type, type, strlen(type)+1);
+						len = strlen(name) + 1;
+						newitem->name = mapred_malloc(len);
+						strncpy(newitem->name, name, len);
+						len = strlen(type) + 1;
+						newitem->type = mapred_malloc(len);
+						strncpy(newitem->type, type, len);
 						newitem->next = obj->u.input.columns;
 						obj->u.input.columns = newitem;
 					}

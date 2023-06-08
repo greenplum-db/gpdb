@@ -79,7 +79,6 @@
 static bool check_optimizer(bool *newval, void **extra, GucSource source);
 static bool check_verify_gpfdists_cert(bool *newval, void **extra, GucSource source);
 static bool check_dispatch_log_stats(bool *newval, void **extra, GucSource source);
-static bool check_gp_hashagg_default_nbatches(int *newval, void **extra, GucSource source);
 static bool check_gp_workfile_compression(bool *newval, void **extra, GucSource source);
 
 /* Helper function for guc setter */
@@ -223,6 +222,7 @@ int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 bool		gp_resource_group_bypass;
 bool		gp_resource_group_bypass_catalog_query;
+bool		gp_resource_group_bypass_direct_dispatch;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -414,7 +414,7 @@ bool		gp_reject_internal_tcp_conn = true;
 bool		gp_enable_segment_copy_checking = true;
 /*
  * Default storage options GUC.  Value is comma-separated name=value
- * pairs.  E.g. "appendonly=true,orientation=column"
+ * pairs.  E.g. "blocksize=32768,compresstype=none,checksum=true"
  */
 char	   *gp_default_storage_options = NULL;
 
@@ -432,6 +432,12 @@ bool		gp_log_endpoints = false;
 
 /* optional reject to  parse ambigous 5-digits date in YYYMMDD format */
 bool		gp_allow_date_field_width_5digits = false;
+
+/* GUCs for Just In Time (JIT) compilation */
+bool		optimizer_jit_enabled;
+double		optimizer_jit_above_cost;
+double		optimizer_jit_inline_above_cost;
+double		optimizer_jit_optimize_above_cost;
 
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
@@ -1820,7 +1826,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_trace_fallback", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Print a message at INFO level, whenever GPORCA falls back."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_trace_fallback,
 		false,
@@ -2015,7 +2021,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_dpe_stats", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable statistics derivation for partitioned tables with dynamic partition elimination."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_dpe_stats,
 		true,
@@ -2296,7 +2302,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_enable_derive_stats_all_groups", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable stats derivation for all groups after exploration."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_derive_stats_all_groups,
 		false,
@@ -2310,7 +2316,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_force_multistage_agg,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -2628,7 +2634,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_force_three_stage_scalar_dqa", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Force optimizer to always pick 3 stage aggregate plan for scalar distinct qualified aggregate."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_force_three_stage_scalar_dqa,
 		true,
@@ -2650,7 +2656,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_array_constraints", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Allows the optimizer's constraint framework to derive array constraints."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_array_constraints,
 		true,
@@ -2661,7 +2667,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_use_gpdb_allocators", PGC_POSTMASTER, RESOURCES_MEM,
 			gettext_noop("Enable ORCA to use GPDB Memory Contexts"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_use_gpdb_allocators,
 		true,
@@ -2736,7 +2742,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"optimizer_replicated_table_insert", PGC_USERSET, STATS_ANALYZE,
 			gettext_noop("Omit broadcast motion when inserting into replicated table"),
 			gettext_noop("Only when source is SegmentGeneral or General locus"),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_replicated_table_insert,
 		true, NULL, NULL
@@ -2762,7 +2768,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resource_group_bypass", PGC_USERSET, RESOURCES,
+		{"gp_resource_group_bypass", PGC_SUSET, RESOURCES,
 			gettext_noop("If the value is true, the query in this session will not be limited by resource group."),
 			NULL
 		},
@@ -2777,6 +2783,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&gp_resource_group_bypass_catalog_query,
+		true, NULL, NULL
+	},
+
+	{
+		{"gp_resource_group_bypass_direct_dispatch", PGC_USERSET, RESOURCES,
+			gettext_noop("Bypass direct dispatch plan."),
+			NULL
+		},
+		&gp_resource_group_bypass_direct_dispatch,
 		true, NULL, NULL
 	},
 
@@ -2820,7 +2835,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"gp_allow_date_field_width_5digits", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
-			gettext_noop("Allow parsing input date field with exactly continous 5 digits in non-standard YYYMMDD timeformat (follow pg12+ behave)"),
+			gettext_noop("Allow parsing input date field with exactly continuous 5 digits in non-standard YYYMMDD timeformat (follow pg12+ behave)"),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
@@ -2947,6 +2962,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL,
 		},
 		&gp_log_suboverflow_statement,
+		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit", PGC_USERSET, QUERY_TUNING_OTHER,
+		 gettext_noop("Allow Optimizer based JIT compilation."),
+		 NULL,
+		 GUC_EXPLAIN
+		},
+		&optimizer_jit_enabled,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3696,28 +3721,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_hashagg_groups_per_bucket", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Target density of hashtable used by Hashagg during execution"),
-			gettext_noop("A smaller value will tend to produce larger hashtables, which increases agg performance"),
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_hashagg_groups_per_bucket,
-		5, 1, 25,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hashagg_default_nbatches", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Default number of batches for hashagg's (re-)spilling phases."),
-			gettext_noop("Must be a power of two."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_hashagg_default_nbatches,
-		32, 4, 1048576,
-		check_gp_hashagg_default_nbatches, NULL, NULL
-	},
-
-	{
 		{"gp_motion_slice_noop", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Make motion nodes in certain slices noop"),
 			gettext_noop("Make motion nodes noop, to help analyze performance"),
@@ -3892,7 +3895,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_resgroup_memory_query_fixed_mem,
 		0, 0, INT_MAX,
-		NULL, NULL, NULL
+		gpvars_check_rg_query_fixed_mem, NULL, NULL
 	},
 
 	{
@@ -3953,7 +3956,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"optimizer_cte_inlining_bound", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Set the CTE inlining cutoff"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cte_inlining_bound,
 		0, 0, INT_MAX,
@@ -3975,7 +3978,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"optimizer_array_expansion_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Item limit for expansion of arrays in WHERE clause for constraint derivation."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_array_expansion_threshold,
 		20, 0, INT_MAX,
@@ -3986,7 +3989,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"optimizer_push_group_by_below_setop_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Maximum number of children setops have to consider pushing group bys below it"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_push_group_by_below_setop_threshold,
 		10, 0, INT_MAX,
@@ -3997,7 +4000,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"optimizer_xform_bind_threshold", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Maximum number bindings per xform per group expression. A value of 0 disables."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_xform_bind_threshold,
 		0, 0, INT_MAX,
@@ -4008,7 +4011,7 @@ struct config_int ConfigureNamesInt_gp[] =
             {"optimizer_skew_factor", PGC_USERSET, DEVELOPER_OPTIONS,
              gettext_noop("Coefficient of skew ratio computed from sample stastics. Default 0: skew computation from sample statistics turned off. [1,100]: skew ratio computed from sample statistics. The skewness used for costing is the product of the optimizer_skew_factor and the skew ratio."),
              NULL,
-             GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			 GUC_NOT_IN_SAMPLE
             },
             &optimizer_skew_factor,
             0, 0, 100,
@@ -4040,7 +4043,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"optimizer_penalize_broadcast_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Maximum number of rows of a relation that can be broadcasted without penalty. A value of 0 disables."),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_penalize_broadcast_threshold,
 		100000, 0, INT_MAX,
@@ -4263,7 +4266,7 @@ struct config_real ConfigureNamesReal_gp[] =
 		{"optimizer_damping_factor_filter", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("select predicate damping factor in optimizer, 1.0 means no damping"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_damping_factor_filter,
 		0.75, 0.0, 1.0,
@@ -4274,7 +4277,7 @@ struct config_real ConfigureNamesReal_gp[] =
 		{"optimizer_damping_factor_join", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("join predicate damping factor in optimizer, 1.0 means no damping, 0.0 means square root method"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_damping_factor_join,
 		0.0, 0.0, 1.0,
@@ -4284,7 +4287,7 @@ struct config_real ConfigureNamesReal_gp[] =
 		{"optimizer_damping_factor_groupby", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("groupby operator damping factor in optimizer, 1.0 means no damping"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_damping_factor_groupby,
 		0.75, 0.0, 1.0,
@@ -4295,7 +4298,7 @@ struct config_real ConfigureNamesReal_gp[] =
 		{"optimizer_cost_threshold", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set the threshold for plan sampling relative to the cost of best plan, 0.0 means unbounded"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cost_threshold,
 		0.0, 0.0, INT_MAX,
@@ -4306,7 +4309,7 @@ struct config_real ConfigureNamesReal_gp[] =
 		{"optimizer_nestloop_factor", PGC_USERSET, QUERY_TUNING_OTHER,
 			gettext_noop("Set the nestloop join cost factor in the optimizer"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_nestloop_factor,
 		1024.0, 1.0, DBL_MAX,
@@ -4317,10 +4320,40 @@ struct config_real ConfigureNamesReal_gp[] =
 		{"optimizer_sort_factor",PGC_USERSET, QUERY_TUNING_OTHER,
 			gettext_noop("Set the sort cost factor in the optimizer, 1.0 means same as default, > 1.0 means more costly than default, < 1.0 means means less costly than default"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_sort_factor,
 		1.0, 0.0, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Perform JIT compilation if query is more expensive."),
+			gettext_noop("-1 disables JIT compilation."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_above_cost,
+		7500, -1, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_optimize_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Optimize JITed functions if query is more expensive."),
+			gettext_noop("-1 disables JIT optimization."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_optimize_above_cost,
+		37500, -1, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_inline_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Perform JIT inlining if query is more expensive."),
+			gettext_noop("-1 disables inlining."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_inline_above_cost,
+		37500, -1, DBL_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -4593,7 +4626,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		{"optimizer_cost_model", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set optimizer cost model."),
 			gettext_noop("Valid values are legacy, calibrated, experimental"),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_cost_model,
 		OPTIMIZER_GPDB_CALIBRATED, optimizer_cost_model_options,
@@ -4942,21 +4975,6 @@ check_dispatch_log_stats(bool *newval, void **extra, GucSource source)
 			return false;
 	}
 	return true;
-}
-
-bool
-check_gp_hashagg_default_nbatches(int *newval, void **extra, GucSource source)
-{
-	/* Must be a power of two */
-	if (0 == (*newval & (*newval - 1)))
-	{
-		return true;
-	}
-	else
-	{
-		GUC_check_errmsg("gp_hashagg_default_nbatches must be a power of two");
-		return false;
-	}
 }
 
 /*

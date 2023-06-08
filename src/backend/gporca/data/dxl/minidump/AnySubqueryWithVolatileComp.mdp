@@ -71,7 +71,7 @@ Physical plan:
       <dxl:TraceFlags Value="102074,102146,102120,103001,103014,103015,103022,103027,103029,104003,104004,104005,105000,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:GPDBFunc Mdid="0.24578.1.0" Name="voleq" ReturnsSet="false" Stability="Volatile" DataAccess="ContainsSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.24578.1.0" Name="voleq" ReturnsSet="false" Stability="Volatile" IsStrict="false">
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.24579.1.0" Name="=" ComparisonType="Other" ReturnsNullOnNullInput="false">

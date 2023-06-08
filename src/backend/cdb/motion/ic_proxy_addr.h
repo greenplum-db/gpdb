@@ -61,7 +61,6 @@ extern List		   *ic_proxy_added_addrs;
 
 extern void ic_proxy_reload_addresses(uv_loop_t *loop);
 extern const ICProxyAddr *ic_proxy_get_my_addr(void);
-extern int ic_proxy_addr_get_port(const ICProxyAddr *addr);
 extern int ic_proxy_extract_sockaddr(const struct sockaddr *addr,
 									 char *name, size_t namelen,
 									 int *port, int *family);

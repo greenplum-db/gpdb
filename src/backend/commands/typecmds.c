@@ -1783,7 +1783,6 @@ makeRangeConstructors(const char *name, Oid namespace,
 								 InvalidOid,	/* prosupport */
 								 1.0,	/* procost */
 								 0.0,	/* prorows */
-								 PRODATAACCESS_NONE,
 								 PROEXECLOCATION_ANY);
 
 		/*

@@ -686,11 +686,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	if (into)
 		eflags |= GetIntoRelEFlags(into);
 
-	if (ShouldUnassignResGroup())
-	{
-		bool inFunction = already_under_executor_run() || utility_nested();
-		ShouldBypassQuery(queryDesc->plannedstmt, inFunction);
-	}
+	check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 	queryDesc->plannedstmt->query_mem =
 		ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
@@ -3435,32 +3431,24 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 
 /*
  * If it's EXPLAIN ANALYZE, show tuplesort stats for a sort node
- *
- * GPDB_90_MERGE_FIXME: The sort statistics are stored quite differently from
- * upstream, it would be nice to rewrite this to avoid looping over all the
- * sort methods and instead have a _get_stats() function as in upstream.
  */
 static void
 show_sort_info(SortState *sortstate, ExplainState *es)
 {
-	CdbExplain_NodeSummary *ns;
-	int			i;
-
 	if (!es->analyze)
-		return;
-
-	ns = ((PlanState *) sortstate)->instrument->cdbNodeSummary;
-	if (!ns)
 		return;
 
 	/*
 	 * Gather QEs' sort statistics
 	 *
-	 * shared_info stores workers' info, but Greenplum stores QEs
+	 * shared_info stores workers' info, but Greenplum stores QEs'
 	 */
 	int64 peakSpaceUsed = 0;
 	int64 totalSpaceUsed = 0;
 	int64 avgSpaceUsed = 0;
+	const char *sortMethod = NULL;
+	const char *spaceType = NULL;
+
 	if (sortstate->shared_info != NULL)
 	{
 		int n;
@@ -3470,6 +3458,10 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			sinstrument = &sortstate->shared_info->sinstrument[n];
 			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
 				continue;		/* ignore any unfilled slots */
+			if (!sortMethod)
+				sortMethod = tuplesort_method_name(sinstrument->sortMethod);
+			if (!spaceType)
+				spaceType = tuplesort_space_type_name(sinstrument->spaceType);
 			peakSpaceUsed = Max(peakSpaceUsed, sinstrument->spaceUsed);
 			totalSpaceUsed += sinstrument->spaceUsed;
 		}
@@ -3478,67 +3470,31 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 			totalSpaceUsed / sortstate->shared_info->num_workers : 0;
 	}
 
-	for (i = 0; i < NUM_SORT_METHOD; i++)
 	{
-		CdbExplain_Agg	*agg;
-		const char *sortMethod;
-		const char *spaceType;
-		int			j;
-
-		/*
-		 * Memory and disk usage statistics are saved separately in GPDB so
-		 * need to pull out the one in question first
-		 */
-		for (j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
-			agg = &ns->sortSpaceUsed[j][i];
-
-			if (agg->vcnt > 0)
-				break;
-		}
-		/*
-		 * If the current sort method in question hasn't been used, skip to
-		 * next one
-		 */
-		if (j >= NUM_SORT_SPACE_TYPE)
-			continue;
-
-		sortMethod = tuplesort_method_name(i);
-		spaceType = tuplesort_space_type_name(j);
-
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Sort Method:  %s  %s: %ldkB",
-				sortMethod, spaceType, (long) agg->vsum);
+							 sortMethod, spaceType, totalSpaceUsed);
 			if (es->verbose)
 			{
-				if (peakSpaceUsed)
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Peak Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
-									 peakSpaceUsed,
-									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
-									 agg->vcnt);
-				else
-					appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-									 totalSpaceUsed ? totalSpaceUsed : (long) agg->vmax,
-									 avgSpaceUsed ? avgSpaceUsed : (long) (agg->vsum / agg->vcnt),
-									 agg->vcnt);
+				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
+								 peakSpaceUsed,
+								 avgSpaceUsed,
+								 sortstate->shared_info->num_workers);
 			}
 			appendStringInfo(es->str, "\n");
 		}
 		else
 		{
 			ExplainPropertyText("Sort Method", sortMethod, es);
-			ExplainPropertyInteger("Sort Space Used", "kB", agg->vsum, es);
+			ExplainPropertyInteger("Sort Space Used", "kB", totalSpaceUsed, es);
 			ExplainPropertyText("Sort Space Type", spaceType, es);
 			if (es->verbose)
 			{
-				ExplainPropertyInteger("Sort Max Segment Memory", "kB", totalSpaceUsed ? totalSpaceUsed : agg->vmax, es);
-				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed ? avgSpaceUsed : (agg->vsum / agg->vcnt), es);
-				if (peakSpaceUsed)
-					ExplainPropertyInteger("Sort Peak Segment Memory", "kB", peakSpaceUsed, es);
-				ExplainPropertyInteger("Sort Segments", NULL, agg->vcnt, es);
+				ExplainPropertyInteger("Sort Max Segment Memory", "kB", peakSpaceUsed, es);
+				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed, es);
+				ExplainPropertyInteger("Sort Segments", NULL, sortstate->shared_info->num_workers, es);
 			}
 		}
 	}

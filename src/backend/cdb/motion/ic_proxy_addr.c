@@ -350,25 +350,6 @@ ic_proxy_get_my_addr(void)
 }
 
 /*
- * Get the port from an address.
- *
- * Return -1 if cannot find the port.
- */
-int
-ic_proxy_addr_get_port(const ICProxyAddr *addr)
-{
-	if (addr->sockaddr.ss_family == AF_INET)
-		return ntohs(((struct sockaddr_in *) addr)->sin_port);
-	else if (addr->sockaddr.ss_family == AF_INET6)
-		return ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
-
-	elog(WARNING,
-				 "ic-proxy: invalid address family %d for seg%d,dbid%d",
-				 addr->sockaddr.ss_family, addr->content, addr->dbid);
-	return -1;
-}
-
-/*
  * Extract the name and port from a sockaddr.
  *
  * - the hostname is stored in "name", the recommended size is HOST_NAME_MAX;

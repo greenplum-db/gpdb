@@ -516,6 +516,12 @@ extern bool optimizer_sample_plans;
 extern int	optimizer_plan_id;
 extern int	optimizer_samples_number;
 
+/* Optimizer Just In Time (JIT) compilation related GUCs*/
+extern  bool	optimizer_jit_enabled;
+extern  double  optimizer_jit_above_cost;
+extern  double  optimizer_jit_inline_above_cost;
+extern  double  optimizer_jit_optimize_above_cost;
+
 /* Cardinality estimation related GUCs used by the Optimizer */
 extern bool optimizer_extract_dxl_stats;
 extern bool optimizer_extract_dxl_stats_all_nodes;
@@ -800,6 +806,7 @@ extern const char *gpvars_show_gp_resource_manager_policy(void);
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source);
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
+extern bool gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source);
 extern int guc_name_compare(const char *namea, const char *nameb);
 extern void DispatchSyncPGVariable(struct config_generic * gconfig);
 

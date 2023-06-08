@@ -265,7 +265,6 @@ Doc Index
             - [pg\_opclass](./system_catalogs/pg_opclass.md)
             - [pg\_operator](./system_catalogs/pg_operator.md)
             - [pg\_opfamily](./system_catalogs/pg_opfamily.md)
-            - [pg\_partition](./system_catalogs/pg_partition.md)
             - [pg\_partitioned\_table](./system_catalogs/pg_partitioned_table.md)
             - [pg\_pltemplate](./system_catalogs/pg_pltemplate.md)
             - [pg\_policy](./system_catalogs/pg_policy.md)

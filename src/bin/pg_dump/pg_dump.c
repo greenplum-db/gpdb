@@ -4882,14 +4882,6 @@ binary_upgrade_set_rel_ao_oids(Archive *fout, PQExpBuffer upgrade_buffer, const 
 						"'%u'::pg_catalog.oid, '%s_%u'::text);\n",
 						tblinfo->aotbl->segrelid, PG_AOSEGMENT_NAMESPACE, aoseg_prefix, tblinfo->dobj.catId.oid);
 
-	/* pg_aoseg composite type */
-	simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->segreltype);
-	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-	 					"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, '%s_%u'::text);\n",
-					  tblinfo->aotbl->segreltype, PG_AOSEGMENT_NAMESPACE, aoseg_prefix, tblinfo->dobj.catId.oid);
-
 	/* blkdir is optional. */
 	if (OidIsValid(tblinfo->aotbl->blkdirrelid))
 	{
@@ -4901,14 +4893,6 @@ binary_upgrade_set_rel_ao_oids(Archive *fout, PQExpBuffer upgrade_buffer, const 
 							"SELECT pg_catalog.binary_upgrade_set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
 							"'%u'::pg_catalog.oid, 'pg_aoblkdir_%d'::text);\n",
 							tblinfo->aotbl->blkdirrelid, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
-
-		/* pg_aoblkdir composite type */
-		simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->blkdirreltype);
-		appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-		appendPQExpBuffer(upgrade_buffer,
-							"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
-							"'%u'::pg_catalog.oid, 'pg_aoblkdir_%d'::text);\n",
-							tblinfo->aotbl->blkdirreltype, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
 
 		/* pg_aoblkdir index */
 		simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->blkdiridxid);
@@ -4928,14 +4912,6 @@ binary_upgrade_set_rel_ao_oids(Archive *fout, PQExpBuffer upgrade_buffer, const 
 						"SELECT pg_catalog.binary_upgrade_set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
 						"'%u'::pg_catalog.oid, 'pg_aovisimap_%u'::text);\n",
 						tblinfo->aotbl->visimaprelid, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
-
-	/* pg_aovisimap composite type */
-	simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->visimapreltype);
-	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-	 					"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, 'pg_aovisimap_%u'::text);\n\n",
-					  tblinfo->aotbl->visimapreltype, PG_AOSEGMENT_NAMESPACE, tblinfo->dobj.catId.oid);
 
 	/* pg_aovisimap index */
 	simple_oid_list_append(&preassigned_oids, tblinfo->aotbl->visimapidxid);
@@ -4975,14 +4951,6 @@ binary_upgrade_set_toast_oids_by_rel(Archive *fout, PQExpBuffer upgrade_buffer, 
 						"SELECT pg_catalog.binary_upgrade_set_next_toast_pg_class_oid('%u'::pg_catalog.oid, "
 						"'%u'::pg_catalog.oid, 'pg_toast_%u'::text);\n",
 						tblinfo->toast_oid, PG_TOAST_NAMESPACE, tblinfo->dobj.catId.oid);
-
-	/* pg_toast composite type */
-	simple_oid_list_append(&preassigned_oids, tblinfo->toast_type);
-	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-						"SELECT pg_catalog.binary_upgrade_set_next_toast_pg_type_oid('%u'::pg_catalog.oid, "
-						"'%u'::pg_catalog.oid, 'pg_toast_%u'::text);\n\n",
-					  tblinfo->toast_type, PG_TOAST_NAMESPACE, tblinfo->dobj.catId.oid);
 
 	/* every toast table has an index */
 	simple_oid_list_append(&preassigned_oids, tblinfo->toast_index);
@@ -6423,7 +6391,6 @@ getTables(Archive *fout, int *numTables)
 	int			i_relstorage;
 	int			i_parrelid;
 	int			i_parlevel;
-	int			i_toast_type_oid;
 	int			i_toast_index_oid;
 	int			i_distclause;
 	int			i_partclause;
@@ -6580,7 +6547,6 @@ getTables(Archive *fout, int *numTables)
 
 	if (dopt->binary_upgrade)
 		appendPQExpBufferStr(query,
-							"tc.reltype AS toast_type_oid, "
 							"i.indexrelid as toast_index_oid, ");
 
 	/* GPDB5: We expect either an empty policy entry, or exactly
@@ -6745,7 +6711,6 @@ getTables(Archive *fout, int *numTables)
 	i_relstorage = PQfnumber(res, "relstorage");
 	i_parrelid = PQfnumber(res, "parrelid");
 	i_parlevel = PQfnumber(res, "parlevel");
-	i_toast_type_oid = PQfnumber(res, "toast_type_oid");
 	i_toast_index_oid = PQfnumber(res, "toast_index_oid");
 	i_distclause = PQfnumber(res, "distclause");
 	i_partclause = PQfnumber(res, "partclause");
@@ -6860,7 +6825,6 @@ getTables(Archive *fout, int *numTables)
 			/* AO table metadata will be set in getAOTableInfo() */
 			tblinfo[i].aotbl = NULL;
 			tblinfo[i].toast_index = atooid(PQgetvalue(res, i, i_toast_index_oid));
-			tblinfo[i].toast_type = atooid(PQgetvalue(res, i, i_toast_type_oid));
 		}
 
 		/* other fields were zeroed above */
@@ -12388,7 +12352,6 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 	char	   *proparallel;
 	char	   *lanname;
 	char	   *callbackfunc;
-	char	   *prodataaccess;
 	char	   *proexeclocation;
 	const char *rettypename;
 	int			nallargs;
@@ -12426,7 +12389,6 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 							"proconfig,\n"
 							"procost,\n"
 							"prorows,\n"
-							"prodataaccess,\n"
 							"pg_catalog.pg_get_function_arguments(p.oid) AS funcargs,\n"
 							"pg_catalog.pg_get_function_identity_arguments(p.oid) AS funciargs,\n"
 							"pg_catalog.pg_get_function_result(p.oid) AS funcresult,\n"
@@ -12515,12 +12477,11 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 	proparallel = PQgetvalue(res, 0, PQfnumber(res, "proparallel"));
 	lanname = PQgetvalue(res, 0, PQfnumber(res, "lanname"));
 	callbackfunc = PQgetvalue(res, 0, PQfnumber(res, "callbackfunc"));
-	prodataaccess = PQgetvalue(res, 0, PQfnumber(res, "prodataaccess"));
 	proexeclocation = PQgetvalue(res, 0, PQfnumber(res, "proexeclocation"));
 
 	/*
-	 * See backend/commands/define.c for details of how the 'AS' clause is
-	 * used. In GPDB Paris and up, an unused probin is NULL (here ""); previous8bc709b37411ba7ad0fd0f1f79c354714424af3d
+	 * See backend/commands/functioncmds.c for details of how the 'AS' clause
+	 * is used.  In 8.4 and up, an unused probin is NULL (here ""); previous
 	 * versions would set it to "-".  There are no known cases in which prosrc
 	 * is unused, so the tests below for "-" are probably useless.
 	 */
@@ -12713,15 +12674,6 @@ dumpFunc(Archive *fout, const FuncInfo *finfo)
 			fatal("unrecognized proparallel value for function \"%s\"",
 				  finfo->dobj.name);
 	}
-
-	if (prodataaccess[0] == PRODATAACCESS_NONE)
-		appendPQExpBuffer(q, " NO SQL");
-	else if (prodataaccess[0] == PRODATAACCESS_CONTAINS)
-		appendPQExpBuffer(q, " CONTAINS SQL");
-	else if (prodataaccess[0] == PRODATAACCESS_READS)
-		appendPQExpBuffer(q, " READS SQL DATA");
-	else if (prodataaccess[0] == PRODATAACCESS_MODIFIES)
-		appendPQExpBuffer(q, " MODIFIES SQL DATA");
 
 	if (proexeclocation[0] == PROEXECLOCATION_ANY)
 	{
@@ -18462,8 +18414,11 @@ dumpSequence(Archive *fout, const TableInfo *tbinfo)
 	{
 		binary_upgrade_set_pg_class_oids(fout, query,
 										 tbinfo->dobj.catId.oid, false);
-		binary_upgrade_set_type_oids_by_rel(fout, query,
-												tbinfo);
+
+		/*
+		 * In older GPDB versions a sequence will have a pg_type entry, but GPDB7
+		 * doesn't use that, so don't attempt to preserve the type OID.
+		 */
 	}
 
 	if (tbinfo->is_identity_sequence)

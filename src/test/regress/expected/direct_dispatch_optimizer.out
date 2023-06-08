@@ -672,15 +672,19 @@ explain (costs off) select gp_segment_id, count(*) from bar_randDistr group by g
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  Finalize GroupAggregate
          Group Key: gp_segment_id
          ->  Sort
                Sort Key: gp_segment_id
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: gp_segment_id
-                     ->  Seq Scan on bar_randdistr
+                     ->  Partial GroupAggregate
+                           Group Key: gp_segment_id
+                           ->  Sort
+                                 Sort Key: gp_segment_id
+                                 ->  Seq Scan on bar_randdistr
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(13 rows)
 
 -- Case2: Conjunction scenario with filter condition on gp_segment_id and column
 explain (costs off) select gp_segment_id, * from bar_randDistr where gp_segment_id=0 and col1 between 1 and 10;
@@ -919,21 +923,28 @@ explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid grou
                     QUERY PLAN                     
 ---------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  Finalize GroupAggregate
          Group Key: gp_segment_id
          ->  Sort
                Sort Key: gp_segment_id
-               ->  Seq Scan on t_test_dd_via_segid
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: gp_segment_id
+                     ->  Partial GroupAggregate
+                           Group Key: gp_segment_id
+                           ->  Sort
+                                 Sort Key: gp_segment_id
+                                 ->  Seq Scan on t_test_dd_via_segid
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(9 rows)
 
 select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
+INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  gp_segment_id | count 
 ---------------+-------
+             2 |     2
              0 |     3
              1 |     1
-             2 |     2
 (3 rows)
 
 -- test direct dispatch via gp_segment_id qual with conjunction

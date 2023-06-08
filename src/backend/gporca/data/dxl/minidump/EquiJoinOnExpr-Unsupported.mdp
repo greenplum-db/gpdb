@@ -998,7 +998,7 @@
         <dxl:OpFunc Mdid="0.177.1.0"/>
         <dxl:Commutator Mdid="0.551.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.937.1.0" Name="substring" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">
+      <dxl:GPDBFunc Mdid="0.937.1.0" Name="substring" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.57350.1.0.2" Name="c" Width="5.000000" NullFreq="0.000000" NdvRemain="100203.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

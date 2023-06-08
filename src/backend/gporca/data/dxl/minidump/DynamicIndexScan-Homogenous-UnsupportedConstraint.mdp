@@ -54,10 +54,10 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.17078.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.17078.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.17079.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.17079.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.1098.1.0" Name="&gt;=" ComparisonType="GEq">
@@ -100,7 +100,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.7" Name="cmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.6" Name="xmax" Width="4.000000"/>
-      <dxl:Index Mdid="0.310765.1.0" Name="ord_ind_1_prt_orders_1" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.310765.1.0" Name="ord_ind_1_prt_orders_1" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.434.1.0"/>
         </dxl:Opfamilies>
@@ -177,10 +177,10 @@
       </dxl:GPDBScalarOp>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.4" Name="xmin" Width="4.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Index Mdid="0.318839.1.0" Name="ord_1_ind_1_prt_orders_1" IsClustered="false" KeyColumns="1,2" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.318839.1.0" Name="ord_1_ind_1_prt_orders_1" IsClustered="false" KeyColumns="1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.434.1.0"/>
           <dxl:Opfamily Mdid="0.3027.1.0"/>

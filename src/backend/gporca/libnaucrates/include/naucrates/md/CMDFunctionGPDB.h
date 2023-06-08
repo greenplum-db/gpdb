@@ -57,9 +57,6 @@ private:
 	// function stability
 	EFuncStbl m_func_stability;
 
-	// function data access
-	EFuncDataAcc m_func_data_access;
-
 	// function strictness (i.e. whether func returns NULL on NULL input)
 	BOOL m_is_strict;
 
@@ -73,14 +70,8 @@ private:
 	// dxl token array for stability
 	Edxltoken m_dxl_func_stability_array[EfsSentinel];
 
-	// dxl token array for data access
-	Edxltoken m_dxl_data_access_array[EfdaSentinel];
-
 	// returns the string representation of the function stability
 	const CWStringConst *GetFuncStabilityStr() const;
-
-	// returns the string representation of the function data access
-	const CWStringConst *GetFuncDataAccessStr() const;
 
 	// serialize the array of output arg types into a comma-separated string
 	CWStringDynamic *GetOutputArgTypeArrayStr() const;
@@ -94,8 +85,7 @@ public:
 	// ctor/dtor
 	CMDFunctionGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 					IMDId *result_type_mdid, IMdIdArray *mdid_array,
-					BOOL ReturnsSet, EFuncStbl func_stability,
-					EFuncDataAcc func_data_access, BOOL is_strict,
+					BOOL ReturnsSet, EFuncStbl func_stability, BOOL is_strict,
 					BOOL is_ndv_preserving, BOOL is_allowed_for_PS);
 
 	~CMDFunctionGPDB() override;
@@ -140,13 +130,6 @@ public:
 	GetFuncStability() const override
 	{
 		return m_func_stability;
-	}
-
-	// function data access
-	EFuncDataAcc
-	GetFuncDataAccess() const override
-	{
-		return m_func_data_access;
 	}
 
 	// does function return a set of values

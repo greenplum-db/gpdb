@@ -350,7 +350,7 @@ Each component of a Greenplum Database system \(coordinator, standby coordinator
 
 -   [gp\_log\_command\_timings](#topic17)
 -   [gp\_log\_database](#topic18)
--   [gp\_log\_master\_concise](#topic19)
+-   [gp\_log\_coordinator\_concise](#topic19)
 -   [gp\_log\_system](#topic20)
 
 **Parent topic:** [The gp\_toolkit Administrative Schema](gp_toolkit.html)
@@ -407,7 +407,7 @@ This view uses an external table to read the server log files of the entire Gree
 |logline|The line in the log file in which this message is generated.|
 |logstack|Full text of the stack trace associated with this message.|
 
-### <a id="topic19"></a>gp\_log\_master\_concise 
+### <a id="topic19"></a>gp\_log\_coordinator\_concise 
 
 This view uses an external table to read a subset of the log fields from the coordinator log file. The use of this view requires superuser permissions.
 
@@ -774,7 +774,6 @@ The `gp_size_*` family of views can be used to determine the disk space usage fo
 -   [gp\_size\_of\_all\_table\_indexes](#topic39)
 -   [gp\_size\_of\_database](#topic40)
 -   [gp\_size\_of\_index](#topic41)
--   [gp\_size\_of\_partition\_and\_indexes\_disk](#topic42)
 -   [gp\_size\_of\_schema\_disk](#topic43)
 -   [gp\_size\_of\_table\_and\_indexes\_disk](#topic44)
 -   [gp\_size\_of\_table\_and\_indexes\_licensing](#topic45)
@@ -826,21 +825,6 @@ This view shows the total size of an index. This view is accessible to all users
 |soiindexname|The name of the index|
 |soitableschemaname|The name of the table schema|
 |soitablename|The name of the table|
-
-### <a id="topic42"></a>gp\_size\_of\_partition\_and\_indexes\_disk 
-
-This view shows the size on disk of partitioned child tables and their indexes. This view is accessible to all users, however non-superusers will only be able to see relations that they have permission to access.
-
-|Column|Description|
-|------|-----------|
-|sopaidparentoid|The object ID of the parent table|
-|sopaidpartitionoid|The object ID of the partition table|
-|sopaidpartitiontablesize|The partition table size in bytes|
-|sopaidpartitionindexessize|The total size of all indexes on this partition|
-|Sopaidparentschemaname|The name of the parent schema|
-|Sopaidparenttablename|The name of the parent table|
-|Sopaidpartitionschemaname|The name of the partition schema|
-|sopaidpartitiontablename|The name of the partition table|
 
 ### <a id="topic43"></a>gp\_size\_of\_schema\_disk 
 

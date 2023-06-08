@@ -46,6 +46,7 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
+#include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
@@ -279,6 +280,10 @@ static bool slotIsInUse(const ResGroupSlotData *slot);
 static bool groupIsNotDropped(const ResGroupData *group);
 static bool groupWaitQueueFind(ResGroupData *group, const PGPROC *proc);
 #endif /* USE_ASSERT_CHECKING */
+
+static bool is_pure_catalog_plan(PlannedStmt *stmt);
+static bool can_bypass_based_on_plan_cost(PlannedStmt *stmt);
+static bool can_bypass_direct_dispatch_plan(PlannedStmt *stmt);
 
 /*
  * Estimate size the resource group structures will need in
@@ -3369,95 +3374,6 @@ ResGroupGetGroupIdBySessionId(int sessionId)
 }
 
 /*
- * traverse the flattened rangetable entries.
- * It's hard to see whether the query contains UDF, traverse the whole plan
- * is expensive, so it will be ignored even if there can have non-catalog
- * query inside the UDF.
- */
-static bool
-PurecatalogQuery(PlannedStmt* stmt)
-{
-	ListCell *rtable;
-
-	if (stmt->numSlices != 1)
-		return false;
-
-	foreach(rtable, stmt->rtable)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *)lfirst(rtable);
-
-		if (rte->rtekind != RTE_RELATION)
-			continue;
-		else
-		{
-			if (rte->relkind == RELKIND_MATVIEW)
-				return false;
-			else if (rte->relkind == RELKIND_VIEW)
-				continue;
-			else
-			{
-				if(!IsCatalogRelationOid(rte->relid))
-					return false;
-			}
-		}
-	}
-
-	return true;
-}
-
-/*
- * To decide whether we should bypass the query. If it's a pure-catalog query,
- * unassign the query from resource group and bypass the query.
- */
-void
-ShouldBypassQuery(PlannedStmt* stmt, bool inFunc)
-{
-	if (Gp_role != GP_ROLE_DISPATCH || bypassedGroup)
-		return;
-
-	/*
-	 * Don't need to consider the sql commands inside the UDF, they will also
-	 * be bypassed or use the same resgroup as the outer query.
-	 */
-	if (!IsInTransactionBlock(!inFunc))
-	{
-		List *rte_list = stmt->rtable;
-		bool haveRtable = true;
-		ResGroupCaps            *caps = &self->group->caps;
-		double planCost = stmt->planTree->total_cost;
-		int    min_cost = (int)pg_atomic_read_u32((pg_atomic_uint32 *)&caps->min_cost);
-
-		if (list_length(rte_list) == 1 && (lfirst_node(RangeTblEntry, rte_list->head)->rtekind == RTE_RESULT))
-			haveRtable = false;
-
-		/*
-		 * For some special case, like 'select UDF', don't bypass the query.
-		 *
-		 * when gp_resource_group_bypass_catalog_query is on, pure-catalog queries
-		 * will be unassigned from the resource group.
-		 * for quries with cost under the min_cost limit, unassign it from resource
-		 * group too.
-		 */
-		if (haveRtable && (planCost < min_cost || PurecatalogQuery(stmt)))
-		{
-			ResGroupInfo		groupInfo;
-
-			UnassignResGroup(true);
-			do {
-				decideResGroup(&groupInfo);
-			} while (!groupIncBypassedRef(&groupInfo));
-			bypassedGroup = groupInfo.group;
-			bypassedGroup->totalExecuted++;
-			pgstat_report_resgroup(bypassedGroup->groupId);
-			bypassedSlot.group = groupInfo.group;
-			bypassedSlot.groupId = groupInfo.groupId;
-			cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
-									   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
-		}
-	}
-}
-
-/*
  * In resource group mode, how much memory should a query take in bytes.
  */
 uint64
@@ -3498,4 +3414,153 @@ ResourceGroupGetQueryMemoryLimit(void)
 	 * If user requests more than statement_mem, grant that.
 	 */
 	return Max(queryMem, stateMem);
+}
+
+/*
+ * After getting the plan of a query, it must be inside
+ * a transaction which means it must already hold a resgroup
+ * slot. For some cases, we can unassign to save a concurrency
+ * slot and other resources (just like bypass):
+ *   - only happen on QD
+ *   - for explicit transaction block (begin; end), don't do it
+ *     because for following SQLs it will not try to enter resgroup
+ *   - pure catalog query or very simple query (no rangetable and
+ *     no function)
+ *   - if the total cost is smaller than resgroup configured mincost
+ */
+void
+check_and_unassign_from_resgroup(PlannedStmt* stmt)
+{
+	bool         inFunction;
+	ResGroupInfo groupInfo;
+
+	SIMPLE_FAULT_INJECTOR("check_and_unassign_from_resgroup_entry");
+
+	if (Gp_role != GP_ROLE_DISPATCH ||
+		!IsNormalProcessingMode() ||
+		!IsResGroupActivated() ||
+		bypassedGroup != NULL)
+		return;
+
+	/*
+	 * Don't need to consider the sql commands inside the UDF, they will also
+	 * be bypassed or use the same resgroup as the outer query.
+	 */
+	inFunction = already_under_executor_run() || utility_nested();
+	if (IsInTransactionBlock(!inFunction))
+		return;
+
+	/*
+	 * If none of the bypass(unassign) rule satisfy, return directly
+	 */
+	if (!can_bypass_based_on_plan_cost(stmt) &&
+		!(gp_resource_group_bypass_direct_dispatch && can_bypass_direct_dispatch_plan(stmt)) &&
+		!(gp_resource_group_bypass_catalog_query && is_pure_catalog_plan(stmt)))
+		return;
+
+	/* Unassign from resgroup and bypass */
+	UnassignResGroup(true);
+
+	do {
+		decideResGroup(&groupInfo);
+	} while (!groupIncBypassedRef(&groupInfo));
+
+	bypassedGroup = groupInfo.group;
+	bypassedGroup->totalExecuted++;
+	pgstat_report_resgroup(bypassedGroup->groupId);
+	bypassedSlot.group = groupInfo.group;
+	bypassedSlot.groupId = groupInfo.groupId;
+
+	cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
+								   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+}
+
+/*
+ * Given a planned statement, check if it is pure catalog query or a very simple query.
+ * Return true only when:
+ *   - there must be only one slice
+ *   - there is no FuncExpr in target list
+ *   - range table cannot contain FUNCTION or TABLEFUNC
+ *   - range table must be catalog if it is RTE_RELATION
+ */
+static bool
+is_pure_catalog_plan(PlannedStmt *stmt)
+{
+	ListCell *rtable;
+	List     *func_tag;
+
+	/* For catalog SQL, we only consider SELECT stmt. */
+	if (stmt->commandType != CMD_SELECT)
+		return false;
+
+	if (stmt->numSlices != 1)
+		return false;
+
+	if (stmt->planTree->targetlist != NIL)
+	{
+		int    pos;
+		func_tag = list_make1_int(T_FuncExpr);
+		pos = find_nodes((Node *) (stmt->planTree->targetlist), func_tag);
+		list_free(func_tag);
+		if (pos >= 0)
+			return false;
+	}
+
+	foreach(rtable, stmt->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(rtable);
+
+		if (rte->rtekind == RTE_FUNCTION ||
+			rte->rtekind == RTE_TABLEFUNC ||
+			rte->rtekind == RTE_TABLEFUNCTION)
+			return false;
+
+		if (rte->rtekind != RTE_RELATION)
+			continue;
+
+		if (rte->relkind == RELKIND_MATVIEW)
+			return false;
+
+		if (rte->relkind == RELKIND_VIEW)
+			continue;
+
+		if(!IsCatalogRelationOid(rte->relid))
+			return false;
+	}
+
+	return true;
+}
+
+static bool
+can_bypass_based_on_plan_cost(PlannedStmt *stmt)
+{
+	ResGroupCaps *caps = &self->group->caps;
+	int           min_cost;
+
+	min_cost = (int) pg_atomic_read_u32((pg_atomic_uint32 *) &caps->min_cost);
+	return stmt->planTree->total_cost < min_cost;
+}
+
+/*
+ * Insert|Delete|Update: bypass those with numSlice = 1
+ * and the slice is direct dispatch.
+ *
+ * Select: since there is motion to gather to QD, bypass
+ * those with numSlice = 2, and  the 1st slice in QD and
+ * the 2nd slice is direct dispatch.
+ */
+static bool
+can_bypass_direct_dispatch_plan(PlannedStmt *stmt)
+{
+	if (stmt->commandType == CMD_SELECT)
+	{
+		return (stmt->numSlices == 2 &&
+				stmt->slices[1].directDispatch.isDirectDispatch);
+	}
+	else if (stmt->commandType == CMD_UPDATE ||
+			 stmt->commandType == CMD_INSERT ||
+			 stmt->commandType == CMD_DELETE)
+		return stmt->numSlices == 1 && stmt->slices[0].directDispatch.isDirectDispatch;
+	else
+		return false;
 }

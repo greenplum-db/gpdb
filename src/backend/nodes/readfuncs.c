@@ -50,6 +50,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/readfuncs.h"
 
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbgang.h"
 #include "nodes/altertablenodes.h"
 #include "utils/builtins.h"
@@ -114,33 +115,6 @@
 
 /* Read an OID field (don't hard-wire assumption that OID is same as uint) */
 #define READ_OID_FIELD(fldname)     READ_SCALAR_FIELD(fldname, atooid(token))
-
-/*
- * extended_char
- *    In GPDB some structures have char fields with non-printing characters
- *    in them.  '\0' is problematic in particular because it ends debugging
- *    displays of nodes.  It is a bad practice, but hard to stem.  This
- *    function used in readfuncs.c READ_CHAR_FIELD is the inverse of the
- *    character output format in outfuncs.c WRITE_CHAR_FIELD.  A length
- *    one token is translated as before.  A longer token is taken as the
- *    decimal code of the desired character.  (The only zero length token,
- *    <>, should not appear in a character field.)
- */
-inline static char extended_char(char* token, size_t length)
-{
-	char c, *s;
-
-	if ( length == 1 )
-		return *token;
-
-	s = debackslash(token, length);
-	if ( strlen(s) == 1 )
-		c = s[0];
-	else
-		c = (char)strtoul(s, NULL, 10);
-	pfree(s);
-	return c;
-}
 
 /* Read a char field (ie, one ascii character) */
 #define READ_CHAR_FIELD(fldname) \
@@ -1012,6 +986,8 @@ _readNewColumnValue(void)
 	READ_NODE_FIELD(expr);
 	/* can't serialize exprstate */
 	READ_BOOL_FIELD(is_generated);
+	READ_NODE_FIELD(new_encoding);
+	READ_ENUM_FIELD(op, AOCSWriteColumnOperation);
 
 	READ_DONE();
 }
@@ -3485,7 +3461,6 @@ _readPlanRowMark(void)
 	READ_ENUM_FIELD(strength, LockClauseStrength);
 	READ_ENUM_FIELD(waitPolicy, LockWaitPolicy);
 	READ_BOOL_FIELD(isParent);
-	READ_BOOL_FIELD(canOptSelectLockingClause);
 
 	READ_DONE();
 }

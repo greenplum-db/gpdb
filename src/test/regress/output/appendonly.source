@@ -1117,6 +1117,7 @@ select count(*) from tenk_ao1 where unique2 < 0;
 ALTER TABLE tenk_ao1 RENAME TO tenk_renamed;
 ALTER TABLE tenk_renamed ADD COLUMN newcol int default 10;
 -- Validate post alter gp_fastsequence reflects correctly
+-- There's not table rewrite, so gp_fastsequence remains same as before.
 SELECT objmod, CASE
 WHEN objmod = 0 THEN last_sequence >= 3300 WHEN objmod = 1 THEN last_sequence =
 0 END, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid IN (SELECT
@@ -1127,7 +1128,10 @@ relname='tenk_renamed'));
       0 | t    |             0
       0 | t    |             1
       0 | t    |             2
-(3 rows)
+      1 | f    |             0
+      1 | f    |             1
+      1 | f    |             2
+(6 rows)
 
 ALTER TABLE tenk_renamed ALTER COLUMN twothousand SET NOT NULL;
 ALTER TABLE tenk_renamed ADD COLUMN sercol serial; -- MPP-10015

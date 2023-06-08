@@ -345,7 +345,7 @@ Additional extensions are available that implement transforms for the `jsonb` ty
 
 The extensions for PL/Perl are called `jsonb_plperl` and j`sonb_plperlu`. If you use them, `jsonb` values are mapped to Perl arrays, hashes, and scalars, as appropriate.
 
-The extensions for PL/Python are called `jsonb_plpythonu`, `jsonb_plpython2u`, and `jsonb_plpython3u`. If you use them, `jsonb` values are mapped to Python dictionaries, lists, and scalars, as appropriate.
+The extension for PL/Python is called `jsonb_plpython3u`. If you use it, `jsonb` values are mapped to Python dictionaries, lists, and scalars, as appropriate.
 
 ## <a id="topic_jsonpath"></a>jsonpath Type
 

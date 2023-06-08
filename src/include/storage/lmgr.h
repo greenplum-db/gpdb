@@ -65,7 +65,6 @@ extern int	RelationExtensionLockWaiterCount(Relation relation);
 
 /* Lock to recompute pg_database.datfrozenxid in the current database */
 extern void LockDatabaseFrozenIds(LOCKMODE lockmode);
-extern void UnLockDatabaseFrozenIds(LOCKMODE lockmode);
 
 /* Lock a page (currently only used within indexes) */
 extern void LockPage(Relation relation, BlockNumber blkno, LOCKMODE lockmode);

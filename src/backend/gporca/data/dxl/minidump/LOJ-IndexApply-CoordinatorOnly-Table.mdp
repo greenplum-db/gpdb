@@ -63,12 +63,12 @@ union all
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.2703.1.0" Name="pg_type_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="29" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35">
+      <dxl:Index Mdid="0.2703.1.0" Name="pg_type_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="29" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2704.1.0" Name="pg_type_typname_nsp_index" IsClustered="false" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35">
+      <dxl:Index Mdid="0.2704.1.0" Name="pg_type_typname_nsp_index" IsClustered="false" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
@@ -445,13 +445,13 @@ union all
           <dxl:Opfamily Mdid="0.7033.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2663.1.0" Name="pg_class_relname_nsp_index" IsClustered="false" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33">
+      <dxl:Index Mdid="0.2663.1.0" Name="pg_class_relname_nsp_index" IsClustered="false" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2662.1.0" Name="pg_class_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="27" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33">
+      <dxl:Index Mdid="0.2662.1.0" Name="pg_class_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="27" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>

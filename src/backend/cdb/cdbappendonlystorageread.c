@@ -414,6 +414,27 @@ AppendOnlyStorageRead_SetTemporaryRange(AppendOnlyStorageRead *storageRead,
 }
 
 /*
+ * This is similar in spirit to AppendOnlyStorageRead_SetTemporaryRange(),
+ * except that we want to kick off a random read from 'beginFileOffset', with
+ * the intention to keep reading beyond 'afterFileOffset'.
+ *
+ * 'beginFileOffset' and 'afterFileOffset' must delimit the varblock we intend
+ * to start reading from.
+ */
+void
+AppendOnlyStorageRead_SetTemporaryStart(AppendOnlyStorageRead *storageRead,
+										int64 beginFileOffset,
+										int64 afterFileOffset)
+{
+	AppendOnlyStorageRead_SetTemporaryRange(storageRead,
+											beginFileOffset,
+											afterFileOffset);
+
+	/* This ensures that we don't limit the scan to afterFileOffset */
+	storageRead->bufferedRead.haveTemporaryLimitInEffect = false;
+}
+
+/*
  * Close the current segment file.
  *
  * No error if the current is already closed.

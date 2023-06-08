@@ -145,7 +145,7 @@
         <dxl:Commutator Mdid="0.97.1.0"/>
         <dxl:InverseOp Mdid="0.523.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.1381.1.0" Name="char_length" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1381.1.0" Name="char_length" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.92635.1.1.7" Name="c1197" Width="66286.000000"/>

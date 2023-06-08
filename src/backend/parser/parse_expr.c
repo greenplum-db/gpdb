@@ -333,11 +333,18 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 					emit_precedence_warnings(pstate, PREC_GROUP_POSTFIX_IS, "IS",
 											 (Node *) n->arg, NULL,
 											 n->location);
+				
+				/* please refer to https://github.com/greenplum-db/gpdb/issues/15494 */
+				NullTest *newn;
+				newn = makeNode(NullTest);
 
-				n->arg = (Expr *) transformExprRecurse(pstate, (Node *) n->arg);
+				newn->arg = (Expr *) transformExprRecurse(pstate, (Node *) n->arg);
 				/* the argument can be any type, so don't coerce it */
-				n->argisrow = type_is_rowtype(exprType((Node *) n->arg));
-				result = expr;
+				newn->argisrow = type_is_rowtype(exprType((Node *) newn->arg));
+				newn->nulltesttype = n->nulltesttype;
+				newn->location = n->location;
+
+				result = (Node *) newn;
 				break;
 			}
 

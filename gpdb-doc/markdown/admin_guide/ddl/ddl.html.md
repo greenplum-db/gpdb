@@ -20,6 +20,8 @@ Most of the advanced Greenplum features are enabled with extensions to the SQL `
 
 -   **[Choosing the Table Storage Model](../ddl/ddl-storage.html)**  
 
+-   **[About Changes to Table Partitioning in Greenplum 7](../ddl/about-part-changes.html)**  
+
 -   **[Partitioning Large Tables](../ddl/ddl-partition.html)**  
 
 -   **[Creating and Using Sequences](../ddl/ddl-sequence.html)**  

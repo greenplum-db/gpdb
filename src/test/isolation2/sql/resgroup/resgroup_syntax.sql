@@ -29,6 +29,11 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
 ALTER ROLE rg_test_role RESOURCE GROUP non_exist_group;
 ALTER ROLE rg_test_role RESOURCE GROUP admin_group;
 
+--cannot create or put role in system_group, should error out
+CREATE ROLE r_test_system_group RESOURCE GROUP system_group;
+CREATE ROLE r_test_system_group;
+ALTER ROLE r_test_system_group RESOURCE GROUP system_group;
+
 CREATE ROLE rg_test_role1 RESOURCE GROUP non_exist_group;
 -- nonsuper user should not be assigned to admin group
 CREATE ROLE rg_test_role1 RESOURCE GROUP admin_group;
@@ -36,6 +41,7 @@ CREATE ROLE rg_test_role1 RESOURCE GROUP admin_group;
 -- cleanup
 DROP ROLE rg_test_role;
 DROP ROLE rg_test_role_super;
+DROP ROLE r_test_system_group;
 
 -- ----------------------------------------------------------------------
 -- Test: create/drop a resource group

@@ -31,10 +31,11 @@ EXPLAIN  (costs off) SELECT * FROM tbl_gist where c4 <@ box(point(1,1),point(10,
                   QUERY PLAN                  
 ----------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on tbl_gist
+   ->  Index Scan using tbl_gist_idx on tbl_gist
+         Index Cond: (c4 <@ '(10,10),(1,1)'::box)
          Filter: (c4 <@ '(10,10),(1,1)'::box)
  Optimizer: Pivotal Optimizer (GPORCA)
-(4 rows)
+(5 rows)
 
 SET enable_bitmapscan TO default;
 DROP TABLE tbl_gist;
@@ -70,10 +71,11 @@ EXPLAIN  (costs off) SELECT * FROM tbl_gist where c4 <@ box(point(1,1),point(10,
                   QUERY PLAN                  
 ----------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on tbl_gist
+   ->  Index Scan using tbl_gist_idx on tbl_gist
+         Index Cond: (c4 <@ '(10,10),(1,1)'::box)
          Filter: (c4 <@ '(10,10),(1,1)'::box)
  Optimizer: Pivotal Optimizer (GPORCA)
-(4 rows)
+(5 rows)
 
 SET enable_bitmapscan TO default;
 DROP TABLE tbl_gist;
@@ -171,10 +173,11 @@ EXPLAIN  (costs off) SELECT * FROM tbl_gist where c4 <@ box(point(1,1),point(10,
                   QUERY PLAN                  
 ----------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Seq Scan on tbl_gist
+   ->  Index Scan using tbl_gist_c4_c1_c2_c3_excl on tbl_gist
+         Index Cond: (c4 <@ '(10,10),(1,1)'::box)
          Filter: (c4 <@ '(10,10),(1,1)'::box)
  Optimizer: Pivotal Optimizer (GPORCA)
-(4 rows)
+(5 rows)
 
 \d tbl_gist
               Table "public.tbl_gist"

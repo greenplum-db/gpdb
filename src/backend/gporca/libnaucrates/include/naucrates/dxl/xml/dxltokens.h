@@ -490,6 +490,7 @@ enum Edxltoken
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,
+	EdxltokenRelDistrUniversal,
 	EdxltokenConvertHashToRandom,
 
 	EdxltokenRelDistrOpfamilies,
@@ -602,11 +603,7 @@ enum Edxltoken
 	EdxltokenGPDBFuncStable,
 	EdxltokenGPDBFuncImmutable,
 	EdxltokenGPDBFuncVolatile,
-	EdxltokenGPDBFuncDataAccess,
-	EdxltokenGPDBFuncNoSQL,
-	EdxltokenGPDBFuncContainsSQL,
-	EdxltokenGPDBFuncReadsSQLData,
-	EdxltokenGPDBFuncModifiesSQLData,
+
 	EdxltokenGPDBFuncResultTypeId,
 	EdxltokenGPDBFuncReturnsSet,
 	EdxltokenGPDBFuncStrict,

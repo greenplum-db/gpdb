@@ -2,11 +2,10 @@
 title: Data Science Package for Python 
 ---
 
-Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). Separate modules are provided for Python 2.7 and Python 3.9 development.
+Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 
 This section contains the following information:
 
--   [Data Science Package for Python 2.7 Modules](#topic_pydatascimod)
 -   [Data Science Package for Python 3.9 Modules](#topic_pydatascimod3)
 -   [Installing a Data Science Package for Python](#topic_instpdsm)
 -   [Uninstalling a Data Science Package for Python](#topic_removepdsm)
@@ -14,104 +13,6 @@ This section contains the following information:
 For information about the Greenplum Database PL/Python Language, see [Greenplum PL/Python Language Extension](../analytics/pl_python.html).
 
 **Parent topic:** [Installing Optional Extensions \(VMware Greenplum\)](data_sci_pkgs.html)
-
-## <a id="topic_pydatascimod"></a>Data Science Package for Python 2.7 Modules 
-
-The following table lists the modules that are provided in the Data Science Package for Python 2.7.
-
-Packages required for Deep Learning features of MADlib are now included. Note that it is not supported for RHEL 6.
-
-|Module Name|Description/Used For|
-|-----------|--------------------|
-|atomicwrites|Atomic file writes|
-|attrs|Declarative approach for defining class attributes|
-|Autograd|Gradient-based optimization|
-|backports.functools-lru-cache|Backports `functools.lru_cache` from Python 3.3|
-|Beautiful Soup|Navigating HTML and XML|
-|Blis|Blis linear algebra routines|
-|Boto|Amazon Web Services library|
-|Boto3|The AWS SDK|
-|botocore|Low-level, data-driven core of boto3|
-|Bottleneck|Fast NumPy array functions|
-|Bz2file|Read and write bzip2-compressed files|
-|Certifi|Provides Mozilla CA bundle|
-|Chardet|Universal encoding detector for Python 2 and 3|
-|ConfigParser|Updated `configparser` module|
-|contextlib2|Backports and enhancements for the `contextlib` module|
-|Cycler|Composable style cycles|
-|cymem|Manage calls to calloc/free through Cython|
-|Docutils|Python documentation utilities|
-|enum34|Backport of Python 3.4 Enum|
-|Funcsigs|Python function signatures from PEP362|
-|functools32|Backport of the `functools` module from Python 3.2.3|
-|funcy|Functional tools focused on practicality|
-|future|Compatibility layer between Python 2 and Python 3|
-|futures|Backport of the `concurrent.futures` package from Python 3|
-|Gensim|Topic modeling and document indexing|
-|GluonTS \(Python 3 only\)|Probabilistic time series modeling|
-|h5py|Read and write HDF5 files|
-|idna|Internationalized Domain Names in Applications \(IDNA\)|
-|importlib-metadata|Read metadata from Python packages|
-|Jinja2|Stand-alone template engine|
-|JMESPath|JSON Matching Expressions|
-|Joblib|Python functions as pipeline jobs|
-|jsonschema|JSON Schema validation|
-|Keras |Deep learning|
-|Keras Applications|Reference implementations of popular deep learning models|
-|Keras Preprocessing|Easy data preprocessing and data augmentation for deep learning models|
-|Kiwi|A fast implementation of the Cassowary constraint solver|
-|Lifelines|Survival analysis|
-|lxml|XML and HTML processing|
-|MarkupSafe|Safely add untrusted strings to HTML/XML markup|
-|Matplotlib|Python plotting package|
-|mock|Rolling backport of `unittest.mock`|
-|more-itertools|More routines for operating on iterables, beyond itertools|
-|MurmurHash|Cython bindings for MurmurHash|
-|NLTK|Natural language toolkit|
-|NumExpr|Fast numerical expression evaluator for NumPy|
-|NumPy|Scientific computing|
-|packaging|Core utilities for Python packages|
-|Pandas|Data analysis|
-|pathlib, pathlib2|Object-oriented filesystem paths|
-|patsy|Package for describing statistical models and for building design matrices|
-|Pattern-en|Part-of-speech tagging|
-|pip|Tool for installing Python packages|
-|plac|Command line arguments parser|
-|pluggy|Plugin and hook calling mechanisms|
-|preshed|Cython hash table that trusts the keys are pre-hashed|
-|protobuf|Protocol buffers|
-|py|Cross-python path, ini-parsing, io, code, log facilities|
-|pyLDAvis|Interactive topic model visualization|
-|PyMC3|Statistical modeling and probabilistic machine learning|
-|pyparsing|Python parsing|
-|pytest|Testing framework|
-|python-dateutil|Extensions to the standard Python datetime module|
-|pytz|World timezone definitions, modern and historical|
-|PyYAML|YAML parser and emitter|
-| regex | Alternative regular expression module, to replace re |
-|requests|HTTP library|
-|s3transfer|Amazon S3 transfer manager|
-|scandir|Directory iteration function|
-|scikit-learn|Machine learning data mining and analysis|
-|SciPy|Scientific computing|
-|setuptools|Download, build, install, upgrade, and uninstall Python packages|
-|six|Python 2 and 3 compatibility library|
-|smart-open|Utilities for streaming large files \(S3, HDFS, gzip, bz2, and so forth\)|
-|spaCy|Large scale natural language processing|
-|srsly|Modern high-performance serialization utilities for Python|
-|StatsModels|Statistical modeling|
-|subprocess32|Backport of the subprocess module from Python 3|
-|Tensorflow |Numerical computation using data flow graphs|
-|Theano|Optimizing compiler for evaluating mathematical expressions on CPUs and GPUs|
-|thinc|Practical Machine Learning for NLP|
-|tqdm|Fast, extensible progress meter|
-|urllib3|HTTP library with thread-safe connection pooling, file post, and more|
-|wasabi|Lightweight console printing and formatting toolkit|
-|wcwidth|Measures number of Terminal column cells of wide-character codes|
-|Werkzeug|Comprehensive WSGI web application library|
-|wheel|A built-package format for Python|
-|XGBoost|Gradient boosting, classifying, ranking|
-|zipp|Backport of pathlib-compatible object wrapper for zip files|
 
 ## <a id="topic_pydatascimod3"></a>Data Science Package for Python 3.9 Modules 
 
@@ -279,19 +180,18 @@ Before you install a Data Science Package for Python, make sure that your Greenp
 
 ```
 $ sudo yum install tk
-
 ```
 
 1.  Locate the Data Science Package for Python that you built or downloaded.
 
-    The file name format of the package is `DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg`.  For example, the Data Science Package for Python 2.7 for Redhat 8 file is `DataSciencePython2.7-2.0.4-gp7-rhel8_x86_64.gppkg`, and the Python 3.9 package is `DataSciencePython3.9-3.0.0-gp7-rhel8_x86_64.gppkg`.
+    The file name format of the package is `DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg`.  For example: `DataSciencePython3.9-3.0.0-gp7-rhel8_x86_64.gppkg`.
 
 2.  Copy the package to the Greenplum Database coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the *Greenplum Procedural Languages Python Data Science Package* software.
 4.  Use the `gppkg` command to install the package. For example:
 
     ```
-    $ gppkg install DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg
+    $ gppkg install DataSciencePython3.9-3.0.0-gp7-rhel8_x86_64.gppkg
     ```
 
     `gppkg` installs the Data Science Package for Python modules on all nodes in your Greenplum Database cluster. The command also updates the `PYTHONPATH`, `PATH`, and `LD_LIBRARY_PATH` environment variables in your `greenplum_path.sh` file.
@@ -304,13 +204,7 @@ $ sudo yum install tk
     ```
 
 
-The Data Science Package for Python modules are installed in the following directory for Python 2.7:
-
-```
-$GPHOME/ext/DataSciencePython/lib/python2.7/site-packages/
-```
-
-For Python 3.9 the directory is:
+The Data Science Package for Python modules are installed in the following directory:
 
 ```
 $GPHOME/ext/DataSciencePython/lib/python3.9/site-packages/

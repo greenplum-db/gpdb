@@ -6,7 +6,8 @@
  *
  */
 
-BEGIN;
+-- complain if script is sourced in psql, rather than via CREATE EXTENSION
+\echo Use "CREATE EXTENSION gp_toolkit" to load this file. \quit
 
 CREATE SCHEMA gp_toolkit;
 
@@ -157,9 +158,6 @@ AS
         AND content >= 0;
 
 GRANT SELECT ON TABLE gp_toolkit.__gp_number_of_segments TO public;
-
-
-CREATE EXTENSION gp_exttable_fdw;
 
 --------------------------------------------------------------------------------
 -- log-reading external tables and views
@@ -1760,7 +1758,7 @@ GRANT SELECT ON gp_toolkit.gp_resgroup_config TO public;
 --------------------------------------------------------------------------------
 
 CREATE VIEW gp_toolkit.gp_resgroup_status AS
-    SELECT r.rsgname, s.groupid, s.num_running, s.num_queueing,
+    SELECT s.groupid, r.rsgname as groupname, s.num_running, s.num_queueing,
            s.num_queued, s.num_executed, s.total_queue_duration
     FROM pg_resgroup_get_status(null) AS s,
          pg_resgroup AS r
@@ -1790,8 +1788,8 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
         WHERE s.groupid = r.oid
     )
     SELECT
-        es.rsgname
-      , es.groupid
+        es.groupid
+      , es.rsgname as groupname
       , c.hostname
       , round(avg((es.cpu_usage)::text::numeric), 2) AS cpu_usage
       , round(avg((es.memory_usage)::text::numeric), 2) AS memory_usage
@@ -2173,6 +2171,7 @@ GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AO segment file numbers for each ao_row table
@@ -2180,7 +2179,7 @@ GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION gp_toolkit.__get_ao_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -2189,22 +2188,25 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid 
-             FROM pg_appendonly a 
-             JOIN pg_class tc ON a.relid = tc.oid 
-             JOIN pg_am am ON tc.relam = am.oid 
-             JOIN pg_class sc ON a.segrelid = sc.oid 
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname 
+             FROM pg_appendonly a
+             JOIN pg_class tc ON a.relid = tc.oid
+             JOIN pg_am am ON tc.relam = am.oid
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE amname = 'ao_row' 
   LOOP
-    table_name := rec.segrel;
-    -- Fetch and return each row from the aoseg table
+    table_name := rec.relname;
+    -- Fetch and return each row from the aoseg table.
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT segno FROM pg_aoseg.%I', table_name);
+      OPEN cur FOR EXECUTE format('SELECT segno, eof '
+                                  'FROM gp_toolkit.__gp_aoseg(''%I.%I'') ',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -2213,7 +2215,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aoseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -2232,6 +2234,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__get_ao_segno_list() TO public;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AOCO segment file numbers for each ao_column table
@@ -2239,7 +2242,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.__get_ao_segno_list() TO public;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION gp_toolkit.__get_aoco_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -2248,25 +2251,25 @@ DECLARE
   row record;
 BEGIN
   -- iterate over the aocoseg relations
-  FOR rec IN SELECT sc.relname segrel, tc.oid tableoid
+  FOR rec IN SELECT tc.oid tableoid, tc.relname, ns.nspname
              FROM pg_appendonly a
              JOIN pg_class tc ON a.relid = tc.oid
              JOIN pg_am am ON tc.relam = am.oid
-             JOIN pg_class sc ON a.segrelid = sc.oid
+             JOIN pg_namespace ns ON tc.relnamespace = ns.oid
              WHERE amname = 'ao_column'
   LOOP
-    table_name := rec.segrel;
-    -- Fetch and return each extended segno corresponding to filenum and segno in the aocoseg table
+    table_name := rec.relname;
+    -- Fetch and return each extended segno corresponding to filenum and segno in the aocoseg table.
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT ((a.filenum - 1) * 128 + s.segno) as segno '
-                                  'FROM (SELECT * FROM pg_attribute_encoding '
-                                  'WHERE attrelid = %s) a CROSS JOIN pg_aoseg.%I s', 
-                                   rec.tableoid, table_name);
+      OPEN cur FOR EXECUTE format('SELECT physical_segno as segno, eof '
+                                  'FROM gp_toolkit.__gp_aocsseg(''%I.%I'') ',
+                                   rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -2275,7 +2278,7 @@ BEGIN
     EXCEPTION
       -- If failed to open the aocoseg table (e.g. the table itself is missing), continue
       WHEN OTHERS THEN
-      RAISE WARNING 'Failed to read %: %', table_name, SQLERRM;
+      RAISE WARNING 'Failed to get aocsseg info for %: %', table_name, SQLERRM;
     END;
   END LOOP;
   RETURN;
@@ -2333,7 +2336,8 @@ CREATE OR REPLACE VIEW gp_toolkit.__get_expect_files AS
 SELECT s.reltablespace AS tablespace, s.relname, a.amname AS AM,
        (CASE WHEN s.relfilenode != 0 THEN s.relfilenode ELSE pg_relation_filenode(s.oid) END)::text AS filename
 FROM pg_class s
-LEFT JOIN pg_am a ON s.relam = a.oid;
+LEFT JOIN pg_am a ON s.relam = a.oid
+WHERE s.relkind != 'v'; -- view could have valid relfilenode if created from a table, but its relfile is gone
 
 GRANT SELECT ON gp_toolkit.__get_expect_files TO public;
 
@@ -2345,12 +2349,21 @@ GRANT SELECT ON gp_toolkit.__get_expect_files TO public;
 --        Retrieve a list of expected data files in the database,
 --        using the knowledge from catalogs. This includes all
 --        the extended data files for AO/CO tables.
+--        But ignore those w/ eof=0. They might be created just for
+--        modcount whereas no data has ever been inserted to the seg.
+--        Or, they could be created when a seg has only aborted rows.
+--        In both cases, we can ignore these segs, because no matter
+--        whether the data files exist or not, the rest of the system
+--        can handle them gracefully.
+--        Also exclude views which could have valid relfilenode if 
+--        created from a table, but their relfiles are gone.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_toolkit.__get_expect_files_ext AS
 SELECT s.reltablespace AS tablespace, s.relname, a.amname AS AM,
        (CASE WHEN s.relfilenode != 0 THEN s.relfilenode ELSE pg_relation_filenode(s.oid) END)::text AS filename
 FROM pg_class s LEFT JOIN pg_am a ON s.relam = a.oid
+WHERE s.relkind != 'v'
 UNION
 -- AO extended files
 SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
@@ -2358,13 +2371,15 @@ SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
 FROM gp_toolkit.__get_ao_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
 LEFT JOIN pg_am a ON c.relam = a.oid
+WHERE s.eof > 0 AND c.relkind != 'v'
 UNION
 -- CO extended files
 SELECT c.reltablespace AS tablespace, c.relname, a.amname AS AM,
        format(c.relfilenode::text || '.' || s.segno::text) AS filename
 FROM gp_toolkit.__get_aoco_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
-LEFT JOIN pg_am a ON c.relam = a.oid;
+LEFT JOIN pg_am a ON c.relam = a.oid
+WHERE s.eof > 0 AND c.relkind != 'v';
 
 GRANT SELECT ON gp_toolkit.__get_expect_files_ext TO public;
 
@@ -2373,46 +2388,21 @@ GRANT SELECT ON gp_toolkit.__get_expect_files_ext TO public;
 --        gp_toolkit.__check_orphaned_files
 --
 -- @doc:
---        Check orphaned data files on default and user tablespaces,
---        not including extended files.
+--        Check orphaned data files on default and user tablespaces.
+--        A file is considered orphaned if its main relfilenode is not expected
+--        to exist. For example, '12345.1' is an orphaned file if there is no
+--        table has relfilenode=12345, but not otherwise.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_toolkit.__check_orphaned_files AS
 SELECT f1.tablespace, f1.filename
 from gp_toolkit.__get_exist_files f1
 LEFT JOIN gp_toolkit.__get_expect_files f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
+ON f1.tablespace = f2.tablespace AND substring(f1.filename from '[0-9]+') = f2.filename
 WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+';
+  AND f1.filename SIMILAR TO '[0-9]+(\.)?(\_)?%';
 
 GRANT SELECT ON gp_toolkit.__check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        gp_toolkit.__check_orphaned_files_ext
---
--- @doc:
---        Check orphaned data files on default and user tablespaces,
---        including extended files.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW gp_toolkit.__check_orphaned_files_ext AS
-SELECT f1.tablespace, f1.filename
-FROM gp_toolkit.__get_exist_files f1
-LEFT JOIN gp_toolkit.__get_expect_files_ext f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
-WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+(\.[0-9]+)?'
-  AND NOT EXISTS (
-    -- XXX: not supporting heap for now, do not count them
-    SELECT 1 FROM pg_class c 
-    JOIN pg_am a 
-    ON c.relam = a.oid 
-    WHERE c.relfilenode::text = split_part(f1.filename, '.', 1) 
-        AND a.amname = 'heap'
-  );
-
-GRANT SELECT ON gp_toolkit.__check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -2469,24 +2459,6 @@ SELECT -1 AS gp_segment_id, *
 FROM gp_toolkit.__check_orphaned_files;
 
 GRANT SELECT ON gp_toolkit.gp_check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        gp_toolkit.gp_check_orphaned_files_ext
---
--- @doc:
---        User-facing view of gp_toolkit.__check_orphaned_files_ext.
---        Gather results from coordinator and all segments.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW gp_toolkit.gp_check_orphaned_files_ext AS 
-SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
-FROM gp_dist_random('gp_toolkit.__check_orphaned_files_ext')
-UNION ALL 
-SELECT -1 AS gp_segment_id, *
-FROM gp_toolkit.__check_orphaned_files; -- not checking ext on coordinator
-
-GRANT SELECT ON gp_toolkit.gp_check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -2636,9 +2608,5 @@ CREATE OR REPLACE VIEW gp_toolkit.gp_column_size_summary AS (
 GRANT SELECT ON gp_toolkit.gp_column_size_summary TO public;
 
 --------------------------------------------------------------------------------
-
--- Finalize install
-COMMIT;
-
 
 -- EOF

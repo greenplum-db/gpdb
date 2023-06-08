@@ -95,6 +95,7 @@ extern double gp_resource_group_cpu_limit;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;
 extern bool gp_resource_group_bypass_catalog_query;
+extern bool gp_resource_group_bypass_direct_dispatch;
 
 /*
  * Non-GUC global variables.
@@ -168,7 +169,7 @@ extern void ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 extern void ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
-extern void ShouldBypassQuery(PlannedStmt* stmt, bool inFunc);
+extern void check_and_unassign_from_resgroup(PlannedStmt* stmt);
 extern uint64 ResourceGroupGetQueryMemoryLimit(void);
 
 /*

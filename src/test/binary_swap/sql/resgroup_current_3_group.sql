@@ -9,8 +9,8 @@ select avg(reslimittype)
 select groupname from gp_toolkit.gp_resgroup_config
   where groupname not like 'rg_dump_test%'
   order by groupid;
-select rsgname from gp_toolkit.gp_resgroup_status
-  where rsgname not like 'rg_dump_test%'
+select groupname from gp_toolkit.gp_resgroup_status
+  where groupname not like 'rg_dump_test%'
   order by groupid;
 
 alter resource group rg1 set cpu_hard_quota_limit 20;

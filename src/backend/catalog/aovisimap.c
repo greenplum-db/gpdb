@@ -45,7 +45,7 @@ AlterTableCreateAoVisimapTable(Oid relOid)
 	 */
 	rel = table_open(relOid, AccessExclusiveLock);
 
-	if (!RelationIsAppendOptimized(rel))
+	if (!RelationStorageIsAO(rel))
 	{
 		table_close(rel, NoLock);
 		return;

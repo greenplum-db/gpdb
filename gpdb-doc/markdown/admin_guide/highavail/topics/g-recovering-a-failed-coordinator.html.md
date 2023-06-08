@@ -4,7 +4,7 @@ title: Recovering a Failed Coordinator
 
 If the primary coordinator fails, the Greenplum Database system is not accessible and WAL replication stops. Use [gpactivatestandby](../../../utility_guide/ref/gpactivatestandby.html) to activate the standby coordinator. Upon activation of the standby coordinator, Greenplum Database reconstructs the coordinator host state at the time of the last successfully committed transaction.
 
-These steps assume a standby coordinator host is configured for the system. See [Enabling Coordinator Mirroring](g-enabling-master-mirroring.html).
+These steps assume a standby coordinator host is configured for the system. See [Enabling Coordinator Mirroring](g-enabling-coordinator-mirroring.html).
 
 ## <a id="ki181117"></a>To activate the standby coordinator 
 
@@ -31,10 +31,10 @@ These steps assume a standby coordinator host is configured for the system. See 
 
     > **Important** You must initialize a new standby coordinator to continue providing coordinator mirroring.
 
-    For information about restoring the original coordinator and standby coordinator configuration, see [Restoring Coordinator Mirroring After a Recovery](g-restoring-master-mirroring-after-a-recovery.html).
+    For information about restoring the original coordinator and standby coordinator configuration, see [Restoring Coordinator Mirroring After a Recovery](g-restoring-coordinator-mirroring-after-a-recovery.html).
 
 
--   **[Restoring Coordinator Mirroring After a Recovery](../../highavail/topics/g-restoring-master-mirroring-after-a-recovery.html)**  
+-   **[Restoring Coordinator Mirroring After a Recovery](../../highavail/topics/g-restoring-coordinator-mirroring-after-a-recovery.html)**  
 
 
 **Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)

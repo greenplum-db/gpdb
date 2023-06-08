@@ -11,6 +11,8 @@ VACUUM [FULL] [FREEZE] [VERBOSE] [<table>]
 
 VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
               [<table> [(<column> [, ...] )]]
+
+VACUUM AO_AUX_ONLY <ao_table>
 ```
 
 ## <a id="section3"></a>Description 
@@ -58,10 +60,16 @@ SKIP_LOCKED
 INDEX_CLEANUP
 :   Specifies that `VACUUM` should attempt to remove index entries pointing to dead tuples. This is normally the desired behavior and is the default unless you override it by setting `vacuum_index_cleanup` to `false` for the table you run `VACUUM` against. Setting this option to `false` may be useful when you need to make vacuum run as quickly as possible, for example, to avoid imminent transaction ID wraparound. However, if you do not perform index cleanup regularly, performance may suffer, because as the table is modified, indexes accumulate dead tuples and the table itself accumulates dead line pointers that cannot be removed until index cleanup completes. This option has no effect for tables that do not have an index. If you use the `FULL` option, it will ignore the `INDEX_CLEANUP` option.
 
-table
+AO_AUX_ONLY
+:   Runs `VACUUM` against all auxiliary tables of an append-optimized table. It does not run `VACUUM` against the append-optimized table. If run against a non append-optimized table without any child partitions, no action takes place. If run against a heap table with an append-optimized partition, it vacuums the auxiliary tables of this partition.
+
+<ao_table>
+:    The name of a table to vacuum its auxiliary tables, ideally an append-optimized table.
+
+<table>
 :   The name \(optionally schema-qualified\) of a specific table to vacuum. Defaults to all tables in the current database.
 
-column
+<column>
 :   The name of a specific column to analyze. Defaults to all columns. If a column list is specified, `ANALYZE` is implied.
 
 ## <a id="section6"></a>Notes 

@@ -138,6 +138,19 @@ def impl(context, dbname, psql_cmd):
         raise Exception('%s' % context.error_message)
 
 
+@given('the user runs sql "{query}" in "{db}" on primary segment with content {contentids}')
+@when('the user runs sql "{query}" in "{db}" on primary segment with content {contentids}')
+@then('the user runs sql "{query}" in "{db}" on primary segment with content {contentids}')
+def impl(context, query, db, contentids):
+    content_ids = [int(i) for i in contentids.split(',')]
+
+    for content in content_ids:
+        host, port = get_primary_segment_host_port_for_content(content)
+        psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+            db, host, port, query)
+        Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
+
+
 @given('the user connects to "{dbname}" with named connection "{cname}"')
 def impl(context, dbname, cname):
     if not hasattr(context, 'named_conns'):
@@ -447,9 +460,9 @@ def impl(context, logdir):
                 context.recovery_lines = fp.readlines()
             for line in context.recovery_lines:
                 recovery_type, dbid, progress = line.strip().split(':', 2)
-                progress_pattern = re.compile(get_recovery_progress_pattern())
+                progress_pattern = re.compile(get_recovery_progress_pattern(recovery_type))
                 # TODO: assert progress line in the actual hosts bb/rewind progress file
-                if re.search(progress_pattern, progress) and dbid.isdigit() and recovery_type in ['full', 'incremental']:
+                if re.search(progress_pattern, progress) and dbid.isdigit() and recovery_type in ['full', 'differential', 'incremental']:
                     return
                 else:
                     raise Exception('File present but incorrect format line "{}"'.format(line))
@@ -481,7 +494,13 @@ def impl(context, logdir):
         seg_dbid = seg.getSegmentDbId()
         if seg_dbid in all_progress_lines_by_dbid:
             recovery_type, line_from_combined_progress_file = all_progress_lines_by_dbid[seg_dbid]
-            process_name = 'pg_basebackup' if recovery_type == 'full' else 'pg_rewind'
+            if recovery_type == "full":
+                process_name = 'pg_basebackup'
+            elif recovery_type == "differential":
+                process_name = 'rsync'
+            else:
+                process_name = 'pg_rewind'
+
             seg_progress_file = '{}/{}.*.dbid{}.out'.format(log_dir, process_name, seg_dbid)
             check_cmd_str = 'grep "{}" {}'.format(line_from_combined_progress_file, seg_progress_file)
             check_cmd = Command(name='check line in segment progress file',
@@ -1573,7 +1592,9 @@ def impl(context, when):
     context.saved_array[when] = GpArray.initFromCatalog(dbconn.DbURL())
 
 
+@given('we run a sample background script to generate a pid on "{seg}" segment')
 @when('we run a sample background script to generate a pid on "{seg}" segment')
+@then('we run a sample background script to generate a pid on "{seg}" segment')
 def impl(context, seg):
     if seg == "primary":
         if not hasattr(context, 'pseg_hostname'):
@@ -1583,6 +1604,8 @@ def impl(context, seg):
         if not hasattr(context, 'standby_host'):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
+    elif seg == "coordinator":
+        hostname = get_coordinator_hostname()[0][0]
 
     filename = os.path.join(os.getcwd(), './test/behave/mgmt_utils/steps/data/pid_background_script.py')
 
@@ -1598,7 +1621,7 @@ def impl(context, seg):
     cmd.run(validateAfter=True)
 
     cmd = Command(name="get Bg process PID",
-                  cmdStr='until [ -f /tmp/bgpid ]; do sleep 1; done; cat /tmp/bgpid', remoteHost=hostname, ctxt=REMOTE)
+                  cmdStr='sleep 1; until [ -f /tmp/bgpid ]; do sleep 1; done; cat /tmp/bgpid', remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
 
@@ -1619,6 +1642,8 @@ def impl(context, seg):
         if not hasattr(context, 'standby_host'):
             raise Exception("Standby host is not saved in the context")
         hostname = context.standby_host
+    elif seg == "coordinator":
+        hostname = get_coordinator_hostname()[0][0]
 
     cmd = Command(name="killbg pid", cmdStr='kill -9 %s' % context.bg_pid, remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
@@ -2107,6 +2132,33 @@ def impl(context, filename, contain, output):
         if (not valuesShouldExist) and (output in actual):
             raise Exception('File %s on host %s contains "%s"' % (filepath, host, output))
 
+@given('verify that the path "{filename}" in each segment data directory does not exist')
+@then('verify that the path "{filename}" in each segment data directory does not exist')
+def impl(context, filename):
+    try:
+        with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+            curs = dbconn.query(conn, "SELECT hostname, datadir FROM gp_segment_configuration WHERE content > -1;")
+            result = curs.fetchall()
+            segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
+    except Exception as e:
+        raise Exception("Could not retrieve segment information: %s" % e.message)
+
+    for info in segment_info:
+        host, datadir = info
+        filepath = os.path.join(datadir, filename)
+        cmd_str = 'test -d "%s" && echo 1 || echo 0' % (filepath)
+        cmd = Command(name='check exists directory or not',
+                      cmdStr=cmd_str,
+                      ctxt=REMOTE,
+                      remoteHost=host)
+        cmd.run(validateAfter=False)
+        try:
+            val = int(cmd.get_stdout().strip())
+            if val:
+                raise Exception('Path %s on host %s exists (val %s) (cmd "%s")' % (filepath, host, val, cmd_str))
+        except:
+            raise Exception('Path %s on host %s exists (cmd "%s")' % (filepath, host, cmd_str))
+
 
 @given('the gpfdists occupying port {port} on host "{hostfile}"')
 def impl(context, port, hostfile):
@@ -2213,6 +2265,13 @@ def impl(context, tabletype, tablename, dbname):
 def impl(context, tabletype, table_name, dbname):
     create_partition(context, tablename=table_name, storage_type=tabletype, dbname=dbname, with_data=True)
 
+@given('there is a view without columns in "{dbname}"')
+@then('there is a view without columns in "{dbname}"')
+@when('there is a view without columns in "{dbname}"')
+def impl(context, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+        dbconn.execSQL(conn, "create view v_no_cols as select;")
+        conn.commit()
 
 @then('read pid from file "{filename}" and kill the process')
 @when('read pid from file "{filename}" and kill the process')
@@ -3350,7 +3409,7 @@ def impl(context, table1, table2, dbname):
 
 def _get_row_count_per_segment(table, dbname):
     with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
-        query = "SELECT gp_segment_id,COUNT(i) FROM %s GROUP BY gp_segment_id ORDER BY gp_segment_id;" % table
+        query = "SELECT gp_segment_id,COUNT(*) FROM %s GROUP BY gp_segment_id ORDER BY gp_segment_id;" % table
         cursor = dbconn.query(conn, query)
         rows = cursor.fetchall()
     return [row[1] for row in rows] # indices are the gp segment id's, so no need to store them explicitly
@@ -3852,7 +3911,7 @@ def impl(context, slot):
     query = "SELECT count(*) FROM pg_catalog.pg_replication_slots WHERE slot_name = '{}'".format(slot)
 
     for seg in segments:
-        if seg.isSegmentPrimary():
+        if seg.isSegmentPrimary(current_role=True):
             host = seg.getSegmentHostName()
             port = seg.getSegmentPort()
             with closing(dbconn.connect(dbconn.DbURL(dbname=dbname, port=port, hostname=host),
@@ -3894,6 +3953,7 @@ def impl(context):
 
     with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, query)
+
 
 @given('running postgres processes are saved in context')
 @when('running postgres processes are saved in context')

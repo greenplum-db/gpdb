@@ -73,7 +73,7 @@ Specifies a fraction of the table size to add to [`autovacuum_vacuum_threshold`]
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-| floating point (%) | 0.2 |local, system, reload|
+| floating point (%) | 0.05 |local, system, reload|
 
 ## <a id="autovacuum_vacuum_threshold"></a>autovacuum_vacuum_threshold
 
@@ -81,7 +81,7 @@ Specifies the minimum number of updated or deleted tuples needed to trigger a `V
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-| 0 < integer < INT_MAX | 50 |local, system, reload|
+| 0 < integer < INT_MAX | 500 |local, system, reload|
 
 ## <a id="backslash_quote"></a>backslash\_quote 
 
@@ -1050,18 +1050,18 @@ The amount of shared memory, in kilobytes, allocated for query metrics. The defa
 
 ## <a id="gp_interconnect_address_type"></a>gp_interconnect_address_type
 
-Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `wildcard`.
+Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `unicast`.
 
-- When this parameter is set to `unicast`, Greenplum Database  uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. 
+- When this parameter is set to `unicast`, Greenplum Database uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. This is the recommended option.
 
 - When this parameter is set to `wildcard`, Greenplum Database uses a wildcard address for binding, enabling the use of any network interface compliant with routing rules.
 
 > **Note** In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules do not allow for such
-communication. In these cases, you must configure this parameter to use a wildcard address for address binding.
+communication. In these cases, we recommend you use a single subnet for all segment addresses, or fix routing rules to allow communication between subnets. If neither is possible, you will need to configure this parameter to `wildcard` for wildcard address binding.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|wildcard,unicast|wildcard|local, system, reload|
+|wildcard,unicast|unicast|local, system, reload|
 
 ## <a id="gp_interconnect_debug_retry_interval"></a>gp_interconnect_debug_retry_interval 
 
@@ -2362,7 +2362,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|true|coordinator, session, reload|
 
-## <a id="optimizer_enable_master_only_queries"></a>optimizer\_enable\_master\_only\_queries 
+## <a id="optimizer_enable_coordinator_only_queries"></a>optimizer\_enable\_coordinator\_only\_queries 
 
 When GPORCA is enabled \(the default\), this parameter allows GPORCA to run catalog queries that run only on the Greenplum Database coordinator. For the default value `off`, only the Postgres Planner can run catalog queries that run only on the Greenplum Database coordinator.
 

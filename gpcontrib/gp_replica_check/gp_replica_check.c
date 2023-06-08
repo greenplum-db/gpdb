@@ -1,7 +1,10 @@
 #include "postgres.h"
 
+#include "access/brin_xlog.h"
 #include "access/heapam.h"
 #include "access/heapam_xlog.h"
+#include "access/hash_xlog.h"
+#include "access/spgxlog.h"
 #include "access/nbtxlog.h"
 #include "access/gistxlog.h"
 #include "access/ginxlog.h"
@@ -23,7 +26,7 @@
  * If a file comparison fails, how many times to retry before admitting
  * that it really differs?
  */
-#define NUM_RETRIES		3
+#define NUM_RETRIES		10
 
 /*
  * How many seconds to wait for checkpoint record to be applied in standby?
@@ -78,6 +81,8 @@ typedef struct RelationTypeData
  * having on the fly access methods is not at all common phenomenon. If and
  * when in future new access method is added, can update this array or enhance
  * the tool to dynamically create this array based on pg_am table.
+ *
+ * FIXME: Consider getting rid of this array and index into RmgrTable instead.
  *
  */
 static RelationTypeData relation_types[MAX_INCLUDE_RELATION_TYPES+1] = {
@@ -195,6 +200,18 @@ mask_block(char *pagedata, BlockNumber blockno, Oid relam, int relkind)
 			btree_mask(pagedata, blockno);
 			break;
 
+		case HASH_AM_OID:
+			hash_mask(pagedata, blockno);
+			break;
+
+		case SPGIST_AM_OID:
+			spg_mask(pagedata, blockno);
+			break;
+
+		case BRIN_AM_OID:
+			brin_mask(pagedata, blockno);
+			break;
+
 		case GIST_AM_OID:
 			gist_mask(pagedata, blockno);
 			break;
@@ -203,13 +220,26 @@ mask_block(char *pagedata, BlockNumber blockno, Oid relam, int relkind)
 			gin_mask(pagedata, blockno);
 			break;
 
-		/* heap table */
+		/* This doesn't have a masking function. Do nothing. */
+		case BITMAP_AM_OID:
+			break;
+
+		/*
+		 * These types don't follow the PG page format, so we don't expect this
+		 * function to be called with them.
+		 */
+		case AO_ROW_TABLE_AM_OID:
+		case AO_COLUMN_TABLE_AM_OID:
+			Assert(false);
+			break; /* keep compiler happy */
+
+		case HEAP_TABLE_AM_OID:
+			heap_mask(pagedata, blockno);
+			break;
+
 		default:
 			if (relkind == RELKIND_SEQUENCE)
 				seq_mask(pagedata, blockno);
-			else
-				heap_mask(pagedata, blockno);
-
 			break;
 	}
 }
@@ -389,7 +419,8 @@ retry:
 		int			mirrorFileBytesRead;
 		int			diff;
 		off_t		offset;
-		bool		do_check;
+		bool 		do_check;
+		bool 		isPGPageFormat;
 
 		do_check = true;
 
@@ -397,6 +428,9 @@ retry:
 
 		offset = (off_t) blockno * BLCKSZ;
 
+		/*
+		 * We read in chunks of BLCKSZ, even for append-optimized tables.
+		 */
 		primaryFileBytesRead = FileRead(primaryFile, primaryFileBuf, sizeof(primaryFileBuf), offset,
 										WAIT_EVENT_DATA_FILE_READ);
 		if (primaryFileBytesRead < 0)
@@ -426,11 +460,16 @@ retry:
 		if (primaryFileBytesRead == 0)
 			break; /* reached EOF */
 
-		if (rentry->relam == HEAP_TABLE_AM_OID)
+		/*
+		 * Apply sanity checks and masking that are only relevant to reltypes
+		 * adhering to PG's page format.
+		 */
+		isPGPageFormat = !IsAccessMethodAO(rentry->relam);
+		if (isPGPageFormat)
 		{
 			if (primaryFileBytesRead != BLCKSZ)
 			{
-				elog(NOTICE, "short read of %d bytes from heap file \"%s\", block %u: %m", primaryFileBytesRead, primaryfilepath, blockno);
+				elog(NOTICE, "short read of %d bytes from file \"%s\", block %u: %m", primaryFileBytesRead, primaryfilepath, blockno);
 				goto retry;
 			}
 			/*
@@ -440,12 +479,12 @@ retry:
 			 */
 			if (!PageIsVerified(primaryFileBuf, blockno))
 			{
-				elog(NOTICE, "invalid page header or checksum in heap file \"%s\", block %u", primaryfilepath, blockno);
+				elog(NOTICE, "invalid page header or checksum in file \"%s\", block %u", primaryfilepath, blockno);
 				goto retry;
 			}
 			if (!PageIsVerified(mirrorFileBuf, blockno))
 			{
-				elog(NOTICE, "invalid page header or checksum in heap file \"%s\", block %u", mirrorfilepath, blockno);
+				elog(NOTICE, "invalid page header or checksum in file \"%s\", block %u", mirrorfilepath, blockno);
 				goto retry;
 			}
 
