@@ -1568,6 +1568,7 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	failIfUpdateTriggers(resultRelation);
 
 	resultDesc = RelationGetDescr(resultRelation);
+	GpPolicy *cdbpolicy = resultRelation->rd_cdbpolicy;
 
 	ctidColIdx = find_ctid_attribute_check(subplan->targetlist);
 
@@ -1610,8 +1611,37 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 			Assert(exprType((Node *) tle->expr) == attr->atttypid);
 		}
 
+		/*
+		 * Is this a distribution key column? If so, we will need its old value.
+		 * expand_targetlist() put the old values for distribution key columns in
+		 * the target list after the new column values.
+		 */
+		int oldAttrIdx = -1;
+		for (int i = 0; i < cdbpolicy->nattrs; i++)
+		{
+			AttrNumber	keyattno = cdbpolicy->attrs[i];
+
+			if (keyattno == attrIdx)
+			{
+				TargetEntry *oldtle;
+
+				oldAttrIdx = resultDesc->natts + i + 1;
+
+				/* sanity checks. */
+				if (oldAttrIdx > list_length(subplan->targetlist))
+					elog(ERROR, "old value for attribute \"%s\" missing from split update input target list",
+							NameStr(attr->attname));
+				oldtle = list_nth(subplan->targetlist, oldAttrIdx - 1);
+				if (exprType((Node *) oldtle->expr) != attr->atttypid)
+					elog(ERROR, "datatype mismatch for old value for attribute \"%s\" in split update input target list",
+						NameStr(attr->attname));
+
+				break;
+			}
+		}
+
 		splitupdate->insertColIdx = lappend_int(splitupdate->insertColIdx, attrIdx);
-		splitupdate->deleteColIdx = lappend_int(splitupdate->deleteColIdx, -1);
+		splitupdate->deleteColIdx = lappend_int(splitupdate->deleteColIdx, oldAttrIdx);
 
 		splitupdate->plan.targetlist = lappend(splitupdate->plan.targetlist, tle);
 	}
@@ -1648,8 +1678,6 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	/* populate information generated above into splitupdate node */
 	splitupdate->ctidColIdx = ctidColIdx;
 	splitupdate->tupleoidColIdx = oidColIdx;
-	splitupdate->insertColIdx = insertColIdx;
-	splitupdate->deleteColIdx = deleteColIdx;
 	splitupdate->plan.lefttree = subplan;
 
 	/*
