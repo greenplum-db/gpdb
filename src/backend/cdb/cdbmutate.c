@@ -1569,31 +1569,78 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 
 	resultDesc = RelationGetDescr(resultRelation);
 
-	/*
-	 * insertColIdx/deleteColIdx: In split update mode, we have to form two tuples,
-	 * one is for deleting and the other is for inserting. Find the old and new
-	 * values in the subplan's target list, and store their column indexes in
-	 * insertColIdx and deleteColIdx.
-	 */
-	process_targetlist_for_splitupdate(resultRelation,
-									   subplan->targetlist,
-									   &splitUpdateTargetList, &insertColIdx, &deleteColIdx);
 	ctidColIdx = find_ctid_attribute_check(subplan->targetlist);
 
 	if (resultRelation->rd_rel->relhasoids)
 		oidColIdx = find_oid_attribute_check(subplan->targetlist);
 
-	copy_junk_attributes(subplan->targetlist, &splitUpdateTargetList, resultDesc->natts);
+	splitupdate = makeNode(SplitUpdate);
+	/*
+	 * Build the insertColIdx and deleteColIdx arrays, to indicate how the
+	 * inputs are mapped to the output tuples, for the DELETE and INSERT
+	 * actions.
+	 *
+	 * For the DELETE rows, we only need the 'gp_segment_id' and 'ctid'
+	 * junk columns, so we fill deleteColIdx with -1. The gp_segment_id
+	 * column is used to indicate the target segment. In other words,
+	 * there should be an Explicit Motion on top of the Split Update node.
+	 * NOTE: ORCA uses SplitUpdate differently. It puts a Redistribute
+	 * Motion on top of the SplitUpdate, and fills in the distribution key
+	 * columns on DELETE rows with the old values. The Redistribute Motion
+	 * then computes the target segment. So deleteColIdx is needed for
+	 * ORCA, but we don't use it here.
+	 */
+	ListCell *lc = list_head(subplan->targetlist);
+	for (int attrIdx = 1; attrIdx <= resultDesc->natts; ++attrIdx)
+	{
+		TargetEntry			*tle;
+		Form_pg_attribute	attr;
+
+		tle = (TargetEntry *) lfirst(lc);
+		lc = lnext(lc);
+		Assert(tle);
+
+		attr = resultDesc->attrs[attrIdx - 1];
+		if (attr->attisdropped)
+		{
+			Assert(IsA(tle->expr, Const) && ((Const *) tle->expr)->constisnull);
+		}
+		else
+		{
+			Assert(exprType((Node *) tle->expr) == attr->atttypid);
+		}
+
+		splitupdate->insertColIdx = lappend_int(splitupdate->insertColIdx, attrIdx);
+		splitupdate->deleteColIdx = lappend_int(splitupdate->deleteColIdx, -1);
+
+		splitupdate->plan.targetlist = lappend(splitupdate->plan.targetlist, tle);
+	}
+	int lastresno = list_length(splitupdate->plan.targetlist);
+
+	/* Copy all junk attributes. */
+	for (; lc != NULL; lc = lnext(lc))
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+		TargetEntry *newtle;
+
+		if (!tle->resjunk)
+			continue;
+
+		newtle = makeTargetEntry(tle->expr,
+								 ++lastresno,
+								 tle->resname,
+								 tle->resjunk);
+		splitupdate->plan.targetlist = lappend(splitupdate->plan.targetlist, newtle);
+	}
+	splitupdate->plan.targetlist = lappend(splitupdate->plan.targetlist,
+										   makeTargetEntry((Expr *) makeNode(DMLActionExpr),
+														   ++lastresno,
+														   "ColRef",
+														   true));
 
 	relation_close(resultRelation, NoLock);
 
-	/* finally, we should add action column at the end of targetlist */
-	actionExpr = makeNode(DMLActionExpr);
-	actionColIdx = list_length(splitUpdateTargetList) + 1;
-	newTargetEntry = makeTargetEntry((Expr *) actionExpr, actionColIdx, "ColRef", true);
-	splitUpdateTargetList = lappend(splitUpdateTargetList, newTargetEntry);
-
-	splitupdate = makeNode(SplitUpdate);
+	actionColIdx = lastresno;
 	splitupdate->actionColIdx = actionColIdx;
 
 	Assert(ctidColIdx > 0);
@@ -1603,7 +1650,6 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	splitupdate->tupleoidColIdx = oidColIdx;
 	splitupdate->insertColIdx = insertColIdx;
 	splitupdate->deleteColIdx = deleteColIdx;
-	splitupdate->plan.targetlist = splitUpdateTargetList;
 	splitupdate->plan.lefttree = subplan;
 
 	/*
