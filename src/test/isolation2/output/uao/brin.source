@@ -463,7 +463,7 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
 (8 rows)
 
 --------------------------------------------------------------------------------
--- Specific range summarization
+-- Specific range summarization/desummarization
 --------------------------------------------------------------------------------
 CREATE TABLE brin_ao_specific_@amname@(i int) USING @amname@;
 CREATE
@@ -561,6 +561,116 @@ SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
  3          | 33554435 | 1      | f        | f        | f           | {1 .. 1} 
  4          | 67108864 | 1      | f        | f        | f           | {1 .. 1} 
 (4 rows)
+
+-- Now test desummarization
+-- XXX: We currently use utility mode as brin_desummarize_range() is not MPPized yet.
+
+-- Desummarization of a block falling beyond the end of aoseg1 should be a no-op.
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554436);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+-- Desummarization of a block falling in aoseg0 should be a no-op (as aoseg0 doesn't exist).
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 1);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+-- Desummarization of a block falling in aoseg3 should be a no-op (as aoseg3 doesn't exist).
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+
+-- Sanity: Nothing should have changed.
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_specific_@amname@_i_idx', blkno)) FROM generate_series(0, nblocks('brin_ao_specific_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+ 3     | revmap         
+(4 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_specific_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,1) 
+ (2,2) 
+ (2,3) 
+(3 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_specific_@amname@_i_idx', 3)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,4) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2), 'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
+------------+----------+--------+----------+----------+-------------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+ 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1} 
+ 3          | 33554435 | 1      | f        | f        | f           | {1 .. 1} 
+ 4          | 67108864 | 1      | f        | f        | f           | {1 .. 1} 
+(4 rows)
+
+-- Should be able to desummarize all existing blocks in aoseg1.
+1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554432);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554433);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+
+-- Sanity: All revmap entries corresponding to aoseg1 have been set to invalid
+-- and all their data page tuples have been deleted (marked unused).
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_specific_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages          
+----------------
+ (4294967295,0) 
+ (4294967295,0) 
+ (4294967295,0) 
+(3 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2), 'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
+------------+----------+--------+----------+----------+-------------+----------
+ 4          | 67108864 | 1      | f        | f        | f           | {1 .. 1} 
+ 1          |          |        |          |          |             |          
+ 2          |          |        |          |          |             |          
+ 3          |          |        |          |          |             |          
+(4 rows)
+
+-- Now desummarize the last remaining range in the data page (from aoseg2).
+1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 67108864);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+
+-- Sanity: The revmap entry should be marked invalid.
+-- Also, this time instead of looking up the data page, look at the data page
+-- header (pd_upper = pd_special) to verify index tuple removal (we can't use
+-- brin_page_items() as PageIndexTupleDeleteNoCompact() does not mark
+-- the last tuple as unused).
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_specific_@amname@_i_idx', 3)) WHERE pages != '(0,0)' order by 1;
+ pages          
+----------------
+ (4294967295,0) 
+(1 row)
+1U: SELECT upper, special FROM page_header(get_raw_page('brin_ao_specific_@amname@_i_idx', 2));
+ upper | special 
+-------+---------
+ 32752 | 32752   
+(1 row)
 
 --------------------------------------------------------------------------------
 -- Test summarization of last partial range.
@@ -1215,8 +1325,11 @@ SET
 UPDATE 1
 
 -- Now insert a single committed row.
-INSERT INTO brin_abort_fullpage_@amname@ VALUES(20);
-INSERT 1
+INSERT INTO brin_abort_fullpage_@amname@ VALUES(20) RETURNING ctid;
+ ctid         
+--------------
+ (33559886,3) 
+(1 row)
 
 SELECT brin_summarize_new_values('brin_abort_fullpage_@amname@_i_idx');
  brin_summarize_new_values 
@@ -1344,6 +1457,48 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_
  gp_inject_fault 
 -----------------
  Success:        
+(1 row)
+
+-- Desummarize the last block (test iteration to target range across chain)
+1U: SELECT brin_desummarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
+ brin_desummarize_range 
+------------------------
+                        
+(1 row)
+
+-- Sanity: The revmap entry for the last block should be marked invalid.
+-- Also, this time instead of looking up the data page, look at the data page
+-- header (pd_upper = pd_special) to verify index tuple removal (we can't use
+-- brin_page_items() as PageIndexTupleDeleteNoCompact() does not mark
+-- the last tuple as unused).
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 4)) WHERE pages != '(0,0)' order by 1;
+ pages          
+----------------
+ (4294967295,0) 
+(1 row)
+1U: SELECT upper, special FROM page_header(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 5));
+ upper | special 
+-------+---------
+ 32752 | 32752   
+(1 row)
+
+-- Summarize only the last block (test iteration to target range across chain)
+SELECT brin_summarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
+ brin_summarize_range 
+----------------------
+ 1                    
+(1 row)
+
+-- Sanity: The last block is summarized.
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 4)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (5,1) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 5), 'brin_abort_fullpage_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
+------------+----------+--------+----------+----------+-------------+------------
+ 1          | 33559886 | 1      | f        | f        | f           | {20 .. 20} 
 (1 row)
 
 RESET enable_seqscan;

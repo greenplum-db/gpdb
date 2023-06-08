@@ -351,6 +351,10 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 
 	revmap = brinRevmapInitialize(idxrel, &pagesPerRange, NULL);
 
+	/* Position the AO revmap iterator to the chain containing heapBlk */
+	if (revmap->rm_isAO)
+		brinRevmapAOPositionAtStart(revmap, AOSegmentGet_blockSequenceNum(heapBlk));
+
 	revmapBlk = revmap_get_blkno(revmap, heapBlk);
 	if (!BlockNumberIsValid(revmapBlk))
 	{
