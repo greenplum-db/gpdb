@@ -46,13 +46,13 @@ pids_to_check = [r['pid'] for r in res]
 for pid in pids_to_check:
     # We iterate through all backends related to current session
     motion_socket_count = 0
-    # Typical 'lsof -i -n -a -p <pid>' output:
+    # Typical 'lsof -i -nP -a -p <pid>' output:
     # COMMAND     PID    USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
     # postgres 271688 cmulong    4u  IPv4 1087560      0t0  TCP 127.0.0.1:51327 (LISTEN)
     # postgres 271688 cmulong    9u  IPv6 1077090      0t0  UDP [::1]:42130->[::1]:42130
     # We check count of those connections which have not been established.
     # Use the regex for example: "TCP <ip>:\d+ .*" (without '->')
-    lsof_ret = subprocess.run(["lsof", "-i", "-n", "-a", "-p", str(pid)],
+    lsof_ret = subprocess.run(["lsof", "-i", "-nP", "-a", "-p", str(pid)],
         capture_output=True, check=True).stdout
     plpy.info(
         f'Checking postgres backend {pid}, ' \
@@ -62,7 +62,7 @@ for pid in pids_to_check:
     for line in r:
         # No '->' follows he port. The connection has not be setup yet
         match=re.match(f".*{expected_socket_kind} {hostip}:\d+ .*", str(line))
-        if match != None:
+        if match is not None:
             motion_socket_count += 1
 
     if motion_socket_count != expected_socket_count_per_segment:
