@@ -5169,20 +5169,22 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 
 		/* 
 		 * Check for overflowing fields.
-		 * In QE, attr_count may be equal to 0,
+		 * GPDB: Change below condition compared to upstream to 
+		 * greater than or equal to 0 as in QE, 
+		 * attr_count may be equal to 0, 
 		 * when all fields are processed in the QD.
 		 */
 		if (file_has_oids)
 		{
 			/* real fldct should -1 due to addtional oids column */
-			if (attr_count >= 0 && (fldct - 1) > attr_count)
+			if ((fldct - 1) > attr_count)
 				ereport(ERROR,
 						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 						errmsg("extra data after last expected column when doing copy with oid")));
 		}
 		else 
 		{
-			if (attr_count >= 0 && fldct > attr_count)
+			if (fldct > attr_count)
 				ereport(ERROR,
 						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 						errmsg("extra data after last expected column")));			
