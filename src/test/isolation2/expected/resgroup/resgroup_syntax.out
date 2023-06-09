@@ -507,7 +507,7 @@ ALTER
 0: DROP RESOURCE GROUP rg_test_group;
 DROP
 -- start_ignore
-!\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.9;
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 1;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
