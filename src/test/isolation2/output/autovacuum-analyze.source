@@ -114,6 +114,8 @@ select relpages, reltuples from pg_class where oid = 'anatest'::regclass;
 1: CREATE TABLE rankpart (id int, rank int, product int) DISTRIBUTED BY (id) PARTITION BY RANGE (rank) ( START (1) END (10) EVERY (2), DEFAULT PARTITION extra );
 CREATE TABLE
 
+1: CREATE STATISTICS dep(dependencies) on rank, product from rankpart;
+CREATE STATISTICS
 -- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'rankpart_1_prt_extra', 1, -1, 0, 1);
  gp_inject_fault 
@@ -251,6 +253,103 @@ select relpages, reltuples from pg_class where oid = 'rankpart'::regclass;
  relpages | reltuples 
 ----------+-----------
  0        | 0         
+(1 row)
+
+-- Insert data into rankpart_1_prt_6, check that root partition stats are updated
+
+-- Track report gpstat on coordinator
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'rankpart_1_prt_6', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Track that we have updated the attributes stats in pg_statistic when finished
+SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'rankpart_1_prt_6', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'rankpart_1_prt_6', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Insert data into final partition to trigger stats collection for root partition
+1&: insert into rankpart select i, 9, i from generate_series(1,200)i;  <waiting ...>
+
+-- Wait until report pgstat on coordinator
+SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+INSERT 0 200
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.rankpart_1_prt_6                                                              
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Once all partitions are analyzed, statistics should be collected for root
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_6'::regclass;
+ count 
+-------
+ 3     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'rankpart'::regclass;
+ count 
+-------
+ 3     
+(1 row)
+SELECT relpages, reltuples FROM pg_class WHERE oid = 'rankpart_1_prt_6'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 200       
+(1 row)
+SELECT relpages, reltuples FROM pg_class where oid = 'rankpart'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 0        | 0         
+(1 row)
+-- Extended stats should not be collected
+SELECT d.stxddependencies FROM pg_statistic_ext s, pg_statistic_ext_data d WHERE s.stxrelid = 'rankpart'::regclass AND d.stxoid = s.oid;
+ stxddependencies 
+------------------
+                  
 (1 row)
 
 
@@ -625,6 +724,147 @@ select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_ta
  analyze_count | autoanalyze_count | n_mod_since_analyze 
 ---------------+-------------------+---------------------
  2             | 3                 | 0                   
+(1 row)
+
+-- Case 4 --
+-- Multi-level partition case
+
+-- Prepare the table to be ANALYZEd
+1: RESET gp_autostats_mode;
+RESET
+1: create table multipart(a int)  partition by range(a);
+CREATE TABLE
+1: create table part2(a int) partition by range(a);
+CREATE TABLE
+1: create table part3(a int) partition by range(a);
+CREATE TABLE
+1: create table p1(a int);
+CREATE TABLE
+1: create table p2(a int);
+CREATE TABLE
+1: create table p3(a int);
+CREATE TABLE
+1: create table p4(a int);
+CREATE TABLE
+1: alter table multipart attach partition part2 for values from (0) to (10);
+ALTER TABLE
+1: alter table multipart attach partition part3 for values from (10) to (20);
+ALTER TABLE
+1: alter table part2 attach partition p1 for values from (0) to (5);
+ALTER TABLE
+1: alter table part2 attach partition p2 for values from (5) to (10);
+ALTER TABLE
+1: alter table part3 attach partition p3 for values from (10) to (15);
+ALTER TABLE
+1: alter table part3 attach partition p4 for values from (15) to (20);
+ALTER TABLE
+
+-- Track report gpstat on coordinator
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'p3', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Track that we have updated the attributes stats in pg_statistic when finished
+SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'p3', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- Suspend the autovacuum worker from analyze before
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'p3', 1, -1, 0, 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1&: insert into multipart select i%20 from generate_series(1, 1000)i;  <waiting ...>
+
+-- Wait until report pgstat on coordinator
+SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+INSERT 0 1000
+
+-- Wait until autovacuum is triggered
+SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
+ datname        | query                                                                                                    
+----------------+----------------------------------------------------------------------------------------------------------
+ isolation2test | select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database(); 
+ isolation2test | autovacuum: ANALYZE public.p3                                                                            
+(2 rows)
+SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Wait until autovacuum worker updates pg_database
+SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Root and leaves should have statistic updated. Intermediate partitions should not
+SELECT count(*) FROM pg_statistic where starelid = 'multipart'::regclass;
+ count 
+-------
+ 1     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'part2'::regclass;
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'part3'::regclass;
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(*) FROM pg_statistic where starelid = 'p4'::regclass;
+ count 
+-------
+ 1     
+(1 row)
+select relpages, reltuples from pg_class where oid = 'multipart'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 0        | 0         
+(1 row)
+select relpages, reltuples from pg_class where oid = 'part2'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 0        | 0         
+(1 row)
+select relpages, reltuples from pg_class where oid = 'part3'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 0        | 0         
+(1 row)
+select relpages, reltuples from pg_class where oid = 'p4'::regclass;
+ relpages | reltuples 
+----------+-----------
+ 3        | 250       
 (1 row)
 
 -- Reset GUCs.

@@ -700,6 +700,13 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	}
 
 	sample_needed = needs_sample(onerel, vacattrstats, attr_cnt);
+	/*
+	 * Do not sample partitioned tables during autovacuum for any reason.
+	 * It can take a long time and be IO intensive, and we'd only hit this case
+	 * for collecting extended stats
+	 */
+	if (onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE && IsAutoVacuumWorkerProcess())
+		sample_needed = false;
 	if (ctx || sample_needed)
 	{
 		if (ctx)
@@ -822,6 +829,8 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 				MemoryContextResetAndDeleteChildren(col_context);
 				continue;
 			}
+			if (!sample_needed)
+				continue;
 			Assert(sample_needed);
 
 			Bitmapset  *rowIndexes = colLargeRowIndexes[stats->attr->attnum - 1];
@@ -989,8 +998,10 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		 *
 		 * For now we only build extended statistics on individual relations,
 		 * not for relations representing inheritance trees.
+		 *
+		 * Additionally, don't build external stats for partitioned tables during autovacuum
 		 */
-		if (build_ext_stats)
+		if (build_ext_stats && !(onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE && IsAutoVacuumWorkerProcess()))
 			BuildRelationExtStatistics(onerel, totalrows, numrows, rows,
 									   attr_cnt, vacattrstats);
 	}

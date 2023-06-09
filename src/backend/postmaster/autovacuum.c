@@ -122,6 +122,7 @@
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/namespace.h"
+#include "catalog/partition.h"
 #include "catalog/pg_database.h"
 #include "commands/dbcommands.h"
 #include "commands/vacuum.h"
@@ -2037,6 +2038,7 @@ do_autovacuum(void)
 	bool		did_vacuum = false;
 	bool		found_concurrent_worker = false;
 	int			i;
+	Bitmapset  *partition_roots_to_analyze = NULL;
 
 	/*
 	 * StartTransactionCommand and CommitTransactionCommand will automatically
@@ -2204,6 +2206,13 @@ do_autovacuum(void)
 		if (dovacuum || doanalyze)
 			table_oids = lappend_oid(table_oids, relid);
 
+		/* add partition root to separate set */
+		if (doanalyze && classForm->relispartition)
+		{
+			List *ancestors = get_partition_ancestors(relid);
+			Oid root_parent_relid = llast_oid(ancestors);
+			partition_roots_to_analyze = bms_add_member(partition_roots_to_analyze, root_parent_relid);
+		}
 		/*
 		 * Remember TOAST associations for the second pass.  Note: we must do
 		 * this whether or not the table is going to be vacuumed, because we
@@ -2392,6 +2401,16 @@ do_autovacuum(void)
 	PortalContext = AllocSetContextCreate(AutovacMemCxt,
 										  "Autovacuum Portal",
 										  ALLOCSET_DEFAULT_SIZES);
+
+	/*
+	 * analyze all partition roots at end. This ensures we only merge stats once
+	 * per root partition
+	 */
+	int k = -1;
+	while ((k = bms_next_member(partition_roots_to_analyze, k)) >= 0)
+	{
+		table_oids = lappend_oid(table_oids, k);
+	}
 
 	/*
 	 * Perform operations on collected tables.
@@ -2832,7 +2851,8 @@ extract_autovac_opts(HeapTuple tup, TupleDesc pg_class_desc)
 		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_TOASTVALUE ||
 		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_AOSEGMENTS ||
 		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_AOBLOCKDIR ||
-		   ((Form_pg_class) GETSTRUCT(tup))->relkind ==  RELKIND_AOVISIMAP);
+		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_AOVISIMAP ||
+		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_PARTITIONED_TABLE);
 
 
 	relopts = extractRelOptions(tup, pg_class_desc, NULL);
@@ -3218,20 +3238,16 @@ relation_needs_vacanalyze(Oid relid,
 	if (relid == StatisticRelationId)
 		*doanalyze = false;
 
+	/*
+	 * Always analyze (merge stats) for partitioned tables, since we
+	 * aren't tracking tuples modified in the root, only the leaves
+	 */
+	if (get_rel_relkind(relid) == RELKIND_PARTITIONED_TABLE)
+		*doanalyze = true;
+
 	/* Only wish to trigger auto-analyze from coordinator */
 	if (Gp_role != GP_ROLE_DISPATCH)
 		*doanalyze = false;
-
-	/*
-	 * There are a lot of things to do to enable auto-ANALYZE for partition tables,
-	 * see PR10515 for details.
-	 * Currently, we just disable auto-ANALYZE for partition tables.
-	 */
-	if (*doanalyze)
-	{
-		if (get_rel_relkind(relid) == RELKIND_PARTITIONED_TABLE)
-			*doanalyze = false;
-	}
 
 	if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG)
 	{
