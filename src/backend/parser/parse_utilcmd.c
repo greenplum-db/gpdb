@@ -1212,6 +1212,12 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 
 			cxt->alist = lappend(cxt->alist, stmt);
 		}
+
+		/* Likewise, copy attribute encoding if requested */
+		if (table_like_clause->options & CREATE_TABLE_LIKE_ENCODING)
+			cxt->attr_encodings = list_union(cxt->attr_encodings, rel_get_column_encodings(relation));
+		else
+			cxt->attr_encodings = NIL;
 	}
 
 	/*
@@ -1232,65 +1238,28 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 		cxt->likeclauses = lappend(cxt->likeclauses, table_like_clause);
 	}
 
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 * 		This is not ideal and introduces limitations when multiple like
-	 * 		clauses are present in the statement.
-	 *
-	 *		Try to use a unified interface for encoding handling in a manner
-	 *		similar to CREATE/ALTER commands.
-	 *		For more details see:
-	 *		https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/mOPeBxFm43w
-	 */
-	/*
-	 * If STORAGE is included, we need to copy over the table storage params
-	 * as well as the attribute encodings.
-	 */
-	if (stmt && table_like_clause->options & CREATE_TABLE_LIKE_STORAGE)
+	/* Copy AM if requested */
+	if (table_like_clause->options & CREATE_TABLE_LIKE_AM)
 	{
-		MemoryContext oldcontext;
-		/*
-		 * As we are modifying the utility statement we must make sure these
-		 * DefElem allocations can survive outside of this context.
-		 */
-		oldcontext = MemoryContextSwitchTo(CurTransactionContext);
+		/* Allow multiple LIKE INCLUDING AM clauses and take last specification */
+		if (stmt->accessMethod && strcmp(stmt->accessMethod, get_am_name(relation->rd_rel->relam)) != 0)
+			ereport(WARNING,
+					(errcode(ERRCODE_DUPLICATE_OBJECT),
+						errmsg("Multiple INCLUDING AM is specified, replacing previous AM %s with %s LIKE relation %s",
+							   stmt->accessMethod, get_am_name(relation->rd_rel->relam), RelationGetRelationName(relation))));
+		stmt->accessMethod = get_am_name(relation->rd_rel->relam);
+	}
 
-		if (RelationStorageIsAO(relation))
-		{
-			bool		checksum = true;
-			int32		blocksize = -1;
-			int16		compresslevel = 0;
-			NameData	compresstype;
-
-			if (stmt->accessMethod != NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("LIKE %s INCLUDING STORAGE is not allowed because the access method of table %s is already set to %s",
-								RelationGetRelationName(relation), cxt->relation->relname, stmt->accessMethod)),
-						 errdetail("Multiple INCLUDING STORAGE clauses of append-optimized tables are not allowed.\n"
-								   "Single INCLUDING STORAGE clause of append-optimized table is also not allowed if access method is explicitly specified."));
-
-			GetAppendOnlyEntryAttributes(relation->rd_id,&blocksize,
-																	&compresslevel,&checksum,&compresstype);
-
-			stmt->accessMethod = get_am_name(relation->rd_rel->relam);
-
-			stmt->options = lappend(stmt->options,
-			                        makeDefElem("blocksize", (Node *) makeInteger(blocksize), -1));
-			stmt->options = lappend(stmt->options,
-			                        makeDefElem("checksum", (Node *) makeInteger(checksum), -1));
-			stmt->options = lappend(stmt->options,
-			                        makeDefElem("compresslevel", (Node *) makeInteger(compresslevel), -1));
-			if (strlen(NameStr(compresstype)) > 0)
-				stmt->options = lappend(stmt->options,
-				                        makeDefElem("compresstype", (Node *) makeString(pstrdup(NameStr(compresstype))), -1));
-		}
-
-		/*
-		 * Set the attribute encodings.
-		 */
-		cxt->attr_encodings = list_union(cxt->attr_encodings, rel_get_column_encodings(relation));
-		MemoryContextSwitchTo(oldcontext);
+	/* Copy reloptions if requested */
+	if (table_like_clause->options & CREATE_TABLE_LIKE_RELOPT)
+	{
+		/* Allow multiple LIKE INCLUDING RELOPT clauses and take last specification */
+		if (stmt->options)
+			ereport(WARNING,
+					(errcode(ERRCODE_DUPLICATE_OBJECT),
+						errmsg("Multiple INCLUDING RELOPT is specified, applying the last specification only LIKE %s",
+							   RelationGetRelationName(relation))));
+		stmt->options = untransformRelOptions(get_rel_opts(relation));
 	}
 
 	/*

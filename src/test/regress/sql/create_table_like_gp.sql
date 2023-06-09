@@ -1,31 +1,96 @@
--- AO/AOCS
-CREATE TABLE t_ao (a integer, b text) WITH (appendonly=true, orientation=column);
-CREATE TABLE t_ao_enc (a integer, b text ENCODING (compresstype=zlib,compresslevel=1,blocksize=32768)) WITH (appendonly=true, orientation=column);
+-- Verify the copied STORAGE, ENCODING, RELOPT, and AM options
 
-CREATE TABLE t_ao_a (LIKE t_ao INCLUDING ALL);
-CREATE TABLE t_ao_b (LIKE t_ao INCLUDING STORAGE);
-CREATE TABLE t_ao_c (LIKE t_ao); -- Should create a heap table
-
-CREATE TABLE t_ao_enc_a (LIKE t_ao_enc INCLUDING STORAGE);
-
--- Verify default_table_access_method GUC doesn't get used
+-- create a source heap table
+CREATE TABLE ctlt_heap (a text) WITH (fillfactor = 50);
+ALTER TABLE ctlt_heap ALTER COLUMN a SET STORAGE MAIN;
+-- create table like the heap table
+CREATE TABLE like_heap_storage (LIKE ctlt_heap INCLUDING STORAGE); -- succeeds
+CREATE TABLE like_heap_encoding (LIKE ctlt_heap INCLUDING ENCODING); -- succeeds, but ignored
+CREATE TABLE like_heap_relopt (LIKE ctlt_heap INCLUDING RELOPT); -- succeeds
 SET default_table_access_method = ao_row;
-CREATE TABLE t_ao_d (LIKE t_ao INCLUDING ALL);
-RESET gp_default_storage_options;
+CREATE TABLE like_heap_am (LIKE ctlt_heap INCLUDING AM); -- succeeds
+CREATE TABLE like_heap_am_relopt (LIKE ctlt_heap INCLUDING AM INCLUDING relopt); -- succeeds
+CREATE TABLE like_heap_all (LIKE ctlt_heap INCLUDING ALL); -- succeeds
+CREATE TABLE like_heap_all_use_heap (LIKE ctlt_heap INCLUDING ALL) USING heap; -- error, AM already explicitly specified
+CREATE TABLE like_heap_all_use_ao (LIKE ctlt_heap INCLUDING ALL) USING ao_row; -- error, AM already explicitly specified
+CREATE TABLE like_heap_all_use_ao (LIKE ctlt_heap INCLUDING ALL EXCLUDING AM) USING ao_row; -- error, unrecognized parameter "fillfactor"
+CREATE TABLE like_heap_all_with_relopt (LIKE ctlt_heap INCLUDING ALL) WITH (fillfactor = 50); -- error, relopt already explicitly specified
+RESET default_table_access_method;
+
+-- create a source ao_row table
+CREATE TABLE ctlt_aorow (b text) USING ao_row WITH (compresstype=zstd,compresslevel=5,blocksize=65536);
+ALTER TABLE ctlt_aorow ALTER COLUMN b SET STORAGE MAIN;
+-- create table like the ao_row table
+CREATE TABLE like_aorow_storage (LIKE ctlt_aorow INCLUDING STORAGE); -- succeeds
+CREATE TABLE like_aorow_encoding (LIKE ctlt_aorow INCLUDING ENCODING); -- succeeds, but ignored
+CREATE TABLE like_aorow_relopt (LIKE ctlt_aorow INCLUDING RELOPT); -- errors, unrecognized parameter "blocksize"
+CREATE TABLE like_aorow_relopt_use_aorow (LIKE ctlt_aorow INCLUDING RELOPT) USING ao_row; -- succeeds
+CREATE TABLE like_aorow_am (LIKE ctlt_aorow INCLUDING AM); -- succeeds
+CREATE TABLE like_aorow_am_relopt (LIKE ctlt_aorow INCLUDING AM INCLUDING relopt); -- succeeds
+CREATE TABLE like_aorow_all (LIKE ctlt_aorow INCLUDING ALL); -- succeeds
+CREATE TABLE like_aorow_all_use_aorow (LIKE ctlt_aorow INCLUDING ALL) USING ao_row; -- errors, AM already explicitly specified
+CREATE TABLE like_aorow_all_exc_am_use_aorow (LIKE ctlt_aorow INCLUDING ALL EXCLUDING AM) USING ao_row; -- succeeds
+CREATE TABLE like_aorow_all_with_relopt (LIKE ctlt_aorow INCLUDING ALL) WITH (compresstype=zstd,compresslevel=5,blocksize=65536); -- errors, relopt already explicitly specified
+CREATE TABLE like_aorow_all_exc_relopt_with_relopt (LIKE ctlt_aorow INCLUDING ALL EXCLUDING RELOPT) WITH (compresstype=zstd,compresslevel=5,blocksize=65536); -- errors, relopt already explicitly specified
+
+-- create a source ao_col table
+CREATE TABLE ctlt_aocol (c text ENCODING (compresstype=zlib, compresslevel=1, blocksize=8192), d int) USING ao_column WITH (compresstype=zlib, compresslevel=3, blocksize=32768);
+ALTER TABLE ctlt_aocol ALTER COLUMN c SET STORAGE MAIN;
+-- create table like the ao_col table
+CREATE TABLE like_aocol_storage (LIKE ctlt_aocol INCLUDING STORAGE); -- succeeds
+CREATE TABLE like_aocol_encoding (LIKE ctlt_aocol INCLUDING ENCODING); -- errors, encoding not supported for non ao_col
+CREATE TABLE like_aocol_encoding_use_aocol (LIKE ctlt_aocol INCLUDING ENCODING) USING ao_column; -- errors, encoding not supported for non ao_col
+CREATE TABLE like_aocol_relopt (LIKE ctlt_aocol INCLUDING RELOPT); -- errors, unrecognized parameter "compresstype"
+CREATE TABLE like_aocol_relopt_with_aocol (LIKE ctlt_aocol INCLUDING RELOPT) WITH (appendonly=true, orientation=column); -- succeeds
+CREATE TABLE like_aocol_am (LIKE ctlt_aocol INCLUDING AM); -- succeeds
+CREATE TABLE like_aocol_relopt_am (LIKE ctlt_aocol INCLUDING RELOPT INCLUDING AM); -- succeeds
+CREATE TABLE like_aocol_all (LIKE ctlt_aocol INCLUDING ALL); -- succeeds
+CREATE TABLE like_aocol_all_use_aocol (LIKE ctlt_aocol INCLUDING ALL) USING ao_column; -- errors, AM already explicitly specified
+CREATE TABLE like_aocol_all_with_aocol (LIKE ctlt_aocol INCLUDING ALL) WITH (appendonly = true, orientation = column); -- errors, AM already explicitly specified
+CREATE TABLE like_aocol_all_exc_am_use_aocol (LIKE ctlt_aocol INCLUDING ALL EXCLUDING AM) USING ao_column; ; -- succeeds
+CREATE TABLE like_aocol_all_add_encoding (LIKE ctlt_aocol INCLUDING ALL, i text ENCODING (compresstype=zstd, compresslevel=3, blocksize=65536)); -- succeeds
+CREATE TABLE like_aocol_all_with_relopt (LIKE ctlt_aocol INCLUDING ALL) WITH (compresstype=zlib, compresslevel=3, blocksize=32768); -- errors, relopt already explicitly specified
+
+-- Multiple LIKE INCLUDING ENCODING clauses
+SET default_table_access_method = ao_column;
+CREATE TABLE ctlt_aocol2 (c2 text ENCODING (compresstype=zstd, compresslevel=3, blocksize=8192), d2 int) USING ao_column WITH (compresstype=zlib, compresslevel=3, blocksize=32768);
+CREATE TABLE like_aocol_encoding_aocol_encoding (LIKE ctlt_aocol INCLUDING ENCODING, LIKE ctlt_aocol2 INCLUDING ENCODING); -- succeeds
+CREATE TABLE like_aocol_encoding_aorow_encoding (LIKE ctlt_aocol INCLUDING ENCODING, LIKE ctlt_aorow INCLUDING ENCODING); -- succeeds
+RESET default_table_access_method;
+
+-- Multiple LIKE INCLUDING RELOPT clauses
+CREATE TABLE ctlt_heap2 (a2 text) WITH (fillfactor = 70);
+CREATE TABLE like_heap_relopt_heap_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_heap2 INCLUDING RELOPT); -- succeeds, but warnings
+CREATE TABLE like_heap_relopt_aocol_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING RELOPT); -- errors, unrecognized parameter "compresstype"
+
+-- Multiple LIKE INCLUDING AM clauses
+CREATE TABLE like_heap_am_aocol_am (LIKE ctlt_heap INCLUDING AM, LIKE ctlt_aocol INCLUDING AM); -- succeeds, but warnings
+CREATE TABLE like_aocol_am_heap_am (LIKE ctlt_aocol INCLUDING AM, LIKE ctlt_heap INCLUDING AM); -- succeeds, but warnings
+
+-- Multiple LIKEs with mixed INCLUDING ENCODING, RELOPT, and AM clauses
+CREATE TABLE like_aocol_encoding_aorow_am (LIKE ctlt_aocol INCLUDING ENCODING, LIKE ctlt_aorow INCLUDING AM); -- succeeds, but ignores ENCODING
+CREATE TABLE like_aocol_relopt_aorow_am (LIKE ctlt_aocol INCLUDING RELOPT, LIKE ctlt_aorow INCLUDING AM); -- succeeds
+CREATE TABLE like_aocol_relopt_heap_am (LIKE ctlt_aocol INCLUDING RELOPT, LIKE ctlt_heap INCLUDING AM); -- errors, unrecognized parameter "compresstype"
+CREATE TABLE like_heap_relopt_aocol_am (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING AM); -- errors, unrecognized parameter "fillfactor"
+CREATE TABLE like_heap_relopt_aocol_relopt_am (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING RELOPT INCLUDING AM); -- succeeds, but warnings
+CREATE TABLE ctlt_heap_no_relopt (a2 text);
+CREATE TABLE like_heap_relopt_aocol_am2 (LIKE ctlt_heap_no_relopt INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING AM); -- succeeds
 
 -- Verify created tables and attributes
-select relname, reloptions from pg_class where relname LIKE 't_ao%' order by relname;
+select c.relname, am.amname, c.reloptions from pg_class c JOIN pg_am am ON c.relam = am.oid where relname LIKE 'like_%' order by relname;
 
 SELECT
 	c.relname,
-	a.attnum,
-	a.filenum,
-	a.attoptions
+	ae.attnum,
+	ae.filenum,
+	ae.attoptions,
+	a.attstorage
 FROM
 	pg_catalog.pg_class c
-		JOIN pg_catalog.pg_attribute_encoding a ON (a.attrelid = c.oid)
+		JOIN pg_catalog.pg_attribute_encoding ae ON (ae.attrelid = c.oid)
+		JOIN pg_catalog.pg_attribute a ON (a.attrelid = c.oid AND a.attnum = ae.attnum)
 WHERE
-	c.relname like 't_ao_enc%';
+	c.relname like 'like_%';
 
 -- EXTERNAL TABLE
 CREATE EXTERNAL TABLE t_ext (a integer) LOCATION ('file://127.0.0.1/tmp/foo') FORMAT 'text';
@@ -86,24 +151,3 @@ WHERE c.table_name = 't_comments_b';
 
 DROP TABLE t_comments_a;
 DROP TABLE t_comments_b;
-
--- Verify INCLUDING STORAGE of an append_optimized table errors out when table AM is explicitly specified
-CREATE TABLE t_aorow (b text) USING ao_row WITH (compresstype=zstd,compresslevel=5,blocksize=65536);
--- Disallow INCLUDING STORAGE when table AM is explicitly specified w/ a different table AM
-CREATE TABLE t_like_aorow_use_heap (LIKE t_aorow INCLUDING STORAGE) USING heap;
-CREATE TABLE t_like_aorow_use_aocol (LIKE t_aorow INCLUDING STORAGE) USING ao_column;
-CREATE TABLE t_like_aorow_use_aocol (LIKE t_aorow INCLUDING STORAGE) WITH (appendonly=true, orientation=column);
--- Disallow INCLUDING STORAGE even if table AM is explicitly specified w/ the same table AM
--- This seems silly, but it's the same behavior as 6X.
-CREATE TABLE t_like_aorow_use_aorow (LIKE t_aorow INCLUDING STORAGE) USING ao_row;
-CREATE TABLE t_like_aorow_use_aorow (LIKE t_aorow INCLUDING STORAGE) WITH (appendonly=true, orientation=row);
-
--- Verify multiple INCLUDING STORAGE clauses with append-optimized tables are not allowed
-CREATE TABLE t_aorow_2 (b text) USING ao_row WITH (compresstype=zstd,compresslevel=5,blocksize=65536);
--- ERROR even if the two source tables have same AM and encoding options.
-CREATE TABLE t_like_ao_ao_storage (LIKE t_aorow INCLUDING STORAGE, LIKE t_aorow_2 INCLUDING STORAGE);
--- Mix heap and AO AMs are still allowed. The new table takes the AO tables' AM and encoding options.
--- This is not intuitive, but it is the same behavior as 6X.
-CREATE TABLE t_heap (a text) USING heap WITH (fillfactor = 50);
-CREATE TABLE t_like_ao_heap_storage (LIKE t_aorow INCLUDING STORAGE, LIKE t_heap INCLUDING STORAGE);
-\d+ t_like_ao_heap_storage

@@ -536,7 +536,6 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
-static Datum get_rel_opts(Relation rel);
 
 /* ----------------------------------------------------------------
  *		DefineRelation
@@ -16670,7 +16669,7 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 /*
  * GPDB: Convenience function to get reloptions for a given relation.
  */
-static Datum
+Datum
 get_rel_opts(Relation rel)
 {
 	Datum newOptions = PointerGetDatum(NULL);
