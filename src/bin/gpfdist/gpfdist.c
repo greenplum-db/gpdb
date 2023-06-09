@@ -2137,8 +2137,7 @@ static void do_write(int fd, short event, void* arg)
 	 */
 	if (opt.multi_thread)
 	{
-		int res = recycle_thread(r);
-		if (res < 0)
+		if (recycle_thread(r) < 0)
 		{
 			return;
 		}
@@ -5056,8 +5055,7 @@ int decompress_write_loop(request_t *r)
 		gdebug(r, "wrote %d bytes to file", wrote);
 		delay_watchdog_timer();
 
-		res = check_output_to_file(r, wrote);
-		if (res < 0)
+		if (check_output_to_file(r, wrote) < 0)
 		{
 			return -1;
 		}
