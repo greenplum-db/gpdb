@@ -661,6 +661,20 @@ aoco_endscan(TableScanDesc scan)
 	pfree(aocsBitmapScan->bitmapScanDesc[RECHECK].proj);
 }
 
+/* ----------------
+ * aoco_rescan - restart a relation scan
+ *
+ * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: When doing an initial rescan with `table_rescan`,
+ * the values for the new flags (introduced by Table AM API) are
+ * set to false. This means that whichever ScanOptions flags that were initially set will be
+ * used for the rescan. However with TABLESAMPLE, which is currently not
+ * supported for AO/CO, the new flags may be modified.
+ * Additionally, allow_sync, allow_strat, and allow_pagemode may
+ * need to be implemented for AO/CO in order to properly use them.
+ * You may view `syncscan.c` as an example to see how heap added scan
+ * synchronization support.
+ * ----------------
+ */
 static void
 aoco_rescan(TableScanDesc scan, ScanKey key,
                   bool set_params, bool allow_strat,
