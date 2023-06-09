@@ -1722,15 +1722,30 @@ AllocSetTransferAccounting(MemoryContext context, MemoryContext new_parent)
 		(np && set->accountingParent == np->accountingParent))
 		return;
 
-	while (np && np != set->accountingParent)
+	while (np && np->accountingParent != np && np != set->accountingParent)
 		np = (AllocSet)np->header.parent;
 
-	if (np == set->accountingParent)
+	if (np)
 	{
-		/*
-		 * if set->accountingParent is the ancestor of the new parent,
-		 * the accoutingParent doesn't need to change.
-		 */
+		if (np == set->accountingParent)
+		{
+			/*
+			* if set->accountingParent is the ancestor of the new parent,
+			* the accoutingParent doesn't need to change.
+			*/
+		}
+		else if (np == np->accountingParent)
+		{
+			set->accountingParent->currentAllocated -= set->localAllocated;
+			set->accountingParent = np->accountingParent;
+			np->currentAllocated += set->localAllocated;
+			np->peakAllocated = Max(np->currentAllocated, np->peakAllocated);
+
+			/* also need to update accounting info for descendants */
+			MemoryContext child;
+			for (child = context->firstchild; child != NULL; child = child->nextchild)
+				AllocSetTransferAccounting(child, (MemoryContext)np);
+		}
 	}
 	else
 	{
@@ -1739,6 +1754,11 @@ AllocSetTransferAccounting(MemoryContext context, MemoryContext new_parent)
 		set->accountingParent = set;
 		set->currentAllocated = set->localAllocated;
 		set->peakAllocated = set->localAllocated;
+
+		/* also need to update accounting info for descendants */
+		MemoryContext child;
+		for (child = context->firstchild; child != NULL; child = child->nextchild)
+			AllocSetTransferAccounting(child, (MemoryContext)set);
 	}
 
 }
