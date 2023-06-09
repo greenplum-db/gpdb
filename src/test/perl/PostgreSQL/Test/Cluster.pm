@@ -2249,6 +2249,12 @@ instead of the default.
 
 If this regular expression is set, matches it with the output generated.
 
+=item log_like => [ qr/required message/ ]
+
+=item log_unlike => [ qr/prohibited message/ ]
+
+See C<log_check(...)>.
+
 =back
 
 =cut
@@ -2268,6 +2274,8 @@ sub connect_ok
 		$sql = "SELECT \$\$connected with $connstr\$\$";
 	}
 
+	my $log_location = -s $self->logfile;
+
 	# Never prompt for a password, any callers of this routine should
 	# have set up things properly, and this should not block.
 	my ($ret, $stdout, $stderr) = $self->psql(
@@ -2284,6 +2292,9 @@ sub connect_ok
 		like($stdout, $params{expected_stdout}, "$test_name: matches");
 	}
 
+	is($stderr, "", "$test_name: no stderr");
+
+	$self->log_check($test_name, $log_location, %params);
 }
 
 =pod
@@ -2299,6 +2310,12 @@ to fail.
 
 If this regular expression is set, matches it with the output generated.
 
+=item log_like => [ qr/required message/ ]
+
+=item log_unlike => [ qr/prohibited message/ ]
+
+See C<log_check(...)>.
+
 =back
 
 =cut
@@ -2307,6 +2324,8 @@ sub connect_fails
 {
 	local $Test::Builder::Level = $Test::Builder::Level + 1;
 	my ($self, $connstr, $test_name, %params) = @_;
+
+	my $log_location = -s $self->logfile;
 
 	# Never prompt for a password, any callers of this routine should
 	# have set up things properly, and this should not block.
@@ -2323,6 +2342,7 @@ sub connect_fails
 		like($stderr, $params{expected_stderr}, "$test_name: matches");
 	}
 
+	$self->log_check($test_name, $log_location, %params);
 }
 
 =pod
@@ -2508,6 +2528,82 @@ sub issues_sql_like
 	my $log = PostgreSQL::Test::Utils::slurp_file($self->logfile, $log_location);
 	like($log, $expected_sql, "$test_name: SQL found in server log");
 	return;
+}
+
+=pod
+
+=item $node->log_content()
+
+Returns the contents of log of the node
+
+=cut
+
+sub log_content
+{
+	my ($self) = @_;
+	return PostgreSQL::Test::Utils::slurp_file($self->logfile);
+}
+
+=pod
+
+=item $node->log_check($offset, $test_name, %parameters)
+
+Check contents of server logs.
+
+=over
+
+=item $test_name
+
+Name of test for error messages.
+
+=item $offset
+
+Offset of the log file.
+
+=item log_like => [ qr/required message/ ]
+
+If given, it must be an array reference containing a list of regular
+expressions that must match against the server log, using
+C<Test::More::like()>.
+
+=item log_unlike => [ qr/prohibited message/ ]
+
+If given, it must be an array reference containing a list of regular
+expressions that must NOT match against the server log.  They will be
+passed to C<Test::More::unlike()>.
+
+=back
+
+=cut
+
+sub log_check
+{
+	my ($self, $test_name, $offset, %params) = @_;
+
+	my (@log_like, @log_unlike);
+	if (defined($params{log_like}))
+	{
+		@log_like = @{ $params{log_like} };
+	}
+	if (defined($params{log_unlike}))
+	{
+		@log_unlike = @{ $params{log_unlike} };
+	}
+
+	if (@log_like or @log_unlike)
+	{
+		my $log_contents =
+		  PostgreSQL::Test::Utils::slurp_file($self->logfile, $offset);
+
+		while (my $regex = shift @log_like)
+		{
+			like($log_contents, $regex, "$test_name: log matches");
+		}
+		while (my $regex = shift @log_unlike)
+		{
+			unlike($log_contents, $regex, "$test_name: log does not match");
+		}
+	}
 }
 
 =pod
