@@ -913,10 +913,7 @@ class SQLIsolationTestCase:
 
         One difference to SQLTestCase is the output of INSERT.
         SQLTestCase would output "INSERT 0 1" if one tuple is inserted.
-        SQLIsolationTestCase would output "INSERT 1". As the
-        SQLIsolationTestCase needs to have a more fine-grained control
-        over the execution order than possible with PSQL, it uses
-        the pygresql python library instead.
+        SQLIsolationTestCase would output "INSERT 1". 
 
         Connecting to a specific database:
         1. If you specify a db_name metadata in the sql file, connect to that database in all open sessions.
