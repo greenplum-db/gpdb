@@ -1258,13 +1258,6 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 		/* Allow multiple LIKE INCLUDING RELOPT clauses and take last specification */
 		if (stmt->options)
 		{
-			Datum options;
-			options = transformRelOptions(PointerGetDatum(NULL),
-									stmt->options,
-									NULL,
-									NULL,
-									true,
-									false);
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 						errmsg(
