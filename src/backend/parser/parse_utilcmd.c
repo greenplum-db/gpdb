@@ -1241,12 +1241,14 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 	/* Copy AM if requested */
 	if (table_like_clause->options & CREATE_TABLE_LIKE_AM)
 	{
-		/* Allow multiple LIKE INCLUDING AM clauses and take last specification */
-		if (stmt->accessMethod && strcmp(stmt->accessMethod, get_am_name(relation->rd_rel->relam)) != 0)
-			ereport(WARNING,
-					(errcode(ERRCODE_DUPLICATE_OBJECT),
-						errmsg("Multiple INCLUDING AM is specified, replacing previous AM %s with %s LIKE relation %s",
-							   stmt->accessMethod, get_am_name(relation->rd_rel->relam), RelationGetRelationName(relation))));
+		if (stmt->accessMethod)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("LIKE %s INCLUDING AM is not allowed because the access method of table %s is already set to %s",
+							   RelationGetRelationName(relation), cxt->relation->relname, stmt->accessMethod)),
+					errdetail("Multiple LIKE clauses with the INCLUDING AM option is not allowed.\n"
+							  "Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause."),
+					errhint("Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE."));
 		stmt->accessMethod = get_am_name(relation->rd_rel->relam);
 	}
 
@@ -1255,10 +1257,26 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 	{
 		/* Allow multiple LIKE INCLUDING RELOPT clauses and take last specification */
 		if (stmt->options)
-			ereport(WARNING,
-					(errcode(ERRCODE_DUPLICATE_OBJECT),
-						errmsg("Multiple INCLUDING RELOPT is specified, applying the last specification only LIKE %s",
-							   RelationGetRelationName(relation))));
+		{
+			Datum options;
+			options = transformRelOptions(PointerGetDatum(NULL),
+									stmt->options,
+									NULL,
+									NULL,
+									true,
+									false);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg(
+							"LIKE %s INCLUDING RELOPT is not allowed because the reloptions of table %s is already set",
+							RelationGetRelationName(relation),
+							cxt->relation->relname)),
+					errdetail(
+						"Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.\n"
+						"Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause."),
+					errhint(
+						"Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE."));
+		}
 		stmt->options = untransformRelOptions(get_rel_opts(relation));
 	}
 

@@ -201,8 +201,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 static bool isSetWithReorganize(List **options);
 static char *greenplumLegacyAOoptions(const char *accessMethod, List **options);
 static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_t yyscanner);
-static bool greenplumCreateTableLikeIncludesAM(const List *tableElts);
-static bool greenplumCreateTableLikeIncludesRelOpt(const List *tableElts);
 
 %}
 
@@ -4570,18 +4568,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->relKind = RELKIND_RELATION;
 
 					n->accessMethod = greenplumLegacyAOoptions(n->accessMethod, &n->options);
-					if (n->accessMethod && greenplumCreateTableLikeIncludesAM(n->tableElts))
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("cannot specify an access method when create table like another table including its AM"),
-								 errhint("Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE."),
-								 $10 ? parser_errposition(@10) : parser_errposition(@11)));
-					if (n->options && greenplumCreateTableLikeIncludesRelOpt(n->tableElts))
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("cannot specify WITH options when create table like another table including its RELOPT"),
-								 errhint("Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE."),
-								 parser_errposition(@11)));
 
 					$$ = (Node *)n;
 				}
@@ -19935,52 +19921,6 @@ check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_t yyscanner)
 					 errmsg("expressions in partition key not supported in legacy GPDB partition syntax"),
 					 parser_errposition(e->location)));
 	}
-}
-
-/*
- * Helper function to detect Greenplum-specific LIKE option: INCLUDING AM
- *
- * This is invoked only if AM is explicitly specified in the CreateStmt, in
- * which case it will add some overhead when creating a wide table with many
- * ColumnDefs.
- */
-static bool
-greenplumCreateTableLikeIncludesAM(const List *tableElts)
-{
-	ListCell   *elements;
-	foreach(elements, tableElts)
-	{
-		Node	*element = lfirst(elements);
-		if (nodeTag(element) == T_TableLikeClause)
-		{
-			if (((TableLikeClause *) element)->options & CREATE_TABLE_LIKE_AM)
-				return true;
-		}
-	}
-	return false;
-}
-
-/*
- * Helper function to detect Greenplum-specific LIKE option: INCLUDING RELOPT
- *
- * This is invoked only if WITH <reloptions> is explicitly specified in the
- * CreateStmt, in which case it will add some overhead when creating a wide
- * table with many ColumnDefs.
- */
-static bool
-greenplumCreateTableLikeIncludesRelOpt(const List *tableElts)
-{
-	ListCell   *elements;
-	foreach(elements, tableElts)
-	{
-		Node	*element = lfirst(elements);
-		if (nodeTag(element) == T_TableLikeClause)
-		{
-			if (((TableLikeClause *) element)->options & CREATE_TABLE_LIKE_RELOPT)
-				return true;
-		}
-	}
-	return false;
 }
 
 /* parser_init()
