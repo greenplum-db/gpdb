@@ -5174,21 +5174,10 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 		 * attr_count may be equal to 0, 
 		 * when all fields are processed in the QD.
 		 */
-		if (file_has_oids)
-		{
-			/* real fldct should -1 due to addtional oids column */
-			if ((fldct - 1) > attr_count)
-				ereport(ERROR,
-						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						errmsg("extra data after last expected column when doing copy with oid")));
-		}
-		else 
-		{
-			if (fldct > attr_count)
-				ereport(ERROR,
-						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						errmsg("extra data after last expected column")));			
-		}
+		if (fldct > nfields)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("extra data after last expected column")));
 
 		fieldno = 0;
 
