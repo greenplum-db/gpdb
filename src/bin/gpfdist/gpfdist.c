@@ -2141,9 +2141,7 @@ static void do_write(int fd, short event, void* arg)
 	if (opt.multi_thread)
 	{
 		if (recycle_thread(r) < 0)
-		{
 			return;
-		}
 	}
 #endif
 
@@ -3792,9 +3790,8 @@ static bool base16_decode(char* data)
 		char *endptr = NULL;
 		char ch = strtoul(buf, &endptr, 16);
 		if (*endptr != '\0')
-		{
 			return false;
-		}
+
 		data[i] = ch;
 		i++;
 		encoded_bytes += 2;
@@ -5059,9 +5056,7 @@ int decompress_write_loop(request_t *r)
 		delay_watchdog_timer();
 
 		if (check_output_to_file(r, wrote) < 0)
-		{
 			return -1;
-		}
 
 	} while (r->in.woffset);
 	return wrote_total;
