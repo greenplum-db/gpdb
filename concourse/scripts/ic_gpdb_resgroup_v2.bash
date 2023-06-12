@@ -17,6 +17,7 @@ enable_cgroup_subtree_control() {
     local basedir=$CGROUP_BASEDIR
 
     ssh -t $gpdb_host_alias sudo bash -ex <<EOF
+        sudo su
         chmod -R 777 $basedir/
         echo "+cpu" >> $basedir/cgroup.subtree_control
         echo "+cpuset" >> $basedir/cgroup.subtree_control
