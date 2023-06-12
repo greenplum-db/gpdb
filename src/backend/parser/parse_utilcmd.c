@@ -1255,7 +1255,6 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 	/* Copy reloptions if requested */
 	if (table_like_clause->options & CREATE_TABLE_LIKE_RELOPT)
 	{
-		/* Allow multiple LIKE INCLUDING RELOPT clauses and take last specification */
 		if (stmt->options)
 		{
 			ereport(ERROR,
