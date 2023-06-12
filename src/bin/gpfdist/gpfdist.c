@@ -3790,8 +3790,9 @@ static bool base16_decode(char* data)
 		char *endptr = NULL;
 		char ch = strtoul(buf, &endptr, 16);
 		if (*endptr != '\0')
+		{
 			return false;
-
+		}
 		data[i] = ch;
 		i++;
 		encoded_bytes += 2;
