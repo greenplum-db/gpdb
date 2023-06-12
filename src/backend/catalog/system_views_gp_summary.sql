@@ -292,7 +292,7 @@ CREATE VIEW gp_statio_sys_tables_summary AS
           schemaname ~ '^pg_toast';
 
 CREATE VIEW gp_statio_user_tables_summary AS
-    SELECT * FROM gp_stat_all_tables_summary
+    SELECT * FROM gp_statio_all_tables_summary
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
