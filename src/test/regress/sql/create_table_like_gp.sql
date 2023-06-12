@@ -60,8 +60,7 @@ RESET default_table_access_method;
 
 -- Multiple LIKE INCLUDING RELOPT clauses
 CREATE TABLE ctlt_heap2 (a2 text) WITH (fillfactor = 70);
-CREATE TABLE like_heap_relopt_heap_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_heap2 INCLUDING RELOPT); -- succeeds, but warnings
-CREATE TABLE like_heap_relopt_aocol_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING RELOPT); -- errors, unrecognized parameter "compresstype"
+CREATE TABLE like_heap_relopt_heap_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_heap2 INCLUDING RELOPT); -- errors, multiple INCLUDING RELOPTs not allowed
 
 -- Multiple LIKE INCLUDING AM clauses
 CREATE TABLE like_heap_am_aocol_am (LIKE ctlt_heap INCLUDING AM, LIKE ctlt_aocol INCLUDING AM); -- errors, multiple INCLUDING AMs not allowed
