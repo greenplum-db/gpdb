@@ -917,6 +917,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc AGGREGATE
 			%nonassoc ALSO
 			%nonassoc ALTER
+			%nonassoc AM
 			%nonassoc AO_AUX_ONLY
 			%nonassoc ASSERTION
 			%nonassoc ASSIGNMENT
@@ -1107,6 +1108,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc REJECT_P
 			%nonassoc RELATIVE_P
 			%nonassoc RELEASE
+			%nonassoc RELOPT
 			%nonassoc RENAME
 			%nonassoc REPEATABLE
 			%nonassoc REPLACE
@@ -18426,6 +18428,7 @@ PartitionIdentKeyword: ABORT_P
 			| AFTER
 			| AGGREGATE
 			| ALSO
+			| AM
 			| AO_AUX_ONLY
 			| ASSERTION
 			| ASSIGNMENT
@@ -18605,6 +18608,7 @@ PartitionIdentKeyword: ABORT_P
 			| REINDEX
 			| RELATIVE_P
 			| RELEASE
+			| RELOPT
 			| RENAME
 			| REPEATABLE
 			| REPLACE
