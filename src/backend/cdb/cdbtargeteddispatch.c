@@ -498,7 +498,7 @@ DirectDispatchUpdateContentIdsFromPlan(PlannerInfo *root, Plan *plan)
 																	  plan,
 																	  ((Scan *) plan)->scanrelid,
 																	  indexOnlyScan->recheckqual);
-				/* must use _orig_ qual ! */
+				/* must use _orig_ qual ! Upstream's recheckqual is the orig qual, just use it. */
 			}
 			break;
 
