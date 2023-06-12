@@ -1248,7 +1248,7 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 							   RelationGetRelationName(relation), cxt->relation->relname, stmt->accessMethod)),
 					errdetail("Multiple LIKE clauses with the INCLUDING AM option is not allowed.\n"
 							  "Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause."),
-					errhint("Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE."));
+					errhint("Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified."));
 		stmt->accessMethod = get_am_name(relation->rd_rel->relam);
 	}
 
@@ -1267,7 +1267,7 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 						"Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.\n"
 						"Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause."),
 					errhint(
-						"Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE."));
+						"Remove INCLUDING RELOPT or append EXCLUDING RELOPT if INCLUDING ALL is specified."));
 		}
 		stmt->options = untransformRelOptions(get_rel_opts(relation));
 	}

@@ -64,15 +64,13 @@ CREATE TABLE like_heap_relopt_heap_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE
 CREATE TABLE like_heap_relopt_aocol_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING RELOPT); -- errors, unrecognized parameter "compresstype"
 
 -- Multiple LIKE INCLUDING AM clauses
-CREATE TABLE like_heap_am_aocol_am (LIKE ctlt_heap INCLUDING AM, LIKE ctlt_aocol INCLUDING AM); -- succeeds, but warnings
-CREATE TABLE like_aocol_am_heap_am (LIKE ctlt_aocol INCLUDING AM, LIKE ctlt_heap INCLUDING AM); -- succeeds, but warnings
+CREATE TABLE like_heap_am_aocol_am (LIKE ctlt_heap INCLUDING AM, LIKE ctlt_aocol INCLUDING AM); -- errors, multiple INCLUDING AMs not allowed
 
 -- Multiple LIKEs with mixed INCLUDING ENCODING, RELOPT, and AM clauses
 CREATE TABLE like_aocol_encoding_aorow_am (LIKE ctlt_aocol INCLUDING ENCODING, LIKE ctlt_aorow INCLUDING AM); -- succeeds, but ignores ENCODING
 CREATE TABLE like_aocol_relopt_aorow_am (LIKE ctlt_aocol INCLUDING RELOPT, LIKE ctlt_aorow INCLUDING AM); -- succeeds
 CREATE TABLE like_aocol_relopt_heap_am (LIKE ctlt_aocol INCLUDING RELOPT, LIKE ctlt_heap INCLUDING AM); -- errors, unrecognized parameter "compresstype"
 CREATE TABLE like_heap_relopt_aocol_am (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING AM); -- errors, unrecognized parameter "fillfactor"
-CREATE TABLE like_heap_relopt_aocol_relopt_am (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING RELOPT INCLUDING AM); -- succeeds, but warnings
 CREATE TABLE ctlt_heap_no_relopt (a2 text);
 CREATE TABLE like_heap_relopt_aocol_am2 (LIKE ctlt_heap_no_relopt INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING AM); -- succeeds
 

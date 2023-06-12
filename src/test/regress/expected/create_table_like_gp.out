@@ -22,12 +22,12 @@ CREATE TABLE like_heap_all_use_heap (LIKE ctlt_heap INCLUDING ALL) USING heap; -
 ERROR:  LIKE ctlt_heap INCLUDING AM is not allowed because the access method of table like_heap_all_use_heap is already set to heap
 DETAIL:  Multiple LIKE clauses with the INCLUDING AM option is not allowed.
 Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause.
-HINT:  Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified.
 CREATE TABLE like_heap_all_use_ao (LIKE ctlt_heap INCLUDING ALL) USING ao_row; -- error, AM already explicitly specified
 ERROR:  LIKE ctlt_heap INCLUDING AM is not allowed because the access method of table like_heap_all_use_ao is already set to ao_row
 DETAIL:  Multiple LIKE clauses with the INCLUDING AM option is not allowed.
 Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause.
-HINT:  Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified.
 CREATE TABLE like_heap_all_use_ao (LIKE ctlt_heap INCLUDING ALL EXCLUDING AM) USING ao_row; -- error, unrecognized parameter "fillfactor"
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 ERROR:  unrecognized parameter "fillfactor"
@@ -35,7 +35,7 @@ CREATE TABLE like_heap_all_with_relopt (LIKE ctlt_heap INCLUDING ALL) WITH (fill
 ERROR:  LIKE ctlt_heap INCLUDING RELOPT is not allowed because the reloptions of table like_heap_all_with_relopt is already set
 DETAIL:  Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.
 Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause.
-HINT:  Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING RELOPT or append EXCLUDING RELOPT if INCLUDING ALL is specified.
 RESET default_table_access_method;
 -- create a source ao_row table
 CREATE TABLE ctlt_aorow (b text) USING ao_row WITH (compresstype=zstd,compresslevel=5,blocksize=65536);
@@ -62,14 +62,14 @@ CREATE TABLE like_aorow_all_use_aorow (LIKE ctlt_aorow INCLUDING ALL) USING ao_r
 ERROR:  LIKE ctlt_aorow INCLUDING AM is not allowed because the access method of table like_aorow_all_use_aorow is already set to ao_row
 DETAIL:  Multiple LIKE clauses with the INCLUDING AM option is not allowed.
 Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause.
-HINT:  Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified.
 CREATE TABLE like_aorow_all_exc_am_use_aorow (LIKE ctlt_aorow INCLUDING ALL EXCLUDING AM) USING ao_row; -- succeeds
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE like_aorow_all_with_relopt (LIKE ctlt_aorow INCLUDING ALL) WITH (compresstype=zstd,compresslevel=5,blocksize=65536); -- errors, relopt already explicitly specified
 ERROR:  LIKE ctlt_aorow INCLUDING RELOPT is not allowed because the reloptions of table like_aorow_all_with_relopt is already set
 DETAIL:  Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.
 Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause.
-HINT:  Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING RELOPT or append EXCLUDING RELOPT if INCLUDING ALL is specified.
 CREATE TABLE like_aorow_all_exc_relopt_with_relopt (LIKE ctlt_aorow INCLUDING ALL EXCLUDING RELOPT) WITH (compresstype=zstd,compresslevel=5,blocksize=65536); -- errors, relopt already explicitly specified
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- create a source ao_col table
@@ -100,12 +100,12 @@ CREATE TABLE like_aocol_all_use_aocol (LIKE ctlt_aocol INCLUDING ALL) USING ao_c
 ERROR:  LIKE ctlt_aocol INCLUDING AM is not allowed because the access method of table like_aocol_all_use_aocol is already set to ao_column
 DETAIL:  Multiple LIKE clauses with the INCLUDING AM option is not allowed.
 Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause.
-HINT:  Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified.
 CREATE TABLE like_aocol_all_with_aocol (LIKE ctlt_aocol INCLUDING ALL) WITH (appendonly = true, orientation = column); -- errors, AM already explicitly specified
 ERROR:  LIKE ctlt_aocol INCLUDING AM is not allowed because the access method of table like_aocol_all_with_aocol is already set to ao_column
 DETAIL:  Multiple LIKE clauses with the INCLUDING AM option is not allowed.
 Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause.
-HINT:  Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified.
 CREATE TABLE like_aocol_all_exc_am_use_aocol (LIKE ctlt_aocol INCLUDING ALL EXCLUDING AM) USING ao_column; ; -- succeeds
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE like_aocol_all_add_encoding (LIKE ctlt_aocol INCLUDING ALL, i text ENCODING (compresstype=zstd, compresslevel=3, blocksize=65536)); -- succeeds
@@ -114,7 +114,7 @@ CREATE TABLE like_aocol_all_with_relopt (LIKE ctlt_aocol INCLUDING ALL) WITH (co
 ERROR:  LIKE ctlt_aocol INCLUDING RELOPT is not allowed because the reloptions of table like_aocol_all_with_relopt is already set
 DETAIL:  Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.
 Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause.
-HINT:  Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING RELOPT or append EXCLUDING RELOPT if INCLUDING ALL is specified.
 -- Multiple LIKE INCLUDING ENCODING clauses
 SET default_table_access_method = ao_column;
 CREATE TABLE ctlt_aocol2 (c2 text ENCODING (compresstype=zstd, compresslevel=3, blocksize=8192), d2 int) USING ao_column WITH (compresstype=zlib, compresslevel=3, blocksize=32768);
@@ -133,23 +133,13 @@ CREATE TABLE like_heap_relopt_heap_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE
 ERROR:  LIKE ctlt_heap2 INCLUDING RELOPT is not allowed because the reloptions of table like_heap_relopt_heap_relopt is already set
 DETAIL:  Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.
 Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause.
-HINT:  Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE.
-CREATE TABLE like_heap_relopt_aocol_relopt (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING RELOPT); -- errors, unrecognized parameter "compresstype"
-ERROR:  LIKE ctlt_aocol INCLUDING RELOPT is not allowed because the reloptions of table like_heap_relopt_aocol_relopt is already set
-DETAIL:  Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.
-Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause.
-HINT:  Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING RELOPT or append EXCLUDING RELOPT if INCLUDING ALL is specified.
 -- Multiple LIKE INCLUDING AM clauses
 CREATE TABLE like_heap_am_aocol_am (LIKE ctlt_heap INCLUDING AM, LIKE ctlt_aocol INCLUDING AM); -- succeeds, but warnings
 ERROR:  LIKE ctlt_aocol INCLUDING AM is not allowed because the access method of table like_heap_am_aocol_am is already set to heap
 DETAIL:  Multiple LIKE clauses with the INCLUDING AM option is not allowed.
 Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause.
-HINT:  Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE.
-CREATE TABLE like_aocol_am_heap_am (LIKE ctlt_aocol INCLUDING AM, LIKE ctlt_heap INCLUDING AM); -- succeeds, but warnings
-ERROR:  LIKE ctlt_heap INCLUDING AM is not allowed because the access method of table like_aocol_am_heap_am is already set to ao_column
-DETAIL:  Multiple LIKE clauses with the INCLUDING AM option is not allowed.
-Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause.
-HINT:  Remove INCLUDING AM or add EXCLUDING AM from CREATE TABLE LIKE.
+HINT:  Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified.
 -- Multiple LIKEs with mixed INCLUDING ENCODING, RELOPT, and AM clauses
 CREATE TABLE like_aocol_encoding_aorow_am (LIKE ctlt_aocol INCLUDING ENCODING, LIKE ctlt_aorow INCLUDING AM); -- succeeds, but ignores ENCODING
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
@@ -161,11 +151,6 @@ ERROR:  unrecognized parameter "compresstype"
 CREATE TABLE like_heap_relopt_aocol_am (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING AM); -- errors, unrecognized parameter "fillfactor"
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 ERROR:  unrecognized parameter "fillfactor"
-CREATE TABLE like_heap_relopt_aocol_relopt_am (LIKE ctlt_heap INCLUDING RELOPT, LIKE ctlt_aocol INCLUDING RELOPT INCLUDING AM); -- succeeds, but warnings
-ERROR:  LIKE ctlt_aocol INCLUDING RELOPT is not allowed because the reloptions of table like_heap_relopt_aocol_relopt_am is already set
-DETAIL:  Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.
-Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause.
-HINT:  Remove INCLUDING RELOPT or add EXCLUDING RELOPT from CREATE TABLE LIKE.
 CREATE TABLE ctlt_heap_no_relopt (a2 text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a2' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
