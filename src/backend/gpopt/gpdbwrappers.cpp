@@ -2721,4 +2721,18 @@ gpdb::GPDBAllocSetContextCreate()
 	return NULL;
 }
 
+
+// Returns true if type is a RANGE
+// pg_type (typtype = 'r')
+bool
+gpdb::IsTypeRange(Oid typid)
+{
+	GP_WRAP_START;
+	{
+		return type_is_range(typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
 // EOF

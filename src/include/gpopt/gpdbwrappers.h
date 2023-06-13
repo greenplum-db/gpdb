@@ -708,6 +708,8 @@ MemoryContext GPDBAllocSetContextCreate();
 
 void GPDBMemoryContextDelete(MemoryContext context);
 
+bool IsTypeRange(Oid typid);
+
 }  //namespace gpdb
 
 #define ForEach(cell, l) \

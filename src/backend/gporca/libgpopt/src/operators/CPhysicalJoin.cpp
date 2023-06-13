@@ -674,6 +674,20 @@ CPhysicalJoin::FHashJoinCompatible(
 		return false;
 	}
 
+	// This check is mainly added for RANGE TYPES; RANGE's are treated as
+	// containers and whether a range type can support hashing is decided
+	// based on hashing support of its subtype
+	if (COperator::EopScalarCast == pexprPredOuter->Pop()->Eopid())
+	{
+		pmdidTypeOuter =
+			CScalar::PopConvert((*pexprPredOuter)[0]->Pop())->MdidType();
+	}
+	if (COperator::EopScalarCast == pexprPredInner->Pop()->Eopid())
+	{
+		pmdidTypeInner =
+			CScalar::PopConvert((*pexprPredInner)[0]->Pop())->MdidType();
+	}
+
 	if (md_accessor->RetrieveType(pmdidTypeOuter)->IsHashable() &&
 		md_accessor->RetrieveType(pmdidTypeInner)->IsHashable())
 	{

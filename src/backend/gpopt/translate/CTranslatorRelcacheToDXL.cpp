@@ -1608,6 +1608,12 @@ CTranslatorRelcacheToDXL::RetrieveType(CMemoryPool *mp, IMDId *mdid)
 	INT iFlags = TYPECACHE_EQ_OPR | TYPECACHE_LT_OPR | TYPECACHE_GT_OPR |
 				 TYPECACHE_CMP_PROC | TYPECACHE_EQ_OPR_FINFO |
 				 TYPECACHE_CMP_PROC_FINFO | TYPECACHE_TUPDESC;
+	// special case for range type: fetch HASH_PROC that handles ranges as a
+	// container and returns the hash proc if the underlying element has one
+	if (gpdb::IsTypeRange(oid_type))
+	{
+		iFlags |= TYPECACHE_HASH_PROC;
+	}
 
 	TypeCacheEntry *ptce = gpdb::LookupTypeCache(oid_type, iFlags);
 
@@ -1640,7 +1646,19 @@ CTranslatorRelcacheToDXL::RetrieveType(CMemoryPool *mp, IMDId *mdid)
 		CMDIdGPDB(IMDId::EmdidGeneral, gpdb::GetInverseOp(ptce->lt_opr));
 	CMDIdGPDB *mdid_op_cmp =
 		GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, ptce->cmp_proc);
-	BOOL is_hashable = gpdb::IsOpHashJoinable(ptce->eq_opr, oid_type);
+
+	BOOL is_hashable = false;
+	// decide if range operator is hashable based on returned hash proc
+	if (gpdb::IsTypeRange(oid_type))
+	{
+		is_hashable = OidIsValid(ptce->hash_proc);
+	}
+	else
+	{
+		// default set based on the eq_opr
+		is_hashable = gpdb::IsOpHashJoinable(ptce->eq_opr, oid_type);
+	}
+
 	BOOL is_merge_joinable = gpdb::IsOpMergeJoinable(ptce->eq_opr, oid_type);
 	BOOL is_composite_type = gpdb::IsCompositeType(oid_type);
 	BOOL is_text_related_type = gpdb::IsTextRelatedType(oid_type);

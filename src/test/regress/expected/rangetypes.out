@@ -1445,6 +1445,7 @@ alter type two_ints add attribute c two_ints_range;
 ERROR:  composite type two_ints cannot be made a member of itself
 drop type two_ints cascade;
 NOTICE:  drop cascades to type two_ints_range
+-- end_ignore
 --
 -- Check behavior when subtype lacks a hash function
 --
@@ -1457,7 +1458,6 @@ select '(2,5)'::cashrange except select '(5,6)'::cashrange;
 (1 row)
 
 reset enable_sort;
--- end_ignore
 --
 -- OUT/INOUT/TABLE functions
 --
