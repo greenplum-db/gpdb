@@ -99,15 +99,20 @@ SplitTupleTableSlot(TupleTableSlot *slot,
 		}
 		else
 		{
-			Assert(IsA(tle->expr, Var));
-			/* `Resjunk' values */
-			delete_values[resno] = values[((Var *)tle->expr)->varattno-1];
-			delete_nulls[resno] = nulls[((Var *)tle->expr)->varattno-1];
+			/*
+			 * If we get here, tle could only be Var(junk column) or Const(isdropped true in pg_attribute)
+			 * we just fill junk column as usual and ignore Const isdropped column
+			 */
+			if (IsA(tle->expr, Var))
+			{
+				delete_values[resno] = values[((Var *)tle->expr)->varattno-1];
+				delete_nulls[resno] = nulls[((Var *)tle->expr)->varattno-1];
 
-			insert_values[resno] = values[((Var *)tle->expr)->varattno-1];
-			insert_nulls[resno] = nulls[((Var *)tle->expr)->varattno-1];
+				insert_values[resno] = values[((Var *)tle->expr)->varattno-1];
+				insert_nulls[resno] = nulls[((Var *)tle->expr)->varattno-1];
 
-			Assert(exprType((Node *) tle->expr) == slot->tts_tupleDescriptor->attrs[((Var *)tle->expr)->varattno-1]->atttypid);
+				Assert(exprType((Node *) tle->expr) == slot->tts_tupleDescriptor->attrs[((Var *)tle->expr)->varattno-1]->atttypid);
+			}
 		}
 	}
 }

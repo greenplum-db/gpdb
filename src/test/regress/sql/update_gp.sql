@@ -205,6 +205,15 @@ select * from r;
 update r set a = r.a + 1 where b in (select b from s);
 select * from r;
 
+-- Update redistribution with returning clause
+delete from r;
+delete from s;
+insert into r select generate_series(1, 5), generate_series(1, 5);
+insert into s select generate_series(6, 10), generate_series(1, 5);
+update r set a = s.a from s where r.b = s.b returning r.b;
+update r set a = s.a from s where r.b = s.b returning s.b;
+select * from r order by 1;
+
 -- Update hash aggreate group by
 delete from r;
 delete from s;
@@ -236,6 +245,14 @@ select * from r;
 select * from s;
 prepare update_s(int) as update s set a = s.a + $1 where exists (select 1 from r where s.a = r.b);
 execute update_s(10);
+select * from s;
+
+
+-- Update distribution key of other columns dropped case
+delete from s;
+alter table s drop column b;
+insert into s select i from generate_series(1, 5) i;
+update s set a = a + 1;
 select * from s;
 
 -- Confirm that a split update is not created for a table excluded by

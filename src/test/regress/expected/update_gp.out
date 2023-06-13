@@ -374,6 +374,41 @@ select * from r;
  4 | 2
 (5 rows)
 
+-- Update redistribution with returning clause
+delete from r;
+delete from s;
+insert into r select generate_series(1, 5), generate_series(1, 5);
+insert into s select generate_series(6, 10), generate_series(1, 5);
+update r set a = s.a from s where r.b = s.b returning r.b;
+ b 
+---
+ 2
+ 3
+ 1
+ 5
+ 4
+(5 rows)
+
+update r set a = s.a from s where r.b = s.b returning s.b;
+ b 
+---
+ 2
+ 3
+ 1
+ 4
+ 5
+(5 rows)
+
+select * from r order by 1;
+ a  | b 
+----+---
+  6 | 1
+  7 | 2
+  8 | 3
+  9 | 4
+ 10 | 5
+(5 rows)
+
 -- Update hash aggreate group by
 delete from r;
 delete from s;
@@ -491,6 +526,21 @@ select * from s;
   3 | 3
   5 | 5
  12 | 2
+(5 rows)
+
+-- Update distribution key of other columns dropped case
+delete from s;
+alter table s drop column b;
+insert into s select i from generate_series(1, 5) i;
+update s set a = a + 1;
+select * from s;
+ a 
+---
+ 3
+ 4
+ 2
+ 6
+ 5
 (5 rows)
 
 -- Confirm that a split update is not created for a table excluded by

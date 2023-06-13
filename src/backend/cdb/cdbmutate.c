@@ -1387,7 +1387,6 @@ copy_junk_attributes(List *src, List **dest, AttrNumber startAttrIdx)
 {
 	ListCell	*currAppendCell;
 	ListCell	*lct;
-	Var			*var;
 	TargetEntry	*newTargetEntry;
 
 	/* There should be at least ctid exist */
@@ -1399,11 +1398,9 @@ copy_junk_attributes(List *src, List **dest, AttrNumber startAttrIdx)
 	{
 		Assert(IsA(lfirst(lct), TargetEntry) && IsA(((TargetEntry *) lfirst(lct))->expr, Var));
 
-		var = copyObject(((TargetEntry *) lfirst(lct))->expr);
-		var->varno = OUTER_VAR;
-		var->varattno = ((TargetEntry *) lfirst(lct))->resno;
+		TargetEntry *tle = (TargetEntry *) lfirst(lct);
 
-		newTargetEntry = makeTargetEntry((Expr *) var, startAttrIdx + 1, ((TargetEntry *) lfirst(lct))->resname,
+		newTargetEntry = makeTargetEntry(tle->expr, startAttrIdx + 1, ((TargetEntry *) lfirst(lct))->resname,
 										 true);
 		*dest = lappend(*dest, newTargetEntry);
 		++startAttrIdx;
@@ -1426,7 +1423,6 @@ process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
 	TupleDesc	resultDesc = RelationGetDescr(resultRel);
 	GpPolicy   *cdbpolicy = resultRel->rd_cdbpolicy;
 	int			attrIdx;
-	Var		   *splitVar;
 	TargetEntry	*splitTargetEntry;
 	ListCell   *lc;
 
@@ -1454,17 +1450,7 @@ process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
 			int			i;
 
 			Assert(exprType((Node *) tle->expr) == attr->atttypid);
-
-			splitVar = (Var *) makeVar(OUTER_VAR,
-									   attrIdx,
-									   attr->atttypid,
-									   attr->atttypmod,
-									   attr->attcollation,
-									   0);
-			splitVar->varnoold = attrIdx;
-
-			splitTargetEntry = makeTargetEntry((Expr *) splitVar, tle->resno, tle->resname, tle->resjunk);
-			*splitUpdateTargetList = lappend(*splitUpdateTargetList, splitTargetEntry);
+			*splitUpdateTargetList = lappend(*splitUpdateTargetList, tle);
 
 			/*
 			 * Is this a distribution key column? If so, we will need its old value.
