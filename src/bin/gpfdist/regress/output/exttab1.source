@@ -641,6 +641,7 @@ drop external table bad_location2;
 -- CREATE (including LIKE, DISTRIBUTED BY)
 --
 -- positive
+set writable_external_table_bufsize = 131072;
 create writable external table wet_pos1(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text';
 \d wet_pos1
                Foreign table "public.wet_pos1"
