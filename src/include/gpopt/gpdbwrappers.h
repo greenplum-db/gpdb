@@ -663,6 +663,8 @@ Var *MakeVarFromTargetEntry(Index varno, TargetEntry *tle);
 
 TargetEntry *FlatCopyTargetEntry(TargetEntry *src_tle);
 
+bool IsTypeRange(Oid typid);
+
 }  //namespace gpdb
 
 #define ForEach(cell, l) \
