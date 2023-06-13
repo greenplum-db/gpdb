@@ -1440,6 +1440,9 @@ static int
 appendonly_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 							   int targrows, double *totalrows, double *totaldeadrows)
 {
+	FileSegTotals	*fileSegTotals;
+	BlockNumber		totalBlocks;
+	BlockNumber     blksdone = 0;
 	int		numrows = 0;	/* # number of rows sampled */
 	double	liverows = 0;	/* # live rows seen */
 	double	deadrows = 0;	/* # dead rows seen */
@@ -1454,6 +1457,16 @@ appendonly_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	int64 totaldeadtupcount = 0;
 	if (aoscan->aos_total_segfiles > 0 )
 		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aoscan->visibilityMap);
+
+	/*
+	 * Get the total number of blocks for the table
+	 */
+	fileSegTotals = GetSegFilesTotals(onerel,
+										   aoscan->appendOnlyMetaDataSnapshot);
+	totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
+	pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_TOTAL,
+								 totalBlocks);
+
 	/*
      * The conversion from int64 to double (53 significant bits) is safe as the
 	 * AOTupleId is 48bits, the max value of totalrows is never greater than
@@ -1479,6 +1492,18 @@ appendonly_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 		}
 		else
 			deadrows++;
+
+		/*
+		 * Even though we now do row based sampling,
+		 * we can still report in terms of blocks processed using ratio of
+		 * rows scanned / target rows on totalblocks in the table.
+		 * For e.g., if we have 1000 blocks in the table and we are sampling 100 rows,
+		 * and if 10 rows are done, we can say that 100 blocks are done.
+		 */
+		blksdone = (totalBlocks * (double) (liverows + deadrows)) / targrows ;
+		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
+									 blksdone);
+		SIMPLE_FAULT_INJECTOR("analyze_block");
 
 		ExecClearTuple(slot);
 	}
@@ -1526,6 +1551,12 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	ExprContext *econtext;
 	Snapshot	snapshot;
 	int64 previous_blkno = -1;
+
+	bool		need_create_blk_directory = false;
+	Oid 		blkdirrelid;
+	Relation 	blkdir;
+	AppendOnlyBlockDirectory existingBlkdir;
+	bool		partialScanWithBlkdir = false;
 
 	/*
 	 * sanity checks
@@ -1600,7 +1631,6 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	/*
 	 * If block directory is empty, it must also be built along with the index.
 	 */
-	Oid blkdirrelid;
 
 	GetAppendOnlyEntryAuxOids(aoscan->aos_rd, NULL,
 							  &blkdirrelid, NULL);
@@ -1613,18 +1643,86 @@ appendonly_index_build_range_scan(Relation heapRelation,
 	 * blocked.  We can rest assured of exclusive access to the block
 	 * directory relation.
 	 */
-	Relation blkdir = relation_open(blkdirrelid, AccessShareLock);
-	if (RelationGetNumberOfBlocks(blkdir) == 0)
+	blkdir = relation_open(blkdirrelid, AccessShareLock);
+	need_create_blk_directory = RelationGetNumberOfBlocks(blkdir) == 0;
+	relation_close(blkdir, NoLock);
+
+	if (need_create_blk_directory)
 	{
 		/*
 		 * Allocate blockDirectory in scan descriptor to let the access method
-		 * know that it needs to also build the block directory while
-		 * scanning.
+		 * know that it needs to also build the block directory while scanning.
 		 */
 		Assert(aoscan->blockDirectory == NULL);
 		aoscan->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
 	}
-	relation_close(blkdir, NoLock);
+	else if (numblocks != InvalidBlockNumber)
+	{
+		/*
+		 * We are performing a partial scan of the base relation. We already
+		 * have a non-empty blkdir to help guide our partial scan.
+		 */
+		int 							fsInfoIdx;
+		AppendOnlyBlockDirectoryEntry 	dirEntry = {0};
+
+		/* The range is contained within one seg. */
+		Assert(AOSegmentGet_segno(start_blockno) ==
+				   AOSegmentGet_segno(start_blockno + numblocks - 1));
+
+		partialScanWithBlkdir = true;
+		AppendOnlyBlockDirectory_Init_forSearch(&existingBlkdir,
+												snapshot,
+												aoscan->aos_segfile_arr,
+												aoscan->aos_total_segfiles,
+												aoscan->aos_rd,
+												1,
+												false,
+												NULL);
+
+		if (AppendOnlyBlockDirectory_GetEntryForPartialScan(&existingBlkdir,
+															start_blockno,
+															0, /* columnGroupNo */
+															&dirEntry,
+															&fsInfoIdx))
+		{
+			/*
+			 * Since we found a block directory entry near start_blockno, we can
+			 * use it to position our scan.
+			 */
+			if (!appendonly_positionscan(aoscan, &dirEntry, fsInfoIdx))
+			{
+				/*
+				 * If we have failed to position our scan, that can mean that
+				 * the start_blockno does not exist in the segfile.
+				 *
+				 * This could be either because the segfile itself is
+				 * empty/awaiting-drop or the directory entry's fileOffset is
+				 * beyond the seg's eof.
+				 *
+				 * In such a case, we can bail early. There is no need to scan
+				 * this segfile or any others.
+				 */
+				reltuples = 0;
+				goto cleanup;
+			}
+		}
+		else
+		{
+			/*
+			 * We were unable to find a block directory row
+			 * encompassing/preceding the start block. This represents an edge
+			 * case where the start block of the range maps to a hole at the
+			 * very beginning of the segfile (and before the first minipage
+			 * entry of the first minipage corresponding to this segfile).
+			 *
+			 * Do nothing in this case. The scan will start anyway from the
+			 * beginning of the segfile (offset = 0), i.e. from the first row
+			 * present in the segfile (see BufferedReadInit()).
+			 * This will ensure that we don't skip the other possibly extant
+			 * blocks in the range.
+			 */
+		}
+	}
 
 
 	/* Publish number of blocks to scan */
@@ -1670,14 +1768,19 @@ appendonly_index_build_range_scan(Relation heapRelation,
 
 		CHECK_FOR_INTERRUPTS();
 
-		/*
-		 * GPDB_12_MERGE_FIXME: How to properly do a partial scan? Currently,
-		 * we scan the whole table, and throw away tuples that are not in the
-		 * range. That's clearly very inefficient.
-		 */
-		if (currblockno < start_blockno ||
-			(numblocks != InvalidBlockNumber && currblockno >= (start_blockno + numblocks)))
+		if (currblockno < start_blockno)
+		{
+			/*
+			 * If the scan returned some tuples lying before the start of our
+			 * desired range, ignore the current tuple, and keep scanning.
+			 */
 			continue;
+		}
+		else if (partialScanWithBlkdir && currblockno >= (start_blockno + numblocks))
+		{
+			/* The scan has gone beyond our range bound. Time to stop. */
+			break;
+		}
 
 		/* Report scan progress, if asked to. */
 		if (progress)
@@ -1752,7 +1855,11 @@ appendonly_index_build_range_scan(Relation heapRelation,
 
 	}
 
+cleanup:
 	table_endscan(scan);
+
+	if (partialScanWithBlkdir)
+		AppendOnlyBlockDirectory_End_forSearch(&existingBlkdir);
 
 	ExecDropSingleTupleTableSlot(slot);
 

@@ -706,7 +706,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 /* ordinary key words in alphabetical order */
 %token <keyword> ABORT_P ABSOLUTE_P ACCESS ACTION ADD_P ADMIN AFTER
-	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
+	AGGREGATE ALL ALSO ALTER ALWAYS AM ANALYSE ANALYZE AND ANY ARRAY AS ASC
 	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTRIBUTE AUTHORIZATION
 
 	BACKWARD BEFORE BEGIN_P BETWEEN BIGINT BINARY BIT
@@ -769,7 +769,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 	QUOTE
 
 	RANGE READ REAL REASSIGN RECHECK RECURSIVE REF REFERENCES REFERENCING
-	REFRESH REINDEX RELATIVE_P RELEASE RENAME REPEATABLE REPLACE REPLICA
+	REFRESH REINDEX RELATIVE_P RELEASE RELOPT RENAME REPEATABLE REPLACE REPLICA
 	RESET RESTART RESTRICT RETRIEVE RETURNING RETURNS REVOKE RIGHT ROLE ROLLBACK ROLLUP
 	ROUTINE ROUTINES ROW ROWS RULE
 
@@ -917,14 +917,17 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc AGGREGATE
 			%nonassoc ALSO
 			%nonassoc ALTER
-            %nonassoc AO_AUX_ONLY
+			%nonassoc AM
+			%nonassoc AO_AUX_ONLY
 			%nonassoc ASSERTION
 			%nonassoc ASSIGNMENT
+			%nonassoc ATTACH
 			%nonassoc BACKWARD
 			%nonassoc BEFORE
 			%nonassoc BEGIN_P
 			%nonassoc BY
 			%nonassoc CACHE
+			%nonassoc CALL
 			%nonassoc CALLED
 			%nonassoc CASCADE
 			%nonassoc CASCADED
@@ -934,6 +937,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc CLASS
 			%nonassoc CLOSE
 			%nonassoc CLUSTER
+			%nonassoc COLUMNS
 			%nonassoc COMMENT
 			%nonassoc COMMIT
 			%nonassoc COMMITTED
@@ -945,6 +949,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc CONTENT_P
 			%nonassoc CONTINUE_P
 			%nonassoc CONVERSION_P
+			%nonassoc COORDINATOR
 			%nonassoc COPY
 			%nonassoc COST
 			%nonassoc CPUSET
@@ -966,6 +971,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc DELETE_P
 			%nonassoc DELIMITER
 			%nonassoc DELIMITERS
+			%nonassoc DEPENDS
+			%nonassoc DETACH
 			%nonassoc DISABLE_P
 			%nonassoc DOMAIN_P
 			%nonassoc DOUBLE_P
@@ -995,6 +1002,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc FUNCTION
 			%nonassoc GLOBAL
 			%nonassoc GRANTED
+			%nonassoc GROUPING
 			%nonassoc HANDLER
 			%nonassoc HASH
 			%nonassoc HEADER_P
@@ -1005,6 +1013,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc IMMEDIATE
 			%nonassoc IMMUTABLE
 			%nonassoc IMPLICIT_P
+			%nonassoc IMPORT_P
+			%nonassoc INCLUDE
 			%nonassoc INCLUDING
 			%nonassoc INCLUSIVE
 			%nonassoc INCREMENT
@@ -1028,11 +1038,14 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc LOAD
 			%nonassoc LOCAL
 			%nonassoc LOCATION
+			%nonassoc LOCKED
 			%nonassoc LOCK_P
+			%nonassoc LOGGED
 			%nonassoc MASTER
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
 			%nonassoc MEMORY_LIMIT
+			%nonassoc METHOD
 			%nonassoc MIN_COST
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
@@ -1043,6 +1056,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc MOVE
 			%nonassoc NAME_P
 			%nonassoc NAMES
+			%nonassoc NEW
 			%nonassoc NEWLINE
 			%nonassoc NEXT
 			%nonassoc NO
@@ -1055,11 +1069,13 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc OBJECT_P
 			%nonassoc OF
 			%nonassoc OIDS
+			%nonassoc OLD
 			%nonassoc OPTION
 			%nonassoc OPTIONS
 			%nonassoc OTHERS
 			%nonassoc OVER
 			%nonassoc OVERCOMMIT
+			%nonassoc OVERRIDING
 			%nonassoc OWNED
 			%nonassoc OWNER
 			%nonassoc PARALLEL
@@ -1068,13 +1084,16 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc PASSWORD
 			%nonassoc PERCENT
 			%nonassoc PERSISTENTLY
+			%nonassoc POLICY
 			%nonassoc PREPARE
 			%nonassoc PREPARED
 			%nonassoc PRIOR
 			%nonassoc PRIVILEGES
 			%nonassoc PROCEDURAL
 			%nonassoc PROCEDURE
+			%nonassoc PROCEDURES
 			%nonassoc PROTOCOL
+			%nonassoc PUBLICATION
 			%nonassoc QUEUE
 			%nonassoc QUOTE
 			%nonassoc RANDOMLY
@@ -1084,10 +1103,12 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc REASSIGN
 			%nonassoc RECHECK
 			%nonassoc RECURSIVE
+			%nonassoc REFERENCING
 			%nonassoc REINDEX
 			%nonassoc REJECT_P
 			%nonassoc RELATIVE_P
 			%nonassoc RELEASE
+			%nonassoc RELOPT
 			%nonassoc RENAME
 			%nonassoc REPEATABLE
 			%nonassoc REPLACE
@@ -1100,9 +1121,12 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc REVOKE
 			%nonassoc ROLE
 			%nonassoc ROLLBACK
+			%nonassoc ROUTINE
+			%nonassoc ROUTINES
 			%nonassoc RULE
 			%nonassoc SAVEPOINT
 			%nonassoc SCHEMA
+			%nonassoc SCHEMAS
 			%nonassoc SCROLL
 			%nonassoc SEARCH
 			%nonassoc SECOND_P
@@ -1115,6 +1139,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc SHARE
 			%nonassoc SHOW
 			%nonassoc SIMPLE
+			%nonassoc SQL_P
 			%nonassoc SPLIT
 			%nonassoc STABLE
 			%nonassoc START
@@ -1123,10 +1148,13 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc STDIN
 			%nonassoc STDOUT
 			%nonassoc STORAGE
+			%nonassoc STORED
 			%nonassoc SUBPARTITION
+			%nonassoc SUPPORT
 			%nonassoc SYSID
 			%nonassoc SYSTEM_P
 			%nonassoc STRICT_P
+			%nonassoc TABLESAMPLE
 			%nonassoc TABLESPACE
 			%nonassoc TEMP
 			%nonassoc TEMPLATE
@@ -1134,6 +1162,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc THRESHOLD
 			%nonassoc TIES
 			%nonassoc TRANSACTION
+			%nonassoc TRANSFORM
 			%nonassoc TRIGGER
 			%nonassoc TRUNCATE
 			%nonassoc TRUSTED
@@ -5098,6 +5127,9 @@ TableLikeOption:
 				| INDEXES			{ $$ = CREATE_TABLE_LIKE_INDEXES; }
 				| STATISTICS		{ $$ = CREATE_TABLE_LIKE_STATISTICS; }
 				| STORAGE			{ $$ = CREATE_TABLE_LIKE_STORAGE; }
+				| ENCODING			{ $$ = CREATE_TABLE_LIKE_ENCODING; }
+				| RELOPT			{ $$ = CREATE_TABLE_LIKE_RELOPT; }
+				| AM				{ $$ = CREATE_TABLE_LIKE_AM; }
 				| ALL				{ $$ = CREATE_TABLE_LIKE_ALL; }
 		;
 
@@ -18022,6 +18054,7 @@ unreserved_keyword:
 			| ALSO
 			| ALTER
 			| ALWAYS
+			| AM
 			| ASSERTION
 			| ASSIGNMENT
 			| AT
@@ -18167,7 +18200,7 @@ unreserved_keyword:
 			| LOCATION
 			| LOCK_P
 			| LOCKED
-            | LOG_P
+			| LOG_P
 			| LOGGED
 			| MAPPING
 			| MASTER
@@ -18250,6 +18283,7 @@ unreserved_keyword:
 			| REJECT_P /* gp */
 			| RELATIVE_P
 			| RELEASE
+			| RELOPT
 			| RENAME
 			| REPEATABLE
 			| REPLACE
@@ -18394,13 +18428,17 @@ PartitionIdentKeyword: ABORT_P
 			| AFTER
 			| AGGREGATE
 			| ALSO
+			| AM
+			| AO_AUX_ONLY
 			| ASSERTION
 			| ASSIGNMENT
+			| ATTACH
 			| BACKWARD
 			| BEFORE
 			| BEGIN_P
 			| BY
 			| CACHE
+			| CALL
 			| CALLED
 			| CASCADE
 			| CASCADED
@@ -18410,6 +18448,7 @@ PartitionIdentKeyword: ABORT_P
 			| CLASS
 			| CLOSE
 			| CLUSTER
+			| COLUMNS
 			| COMMENT
 			| COMMIT
 			| COMMITTED
@@ -18419,6 +18458,7 @@ PartitionIdentKeyword: ABORT_P
 			| CONTAINS
 			| CONTENT_P
 			| CONVERSION_P
+			| COORDINATOR
 			| COPY
 			| COST
 			| CPUSET
@@ -18438,6 +18478,8 @@ PartitionIdentKeyword: ABORT_P
 			| DELETE_P
 			| DELIMITER
 			| DELIMITERS
+			| DEPENDS
+			| DETACH
 			| DISABLE_P
 			| DOMAIN_P
 			| DOUBLE_P
@@ -18464,8 +18506,11 @@ PartitionIdentKeyword: ABORT_P
 			| FORMAT
 			| FORWARD
 			| FUNCTION
+			| GENERATED
 			| GLOBAL
 			| GRANTED
+			| GROUPING
+			| GROUPS
 			| HANDLER
 			| HASH
 			| HEADER_P
@@ -18475,6 +18520,8 @@ PartitionIdentKeyword: ABORT_P
 			| IMMEDIATE
 			| IMMUTABLE
 			| IMPLICIT_P
+			| IMPORT_P
+			| INCLUDE
 			| INCLUDING
 			| INCLUSIVE
 			| INCREMENT
@@ -18498,11 +18545,14 @@ PartitionIdentKeyword: ABORT_P
 			| LOAD
 			| LOCAL
 			| LOCATION
+			| LOCKED
 			| LOCK_P
+			| LOGGED
 			| MASTER
 			| MATCH
 			| MAXVALUE
 			| MEMORY_LIMIT
+			| METHOD
 			| MINVALUE
 			| MISSING
 			| MODE
@@ -18510,6 +18560,7 @@ PartitionIdentKeyword: ABORT_P
 			| MOVE
 			| NAME_P
 			| NAMES
+			| NEW
 			| NEWLINE
 			| NEXT
 			| NO
@@ -18521,11 +18572,13 @@ PartitionIdentKeyword: ABORT_P
 			| OBJECT_P
 			| OF
 			| OIDS
+			| OLD
 			| OPERATOR
 			| OPTION
 			| OPTIONS
 			| OTHERS
 			| OVERCOMMIT
+			| OVERRIDING
 			| OWNED
 			| OWNER
 			| PARALLEL
@@ -18534,6 +18587,7 @@ PartitionIdentKeyword: ABORT_P
 			| PASSWORD
 			| PERCENT
 			| PERSISTENTLY
+			| POLICY
 			| PREPARE
 			| PREPARED
 			| PRESERVE
@@ -18541,16 +18595,20 @@ PartitionIdentKeyword: ABORT_P
 			| PRIVILEGES
 			| PROCEDURAL
 			| PROCEDURE
+			| PROCEDURES
 			| PROTOCOL
+			| PUBLICATION
 			| QUEUE
 			| QUOTE
 			| RANGE
 			| READ
 			| REASSIGN
 			| RECHECK
+			| REFERENCING
 			| REINDEX
 			| RELATIVE_P
 			| RELEASE
+			| RELOPT
 			| RENAME
 			| REPEATABLE
 			| REPLACE
@@ -18558,15 +18616,19 @@ PartitionIdentKeyword: ABORT_P
 			| RESOURCE
 			| RESTART
 			| RESTRICT
+			| RETRIEVE
 			| RETURNS
 			| REVOKE
 			| ROLE
 			| ROLLBACK
 			| ROLLUP
+			| ROUTINE
+			| ROUTINES
 			| ROWS
 			| RULE
 			| SAVEPOINT
 			| SCHEMA
+			| SCHEMAS
 			| SCROLL
 			| SEARCH
 			| SECURITY
@@ -18580,6 +18642,7 @@ PartitionIdentKeyword: ABORT_P
 			| SHOW
 			| SIMPLE
 			| SPLIT
+			| SQL_P
 			| STABLE
 			| START
 			| STATEMENT
@@ -18587,16 +18650,20 @@ PartitionIdentKeyword: ABORT_P
 			| STDIN
 			| STDOUT
 			| STORAGE
+			| STORED
 			| STRICT_P
 			| SUBPARTITION
+			| SUPPORT
 			| SYSID
 			| SYSTEM_P
+			| TABLESAMPLE
 			| TEMP
 			| TEMPLATE
 			| TEMPORARY
 			| THRESHOLD
 			| TIES
 			| TRANSACTION
+			| TRANSFORM
 			| TRIGGER
 			| TRUNCATE
 			| TRUSTED
@@ -19760,7 +19827,6 @@ isSetWithReorganize(List **options)
 	}
 	return false;
 }
-
 
 /*
  * Greenplum: a thin wax off layer to keep compatibility with the legacy syntax

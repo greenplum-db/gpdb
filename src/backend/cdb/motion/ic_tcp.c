@@ -1669,29 +1669,26 @@ SetupTCPInterconnect(EState *estate)
 		/*
 		 * Log the select() if requested.
 		 */
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG ||
+			(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE &&
+			 n != expectedTotalIncoming + expectedTotalOutgoing))
 		{
-			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG ||
-				n != expectedTotalIncoming + expectedTotalOutgoing)
-			{
-				int			elevel = (n == expectedTotalIncoming + expectedTotalOutgoing)
-				? DEBUG1 : LOG;
+			int elevel = (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG) ? DEBUG1 : LOG;
 
-				initStringInfo(&logbuf);
-				if (n > 0)
-				{
-					appendStringInfo(&logbuf, "result=%d  Ready: ", n);
-					format_fd_set(&logbuf, highsock + 1, &rset, "r={", "} ");
-					format_fd_set(&logbuf, highsock + 1, &wset, "w={", "} ");
-					format_fd_set(&logbuf, highsock + 1, &eset, "e={", "}");
-				}
-				else
-					appendStringInfoString(&logbuf, n < 0 ? "error" : "timeout");
-				ereport(elevel, (errmsg("SetupInterconnect+" UINT64_FORMAT "ms:   select()  %s",
-										elapsed_ms, logbuf.data)));
-				pfree(logbuf.data);
-				MemSet(&logbuf, 0, sizeof(logbuf));
+			initStringInfo(&logbuf);
+			if (n > 0)
+			{
+				appendStringInfo(&logbuf, "result=%d  Ready: ", n);
+				format_fd_set(&logbuf, highsock + 1, &rset, "r={", "} ");
+				format_fd_set(&logbuf, highsock + 1, &wset, "w={", "} ");
+				format_fd_set(&logbuf, highsock + 1, &eset, "e={", "}");
 			}
+			else
+				appendStringInfoString(&logbuf, n < 0 ? "error" : "timeout");
+			ereport(elevel, (errmsg("SetupInterconnect+" UINT64_FORMAT "ms:   select()  %s",
+									elapsed_ms, logbuf.data)));
+			pfree(logbuf.data);
+			MemSet(&logbuf, 0, sizeof(logbuf));
 		}
 
 		/* An error other than EINTR is not acceptable */

@@ -411,6 +411,26 @@ open_next_scan_seg(AOCSScanDesc scan)
 	return -1;
 }
 
+/*
+ * Similar to open_next_scan_seg(), except that we explicitly specify the segno
+ * to be opened (via 'fsInfoIdx', an index into the scan's segfile array).
+ *
+ * We return true if we are successfully able to open the target segment.
+ *
+ * Since open_next_scan_seg() opens the next segment starting from
+ * (scan->cur_seg + 1), skipping empty/awaiting-drop segs, we also check if the
+ * seg opened isn't the one we targeted. If it isn't, then the target seg was
+ * empty/awaiting-drop, and we return false.
+ */
+static bool
+open_scan_seg(AOCSScanDesc scan, int fsInfoIdx)
+{
+	Assert(fsInfoIdx >= 0 && fsInfoIdx < scan->total_seg);
+
+	scan->cur_seg = fsInfoIdx - 1;
+	return open_next_scan_seg(scan) == fsInfoIdx;
+}
+
 static void
 close_cur_scan_seg(AOCSScanDesc scan)
 {
@@ -639,6 +659,63 @@ aocs_rescan(AOCSScanDesc scan)
 	if (scan->columnScanInfo.ds)
 		close_ds_read(scan->columnScanInfo.ds, scan->columnScanInfo.relationTupleDesc->natts);
 	initscan_with_colinfo(scan);
+}
+
+/*
+ * Position an AOCS scan to start from a segno specified by the 'fsInfoIdx' in
+ * the scan's segfile array, and offset specified by blkdir entry 'dirEntry',
+ * for column specified by 'colIdx' in the scan's columnScanInfo.
+ *
+ * If we are unable to position the scan, we return false.
+ */
+bool
+aocs_positionscan(AOCSScanDesc scan,
+				  AppendOnlyBlockDirectoryEntry *dirEntry,
+				  int colIdx,
+				  int fsInfoIdx)
+{
+	int64 			beginFileOffset = dirEntry->range.fileOffset;
+	int64 			afterFileOffset = dirEntry->range.afterFileOffset;
+	DatumStreamRead *ds;
+	int 			dsIdx;
+
+	Assert(colIdx >= 0 && colIdx < scan->columnScanInfo.num_proj_atts);
+	Assert(dirEntry);
+
+	if (colIdx == 0)
+	{
+		if (scan->columnScanInfo.relationTupleDesc == NULL)
+		{
+			scan->columnScanInfo.relationTupleDesc = RelationGetDescr(scan->rs_base.rs_rd);
+			/* Pin it! ... and of course release it upon destruction / rescan */
+			PinTupleDesc(scan->columnScanInfo.relationTupleDesc);
+			initscan_with_colinfo(scan);
+		}
+
+		/* Open segfiles for the given segno for each col the first time through. */
+		if (!open_scan_seg(scan, fsInfoIdx))
+		{
+			/* target segment is empty/awaiting-drop */
+			return false;
+		}
+	}
+
+	/* The datum stream array is always of length relnatts */
+	dsIdx = scan->columnScanInfo.proj_atts[colIdx];
+	Assert(dsIdx >= 0 && dsIdx < RelationGetNumberOfAttributes(scan->rs_base.rs_rd));
+	ds = scan->columnScanInfo.ds[dsIdx];
+
+	if (beginFileOffset > ds->ao_read.logicalEof)
+	{
+		/* position maps to a hole at the end of the segfile */
+		return false;
+	}
+
+	AppendOnlyStorageRead_SetTemporaryStart(&ds->ao_read,
+											beginFileOffset,
+											afterFileOffset);
+
+	return true;
 }
 
 void

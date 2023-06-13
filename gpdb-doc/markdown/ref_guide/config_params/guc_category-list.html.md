@@ -64,7 +64,6 @@ These parameters set the limits for system resources consumed by Greenplum Datab
 These parameters control system memory usage.
 
 - [gp_vmem_idle_resource_timeout](guc-list.html#gp_vmem_idle_resource_timeout)
-- [gp_resource_group_memory_limit](guc-list.html#gp_resource_group_memory_limit) \(resource group-based resource management\)
 - [gp_vmem_protect_limit](guc-list.html#gp_vmem_protect_limit) \(resource queue-based resource management\)
 - [gp_vmem_protect_segworker_cache_limit](guc-list.html#gp_vmem_protect_segworker_cache_limit)
 - [gp_workfile_limit_files_per_query](guc-list.html#gp_workfile_limit_files_per_query)
@@ -403,13 +402,11 @@ The following configuration parameters configure the Greenplum Database resource
 The following parameters configure the Greenplum Database resource group workload management feature.
 
 - [gp_resgroup_memory_policy](guc-list.html#gp_resgroup_memory_policy)
+- [gp_resgroup_memory_query_fixed_mem](guc-list.html#gp_resgroup_memory_query_fixed_mem)
 - [gp_resource_group_bypass](guc-list.html#gp_resource_group_bypass)
 - [gp_resource_group_bypass_catalog_query](guc-list.html#gp_resource_group_bypass_catalog_query)
-- [gp_resource_group_cpu_ceiling_enforcement](guc-list.html#gp_resource_group_cpu_ceiling_enforcement)
 - [gp_resource_group_cpu_limit](guc-list.html#gp_resource_group_cpu_limit)
 - [gp_resource_group_cpu_priority](guc-list.html#gp_resource_group_cpu_priority)
-- [gp_resource_group_enable_recalculate_query_mem](guc-list.html#gp_resource_group_enable_recalculate_query_mem)
-- [gp_resource_group_memory_limit](guc-list.html#gp_resource_group_memory_limit)
 - [gp_resource_group_queuing_timeout](guc-list.html#gp_resource_group_queuing_timeout)
 - [gp_resource_manager](guc-list.html#gp_resource_manager)
 - [gp_vmem_idle_resource_timeout](guc-list.html#gp_vmem_idle_resource_timeout)

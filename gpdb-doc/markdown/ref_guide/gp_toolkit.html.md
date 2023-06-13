@@ -560,32 +560,18 @@ This view is accessible to all users.
 |num\_queued|The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
 |num\_executed|The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
 |total\_queue\_duration|The total time any transaction was queued since the Greenplum Database cluster was last started.|
-|cpu\_usage|A set of key-value pairs. For each segment instance \(the key\), the value is the real-time, per-segment instance CPU core usage by a resource group. The value is the sum of the percentages \(as a decimal value\) of CPU cores that are used by the resource group for the segment instance.|
-|memory\_usage|The real-time memory usage of the resource group on each Greenplum Database segment's host.|
 
-The `cpu_usage` field is a JSON-formatted, key:value string that identifies, for each resource group, the per-segment instance CPU core usage. The key is the segment id. The value is the sum of the percentages \(as a decimal value\) of the CPU cores used by the segment instance's resource group on the segment host; the maximum value is 1.00. The total CPU usage of all segment instances running on a host should not exceed the `gp_resource_group_cpu_limit`. Example `cpu_usage` column output:
+Sample output for the `gp_resgroup_status` view:
 
 ```
-
-{"-1":0.01, "0":0.31, "1":0.31}
+select * from gp_toolkit.gp_resgroup_status;
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration |
+---------------+---------+-------------+--------------+------------+------------------------------------------------------------------------
+ default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  |
+ admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  |
+ system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  |
+(3 rows)
 ```
-
-In the example, segment `0` and segment `1` are running on the same host; their CPU usage is the same.
-
-The `memory_usage` field is also a JSON-formatted, key:value string. The string contents differ depending upon the type of resource group. For each resource group that you assign to a role \(default memory auditor `vmtracker`\), this string identifies the used and available fixed and shared memory quota allocations on each segment. The key is segment id. The values are memory values displayed in MB units. The following example shows `memory_usage` column output for a single segment for a resource group that you assign to a role:
-
-```
-
-"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "shared_used":0, "shared_available":16}
-```
-
-For each resource group that you assign to an external component, the `memory_usage` JSON-formatted string identifies the memory used and the memory limit on each segment. The following example shows `memory_usage` column output for an external component resource group for a single segment:
-
-```
-"1":{"used":11, "limit_granted":15}
-```
-
-> **Note** See the `gp_resgroup_status_per_host` view, described below, for more user-friendly display of CPU and memory usage.
 
 ### <a id="perhost"></a>gp\_resgroup\_status\_per\_host 
 
@@ -596,22 +582,19 @@ The [gp\_resgroup\_status\_per\_host](system_catalogs/catalog_ref-views.html#gp_
 |`rsgname`|The name of the resource group.|
 |`groupid`|The ID of the resource group.|
 |`hostname`|The hostname of the segment host.|
-|`cpu`|The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages \(as a decimal value\) of the CPU cores that are used by the resource group on the host.|
-|`memory_used`|The real-time memory usage of the resource group on the host. This total includes resource group fixed and shared memory. It also includes global shared memory used by the resource group.|
-|`memory_available`|The unused fixed and shared memory for the resource group that is available on the host. This total does not include available resource group global shared memory.|
-|`memory_quota_used`|The real-time fixed memory usage for the resource group on the host.|
-|`memory_quota_available`|The fixed memory available to the resource group on the host.|
-|`memory_shared_used`|The group shared memory used by the resource group on the host. If any global shared memory is used by the resource group, this amount is included in the total as well.|
-|`memory_shared_available`|The amount of group shared memory available to the resource group on the host. Resource group global shared memory is not included in this total.|
+|`cpu_usage`|The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages (as a float value) of the CPU cores that are used by the resource group on the host.|
+|`memory_usage`|The real-time memory usage of the resource group on each Greenplum Database segment's host, in MB.|
 
 Sample output for the `gp_resgroup_status_per_host` view:
 
 ```
- rsgname       | groupid | hostname   | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_shared_used | memory_shared_available 
----------------+---------+------------+------+-------------+------------------+-------------------+------------------------+---------------------+---------------------
- admin_group   | 6438    | my-desktop | 0.84 | 1           | 271              | 68                | 68                     | 0                  | 136                     
- default_group | 6437    | my-desktop | 0.00 | 0           | 816              | 0                 | 400                    | 0                  | 416                     
-(2 rows)
+select * from gp_toolkit.gp_resgroup_status_per_host;
+ rsgname       | groupid | hostname | cpu_usage | memory_usage
+---------------+---------+----------+-----------+--------------
+ admin_group   | 6438    | zero     | 0.07      | 91.92
+ default_group | 6437    | zero     | 0.00      | 0.00
+ system_group  | 6441    | zero     | 0.02      | 53.04
+(3 rows)
 ```
 
 ## <a id="topic26"></a>Checking Resource Queue Activity and Status 

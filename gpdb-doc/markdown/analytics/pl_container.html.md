@@ -144,7 +144,7 @@ Install the PL/Container language extension using the `gppkg` utility.
 4.  Run the package installation command:
 
     ```
-    gppkg -i plcontainer-2.1.1-rhel8-x86_64.gppkg
+    gppkg install plcontainer-2.1.1-rhel8-x86_64.gppkg
     ```
 
 5.  Source the file `$GPHOME/greenplum_path.sh`:
@@ -355,10 +355,10 @@ To upgrade, perform the following procedure:
     $ plcontainer runtime-backup -f plcontainer202-backup.xml
     ```
 
-2.  Use the Greenplum Database `gppkg` utility with the `-u` option to update the PL/Container language extension. For example, the following command updates the PL/Container language extension to version 2.2.0 on a Linux system:
+2.  Use the Greenplum Database `gppkg` utility with the `install` option to update the PL/Container language extension using the latest package. For example, the following command updates the PL/Container language extension to version 2.2.0 on a Linux system:
 
     ```
-    $ gppkg -u plcontainer-2.2.0-gp7-rhel8_x86_64.gppkg
+    $ gppkg install plcontainer-2.2.0-gp7-rhel8_x86_64.gppkg
     ```
 
 3.  Source the Greenplum Database environment file `$GPHOME/greenplum_path.sh`.
@@ -423,13 +423,13 @@ The `CASCADE` keyword drops PL/Container-specific functions and views.
 
 If no databases have `plcontainer` as a registered language, uninstall the Greenplum Database PL/Container language extension with the `gppkg` utility.
 
-1.  Use the Greenplum Database `gppkg` utility with the `-r` option to uninstall the PL/Container language extension. This example uninstalls the PL/Container language extension on a Linux system:
+1.  Use the Greenplum Database `gppkg` utility with the `remove` option to uninstall the PL/Container language extension. This example uninstalls the PL/Container language extension on a Linux system:
 
     ```
-    $ gppkg -r plcontainer-2.1.1
+    $ gppkg remove plcontainer-2.1.1
     ```
 
-    You can run the `gppkg` utility with the options `-q --all` to list the installed extensions and their versions.
+    You can run the `gppkg` utility with the `query` option to list the installed extensions and their versions.
 
 2.  Reload `greenplum_path.sh`.
 

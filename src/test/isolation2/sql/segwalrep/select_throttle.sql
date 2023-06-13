@@ -18,7 +18,7 @@ SELECT pg_reload_conf();
 CREATE TABLE select_no_throttle(a int) DISTRIBUTED BY (a);
 INSERT INTO select_no_throttle SELECT generate_series (1, 10);
 CREATE TABLE select_throttle(a int) DISTRIBUTED BY (a);
-INSERT INTO select_throttle SELECT generate_series (1, 100000);
+INSERT INTO select_throttle SELECT generate_series (1, 900000);
 
 -- Enable tuple hints so that buffer will be marked dirty upon a hint bit change
 -- (so that we don't have to wait for the tuple to age. See logic in markDirty)
@@ -78,7 +78,7 @@ SELECT wait_until_all_segments_synchronized();
 -- (so that we don't have to wait for the tuple to age. See logic in markDirty)
 1U: SET gp_disable_tuple_hints=off;
 Truncate select_throttle;
-INSERT INTO select_throttle SELECT generate_series (1, 100000);
+INSERT INTO select_throttle SELECT generate_series (1, 900000);
 -- flush the data to disk
 checkpoint;
 -- Suspend walsender

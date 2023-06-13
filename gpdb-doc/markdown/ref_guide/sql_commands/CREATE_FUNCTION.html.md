@@ -24,6 +24,7 @@ CREATE [OR REPLACE] FUNCTION <name>    
     | SET <configuration_parameter> { TO <value> | = <value> | FROM CURRENT }
     | AS '<definition>'
     | AS '<obj_file>', '<link_symbol>' 
+    [ WITH ({ DESCRIBE = <describe_function> } [, ...] ) ]
   } ...
 ```
 
@@ -210,6 +211,9 @@ obj\_file, link\_symbol
 :   This form of the `AS` clause is used for dynamically loadable C language functions when the function name in the C language source code is not the same as the name of the SQL function. The string obj\_file is the name of the file containing the dynamically loadable object, and is interpreted as for the [LOAD](LOAD.html) command. The string link\_symbol is the name of the function in the C language source code. If the link symbol is omitted, it is assumed to be the same as the name of the SQL function being defined. The C names of all functions must be different, so you must give overloaded SQL functions different C names \(for example, use the argument types as part of the C names\).
 :   When repeated `CREATE FUNCTION` calls refer to the same object file, the file is only loaded once per session. To unload and reload the file \(perhaps during development\), start a new session.
 :   Locating shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) will simplify version upgrades if the new installation is at a different location.
+
+describe\_function
+:   The name of a callback function to run when a query that calls this function is parsed. The callback function returns a tuple descriptor that indicates the result type.
 
 ## <a id="section5o"></a>Overloading 
 

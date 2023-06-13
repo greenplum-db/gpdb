@@ -2572,4 +2572,97 @@ gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
 	GP_WRAP_END;
 }
 
+char *
+gpdb::GetRelFdwName(Oid reloid)
+{
+	GP_WRAP_START;
+	{
+		Oid fs_id = GetForeignServerIdByRelId(reloid);
+		ForeignServer *fs = GetForeignServer(fs_id);
+		ForeignDataWrapper *fdw = GetForeignDataWrapper(fs->fdwid);
+		return fdw->fdwname;
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+PathTarget *
+gpdb::MakePathtargetFromTlist(List *tlist)
+{
+	GP_WRAP_START;
+	{
+		return make_pathtarget_from_tlist(tlist);
+	}
+	GP_WRAP_END;
+}
+
+void
+gpdb::SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
+							PathTarget *input_target, List **targets,
+							List **targets_contain_srfs)
+{
+	GP_WRAP_START;
+	{
+		split_pathtarget_at_srfs(root, target, input_target, targets,
+								 targets_contain_srfs);
+	}
+	GP_WRAP_END;
+}
+
+List *
+gpdb::MakeTlistFromPathtarget(PathTarget *target)
+{
+	GP_WRAP_START;
+	{
+		return make_tlist_from_pathtarget(target);
+	}
+	GP_WRAP_END;
+	return NIL;
+}
+
+Node *
+gpdb::Expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
+{
+	GP_WRAP_START;
+	{
+		return expression_tree_mutator(node, mutator, context);
+	}
+	GP_WRAP_END;
+
+	return nullptr;
+}
+
+TargetEntry *
+gpdb::TlistMember(Expr *node, List *targetlist)
+{
+	GP_WRAP_START;
+	{
+		return tlist_member(node, targetlist);
+	}
+	GP_WRAP_END;
+
+	return nullptr;
+}
+
+Var *
+gpdb::MakeVarFromTargetEntry(Index varno, TargetEntry *tle)
+{
+	GP_WRAP_START;
+	{
+		return makeVarFromTargetEntry(varno, tle);
+	}
+	GP_WRAP_END;
+}
+
+TargetEntry *
+gpdb::FlatCopyTargetEntry(TargetEntry *src_tle)
+{
+	GP_WRAP_START;
+	{
+		return flatCopyTargetEntry(src_tle);
+	}
+	GP_WRAP_END;
+}
+
+
 // EOF

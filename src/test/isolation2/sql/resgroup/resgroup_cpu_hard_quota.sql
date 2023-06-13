@@ -22,10 +22,10 @@ CREATE OR REPLACE FUNCTION fetch_sample() RETURNS text AS $$
     import json
 
     group_cpus = plpy.execute('''
-        SELECT rsgname, cpu_usage FROM gp_toolkit.gp_resgroup_status_per_host
+        SELECT groupname, cpu_usage FROM gp_toolkit.gp_resgroup_status_per_host
     ''')
     plpy.notice(group_cpus)
-    json_text = json.dumps(dict([(row['rsgname'], float(row['cpu_usage'])) for row in group_cpus]))
+    json_text = json.dumps(dict([(row['groupname'], float(row['cpu_usage'])) for row in group_cpus]))
     plpy.execute('''
         INSERT INTO cpu_usage_samples VALUES ('{value}')
     '''.format(value=json_text))

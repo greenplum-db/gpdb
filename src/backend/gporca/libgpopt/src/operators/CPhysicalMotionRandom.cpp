@@ -82,6 +82,28 @@ CPhysicalMotionRandom::PcrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 						 gpos::ulong_max);
 }
 
+CPartitionPropagationSpec *
+CPhysicalMotionRandom::PppsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
+									CPartitionPropagationSpec *pppsRequired,
+									ULONG child_index,
+									CDrvdPropArray *pdrgpdpCtxt,
+									ULONG ulOptReq) const
+{
+	// If the random motion is duplicate sensitive, it gets translated to a hash filter
+	// instead of a motion, which isn't a barrier for partition selectors
+	if (IsDuplicateSensitive())
+	{
+		return CPhysical::PppsRequired(mp, exprhdl, pppsRequired, child_index,
+									   pdrgpdpCtxt, ulOptReq);
+	}
+	// A motion is a hard barrier for partition propagation since it executes in a
+	// different slice; and thus it cannot require this property from its child
+	else
+	{
+		return GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+	}
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalMotionRandom::FProvidesReqdCols
@@ -164,6 +186,22 @@ CPhysicalMotionRandom::PosDerive(CMemoryPool *mp,
 	return GPOS_NEW(mp) COrderSpec(mp);
 }
 
+CPartitionPropagationSpec *
+CPhysicalMotionRandom::PppsDerive(CMemoryPool *mp,
+								  CExpressionHandle &exprhdl) const
+{
+	// If the random motion is duplicate sensitive, it gets translated to a hash filter
+	// instead of a motion, which isn't a barrier for partition selectors
+	if (IsDuplicateSensitive())
+	{
+		return CPhysical::PppsDerive(mp, exprhdl);
+	}
+	else
+	{
+		// A Motion cannot pass propagation spec
+		return GPOS_NEW(mp) CPartitionPropagationSpec(mp);
+	}
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -178,6 +216,10 @@ CPhysicalMotionRandom::OsPrint(IOstream &os) const
 {
 	os << SzId();
 
+	if (IsDuplicateSensitive())
+	{
+		os << " (dup sensitive) ";
+	}
 	return os;
 }
 

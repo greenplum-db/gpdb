@@ -52,6 +52,7 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [gpstate](ref/gpstate.html)
 - [gpstop](ref/gpstop.html)
 - [gpsync](ref/gpsync.html)
+- [pg\_checksums](ref/pg_checksums.html)
 - [pg\_config](ref/pg_config.html)
 - [pg\_dump](ref/pg_dump.html)<sup>3</sup>
 - [pg\_dumpall](ref/pg_dumpall.html)<sup>3</sup>

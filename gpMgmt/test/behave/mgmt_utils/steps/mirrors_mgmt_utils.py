@@ -481,7 +481,7 @@ def make_temp_dir_on_remote(context, hostname, tmp_base_dir_remote, mode='700'):
         raise Exception("tmp_base_dir cannot be empty")
 
     tempfile_cmd = Command(name="Create temp directory on remote host",
-                           cmdStr=""" python -c "import tempfile; t=tempfile.mkdtemp(dir='{}');print(t)" """
+                           cmdStr=""" python3 -c "import tempfile; t=tempfile.mkdtemp(dir='{}');print(t)" """
                            .format(tmp_base_dir_remote),
                            remoteHost=hostname, ctxt=REMOTE)
     tempfile_cmd.run(validateAfter=True)

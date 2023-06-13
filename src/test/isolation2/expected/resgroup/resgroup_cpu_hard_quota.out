@@ -27,7 +27,7 @@ CREATE
 -- and dump them into text in json format then save them in db for
 -- further analysis.
 CREATE OR REPLACE FUNCTION fetch_sample() RETURNS text AS $$ import json 
-group_cpus = plpy.execute(''' SELECT rsgname, cpu_usage FROM gp_toolkit.gp_resgroup_status_per_host ''') plpy.notice(group_cpus) json_text = json.dumps(dict([(row['rsgname'], float(row['cpu_usage'])) for row in group_cpus])) plpy.execute(''' INSERT INTO cpu_usage_samples VALUES ('{value}') '''.format(value=json_text)) return json_text $$ LANGUAGE plpython3u;
+group_cpus = plpy.execute(''' SELECT groupname, cpu_usage FROM gp_toolkit.gp_resgroup_status_per_host ''') plpy.notice(group_cpus) json_text = json.dumps(dict([(row['groupname'], float(row['cpu_usage'])) for row in group_cpus])) plpy.execute(''' INSERT INTO cpu_usage_samples VALUES ('{value}') '''.format(value=json_text)) return json_text $$ LANGUAGE plpython3u;
 CREATE
 
 -- verify_cpu_usage: calculate each QE's average cpu usage using all the data in

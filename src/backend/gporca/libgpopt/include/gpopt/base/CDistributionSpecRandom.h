@@ -81,8 +81,6 @@ public:
 	void
 	MarkDuplicateSensitive()
 	{
-		GPOS_ASSERT(!m_is_duplicate_sensitive);
-
 		m_is_duplicate_sensitive = true;
 	}
 

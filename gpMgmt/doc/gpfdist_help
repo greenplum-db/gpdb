@@ -9,7 +9,7 @@ SYNOPSIS
 
 gpfdist [-d <directory>] [-p <http_port>] [-l <log_file>] [-t <timeout>] 
 [-S] [-w <time>] [-v | -V] [-m <max_length>] [--ssl <certificate_path>]
-[--compress] [--multi_thread <number_of_threads>]
+[--compress] [--multi_thread <number_of_threads>] [-k <seconds>]
 
 gpfdist [-? | --help] | --version
 
@@ -119,8 +119,15 @@ OPTIONS
  For a Greenplum Database with multiple segments, there might be a delay 
  between segments when writing data from different segments to the file. 
  You can specify a time to wait before Greenplum Database closes the file 
- to ensure all the data is written to the file. 
+ to ensure all the data is written to the file.
 
+-k <time>
+
+ Sets the number of seconds the gpfdist will delay before clean up the
+ session when there are no requests handling even before all of the segment
+ requests have sent final POST requests for writable sessions. This is
+ used to clean up garbage sessions if segment process left before
+ sending the final POST message.
 
 --ssl <certificate_path> 
 

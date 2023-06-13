@@ -661,6 +661,20 @@ aoco_endscan(TableScanDesc scan)
 	pfree(aocsBitmapScan->bitmapScanDesc[RECHECK].proj);
 }
 
+/* ----------------
+ * aoco_rescan - restart a relation scan
+ *
+ * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: When doing an initial rescan with `table_rescan`,
+ * the values for the new flags (introduced by Table AM API) are
+ * set to false. This means that whichever ScanOptions flags that were initially set will be
+ * used for the rescan. However with TABLESAMPLE, which is currently not
+ * supported for AO/CO, the new flags may be modified.
+ * Additionally, allow_sync, allow_strat, and allow_pagemode may
+ * need to be implemented for AO/CO in order to properly use them.
+ * You may view `syncscan.c` as an example to see how heap added scan
+ * synchronization support.
+ * ----------------
+ */
 static void
 aoco_rescan(TableScanDesc scan, ScanKey key,
                   bool set_params, bool allow_strat,
@@ -1624,9 +1638,12 @@ static int
 aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 						 int targrows, double *totalrows, double *totaldeadrows)
 {
-	int		numrows = 0;	/* # rows now in reservoir */
-	double	liverows = 0;	/* # live rows seen */
-	double	deadrows = 0;	/* # dead rows seen */
+	FileSegTotals	*fileSegTotals;
+	BlockNumber		totalBlocks;
+	BlockNumber     blksdone = 0;
+	int		        numrows = 0;	/* # rows now in reservoir */
+	double	        liverows = 0;	/* # live rows seen */
+	double	        deadrows = 0;	/* # dead rows seen */
 
 	Assert(targrows > 0);
 
@@ -1638,6 +1655,16 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	int64 totaldeadtupcount = 0;
 	if (aocoscan->total_seg > 0 )
 		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aocoscan->visibilityMap);
+
+	/*
+	 * Get the total number of blocks for the table
+	 */
+	fileSegTotals = GetAOCSSSegFilesTotals(onerel,
+											   aocoscan->appendOnlyMetaDataSnapshot);
+
+	totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
+	pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_TOTAL,
+								 totalBlocks);
 	/*
      * The conversion from int64 to double (53 significant bits) is safe as the
 	 * AOTupleId is 48bits, the max value of totalrows is never greater than
@@ -1663,7 +1690,19 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 		}
 		else
 			deadrows++;
-		
+
+		/*
+		 * Even though we now do row based sampling,
+		 * we can still report in terms of blocks processed using ratio of
+		 * rows scanned / target rows on totalblocks in the table.
+		 * For e.g., if we have 1000 blocks in the table and we are sampling 100 rows,
+		 * and if 10 rows are done, we can say that 100 blocks are done.
+		 */
+		blksdone = (totalBlocks * (double) (liverows + deadrows)) / targrows ;
+		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
+									 blksdone);
+		SIMPLE_FAULT_INJECTOR("analyze_block");
+
 		ExecClearTuple(slot);
 	}
 
@@ -1713,6 +1752,9 @@ aoco_index_build_range_scan(Relation heapRelation,
 	List	   *tlist = NIL;
 	List	   *qual = indexInfo->ii_Predicate;
 	Oid			blkdirrelid;
+	Relation 	blkdir;
+	AppendOnlyBlockDirectory existingBlkdir;
+	bool        partialScanWithBlkdir = false;
 	int64 		previous_blkno = -1;
 
 	/*
@@ -1759,7 +1801,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	GetAppendOnlyEntryAuxOids(heapRelation, NULL,
 							  &blkdirrelid, NULL);
 
-	Relation blkdir = relation_open(blkdirrelid, AccessShareLock);
+	blkdir = relation_open(blkdirrelid, AccessShareLock);
 
 	need_create_blk_directory = RelationGetNumberOfBlocks(blkdir) == 0;
 	relation_close(blkdir, NoLock);
@@ -1847,13 +1889,95 @@ aoco_index_build_range_scan(Relation heapRelation,
 	{
 		/*
 		 * Allocate blockDirectory in scan descriptor to let the access method
-		 * know that it needs to also build the block directory while
-		 * scanning.
+		 * know that it needs to also build the block directory while scanning.
 		 */
 		Assert(aocoscan->blockDirectory == NULL);
 		aocoscan->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
 	}
+	else if (numblocks != InvalidBlockNumber)
+	{
+		/*
+		 * We are performing a partial scan of the base relation. We already
+		 * have a non-empty blkdir to help guide our partial scan.
+		 */
+		bool	*proj;
+		int		relnatts = RelationGetNumberOfAttributes(heapRelation);
+		AppendOnlyBlockDirectoryEntry dirEntry = {0};
 
+		/* The range is contained within one seg. */
+		Assert(AOSegmentGet_segno(start_blockno) ==
+				   AOSegmentGet_segno(start_blockno + numblocks - 1));
+
+		/* Reverse engineer a proj bool array from the scan proj info */
+		proj = palloc0(relnatts * sizeof(bool));
+		for (int i = 0; i < aocoscan->columnScanInfo.num_proj_atts; i++)
+		{
+			AttrNumber colno = aocoscan->columnScanInfo.proj_atts[i];
+			proj[colno] = true;
+		}
+
+		partialScanWithBlkdir = true;
+		AppendOnlyBlockDirectory_Init_forSearch(&existingBlkdir,
+												snapshot,
+												(FileSegInfo **) aocoscan->seginfo,
+												aocoscan->total_seg,
+												heapRelation,
+												relnatts,
+												true,
+												proj);
+
+		for (int colIdx = 0; colIdx < aocoscan->columnScanInfo.num_proj_atts; colIdx++)
+		{
+			int		fsInfoIdx;
+			int 	columnGroupNo = aocoscan->columnScanInfo.proj_atts[colIdx];
+
+			if (AppendOnlyBlockDirectory_GetEntryForPartialScan(&existingBlkdir,
+																start_blockno,
+																columnGroupNo,
+																&dirEntry,
+																&fsInfoIdx))
+			{
+				/*
+				 * Since we found a block directory entry near start_blockno, we
+				 * can use it to position our scan.
+				 */
+				if (!aocs_positionscan(aocoscan, &dirEntry, colIdx, fsInfoIdx))
+				{
+					/*
+					 * If we have failed to position our scan, that can mean that
+					 * the start_blockno does not exist in the segfile.
+					 *
+					 * This could be either because the segfile itself is
+					 * empty/awaiting-drop or the directory entry's fileOffset
+					 * is beyond the seg's eof.
+					 *
+					 * In such a case, we can bail early. There is no need to scan
+					 * this segfile or any others.
+					 */
+					reltuples = 0;
+					goto cleanup;
+				}
+			}
+			else
+			{
+				/*
+				 * We were unable to find a block directory row
+				 * encompassing/preceding the start block. This represents an
+				 * edge case where the start block of the range maps to a hole
+				 * at the very beginning of the segfile (and before the first
+				 * minipage entry of the first minipage corresponding to this
+				 * segfile).
+				 *
+				 * Do nothing in this case. The scan will start anyway from the
+				 * beginning of the segfile (offset = 0), i.e. from the first row
+				 * present in the segfile (see BufferedReadInit()).
+				 * This will ensure that we don't skip the other possibly extant
+				 * blocks in the range.
+				 */
+				break;
+			}
+		}
+	}
 
 	/* Publish number of blocks to scan */
 	if (progress)
@@ -1909,14 +2033,19 @@ aoco_index_build_range_scan(Relation heapRelation,
 
 		CHECK_FOR_INTERRUPTS();
 
-		/*
-		 * GPDB_12_MERGE_FIXME: How to properly do a partial scan? Currently,
-		 * we scan the whole table, and throw away tuples that are not in the
-		 * range. That's clearly very inefficient.
-		 */
-		if (currblockno < start_blockno ||
-			(numblocks != InvalidBlockNumber && currblockno >= (start_blockno + numblocks)))
+		if (currblockno < start_blockno)
+		{
+			/*
+			 * If the scan returned some tuples lying before the start of our
+			 * desired range, ignore the current tuple, and keep scanning.
+			 */
 			continue;
+		}
+		else if (partialScanWithBlkdir && currblockno >= (start_blockno + numblocks))
+		{
+			/* The scan has gone beyond our range bound. Time to stop. */
+			break;
+		}
 
 		/* Report scan progress, if asked to. */
 		if (progress)
@@ -1991,7 +2120,11 @@ aoco_index_build_range_scan(Relation heapRelation,
 
 	}
 
+cleanup:
 	table_endscan(scan);
+
+	if (partialScanWithBlkdir)
+		AppendOnlyBlockDirectory_End_forSearch(&existingBlkdir);
 
 	ExecDropSingleTupleTableSlot(slot);
 

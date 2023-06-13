@@ -43,6 +43,15 @@
 
 #define PRINT_DISPATCH_DECISIONS_STRING ("print_dispatch_decisions")
 
+/**
+ *  The attributes of GpSegmentId,
+ *  you can find its static definition in heap.c (static FormData_pg_attribute a8;)
+ */
+#define GP_SEGMENTID_TYPID INT4OID
+#define GP_SEGMENTID_TYPMOD -1
+#define GP_SEGMENTID_TYPCOLL 0
+#define GP_SEGMENTID_OPFAMILY 1977	/* integer_ops */
+
 static char *gp_test_options = "";
 
 /* PRINT_DISPATCH_DECISIONS_STRING; */
@@ -157,23 +166,32 @@ GetContentIdsFromPlanForSingleRelation(PlannerInfo *root, Plan *plan, int rangeT
 	 */
 	if (GpPolicyIsPartitioned(policy))
 	{
-		Var                *seg_id_var;
-		Oid                 vartypeid;
-		int32               type_mod;
-		Oid                 type_coll;
 		PossibleValueSet    pvs_segids;
 		Node              **seg_ids;
 		int                 len;
 		int                 i;
 		List               *contentIds = NULL;
 
-		get_atttypetypmodcoll(rte->relid, GpSegmentIdAttributeNumber,
-							  &vartypeid, &type_mod, &type_coll);
-		seg_id_var = makeVar(rangeTableIndex,
-							 GpSegmentIdAttributeNumber,
-							 vartypeid, type_mod, type_coll, 0);
-		Oid opclass = GetDefaultOpClass(vartypeid, HASH_AM_OID);
-		Oid opfamily = get_opclass_family(opclass);
+		/**
+		 * In previous code, we get the attributes of GpSegmentId dynamically:
+		 * 	get_atttypetypmodcoll(rte->relid, GpSegmentIdAttributeNumber,
+		 *					      &vartypeid, &type_mod, &type_coll);
+		 *  Oid opclass = GetDefaultOpClass(vartypeid, HASH_AM_OID);
+		 *	Oid opfamily = get_opclass_family(opclass);
+		 *
+		 * But they caused the perf regression of pgbench. After test, the bottleneck is
+		 * the indexscan on systable.
+		 *
+		 * So, let's simply introduce GP_SEGMENTID_XXX macros to hardcord them here
+		 * since GpSegmentId is a stable type in GP: you can find its static definition
+		 * in heap.c (static FormData_pg_attribute a8;)
+		 */
+		Var *seg_id_var = makeVar(rangeTableIndex,
+								  GpSegmentIdAttributeNumber,
+								  GP_SEGMENTID_TYPID, GP_SEGMENTID_TYPMOD, GP_SEGMENTID_TYPCOLL,
+								  0);
+		Oid opfamily = GP_SEGMENTID_OPFAMILY;
+
 		pvs_segids = DeterminePossibleValueSet((Node *) qualification,
 											   (Node *) seg_id_var, opfamily);
 		if (!pvs_segids.isAnyValuePossible)
@@ -480,7 +498,7 @@ DirectDispatchUpdateContentIdsFromPlan(PlannerInfo *root, Plan *plan)
 																	  plan,
 																	  ((Scan *) plan)->scanrelid,
 																	  indexOnlyScan->recheckqual);
-				/* must use _orig_ qual ! */
+				/* must use _orig_ qual ! Upstream's recheckqual is the orig qual, just use it. */
 			}
 			break;
 

@@ -9,9 +9,7 @@ CREATE
 create extension if not exists gp_inject_fault;
 CREATE
 
-CREATE OR REPLACE FUNCTION idle_gang_pressure_test() RETURNS VOID LANGUAGE plpython3u AS $$ from pg import DB 
-dbname = plpy.execute("select current_database() db")[0]["db"] db = DB(dbname=dbname) 
-db.query("SET gp_vmem_idle_resource_timeout = 1") for i in range(1000): db.query("SELECT count(*) from idle_gang_cleaner_t a join idle_gang_cleaner_t b using (c2);") db.query("RESET gp_vmem_idle_resource_timeout") db.close() $$;
+CREATE OR REPLACE FUNCTION idle_gang_pressure_test() RETURNS VOID LANGUAGE plpython3u AS $$ plpy.execute("SET gp_vmem_idle_resource_timeout = 1") for i in range(1000): plpy.execute("SELECT count(*) from idle_gang_cleaner_t a join idle_gang_cleaner_t b using (c2);") plpy.execute("RESET gp_vmem_idle_resource_timeout") $$;
 CREATE
 
 set gp_vmem_idle_resource_timeout to '0.5s';

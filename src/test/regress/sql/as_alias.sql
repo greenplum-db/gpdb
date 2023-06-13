@@ -241,3 +241,8 @@ SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
 
 UPDATE colalias_dml_decimal SET col1 =colalias_dml_decimal_candidate.col2 FROM colalias_dml_decimal_candidate;
 SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
+
+-- GPDB: allow keywords defined in PartitionIdentKeyword (see gram.y) to be created as column alias without the 'AS'
+-- XXX: this will not be a GPDB-only feature when we catch up with PG14
+create table colalias_noas(a int, b int);
+select a new, b old from colalias_noas;
