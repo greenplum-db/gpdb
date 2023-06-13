@@ -31,6 +31,9 @@ function gen_env(){
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
 		cd "\${1}/gpdb_src"
 		source gpAux/gpdemo/gpdemo-env.sh
+		# Some tests rely on plpython to run management utilities, that requires PYTHONPATH for gppylib.
+		gpconfig -c plpython3.python_path -v "'$GPHOME/lib/python'" --skipvalidation;
+		gpstop -ari;
 		PG_TEST_EXTRA="kerberos ssl" make -s ${MAKE_TEST_COMMAND}
 	EOF
 
