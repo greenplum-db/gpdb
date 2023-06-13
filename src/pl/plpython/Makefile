@@ -95,6 +95,7 @@ endif
 # for some of text return type functions, hence adding this as fixme
 # for later.
 REGRESS = \
+	setup \
 	plpython_schema \
 	plpython_populate \
 	plpython_test \

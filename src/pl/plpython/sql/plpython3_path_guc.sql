@@ -1,9 +1,6 @@
 --
 -- Tests for functions that return set PYTHONPATH guc only for gpdb7 plpython3
 --
-
--- The 'SHOW' command will fail with an error message saying
--- ERROR: unrecognized configuration parameter "plpython3.python_path"
 show plpython3.python_path;
 
 set plpython3.python_path='/foo';
