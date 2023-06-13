@@ -435,7 +435,6 @@ bool		gp_log_endpoints = false;
 bool		gp_allow_date_field_width_5digits = false;
 
 /* GUCs for Just In Time (JIT) compilation */
-bool		optimizer_jit_enabled;
 double		optimizer_jit_above_cost;
 double		optimizer_jit_inline_above_cost;
 double		optimizer_jit_optimize_above_cost;
@@ -2973,16 +2972,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL,
 		},
 		&gp_log_suboverflow_statement,
-		false,
-		NULL, NULL, NULL
-	},
-	{
-		{"optimizer_jit", PGC_USERSET, QUERY_TUNING_OTHER,
-		 gettext_noop("Allow Optimizer based JIT compilation."),
-		 NULL,
-		 GUC_EXPLAIN
-		},
-		&optimizer_jit_enabled,
 		false,
 		NULL, NULL, NULL
 	},

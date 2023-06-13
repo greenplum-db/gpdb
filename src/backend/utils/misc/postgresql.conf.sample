@@ -377,6 +377,17 @@ max_prepared_transactions = 250		# can be 0 or more
 
 #gp_enable_sort_limit = on
 
+# - JIT GUCs for Optimizer(ORCA) -
+
+#optimizer_jit_above_cost = 7500	# perform JIT compilation if available
+					# and query more expensive than this;
+					# -1 disables
+#optimizer_jit_inline_above_cost = 37500	# inline small functions if query is
+						# more expensive than this; -1 disables
+#optimizer_jit_optimize_above_cost = 37500	# use expensive JIT optimizations if
+						# query is more expensive than this;
+						# -1 disables
+
 # - Planner Cost Constants -
 
 #seq_page_cost = 1.0			# measured on an arbitrary scale

@@ -8621,7 +8621,6 @@ static void compute_jit_flags(PlannedStmt* pstmt)
 	 * Common variables to hold values for optimizer or planner
 	 * based on function call.
 	 */
-	bool jit_on;
 	double above_cost;
 	double inline_above_cost;
 	double optimize_above_cost;
@@ -8632,7 +8631,6 @@ static void compute_jit_flags(PlannedStmt* pstmt)
 		/*
 		 * Setting values for ORCA.
 		 */
-		jit_on = optimizer_jit_enabled;
 		above_cost = optimizer_jit_above_cost;
 		inline_above_cost = optimizer_jit_inline_above_cost;
 		optimize_above_cost = optimizer_jit_optimize_above_cost;
@@ -8643,14 +8641,13 @@ static void compute_jit_flags(PlannedStmt* pstmt)
 		/*
 		 * Setting values for Planner.
 		 */
-		jit_on = jit_enabled;
 		above_cost = jit_above_cost;
 		inline_above_cost = jit_inline_above_cost;
 		optimize_above_cost = jit_optimize_above_cost;
 
 	}
 
-	if (jit_on && above_cost >= 0 &&
+	if (jit_enabled && above_cost >= 0 &&
 		top_plan->total_cost > above_cost)
 	{
 		pstmt->jitFlags |= PGJIT_PERFORM;

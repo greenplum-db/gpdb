@@ -159,7 +159,6 @@ SET jit_above_cost = 0;
 SET gp_explain_jit = on;
 
 -- ORCA GUCs to enable JIT
-set optimizer_jit to on;
 set optimizer_jit_above_cost to 1;
 
 -- explain_processing_off
@@ -213,7 +212,6 @@ EXPLAIN (ANALYZE, FORMAT json) SELECT * FROM jit_explain_output LIMIT 10;
 RESET jit;
 RESET jit_above_cost;
 RESET gp_explain_jit;
-RESET optimizer_jit;
 RESET optimizer_jit_above_cost;
 -- Cleanup
 DROP TABLE boxes;

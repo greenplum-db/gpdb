@@ -73,7 +73,7 @@ provider_init(void)
 	JitProviderInit init;
 
 	/* don't even try to load if not enabled */
-	if (!optimizer_jit_enabled && !jit_enabled)
+	if (!jit_enabled)
 		return false;
 
 	/*
