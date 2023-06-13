@@ -217,6 +217,9 @@ If you supply the `DISTRIBUTED REPLICATED` clause, Greenplum Database distribute
 
 The `PARTITION BY` and `PARTITION OF` clauses allow you to divide the table into multiple sub-tables (or parts) that, taken together, make up the parent table and share its schema.
 
+> **Note** Greenplum Database supports both *classic* and *modern* partitioning syntaxes. Refer to [Choosing the Partitioning Syntax](../../admin_guide/ddl/ddl-partition.html#choose) for more information, including guidance on selecting the appropriate syntax for a partitioned table.
+
+
 ## <a id="section4"></a>Parameters 
 
 GLOBAL \| LOCAL
