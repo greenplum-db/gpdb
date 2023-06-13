@@ -3457,6 +3457,12 @@ resGroupGiveSlotAway(int sessionId, ResGroupSlotData ** slot, Oid groupId)
 
 	for (;;)
 	{
+		/*
+		 * In an infinite loop, call ResGroupMoveCheckTargetReady() to check whether
+		 * all target processes have received signal of RG move.
+		 * If we have hit gp_resource_group_move_timeout, try to cancel the move
+		 * operation (no matter was target handled signal) and clean remained stuffs.
+		 */
 		curTime = GetCurrentTimestamp();
 		timeout = gp_resource_group_move_timeout - (curTime - waitStart) / 1000;
 		if (timeout > 0)
@@ -3524,7 +3530,7 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 	ResGroupInfo groupInfo;
 	ResGroupData *group;
 	ResGroupSlotData *slot;
-	char	   *cmd;
+	char *cmd;
 
 	Assert(pResGroupControl != NULL);
 	Assert(pResGroupControl->segmentsOnCoordinator > 0);
