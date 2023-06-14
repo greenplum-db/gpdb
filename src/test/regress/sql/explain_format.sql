@@ -159,7 +159,7 @@ SET jit_above_cost = 0;
 SET gp_explain_jit = on;
 
 -- ORCA GUCs to enable JIT
-set optimizer_jit_above_cost to 1;
+set optimizer_jit_above_cost to 0;
 
 -- explain_processing_off
 EXPLAIN SELECT * FROM jit_explain_output LIMIT 10;
