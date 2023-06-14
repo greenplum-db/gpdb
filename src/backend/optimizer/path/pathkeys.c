@@ -1536,7 +1536,7 @@ cdb_pull_up_eclass(PlannerInfo *root,
 		return NULL;
 
 	if (!newexpr)
-		elog(ERROR, "could not pull up equivalence class using projected target list");
+		return NULL;
 
 	/*
 	 * It should be OK to set nullable_relids = NULL, since this eclass is only
