@@ -197,17 +197,17 @@ DROP RESOURCE GROUP rg1_test_group;
 DROP RESOURCE GROUP rg2_test_group;
 
 -- positive: min_cost should be in [0,INT32_MAX]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=0);
-CREATE RESOURCE GROUP rg1_test_group WITH (cpu_hard_quota_limit=10, min_cost=2147483647);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=0);
+CREATE RESOURCE GROUP rg1_test_group WITH (cpu_max_percent=10, min_cost=2147483647);
 ALTER RESOURCE GROUP rg_test_group SET min_cost 2147483647;
 ALTER RESOURCE GROUP rg1_test_group SET min_cost 0;
 DROP RESOURCE GROUP rg_test_group;
 DROP RESOURCE GROUP rg1_test_group;
 
 -- negative: min_cost should be in [0,INT32_MAX]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=-1);
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=2147483648);
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=0);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=-1);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=2147483648);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=0);
 ALTER RESOURCE GROUP rg_test_group SET min_cost -1;
 ALTER RESOURCE GROUP rg_test_group SET min_cost 2147483648;
 DROP RESOURCE GROUP rg_test_group;
