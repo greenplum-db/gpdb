@@ -11,9 +11,9 @@ ALTER RESOURCE GROUP <name> SET <group_attribute> <value>
 where group_attribute is one of:
 
 ```
-CPU_HARD_QUOTA_LIMIT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
+CPU_MAX_PERCENT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
 [ MEMORY_LIMIT=<integer> ]
-[ CPU_SOFT_PRIORITY=<integer> ]
+[ CPU_WEIGHT=<integer> ]
 [ CONCURRENCY=<integer> ]
 [ MIN_COST=<integer> ]
 ```
@@ -44,17 +44,17 @@ CONCURRENCY integer
 
 :   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to `0`.
 
-CPU_HARD_QUOTA_LIMIT integer
+CPU_MAX_PERCENT integer
 :   The percentage of the maximum available CPU resources that the resource group can use. The value range is `1-100`. 
 
-CPU_SOFT_PRIORITY integer
+CPU_WEIGHT integer
 :   The scheduling priority of the current group. The value range is `1-500`, the default is `100. 
 
 CPUSET <coordinator_cores>;<segment_cores>
 
 :   `CPUSET` identifies the CPU cores to reserve for this resource group on the coordinator host and on segment hosts. The CPU cores that you specify must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
-:   > **Note** You must specify either `CPU_HARD_QUOTA_LIMIT` or `CPUSET` when you create a resource group, but not both.
+:   > **Note** You must specify either `CPU_MAX_PERCENT` or `CPUSET` when you create a resource group, but not both.
 
 :   Specify cores as a comma-separated list of single core numbers or core number intervals. Define the coordinator host cores first, followed by segment host cores, and separate the two with a semicolon. You must enclose the full core configuration in single quotes. For example, '1;1,3-4' configures core 1 for the coordinator host, and cores 1, 3, and 4 for the segment hosts.
 
@@ -93,7 +93,7 @@ ALTER RESOURCE GROUP rgroup1 SET CONCURRENCY 13;
 Update the CPU limit for a resource group:
 
 ```
-ALTER RESOURCE GROUP rgroup2 SET cpu_hard_quota_limit 45;
+ALTER RESOURCE GROUP rgroup2 SET cpu_max_percent 45;
 ```
 
 Update the memory limit for a resource group:

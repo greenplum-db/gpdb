@@ -70,7 +70,7 @@ CREATE LANGUAGE plpython3u;
     assert shares == 1024 * gp_resource_group_cpu_priority
 
     def check_group_shares(name):
-        cpu_soft_priority = int(plpy.execute('''
+        cpu_weight = int(plpy.execute('''
                 SELECT value
                   FROM pg_resgroupcapability c, pg_resgroup g
                  WHERE c.resgroupid=g.oid
@@ -81,7 +81,7 @@ CREATE LANGUAGE plpython3u;
                 SELECT oid FROM pg_resgroup WHERE rsgname='{}'
             '''.format(name))[0]['oid'])
         sub_shares = get_cgroup_prop('cpu/gpdb/{}/cpu.shares'.format(oid))
-        assert sub_shares == int(cpu_soft_priority * 1024 / 100)
+        assert sub_shares == int(cpu_weight * 1024 / 100)
 
     # check default groups
     check_group_shares('default_group')

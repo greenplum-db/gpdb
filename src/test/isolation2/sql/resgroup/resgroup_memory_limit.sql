@@ -27,7 +27,7 @@ $$ /*in func*/
 LANGUAGE plpgsql;
 
 -- create a resource group with memory limit 100 Mb
-CREATE RESOURCE GROUP rg_memory_test WITH(memory_limit=100, cpu_hard_quota_limit=20, concurrency=2);
+CREATE RESOURCE GROUP rg_memory_test WITH(memory_limit=100, cpu_max_percent=20, concurrency=2);
 CREATE ROLE role_memory_test RESOURCE GROUP rg_memory_test;
 
 -- session1: explain memory used by query

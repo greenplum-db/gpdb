@@ -61,8 +61,8 @@ select pg_sleep(2);
 11: SELECT check_cpuset('rg1_cpuset_test', '0,1');
 11: END;
 
--- change to cpu_hard_quota_limit while the transaction is running
-ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_hard_quota_limit 70;
+-- change to cpu_max_percent while the transaction is running
+ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_max_percent 70;
 
 -- cancel the transaction
 -- start_ignore
@@ -73,7 +73,7 @@ select * from cancel_all;
 11q:
 -- end_ignore
 
--- test whether the cpu_hard_quota_limit had taken effect
+-- test whether the cpu_max_percent had taken effect
 10: SET ROLE TO role1_cpuset_test;
 10: BEGIN;
 10&: SELECT * FROM busy;
@@ -118,11 +118,11 @@ CREATE RESOURCE GROUP rg1_test_group WITH (cpuset='0');
 SELECT check_cpuset_rules();
 CREATE RESOURCE GROUP rg2_test_group WITH (cpuset='1');
 SELECT check_cpuset_rules();
-ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_max_percent 1;
 SELECT check_cpuset_rules();
 ALTER RESOURCE GROUP rg1_test_group SET cpuset '0';
 SELECT check_cpuset_rules();
-ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_max_percent 1;
 SELECT check_cpuset_rules();
 DROP RESOURCE GROUP rg1_test_group;
 SELECT check_cpuset_rules();

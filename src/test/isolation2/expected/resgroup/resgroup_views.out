@@ -1,5 +1,5 @@
 select * from gp_toolkit.gp_resgroup_config where groupname='default_group';
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit | min_cost 
+ groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost
 ---------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
  6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
 (1 row)
@@ -27,7 +27,7 @@ select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
 
 -- start_ignore
 select * from gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit | min_cost 
+ groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost
 ---------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
  6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
  6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      

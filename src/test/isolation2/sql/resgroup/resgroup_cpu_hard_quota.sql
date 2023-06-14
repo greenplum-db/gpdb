@@ -73,8 +73,8 @@ CREATE VIEW cancel_all AS
     WHERE query LIKE 'SELECT * FROM % WHERE busy%';
 
 -- create two resource groups
-CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=-1, cpu_soft_priority=100);
-CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=-1, cpu_soft_priority=200);
+CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_max_percent=-1, cpu_weight=100);
+CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_max_percent=-1, cpu_weight=200);
 
 --
 -- check gpdb cgroup configuration
@@ -82,8 +82,8 @@ CREATE RESOURCE GROUP rg2_cpu_test WITH (concurrency=5, cpu_hard_quota_limit=-1,
 --
 select check_cgroup_configuration();
 
--- lower admin_group's cpu_hard_quota_limit to minimize its side effect
-ALTER RESOURCE GROUP admin_group SET cpu_hard_quota_limit 1;
+-- lower admin_group's cpu_max_percent to minimize its side effect
+ALTER RESOURCE GROUP admin_group SET cpu_max_percent 1;
 
 -- create two roles and assign them to above groups
 CREATE ROLE role1_cpu_test RESOURCE GROUP rg1_cpu_test;
@@ -168,7 +168,7 @@ SELECT * FROM cancel_all;
 
 --
 -- when there are multiple groups with parallel queries,
--- they should share the cpu usage by their cpu_soft_priority settings,
+-- they should share the cpu usage by their cpu_weight settings,
 --
 -- rg1_cpu_test:rg2_cpu_test is 100:200 => 1:2, so:
 --
@@ -247,9 +247,9 @@ SELECT * FROM cancel_all;
 
 
 
--- Test hard quota limit
-ALTER RESOURCE GROUP rg1_cpu_test set cpu_hard_quota_limit 10;
-ALTER RESOURCE GROUP rg2_cpu_test set cpu_hard_quota_limit 20;
+-- Test cpu max percent
+ALTER RESOURCE GROUP rg1_cpu_test set cpu_max_percent 10;
+ALTER RESOURCE GROUP rg2_cpu_test set cpu_max_percent 20;
 
 -- prepare parallel queries in the two groups
 10: SET ROLE TO role1_cpu_test;
@@ -413,8 +413,8 @@ ALTER RESOURCE GROUP rg2_cpu_test set cpu_hard_quota_limit 20;
 1q:
 -- end_ignore
 
--- restore admin_group's cpu_hard_quota_limit
-2:ALTER RESOURCE GROUP admin_group SET cpu_hard_quota_limit 10;
+-- restore admin_group's cpu_max_percent
+2:ALTER RESOURCE GROUP admin_group SET cpu_max_percent 10;
 
 -- cleanup
 2:REVOKE ALL ON FUNCTION busy() FROM role1_cpu_test;

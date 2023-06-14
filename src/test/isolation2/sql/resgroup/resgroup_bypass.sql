@@ -7,7 +7,7 @@ DROP RESOURCE GROUP rg_bypass;
 -- end_ignore
 
 -- create a resource group with concurrency = 1.
-CREATE RESOURCE GROUP rg_bypass WITH(cpu_hard_quota_limit=20, concurrency=1);
+CREATE RESOURCE GROUP rg_bypass WITH(cpu_max_percent=20, concurrency=1);
 CREATE ROLE role_bypass RESOURCE GROUP rg_bypass;
 
 SET ROLE role_bypass;

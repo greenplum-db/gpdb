@@ -11,9 +11,9 @@ CREATE RESOURCE GROUP <name> WITH (<group_attribute>=<value> [, ... ])
 where group_attribute is one of:
 
 ```
-CPU_HARD_QUOTA_LIMIT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
+CPU_MAX_PERCENT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
 [ MEMORY_LIMIT=<integer> ]
-[ CPU_SOFT_PRIORITY=<integer> ]
+[ CPU_WEIGHT=<integer> ]
 [ CONCURRENCY=<integer> ]
 [ MIN_COST=<integer> ]
 ```
@@ -48,17 +48,17 @@ CONCURRENCY integer
 
 :   > **Note** You cannot set the `CONCURRENCY` value for the `admin_group` to `0`.
 
-CPU_HARD_QUOTA_LIMIT integer
+CPU_MAX_PERCENT integer
 :   Optional. The percentage of the maximum available CPU resources that the resource group can use. The value range is `1-100`. 
 
-CPU_SOFT_PRIORITY integer
+CPU_WEIGHT integer
 :   Optional. The scheduling priority of the current group. The value range is `1-500`, the default is `100. 
 
 CPUSET <coordinator_cores>;<segment_cores>
 
 :   `CPUSET` identifies the CPU cores to reserve for this resource group on the coordinator host and on segment hosts. The CPU cores that you specify must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
-:   > **Note** You must specify either `CPU_HARD_QUOTA_LIMIT` or `CPUSET` when you create a resource group, but not both.
+:   > **Note** You must specify either `CPU_MAX_PERCENT` or `CPUSET` when you create a resource group, but not both.
 
 :   Specify cores as a comma-separated list of single core numbers or core number intervals. Define the coordinator host cores first, followed by segment host cores, and separate the two with a semicolon. You must enclose the full core configuration in single quotes. For example, '1;1,3-4' configures core 1 for the coordinator host, and cores 1, 3, and 4 for the segment hosts.
 
@@ -95,20 +95,20 @@ SELECT * FROM gp_toolkit.gp_resgroup_config;
 Create a resource group with CPU and memory limit percentages of 35:
 
 ```
-CREATE RESOURCE GROUP rgroup1 WITH (cpu_hard_quota_limit=35, MEMORY_LIMIT=35);
+CREATE RESOURCE GROUP rgroup1 WITH (cpu_max_percent=35, MEMORY_LIMIT=35);
 ```
 
 Create a resource group with a concurrent transaction limit of 20, a memory limit of 15, and a CPU limit of 25:
 
 ```
 CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
-  MEMORY_LIMIT=15, cpu_hard_quota_limit=25);
+  MEMORY_LIMIT=15, cpu_max_percent=25);
 ```
 
 Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:
 
 ```
-CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, cpu_hard_quota_limit=10,
+CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, cpu_max_percent=10,
   CONCURRENCY=0);
 ```
 

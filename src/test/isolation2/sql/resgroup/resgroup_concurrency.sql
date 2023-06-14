@@ -4,7 +4,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- no query has been assigned to the this group
@@ -47,7 +47,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 12:SET ROLE role_concurrency_test;
 12:BEGIN;
@@ -79,7 +79,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 22:SET ROLE role_concurrency_test;
 22:BEGIN;
@@ -131,7 +131,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- DROP should fail if there're running transactions
@@ -150,7 +150,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 51:SET ROLE role_concurrency_test;
 51:BEGIN;
@@ -172,7 +172,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 51:SET ROLE role_concurrency_test;
 51:BEGIN;
@@ -191,7 +191,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:SET ROLE role_concurrency_test;
 61:BEGIN;
@@ -210,7 +210,7 @@ DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 61:SET ROLE role_concurrency_test;
 61&:BEGIN;
@@ -224,7 +224,7 @@ DROP RESOURCE GROUP rg_concurrency_test;
 -- Test cursors, pl/* functions only take one slot.
 --
 -- set concurrency to 1
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_hard_quota_limit=20);
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_max_percent=20);
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- declare cursors and verify that it only takes one resource group slot

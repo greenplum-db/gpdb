@@ -104,7 +104,7 @@ ERROR:  resource group "rg_test_group" does not exist
 --end_ignore
 
 SELECT * FROM gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset | memory_limit | min_cost 
+ groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost
 ---------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
  6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
  6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      
@@ -114,36 +114,36 @@ SELECT * FROM gp_toolkit.gp_resgroup_config;
 -- negative
 
 -- can't create the reserved resource groups
-CREATE RESOURCE GROUP default_group WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP default_group WITH (cpu_max_percent=10);
 ERROR:  resource group "default_group" already exists
-CREATE RESOURCE GROUP admin_group WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP admin_group WITH (cpu_max_percent=10);
 ERROR:  resource group "admin_group" already exists
-CREATE RESOURCE GROUP none WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP none WITH (cpu_max_percent=10);
 ERROR:  resource group name "none" is reserved
 
 -- multiple resource groups can't share the same name
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
 CREATE
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
 ERROR:  resource group "rg_test_group" already exists
 DROP RESOURCE GROUP rg_test_group;
 DROP
 
 -- can't specify the resource limit type multiple times
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_hard_quota_limit=5, concurrency=1);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_max_percent=5, concurrency=1);
 ERROR:  found duplicate resource group resource type: concurrency
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5, cpu_hard_quota_limit=5);
-ERROR:  found duplicate resource group resource type: cpu_hard_quota_limit
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=5, cpu_max_percent=5);
+ERROR:  found duplicate resource group resource type: cpu_max_percent
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpuset='0');
 ERROR:  found duplicate resource group resource type: cpuset
 
--- can't specify both cpu_hard_quota_limit and cpuset
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5, cpuset='0');
-ERROR:  can't specify both cpu_hard_quota_limit and cpuset
+-- can't specify both cpu_max_percent and cpuset
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=5, cpuset='0');
+ERROR:  can't specify both cpu_max_percent and cpuset
 
--- cpu_soft_priority can't be negative value
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5, cpu_soft_priority=-100);
-ERROR:  cpu_soft_priority range is [1, 500]
+-- cpu_weight can't be negative value
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=5, cpu_weight=-100);
+ERROR:  cpu_weight range is [1, 500]
 
 -- can't specify invalid cpuset
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='');
@@ -234,10 +234,10 @@ DROP RESOURCE GROUP none;
 ERROR:  resource group "none" does not exist
 
 -- positive
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
 CREATE
-SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
+SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | concurrency | cpu_max_percent | cpu_weight
 ---------------+-------------+----------------------+-------------------
  rg_test_group | 20          | 10                   | 100               
 (1 row)
@@ -245,35 +245,35 @@ DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpuset='0');
 CREATE
-SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
+SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | concurrency | cpu_max_percent | cpu_weight
 ---------------+-------------+----------------------+-------------------
  rg_test_group | 1           | -1                   | 100               
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=500);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=500);
 CREATE
-SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
+SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | concurrency | cpu_max_percent | cpu_weight
 ---------------+-------------+----------------------+-------------------
  rg_test_group | 20          | 10                   | 500               
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=-1, cpu_soft_priority=500);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=-1, cpu_weight=500);
 CREATE
-SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
+SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | concurrency | cpu_max_percent | cpu_weight
 ---------------+-------------+----------------------+-------------------
  rg_test_group | 20          | -1                   | 500               
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_soft_priority=500);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_weight=500);
 CREATE
-SELECT groupname,concurrency,cpu_hard_quota_limit, cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
+SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | concurrency | cpu_max_percent | cpu_weight
 ---------------+-------------+----------------------+-------------------
  rg_test_group | 20          | -1                   | 500               
 (1 row)
@@ -281,8 +281,8 @@ DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
 CREATE
-SELECT groupname,concurrency,cpu_hard_quota_limit,cpu_soft_priority FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority 
+SELECT groupname,concurrency,cpu_max_percent,cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | concurrency | cpu_max_percent | cpu_weight
 ---------------+-------------+----------------------+-------------------
  rg_test_group | 20          | -1                   | 100               
 (1 row)
@@ -290,8 +290,8 @@ DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0;0-1');
 CREATE
-SELECT groupname,concurrency,cpu_hard_quota_limit,cpu_soft_priority,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_hard_quota_limit | cpu_soft_priority | cpuset 
+SELECT groupname,concurrency,cpu_max_percent,cpu_weight,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset
 ---------------+-------------+----------------------+-------------------+--------
  rg_test_group | 20          | -1                   | 100               | 0;0-1  
 (1 row)
@@ -301,16 +301,16 @@ DROP
 -- Test: boundary check in create resource group syntax
 -- ----------------------------------------------------------------------
 
--- negative: cpu_hard_quota_limit should be in [1, 100]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=101);
-ERROR:  cpu_hard_quota_limit range is [1, 100] or equals to -1
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=0);
-ERROR:  cpu_hard_quota_limit range is [1, 100] or equals to -1
+-- negative: cpu_max_percent should be in [1, 100]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=101);
+ERROR:  cpu_max_percent range is [1, 100] or equals to -1
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=0);
+ERROR:  cpu_max_percent range is [1, 100] or equals to -1
 
 -- negative: concurrency should be in [1, max_connections]
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=-1, cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=-1, cpu_max_percent=10);
 ERROR:  concurrency range is [0, 'max_connections']
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=26, cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=26, cpu_max_percent=10);
 ERROR:  concurrency range is [0, 'max_connections']
 
 -- negative: the cores of cpuset in different groups mustn't overlap
@@ -321,57 +321,57 @@ ERROR:  cpu cores 0 are used by resource group rg_test_group1
 DROP RESOURCE GROUP rg_test_group1;
 DROP
 
--- negative: cpu_soft_priority should be in [1, 500]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=0);
-ERROR:  cpu_soft_priority range is [1, 500]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=-1);
-ERROR:  cpu_soft_priority range is [1, 500]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=-1024);
-ERROR:  cpu_soft_priority range is [1, 500]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=501);
-ERROR:  cpu_soft_priority range is [1, 500]
+-- negative: cpu_weight should be in [1, 500]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=0);
+ERROR:  cpu_weight range is [1, 500]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=-1);
+ERROR:  cpu_weight range is [1, 500]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=-1024);
+ERROR:  cpu_weight range is [1, 500]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=501);
+ERROR:  cpu_weight range is [1, 500]
 
--- positive: cpu_hard_quota_limit should be in [1, 100]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=60);
+-- positive: cpu_max_percent should be in [1, 100]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=60);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=1);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=1);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
 
--- positive: cpu_soft_priority should be in [1, 500]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=100);
+-- positive: cpu_weight should be in [1, 500]
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=100);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, cpu_soft_priority=500);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=500);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
 
 -- positive: concurrency should be in [0, max_connections]
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_max_percent=10);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_max_percent=10);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=25, cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=25, cpu_max_percent=10);
 CREATE
 DROP RESOURCE GROUP rg_test_group;
 DROP
-CREATE RESOURCE GROUP rg1_test_group WITH (concurrency=1, cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg1_test_group WITH (concurrency=1, cpu_max_percent=10);
 CREATE
-CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_hard_quota_limit=500);
-ERROR:  cpu_hard_quota_limit range is [1, 100] or equals to -1
+CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_max_percent=500);
+ERROR:  cpu_max_percent range is [1, 100] or equals to -1
 DROP RESOURCE GROUP rg1_test_group;
 DROP
 DROP RESOURCE GROUP rg2_test_group;
@@ -380,7 +380,7 @@ ERROR:  resource group "rg2_test_group" does not exist
 -- ----------------------------------------------------------------------
 -- Test: alter a resource group
 -- ----------------------------------------------------------------------
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=5);
 CREATE
 
 -- ALTER RESOURCE GROUP SET CONCURRENCY N
@@ -421,68 +421,68 @@ ALTER
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 25;
 ALTER
 
--- ALTER RESOURCE GROUP SET cpu_hard_quota_limit VALUE
--- negative: cpu_hard_quota_limit should be in [1, 100]
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit -0.1;
+-- ALTER RESOURCE GROUP SET cpu_max_percent VALUE
+-- negative: cpu_max_percent should be in [1, 100]
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent -0.1;
 ERROR:  syntax error at or near "0.1"
-LINE 1: ... RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit -0.1;
+LINE 1: ... RESOURCE GROUP rg_test_group SET cpu_max_percent -0.1;
                                                                    ^
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit -1;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent -1;
 ALTER
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 0;
-ERROR:  cpu_hard_quota_limit range is [1, 100] or equals to -1
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 0.7;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0;
+ERROR:  cpu_max_percent range is [1, 100] or equals to -1
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.7;
 ERROR:  syntax error at or near "0.7"
-LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 0.7;
+LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_max_percent 0.7;
                                                                    ^
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 1.7;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 1.7;
 ERROR:  syntax error at or near "1.7"
-LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 1.7;
+LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_max_percent 1.7;
                                                                    ^
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 61;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 61;
 ALTER
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit a;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent a;
 ERROR:  syntax error at or near "a"
-LINE 1: ...TER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit a;
+LINE 1: ...TER RESOURCE GROUP rg_test_group SET cpu_max_percent a;
                                                                      ^
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 'abc';
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 'abc';
 ERROR:  syntax error at or near "'abc'"
-LINE 1: ...RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 'abc';
+LINE 1: ...RESOURCE GROUP rg_test_group SET cpu_max_percent 'abc';
                                                                  ^
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 20%;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 20%;
 ERROR:  syntax error at or near "%"
-LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 20%;
+LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_max_percent 20%;
                                                                      ^
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 0.2%;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.2%;
 ERROR:  syntax error at or near "0.2"
-LINE 1: ... RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 0.2%;
+LINE 1: ... RESOURCE GROUP rg_test_group SET cpu_max_percent 0.2%;
                                                                   ^
--- positive: cpu_hard_quota_limit should be in [1, 100]
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 1;
+-- positive: cpu_max_percent should be in [1, 100]
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 1;
 ALTER
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 2;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 2;
 ALTER
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 60;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 60;
 ALTER
 DROP RESOURCE GROUP rg_test_group;
 DROP
 
--- positive: cpuset and cpu_hard_quota_limit are exclusive,
--- if cpu_hard_quota_limit is set, cpuset is empty
+-- positive: cpuset and cpu_max_percent are exclusive,
+-- if cpu_max_percent is set, cpuset is empty
 -- if cpuset is set, cpuset is -1
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
 CREATE
 ALTER RESOURCE GROUP rg_test_group SET CPUSET '0';
 ALTER
-SELECT groupname,cpu_hard_quota_limit,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | cpu_hard_quota_limit | cpuset 
+SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | cpu_max_percent | cpuset
 ---------------+----------------------+--------
  rg_test_group | -1                   | 0      
 (1 row)
-ALTER RESOURCE GROUP rg_test_group SET cpu_hard_quota_limit 10;
+ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 10;
 ALTER
-SELECT groupname,cpu_hard_quota_limit,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | cpu_hard_quota_limit | cpuset 
+SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+ groupname     | cpu_max_percent | cpuset
 ---------------+----------------------+--------
  rg_test_group | 10                   | -1     
 (1 row)

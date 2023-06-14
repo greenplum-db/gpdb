@@ -1732,8 +1732,8 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
     SELECT G.oid       AS groupid
          , G.rsgname   AS groupname
          , T1.value    AS concurrency
-         , T2.value    AS cpu_hard_quota_limit
-         , T3.value    AS cpu_soft_priority
+         , T2.value    AS cpu_max_percent
+         , T3.value    AS cpu_weight
          , T4.value    AS cpuset
          , T5.value    AS memory_limit
          , T6.value    AS min_cost
