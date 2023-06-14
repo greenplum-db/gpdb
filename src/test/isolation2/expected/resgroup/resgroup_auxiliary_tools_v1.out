@@ -54,11 +54,11 @@ ERROR:  language "plpython3u" already exists
 
 -- verify the default settings
 0: SELECT * from gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost
----------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
- 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      
- 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           | 500      
+ groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+-----------------+------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20              | 100        | -1     | -1           | 500      
+ 6438    | admin_group   | 10          | 10              | 100        | -1     | -1           | 500      
+ 6441    | system_group  | 0           | 10              | 100        | -1     | -1           | 500      
 (3 rows)
 
 
@@ -71,7 +71,7 @@ def show_guc(guc): return plpy.execute('SHOW {}'.format(guc))[0][guc]
 # get global gucs gp_resource_group_cpu_limit = float(show_guc('gp_resource_group_cpu_limit')) gp_resource_group_cpu_priority = int(show_guc('gp_resource_group_cpu_priority')) 
 # cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit assert cfs_quota_us == cfs_period_us * ncores * gp_resource_group_cpu_limit 
 # shares := 1024 * gp_resource_group_cpu_priority assert shares == 1024 * gp_resource_group_cpu_priority 
-def check_group_shares(name): cpu_weight = int(plpy.execute(''' SELECT value FROM pg_resgroupcapability c, pg_resgroup g WHERE c.resgroupid=g.oid AND reslimittype=3 AND g.rsgname='{}' '''.format(name))[0]['value']) oid = int(plpy.execute(''' SELECT oid FROM pg_resgroup WHERE rsgname='{}' '''.format(name))[0]['oid']) sub_shares = get_cgroup_prop('cpu/gpdb/{}/cpu.shares'.format(oid)) assert sub_shares == int(cpu_weight * 1024 / 100)
+def check_group_shares(name): cpu_weight = int(plpy.execute(''' SELECT value FROM pg_resgroupcapability c, pg_resgroup g WHERE c.resgroupid=g.oid AND reslimittype=3 AND g.rsgname='{}' '''.format(name))[0]['value']) oid = int(plpy.execute(''' SELECT oid FROM pg_resgroup WHERE rsgname='{}' '''.format(name))[0]['oid']) sub_shares = get_cgroup_prop('cpu/gpdb/{}/cpu.shares'.format(oid)) assert sub_shares == int(cpu_weight * 1024 / 100) 
 # check default groups check_group_shares('default_group') check_group_shares('admin_group') check_group_shares('system_group') 
 # check user groups check_group_shares('rg1_cpu_test') check_group_shares('rg2_cpu_test') 
 return True $$ LANGUAGE plpython3u;
