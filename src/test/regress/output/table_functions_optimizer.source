@@ -5,6 +5,7 @@
 -- ===================
 CREATE SCHEMA table_function;
 SET search_path TO table_function, public;
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE TABLE example(a int, b text) DISTRIBUTED by (a);
 COPY example FROM stdin;
 CREATE TABLE history(id integer, time timestamp) DISTRIBUTED BY (id);
@@ -122,33 +123,39 @@ select
 FROM pg_proc p join pg_namespace n ON (p.pronamespace = n.oid)
 WHERE n.nspname = 'table_function'
 ORDER BY p.proname;
-          proname          |            oid            |                 oid                 | proretset | proargtypes  | prorettype | proargmodes 
----------------------------+---------------------------+-------------------------------------+-----------+--------------+------------+-------------
- multiset_1                | multiset_1                | multiset_1(anytable)                | t         | {anytable}   | record     | {i,t,t}
- multiset_2                | multiset_2                | multiset_2(anytable)                | t         | {anytable}   | record     | {i,t,t}
- multiset_3                | multiset_3                | multiset_3(anytable)                | t         | {anytable}   | record     | {i,o,o}
- multiset_4                | multiset_4                | multiset_4(anytable)                | t         | {anytable}   | record     | 
- multiset_5                | multiset_5                | multiset_5(anytable)                | t         | {anytable}   | example    | 
- multiset_6                | multiset_6                | multiset_6(anytable)                | t         | {anytable}   | record     | 
- multiset_materialize_bad  | multiset_materialize_bad  | multiset_materialize_bad(anytable)  | t         | {anytable}   | record     | {i,t,t}
- multiset_materialize_good | multiset_materialize_good | multiset_materialize_good(anytable) | t         | {anytable}   | record     | {i,t,t}
- multiset_scalar_null      | multiset_scalar_null      | multiset_scalar_null(anytable)      | f         | {anytable}   | integer    | 
- multiset_scalar_tuple     | multiset_scalar_tuple     | multiset_scalar_tuple(anytable)     | f         | {anytable}   | example    | 
- multiset_scalar_value     | multiset_scalar_value     | multiset_scalar_value(anytable)     | f         | {anytable}   | integer    | 
- multiset_setof_null       | multiset_setof_null       | multiset_setof_null(anytable)       | t         | {anytable}   | integer    | 
- multiset_setof_value      | multiset_setof_value      | multiset_setof_value(anytable)      | t         | {anytable}   | integer    | 
- scalar_1                  | scalar_1                  | scalar_1(integer)                   | f         | {integer}    | integer    | 
- scalar_2                  | scalar_2                  | scalar_2(integer)                   | f         | {integer}    | integer    | 
- scalar_3                  | scalar_3                  | scalar_3(integer)                   | f         | {integer}    | integer    | {i,o}
- scalar_4                  | scalar_4                  | scalar_4(integer)                   | f         | {integer}    | integer    | {b}
- scalar_5                  | scalar_5                  | scalar_5(anyelement)                | f         | {anyelement} | anyelement | 
- scalar_tf_1               | scalar_tf_1               | scalar_tf_1(integer)                | t         | {integer}    | record     | {i,t,t}
- scalar_tf_2               | scalar_tf_2               | scalar_tf_2(integer)                | t         | {integer}    | record     | {i,t,t}
- scalar_tf_3               | scalar_tf_3               | scalar_tf_3(integer)                | t         | {integer}    | record     | {i,t,t}
- scalar_tf_4               | scalar_tf_4               | scalar_tf_4(integer)                | t         | {integer}    | record     | {i,o,o}
- scalar_tf_5               | scalar_tf_5               | scalar_tf_5(integer)                | t         | {integer}    | record     | 
- scalar_tf_6               | scalar_tf_6               | scalar_tf_6(anyelement)             | t         | {anyelement} | example    | 
-(24 rows)
+            proname            |                oid                 |                                      oid                                      | proretset | proargtypes  | prorettype | proargmodes 
+-------------------------------+------------------------------------+-------------------------------------------------------------------------------+-----------+--------------+------------+-------------
+ gp_inject_fault               | table_function.gp_inject_fault     | gp_inject_fault(text,text,text,text,text,integer,integer,integer)             | f         | {text}       | boolean    | 
+ gp_inject_fault               | table_function.gp_inject_fault     | gp_inject_fault(text,text,integer)                                            | f         | {text}       | boolean    | 
+ gp_inject_fault_infinite      | gp_inject_fault_infinite           | gp_inject_fault_infinite(text,text,integer)                                   | f         | {text}       | boolean    | 
+ gp_inject_fault_new           | table_function.gp_inject_fault_new | gp_inject_fault_new(text,text,text,text,text,integer,integer,integer,integer) | f         | {text}       | boolean    | 
+ gp_inject_fault_new           | table_function.gp_inject_fault_new | gp_inject_fault_new(text,text,integer)                                        | f         | {text}       | boolean    | 
+ gp_wait_until_triggered_fault | gp_wait_until_triggered_fault      | gp_wait_until_triggered_fault(text,integer,integer)                           | f         | {text}       | boolean    | 
+ multiset_1                    | multiset_1                         | multiset_1(anytable)                                                          | t         | {anytable}   | record     | {i,t,t}
+ multiset_2                    | multiset_2                         | multiset_2(anytable)                                                          | t         | {anytable}   | record     | {i,t,t}
+ multiset_3                    | multiset_3                         | multiset_3(anytable)                                                          | t         | {anytable}   | record     | {i,o,o}
+ multiset_4                    | multiset_4                         | multiset_4(anytable)                                                          | t         | {anytable}   | record     | 
+ multiset_5                    | multiset_5                         | multiset_5(anytable)                                                          | t         | {anytable}   | example    | 
+ multiset_6                    | multiset_6                         | multiset_6(anytable)                                                          | t         | {anytable}   | record     | 
+ multiset_materialize_bad      | multiset_materialize_bad           | multiset_materialize_bad(anytable)                                            | t         | {anytable}   | record     | {i,t,t}
+ multiset_materialize_good     | multiset_materialize_good          | multiset_materialize_good(anytable)                                           | t         | {anytable}   | record     | {i,t,t}
+ multiset_scalar_null          | multiset_scalar_null               | multiset_scalar_null(anytable)                                                | f         | {anytable}   | integer    | 
+ multiset_scalar_tuple         | multiset_scalar_tuple              | multiset_scalar_tuple(anytable)                                               | f         | {anytable}   | example    | 
+ multiset_scalar_value         | multiset_scalar_value              | multiset_scalar_value(anytable)                                               | f         | {anytable}   | integer    | 
+ multiset_setof_null           | multiset_setof_null                | multiset_setof_null(anytable)                                                 | t         | {anytable}   | integer    | 
+ multiset_setof_value          | multiset_setof_value               | multiset_setof_value(anytable)                                                | t         | {anytable}   | integer    | 
+ scalar_1                      | scalar_1                           | scalar_1(integer)                                                             | f         | {integer}    | integer    | 
+ scalar_2                      | scalar_2                           | scalar_2(integer)                                                             | f         | {integer}    | integer    | 
+ scalar_3                      | scalar_3                           | scalar_3(integer)                                                             | f         | {integer}    | integer    | {i,o}
+ scalar_4                      | scalar_4                           | scalar_4(integer)                                                             | f         | {integer}    | integer    | {b}
+ scalar_5                      | scalar_5                           | scalar_5(anyelement)                                                          | f         | {anyelement} | anyelement | 
+ scalar_tf_1                   | scalar_tf_1                        | scalar_tf_1(integer)                                                          | t         | {integer}    | record     | {i,t,t}
+ scalar_tf_2                   | scalar_tf_2                        | scalar_tf_2(integer)                                                          | t         | {integer}    | record     | {i,t,t}
+ scalar_tf_3                   | scalar_tf_3                        | scalar_tf_3(integer)                                                          | t         | {integer}    | record     | {i,t,t}
+ scalar_tf_4                   | scalar_tf_4                        | scalar_tf_4(integer)                                                          | t         | {integer}    | record     | {i,o,o}
+ scalar_tf_5                   | scalar_tf_5                        | scalar_tf_5(integer)                                                          | t         | {integer}    | record     | 
+ scalar_tf_6                   | scalar_tf_6                        | scalar_tf_6(anyelement)                                                       | t         | {anyelement} | example    | 
+(30 rows)
 
 /* Observe how psql reports them */
 \df (scalar_*|multiset_*)
@@ -1549,6 +1556,27 @@ SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (selec
 (10 rows)
 
 -- end equivalent
+-- Don't generate unique rowid path if there is a table function scan
+SELECT gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+SELECT count(*) FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (select a,b from example);
+ count 
+-------
+    10
+(1 row)
+
+SELECT gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- Explain a couple interesting cases
 explain SELECT * FROM multiset_5( TABLE (SELECT dbid, gpname FROM gp_id) );
                               QUERY PLAN                               
@@ -3163,4 +3191,6 @@ NOTICE:  drop cascades to function scalar_1(integer)
 NOTICE:  drop cascades to table example_r
 NOTICE:  drop cascades to table history
 NOTICE:  drop cascades to table example
+NOTICE:  drop cascades to function gp_wait_until_triggered_fault(text,integer,integer)
+NOTICE:  drop cascades to extension gp_inject_fault
 SET search_path TO public;

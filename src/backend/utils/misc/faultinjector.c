@@ -383,6 +383,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in ResIncrementAdd to simulate an out-of-shared-memory ERROR */
 	_("reslock_wait_cancel_after_acquire_partition_lock"),
 		/* inject fault in ResLockWaitCancel right after the partition lock has been acquired */
+	_("low_unique_rowid_path_cost"),
+		/* inject fault to choose unique rowid path */
 	_("not recognized"),
 };
 
@@ -1097,6 +1099,7 @@ FaultInjector_NewHashEntry(
 			case AbortAfterProcarrayEnd:
 
 			case ResIncrementAddOOSM:
+			case LowUniqueRowidPathCost:
 
 				break;
 			default:

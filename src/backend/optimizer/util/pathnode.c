@@ -30,6 +30,7 @@
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parsetree.h"
+#include "utils/faultinjector.h"
 #include "utils/memutils.h"
 #include "utils/selfuncs.h"
 #include "utils/lsyscache.h"
@@ -623,8 +624,11 @@ cdb_set_cheapest_dedup(PlannerInfo *root, RelOptInfo *rel)
              * Top off the subpath with DISTINCT ON the non-subquery row ids.
              * Add to rel's main pathlist.
              */
-            upath = create_unique_rowid_path(root, subpath, distinct_relids);
-            add_path(root, rel, (Path *)upath);
+			if (!root->disallow_unique_rowid_path)
+				upath = create_unique_rowid_path(root, subpath, distinct_relids);
+			else
+				return;
+			add_path(root, rel, (Path *)upath);
         }
 
         /* Verify that our new paths haven't gone into the wrong pathlist. */
@@ -1986,7 +1990,18 @@ create_unique_rowid_path(PlannerInfo *root,
         uniquepath->path.total_cost += repartition_cost;
     }
 
-	return uniquepath;
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR(LowUniqueRowidPathCost) == FaultInjectorTypeSkip)
+	{
+		/*
+		 * Inject a fault to set a very low cost for unique rowid path so that
+		 * planner will choose this if it is in pathlist.
+		 */
+		uniquepath->path.total_cost = 1.0;
+	}
+#endif
+
+    return uniquepath;
 }                               /* create_unique_rowid_path */
 
 
@@ -2359,6 +2374,17 @@ create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
 	Path	   *pathnode = makeNode(Path);
 
 	Assert(rte->rtekind == RTE_TABLEFUNCTION);
+
+	/*
+	 * Greenplum specific behavior
+	 *
+	 * Greenplum has a special path to handle semjoin, the planner might add a
+	 * unique_row_id path to the first inner join and then de-duplicate.
+	 *
+	 * Table function scan has no corresponding dedup workflow. Here we
+	 * introduce a switch to turn off it when there is a table function scan.
+	 */
+	root->disallow_unique_rowid_path = true;
 
 	/* Setup the basics of the TableFunction path */
 	pathnode->pathtype	   = T_TableFunctionScan;

@@ -265,6 +265,7 @@ typedef struct PlannerInfo
 	List	   *dynamicScans;	/* DynamicScanInfos */
 
 	bool		is_correlated_subplan; /* true for correlated subqueries nested within subplans */
+	bool		disallow_unique_rowid_path; /* true if we decide not to generate unique rowid path */
 } PlannerInfo;
 
 /*----------

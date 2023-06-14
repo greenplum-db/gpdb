@@ -263,9 +263,11 @@ typedef enum FaultInjectorIdentifier_e {
 
 	ReslockWaitCancelAfterAcquirePartitionLock,
 
+	LowUniqueRowidPathCost,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
-	
+
 } FaultInjectorIdentifier_e;
 
 /*
