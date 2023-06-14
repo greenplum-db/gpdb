@@ -89,7 +89,7 @@ Access to tables referenced in the view is determined by permissions of the view
 
 Functions called in the view are treated the same as if they had been called directly from the query using the view. Therefore the user of a view must have permissions to call any functions used by the view.
 
-XXX If you create a view with an `ORDER BY` clause, the `ORDER BY` clause is ignored when you `SELECT` from the view.
+Greenplum Database ignores the `ORDER BY` clause when you create a view that specifies `AS SELECT ... FROM <table> ORDER BY <col>`.
 
 When `CREATE OR REPLACE VIEW` is used on an existing view, only the view's defining `SELECT` rule is changed. Other view properties, including ownership, permissions, and non-`SELECT` rules, remain unchanged. You must own the view to replace it \(this includes being a member of the owning role\).
 
