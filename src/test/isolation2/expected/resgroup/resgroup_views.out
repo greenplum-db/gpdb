@@ -1,7 +1,7 @@
 select * from gp_toolkit.gp_resgroup_config where groupname='default_group';
- groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost
----------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
+ groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+-----------------+------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20              | 100        | -1     | -1           | 500      
 (1 row)
 
 select groupname , groupid , num_running , num_queueing , num_queued , num_executed from gp_toolkit.gp_resgroup_status where groupname='default_group';
@@ -27,11 +27,11 @@ select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
 
 -- start_ignore
 select * from gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost
----------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
- 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      
- 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           | 500      
+ groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+-----------------+------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20              | 100        | -1     | -1           | 500      
+ 6438    | admin_group   | 10          | 10              | 100        | -1     | -1           | 500      
+ 6441    | system_group  | 0           | 10              | 100        | -1     | -1           | 500      
 (3 rows)
 select * from gp_toolkit.gp_resgroup_status;
  groupid | groupname     | num_running | num_queueing | num_queued | num_executed | total_queue_duration 

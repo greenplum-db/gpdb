@@ -104,11 +104,11 @@ ERROR:  resource group "rg_test_group" does not exist
 --end_ignore
 
 SELECT * FROM gp_toolkit.gp_resgroup_config;
- groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost
----------+---------------+-------------+----------------------+-------------------+--------+--------------+----------
- 6437    | default_group | 20          | 20                   | 100               | -1     | -1           | 500      
- 6438    | admin_group   | 10          | 10                   | 100               | -1     | -1           | 500      
- 6441    | system_group  | 0           | 10                   | 100               | -1     | -1           | 500      
+ groupid | groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset | memory_limit | min_cost 
+---------+---------------+-------------+-----------------+------------+--------+--------------+----------
+ 6437    | default_group | 20          | 20              | 100        | -1     | -1           | 500      
+ 6438    | admin_group   | 10          | 10              | 100        | -1     | -1           | 500      
+ 6441    | system_group  | 0           | 10              | 100        | -1     | -1           | 500      
 (3 rows)
 
 -- negative
@@ -237,63 +237,63 @@ ERROR:  resource group "none" does not exist
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
 CREATE
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_max_percent | cpu_weight
----------------+-------------+----------------------+-------------------
- rg_test_group | 20          | 10                   | 100               
+ groupname     | concurrency | cpu_max_percent | cpu_weight 
+---------------+-------------+-----------------+------------
+ rg_test_group | 20          | 10              | 100        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpuset='0');
 CREATE
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_max_percent | cpu_weight
----------------+-------------+----------------------+-------------------
- rg_test_group | 1           | -1                   | 100               
+ groupname     | concurrency | cpu_max_percent | cpu_weight 
+---------------+-------------+-----------------+------------
+ rg_test_group | 1           | -1              | 100        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=500);
 CREATE
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_max_percent | cpu_weight
----------------+-------------+----------------------+-------------------
- rg_test_group | 20          | 10                   | 500               
+ groupname     | concurrency | cpu_max_percent | cpu_weight 
+---------------+-------------+-----------------+------------
+ rg_test_group | 20          | 10              | 500        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=-1, cpu_weight=500);
 CREATE
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_max_percent | cpu_weight
----------------+-------------+----------------------+-------------------
- rg_test_group | 20          | -1                   | 500               
+ groupname     | concurrency | cpu_max_percent | cpu_weight 
+---------------+-------------+-----------------+------------
+ rg_test_group | 20          | -1              | 500        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_weight=500);
 CREATE
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_max_percent | cpu_weight
----------------+-------------+----------------------+-------------------
- rg_test_group | 20          | -1                   | 500               
+ groupname     | concurrency | cpu_max_percent | cpu_weight 
+---------------+-------------+-----------------+------------
+ rg_test_group | 20          | -1              | 500        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
 CREATE
 SELECT groupname,concurrency,cpu_max_percent,cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_max_percent | cpu_weight
----------------+-------------+----------------------+-------------------
- rg_test_group | 20          | -1                   | 100               
+ groupname     | concurrency | cpu_max_percent | cpu_weight 
+---------------+-------------+-----------------+------------
+ rg_test_group | 20          | -1              | 100        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0;0-1');
 CREATE
 SELECT groupname,concurrency,cpu_max_percent,cpu_weight,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset
----------------+-------------+----------------------+-------------------+--------
- rg_test_group | 20          | -1                   | 100               | 0;0-1  
+ groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset 
+---------------+-------------+-----------------+------------+--------
+ rg_test_group | 20          | -1              | 100        | 0;0-1  
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
@@ -425,38 +425,38 @@ ALTER
 -- negative: cpu_max_percent should be in [1, 100]
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent -0.1;
 ERROR:  syntax error at or near "0.1"
-LINE 1: ... RESOURCE GROUP rg_test_group SET cpu_max_percent -0.1;
-                                                                   ^
+LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent -0.1;
+                                                                ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent -1;
 ALTER
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0;
 ERROR:  cpu_max_percent range is [1, 100] or equals to -1
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.7;
 ERROR:  syntax error at or near "0.7"
-LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_max_percent 0.7;
-                                                                   ^
+LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.7;
+                                                               ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 1.7;
 ERROR:  syntax error at or near "1.7"
-LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_max_percent 1.7;
-                                                                   ^
+LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 1.7;
+                                                               ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 61;
 ALTER
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent a;
 ERROR:  syntax error at or near "a"
-LINE 1: ...TER RESOURCE GROUP rg_test_group SET cpu_max_percent a;
-                                                                     ^
+LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent a;
+                                                               ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 'abc';
 ERROR:  syntax error at or near "'abc'"
-LINE 1: ...RESOURCE GROUP rg_test_group SET cpu_max_percent 'abc';
+LINE 1: ...LTER RESOURCE GROUP rg_test_group SET cpu_max_percent 'abc';
                                                                  ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 20%;
 ERROR:  syntax error at or near "%"
-LINE 1: ...R RESOURCE GROUP rg_test_group SET cpu_max_percent 20%;
-                                                                     ^
+LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 20%;
+                                                                 ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.2%;
 ERROR:  syntax error at or near "0.2"
-LINE 1: ... RESOURCE GROUP rg_test_group SET cpu_max_percent 0.2%;
-                                                                  ^
+LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.2%;
+                                                               ^
 -- positive: cpu_max_percent should be in [1, 100]
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 1;
 ALTER
@@ -475,16 +475,16 @@ CREATE
 ALTER RESOURCE GROUP rg_test_group SET CPUSET '0';
 ALTER
 SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | cpu_max_percent | cpuset
----------------+----------------------+--------
- rg_test_group | -1                   | 0      
+ groupname     | cpu_max_percent | cpuset 
+---------------+-----------------+--------
+ rg_test_group | -1              | 0      
 (1 row)
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 10;
 ALTER
 SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
- groupname     | cpu_max_percent | cpuset
----------------+----------------------+--------
- rg_test_group | 10                   | -1     
+ groupname     | cpu_max_percent | cpuset 
+---------------+-----------------+--------
+ rg_test_group | 10              | -1     
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
