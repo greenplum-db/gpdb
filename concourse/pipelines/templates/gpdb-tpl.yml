@@ -863,7 +863,7 @@ jobs:
     image: gpdb7-[[ os_type ]]-test
     timeout: 24h
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on -c jit=on -c jit_above_cost=0 -c gp_explain_jit=off' installcheck
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on -c jit=on -c jit_above_cost=0 -c optimizer_jit_above_cost=0 -c gp_explain_jit=off' installcheck
       TEST_OS: [[ test_os ]]
       CONFIGURE_FLAGS: ((configure_flags))
 
