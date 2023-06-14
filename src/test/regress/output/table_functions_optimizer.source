@@ -5,6 +5,7 @@
 -- ===================
 CREATE SCHEMA table_function;
 SET search_path TO table_function, public;
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE TABLE example(a int, b text) DISTRIBUTED by (a);
 COPY example FROM stdin;
 CREATE TABLE history(id integer, time timestamp) DISTRIBUTED BY (id);
@@ -1549,6 +1550,25 @@ SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (selec
 (10 rows)
 
 -- end equivalent
+-- Don't generate unique rowid path if there is a table function scan
+SELECT gp_inject_fault_infinite('low_unique_rowid_path_cost', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+(1 row)
+
+SELECT count(*) FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (select a,b from example);
+ count 
+-------
+    10
+(1 row)
+
+SELECT gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
 -- Explain a couple interesting cases
 explain SELECT * FROM multiset_5( TABLE (SELECT dbid, gpname FROM gp_id) );
                               QUERY PLAN                               

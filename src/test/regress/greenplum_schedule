@@ -58,8 +58,8 @@ test: gpcopy
 # this test fiddles with relfrozenxid, so run independently as any
 # parallel test running vacuum could have trouble
 test: matview_ao
-
-test: filter gp_combocid gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var distributed_transactions explain_format direct_dispatch_explain_analyze
+test: table_functions
+test: filter gp_combocid gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink olap_setup complex opclass_ddl information_schema guc_env_var distributed_transactions explain_format direct_dispatch_explain_analyze
 
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_explain

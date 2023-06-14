@@ -2824,6 +2824,17 @@ create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel,
 
 	Assert(rte->rtekind == RTE_TABLEFUNCTION);
 
+	/*
+	 * Greenplum specific behavior
+	 *
+	 * Greenplum has a special path to handle semjoin, the planner might add a
+	 * unique_row_id path to the first inner join and then de-duplicate.
+	 *
+	 * Table function scan has no corresponding dedup workflow. Here we
+	 * introduce a switch to turn off it when there is a table function scan.
+	 */
+	root->disallow_unique_rowid_path = true;
+
 	/* Setup the basics of the TableFunction path */
 	pathnode->pathtype	   = T_TableFunctionScan;
 	pathnode->parent	   = rel;
