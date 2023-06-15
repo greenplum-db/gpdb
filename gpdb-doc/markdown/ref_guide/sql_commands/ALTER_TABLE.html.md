@@ -356,7 +356,10 @@ SET SCHEMA
 :   Moves the table into another schema. Associated indexes, constraints, and sequences owned by table columns are moved as well.
 
 SET DISTRIBUTED
-:   Changes the distribution policy of a table. Changing a hash distribution policy, or changing to or from a replicated policy, will cause the table data to be physically redistributed on disk, which can be resource intensive. While Greenplum Database permits changing the distribution policy of a writable external table, the operation never results in physical redistribution of the external data.
+:   Changes the distribution policy of a table. Changing a hash distribution policy, or changing to or from a replicated policy, will cause the table data to be physically redistributed on disk, which can be resource intensive. If you declare the same hash distribution policy or change from hash to random distribution, data will not be redistributed unless you declare `SET WITH (reorganize=true)`.
+
+:  While Greenplum Database permits changing the distribution policy of a writable external table, the operation never results in physical redistribution of the external data.
+
 
 ATTACH PARTITION partition_name { FOR VALUES partition_bound_spec | DEFAULT }
 :   This form of the *modern partitioning syntax* attaches an existing table (which might itself be partitioned) as a partition of the target table. The table can be attached as a partition for specific values using `FOR VALUES` or as a default partition by using `DEFAULT`. For each index in the target table, a corresponding one will be created in the attached table; or, if an equivalent index already exists, it will be attached to the target table's index, as if you had run `ALTER INDEX ATTACH PARTITION`. Note that if the existing table is a foreign table, Greenplum does not permit attaching the table as a partition of the target table if there are `UNIQUE` indexes on the target table. (See also [CREATE FOREIGN TABLE](CREATE_FOREIGN_TABLE.html).)
@@ -385,7 +388,7 @@ You can combine all forms of `ALTER TABLE` that act on a single table into a lis
 
 You must own the table to use `ALTER TABLE`. To change the schema or tablespace of a table, you must also have `CREATE` privilege on the new schema or tablespace. To add the table as a new child of a parent table, you must own the parent table as well. Also, to attach a table as a new partition of the table, you must own the table being attached. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have `CREATE` privilege on the table's schema. To add a column or alter a column type or use the `OF` clause, you must also have `USAGE` privilege on the data type. A superuser has these privileges automatically.
 
-> **Note** XXX Memory usage increases significantly when a table has many partitions, if a table has compression, or if the blocksize for a table is large. If the number of relations associated with the table is large, this condition can force an operation on the table to use more memory. For example, if the table is a CO table and has a large number of columns, each column is a relation. An operation like `ALTER TABLE ALTER COLUMN` opens all the columns in the table allocates associated buffers. If a CO table has 40 columns and 100 partitions, and the columns are compressed and the blocksize is 2 MB \(with a system factor of 3\), the system attempts to allocate 24 GB, that is \(40 ×100\) × \(2 ×3\) MB or 24 GB.
+> **Note** Memory usage increases significantly when a table has many partitions, if a table has compression, or if the blocksize for a table is large. If the number of relations associated with the table is large, this condition can force an operation on the table to use more memory. For example, if the table is an append-optimized column-oriented table and has a large number of columns, each column is a relation. An operation that accesses all of the columns in the table allocates associated buffers. If the table has 40 columns and 100 partitions, and the columns are compressed and the blocksize is 2 MB \(with a system factor of 3\), the system attempts to allocate 24 GB, that is \(40 ×100\) × \(2 ×3\) MB or 24 GB.
 
 ## <a id="section4"></a>Parameters 
 
@@ -460,14 +463,8 @@ partition_name
 partition_bound_spec
 :   The partition bound specification for a new partition. Refer to [CREATE TABLE](CREATE_TABLE.html) for more details on the syntax of the same.
 
-DISTRIBUTED BY \(column\_name \[opclass\] \[, ... \]\)
-DISTRIBUTED RANDOMLY
- DISTRIBUTED REPLICATED
-:   Specifies the distribution policy for a table. Changing a hash distribution policy causes the table data to be physically redistributed, which can be resource intensive. If you declare the same hash distribution policy or change from hash to random distribution, data will not be redistributed unless you declare `SET WITH (reorganize=true)`.
-:   Changing to or from a replicated distribution policy always causes Greenplum Database to redistribute the table data.
-
 access_method
-:   The method to use for accessing the table. Set to `heap` to access the table as a heap-storage table, `ao_row` to access the table as an append-optimized table with row-oriented storage (AO), or `ao_column` to access the table as an append-optimized table with column-oriented storage (AO/CO).
+:   The method to use for accessing the table. Refer to [Choosing the Storage Model](../../admin_guide/ddl/ddl-storage.html) for more information on the table storage models and access methods available in Greenplum Database. Set to `heap` to access the table as a heap-storage table, `ao_row` to access the table as an append-optimized table with row-oriented storage (AO), or `ao_column` to access the table as an append-optimized table with column-oriented storage (AO/CO).
 
   <p class="note">
 <strong>Note:</strong>
@@ -574,8 +571,6 @@ The `DROP COLUMN` form does not physically remove the column, but simply makes i
 
 To force immediate reclamation of space occupied by a dropped column, you can run one of the forms of `ALTER TABLE` that performs a rewrite of the whole table. This results in reconstructing each row with the dropped column replaced by a null value.
 
-XXX
-
 This table lists the `ALTER TABLE` operations that require a table rewrite when performed on tables defined with the specified type of table storage.
 
 |Operation \(See Note\)|Append-Optimized, Column-Oriented|Append-Optimized|Heap|
@@ -583,8 +578,6 @@ This table lists the `ALTER TABLE` operations that require a table rewrite when 
 |`ALTER COLUMN TYPE`|No|Yes|Yes|
 |`ADD COLUMN`|No|Yes|Yes|
 | `ALTER COLUMN SET ENCODING`|Yes|N/A|N/A|
-
-XXX
 
 > **Important** The forms of `ALTER TABLE` that perform a table rewrite are not MVCC-safe. After a table rewrite, the table will appear empty to concurrent transactions if they are using a snapshot taken before the rewrite occurred. See [MVCC Caveats](https://www.postgresql.org/docs/12/mvcc-caveats.html) for more details.
 
@@ -603,8 +596,6 @@ Greenplum Database does not currently support foreign key constraints. For a uni
 Greenplum Database does not permit changing any part of a system catalog table.
 
 Refer to [CREATE TABLE](CREATE_TABLE.html) for a further description of valid parameters.
-
-XXX
 
 Be aware of the following when altering partitioned tables using the *classic syntax*:
 
@@ -625,7 +616,6 @@ Be aware of the following when altering partitioned tables using the *classic sy
     -   Adding or dropping constraints.
     -   Splitting an external partition.
 
-XXX
 
 ## <a id="section6"></a>Examples 
 
