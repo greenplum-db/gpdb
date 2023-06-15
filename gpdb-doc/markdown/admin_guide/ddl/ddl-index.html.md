@@ -162,7 +162,7 @@ When loading data, it can be faster to drop all indexes, load, then recreate the
 
 ## <a id="scan_cover"></a>About Indexes on Expressions
 
-An index column need not be just a column of the underlying table, but can be a function or scalar expression computed from one or more columns of the table. This useful to obtain fast access to a table based on the results of computations.
+An index column need not be just a column of the underlying table, but can be a function or scalar expression computed from one or more columns of the table. This is useful to obtain fast access to a table based on the results of computations.
 
 For example, a common way to do case-insensitive comparisons is to use the `lower()` function:
 

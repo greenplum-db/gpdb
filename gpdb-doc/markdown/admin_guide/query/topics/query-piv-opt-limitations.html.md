@@ -50,7 +50,6 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   DML and `COPY ... FROM` operations on foreign tables.
 -   Unsupported index-related features include:
 
-    - Index-only scan over a common table expression (CTE)
     - Index scan on AO tables
     - Dynamic index-only scan
     - Partial dynamic index scan
