@@ -167,18 +167,22 @@ DECLARE
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
 (3 rows)
---- uu1 can not see u1's endpoints.
+--- u1 can not see uu1's endpoints.
+1: SET ROLE u1;
+SET
 1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
  cursorname | username 
 ------------+----------
-(0 rows)
+ c2         | u1       
+ c12        | u1       
+(2 rows)
 2: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
  cursorname | username  
 ------------+-----------
  c1         | adminuser 
  c12        | u1        
  c2         | u1        
- c3         | u1        
+ c3         | uu1       
 (4 rows)
 
 3: @pre_run 'export RETRIEVE_USER="uu1"; echo $RAW_STR ' : SELECT 1;
@@ -186,20 +190,23 @@ DECLARE
 ----------
  1        
 (1 row)
---- Login as uu1 and retrieve, only u1 can retrieve
-3R: SELECT SESSION_USER, CURRENT_USER;
-#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
-
+--- Login as uu1 and retrieve
 3R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
-#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
-
+ a 
+---
+ 2 
+ 3 
+ 4 
+ 7 
+ 8 
+(5 rows)
 
 --- Retrieve c2(which belongs to u1) but current user is uu1.
 3R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
-
+ERROR:  the PARALLEL RETRIEVE CURSOR was created by a different user
+HINT:  Use the same user as the PARALLEL RETRIEVE CURSOR creator to retrieve.
 0Rq: ... <quitting>
-3Rq:Sessions not started cannot be quit
+3Rq: ... <quitting>
 1<:  <... completed>
 FAILED:  Execution failed
 1: END;
