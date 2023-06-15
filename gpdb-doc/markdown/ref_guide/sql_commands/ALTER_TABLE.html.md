@@ -785,6 +785,12 @@ Change a table's access method to `ao_row`, compression type to `zstd` and compr
 ALTER TABLE sales SET ACCESS METHOD ao_row with (compresstype=zstd,compresslevel=4);
 ```
 
+Alternatively, you can perform the same operation using `SET WITH`:
+
+```
+ALTER TABLE sales SET WITH (appendoptimized=true, compresstype=zstd, compresslevel=4);
+```
+
 Change access method for all existing partitions of a table:
 
 ```
@@ -813,6 +819,12 @@ Change the distribution policy of a table to replicated:
 
 ```
 ALTER TABLE myschema.distributors SET DISTRIBUTED REPLICATED;
+```
+
+Change the distribution policy of a table to random and force a table rewrite:
+
+```
+ALTER TABLE distributors SET WITH (REORGANIZE=true) SET DISTRIBUTED RANDOMLY;
 ```
 
 ### <a id="examples_modern"></a>Modern Syntax Partioning Examples
