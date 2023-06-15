@@ -1669,6 +1669,23 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid, bool skip_permission
 	fdw = GetForeignDataWrapper(server->fdwid);
 
 	/*
+	 * Check compatibility between DistributedBy and mpp_execute option.
+	 */
+	if (stmt->distributedBy != NULL)
+	{
+		List *tmp_options = list_copy(stmt->options);
+		char mpp_execute = SeparateOutMppExecute(&tmp_options);
+		if (mpp_execute == FTEXECLOCATION_NOT_DEFINED)
+			mpp_execute = server->exec_location;
+
+		if (stmt->distributedBy->ptype == POLICYTYPE_PARTITIONED &&
+			(mpp_execute == FTEXECLOCATION_ANY || mpp_execute == FTEXECLOCATION_COORDINATOR))
+			ereport(ERROR, (errcode(ERRCODE_FDW_ERROR), errmsg("Hash or random distribution must set option mpp_execute to \"all segments\"")));
+		else if (stmt->distributedBy->ptype != POLICYTYPE_PARTITIONED && mpp_execute == FTEXECLOCATION_ALL_SEGMENTS)
+			ereport(ERROR, (errcode(ERRCODE_FDW_ERROR), errmsg("Replicated or entry distribution can't match option mpp_execute = \"all segments\"")));
+	}
+
+	/*
 	 * Insert tuple into pg_foreign_table.
 	 */
 	memset(values, 0, sizeof(values));
