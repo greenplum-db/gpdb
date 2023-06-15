@@ -421,7 +421,6 @@
 		"optimizer_print_xform",
 		"optimizer_print_xform_results",
 		"optimizer_prune_computed_columns",
-		"optimizer_prune_unused_columns",
 		"optimizer_push_group_by_below_setop_threshold",
 		"optimizer_push_requirements_from_consumer_to_producer",
 		"optimizer_remove_order_below_dml",

@@ -331,7 +331,6 @@ bool		optimizer_enable_hashagg;
 bool		optimizer_enable_groupagg;
 bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
-bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
 bool		optimizer_force_comprehensive_join_implementation;
 bool		optimizer_enable_replicated_table;
@@ -2851,17 +2850,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_enable_eageragg,
 		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"optimizer_prune_unused_columns", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Prune unused table columns during query optimization."),
-			NULL,
-			GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_prune_unused_columns,
-		true,
 		NULL, NULL, NULL
 	},
 
