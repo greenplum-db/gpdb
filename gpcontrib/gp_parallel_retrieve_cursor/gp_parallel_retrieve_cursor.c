@@ -330,8 +330,8 @@ gp_get_segment_endpoints(PG_FUNCTION_ARGS)
 		MemSet(nulls, 0, sizeof(nulls));
 
 		/*
-		 * Only allow current user to list his/her own endpoints, or let
-		 * superuser list all endpoints.
+		 * Only allow the current user to list own endpoints, or let superuser
+		 * list all endpoints.
 		 */
 		if (!entry->empty && entry->databaseID == MyDatabaseId && (superuser() || entry->userID == GetUserId()))
 		{

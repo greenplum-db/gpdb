@@ -102,7 +102,7 @@ gp_get_endpoints() Columns:
 | port        | integer   | The port number to start the retrieve    |
 |             |           | session                                  |
 |-------------+-----------+------------------------------------------|
-| userid      | oid       | The oid of the session user              |
+| userid      | oid       | The oid of the user                      |
 |-------------+-----------+------------------------------------------|
 | state       | text      | One of the following state for this      |
 |             |           | endpoint:                                |
@@ -132,24 +132,15 @@ postgres=# select * from gp_get_endpoints();
     4 | 97a8eeee337798f718319c5234ea1440 | c3         |       105 | host67   | 6004 |     10 | READY | c30000006900000005
 (3 rows)
 
-The userid of the endpoint is the session user, not the current user. For
-example, if a user logs in to the database as user1, then uses set role to
-switch to another user (e.g., user2) and declare a parallel retrieve cursor.
-The userid of these endpoints is user1's oid, not user2's oid. The session user
-(i.e., user1) should be used to start a retrieve connection. This is typically
-due to the security concern, e.g. if user2 is nologin, we should not be able to
-retrieve using user2.
-
 There is another similar gp_get_session_endpoints() that shows the endpoint
-informations that belong to this session only.
+information that belong to this session only.
 
 Start A Retrieve Session
 ========================
 
 Once a parallel retrieve cursor has been declared, retrieve sessions can be
 started on each endpoint's host by using the endpoint's token as the session
-authentication password. The user of this retrieve session is the session user
-who declares this parallel retrieve cursor.
+authentication password.
 
 gp_retrieve_conn=true needs to be set to start retrieve session.
 
