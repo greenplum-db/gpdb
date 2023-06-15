@@ -437,7 +437,7 @@ index\_name
 :   The name of an existing index.
 
 storage_parameter
-:   The name of a table storage parameter.
+:   The name of a table storage parameter. Refer to the [Storage Parameters](CREATE_TABLE.html#storage_parameters) section on the `CREATE TABLE` reference page for a list of parameters.
 
 value
 :   The new value for the a table storage parameter. This might be a number or a word, depending on the parameter.
@@ -473,9 +473,6 @@ access_method
 <strong>Note:</strong>
 Although you can specify the table's access method using <code>SET &lt;storage_parameter></code>, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
 </p>
-
-storage_parameter
-:   Identifies a table storage parameter. Refer to the [Storage Parameters](CREATE_TABLE.html#storage_parameters) section on the `CREATE TABLE` reference page for a list of parameters.
 
 SET WITH (reorganize=true\|false)
 :   Use `reorganize=true` when the hash distribution policy has not changed or when you have changed from a hash to a random distribution, and you want to redistribute the data anyway.
