@@ -406,8 +406,6 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 static int decompress_write_loop(request_t *r);
 static int local_send_with_zstd(request_t *r);
 static void* send_compression_data (void *req);
-#endif
-#ifndef WIN32
 static int wait_for_thread_join(request_t *r);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
@@ -2141,7 +2139,7 @@ static void do_write(int fd, short event, void* arg)
 		gfatal(r, "internal error - non matching fd (%d) "
 					  "and socket (%d)", fd, r->sock);
 
-#ifndef WIN32
+#ifdef USE_ZSTD
 	/* 
 	 * It is essential to recycle threads before we read file.
 	 * Since session_get_block will change value of top and content
