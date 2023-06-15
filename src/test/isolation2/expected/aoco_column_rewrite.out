@@ -1281,14 +1281,11 @@ INSERT 10
 BEGIN
 1: INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;
 INSERT 10
-1: END;
-END
 2&: ALTER TABLE aoco_concurrent_inserts ALTER COLUMN b TYPE text;  <waiting ...>
-FAILED:  Forked command is not blocking; got output: ALTER
 1: END;
 END
 2<:  <... completed>
-FAILED:  Execution failed
+ALTER
 -- should see 20 rows
 SELECT count(*) FROM aoco_concurrent_inserts;
  count 
