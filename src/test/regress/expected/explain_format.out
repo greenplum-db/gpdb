@@ -129,6 +129,7 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- end_matchsubs
 -- start_matchignore
 -- m/\s*optimizer:\s*"off"/
+-- m/^\s+optimizer_jit\w*:/
 -- end_matchignore
 -- Check Explain YAML output
 EXPLAIN (FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
@@ -564,6 +565,8 @@ QUERY PLAN
 -- end_matchsubs
 -- ignore the variable JIT gucs and "optimizer = 'off'" in Settings (unaligned mode + text format)
 -- start_matchsubs
+-- m/^Settings:.*/
+-- s/,?\s*optimizer_jit\w*\s*=\s*[^,\n]+//g
 -- m/^Settings:.*/
 -- s/,?\s*jit\w*\s*=\s*[^,\n]+//g
 -- m/^Settings:.*/
