@@ -201,6 +201,10 @@ PerformCursorOpen(DeclareCursorStmt *cstmt, ParamListInfo params,
 				(errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED),
 				 errmsg("Opened parallel cursor number exceeded allowed concurrency: %d", gp_max_parallel_cursors)));
 		}
+
+		if (GetSessionUserId() != GetUserId())
+			ereport(NOTICE,
+					(errmsg("Parallel retrieve cursor is opened on the behalf of the session user: %s", GetUserNameFromId(GetSessionUserId(), false))));
 	}
 
 	/*

@@ -122,7 +122,7 @@ due to the security concern, e.g. if user2 is nologin, we should not be able to
 retrieve using user2.
 
 There is another similar gp_get_session_endpoints() that shows the endpoint
-informations that belong to this session only.
+information that belong to this session only.
 
 Start A Retrieve Session
 ========================
