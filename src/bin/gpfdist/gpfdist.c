@@ -410,8 +410,6 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 static int decompress_write_loop(request_t *r);
 static int local_send_with_zstd(request_t *r);
 static void* send_compression_data (void *req);
-#endif
-#ifndef WIN32
 static int wait_for_thread_join(request_t *r);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
