@@ -129,20 +129,10 @@ and <exclude_element> in an EXCLUDE constraint is:
   { <column_name> | ( <expression> ) } [ <opclass> ] [ ASC | DESC ]
      [ NULLS { FIRST | LAST }
 
-and <storage_parameter> is:
-
-   analyze_hll_non_part_table={ true | false }
-   blocksize={8192-2097152}
-   checksum= { true | false }
-   compresstype={ZLIB|ZSTD|RLE_TYPE|NONE}
-   compresslevel={0-9}
-   fillfactor={10-100}
-   orientation={COLUMN|ROW}
-   vacuum_index_cleanup { true | false } 
-
 and <set_with_parameter> is:
 
    reorganize={ true | false } |
+   orientation={COLUMN|ROW}
    appendoptimized={ true | false } [, <storage_parameter> [, ...]]
 ```
 
@@ -215,14 +205,14 @@ ADD COLUMN [ IF NOT EXISTS ]
 :    Adds a new column to the table, using the same syntax as [CREATE TABLE](CREATE_TABLE.html). If `IF NOT EXISTS` is specified and a column already exists with this name, no error is thrown.
 
 DROP COLUMN [ IF EXISTS ]
-:   Drops a column from a table. XXX Note that if you drop table columns that are being used as the Greenplum Database distribution key, the distribution policy for the table will be changed to `DISTRIBUTED RANDOMLY`. XXX Indexes and table constraints involving the column are automatically dropped as well. Multivariate statistics referencing the dropped column will also be removed if the removal of the column would cause the statistics to contain data for only a single column. You need to specify `CASCADE` if anything outside of the table depends on the column, such as views. If `IF EXISTS` is specified and the column does not exist, no error is thrown; Greenplum Database issues a notice instead.
+:   Drops a column from a table. Note that if you drop table columns that are being used as the Greenplum Database distribution key, the distribution policy for the table will be changed to `DISTRIBUTED RANDOMLY`. Indexes and table constraints involving the column are automatically dropped as well. Multivariate statistics referencing the dropped column will also be removed if the removal of the column would cause the statistics to contain data for only a single column. You need to specify `CASCADE` if anything outside of the table depends on the column, such as views. If `IF EXISTS` is specified and the column does not exist, no error is thrown; Greenplum Database issues a notice instead.
 
 SET DATA TYPE
-:   This form changes the data type of a column of a table. XXX Note that you cannot alter column data types that are being used as distribution or partitioning keys. XXX Indexes and simple table constraints involving the column will be automatically converted to use the new column type by reparsing the originally supplied expression. The optional `COLLATE` clause specifies a collation for the new column; if omitted, the collation is the default for the new column type. The optional `USING` clause specifies how to compute the new column value from the old. If omitted, the default conversion is the same as an assignment cast from old data type to new. A `USING` clause must be provided if there is no implicit or assignment cast from old to new type.
+:   This form changes the data type of a column of a table. Note that you cannot alter column data types that are being used as distribution or partitioning keys. Indexes and simple table constraints involving the column will be automatically converted to use the new column type by reparsing the originally supplied expression. The optional `COLLATE` clause specifies a collation for the new column; if omitted, the collation is the default for the new column type. The optional `USING` clause specifies how to compute the new column value from the old. If omitted, the default conversion is the same as an assignment cast from old data type to new. A `USING` clause must be provided if there is no implicit or assignment cast from old to new type.
 
 :   > **Note** The Greenplum Query Optimizer (GPORCA) supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
 
-:   XXX Changing a column data type may require a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
+:   Changing a column data type may or may not require a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
 
 SET DEFAULT
 DROP DEFAULT
@@ -258,8 +248,13 @@ RESET ( attribute\_option [, ...] )
 
 :   Changing per-attribute options acquires a `SHARE UPDATE EXCLUSIVE` lock.
 
+:   Do not use this form of `SET` to set attribute encoding options for appendoptimized, column-oriented tables. Instead, use  `ALTER COLUMN ... SET ENCODING ...`.
+
 SET STORAGE
 :   This form sets the storage mode for a column. This controls whether this column is held inline or in a secondary TOAST table, and whether the data should be compressed or not. `PLAIN` must be used for fixed-length values such as integer and is inline, uncompressed. `MAIN` is for inline, compressible data. `EXTERNAL` is for external, uncompressed data, and `EXTENDED` is for external, compressed data. `EXTENDED` is the default for most data types that support non-`PLAIN` storage. Use of `EXTERNAL` will make substring operations on very large text and bytea values run faster, at the penalty of increased storage space. Note that `SET STORAGE` doesn't itself change anything in the table, it just sets the strategy to be pursued during future table updates.
+
+SET ENCODING ( storage\_directive> [, ...] )
+:   This form sets column encoding options for append-optimized, column-oriented tables.
 
 ADD table\_constraint [ NOT VALID ]
 :   Adds a new constraint to a table using the same syntax as [CREATE TABLE](CREATE_TABLE.html). The `NOT VALID` option is currently allowed only for foreign key and `CHECK` constraints.
@@ -317,13 +312,13 @@ SET TABLESPACE
 
 :   All tables in the current database in a tablespace can be moved by using the `ALL IN TABLESPACE` form, which will lock all tables to be moved first and then move each one. This form also supports `OWNED BY`, which will only move tables owned by the roles specified. If the `NOWAIT` option is specified then the command will fail if it is unable to acquire all of the locks required immediately. Note that system catalogs are not moved by this command, use `ALTER DATABASE` or explicit `ALTER TABLE` invocations instead if desired. The `information_schema` relations are not considered part of the system catalogs and will be moved. See also [CREATE TABLESPACE](CREATE_TABLESPACE.html).
 
-:   XXX If changing the tablespace of a partitioned table, all child table partitions will also be moved to the new tablespace.
+:   If changing the tablespace of a partitioned table, all child table partitions will also be moved to the new tablespace.
 
 SET { LOGGED | UNLOGGED }
 :   This form changes the table from unlogged to logged or vice-versa. It cannot be applied to a temporary table.
 
 SET ( storage_\parameter [= value] [, ... ] )
-:   This form changes one or more table-level options. See [Storage Parameters](CREATE_TABLE.html#storage_parameters) in the `CREATE TABLE` reference for details on the available parameters. Note that the table contents will not be modified immediately by this command; depending on the parameter, you may need to rewrite the table to get the desired effects. That can be done with [VACUUM FULL](VACUUM.html), [CLUSTER](CLUSTER.html) or one of the forms of `ALTER TABLE` that forces a table rewrite, see [Notes](#section5). For planner-related parameters, changes take effect from the next time the table is locked, so currently executing queries are not affected.
+:   This form changes one or more table-level options. See [Storage Parameters](CREATE_TABLE.html#storage_parameters) in the `CREATE TABLE` reference for details on the available parameters. Note that for heap tables, the table contents will not be modified immediately by this command; depending on the parameter, you may need to rewrite the table to get the desired effects. That can be done with [VACUUM FULL](VACUUM.html), [CLUSTER](CLUSTER.html) or one of the forms of `ALTER TABLE` that forces a table rewrite, see [Notes](#section5). For append-optimized column-oriented tables, changing a storage parameter always results in a table rewrite. For planner-related parameters, changes take effect from the next time the table is locked, so currently executing queries are not affected.
 
 :   Greenplum Database takes a `SHARE UPDATE EXCLUSIVE` lock when setting `fillfactor`, toast and autovacuum storage parameters, and the planner parameter `parallel_workers`.
 
@@ -331,10 +326,10 @@ RESET ( storage_parameter [, ... ] )
 :   This form resets one or more table level options to their defaults. As with `SET`, a table rewrite might be required to update the table entirely.
 
 SET WITH (<set_with_parameter> = <value> [, ...])
-:   You can use this form of the command to reorganize the table, or to set the table access method and also optionally set table options.
+:   You can use this form of the command to reorganize the table, or to set the table access method and also optionally set storage parameters.
   <p class="note">
 <strong>Note:</strong>
-Although you can specify the table's access method using the <code>appendoptimized</code> storage parameter, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
+Although you can specify the table's access method using the <code>appendoptimized</code> and <code>orientation</code> storage parameters, VMware recommends that you use <code>SET ACCESS METHOD &lt;access_method></code> instead.
 </p>
 
 INHERIT parent\_table
@@ -355,7 +350,7 @@ OWNER TO
 :   Changes the owner of the table, sequence, view, materialized view, or foreign table to the specified user.
 
 RENAME
-:   Changes the name of a table (or an index, sequence, view, materialized view, or foreign table), the name of an individual column in a table, or the name of a constraint of the table. When renaming a constraint that has an underlying index, the index is renamed as well. There is no effect on the stored data. XXX Note that Greenplum Database does not permit renaming distribution key columns. XXX
+:   Changes the name of a table (or an index, sequence, view, materialized view, or foreign table), the name of an individual column in a table, or the name of a constraint of the table. When renaming a constraint that has an underlying index, the index is renamed as well. There is no effect on the stored data.
 
 SET SCHEMA
 :   Moves the table into another schema. Associated indexes, constraints, and sequences owned by table columns are moved as well.
@@ -382,7 +377,7 @@ DETACH PARTITION partition_name
 :   This form of the *modern partitioning syntax* detaches the specified partition of the target table. The detached partition continues to exist as a standalone table, but no longer has any ties to the table from which it was detached. Any indexes that were attached to the target table's indexes are detached.
 
 ALTER PARTITION \| DROP PARTITION \| RENAME PARTITION \| TRUNCATE PARTITION \| ADD PARTITION \| SPLIT PARTITION \| EXCHANGE PARTITION \| SET SUBPARTITION TEMPLATE
-:   These forms of the *classic partitioning syntax* change the structure of a partitioned table. In most cases, you must go through the parent table to alter one of its child table partitions.
+:   These forms of the *classic partitioning syntax* change the structure of a partitioned table. You must go through the parent table to alter one of its child table partitions.
 
 > **Note** If you add a partition to a table that has subpartition encodings, the new partition inherits the storage directives for the subpartitions. For more information about the precedence of compression settings, see [Using Compression](../../admin_guide/ddl/ddl-storage.html#topic40).
 
@@ -400,7 +395,7 @@ IF EXISTS
 name
 :   The name (possibly schema-qualified) of an existing table to alter. If `ONLY` is specified, only that table is altered. If `ONLY` is not specified, the table and all of its descendant tables (if any) are updated.  You can optionally specify `*` after the table name to explicitly indicate that descendant tables are included.
 
-    > **Note** XXX Adding or dropping a column, or changing a column's type, in a parent or descendant table only is not permitted. The parent table and its descendents must always have the same columns and types.
+    > **Note** Adding or dropping a column, or changing a column's type, in a parent or descendant table only is not permitted. The parent table and its descendents must always have the same columns and types.
 
 column\_name
 :   Name of a new or existing column. Note that Greenplum Database distribution key columns must be treated with special care. Altering or dropping these columns can change the distribution policy for the table.
@@ -415,7 +410,7 @@ type
 :   Data type of the new column, or new data type for an existing column. If changing the data type of a Greenplum distribution key column, you are only allowed to change it to a compatible type (for example, `text` to `varchar` is OK, but `text` to `int` is not).
 
 table\_constraint
-:   New table constraint for the table. Note that foreign key constraints are currently not supported in Greenplum Database. XXX Also a table is only allowed one unique constraint and the uniqueness must be within the Greenplum Database distribution key. XXX
+:   New table constraint for the table. Note that foreign key constraints are currently not supported in Greenplum Database. Also a table is only allowed one unique constraint and the uniqueness must be within the Greenplum Database distribution key.
 
 constraint\_name
 :   Name of an existing constraint to drop.
@@ -596,7 +591,7 @@ XXX
 
 > **Important** The forms of `ALTER TABLE` that perform a table rewrite are not MVCC-safe. After a table rewrite, the table will appear empty to concurrent transactions if they are using a snapshot taken before the rewrite occurred. See [MVCC Caveats](https://www.postgresql.org/docs/12/mvcc-caveats.html) for more details.
 
-XXX Take special care when altering or dropping columns that are part of the Greenplum Database distribution key as this can change the distribution policy for the table.
+Take special care when altering or dropping columns that are part of the Greenplum Database distribution key as this can change the distribution policy for the table.
 
 The `USING` option of `SET DATA TYPE` can actually specify any expression involving the old values of the row; that is, it can refer to other columns as well as the one being converted. This allows very general conversions to be done with the `SET DATA TYPE` syntax. Because of this flexibility, the `USING` expression is not applied to the column's default value (if any); the result might not be a constant expression as required for a default. This means that when there is no implicit or assignment cast from old to new type, `SET DATA TYPE` might fail to convert the default even though a `USING` clause is supplied. In such cases, drop the default with `DROP DEFAULT`, perform the `ALTER TYPE`, and then use `SET DEFAULT` to add a suitable new default. Similar considerations apply to indexes and constraints involving the column.
 
@@ -616,7 +611,7 @@ XXX
 
 Be aware of the following when altering partitioned tables using the *classic syntax*:
 
-- The table name specified in the `ALTER TABLE` command cannot be the name of a partition within a table.
+- The table name specified in the `ALTER TABLE` command must be the actual table name of the partition, not the partition alias that is specified in the classic syntax.
 - Use the `pg_partition_tree()` function to view the structure of a partitioned table. This function returns the partition hierarchy, and can help you identify the particular partitions you may want to alter.
 - These `ALTER PARTITION` operations are supported if no data is changed on a partitioned table that contains a leaf child partition that has been exchanged to use an external table. Otherwise, an error is returned.
 
