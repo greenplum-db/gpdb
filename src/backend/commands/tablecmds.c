@@ -17726,12 +17726,17 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (need_reorg)
 		{
 			/*
+			 * Make sure the redistribution happens for a randomly distributed table.
+			 *
 			 * Force the use of Postgres query optimizer, since Pivotal Optimizer (GPORCA) will not
 			 * redistribute the tuples if the current and required distributions
 			 * are both RANDOM even when reorganize is set to "true"
+			 * Also set gp_force_random_redistribution to true.
 			 */
 			bool saveOptimizerGucValue = optimizer;
+			bool saveRedistributeGucValue = gp_force_random_redistribution;
 			optimizer = false;
+			gp_force_random_redistribution = true;
 
 			if (saveOptimizerGucValue)
 				ereport(LOG,
@@ -17822,6 +17827,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			PopActiveSnapshot();
 			optimizer = saveOptimizerGucValue;
 			optimizer_replicated_table_insert = save_optimizer_replicated_table_insert;
+			gp_force_random_redistribution = saveRedistributeGucValue;
 
 			CommandCounterIncrement(); /* see the effects of the command */
 

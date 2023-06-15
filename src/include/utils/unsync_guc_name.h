@@ -177,6 +177,7 @@
 		"gp_external_enable_exec",
 		"gp_external_max_segs",
 		"gpfdist_retry_timeout",
+		"gp_force_random_redistribution",
 		"gp_fts_mark_mirror_down_grace_period",
 		"gp_fts_probe_interval",
 		"gp_fts_probe_retries",

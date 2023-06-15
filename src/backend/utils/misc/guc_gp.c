@@ -262,6 +262,7 @@ bool		gp_cte_sharing = false;
 bool		gp_enable_relsize_collection = false;
 bool		gp_recursive_cte = true;
 bool		gp_eager_two_phase_agg = false;
+bool		gp_force_random_redistribution = false;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -1794,6 +1795,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_eager_two_phase_agg,
+		false, NULL, NULL
+	},
+
+	{
+		{"gp_force_random_redistribution", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Force redistribution of insert for randomly-distributed."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_force_random_redistribution,
 		false, NULL, NULL
 	},
 

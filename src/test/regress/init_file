@@ -132,6 +132,8 @@ m/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/
 s/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode (openssl.c:XXX)/
 m/ERROR:  requested functionality not allowed in FIPS mode .*/
 s/ERROR:  requested functionality not allowed in FIPS mode .*/ERROR:  requested functionality not allowed in FIPS mode (openssl.c:XXX)/
+m/ERROR:  could not devise a plan.*/
+s/ERROR:  could not devise a plan.*/ERROR:  could not devise a plan (cdbpath.c:XXX)/
 
 # Mask out OpenSSL behavior change in different version
 m/ERROR:  Cannot use "md5": No such hash algorithm/
