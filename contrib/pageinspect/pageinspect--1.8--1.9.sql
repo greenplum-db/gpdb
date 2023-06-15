@@ -25,3 +25,20 @@ CREATE FUNCTION brin_revmap_chain(IN indexrelid regclass, IN segno int)
     RETURNS bigint[]
 AS 'MODULE_PATHNAME', 'brin_revmap_chain'
     LANGUAGE C STRICT PARALLEL SAFE;
+
+--
+-- add information about BRIN empty ranges
+--
+DROP FUNCTION brin_page_items(IN page bytea, IN index_oid regclass);
+CREATE FUNCTION brin_page_items(IN page bytea, IN index_oid regclass,
+                                OUT itemoffset int,
+                                OUT blknum int8,
+                                OUT attnum int,
+                                OUT allnulls bool,
+                                OUT hasnulls bool,
+                                OUT placeholder bool,
+                                OUT empty bool,
+                                OUT value text)
+    RETURNS SETOF record
+AS 'MODULE_PATHNAME', 'brin_page_items'
+    LANGUAGE C STRICT PARALLEL RESTRICTED;

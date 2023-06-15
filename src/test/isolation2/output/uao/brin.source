@@ -71,11 +71,11 @@ CREATE
  (2,3) 
 (3 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1} 
- 3          | 33554434 | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (3 rows)
 
 -- There is nothing new to summarize - it was all done during the index build.
@@ -101,11 +101,11 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
  (2,3) 
 (3 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1} 
- 3          | 33554434 | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (3 rows)
 
 -- Sanity: Scan should return all 3 blocks in the tidbitmap.
@@ -156,11 +156,11 @@ SELECT populate_pages('brin_ao_summarize_@amname@', 20, tid '(33554436, 0)');
  (2,3) 
 (3 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value     
-------------+----------+--------+----------+----------+-------------+-----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}  
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}  
- 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value     
+------------+----------+--------+----------+----------+-------------+-------+-----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}  
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}  
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 20} 
 (3 rows)
 
 -- Sanity: Scan should return all blocks in the tidbitmap.
@@ -211,13 +211,13 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
  (2,5) 
 (5 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
- 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
- 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
- 5          | 33554436 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (5 rows)
 
 -- Sanity: Scan should return only the first 3 blocks in the tidbitmap, now that
@@ -295,13 +295,13 @@ SELECT populate_pages('brin_ao_summarize_@amname@', 30, tid '(33554438, 0)');
  (2,5) 
 (5 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
- 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
- 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
- 5          | 33554436 | 1      | f        | f        | f           | {20 .. 30} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | f     | {20 .. 30} 
 (5 rows)
 
 DELETE FROM brin_ao_summarize_@amname@ WHERE i = 1;
@@ -380,16 +380,16 @@ SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum FROM brin_a
  (2,8) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
- 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
- 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
- 5          | 33554436 | 1      | f        | f        | f           | {20 .. 30} 
- 6          | 33554437 | 1      | t        | f        | f           |            
- 7          | 33554438 | 1      | f        | f        | f           | {40 .. 40} 
- 8          | 67108864 | 1      | f        | f        | f           | {20 .. 30} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | f     | {20 .. 30} 
+ 6          | 33554437 | 1      | t        | f        | f           | t     |            
+ 7          | 33554438 | 1      | f        | f        | f           | f     | {40 .. 40} 
+ 8          | 67108864 | 1      | f        | f        | f           | f     | {20 .. 30} 
 (8 rows)
 
 -- Sanity: Scan should return only first 3 blocks corresponding to the vacuumed
@@ -450,16 +450,16 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
  (2,8) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
- 3          | 33554434 | 1      | f        | f        | f           | {1 .. 20}  
- 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
- 5          | 33554436 | 1      | f        | f        | f           | {20 .. 30} 
- 6          | 33554437 | 1      | t        | f        | f           |            
- 7          | 33554438 | 1      | f        | f        | f           | {40 .. 40} 
- 8          | 67108864 | 1      | f        | f        | f           | {20 .. 30} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 20}  
+ 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 5          | 33554436 | 1      | f        | f        | f           | f     | {20 .. 30} 
+ 6          | 33554437 | 1      | t        | f        | f           | t     |            
+ 7          | 33554438 | 1      | f        | f        | f           | f     | {40 .. 40} 
+ 8          | 67108864 | 1      | f        | f        | f           | f     | {20 .. 30} 
 (8 rows)
 
 --------------------------------------------------------------------------------
@@ -554,12 +554,12 @@ SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
  (2,4) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2), 'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1} 
- 3          | 33554435 | 1      | f        | f        | f           | {1 .. 1} 
- 4          | 67108864 | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 3          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 4          | 67108864 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (4 rows)
 
 -- Now test desummarization
@@ -606,12 +606,12 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
  (2,4) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2), 'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1} 
- 3          | 33554435 | 1      | f        | f        | f           | {1 .. 1} 
- 4          | 67108864 | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 3          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 4          | 67108864 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (4 rows)
 
 -- Should be able to desummarize all existing blocks in aoseg1.
@@ -641,12 +641,12 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
  (4294967295,0) 
 (3 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2), 'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 4          | 67108864 | 1      | f        | f        | f           | {1 .. 1} 
- 1          |          |        |          |          |             |          
- 2          |          |        |          |          |             |          
- 3          |          |        |          |          |             |          
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 4          | 67108864 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 1          |          |        |          |          |             |       |          
+ 2          |          |        |          |          |             |       |          
+ 3          |          |        |          |          |             |       |          
 (4 rows)
 
 -- Now desummarize the last remaining range in the data page (from aoseg2).
@@ -746,10 +746,10 @@ SELECT brin_summarize_new_values('brin_ao_summarize_partial_@amname@_i_idx');
  (2,2) 
 (2 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_partial_@amname@_i_idx', 2), 'brin_ao_summarize_partial_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 33554435 | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (2 rows)
 
 --------------------------------------------------------------------------------
@@ -802,9 +802,9 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FR
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2), 'brin_range_extended1_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value 
-------------+----------+--------+----------+----------+-------------+-------
- 1          | 33554432 | 1      | t        | f        | t           |       
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value 
+------------+----------+--------+----------+----------+-------------+-------+-------
+ 1          | 33554432 | 1      | t        | f        | t           | t     |       
 (1 row)
 
 -- Insert a different value into seg1 concurrently.
@@ -826,9 +826,9 @@ INSERT 1
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2), 'brin_range_extended1_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | t           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | f     | {20 .. 20} 
 (1 row)
 
 SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -860,9 +860,9 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_se
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended1_@amname@_i_idx', 2), 'brin_range_extended1_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value     
-------------+----------+--------+----------+----------+-------------+-----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value     
+------------+----------+--------+----------+----------+-------------+-------+-----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 20} 
 (1 row)
 
 -- Sanity: Scan should return all 3 blocks in the tidbitmap, even though the
@@ -935,9 +935,9 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FR
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value 
-------------+----------+--------+----------+----------+-------------+-------
- 1          | 33554432 | 1      | t        | f        | t           |       
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value 
+------------+----------+--------+----------+----------+-------------+-------+-------
+ 1          | 33554432 | 1      | t        | f        | t           | t     |       
 (1 row)
 
 -- Extend the last partial range by 1 block.
@@ -962,9 +962,9 @@ SELECT populate_pages('brin_range_extended2_@amname@', 20, tid '(33554435, 0)');
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | t           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | f     | {20 .. 20} 
 (1 row)
 
 SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -996,9 +996,9 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_se
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | t           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | f     | {20 .. 20} 
 (1 row)
 
 -- Another insert into the same QE and the same range should not change the fact
@@ -1018,9 +1018,9 @@ INSERT 1
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended2_@amname@_i_idx', 2), 'brin_range_extended2_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | t           | {20 .. 30} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | t           | f     | {20 .. 30} 
 (1 row)
 
 --------------------------------------------------------------------------------
@@ -1070,12 +1070,12 @@ CREATE
  (2,2) 
 (2 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_multi_@amname@_i_idx', 2), 'brin_multi_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {1 .. 1}   
- 3          | 67108864 | 1      | f        | f        | f           | {20 .. 20} 
- 4          | 67108865 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 3          | 67108864 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 4          | 67108865 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (4 rows)
 
 -- Sanity: Scan should return all 4 blocks across both segfiles in the tidbitmap.
@@ -1149,11 +1149,11 @@ SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
  (2,3) 
 (3 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2), 'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value 
-------------+----------+--------+----------+----------+-------------+-------
- 1          | 33554432 | 1      | t        | f        | f           |       
- 2          | 33554433 | 1      | t        | f        | f           |       
- 3          | 33554434 | 1      | t        | f        | f           |       
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value 
+------------+----------+--------+----------+----------+-------------+-------+-------
+ 1          | 33554432 | 1      | t        | f        | f           | t     |       
+ 2          | 33554433 | 1      | t        | f        | f           | t     |       
+ 3          | 33554434 | 1      | t        | f        | f           | t     |       
 (3 rows)
 
 -- Sanity: Scan should return no blocks in the tidbitmap, as the summary tuples
@@ -1212,12 +1212,12 @@ SELECT brin_summarize_new_values('brin_abort_@amname@_i_idx');
  (2,4) 
 (4 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2), 'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | t        | f        | f           |            
- 2          | 33554433 | 1      | t        | f        | f           |            
- 3          | 33554434 | 1      | f        | f        | f           | {20 .. 20} 
- 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | t        | f        | f           | t     |            
+ 2          | 33554433 | 1      | t        | f        | f           | t     |            
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (4 rows)
 
 -- Sanity: Scan should return only the 2 blocks corresponding to the committed
@@ -1268,12 +1268,12 @@ CREATE
  (2,4) 
 (4 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_@amname@_i_idx', 2), 'brin_abort_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | t        | f        | f           |            
- 2          | 33554433 | 1      | t        | f        | f           |            
- 3          | 33554434 | 1      | f        | f        | f           | {20 .. 20} 
- 4          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | t        | f        | f           | t     |            
+ 2          | 33554433 | 1      | t        | f        | f           | t     |            
+ 3          | 33554434 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (4 rows)
 
 -- Sanity: Scan should return only the 2 blocks corresponding to the committed
@@ -1496,9 +1496,9 @@ SELECT brin_summarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
  (5,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_fullpage_@amname@_i_idx', 5), 'brin_abort_fullpage_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33559886 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33559886 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (1 row)
 
 RESET enable_seqscan;

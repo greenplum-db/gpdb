@@ -56,10 +56,10 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FR
  (2,2) 
 (2 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended_heap_i_idx', 2), 'brin_range_extended_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value    
-------------+--------+--------+----------+----------+-------------+----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 5      | 1      | t        | f        | t           |          
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+--------+--------+----------+----------+-------------+-------+----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 5      | 1      | t        | f        | t           | t     |          
 (2 rows)
 
 -- Extend the last partial range by 1 block.
@@ -97,10 +97,10 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_se
  (2,2) 
 (2 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended_heap_i_idx', 2), 'brin_range_extended_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value     
-------------+--------+--------+----------+----------+-------------+-----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1}  
- 2          | 5      | 1      | f        | f        | f           | {1 .. 20} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value     
+------------+--------+--------+----------+----------+-------------+-------+-----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1}  
+ 2          | 5      | 1      | f        | f        | f           | f     | {1 .. 20} 
 (2 rows)
 
 
@@ -136,9 +136,9 @@ ABORT
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value    
-------------+--------+--------+----------+----------+-------------+----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+--------+--------+----------+----------+-------------+-------+----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1} 
 (1 row)
 
 -- Summarize over the aborted rows.
@@ -166,11 +166,11 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
  (2,3) 
 (3 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value    
-------------+--------+--------+----------+----------+-------------+----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 1      | 1      | t        | f        | f           |          
- 3          | 2      | 1      | t        | f        | f           |          
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+--------+--------+----------+----------+-------------+-------+----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 1      | 1      | t        | f        | f           | t     |          
+ 3          | 2      | 1      | t        | f        | f           | t     |          
 (3 rows)
 
 -- Sanity: Scan should only return the 1st block and ignore the blocks for which
@@ -229,12 +229,12 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
  (2,4) 
 (4 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value      
-------------+--------+--------+----------+----------+-------------+------------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 1      | 1      | t        | f        | f           |            
- 3          | 2      | 1      | f        | f        | f           | {20 .. 20} 
- 4          | 3      | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+--------+--------+----------+----------+-------------+-------+------------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 1      | 1      | t        | f        | f           | t     |            
+ 3          | 2      | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 4          | 3      | 1      | f        | f        | f           | f     | {20 .. 20} 
 (4 rows)
 
 -- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
@@ -284,12 +284,12 @@ CREATE
  (2,4) 
 (4 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value      
-------------+--------+--------+----------+----------+-------------+------------
- 1          | 0      | 1      | t        | f        | f           |            
- 2          | 1      | 1      | t        | f        | f           |            
- 3          | 2      | 1      | f        | f        | f           | {20 .. 20} 
- 4          | 3      | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+--------+--------+----------+----------+-------------+-------+------------
+ 1          | 0      | 1      | t        | f        | f           | t     |            
+ 2          | 1      | 1      | t        | f        | f           | t     |            
+ 3          | 2      | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 4          | 3      | 1      | f        | f        | f           | f     | {20 .. 20} 
 (4 rows)
 
 -- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
