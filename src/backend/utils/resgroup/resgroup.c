@@ -3297,7 +3297,7 @@ HandleMoveResourceGroup(void)
 		 * transaction.
 		 */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 
 		pgstat_report_resgroup(self->groupId);
 	}
@@ -3339,7 +3339,7 @@ HandleMoveResourceGroup(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 	}
 
 	/*
