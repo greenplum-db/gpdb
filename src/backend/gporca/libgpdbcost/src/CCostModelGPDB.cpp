@@ -1578,6 +1578,10 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupCostUnit)
 			->Get();
+	const CDouble dIndexOnlyScanTupCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexOnlyScanTupCostUnit)
+			->Get();
 	const CDouble dIndexScanTupRandomFactor =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupRandomFactor)
@@ -1619,13 +1623,14 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 
 	// index scan cost contains two parts: index-column lookup and output tuple cost.
 	// 1. index-column lookup: correlated with index lookup rows, the number of index columns used in lookup,
-	// table width and a randomIOFactor.
+	// table width and a randomIOFactor. also accounts for included columns which adds to the payload of index leaf
+	// pages that leads to bigger a btree which subsequently leads to more random IO during index lookup.
 	// 2. output tuple cost: this is handled by the Filter on top of IndexScan, if no Filter exists, we add output cost
 	// when we sum-up children cost
 
 	CDouble dCostPerIndexRow = ulIndexKeys * dIndexFilterCostUnit +
 							   dTableWidth * dIndexScanTupCostUnit +
-							   ulIncludedColWidth * dIndexScanTupCostUnit;
+							   ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
 	return CCost(pci->NumRebinds() *
 				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor));
 }
@@ -1654,6 +1659,10 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	const CDouble dIndexScanTupCostUnit =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupCostUnit)
+			->Get();
+	const CDouble dIndexOnlyScanTupCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexOnlyScanTupCostUnit)
 			->Get();
 	const CDouble dIndexScanTupRandomFactor =
 		pcmgpdb->GetCostModelParams()
@@ -1706,7 +1715,7 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 		// partial visibile read from table
 		dTableWidth * dIndexScanTupCostUnit * dPartialVisFrac +
 		// always read from index (partial and full visible)
-		ulIncludedColWidth * dIndexScanTupCostUnit;
+		ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
 
 	return CCost(pci->NumRebinds() *
 				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor));
