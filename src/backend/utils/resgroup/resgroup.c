@@ -2909,6 +2909,7 @@ sessionResetSlot(ResGroupSlotData *slot)
 	{
 		LWLockAcquire(SessionStateLock, LW_EXCLUSIVE);
 
+		/* If the slot is ours, set resGroupSlot to NULL. */
 		if (MySessionState->resGroupSlot == slot)
 			MySessionState->resGroupSlot = NULL;
 

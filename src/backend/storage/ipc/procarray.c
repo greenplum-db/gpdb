@@ -5277,6 +5277,10 @@ ResGroupMoveCheckTargetReady(int sessionId, bool *clean, bool *result)
 		backendId = proc->backendId;
 
 		SpinLockAcquire(&proc->movetoMutex);
+		/* If proc->movetoCallerPid not equals to MyProc->pid, the target
+		 * process could is handling signal from another caller.After we
+		 * get the movetoMutex check it again.
+		 */
 		if (proc->movetoCallerPid == MyProc->pid)
 		{
 			/*
