@@ -468,7 +468,6 @@ CREATE TABLE aoco_concurrent_inserts(a int, b int, c int) USING ao_column;
 INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;
 1: BEGIN;
 1: INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;
-1: END;
 2&: ALTER TABLE aoco_concurrent_inserts ALTER COLUMN b TYPE text;
 1: END;
 2<:

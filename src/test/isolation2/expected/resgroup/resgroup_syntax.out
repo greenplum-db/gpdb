@@ -378,9 +378,9 @@ DROP RESOURCE GROUP rg2_test_group;
 ERROR:  resource group "rg2_test_group" does not exist
 
 -- positive: min_cost should be in [0,INT32_MAX]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=0);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=0);
 CREATE
-CREATE RESOURCE GROUP rg1_test_group WITH (cpu_hard_quota_limit=10, min_cost=2147483647);
+CREATE RESOURCE GROUP rg1_test_group WITH (cpu_max_percent=10, min_cost=2147483647);
 CREATE
 ALTER RESOURCE GROUP rg_test_group SET min_cost 2147483647;
 ALTER
@@ -392,11 +392,11 @@ DROP RESOURCE GROUP rg1_test_group;
 DROP
 
 -- negative: min_cost should be in [0,INT32_MAX]
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=-1);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=-1);
 ERROR:  The min_cost value can't be less than 0.
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=2147483648);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=2147483648);
 ERROR:  capability min_cost is out of range
-CREATE RESOURCE GROUP rg_test_group WITH (cpu_hard_quota_limit=10, min_cost=0);
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=0);
 CREATE
 ALTER RESOURCE GROUP rg_test_group SET min_cost -1;
 ERROR:  The min_cost value can't be less than 0.
@@ -519,3 +519,32 @@ SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
 DROP
+
+-- test set cpu_max_percent to high value when gp_resource_group_cpu_limit is low
+-- start_ignore
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.5;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -ari;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+0: CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
+CREATE
+0: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 100;
+ALTER
+0: DROP RESOURCE GROUP rg_test_group;
+DROP
+-- start_ignore
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 1;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -ari;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+
