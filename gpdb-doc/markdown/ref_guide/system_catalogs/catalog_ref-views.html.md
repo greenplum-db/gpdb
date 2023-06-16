@@ -30,6 +30,12 @@ Greenplum Database provides the following system views:
 -   [gp_stat_database_conflicts](#gp_stat_database_conflicts)
 -   [gp_stat_gssapi](#gp_stat_gssapi)
 -   [gp_stat_operations](#gp_stat_operations)
+-   [gp_stat_progress_analyze](#gp_stat_progress_analyze)
+-   [gp_stat_progress_basebackup](#gp_stat_progress_basebackup)
+-   [gp_stat_progress_cluster](#gp_stat_progress_cluster)
+-   [gp_stat_progress_copy](#gp_stat_progress_copy)
+-   [gp_stat_progress_create_index](#gp_stat_progress_create_index)
+-   [gp_stat_progress_vacuum](#gp_stat_progress_vacuum)
 -   [gp_stat_replication](#gp_stat_replication)
 -   [gp_stat_resqueues](#gp_stat_resqueues)
 -   [gp_stat_slru](#gp_stat_slru)
@@ -88,6 +94,12 @@ For more information on summary views, see [Summary Views](#summary_views), belo
 - gp_stat_archiver_summary
 - gp_stat_bgwriter_summary
 - gp_stat_database_summary
+- gp_stat_progress_analyze_summary
+- gp_stat_progress_basebackup_summary
+- gp_stat_progress_cluster_summary
+- gp_stat_progress_copy_summary
+- gp_stat_progress_create_index_summary
+- gp_stat_progress_vacuum_summary
 - gp_stat_slru_summary
 - gp_stat_sys_indexes_summary
 - gp_stat_user_functions_summary
@@ -268,7 +280,7 @@ The `gp_toolkit.gp_resgroup_config` view allows administrators to see the curren
 |`groupid`|oid|pg\_resgroup.oid|The ID of the resource group.|
 |`groupname`|name|pg\_resgroup.rsgname|The name of the resource group.|
 |`concurrency`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 1|The concurrency \(`CONCURRENCY`\) value specified for the resource group.|
-|`cpu_hard_quota_limit`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 2|The CPU limit \(`cpu_hard_quota_limit`\) value specified for the resource group, or -1.|
+|`cpu_max_percent`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 2|The CPU limit \(`cpu_max_percent`\) value specified for the resource group, or -1.|
 |`memory_limit`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 3|The memory limit \(`MEMORY_LIMIT`\) value specified for the resource group.|
 |`memory_shared_quota`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 4|The shared memory quota \(`MEMORY_SHARED_QUOTA`\) value specified for the resource group.|
 |`memory_spill_ratio`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 5|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|
@@ -277,42 +289,32 @@ The `gp_toolkit.gp_resgroup_config` view allows administrators to see the curren
 
 ## <a id="gp_resgroup_status"></a>gp_resgroup_status
 
-The `gp_toolkit.gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.
+The `gp_resgroup_status` view allows administrators to see status and activity for a resource group. It shows how many queries are waiting to run and how many queries are currently active in the system for each resource group. The view also displays current memory and CPU usage for the resource group.
 
-> **Note** The `gp_resgroup_status` view is valid only when resource group-based resource management is active.
+> **Note** Resource groups use the Linux control groups \(cgroups\) configured on the host systems. The cgroups are used to manage host system resources. When resource groups use cgroups that are as part of a nested set of cgroups, resource group limits are relative to the parent cgroup allotment. For information about nested cgroups and Greenplum Database resource group limits, see [Using Resource Groups](../admin_guide/workload_mgmt_resgroups.html#topic8339intro).
+
+This view is accessible to all users.
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`rsgname`|name|pg\_resgroup.rsgname|The name of the resource group.|
-|`groupid`|oid|pg\_resgroup.oid|The ID of the resource group.|
-|`num_running`|integer| |The number of transactions currently running in the resource group.|
-|`num_queueing`|integer| |The number of currently queued transactions for the resource group.|
-|`num_queued`|integer| |The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the `num_queueing`.|
-|`num_executed`|integer| |The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the `num_running`.|
-|`total_queue_duration`|interval| |The total time any transaction was queued since the Greenplum Database cluster was last started.|
-|`cpu_usage`|json| |A set of key-value pairs. For each segment instance \(the key\), the value is the real-time, per-segment instance CPU core usage by a resource group. The value is the sum of the percentages \(as a decimal value\) of CPU cores that are used by the resource group for the segment instance.|
-|`memory_usage`|json| |The real-time memory usage of the resource group on each Greenplum Database segment's host.|
+|rsgname|name| pg_resgroup.rsgname|The name of the resource group.|
+|groupid|oid|pg_resgroup.oid|The ID of the resource group.|
+|num\_running|integer| |The number of transactions currently running in the resource group.|
+|num\_queueing|integer| |The number of currently queued transactions for the resource group.|
+|num\_queued|integer| |The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
+|num\_executed|integer| |The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
+|total\_queue\_duration|interval| |The total time any transaction was queued since the Greenplum Database cluster was last started.|
 
-The `cpu_usage` field is a JSON-formatted, key:value string that identifies, for each resource group, the per-segment instance CPU core usage. The key is the segment id. The value is the sum of the percentages \(as a decimal value\) of the CPU cores used by the segment instance's resource group on the segment host; the maximum value is 1.00. The total CPU usage of all segment instances running on a host should not exceed the `gp_resource_group_cpu_limit`. Example `cpu_usage` column output:
+Sample output for the `gp_resgroup_status` view:
 
 ```
-
-{"-1":0.01, "0":0.31, "1":0.31}
-```
-
-In the example, segment `0` and segment `1` are running on the same host; their CPU usage is the same.
-
-The `memory_usage` field is also a JSON-formatted, key:value string. The string contents differ depending upon the type of resource group. For each resource group that you assign to a role \(default memory auditor `vmtracker`\), this string identifies the used and available fixed and shared memory quota allocations on each segment. The key is segment id. The values are memory values displayed in MB units. The following example shows `memory_usage` column output for a single segment for a resource group that you assign to a role:
-
-```
-
-"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "shared_used":0, "shared_available":16}
-```
-
-For each resource group that you assign to an external component, the `memory_usage` JSON-formatted string identifies the memory used and the memory limit on each segment. The following example shows `memory_usage` column output for an external component resource group for a single segment:
-
-```
-"1":{"used":11, "limit_granted":15}
+select * from gp_toolkit.gp_resgroup_status;
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration |
+---------------+---------+-------------+--------------+------------+-------------------------------------
+ default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  |
+ admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  |
+ system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  |
+(3 rows)
 ```
 
 ## <a id="gp_resgroup_status_per_host"></a>gp_resgroup_status_per_host
@@ -325,16 +327,23 @@ Memory amounts are specified in MBs.
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`rsgname`|name|pg\_resgroup.rsgname|The name of the resource group.|
-|`groupid`|oid|pg\_resgroup.oid|The ID of the resource group.|
-|`hostname`|text|gp\_segment\_configuration.hostname|The hostname of the segment host.|
-|`cpu`|numeric| |The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages \(as a decimal value\) of the CPU cores that are used by the resource group on the host.|
-|`memory_used`|integer| |The real-time memory usage of the resource group on the host. This total includes resource group fixed and shared memory. It also includes global shared memory used by the resource group.|
-|`memory_available`|integer| |The unused fixed and shared memory for the resource group that is available on the host. This total does not include available resource group global shared memory.|
-|`memory_quota_used`|integer| |The real-time fixed memory usage for the resource group on the host.|
-|`memory_quota_available`|integer| |The fixed memory available to the resource group on the host.|
-|`memory_shared_used`|integer| |The group shared memory used by the resource group on the host. If any global shared memory is used by the resource group, this amount is included in the total as well.|
-|`memory_shared_available`|integer| |The amount of group shared memory available to the resource group on the host. Resource group global shared memory is not included in this total.|
+|rsgname|name| pg_resgroup.rsgname|The name of the resource group.|
+|groupid|oid|pg_resgroup.oid|The ID of the resource group.|
+|`hostname`|text|gp_segment_configuration.hostname|The hostname of the segment host.|
+|`cpu_usage`|float| |The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages of the CPU cores that are used by the resource group on the host.|
+|`memory_usage`|float| |The real-time memory usage of the resource group on each Greenplum Database segment's host, in MB.|
+
+Sample output for the `gp_resgroup_status_per_host` view:
+
+```
+select * from gp_toolkit.gp_resgroup_status_per_host;
+ rsgname       | groupid | hostname | cpu_usage | memory_usage
+---------------+---------+----------+-----------+--------------
+ admin_group   | 6438    | zero     | 0.07      | 91.92
+ default_group | 6437    | zero     | 0.00      | 0.00
+ system_group  | 6441    | zero     | 0.02      | 53.04
+(3 rows)
+```
 
 ## <a id="gp_resgroup_status_per_segment"></a>gp_resgroup_status_per_segment
 
@@ -383,7 +392,7 @@ The `gp_segment_endpoints` view lists the endpoints created in the QE for all ac
 
 Endpoints exist only for the duration of the transaction that defines the parallel retrieve cursor, or until the cursor is closed.
 
-|name|type|references|description|
+|column|type|references|description|
 |----|----|----------|-----------|
 |auth\_token|text| |The authentication token for the retrieve session.|
 |databaseid|oid| |The identifier of the database in which the parallel retrieve cursor was created.|
@@ -402,7 +411,7 @@ The `gp_session_endpoints` view lists the endpoints created for all active paral
 
 Endpoints exist only for the duration of the transaction that defines the parallel retrieve cursor, or until the cursor is closed.
 
-|name|type|references|description|
+|column|type|references|description|
 |----|----|----------|-----------|
 |gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
 |auth\_token|text| |The authentication token for a retrieve session.|
@@ -660,6 +669,136 @@ The view `gp_stat_operations` shows details about the last operation performed o
 |`actionname`|name| |The action that was taken on the object.|
 |`subtype`|text| |The type of object operated on or the subclass of operation performed.|
 |`statime`|timestamptz| |The timestamp of the operation. This is the same timestamp that is written to the Greenplum Database server log files in case you need to look up more detailed information about the operation in the logs.|
+
+### <a id="gp_stat_progress_analyze"></a>gp_stat_progress_analyze
+
+The `gp_stat_progress_analyze` view is a cluster-wide view that displays the [pg_stat_progress_analyze](https://www.postgresql.org/docs/15/progress-reporting.html#ANALYZE-PROGRESS-REPORTING) information from every primary segment for all currently-running `ANALYZE` operations.
+
+The `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_analyze`.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_analyze_summary` view.) |
+| `pid` | integer | The process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_analyze_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifier of the table being analyzed. |
+| `phase` | text | Current processing phase. Refer to [ANALYZE Progress Reporting](../../admin_guide/managing/progress_reporting.html#analyze_progress) for detailed information about the phases. |
+| `sample_blks_total` | bigint | Total number of heap blocks that will be sampled. |
+| `sample_blks_scanned` | bigint | Number of heap blocks scanned. |
+| `ext_stats_total` | bigint | Number of extended statistics. |
+| `ext_stats_computed` | bigint | Number of extended statistics computed. This counter only advances when the phase is computing extended statistics. |
+| `child_tables_total` | bigint | Number of child tables. |
+| `child_tables_done` | bigint | Number of child tables scanned. This counter only advances when the phase is acquiring inherited sample rows. |
+| `current_child_table_relid` | oid | The object identifier of the child table currently being scanned. This field is only valid when the phase is acquiring inherited sample rows. (This column is not present in the for `gp_stat_progress_analyze_summary` view.)|
+
+### <a id="gp_stat_progress_basebackup"></a>gp_stat_progress_basebackup
+
+The `gp_stat_progress_basebackup` view is a cluster-wide view that displays the [pg_stat_progress_basebackup](https://www.postgresql.org/docs/15/progress-reporting.html#BASEBACKUP-PROGRESS-REPORTING) information from every primary segment for all currently-running base backup operations (`gprecoverseg`).
+
+The `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_basebackup`.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_basebackup_summary` view.)|
+| `pid` | integer | The process identifier of a WAL sender process, or the coordinator process identifier if the `gp_stat_progress_basebackup_summary` view. |
+| `phase` | text | Current processing phase. Refer to [Base Backup Progress Reporting](../../admin_guide/managing/progress_reporting.html#basebackup_progress) for detailed information about the phases. |
+| `backup_total` | bigint | Total amount of data that will be streamed. This is estimated and reported as of the beginning of streaming database files phase. Note that this is only an approximation since the database may change during streaming database files phase and WAL log may be included in the backup later. This is always the same value as backup_streamed once the amount of data streamed exceeds the estimated total size. NULL if the estimation is disabled in `pg_basebackup`. |
+| `backup_streamed` | bigint | Amount of data streamed. This counter only advances when the phase is streaming database files or transferring wal files. |
+| `tablespaces_total` | bigint | Total number of tablespaces that will be streamed. |
+| `tablespaces_streamed` | bigint | Number of tablespaces streamed. This counter only advances when the phase is streaming database files. |
+
+### <a id="gp_stat_progress_cluster"></a>gp_stat_progress_cluster
+
+The `gp_stat_progress_cluster` view is a cluster-wide view that displays the [pg_stat_progress_cluster](https://www.postgresql.org/docs/15/progress-reporting.html#CLUSTER-PROGRESS-REPORTING) information from every primary segment for all currently-running `CLUSTER` and `VACUUM FULL` (on a heap table) operations.
+
+The `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_cluster`.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_cluster_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_cluster_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | `oid` | The object identifier of the table being clustered. |
+| `command` | text | The name of the command that is running. Either `CLUSTER` or `VACUUM FULL`. |
+| `phase` | text | Current processing phase. Refer to [CLUSTER and VACUUM FULL Progress Reporting](../../admin_guide/managing/progress_reporting.html#cluster_progress) for detailed information about the phases. |
+| `cluster_index_relid` | oid | If the table is being scanned using an index, this is the object identifier of the index being used; otherwise, it is zero. This field is not applicable to AO/CO tables. |
+| `heap_tuples_scanned` | bigint | For heap tables, `heap_tuples_scanned` records the number of tuples scanned, including both live and dead tuples. For AO tables, `heap_tuples_scanned` records the number of live tuples scanned, excluding the dead tuples. This counter only advances when the phase is `seq scanning append-optimized`, `seq scanning heap`, `index scanning heap`, or `writing new heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
+| `heap_tuples_written` | bigint | Number of tuples written. This counter only advances when the phase is `seq scanning heap`, `index scanning heap`, `writing new append-optimized`, or `writing new heap`. |
+| `heap_blks_total` | bigint | Total number of heap blocks in the table. This number is reported as of the beginning of `seq scanning heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
+| `heap_blks_scanned` | bigint | Number of heap blocks scanned. This counter only advances when the phase is `seq scanning heap`. For AO/CO tables, Greenplum converts byte size into equivalent heap blocks in size. |
+| `index_rebuild_count` | bigint | Number of indexes rebuilt. This counter only advances when the phase is `rebuilding index`, and is not applicable to AO/CO tables. |
+
+### <a id="gp_stat_progress_copy"></a>gp_stat_progress_copy
+
+The `gp_stat_progress_copy` view is a cluster-wide view that displays the [pg_stat_progress_copy](https://www.postgresql.org/docs/15/progress-reporting.html#COPY-PROGRESS-REPORTING) information from every primary segment for all currently-running `COPY` operations.
+
+The `gp_stat_progress_copy_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_copy`.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_copy_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_copy_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifier of the table on which the `COPY` command is executed. It is set to `0` if copying from a `SELECT` query. |
+| `command` | text | The command that is running: `COPY FROM`, `COPY TO`, `COPY FROM ON SEGMENT`, or `COPY TO ON SEGMENT`. |
+| `type` | text | The io type that the data is read from or written to: `FILE`, `PROGRAM`, `PIPE` (for `COPY FROM STDIN` and `COPY TO STDOUT`), or `CALLBACK` (used for example during the initial table synchronization in logical replication). |
+| `bytes_processed` | bigint | Number of bytes already processed by `COPY` command. |
+| `bytes_total` | bigint | Size of source file for `COPY FROM` command in bytes. It is set to `0` if not available. |
+| `tuples_processed` | bigint | Number of tuples already processed by `COPY` command. |
+| `tuples_excluded` | bigint | Number of tuples not processed because they were excluded by the `WHERE` clause of the `COPY` command. |
+
+### <a id="gp_stat_progress_create_index"></a>gp_stat_progress_create_index
+
+The `gp_stat_progress_create_index` view is a cluster-wide view that displays the [pg_stat_progress_create_index](https://www.postgresql.org/docs/15/progress-reporting.html#CREATE-INDEX-PROGRESS-REPORTING) information from every primary segment for all currently-running `CREATE INDEX` and `REINDEX` operations.
+
+The `gp_stat_progress_create_index_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_create_index`.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_create_index_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_create_index_summary` view. |
+| `datid` | oid | The object identifer of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifer of the table on which the index is being created. |
+| `index_relid` | oid | The object identifer of the index being created or reindexed. Because Greenplum Database does not support concurrent (re)indexing, this value is always `0`. |
+| `command` | text | The name of the command that is running: `CREATE INDEX` or `REINDEX`. |
+| `phase` | text | Current processing phase of index creation. Refer to [CREATE INDEX Progress Reporting](../../admin_guide/managing/progress_reporting.html#create_index_progress) for detailed information about the phases. |
+| `lockers_total` | bigint | Total number of lockers to wait for, when applicable. |
+| `lockers_done` | bigint | Number of lockers already waited for. |
+| `current_locker_pid` | bigint | The process identifier of the locker currently being waited for. |
+| `blocks_total` | bigint | Total number of blocks to be processed in the current phase. |
+| `blocks_done` | bigint | Number of blocks already processed in the current phase. |
+| `tuples_total` | bigint | Total number of tuples to be processed in the current phase. |
+| `tuples_done` | bigint | Number of tuples already processed in the current phase. |
+| `partitions_total` | bigint | When creating an index on a partitioned table, this column is set to the total number of partitions on which the index is to be created. This field is 0 during a `REINDEX`. |
+| `partitions_done` | bigint | When creating an index on a partitioned table, this column is set to the number of partitions on which the index has been completed. This field is 0 during a `REINDEX`. |
+
+### <a id="gp_stat_progress_vacuum"></a>gp_stat_progress_vacuum
+
+The `gp_stat_progress_vacuum` view is a cluster-wide view that displays the [pg_stat_progress_vacuum](https://www.postgresql.org/docs/15/progress-reporting.html#VACUUM-PROGRESS-REPORTING) information from every primary segment for all currently-running `VACUUM` and `vacuumdb` operations.
+
+The `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Database cluster the metrics reported by `gp_stat_progress_vacuum`.
+
+|Column|Type|Description|
+|------|----|-----------|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_vacuum_summary` view.)|
+| `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_vacuum_summary` view. |
+| `datid` | oid | The object identifier of the database to which this backend is connected. |
+| `datname` | name | Name of the database to which this backend is connected. |
+| `relid` | oid | The object identifier of the table being vacuumed. |
+| `phase` | text | Current processing phase of vacuum. Refer to [VACUUM Progress Reporting](../../admin_guide/managing/progress_reporting.html#vacuum_progress) for detailed information about the phases. |
+| `heap_blks_total` | bigint | *Heap tables*: Total number of heap blocks in the table. This number is reported as of the beginning of the scan; blocks added later will not be (and need not be) visited by this `VACUUM`.</br></br>*AO/CO tables*<sup>1</sup>: Collected at the beginning of the `append-optimized pre-cleanup` phase by adding up the on-disk file sizes of all segment files of the relation, and converting the size into the number of heap-equivalent blocks. The value should not change while `VACUUM` progresses. |
+| `heap_blks_scanned` | bigint | *Heap tables*: Number of heap blocks scanned. Because the visibility map is used to optimize scans, some blocks will be skipped without inspection; skipped blocks are included in this total, so that this number will eventually become equal to `heap_blks_total` when the vacuum is complete. This counter only advances when the phase is `scanning heap`. </br></br> *AO/CO tables*:<sup>1</sup> The counter only advances when the phase is `append-optimized compact`. For `ao_row` tables, updated every time Greenplum finishes scanning a segment file. For `ao_column` tables, updated every time Greenplum moves a tuple. `heap_blks_scanned` can be less than or equal to `heap_blks_total` at the end of the `VACUUM` operation because Greenplum does not need to scan blocks after the logical EOF of a segment file. |
+| `heap_blks_vacuumed` | bigint | *Heap tables*: Number of heap blocks vacuumed. Unless the table has no indexes, this counter only advances when the phase is `vacuuming heap`. Blocks that contain no dead tuples are skipped, so the counter may sometimes skip forward in large increments. </br></br> *AO/CO tables*<sup>1</sup>: The counter advances when Greenplum truncates a segment file, which may happen during both `append-optimized pre-cleanup` and `append-optimized post-cleanup` phases. Because Greenplum Database truncates physical blocks after the logical EOF in a segment file, `heap_blks_vacuumed` may be either smaller or larger than `heap_blks_scanned`. |
+| `index_vacuum_count` | bigint | *Heap tables*: Number of completed index vacuum cycles. </br></br> *AO/CO tables*: Collected when Greenplum recycles a dead segment file, which may happen both, any, or neither, during `append-optimized pre-cleanup` phase and `append-optimized post-cleanup phase`. |
+| `max_dead_tuples` | bigint | *Heap tables*: Number of dead tuples that we can store before needing to perform an index vacuum cycle, based on [maintenance_work_mem](../config_params/guc-list.html#maintenance_work_mem). </br></br> *AO/CO tables*: Collected at the beginning of the `append-optimized pre-cleanup` phase, this is the total number of tuples before the logical EOF of all segment files. The value should not change while `VACUUM` progresses. |
+| `num_dead_tuples` | bigint | *Heap tables*: Number of dead tuples collected since the last index vacuum cycle. </br></br> *AO/CO tables*: Collected during `append-optimized compact` phase. For `ao_row` tables, updated every time Greenplum discares a dead tuple. For `ao_column` tables, updated every time Greenplum moves a live tuple, and also when the number of dead tuples advances. |
+
+<sup>1</sup> In Greenplum Database, an AO/CO table vacuum behaves differently than a heap table vacuum. Because Greenplum stores the logical EOF for each segment file, it does not need to scan physical blocks after the logical EOF, and Greenplum can truncate them. Because of this, for AO/CO tables, `heap_blks_vacuumed` could be either smaller or larger than `heap_blks_scanned`. Neither `heap_blks_vacuumed` nor `heap_blks_scanned` can be larger than `heap_blks_total`. Similarly, `heap_blks_scanned` can be less than or equal to `heap_blks_total` at the end of `VACUUM` for AO/CO tables - there is no need to scan blocks after the logical EOF of a segment file.
+
 
 ## <a id="gp_stat_replication"></a>gp_stat_replication
 
@@ -1341,6 +1480,12 @@ The following is a list of summary views:
 - gp_stat_bgwriter_summary
 - gp_stat_database_summary
 - gp_stat_slru_summary
+- gp_stat_progress_analyze_summary
+- gp_stat_progress_basebackup_summary
+- gp_stat_progress_cluster_summary
+- gp_stat_progress_copy_summary
+- gp_stat_progress_create_index_summary
+- gp_stat_progress_vacuum_summary
 - gp_stat_sys_indexes_summary
 - gp_stat_user_functions_summary
 - gp_stat_user_indexes_summary

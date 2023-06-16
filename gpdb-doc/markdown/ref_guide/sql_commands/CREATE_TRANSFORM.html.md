@@ -47,12 +47,12 @@ Use [DROP TRANSFORM](DROP_TRANSFORM.html) to remove transforms.
 
 ## <a id="section6"></a>Examples 
 
-To create a transform for type `hstore` and language `plpythonu`, first set up the type and the language:
+To create a transform for type `hstore` and language `plpython3u`, first set up the type and the language:
 
 ``` sql
 CREATE EXTENSION IF NOT EXISTS hstore;
 
-CREATE EXTENSION plpythonu;
+CREATE EXTENSION plpython3u;
 ```
 
 Then create the necessary functions:
@@ -70,7 +70,7 @@ AS ...;
 And finally create the transform to connect them all together:
 
 ``` sql
-CREATE TRANSFORM FOR hstore LANGUAGE plpythonu (
+CREATE TRANSFORM FOR hstore LANGUAGE plpython3u (
     FROM SQL WITH FUNCTION hstore_to_plpython(internal),
     TO SQL WITH FUNCTION plpython_to_hstore(internal)
 );

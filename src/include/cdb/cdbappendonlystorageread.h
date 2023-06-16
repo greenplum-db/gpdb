@@ -207,6 +207,9 @@ extern bool AppendOnlyStorageRead_TryOpenFile(AppendOnlyStorageRead *storageRead
 								  char *filePathName, int version, int64 logicalEof);
 extern void AppendOnlyStorageRead_SetTemporaryRange(AppendOnlyStorageRead *storageRead,
 							   int64 beginFileOffset, int64 afterFileOffset);
+extern void AppendOnlyStorageRead_SetTemporaryStart(AppendOnlyStorageRead *storageRead,
+													int64 beginFileOffset,
+													int64 afterFileOffset);
 extern void AppendOnlyStorageRead_CloseFile(AppendOnlyStorageRead *storageRead);
 
 extern bool AppendOnlyStorageRead_GetBlockInfo(AppendOnlyStorageRead *storageRead,

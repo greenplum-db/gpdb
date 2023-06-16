@@ -458,24 +458,21 @@ resources:
     regexp: server/published/main/server-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
-{% if os_type == default_os_type %}
+{% if os_type == compile_platform %}
 - name: bin_gpdb_clients_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
+    {% if os_type == default_os_type %}
     regexp: clients/published/main/clients-rc-(.*)-el8_x86_64((rc-build-type-gcs)).tar.gz
-{% else %}
-- name: bin_gpdb_clients_rc
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
+    {% else %}
     regexp: clients/published/main/clients-rc-(.*)-el9_x86_64((rc-build-type-gcs)).tar.gz
+    {% endif %}
 {% endif %}
 
 {% endif %}
-{% if os_type == compile_platform %}
+{% if os_type == default_os_type %}
 - name: server_src_rc
   type: gcs
   source:
@@ -1691,7 +1688,7 @@ jobs:
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
 
-{% if ( ("Release" in test_sections and os_type == default_os_type or os_type == "rocky9") or directed_release) %}
+{% if ( ("Release" in test_sections and os_type == compile_platform ) or directed_release) %}
 - name: gate_release_candidate_start
   plan:
   - in_parallel:
@@ -1796,21 +1793,17 @@ jobs:
       - put: bin_gpdb_rc
         params:
           file: "release_candidates/server-rc-*el8*.tar.gz"
-      {% endif %}
-      {% if os_type == default_os_type %}
-      - put: bin_gpdb_clients_rc
-        params:
-          file: "release_candidates/clients-rc-*el8*.tar.gz"
-      {% else %}
-      - put: bin_gpdb_clients_rc
-        params:
-          file: "release_candidates/clients-rc-*el9*.tar.gz"
-      {% endif %}
-{% endif %}
-{% if os_type == compile_platform %}
       - put: server_src_rc
         params:
           file: "server_tar/*server-src-rc-*.tar.gz"
+      {% endif %}
+      - put: bin_gpdb_clients_rc
+        params:
+        {% if os_type == default_os_type %}
+          file: "release_candidates/clients-rc-*el8*.tar.gz"
+        {% else %}
+          file: "release_candidates/clients-rc-*el9*.tar.gz"
+        {% endif %}
 {% endif %}
 {% endif %}
 

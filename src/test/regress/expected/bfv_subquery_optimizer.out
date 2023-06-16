@@ -550,3 +550,13 @@ limit 15;
  2 |   102
 (15 rows)
 
+-- test case for Github Issue 15079
+create table if not exists issue_15079(c0 real, c1 boolean);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c0' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select * from (select bool_or(issue_15079.c1) from issue_15079 group by random()) as result;
+ bool_or 
+---------
+(0 rows)
+
+drop table issue_15079;

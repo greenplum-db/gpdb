@@ -1732,8 +1732,8 @@ CREATE VIEW gp_toolkit.gp_resgroup_config AS
     SELECT G.oid       AS groupid
          , G.rsgname   AS groupname
          , T1.value    AS concurrency
-         , T2.value    AS cpu_hard_quota_limit
-         , T3.value    AS cpu_soft_priority
+         , T2.value    AS cpu_max_percent
+         , T3.value    AS cpu_weight
          , T4.value    AS cpuset
          , T5.value    AS memory_limit
          , T6.value    AS min_cost
@@ -1758,7 +1758,7 @@ GRANT SELECT ON gp_toolkit.gp_resgroup_config TO public;
 --------------------------------------------------------------------------------
 
 CREATE VIEW gp_toolkit.gp_resgroup_status AS
-    SELECT r.rsgname, s.groupid, s.num_running, s.num_queueing,
+    SELECT s.groupid, r.rsgname as groupname, s.num_running, s.num_queueing,
            s.num_queued, s.num_executed, s.total_queue_duration
     FROM pg_resgroup_get_status(null) AS s,
          pg_resgroup AS r
@@ -1788,8 +1788,8 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
         WHERE s.groupid = r.oid
     )
     SELECT
-        es.rsgname
-      , es.groupid
+        es.groupid
+      , es.rsgname as groupname
       , c.hostname
       , round(avg((es.cpu_usage)::text::numeric), 2) AS cpu_usage
       , round(avg((es.memory_usage)::text::numeric), 2) AS memory_usage

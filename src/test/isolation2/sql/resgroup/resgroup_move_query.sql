@@ -26,8 +26,8 @@ DROP RESOURCE GROUP rg_move_query;
 DROP RESOURCE GROUP rg_move_query_small;
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_hard_quota_limit=20);
-CREATE RESOURCE GROUP rg_move_query_small WITH (concurrency=1, cpu_hard_quota_limit=10);
+CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_max_percent=20);
+CREATE RESOURCE GROUP rg_move_query_small WITH (concurrency=1, cpu_max_percent=10);
 CREATE ROLE role_move_query RESOURCE GROUP rg_move_query;
 CREATE ROLE role_move_query_small RESOURCE GROUP rg_move_query_small;
 

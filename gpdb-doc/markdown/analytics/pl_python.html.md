@@ -18,9 +18,7 @@ PL/Python is a loadable procedural language. With the Greenplum Database PL/Pyth
 
 You can run PL/Python code blocks as anonymous code blocks. See the [DO](../ref_guide/sql_commands/DO.html) command in the *Greenplum Database Reference Guide*.
 
-The Greenplum Database PL/Python extensions are installed by default with Greenplum Database. Two extensions are provided:
-
-- `plpython3u`, introduced with Greenplum 6.22, supports developing functions using Python 3.9. Greenplum Database installs a compatible Python at `$GPHOME/ext/python3.9`.
+The Greenplum Database PL/Python extension is installed by default with Greenplum Database. `plpython3u`, introduced with Greenplum 6.22, supports developing functions using Python 3.9. Greenplum Database installs a compatible Python at `$GPHOME/ext/python3.9`.
 
 ### <a id="topic3"></a>Greenplum Database PL/Python Limitations 
 
@@ -158,7 +156,7 @@ CREATE FUNCTION composite_type_as_list()
   RETURNS type_record[]
 AS $$              
   return [[('first', 1), ('second', 1)], [('first', 2), ('second', 2)], [('first', 3), ('second', 3)]];
-$$ LANGUAGE plpythonu;
+$$ LANGUAGE plpython3u;
 
 SELECT * FROM composite_type_as_list();
                                composite_type_as_list                           
@@ -356,7 +354,7 @@ As part of the Greenplum Database installation, the `gpadmin` user environment i
 which python
 ```
 
-The command returns the location of the Python installation. All Greenplum installations include Python 2.7 installed as `$GPHOME/ext/python` and Python 3.9 installed as `$GPHOME/ext/python3.9`:
+The command returns the location of the Python installation. All Greenplum installations include Python 3.9 installed as `$GPHOME/ext/python3.9`:
 
 ```
 which python3.9
@@ -368,7 +366,7 @@ When running shell commands on remote hosts with `gpssh`, specify the `-s` optio
 gpssh -s -f gpdb_hosts which python
 ```
 
-To display the list of currently installed Python 2.7 modules, run this command.
+To display the list of currently installed Python modules, run this command.
 
 ```
 python -c "help('modules')"
@@ -448,16 +446,7 @@ You can use `gpssh` to run the command on the Greenplum Database hosts.
 
 For information about these and other Python packages, see [References](#topic12).
 
-### <a id="pip39"></a>Installing Python Packages for Python 3.9
-
-By default, `greenplum_path.sh` changes the `PYTHONPATH` and `PYTHONHOME` environment variables for use with the installed Python 2.7 environment. In order to install modules using `pip` with Python 3.9, you must first `unset` those parameters. For example to install `numpy` and `scipy` for Python 3.9:
-
-```
-gpssh -s -f gpdb_hosts
-=> unset PYTHONHOME
-=> unset PYTHONPATH
-=> $GPHOME/ext/python3.9 -m pip install numpy scipy
-```
+### <a id="pip39"></a>Installing Python Packages to a Non-Standard Location
 
 You can optionally install Python 3.9 modules to a non-standard location by using the `--prefix` option with `pip`. For example:
 
@@ -472,13 +461,10 @@ If you use this option, keep in mind that the `PYTHONPATH` environment variable 
 
 ```
 $ psql -d testdb
-testdb=# load 'plpython3';
 testdb=# SET plpython3.python_path='/home/gpadmin/my_python';
 ```
 
-Greenplum uses the value of `plpython3.python_path` to set `PLPYTHONPATH` in the environment used to create or call `plpython3u` functions.
-
-> **Note** `plpython3.python_path` is provided as part of the `plpython3u` extension, so you _must_ load the extension (with `load 'plpython3';`) before you can set this configuration parameter in a session.
+Greenplum uses the value of `plpython3.python_path` to set `PYTHONPATH` in the environment used to create or call `plpython3u` functions.
 
 Ensure that you configure `plpython3.python_path` _before_ you create or call `plpython3` functions in a session. If you set or change the parameter after `plpython3u` is initialized you receive the error:
 

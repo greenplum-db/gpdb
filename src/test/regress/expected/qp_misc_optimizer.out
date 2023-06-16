@@ -20502,8 +20502,6 @@ WITH cte_coll AS
 SELECT *
 FROM   cte_coll
 WHERE  tkn_arr <> '{nullout}' ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
  tkn_arr 
 ---------
 (0 rows)

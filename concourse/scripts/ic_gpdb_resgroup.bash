@@ -63,7 +63,7 @@ run_resgroup_test() {
         export CPPFLAGS="-I\${GPHOME}/include"
 
         cd /home/gpadmin/gpdb_src
-        PYTHON=python3 ./configure --prefix=/usr/local/greenplum-db-devel \
+        PYTHON=python3.9 ./configure --prefix=/usr/local/greenplum-db-devel \
             --without-zlib --without-rt --without-libcurl \
             --without-libedit-preferred --without-docdir --without-readline \
             --disable-gpcloud --disable-gpfdist --disable-orca \

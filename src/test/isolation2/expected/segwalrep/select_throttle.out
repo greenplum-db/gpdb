@@ -26,8 +26,8 @@ INSERT INTO select_no_throttle SELECT generate_series (1, 10);
 INSERT 10
 CREATE TABLE select_throttle(a int) DISTRIBUTED BY (a);
 CREATE
-INSERT INTO select_throttle SELECT generate_series (1, 100000);
-INSERT 100000
+INSERT INTO select_throttle SELECT generate_series (1, 900000);
+INSERT 900000
 
 -- Enable tuple hints so that buffer will be marked dirty upon a hint bit change
 -- (so that we don't have to wait for the tuple to age. See logic in markDirty)
@@ -82,9 +82,9 @@ SELECT gp_inject_fault_infinite('wal_sender_loop', 'reset', dbid) FROM gp_segmen
 -- after this, system continue to proceed
 
 1U<:  <... completed>
- count 
--------
- 33327 
+ count  
+--------
+ 299393 
 (1 row)
 
 SELECT wait_until_all_segments_synchronized();
@@ -135,8 +135,8 @@ SELECT wait_until_all_segments_synchronized();
 SET
 Truncate select_throttle;
 TRUNCATE
-INSERT INTO select_throttle SELECT generate_series (1, 100000);
-INSERT 100000
+INSERT INTO select_throttle SELECT generate_series (1, 900000);
+INSERT 900000
 -- flush the data to disk
 checkpoint;
 CHECKPOINT
@@ -193,9 +193,9 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 
 -- after mirror is stopped, the SELECT query should proceed without waiting for syncrep
 1U<:  <... completed>
- count 
--------
- 33327 
+ count  
+--------
+ 299393 
 (1 row)
 
 -- Cleanup

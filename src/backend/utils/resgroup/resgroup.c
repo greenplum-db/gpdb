@@ -375,43 +375,6 @@ error_out:
 			 errmsg("not enough shared memory for resource group control")));
 }
 
-
-/*
- * Initialize the global CGroupOpsRoutine struct of resource groups.
- */
-void
-CGroupOpsAndInfoInit(void)
-{
-	bool        found;
-	int			size;
-
-	size = sizeof(CGroupOpsRoutine);
-	cgroupOpsRoutine = (CGroupOpsRoutine *)
-		ShmemInitStruct("global cgroup operations routine",
-									   size, &found);
-	if (found)
-		return;
-	if (cgroupOpsRoutine == NULL)
-		goto error_out;
-
-	size = sizeof(CGroupSystemInfo);
-	cgroupSystemInfo = (CGroupSystemInfo *)
-		ShmemInitStruct("global cgroup system info",
-									   size, &found);
-
-	if (found)
-		return;
-	if (cgroupSystemInfo == NULL)
-		goto error_out;
-
-	return;
-
-error_out:
-	ereport(FATAL,
-			(errcode(ERRCODE_OUT_OF_MEMORY),
-					errmsg("not enough shared memory for cgroup operations routine")));
-}
-
 /*
  * Allocate a resource group entry from a hash table
  */
@@ -532,8 +495,8 @@ InitResGroups(void)
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
-			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuHardQuotaLimit);
-			cgroupOpsRoutine->setcpupriority(groupId, caps.cpuSoftPriority);
+			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuMaxPercent);
+			cgroupOpsRoutine->setcpuweight(groupId, caps.cpuWeight);
 		}
 		else
 		{
@@ -556,7 +519,7 @@ InitResGroups(void)
 								 "please refer to the Greenplum Documentations for details")));
 			}
 
-			Assert(caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+			Assert(caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 
 			if (bms_is_empty(bmsMissing))
 			{
@@ -807,7 +770,7 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
 			cgroupOpsRoutine->setcpulimit(callbackCtx->groupid,
-										callbackCtx->caps.cpuHardQuotaLimit);
+										callbackCtx->caps.cpuMaxPercent);
 
 			/* We should set cpuset to the default value */
 			char *cpuset = (char *) palloc(MaxCpuSetLength);
@@ -816,8 +779,8 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU_SHARES)
 		{
-			cgroupOpsRoutine->setcpupriority(callbackCtx->groupid,
-										  callbackCtx->caps.cpuSoftPriority);
+			cgroupOpsRoutine->setcpuweight(callbackCtx->groupid,
+										   callbackCtx->caps.cpuWeight);
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
@@ -1122,13 +1085,12 @@ slotpoolFreeSlot(ResGroupSlotData *slot)
 }
 
 /*
- * Get a slot with memory quota granted.
+ * Get a slot.
  *
- * A slot can be got with this function if there is enough memory quota
- * available and the concurrency limit is not reached.
+ * A slot can be got with this function the concurrency limit is not reached.
  *
- * On success the memory quota is marked as granted, nRunning is increased
- * and the slot's groupId is also set accordingly, the slot id is returned.
+ * On success the nRunning is increased and the slot's groupId is also set
+ * accordingly, the slot id is returned.
  *
  * On failure nothing is changed and InvalidSlotId is returned.
  */
@@ -1162,8 +1124,7 @@ groupGetSlot(ResGroupData *group)
 /*
  * Put back the slot assigned to self.
  *
- * This will release a slot, its memory quota will be freed and
- * nRunning will be decreased.
+ * This will release a slot, its nRunning will be decreased.
  */
 static void
 groupPutSlot(ResGroupData *group, ResGroupSlotData *slot)
@@ -1351,7 +1312,7 @@ groupAcquireSlot(ResGroupInfo *pGroupInfo, bool isMoveQuery)
  *   temporarily released;
  *
  * When grant is true we'll give up once no slot can be get,
- * e.g. due to lack of free slot or enough memory quota.
+ * e.g. due to lack of free slot.
  *
  * When grant is false all the pending procs will be woken up.
  */
@@ -1443,9 +1404,9 @@ SerializeResGroupInfo(StringInfo str)
 
 	itmp = htonl(caps->concurrency);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
-	itmp = htonl(caps->cpuHardQuotaLimit);
+	itmp = htonl(caps->cpuMaxPercent);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
-	itmp = htonl(caps->cpuSoftPriority);
+	itmp = htonl(caps->cpuWeight);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memory_limit);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
@@ -1484,9 +1445,9 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->concurrency = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
-	capsOut->cpuHardQuotaLimit = ntohl(itmp);
+	capsOut->cpuMaxPercent = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
-	capsOut->cpuSoftPriority = ntohl(itmp);
+	capsOut->cpuWeight = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->memory_limit = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
@@ -1584,7 +1545,7 @@ AssignResGroupOnCoordinator(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
-									   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   bypassedGroup->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 
 		return;
 	}
@@ -1611,7 +1572,7 @@ AssignResGroupOnCoordinator(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 	}
 	PG_CATCH();
 	{
@@ -1740,7 +1701,7 @@ SwitchResGroupOnSegment(const char *buf, int len)
 		/* it's not the first dispatch in the same transaction */
 		Assert(self->groupId == newGroupId);
 		Assert(self->caps.concurrency == caps.concurrency);
-		Assert(self->caps.cpuHardQuotaLimit == caps.cpuHardQuotaLimit);
+		Assert(self->caps.cpuMaxPercent == caps.cpuMaxPercent);
 		Assert(!strcmp(self->caps.cpuset, caps.cpuset));
 		return;
 	}
@@ -1780,7 +1741,7 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	/* Add into cgroup */
 	cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-								   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+								   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 }
 
 /*
@@ -3430,7 +3391,7 @@ HandleMoveResourceGroup(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 	}
 }
 
@@ -3725,7 +3686,7 @@ check_and_unassign_from_resgroup(PlannedStmt* stmt)
 	bypassedSlot.groupId = groupInfo.groupId;
 
 	cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
-								   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+								   bypassedGroup->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 }
 
 /*

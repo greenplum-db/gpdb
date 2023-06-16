@@ -1052,12 +1052,6 @@ brin_summarize_range_internal(PG_FUNCTION_ARGS)
 		SetUserIdAndSecContext(heapRel->rd_rel->relowner,
 							   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 		save_nestlevel = NewGUCNestLevel();
-		if (RelationStorageIsAO(heapRel) && heapBlk64 != BRIN_ALL_BLOCKRANGES)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("cannot summarize specific page range for append-optimized tables")));
-		}
 	}
 	else
 	{
@@ -1547,16 +1541,23 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 
 	/* GPDB: Used for iterating over the revmap */
 	int         	numSequences;
-	BlockSequence 	*sequences;
+	BlockSequence 	sequence;
+	BlockSequence 	*sequences = NULL;
 	BlockNumber		startBlk = InvalidBlockNumber;
 	BlockNumber		endBlk = InvalidBlockNumber;
 
 	revmap = brinRevmapInitialize(index, &pagesPerRange, NULL);
 
 	/* determine sequence(s) of pages to process */
-	sequences = table_relation_get_block_sequences(heapRel,
-												   &numSequences);
-
+	if (pageRange == BRIN_ALL_BLOCKRANGES)
+		sequences = table_relation_get_block_sequences(heapRel,
+													   &numSequences);
+	else
+	{
+		/* For specific range summarization, use targeted API for efficiency */
+		table_relation_get_block_sequence(heapRel, pageRange, &sequence);
+		numSequences = 1;
+	}
 	buf = InvalidBuffer;
 
 	/*
@@ -1581,29 +1582,19 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 	else
 	{
 		/* we have to scan the supplied heap block in its specified range */
+		BlockNumber seqEndBlk;
 
-		/*
-		 * XXX: This branch contains code that only works for heap tables, and
-		 * assumes that there is only 1 range. To support AO/CO tables, we will
-		 * need to use the table AM API: relation_get_block_sequence(), with
-		 * which we can find the endBlk of the specific range we have been
-		 * asked to scan.
-		 */
-
-		Assert(RelationIsHeap(heapRel));
-
-		/* should have to loop only once as there is only 1 sequence for heap */
 		Assert(numSequences == 1);
 
+		seqEndBlk = sequence.startblknum + sequence.nblocks;
 		startBlk = brin_range_start_blk(pageRange,
 										RelationStorageIsAO(heapRel),
 										pagesPerRange);
-		endBlk = Min(sequences[i].nblocks, startBlk + pagesPerRange);
+		endBlk = Min(seqEndBlk, startBlk + pagesPerRange);
 		if (startBlk > endBlk)
 		{
-			/* Nothing to do if start point is beyond end of table */
+			/* Nothing to do if start point is beyond end of block sequence */
 			brinRevmapTerminate(revmap);
-			pfree(sequences);
 			return;
 		}
 	}
@@ -1677,7 +1668,8 @@ brinsummarize(Relation index, Relation heapRel, BlockNumber pageRange,
 		terminate_brin_buildstate(state);
 		pfree(indexInfo);
 	}
-	pfree(sequences);
+	if (sequences)
+		pfree(sequences);
 }
 
 /*

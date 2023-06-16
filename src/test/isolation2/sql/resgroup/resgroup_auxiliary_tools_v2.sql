@@ -65,7 +65,7 @@ CREATE LANGUAGE plpython3u;
     assert shares == 100 * gp_resource_group_cpu_priority
 
     def check_group_shares(name):
-        cpu_soft_priority = int(plpy.execute('''
+        cpu_weight = int(plpy.execute('''
                     SELECT value
                       FROM pg_resgroupcapability c, pg_resgroup g
                      WHERE c.resgroupid=g.oid
@@ -76,7 +76,7 @@ CREATE LANGUAGE plpython3u;
                     SELECT oid FROM pg_resgroup WHERE rsgname='{}'
                 '''.format(name))[0]['oid'])
         sub_shares = get_cgroup_prop('gpdb/{}/cpu.weight'.format(oid))
-        assert sub_shares == int(cpu_soft_priority * 1024 / 100)
+        assert sub_shares == int(cpu_weight * 1024 / 100)
 
     # check default groups
     check_group_shares('default_group')
@@ -97,11 +97,9 @@ $$ LANGUAGE plpython3u;
 -- @return bool: true/false indicating whether it corresponds to the rule
 0: CREATE FUNCTION check_cpuset(grp TEXT, cpuset TEXT) RETURNS BOOL AS $$
     import subprocess
-    import pg
     import time
     import re
 
-    conn = pg.connect(dbname="isolation2resgrouptest")
     pt = re.compile(r'con(\d+)')
 
     def check(expect_cpus, sess_ids):
@@ -115,8 +113,8 @@ $$ LANGUAGE plpython3u;
 
     def get_all_sess_ids_in_group(group_name):
         sql = "select sess_id from pg_stat_activity where rsgname = '%s'" % group_name
-        result = conn.query(sql).getresult()
-        return set([str(r[0]) for r in result])
+        result = plpy.execute(sql)
+        return set([str(r['sess_id']) for r in result])
 
     conf = cpuset
     if conf == '':
@@ -149,16 +147,20 @@ $$ LANGUAGE plpython3u;
 $$ LANGUAGE plpython3u;
 
 -- create a resource group that contains all the cpu cores
-0: CREATE FUNCTION create_allcores_group(grp TEXT) RETURNS BOOL AS $$
-    import pg
-    conn = pg.connect(dbname="isolation2resgrouptest")
+0: CREATE OR REPLACE FUNCTION create_allcores_group(grp TEXT) RETURNS BOOL AS $$
+    import subprocess
+
     file = "/sys/fs/cgroup/gpdb/cpuset.cpus"
     fd = open(file)
     line = fd.readline()
     fd.close()
     line = line.strip('\n')
     sql = "create resource group " + grp + " with (" + "cpuset='" + line + "')"
-    result = conn.query(sql)
+
+    # plpy SPI will always start a transaction, but res group cannot be created in a transaction.
+    ret = subprocess.run(['psql', 'postgres', '-c' , '{}'.format(sql)], capture_output=True)
+    if ret.returncode != 0:
+        plpy.error('failed to create resource group.\n {} \n {}'.format(ret.stdout, ret.stderr))
 
     file = "/sys/fs/cgroup/gpdb/1/cpuset.cpus"
     fd = open(file)
@@ -172,12 +174,10 @@ $$ LANGUAGE plpython3u;
 $$ LANGUAGE plpython3u;
 
 -- check whether the cpuset value in cgroup is valid according to the rule
-0: CREATE FUNCTION check_cpuset_rules() RETURNS BOOL AS $$
-    import pg
-
+0: CREATE OR REPLACE FUNCTION check_cpuset_rules() RETURNS BOOL AS $$
     def get_all_group_which_cpuset_is_set():
         sql = "select groupid,cpuset from gp_toolkit.gp_resgroup_config where cpuset != '-1'"
-        result = conn.query(sql).getresult()
+        result = plpy.execute(sql)
         return result
 
     def parse_cpuset(line):
@@ -208,14 +208,13 @@ $$ LANGUAGE plpython3u;
         fd.close()
         return parse_cpuset(line)
 
-    conn = pg.connect(dbname="isolation2resgrouptest")
     config_groups = get_all_group_which_cpuset_is_set()
     groups_cpuset = set([])
 
     # check whether cpuset in config and cgroup are same, and have no overlap
     for config_group in config_groups:
-        groupid = config_group[0]
-        cpuset_value = config_group[1]
+        groupid = config_group['groupid']
+        cpuset_value = config_group['cpuset']
         config_cpuset = parse_cpuset(cpuset_value)
         cgroup_cpuset = get_cgroup_cpuset(groupid)
         if len(groups_cpuset & cgroup_cpuset) > 0:
@@ -242,25 +241,18 @@ $$ LANGUAGE plpython3u;
 
 0: CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$
     import subprocess
-    import pg
-    import time
-    import re
-    import paramiko
-
-    conn = pg.connect(dbname="isolation2resgrouptest")
-    pt = re.compile(r'con(\d+)')
 
     sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid
-    result = conn.query(sql).getresult()
-    session_id = result[0][0]
+    result = plpy.execute(sql)
+    session_id = result[0]['sess_id']
 
     sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname='%s'" % groupname
-    result = conn.query(sql).getresult()
-    group_id = result[0][0]
+    result = plpy.execute(sql)
+    groupid = result[0]['groupid']
 
-    sql = "select hostname from gp_segment_configuration group by hostname"
-    result = conn.query(sql).getresult()
-    hosts = result[0]
+	sql = "select hostname from gp_segment_configuration group by hostname"
+	result = plpy.execute(sql)
+	hosts = result[0]
 
     def get_result(host):
         import paramiko

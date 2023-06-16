@@ -1256,7 +1256,7 @@ static struct config_bool ConfigureNamesBool[] =
 			NULL
 		},
 		&wal_compression,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -3378,6 +3378,7 @@ static struct config_real ConfigureNamesReal[] =
 		DEFAULT_CPU_OPERATOR_COST, 0, DBL_MAX,
 		NULL, NULL, NULL
 	},
+	/* GPDB_96_MERGE_FIXME: figure out the appropriate default values for the two parallel gucs below. */
 	{
 		{"parallel_tuple_cost", PGC_USERSET, QUERY_TUNING_COST,
 			gettext_noop("Sets the planner's estimate of the cost of "

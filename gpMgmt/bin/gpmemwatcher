@@ -136,7 +136,7 @@ def launchProcess(host, workdir):
 
     # Now let's just quick check the host as to whether the python version is >= 2.6
     try:
-        subprocess.check_call("ssh -T %s '%s python -c \"import sys; sys.exit(1) if sys.hexversion < 0x020600f0 else 0\"'" % (host, py_string), shell=True)
+        subprocess.check_call("ssh -T %s '%s python3 -c \"import sys; sys.exit(1) if sys.hexversion < 0x020600f0 else 0\"'" % (host, py_string), shell=True)
     except subprocess.CalledProcessError as e:
         #print >> sys.stderr, 'Python version on host %s is < 2.6.0.  Aborting' % (host)
         print('Python version on host %s is < 2.6.0.  Aborting' % (host), file=sys.stderr)

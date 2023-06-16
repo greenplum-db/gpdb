@@ -1306,9 +1306,23 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 |-----------|-------|-------------------|
 |auto, eager\_free|eager\_free|local, system, superuser, reload|
 
+## <a id="gp_resgroup_memory_query_fixed_mem"></a>gp_resgroup_memory_query_fixed_mem
+
+> **Note** The `gp_resgroup_memory_query_fixed_mem` server configuration parameter is enforced only when resource group-based resource management is active.
+
+Specifies a fixed amount of memory, in MB, reserved for all queries in a resource group **for the scope of a session**. When this parameter is set to `0`, the default, the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
+
+While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_query_fixed_mem` overrides that limit at a session level. Thus, you can use this configuration parameter to adjust query memory budget for a particular session, on an ad hoc basis. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 < integer < INT_MAX| 0 |coordinator, session, user|
+
 ## <a id="gp_resource_group_bypass"></a>gp\_resource\_group\_bypass 
 
 > **Note** The `gp_resource_group_bypass` server configuration parameter is enforced only when resource group-based resource management is active.
+
+This parameter can only be changed by a superuser.
 
  Activates or deactivates  the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries and external components such as PL/Container.
 
@@ -1344,14 +1358,6 @@ When this configuration parameter is set to `false` and the database has reached
 |-----------|-------|-------------------|
 |Boolean|true|local, session, reload|
 
-## <a id="gp_resource_group_cpu_ceiling_enforcement"></a>gp\_resource\_group\_cpu\_ceiling\_enforcement 
-
-Enables the Ceiling Enforcement mode when assigning CPU resources by Percentage. When deactivated, the Elastic mode will be used.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|false|local, system, restart|
-
 ## <a id="gp_resource_group_cpu_limit"></a>gp\_resource\_group\_cpu\_limit 
 
 > **Note** The `gp_resource_group_cpu_limit` server configuration parameter is enforced only when resource group-based resource management is active.
@@ -1374,37 +1380,6 @@ Sets the CPU priority for Greenplum processes relative to non-Greenplum processe
 |-----------|-------|-------------------|
 |1 - 50|10|local, system, restart|
 
-## <a id="gp_resource_group_enable_recalculate_query_mem"></a>gp\_resource\_group\_enable\_recalculate\_query\_mem
-
-> **Note** The `gp_resource_group_enable_recalculate_query_mem` server configuration parameter is enforced only when resource group-based resource management is active.
-
-Specifies whether or not Greenplum Database recalculates the maximum amount of memory to allocate per query running in a resource group. The default value is `true`, Greenplum Database recalculates the maximum per-query memory based on the memory configuration and the number of primary segments on the segment host. When set to `false`, Greenplum database calculates the maximum per-query memory based on the memory configuration and the number of primary segments on the coordinator host.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|true|coordinator, session, reload|
-
-## <a id="gp_resource_group_memory_limit"></a>gp\_resource\_group\_memory\_limit 
-
-> **Note** The `gp_resource_group_memory_limit` server configuration parameter is enforced only when resource group-based resource management is active.
-
-Identifies the maximum percentage of system memory resources to allocate to resource groups on each Greenplum Database segment node.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|0.1 - 1.0|0.7|local, system, restart|
-
-> **Note** When resource group-based resource management is active, the memory allotted to a segment host is equally shared by active primary segments. Greenplum Database assigns memory to primary segments when the segment takes the primary role. The initial memory allotment to a primary segment does not change, even in a failover situation. This may result in a segment host utilizing more memory than the `gp_resource_group_memory_limit` setting permits.
-
-For example, suppose your Greenplum Database cluster is utilizing the default `gp_resource_group_memory_limit` of `0.7` and a segment host named `seghost1` has 4 primary segments and 4 mirror segments. Greenplum Database assigns each primary segment on `seghost1` `(0.7 / 4 = 0.175)` of overall system memory. If failover occurs and two mirrors on `seghost1` fail over to become primary segments, each of the original 4 primaries retain their memory allotment of `0.175`, and the two new primary segments are each allotted `(0.7 / 6 = 0.116)` of system memory. `seghost1`'s overall memory allocation in this scenario is
-
-```
-
-0.7 + (0.116 * 2) = 0.932
-```
-
-which is above the percentage configured in the `gp_resource_group_memory_limit` setting.
-
 ## <a id="gp_resource_group_queuing_timeout"></a>gp\_resource\_group\_queuing\_timeout 
 
 > **Note** The `gp_resource_group_queuing_timeout` server configuration parameter is enforced only when resource group-based resource management is active.
@@ -1417,11 +1392,19 @@ Cancel a transaction queued in a resource group that waits longer than the speci
 
 ## <a id="gp_resource_manager"></a>gp\_resource\_manager 
 
-Identifies the resource management scheme currently enabled in the Greenplum Database cluster. The default scheme is to use resource queues. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
+Identifies the resource management scheme currently enabled in the Greenplum Database cluster. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
+
+- `none` - configures Greenplum Database to not use any resource manager. This is the default.
+
+- `group` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v1 version of Linux cgroup functionality. 
+
+- `group-v2` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v2 version of Linux cgroup functionality. 
+
+- `queue` - configures Greenplum Database to use resource queues. 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|group, queue|queue|local, system, restart|
+|none, group, group-v2, queue|none|local, system, restart|
 
 ## <a id="gp_resqueue_memory_policy"></a>gp\_resqueue\_memory\_policy 
 
@@ -2956,17 +2939,6 @@ Determines whether ordinary string literals \('...'\) treat backslashes literall
 ## <a id="statement_mem"></a>statement\_mem 
 
 Allocates segment host memory per query. The amount of memory allocated with this parameter cannot exceed [max\_statement\_mem](#max_statement_mem) or the memory limit on the resource queue or resource group through which the query was submitted. If additional memory is required for a query, temporary spill files on disk are used.
-
-*If you are using resource groups to control resource allocation in your Greenplum Database cluster*:
-
--   Greenplum Database uses `statement_mem` to control query memory usage when the resource group `MEMORY_SPILL_RATIO` is set to 0.
--   You can use the following calculation to estimate a reasonable `statement_mem` value:
-
-    ```
-    rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments
-    statement_mem = rg_perseg_mem / max_expected_concurrent_queries
-    ```
-
 
 *If you are using resource queues to control resource allocation in your Greenplum Database cluster*:
 

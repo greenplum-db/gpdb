@@ -211,3 +211,94 @@ select * from parted_copytest where b = 2;
 (1 row)
 
 drop table parted_copytest;
+-- check COPY behavior
+-- there are 2 fields in copy.data
+-- table_1_col_dist_c1: 1 col in table < 2 fields in file
+-- table_2_cols_dist_c1 and
+-- table_2_cols_dist_c2: 2 cols in table = 2 fields in file
+-- table_3_cols_dist_c1 and
+-- table_3_cols_dist_c2 and
+-- table_3_cols_dist_c3: 3 cols in table > 2 fields in file
+CREATE TABLE table_1_col_dist_c1(c1 text) distributed by (c1);
+CREATE TABLE table_2_cols_dist_c1(c1 text, c2 text) distributed by (c1);
+CREATE TABLE table_2_cols_dist_c2(c1 text, c2 text) distributed by (c2);
+CREATE TABLE table_3_cols_dist_c1(c1 text, c2 text, c3 text) distributed by (c1);
+CREATE TABLE table_3_cols_dist_c2(c1 text, c2 text, c3 text) distributed by (c2);
+CREATE TABLE table_3_cols_dist_c3(c1 text, c2 text, c3 text) distributed by (c3);
+COPY table_1_col_dist_c1 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+ERROR:  extra data after last expected column
+CONTEXT:  COPY table_1_col_dist_c1, line 1: "1,text1"
+COPY table_2_cols_dist_c1 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+COPY table_2_cols_dist_c2 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+COPY table_3_cols_dist_c1 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+ERROR:  missing data for column "c3"
+CONTEXT:  COPY table_3_cols_dist_c1, line 1: "1,text1"
+COPY table_3_cols_dist_c2 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+ERROR:  missing data for column "c3"
+CONTEXT:  COPY table_3_cols_dist_c2, line 1: "1,text1"
+COPY table_3_cols_dist_c3 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+ERROR:  missing data for column "c3"
+CONTEXT:  COPY table_3_cols_dist_c3, line 1: "1,text1"
+SELECT count(*) FROM table_1_col_dist_c1;
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM table_2_cols_dist_c1;
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM table_2_cols_dist_c2;
+ count 
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM table_3_cols_dist_c1;
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM table_3_cols_dist_c2;
+ count 
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM table_3_cols_dist_c3;
+ count 
+-------
+     0
+(1 row)
+
+DROP TABLE table_1_col_dist_c1;
+DROP TABLE table_2_cols_dist_c1;
+DROP TABLE table_2_cols_dist_c2;
+DROP TABLE table_3_cols_dist_c1;
+DROP TABLE table_3_cols_dist_c2;
+DROP TABLE table_3_cols_dist_c3;
+-- special case, tables without columns
+CREATE TABLE table_no_cols();
+INSERT INTO table_no_cols DEFAULT VALUES;
+SELECT count(*) FROM table_no_cols;
+ count 
+-------
+     1
+(1 row)
+
+COPY table_no_cols TO '@abs_srcdir@/data/copy_no_cols.data' DELIMITER ',';
+COPY table_no_cols FROM '@abs_srcdir@/data/copy_no_cols.data' DELIMITER ',';
+SELECT count(*) FROM table_no_cols;
+ count 
+-------
+     2
+(1 row)
+
+COPY table_no_cols FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+ERROR:  extra data after last expected column
+CONTEXT:  COPY table_no_cols, line 1: "1,text1"
+DROP TABLE table_no_cols;

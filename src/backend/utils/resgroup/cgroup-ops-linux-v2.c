@@ -643,7 +643,7 @@ unlockcgroup_v2(int fd)
 /*
  * Set the cpu hard limit for the OS group.
  *
- * cpu_hard_quota_limit should be within [-1, 100].
+ * cpu_max_percent should be within [-1, 100].
  */
 static void
 setcpulimit_v2(Oid group, int cpu_hard_limit)
@@ -662,16 +662,16 @@ setcpulimit_v2(Oid group, int cpu_hard_limit)
 }
 
 /*
- * Set the cpu soft priority for the OS group.
+ * Set the cpu weight for the OS group.
  *
  * For version 1, the default value of cpu.shares is 1024, corresponding to
- * our cpu_soft_priority, which default value is 100, so we need to adjust it.
+ * our cpu_weight, which default value is 100, so we need to adjust it.
  *
- * The weight in the range [1, 10000], so the cpu_soft_priority is in range [1, 976.5625].
+ * The weight in the range [1, 10000], so the cpu_weight is in range [1, 976.5625].
  * In Greenplum, we define the range [1, 500].
  */
 static void
-setcpupriority_v2(Oid group, int shares)
+setcpuweight_v2(Oid group, int shares)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
 	writeInt64(group, BASEDIR_GPDB, component,
@@ -817,7 +817,7 @@ static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 
 		.setcpulimit = setcpulimit_v2,
 		.getcpuusage = getcpuusage_v2,
-		.setcpupriority = setcpupriority_v2,
+		.setcpuweight = setcpuweight_v2,
 		.getcpuset = getcpuset_v2,
 		.setcpuset = setcpuset_v2,
 

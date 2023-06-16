@@ -23,9 +23,9 @@ PostgreSQL documentation
 
 CREATE RESOURCE GROUP name WITH (group_attribute=value [, ... ]) 
 where group_attribute is:
-   CPU_HARD_QUOTA_LIMIT=integer | CPUSET=tuple
+   CPU_MAX_PERCENT=integer | CPUSET=tuple
    [ CONCURRENCY=integer ]
-   [ CPU_SOFT_PRIORITY=integer ]
+   [ CPU_WEIGHT=integer ]
 
 </synopsis>
  </refsynopsisdiv>

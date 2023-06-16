@@ -211,6 +211,12 @@ extern bool AppendOnlyBlockDirectory_GetEntry(
 	AOTupleId 						*aoTupleId,
 	int                             columnGroupNo,
 	AppendOnlyBlockDirectoryEntry	*directoryEntry);
+extern bool AppendOnlyBlockDirectory_GetEntryForPartialScan(
+	AppendOnlyBlockDirectory		*blockDirectory,
+	BlockNumber 					blkno,
+	int                             columnGroupNo,
+	AppendOnlyBlockDirectoryEntry	*dirEntry,
+	int 							*fsInfoIdx);
 extern int64 AOBlkDirScan_GetRowNum(
 	AOBlkDirScan					blkdirscan,
 	int								targsegno,

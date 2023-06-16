@@ -348,7 +348,7 @@ public:
 											CDrvdPropArray *pdrgpdpCtxt,
 											ULONG ulOptReq) const = 0;
 
-	// compute required partition propoagation spec of the n-th child
+	// compute required partition propagation spec of the n-th child
 	virtual CPartitionPropagationSpec *PppsRequired(
 		CMemoryPool *mp, CExpressionHandle &exprhdl,
 		CPartitionPropagationSpec *pppsRequired, ULONG child_index,
