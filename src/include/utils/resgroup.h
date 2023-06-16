@@ -37,6 +37,11 @@
 #define DefaultCpuset "-1"
 
 /*
+ * Default value of io_limit
+ */
+#define DefaultIOLimit "-1"
+
+/*
  * Default value of cpu soft priority
  */
 #define DefaultCPUSoftPriority 100

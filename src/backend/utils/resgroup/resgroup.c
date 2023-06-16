@@ -531,8 +531,7 @@ InitResGroups(void)
 
 		cgroupOpsRoutine->createcgroup(groupId);
 
-		if (caps.io_limit != NULL)
-			cgroupOpsRoutine->setio(groupId, cgroupOpsRoutine->parseio(caps.io_limit));
+		cgroupOpsRoutine->setio(groupId, cgroupOpsRoutine->parseio(caps.io_limit));
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{

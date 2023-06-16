@@ -19,6 +19,15 @@ ifeq ($(PORTNAME),linux)
 OBJS += cgroup.o
 OBJS += cgroup-ops-linux-v1.o
 OBJS += cgroup-ops-linux-v2.o
+OBJS += io_limit_lex.o
+OBJS += io_limit_gram.o
+
+io_limit_gram.h: io_limit_gram.c
+	touch $@
+
+io_limit_gram.c: BISONFLAGS += -d
+
+io_limit_gram.o io_limit_lex.o cgroup-ops-linux-v2.o: io_limit_gram.h
 else
 OBJS += cgroup-ops-dummy.o
 endif

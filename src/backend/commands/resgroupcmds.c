@@ -99,7 +99,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	bool		new_record_nulls[Natts_pg_resgroup];
 	ResGroupCaps caps;
 	int			nResGroups;
-	MemoryContext oldContext = CurrentMemoryContext;
+	MemoryContext oldContext;
 
 	/* Permission check - only superuser can create groups. */
 	if (!superuser())
@@ -213,10 +213,11 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		AllocResGroupEntry(groupid, &caps);
 
 		/* Argument of callback function should be allocated in heap region */
-		MemoryContextSwitchTo(TopMemoryContext);
+		oldContext = MemoryContextSwitchTo(TopMemoryContext);
 		callbackCtx = (ResourceGroupCallbackContext *)palloc0(sizeof(*callbackCtx));
 		callbackCtx->groupid = groupid;
 		callbackCtx->caps = caps;
+
 		if (caps.io_limit != NULL)
 		{
 			callbackCtx->caps.io_limit = pstrdup(caps.io_limit);
@@ -228,8 +229,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		/* Create os dependent part for this resource group */
 		cgroupOpsRoutine->createcgroup(groupid);
 
-		if (caps.io_limit != NULL)
-			cgroupOpsRoutine->setio(groupid, callbackCtx->ioLimit);
+		cgroupOpsRoutine->setio(groupid, callbackCtx->ioLimit);
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
@@ -375,7 +375,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	const char *cpuset = NULL;
 	char *io_limit = NULL;
 	ResourceGroupCallbackContext	*callbackCtx;
-	MemoryContext oldContext = CurrentMemoryContext;
+	MemoryContext oldContext;
 
 	/* Permission check - only superuser can alter resource groups. */
 	if (!superuser())
@@ -531,14 +531,17 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	if (IsResGroupActivated())
 	{
 		/* Argument of callback function should be allocated in heap region */
-		MemoryContextSwitchTo(TopMemoryContext);
+		oldContext = MemoryContextSwitchTo(TopMemoryContext);
 		callbackCtx = (ResourceGroupCallbackContext *)palloc0(sizeof(*callbackCtx));
 		callbackCtx->groupid = groupid;
 		callbackCtx->limittype = limitType;
 		callbackCtx->caps = caps;
 
-		callbackCtx->ioLimit = cgroupOpsRoutine->parseio(caps.io_limit);
-		callbackCtx->caps.io_limit = pstrdup(caps.io_limit);
+		if (caps.io_limit != NULL)
+		{
+			callbackCtx->ioLimit = cgroupOpsRoutine->parseio(caps.io_limit);
+			callbackCtx->caps.io_limit = pstrdup(caps.io_limit);
+		}
 
 		callbackCtx->oldCaps = oldCaps;
 		callbackCtx->oldCaps.io_limit = NULL;
@@ -1125,7 +1128,7 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 									  RESGROUP_LIMIT_TYPE_IO_LIMIT, caps->io_limit);
 	else
 		insertResgroupCapabilityEntry(rel, groupId,
-									  RESGROUP_LIMIT_TYPE_IO_LIMIT, "-1");
+									  RESGROUP_LIMIT_TYPE_IO_LIMIT, DefaultIOLimit);
 }
 
 /*
