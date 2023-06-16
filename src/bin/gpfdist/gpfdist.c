@@ -3384,6 +3384,8 @@ int check_output_to_file(request_t *r, int wrote)
 	session_t *session = r->session;
 	char *buf;
 	int *buftop;
+	char error_msg[128];
+
 	if (r->zstd)
 	{
 		buf = r->in.wbuf;
@@ -3403,18 +3405,18 @@ int check_output_to_file(request_t *r, int wrote)
 		request_end(r, ERROR_CODE_GENERIC, 0);
 		return -1;
 	}
-	else if (wrote == *buftop)
+	
+	if (wrote == *buftop)
 	{
 		/* wrote the whole buffer. clean it for next round */
 		*buftop = 0;
 	}
 	else
 	{
-		/* wrote up to last line, some data left over in buffer. move to front */
-		int bytes_left_over = *buftop - wrote;
-
-		memmove(buf, buf + wrote, bytes_left_over);
-		*buftop = bytes_left_over;
+		gwarning(r, "handle_post_request, left incomplete line: %d bytes", *buftop - wrote);
+		snprintf(error_msg, "Incomplete data written into file, left bytes: %d bytes", *buftop - wrote);
+		request_end(r, ERROR_CODE_GENERIC, error_msg);
+		return -1;
 	}
 	return 0;
 }
@@ -3521,7 +3523,7 @@ static void handle_post_request(request_t *r, int header_end)
 	{
 		http_error(r, FDIST_BAD_REQUEST, "invalid Content-Length");
 		gwarning(r, "got an request with invalid Content-Length: %d", r->in.davailable);
-		request_end(r, 1, 0);
+		request_end(r, ERROR_CODE_GENERIC, 0);
 		return;
 	}
 
@@ -3557,7 +3559,6 @@ static void handle_post_request(request_t *r, int header_end)
 	r->in.dbufmax = (int) write_file_size; /* size of max line size */
 	r->in.dbuftop = 0;
 	r->in.wbuftop = 0;
-	r->in.dbuf = palloc_safe(r, r->pool, r->in.dbufmax, "out of memory when allocating r->in.dbuf: %d bytes", r->in.dbufmax);
 	if (r->zstd)
 		r->in.wbuf = palloc_safe(r, r->pool, MAX_FRAME_SIZE, "out of memory when allocating r->in.wbuf: %d bytes", MAX_FRAME_SIZE);
 	r->in.dbuf = (char *) write_file_buffer;
@@ -5070,12 +5071,12 @@ int decompress_write_loop(request_t *r)
 		}
 
 		int wrote = fstream_write(session->fstream, r->in.wbuf, r->in.wbuftop, 0, r->line_delim_str, r->line_delim_length);
-		wrote_total += wrote;
 		gdebug(r, "wrote %d bytes to file", wrote);
 		delay_watchdog_timer();
 
 		if (check_output_to_file(r, wrote) < 0)
 			return -1;
+		wrote_total += wrote;
 
 	} while (r->in.woffset);
 	return wrote_total;
