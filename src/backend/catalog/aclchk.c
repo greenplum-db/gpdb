@@ -706,7 +706,7 @@ ExecGrantStmt_oids(InternalGrant *istmt)
 				 (int) istmt->objtype);
 	}
 	if (grant_hook)
-		(*grant_hook)(istmt->objtype);
+		(*grant_hook) (istmt->objtype);
 }
 
 /*
