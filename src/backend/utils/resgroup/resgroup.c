@@ -3712,7 +3712,7 @@ check_and_unassign_from_resgroup(PlannedStmt* stmt)
 		return;
 
 	/* Unassign from resgroup and bypass */
-	UnassignResGroup(true);
+	UnassignResGroup();
 
 	do {
 		decideResGroup(&groupInfo);
