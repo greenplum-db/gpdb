@@ -6,6 +6,7 @@ from gppylib.db import dbconn
 from gppylib.gparray import GpArray, ROLE_MIRROR
 from test.behave_utils.utils import check_stdout_msg, check_string_not_present_stdout
 from gppylib.commands.gp import get_coordinatordatadir
+from gppylib.commands import unix
 
 @then('a sample recovery_progress.file is created from saved lines')
 def impl(context):
@@ -22,6 +23,8 @@ def impl(context):
 @given('a sample gprecoverseg.lock directory is created using the background pid in coordinator_data_directory')
 def impl(context):
     bg_pid = context.bg_pid
+    if not unix.check_pid(bg_pid):
+        raise Exception("Postgres process {0} not killed.".format(bg_pid))
     gprecoverseg_lock_dir = os.path.join(get_coordinatordatadir() + '/gprecoverseg.lock')
     os.mkdir(gprecoverseg_lock_dir)
 

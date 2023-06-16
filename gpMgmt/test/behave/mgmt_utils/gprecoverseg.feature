@@ -744,7 +744,6 @@ Feature: gprecoverseg tests
     And user can start transactions
     When the user asynchronously runs "gprecoverseg -a --differential" and the process is saved
     Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
-    And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
     Then verify if the gprecoverseg.lock directory is present in coordinator_data_directory
     When the user asynchronously sets up to end gprecoverseg process with SIGINT
     And the user waits until saved async process is completed

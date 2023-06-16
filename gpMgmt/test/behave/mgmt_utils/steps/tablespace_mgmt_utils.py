@@ -1,5 +1,6 @@
 import pipes
 import tempfile
+import time
 
 from behave import given, then
 
@@ -8,6 +9,7 @@ from contextlib import closing
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
 from test.behave_utils.utils import run_cmd
+from gppylib.commands.base import Command, REMOTE
 
 class Tablespace:
     def __init__(self, name):
@@ -37,6 +39,23 @@ class Tablespace:
     def cleanup(self):
         conn = dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False)
         dbconn.execSQL(conn, "DROP DATABASE IF EXISTS %s" % self.dbname)
+        attempt = 0
+        num_retries = 6000
+        while attempt < num_retries:
+            psql_cmd = 'psql -d template1 -c "SELECT datname FROM pg_catalog.pg_database WHERE datname=\'%s\';"' % (
+                self.dbname)
+            cmd = Command(name='Running  command: %s' % psql_cmd, cmdStr=psql_cmd)
+            cmd.run()
+            if cmd.get_return_code() != 0:
+                attempt += 1
+                pass
+            else:
+                break
+            time.sleep(0.1)
+
+            if attempt == num_retries:
+                raise Exception('Unable to drop the database %s!!!').format(self.dbname)
+
         dbconn.execSQL(conn, "DROP TABLESPACE IF EXISTS %s" % self.name)
 
         # Without synchronous_commit = 'remote_apply' introduced in 9.6, there

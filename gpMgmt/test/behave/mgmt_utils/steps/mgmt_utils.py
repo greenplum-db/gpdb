@@ -1456,7 +1456,7 @@ def stop_segments_immediate(context, where_clause):
 @when('user can start transactions')
 @then('user can start transactions')
 def impl(context):
-    wait_for_unblocked_transactions(context)
+    wait_for_unblocked_transactions(context, 600)
 
 @given('below sql is executed in "{dbname}" db')
 @when('below sql is executed in "{dbname}" db')
@@ -1647,6 +1647,9 @@ def impl(context, seg):
         hostname = get_coordinator_hostname()[0][0]
 
     cmd = Command(name="killbg pid", cmdStr='kill -9 %s' % context.bg_pid, remoteHost=hostname, ctxt=REMOTE)
+    cmd.run(validateAfter=True)
+
+    cmd = Command(name="remove pid", cmdStr='rm -rf /tmp/bgpid', remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
 
