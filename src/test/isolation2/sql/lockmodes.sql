@@ -716,6 +716,15 @@ ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 1: ROLLBACK;
 1q:
 
+1: CREATE TABLE t_lockmods_aopart(i int, t text) USING ao_row PARTITION BY RANGE(i) (START(1) END(5) EVERY(1));
+1: BEGIN;
+1: DELETE FROM t_lockmods_aopart WHERE i = 4;
+-- With GDD enabled, QD will only hold lock on root for delete
+1: select * from show_locks_lockmodes;
+1: COMMIT;
+1: DROP TABLE t_lockmods_aopart;
+1q:
+
 -- 2.8 Verify behaviors of select with locking clause (i.e. select for update)
 -- when running concurrently with index creation, for Heap tables.
 -- For AO/CO tables, refer to create_index_allows_readonly.source.

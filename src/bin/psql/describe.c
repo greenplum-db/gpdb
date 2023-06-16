@@ -121,28 +121,6 @@ static bool isGPDB4200OrLater(void)
 }
 
 /*
- * Returns true if GPDB version 4.3 or later, false otherwise.
- */
-static bool
-isGPDB4300OrLater(void)
-{
-	bool       retValue = false;
-
-	if (isGPDB() == true)
-	{
-		PGresult  *result;
-
-		result = PSQLexec(
-				"select attnum from pg_catalog.pg_attribute "
-				"where attrelid = 'pg_catalog.pg_proc'::regclass and "
-				"attname = 'prodataaccess'");
-		retValue = PQntuples(result) > 0;
-	}
-	return retValue;
-}
-
-
-/*
  * If GPDB version is 5.0, pg_proc has provariadic as column number 20.
  * When we have version() returns GPDB version instead of "main build dev" or
  * something similar, we'll fix this function.
@@ -637,19 +615,6 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 
 	if (verbose)
 	{
-		if (isGPDB4300OrLater())
-			appendPQExpBuffer(&buf,
-						  ",\n CASE\n"
-						  "  WHEN p.prodataaccess = 'n' THEN '%s'\n"
-						  "  WHEN p.prodataaccess = 'c' THEN '%s'\n"
-						  "  WHEN p.prodataaccess = 'r' THEN '%s'\n"
-						  "  WHEN p.prodataaccess = 'm' THEN '%s'\n"
-						  "END as \"%s\"",
-						  gettext_noop("no sql"),
-						  gettext_noop("contains sql"),
-						  gettext_noop("reads sql data"),
-						  gettext_noop("modifies sql data"),
-						  gettext_noop("Data access"));
 		if (isGPDB6000OrLater())
 			appendPQExpBuffer(&buf,
 						  ",\n CASE\n"

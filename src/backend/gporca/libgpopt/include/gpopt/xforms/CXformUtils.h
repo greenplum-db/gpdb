@@ -70,7 +70,7 @@ private:
 	enum EIndexCols
 	{
 		EicKey,
-		EicIncluded
+		EicKeyAndIncluded
 	};
 
 	// create a logical assert for the not nullable columns of the given table
@@ -184,9 +184,8 @@ private:
 	static CExpression *PexprBuildBtreeIndexPlan(
 		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
-		CColRefSet *pcrsReqd, CColRefSet *pcrsScalarExpr,
-		CColRefSet *outer_refs, const IMDIndex *pmdindex,
-		const IMDRelation *pmdrel);
+		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
+		const IMDIndex *pmdindex, const IMDRelation *pmdrel);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
@@ -248,9 +247,9 @@ private:
 	static CExpression *PexprBitmapSelectBestIndex(
 		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprPred,
 		CTableDescriptor *ptabdesc, const IMDRelation *pmdrel,
-		CColRefArray *pdrgpcrOutput, CColRefSet *pcrsReqd,
-		CColRefSet *pcrsOuterRefs, CExpression **ppexprRecheck,
-		CExpression **ppexprResidual, BOOL alsoConsiderBTreeIndexes);
+		CColRefArray *pdrgpcrOutput, CColRefSet *pcrsOuterRefs,
+		CExpression **ppexprRecheck, CExpression **ppexprResidual,
+		BOOL alsoConsiderBTreeIndexes);
 
 	// iterate over given hash map and return array of arrays of project elements sorted by the column id of the first entries
 	static CExpressionArrays *PdrgpdrgpexprSortedPrjElemsArray(
@@ -382,25 +381,25 @@ public:
 										  const IMDRelation *pmdrel);
 
 	// return the set of key columns from the given array of columns which appear
+	// in the index key and included columns
+	static CColRefSet *PcrsIndexKeysAndIncludes(CMemoryPool *mp,
+												CColRefArray *colref_array,
+												const IMDIndex *pmdindex,
+												const IMDRelation *pmdrel);
+
+	// return the set of key columns from the given array of columns which appear
 	// in the index key columns
 	static CColRefSet *PcrsIndexKeys(CMemoryPool *mp,
 									 CColRefArray *colref_array,
 									 const IMDIndex *pmdindex,
 									 const IMDRelation *pmdrel);
 
-	// return the set of key columns from the given array of columns which appear
-	// in the index included columns
-	static CColRefSet *PcrsIndexIncludedCols(CMemoryPool *mp,
-											 CColRefArray *colref_array,
-											 const IMDIndex *pmdindex,
-											 const IMDRelation *pmdrel);
-
 	// check if an index is applicable given the required, output and scalar
 	// expression columns
 	static BOOL FIndexApplicable(
 		CMemoryPool *mp, const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-		CColRefArray *pdrgpcrOutput, CColRefSet *pcrsReqd,
-		CColRefSet *pcrsScalar, IMDIndex::EmdindexType emdindtype,
+		CColRefArray *pdrgpcrOutput, CColRefSet *pcrsScalar,
+		IMDIndex::EmdindexType emdindtype,
 		IMDIndex::EmdindexType altindtype = IMDIndex::EmdindSentinel);
 
 	// check whether a CTE should be inlined
@@ -443,13 +442,13 @@ public:
 	static CExpression *
 	PexprLogicalIndexGet(CMemoryPool *mp, CMDAccessor *md_accessor,
 						 CExpression *pexprGet, ULONG ulOriginOpId,
-						 CExpressionArray *pdrgpexprConds, CColRefSet *pcrsReqd,
+						 CExpressionArray *pdrgpexprConds,
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 						 const IMDIndex *pmdindex, const IMDRelation *pmdrel)
 	{
-		return PexprBuildBtreeIndexPlan(
-			mp, md_accessor, pexprGet, ulOriginOpId, pdrgpexprConds, pcrsReqd,
-			pcrsScalarExpr, outer_refs, pmdindex, pmdrel);
+		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
+										pdrgpexprConds, pcrsScalarExpr,
+										outer_refs, pmdindex, pmdrel);
 	}
 
 	// helper for creating bitmap bool op expressions

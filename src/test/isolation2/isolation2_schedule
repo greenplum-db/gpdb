@@ -230,6 +230,7 @@ test: uao/cluster_progress_column
 test: uao/collected_stats_views_column
 test: uao/fast_analyze_column
 test: ao_blkdir
+test: ao_partial_scan
 
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
@@ -245,12 +246,16 @@ test: pg_basebackup_large_database_oid
 test: basebackup_progress
 test: vacuum_progress_row
 test: vacuum_progress_column
+
+test: analyze_progress
+test: appendonly_analyze_progress
+test: aoco_analyze_progress
+test: ao_index_build_progress
+
 test: enable_autovacuum
 test: idle_gang_cleaner
 # test idle_in_transaction_session_timeout
 
-test: ao_index_build_progress
-test: analyze_progress
 test: copy_progress
 
 test: segwalrep/die_commit_pending_replication

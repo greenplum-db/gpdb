@@ -403,35 +403,10 @@ AppendSeconds(char *cp, int sec, fsec_t fsec, int precision, bool fillzeros)
 {
 	Assert(precision >= 0);
 
-	/* GPDB_96_MERGE_FIXME: We had this faster version in GPDB. PostgreSQL
-	 * also added faster versions in commit aa2387e2fd. Performance test is
-	 * the old GPDB variants are even faster, or if we could drop the diff
-	 * and just use upstream code. For now, the GPDB version is disabled
-	 * and we use the upstream code.
-	 */
-#if 0
-		int			j = 0;
-
-		if (fillzeros || abs(sec)  > 9)
-			cp[j++] = abs(sec)  / 10 + '0';
-		cp[j++] = abs(sec)  % 10 + '0';
-		cp[j++] = '.';
-		cp[j++] =  ((int) Abs(fsec) )/ 100000 + '0';
-		cp[j++] = ((int) Abs(fsec) ) / 10000 % 10 + '0';
-		cp[j++] = ((int) Abs(fsec) ) / 1000 % 10 + '0';
-		cp[j++] = ((int) Abs(fsec) ) / 100 % 10 + '0';
-		cp[j++] = ((int) Abs(fsec) ) / 10 % 10 + '0';
-		cp[j++] = ((int) Abs(fsec) ) % 10 + '0';
-		cp[j] = '\0';
-
-#endif
-
-	/* fsec_t is just an int32 */
-
 	if (fillzeros)
-		cp = pg_ltostr_zeropad(cp, Abs(sec), 2);
+		cp = pg_ultostr_zeropad(cp, Abs(sec), 2);
 	else
-		cp = pg_ltostr(cp, Abs(sec));
+		cp = pg_ultostr(cp, Abs(sec));
 
 	/* fsec_t is just an int32 */
 	if (fsec != 0)
@@ -467,11 +442,11 @@ AppendSeconds(char *cp, int sec, fsec_t fsec, int precision, bool fillzeros)
 
 		/*
 		 * If we still have a non-zero value then precision must have not been
-		 * enough to print the number.  We punt the problem to pg_ltostr(),
+		 * enough to print the number.  We punt the problem to pg_ultostr(),
 		 * which will generate a correct answer in the minimum valid width.
 		 */
 		if (value)
-			return pg_ltostr(cp, Abs(fsec));
+			return pg_ultostr(cp, Abs(fsec));
 
 		return end;
 	}
@@ -3866,20 +3841,20 @@ EncodeTimezone(char *str, int tz, int style)
 
 	if (sec != 0)
 	{
-		str = pg_ltostr_zeropad(str, hour, 2);
+		str = pg_ultostr_zeropad(str, hour, 2);
 		*str++ = ':';
-		str = pg_ltostr_zeropad(str, min, 2);
+		str = pg_ultostr_zeropad(str, min, 2);
 		*str++ = ':';
-		str = pg_ltostr_zeropad(str, sec, 2);
+		str = pg_ultostr_zeropad(str, sec, 2);
 	}
 	else if (min != 0 || style == USE_XSD_DATES)
 	{
-		str = pg_ltostr_zeropad(str, hour, 2);
+		str = pg_ultostr_zeropad(str, hour, 2);
 		*str++ = ':';
-		str = pg_ltostr_zeropad(str, min, 2);
+		str = pg_ultostr_zeropad(str, min, 2);
 	}
 	else
-		str = pg_ltostr_zeropad(str, hour, 2);
+		str = pg_ultostr_zeropad(str, hour, 2);
 	return str;
 }
 
@@ -3935,60 +3910,40 @@ EncodeDateOnly(struct pg_tm *tm, int style, char *str)
 		case USE_ISO_DATES:
 		case USE_XSD_DATES:
 			/* compatible with ISO date formats */
-
-			/* GPDB_96_MERGE_FIXME: We had this faster version in GPDB. PostgreSQL
-			 * also added faster versions in commit aa2387e2fd. Performance test is
-			 * the old GPDB variants are even faster, or if we could drop the diff
-			 * and just use upstream code. For now, the GPDB version is disabled
-			 * and we use the upstream code.
-			 */
-#if 0
-			if (tm->tm_year > 0)
-			{
-				//				sprintf(str, "%04d-%02d-%02d",
-				//		tm->tm_year, tm->tm_mon, tm->tm_mday);
-				int j = 0;
-				fast_encode_date(tm, str, &j);
-			}
-			else
-				sprintf(str, "%04d-%02d-%02d %s",
-						-(tm->tm_year - 1), tm->tm_mon, tm->tm_mday, "BC");
-#else
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			*str++ = '-';
-			str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 			*str++ = '-';
-			str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
-#endif
+			str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			break;
 
 		case USE_SQL_DATES:
 			/* compatible with Oracle/Ingres date formats */
 			if (DateOrder == DATEORDER_DMY)
 			{
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 				*str++ = '/';
-				str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 			}
 			else
 			{
-				str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 				*str++ = '/';
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			}
 			*str++ = '/';
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			break;
 
 		case USE_GERMAN_DATES:
 			/* German-style date format */
-			str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			*str++ = '.';
-			str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 			*str++ = '.';
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			break;
 
@@ -3997,18 +3952,18 @@ EncodeDateOnly(struct pg_tm *tm, int style, char *str)
 			/* traditional date-only style for Postgres */
 			if (DateOrder == DATEORDER_DMY)
 			{
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 				*str++ = '-';
-				str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 			}
 			else
 			{
-				str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 				*str++ = '-';
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			}
 			*str++ = '-';
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			break;
 	}
@@ -4033,37 +3988,14 @@ EncodeDateOnly(struct pg_tm *tm, int style, char *str)
 void
 EncodeTimeOnly(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, int style, char *str)
 {
-	/* GPDB_96_MERGE_FIXME: We had this faster version in GPDB. PostgreSQL
-	 * also added faster versions in commit aa2387e2fd. Performance test is
-	 * the old GPDB variants are even faster, or if we could drop the diff
-	 * and just use upstream code. For now, the GPDB version is disabled
-	 * and we use the upstream code.
-	 *
-	 * If we still need the old GPDB version, make sure it was actually correct.
-	 * It seems to ignore the 'print_tz' argument...
-	 */
-#if 0
-	str[0] = tm->tm_hour/10 + '0';
-	str[1] = tm->tm_hour % 10 + '0';
-	str[2] = ':';
-	str[3] = tm->tm_min/10 + '0';
-	str[4] = tm->tm_min % 10 + '0';
-	str[5] = ':';
-	str[6] = '\0';
-	str += strlen(str);
-
-	AppendSeconds(str, tm->tm_sec, fsec, MAX_TIME_PRECISION, true);
-#else
-
-	str = pg_ltostr_zeropad(str, tm->tm_hour, 2);
+	str = pg_ultostr_zeropad(str, tm->tm_hour, 2);
 	*str++ = ':';
-	str = pg_ltostr_zeropad(str, tm->tm_min, 2);
+	str = pg_ultostr_zeropad(str, tm->tm_min, 2);
 	*str++ = ':';
 	str = AppendSeconds(str, tm->tm_sec, fsec, MAX_TIME_PRECISION, true);
 	if (print_tz)
 		str = EncodeTimezone(str, tz, style);
 	*str = '\0';
-#endif
 }
 
 
@@ -4101,16 +4033,16 @@ EncodeDateTime(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, const char 
 		case USE_ISO_DATES:
 		case USE_XSD_DATES:
 			/* Compatible with ISO-8601 date formats */
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			*str++ = '-';
-			str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 			*str++ = '-';
-			str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			*str++ = (style == USE_ISO_DATES) ? ' ' : 'T';
-			str = pg_ltostr_zeropad(str, tm->tm_hour, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_hour, 2);
 			*str++ = ':';
-			str = pg_ltostr_zeropad(str, tm->tm_min, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_min, 2);
 			*str++ = ':';
 			str = AppendTimestampSeconds(str, tm, fsec);
 			if (print_tz)
@@ -4121,23 +4053,23 @@ EncodeDateTime(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, const char 
 			/* Compatible with Oracle/Ingres date formats */
 			if (DateOrder == DATEORDER_DMY)
 			{
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 				*str++ = '/';
-				str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 			}
 			else
 			{
-				str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 				*str++ = '/';
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			}
 			*str++ = '/';
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			*str++ = ' ';
-			str = pg_ltostr_zeropad(str, tm->tm_hour, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_hour, 2);
 			*str++ = ':';
-			str = pg_ltostr_zeropad(str, tm->tm_min, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_min, 2);
 			*str++ = ':';
 			str = AppendTimestampSeconds(str, tm, fsec);
 
@@ -4160,16 +4092,16 @@ EncodeDateTime(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, const char 
 
 		case USE_GERMAN_DATES:
 			/* German variant on European style */
-			str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			*str++ = '.';
-			str = pg_ltostr_zeropad(str, tm->tm_mon, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_mon, 2);
 			*str++ = '.';
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 			*str++ = ' ';
-			str = pg_ltostr_zeropad(str, tm->tm_hour, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_hour, 2);
 			*str++ = ':';
-			str = pg_ltostr_zeropad(str, tm->tm_min, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_min, 2);
 			*str++ = ':';
 			str = AppendTimestampSeconds(str, tm, fsec);
 
@@ -4195,7 +4127,7 @@ EncodeDateTime(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, const char 
 			*str++ = ' ';
 			if (DateOrder == DATEORDER_DMY)
 			{
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 				*str++ = ' ';
 				memcpy(str, months[tm->tm_mon - 1], 3);
 				str += 3;
@@ -4205,16 +4137,16 @@ EncodeDateTime(struct pg_tm *tm, fsec_t fsec, bool print_tz, int tz, const char 
 				memcpy(str, months[tm->tm_mon - 1], 3);
 				str += 3;
 				*str++ = ' ';
-				str = pg_ltostr_zeropad(str, tm->tm_mday, 2);
+				str = pg_ultostr_zeropad(str, tm->tm_mday, 2);
 			}
 			*str++ = ' ';
-			str = pg_ltostr_zeropad(str, tm->tm_hour, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_hour, 2);
 			*str++ = ':';
-			str = pg_ltostr_zeropad(str, tm->tm_min, 2);
+			str = pg_ultostr_zeropad(str, tm->tm_min, 2);
 			*str++ = ':';
 			str = AppendTimestampSeconds(str, tm, fsec);
 			*str++ = ' ';
-			str = pg_ltostr_zeropad(str,
+			str = pg_ultostr_zeropad(str,
 									(tm->tm_year > 0) ? tm->tm_year : -(tm->tm_year - 1), 4);
 
 			if (print_tz)

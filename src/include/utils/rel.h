@@ -459,6 +459,9 @@ typedef struct ViewOptions
  * 		True iff relation has append only storage (can be row or column orientation)
  */
 #define RelationIsAppendOptimized(relation) \
+	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
+
+#define RelationStorageIsAO(relation) \
 	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
 		relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 
@@ -564,7 +567,7 @@ typedef struct ViewOptions
 			smgrsetowner(&((relation)->rd_smgr), \
 						 smgropen((relation)->rd_node, \
 								  (relation)->rd_backend, \
-								  RelationIsAppendOptimized(relation)?SMGR_AO:SMGR_MD)); \
+								  RelationStorageIsAO(relation)?SMGR_AO:SMGR_MD)); \
 	} while (0)
 
 /*

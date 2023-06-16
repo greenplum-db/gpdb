@@ -1002,20 +1002,41 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	 * Update pages/tuples stats in pg_class ... but not if we're doing
 	 * inherited stats.
 	 *
-	 * GPDB_92_MERGE_FIXME: In postgres it is sufficient to check the number of
-	 * pages that are visible with visibilitymap_count(), but in GPDB this
-	 * needs to be the count of all pages marked all visible across the all the
-	 * QEs. We need to gather this information from the segments and then update
-	 * it here.
+	 * GPDB: Coordinator node does not store relation data or metadata. That
+	 * includes visibility map information. Instead, relevant info is gathered
+	 * through dispatch requests. In this case, after vacuum is dispatched then
+	 * relallvisible is aggregated and stored in pg_class. Coordinator node
+	 * should look there for relallvisible.
 	 */
 	if (!inh)
 	{
 		BlockNumber relallvisible;
 
-		if (RelationIsAppendOptimized(onerel))
+		if (RelationStorageIsAO(onerel))
 			relallvisible = 0;
 		else
-			visibilitymap_count(onerel, &relallvisible, NULL);
+		{
+			if (Gp_role != GP_ROLE_DISPATCH)
+				visibilitymap_count(onerel, &relallvisible, NULL);
+			else
+			{
+				/*
+				 * On the QD, retrieve the value of relallvisible from
+				 * pg_class, which was aggregated from the QEs and updated
+				 * earlier in vacuum_rel().
+				 */
+				HeapTuple	ctup;
+				Form_pg_class pgcform;
+
+				ctup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(onerel->rd_id));
+				if (!HeapTupleIsValid(ctup))
+					elog(ERROR, "pg_class entry for relid %u vanished during analyzing",
+						 onerel->rd_id);
+				pgcform = (Form_pg_class) GETSTRUCT(ctup);
+				relallvisible = pgcform->relallvisible;
+				heap_freetuple(ctup);
+			}
+		}
 
 		vac_update_relstats(onerel,
 							relpages,
@@ -1530,7 +1551,7 @@ acquire_sample_rows(Relation onerel, int elevel,
 	 * in table_relation_acquire_sample_rows(). So leave here an assertion to ensure
 	 * the relation should not be an AO/CO table.
 	 */
-	Assert(!RelationIsAppendOptimized(onerel));
+	Assert(!RelationStorageIsAO(onerel));
 
 	totalblocks = RelationGetNumberOfBlocks(onerel);
 

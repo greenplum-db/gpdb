@@ -52,7 +52,10 @@ DROP DATABASE IF EXISTS upgrade_recreated_public;
 NOTICE:  database "upgrade_recreated_public" does not exist, skipping
 CREATE DATABASE upgrade_recreated_public;
 \c upgrade_recreated_public
-DROP SCHEMA public;
+-- Some extensions are pre-baked into template1, hence the new database has
+-- them under public. Remove them too by cascade.
+DROP SCHEMA public CASCADE;
+NOTICE:  drop cascades to extension gp_toolkit
 CREATE SCHEMA public;
 CREATE TABLE public.t();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.

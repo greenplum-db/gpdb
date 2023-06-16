@@ -2137,7 +2137,7 @@ def impl(context, filename, contain, output):
 def impl(context, filename):
     try:
         with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
-            curs = dbconn.execSQL(conn, "SELECT hostname, datadir FROM gp_segment_configuration WHERE content > -1;")
+            curs = dbconn.query(conn, "SELECT hostname, datadir FROM gp_segment_configuration WHERE content > -1;")
             result = curs.fetchall()
             segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
     except Exception as e:
@@ -2265,6 +2265,13 @@ def impl(context, tabletype, tablename, dbname):
 def impl(context, tabletype, table_name, dbname):
     create_partition(context, tablename=table_name, storage_type=tabletype, dbname=dbname, with_data=True)
 
+@given('there is a view without columns in "{dbname}"')
+@then('there is a view without columns in "{dbname}"')
+@when('there is a view without columns in "{dbname}"')
+def impl(context, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
+        dbconn.execSQL(conn, "create view v_no_cols as select;")
+        conn.commit()
 
 @then('read pid from file "{filename}" and kill the process')
 @when('read pid from file "{filename}" and kill the process')

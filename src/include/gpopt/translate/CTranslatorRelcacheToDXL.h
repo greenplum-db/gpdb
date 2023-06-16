@@ -25,6 +25,7 @@ extern "C" {
 
 #include "access/tupdesc.h"
 #include "catalog/gp_distribution_policy.h"
+#include "foreign/foreign.h"
 }
 
 #include "naucrates/dxl/gpdb_types.h"
@@ -244,10 +245,6 @@ private:
 	// check if index is supported
 	static BOOL IsIndexSupported(Relation index_rel);
 
-	// compute the array of included columns
-	static ULongPtrArray *ComputeIncludedCols(CMemoryPool *mp,
-											  const IMDRelation *md_rel);
-
 	// is given level included in the default partitions
 	static BOOL LevelHasDefaultPartition(List *default_levels, ULONG level);
 
@@ -352,6 +349,9 @@ public:
 
 	// get the distribution policy of the relation
 	static IMDRelation::Ereldistrpolicy GetRelDistribution(GpPolicy *gp_policy);
+
+	static IMDRelation::Ereldistrpolicy
+	GetDistributionFromForeignRelExecLocation(ForeignTable *ft);
 };
 }  // namespace gpdxl
 

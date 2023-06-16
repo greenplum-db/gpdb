@@ -1493,7 +1493,6 @@ CREATE VIEW routines AS
 
            CAST('GENERAL' AS character_data) AS parameter_style,
            CAST(CASE WHEN p.provolatile = 'i' THEN 'YES' ELSE 'NO' END AS yes_or_no) AS is_deterministic,
-           CAST('MODIFIES' AS character_data) AS sql_data_access,
            CAST(CASE WHEN p.prokind <> 'p' THEN
              CASE WHEN p.proisstrict THEN 'YES' ELSE 'NO' END END AS yes_or_no) AS is_null_call,
            CAST(null AS character_data) AS sql_path,

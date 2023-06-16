@@ -10,7 +10,8 @@ SHLIB_LINK_INTERNAL = $(libpq)
 EXTENSION = postgres_fdw
 DATA = postgres_fdw--1.0.sql
 
-REGRESS = gp2pg_postgres_fdw
+REGRESS = gp2pg_postgres_fdw gp_postgres_fdw
+REGRESS_OPTS += --init-file=$(top_srcdir)/src/test/regress/init_file
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

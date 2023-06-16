@@ -76,7 +76,8 @@ DELETE FROM alter_type_aoco_delete WHERE b%3 = 1;
 EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_delete');
 SELECT count(*) FROM alter_type_aoco_delete;
 
-ALTER TABLE alter_type_aoco_delete ALTER COLUMN b TYPE text;
+-- test both ALTER COLUMN TYPE and ALTER COLUMN SET ENCODING together
+ALTER TABLE alter_type_aoco_delete ALTER COLUMN b TYPE text, ALTER COLUMN c SET ENCODING (compresstype=rle_type, compresslevel=4);
 
 EXECUTE attribute_encoding_check ('alter_type_aoco_delete');
 SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete') ORDER BY segment_id, column_num;
@@ -104,7 +105,8 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_type_aoco_delete1')).* FR
 EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_delete1');
 SELECT * FROM alter_type_aoco_delete1;
 
-ALTER TABLE alter_type_aoco_delete1 ALTER COLUMN b TYPE text;
+-- test both ALTER COLUMN TYPE and ALTER COLUMN SET ENCODING together
+ALTER TABLE alter_type_aoco_delete1 ALTER COLUMN b TYPE text, ALTER COLUMN c SET ENCODING (compresstype=rle_type, compresslevel=4);
 
 EXECUTE attribute_encoding_check ('alter_type_aoco_delete1');
 SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete1') ORDER BY segment_id, column_num;
@@ -133,7 +135,8 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_type_aoco_delete2')).* FR
 EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_delete2');
 SELECT * FROM alter_type_aoco_delete2;
 
-ALTER TABLE alter_type_aoco_delete2 ALTER COLUMN b TYPE text;
+-- test both ALTER COLUMN TYPE and ALTER COLUMN SET ENCODING together
+ALTER TABLE alter_type_aoco_delete2 ALTER COLUMN b TYPE text, ALTER COLUMN c SET ENCODING (compresstype=rle_type, compresslevel=4);
 
 EXECUTE attribute_encoding_check ('alter_type_aoco_delete2');
 SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete2') ORDER BY segment_id, column_num;
@@ -158,7 +161,7 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_fullrewrite') ORDER BY se
 EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_fullrewrite');
 SELECT * FROM alter_type_aoco_fullrewrite;
 
-ALTER TABLE alter_type_aoco_fullrewrite ALTER COLUMN b TYPE text, ALTER COLUMN C SET ENCODING (compresslevel=4);
+ALTER TABLE alter_type_aoco_fullrewrite ALTER COLUMN b TYPE text, SET UNLOGGED;
 
 EXECUTE attribute_encoding_check ('alter_type_aoco_fullrewrite');
 SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_fullrewrite') ORDER BY segment_id, column_num;
@@ -465,7 +468,6 @@ CREATE TABLE aoco_concurrent_inserts(a int, b int, c int) USING ao_column;
 INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;
 1: BEGIN;
 1: INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;
-1: END;
 2&: ALTER TABLE aoco_concurrent_inserts ALTER COLUMN b TYPE text;
 1: END;
 2<:
@@ -478,3 +480,135 @@ SELECT count(*) FROM aoco_concurrent_inserts;
 2<:
 -- should see 30 rows
 SELECT count(*) FROM aoco_concurrent_inserts;
+
+--------------------------------------------------------------------------------
+-- Tests for ALTER COLUMN SET ENCODING
+--------------------------------------------------------------------------------
+
+--
+-- Basic testing
+--
+create table atsetenc(c1 int, c2 int) using ao_column distributed replicated;
+-- first check an empty table
+-- check the initial encoding settings
+execute attribute_encoding_check('atsetenc');
+-- no table rewrite
+execute capturerelfilenodebefore('set encoding - empty', 'atsetenc');
+alter table atsetenc alter column c1 set encoding (compresstype=zlib,compresslevel=9);
+execute checkrelfilenodediff('set encoding - empty', 'atsetenc');
+execute attribute_encoding_check('atsetenc');
+select * from atsetenc;
+
+-- now insert some data and check
+insert into atsetenc values(1,2);
+-- no table rewrite setting encoding
+execute capturerelfilenodebefore('set encoding - basic', 'atsetenc');
+alter table atsetenc alter column c2 set encoding (compresstype=zlib,compresslevel=9);
+-- result intact
+select * from atsetenc;
+execute checkrelfilenodediff('set encoding - basic', 'atsetenc');
+execute attribute_encoding_check('atsetenc');
+
+-- check if the encoding takes actual effect
+alter table atsetenc add column c3 text default 'a';
+insert into atsetenc values (1,2,repeat('a',10000));
+-- before alter encoding, no compression by default
+execute attribute_encoding_check('atsetenc');
+select relname, attnum, size, compression_ratio from gp_toolkit.gp_column_size where relid::regclass::text = 'atsetenc' and gp_segment_id = 0 and attnum = 3;
+execute capturerelfilenodebefore('set encoding - compress effect', 'atsetenc');
+alter table atsetenc alter column c3 set encoding (compresstype=zlib,compresslevel=9);
+execute capturerelfilenodebefore('set encoding - compress effect', 'atsetenc');
+-- after alter encoding, size is reduced
+execute attribute_encoding_check('atsetenc');
+select relname,attnum,size,compression_ratio from gp_toolkit.gp_column_size where relid::regclass::text = 'atsetenc' and gp_segment_id = 0 and attnum = 3;
+select length(c3) from atsetenc;
+
+-- check if we'll re-index the index for the rewritten column, and not others
+create index atsetenc_idx2 on atsetenc(c2);
+create index atsetenc_idx3 on atsetenc(c3);
+execute capturerelfilenodebefore ('alter_column_c2', 'atsetenc_idx2');
+execute capturerelfilenodebefore ('alter_column_c2', 'atsetenc_idx3');
+alter table atsetenc alter column c2 set encoding (compresstype=zlib,compresslevel=1);
+execute checkrelfilenodediff('alter_column_c2', 'atsetenc_idx2');
+execute checkrelfilenodediff('alter_column_c2', 'atsetenc_idx3');
+
+--
+-- mixed AT commands
+--
+-- 1. with ALTER COLUMN TYPE
+alter table atsetenc add column c4 int default 4, add column c5 int default 5;
+execute capturerelfilenodebefore('set encoding - withaltercoltype', 'atsetenc');
+-- alter column type + alter column set encoding. The subcommands' order shouldn't matter.
+alter table atsetenc alter column c4 type text, alter column c4 set encoding (compresstype=zlib,compresslevel=9);
+alter table atsetenc alter column c5 set encoding (compresstype=zlib,compresslevel=9), alter column c5 type text;
+-- no rewrite
+execute checkrelfilenodediff('set encoding - withaltercoltype', 'atsetenc');
+execute attribute_encoding_check('atsetenc');
+select c4, c5 from atsetenc;
+
+-- 2. with ADD COLUMN
+execute capturerelfilenodebefore('set encoding - withaddcol', 'atsetenc');
+alter table atsetenc add column c6 int default 6, alter column c5 set encoding (compresstype=zlib,compresslevel=1);
+-- no rewrite
+execute checkrelfilenodediff('set encoding - withaddcol', 'atsetenc');
+execute attribute_encoding_check('atsetenc');
+select c5, c6 from atsetenc;
+
+-- 3. with DROP COLUMN
+alter table atsetenc add column c7 int default 7;
+execute capturerelfilenodebefore('set encoding - withdropcol', 'atsetenc');
+-- alter and drop the same column, should complaint
+alter table atsetenc alter column c7 set encoding (compresstype=zlib,compresslevel=9), drop column c7;
+-- alter and drop different columns, should work and no rewrite
+alter table atsetenc alter column c7 set encoding (compresstype=zlib,compresslevel=9), drop column c3;
+execute checkrelfilenodediff('set encoding - withdropcol', 'atsetenc');
+execute attribute_encoding_check('atsetenc');
+-- should error out
+select c3 from atsetenc;
+select c7 from atsetenc;
+
+-- 4. with AT commands that rewrite table
+alter table atsetenc add column c8 int default 8;
+-- changing to another AM, should complaint
+alter table atsetenc set access method heap, alter column c8 set encoding (compresstype=zlib,compresslevel=9);
+-- reorganize, should rewrite
+execute capturerelfilenodebefore('set encoding - reorg', 'atsetenc');
+alter table atsetenc set with (reorganize=true), alter column c8 set encoding (compresstype=zlib,compresslevel=9);
+execute checkrelfilenodediff('set encoding - reorg', 'atsetenc');
+execute attribute_encoding_check('atsetenc');
+
+-- 5. multiple SET ENCODING commands
+-- not rewrite
+execute capturerelfilenodebefore('set encoding - multiple', 'atsetenc');
+alter table atsetenc alter column c7 set encoding (compresstype=rle_type,compresslevel=3), alter column c8 set encoding (compresstype=rle_type,compresslevel=4);
+execute checkrelfilenodediff('set encoding - multiple', 'atsetenc');
+execute attribute_encoding_check('atsetenc');
+
+-- results all good
+select * from atsetenc;
+
+--
+-- partition table
+--
+create table atsetencpart (a int, b int) using ao_column partition by range(b);
+create table atsetencpart_p1 partition of atsetencpart for values from (0) to (10);
+create table atsetencpart_p2 partition of atsetencpart for values from (10) to (20);
+create table atsetencpart_def partition of atsetencpart default;
+insert into atsetencpart select 1,i from generate_series(1,100)i;
+execute capturerelfilenodebefore('set enc', 'atsetencpart_p1');
+execute capturerelfilenodebefore('set enc', 'atsetencpart_p2');
+execute capturerelfilenodebefore('set enc', 'atsetencpart_def');
+-- alter root table will alter all children
+alter table atsetencpart alter column b set encoding (compresstype=zlib,compresslevel=9);
+-- alter a child partition just alter that partition
+alter table atsetencpart_p2 alter column b set encoding (compresslevel=1);
+-- no table rewrite and the options are changed 
+execute checkrelfilenodediff('set enc', 'atsetencpart_p1');
+execute checkrelfilenodediff('set enc', 'atsetencpart_p2');
+execute checkrelfilenodediff('set enc', 'atsetencpart_def');
+execute attribute_encoding_check('atsetencpart_p1');
+execute attribute_encoding_check('atsetencpart_p2');
+execute attribute_encoding_check('atsetencpart_def');
+-- results are expected
+select sum(a), sum(b) from atsetencpart;
+

@@ -25,6 +25,7 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   Indexed expressions \(an index defined as expression based on one or more columns of the table\)
 -   SP-GiST indexing method. GPORCA supports only B-tree, bitmap, GIN, and GiST indexes. GPORCA ignores indexes created with unsupported methods.
 -   External parameters
+-   Multi-level partitioned tables.
 -   Non-uniform partitioned tables.
 -   SortMergeJoin \(SMJ\).
 -   Ordered aggregations.

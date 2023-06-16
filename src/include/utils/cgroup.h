@@ -39,10 +39,10 @@
 #define DEFAULT_CPUSET_GROUP_ID 1
 
 /*
- * If cpu_hard_quota_limit is set to this value, it means this feature is disabled.
+ * If cpu_max_percent is set to this value, it means this feature is disabled.
  * And meanwhile, it also means the process can use CPU resource infinitely.
  */
-#define CPU_HARD_QUOTA_LIMIT_DISABLED (-1)
+#define CPU_MAX_PERCENT_DISABLED (-1)
 
 /* This is the default value about Linux Control Group */
 #define DEFAULT_CPU_PERIOD_US 100000LL
@@ -209,9 +209,9 @@ typedef int (*lockcgroup_function) (Oid group, CGroupComponentType component, bo
 typedef void (*unlockcgroup_function) (int fd);
 
 /* Set the cpu limit. */
-typedef void (*setcpulimit_function) (Oid group, int cpu_hard_quota_limit);
+typedef void (*setcpulimit_function) (Oid group, int cpu_max_percent);
 /* Set the cpu share. */
-typedef void (*setcpupriority_function) (Oid group, int cpu_soft_priority);
+typedef void (*setcpuweight_function) (Oid group, int cpu_weight);
 
 /* Get the cpu usage of the OS group. */
 typedef int64 (*getcpuusage_function) (Oid group);
@@ -255,7 +255,7 @@ typedef struct CGroupOpsRoutine
 
 	setcpulimit_function 	setcpulimit;
 
-	setcpupriority_function	setcpupriority;
+	setcpuweight_function	setcpuweight;
 
 	getcpuusage_function 	getcpuusage;
 	getmemoryusage_function	getmemoryusage;

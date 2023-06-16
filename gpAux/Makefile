@@ -124,6 +124,7 @@ rhel6_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enab
 rhel7_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
 rhel8_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
 rocky8_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+rocky9_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs
 ol8_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
 ubuntu18.04_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
 sles12_x86_64_CONFIGFLAGS=--with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
@@ -137,7 +138,7 @@ endif
 
 
 ifneq (false, ${PG_LANG})
-CONFIGFLAGS+= --with-perl --with-python PYTHON=python3
+CONFIGFLAGS+= --with-perl --with-python PYTHON=python3.9
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif

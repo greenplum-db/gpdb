@@ -79,7 +79,6 @@
 static bool check_optimizer(bool *newval, void **extra, GucSource source);
 static bool check_verify_gpfdists_cert(bool *newval, void **extra, GucSource source);
 static bool check_dispatch_log_stats(bool *newval, void **extra, GucSource source);
-static bool check_gp_hashagg_default_nbatches(int *newval, void **extra, GucSource source);
 static bool check_gp_workfile_compression(bool *newval, void **extra, GucSource source);
 
 /* Helper function for guc setter */
@@ -433,6 +432,12 @@ bool		gp_log_endpoints = false;
 
 /* optional reject to  parse ambigous 5-digits date in YYYMMDD format */
 bool		gp_allow_date_field_width_5digits = false;
+
+/* GUCs for Just In Time (JIT) compilation */
+bool		optimizer_jit_enabled;
+double		optimizer_jit_above_cost;
+double		optimizer_jit_inline_above_cost;
+double		optimizer_jit_optimize_above_cost;
 
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
@@ -2763,7 +2768,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resource_group_bypass", PGC_USERSET, RESOURCES,
+		{"gp_resource_group_bypass", PGC_SUSET, RESOURCES,
 			gettext_noop("If the value is true, the query in this session will not be limited by resource group."),
 			NULL
 		},
@@ -2957,6 +2962,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL,
 		},
 		&gp_log_suboverflow_statement,
+		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit", PGC_USERSET, QUERY_TUNING_OTHER,
+		 gettext_noop("Allow Optimizer based JIT compilation."),
+		 NULL,
+		 GUC_EXPLAIN
+		},
+		&optimizer_jit_enabled,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3706,28 +3721,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_hashagg_groups_per_bucket", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Target density of hashtable used by Hashagg during execution"),
-			gettext_noop("A smaller value will tend to produce larger hashtables, which increases agg performance"),
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&gp_hashagg_groups_per_bucket,
-		5, 1, 25,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hashagg_default_nbatches", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Default number of batches for hashagg's (re-)spilling phases."),
-			gettext_noop("Must be a power of two."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_hashagg_default_nbatches,
-		32, 4, 1048576,
-		check_gp_hashagg_default_nbatches, NULL, NULL
-	},
-
-	{
 		{"gp_motion_slice_noop", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Make motion nodes in certain slices noop"),
 			gettext_noop("Make motion nodes noop, to help analyze performance"),
@@ -3902,7 +3895,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_resgroup_memory_query_fixed_mem,
 		0, 0, INT_MAX,
-		NULL, NULL, NULL
+		gpvars_check_rg_query_fixed_mem, NULL, NULL
 	},
 
 	{
@@ -4331,6 +4324,36 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&optimizer_sort_factor,
 		1.0, 0.0, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Perform JIT compilation if query is more expensive."),
+			gettext_noop("-1 disables JIT compilation."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_above_cost,
+		7500, -1, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_optimize_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Optimize JITed functions if query is more expensive."),
+			gettext_noop("-1 disables JIT optimization."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_optimize_above_cost,
+		37500, -1, DBL_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_jit_inline_above_cost",PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Perform JIT inlining if query is more expensive."),
+			gettext_noop("-1 disables inlining."),
+			GUC_EXPLAIN
+		},
+		&optimizer_jit_inline_above_cost,
+		37500, -1, DBL_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -4952,21 +4975,6 @@ check_dispatch_log_stats(bool *newval, void **extra, GucSource source)
 			return false;
 	}
 	return true;
-}
-
-bool
-check_gp_hashagg_default_nbatches(int *newval, void **extra, GucSource source)
-{
-	/* Must be a power of two */
-	if (0 == (*newval & (*newval - 1)))
-	{
-		return true;
-	}
-	else
-	{
-		GUC_check_errmsg("gp_hashagg_default_nbatches must be a power of two");
-		return false;
-	}
 }
 
 /*

@@ -42,9 +42,9 @@
 #define DefaultIOLimit "-1"
 
 /*
- * Default value of cpu soft priority
+ * Default value of cpu weight
  */
-#define DefaultCPUSoftPriority 100
+#define DefaultCPUWeight 100
 
 /*
  * Resource group capability.
@@ -72,8 +72,8 @@ typedef struct ResGroupCaps
 {
 	ResGroupCap		__unknown;			/* placeholder, do not use it */
 	ResGroupCap		concurrency;
-	ResGroupCap		cpuHardQuotaLimit;
-	ResGroupCap		cpuSoftPriority;
+	ResGroupCap		cpuMaxPercent;
+	ResGroupCap		cpuWeight;
 	ResGroupCap		memory_limit;
 	volatile ResGroupCap	min_cost;
 

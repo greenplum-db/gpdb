@@ -532,10 +532,23 @@ vacuum(List *relations, VacuumParams *params,
 	if ((params->options & VACOPT_VACUUM) && !IsAutoVacuumWorkerProcess())
 	{
 		/*
-		 * Update pg_database.datfrozenxid, and truncate pg_xact if possible.
-		 * (autovacuum.c does this for itself.)
+		 * GPDB vacuums an Append-Optimized table in multiple sub phases, update
+		 * pg_database.datfrozenxid in the last phase (VACOPT_AO_POST_CLEANUP_PHASE)
+		 * as an ending task of the whole VACUUM operation, intead of doing it in very
+		 * sub phase.
+		 * 
+		 * More important, phase VACOPT_AO_COMPACT_PHASE requires two-phase commit
+		 * which could introduce distributed deadlock if acquiring DatabaseFrozenIds lock
+		 * in the case of multiple VACUUM sessions in the same database.
 		 */
-		vac_update_datfrozenxid();
+		if (!(params->options & (VACOPT_AO_PRE_CLEANUP_PHASE | VACOPT_AO_COMPACT_PHASE)))
+		{
+			/*
+			 * Update pg_database.datfrozenxid, and truncate pg_xact if possible.
+			 * (autovacuum.c does this for itself.)
+			 */
+			vac_update_datfrozenxid();
+		}
 	}
 
 	/*
@@ -1516,7 +1529,7 @@ vac_update_relstats(Relation relation,
 		{
 			Assert(Gp_role == GP_ROLE_UTILITY);
 			Assert(!IsSystemRelation(relation));
-			Assert(RelationIsAppendOptimized(relation));
+			Assert(RelationStorageIsAO(relation));
 			num_tuples = 0;
 		}
 
@@ -1557,8 +1570,8 @@ vac_update_relstats(Relation relation,
 		dirty = true;
 	}
 
-	elog(DEBUG2, "Vacuum oid=%u pages=%d tuples=%f",
-		 relid, pgcform->relpages, pgcform->reltuples);
+	elog(DEBUG2, "Vacuum oid=%u pages=%d tuples=%f allvisible pages=%d",
+		 relid, pgcform->relpages, pgcform->reltuples, pgcform->relallvisible);
 
 	/* Apply DDL updates, but not inside an outer transaction (see above) */
 
@@ -1810,10 +1823,7 @@ vac_update_datfrozenxid(void)
 
 	/* chicken out if bogus data found */
 	if (bogus)
-	{
-		UnLockDatabaseFrozenIds(ExclusiveLock);
 		return;
-	}
 
 	Assert(TransactionIdIsNormal(newFrozenXid));
 	Assert(MultiXactIdIsValid(newMinMulti));
@@ -1882,14 +1892,6 @@ vac_update_datfrozenxid(void)
 	if (dirty || ForceTransactionIdLimitUpdate())
 		vac_truncate_clog(newFrozenXid, newMinMulti,
 						  lastSaneFrozenXid, lastSaneMinMulti);
-
-	// GPDB_12_12_MERGE_FIXME: @(interma) upstream lock it in the **whole** tranaction (released by ResourceOwnerRelease())
-	// https://github.com/greenplum-db/gpdb-postgres-merge/commit/30e68a2abb3890c3292ff0b2422a7ea04d62acdd#
-	// 
-	// But in GP, it will cause deadlock in QEs, details: GPSERVER-370
-	// So I tried to release it at the end of this function.
-	// But it may be risks, need to understand upstream commit deeper.
-	UnLockDatabaseFrozenIds(ExclusiveLock);
 }
 
 
@@ -2285,7 +2287,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	else
 		toast_relid = InvalidOid;
 
-	if (RelationIsAppendOptimized(onerel))
+	if (RelationStorageIsAO(onerel))
 	{
 		/*
 		 * GPDB: AO tables should never be passed into vacuum_rel if the
@@ -2380,7 +2382,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		return false;
 	}
 
-	is_appendoptimized = RelationIsAppendOptimized(onerel);
+	is_appendoptimized = RelationStorageIsAO(onerel);
 	is_toast = (onerel->rd_rel->relkind == RELKIND_TOASTVALUE);
 
 	if (ao_vacuum_phase && !(is_appendoptimized || is_toast))

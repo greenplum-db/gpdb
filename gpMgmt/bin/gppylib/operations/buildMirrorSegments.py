@@ -477,8 +477,8 @@ class GpMirrorListToBuild:
                                                        remoteHost=targetHostname)
         return None
 
-    def _get_remove_cmd(self, cmd, target_host):
-        return base.Command("remove file", "rm -f {}".format(pipes.quote(cmd)), ctxt=base.REMOTE, remoteHost=target_host)
+    def _get_remove_cmd(self, remove_file, target_host):
+        return base.Command("remove file", "rm -f {}".format(pipes.quote(remove_file)), ctxt=base.REMOTE, remoteHost=target_host)
 
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, suppressErrorCheck=False, progressCmds=[]):
         for cmd in cmds:
@@ -596,7 +596,7 @@ class GpMirrorListToBuild:
         return running_segments
 
     def dereference_remote_symlink(self, datadir, host):
-        cmdStr = """python -c 'import os; print(os.path.realpath("%s"))'""" % datadir
+        cmdStr = """python3 -c 'import os; print(os.path.realpath("%s"))'""" % datadir
         cmd = base.Command('dereference a symlink on a remote host', cmdStr=cmdStr, ctxt=base.REMOTE, remoteHost=host)
         cmd.run()
         results = cmd.get_results()

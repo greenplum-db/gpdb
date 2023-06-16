@@ -14,7 +14,7 @@ execute E'( python @bindir@/lib/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+execute E'((@bindir@/gpfdist -p 7070 -k 360 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); for i in `seq 1 30`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_stop (x text)
@@ -681,6 +681,10 @@ COPY reg_region FROM STDIN DELIMITER '|';
 INSERT INTO wet_region SELECT * from reg_region;
 COPY wet_region FROM STDIN DELIMITER '|';
 INSERT INTO wet_region VALUES(4,'MIDDLE EAST','uickly special');
+-- Check error correctness, if trying to insert too long row
+INSERT INTO wet_pos1(a)
+SELECT string_agg(md5(random()::text), '') from generate_series(1,1100);
+ERROR:  http response code 500 from gpfdist (gpfdist://@hostname@:7070/wet.out): HTTP/1.0 500 no complete data row found for writing
 --
 -- Now use RET to see if data was exported correctly.
 -- NOTE: since we don't bother cleaning up the exported file, it may grow bigger

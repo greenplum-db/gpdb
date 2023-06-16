@@ -23,7 +23,6 @@ GPORCA also includes these optimization enhancements:
 GPORCA includes these enhancements for queries against partitioned tables:
 
 -   Partition elimination is improved.
--   Uniform multi-level partitioned tables are supported. For information about uniform multi-level partitioned tables, see [About Uniform Multi-level Partitioned Tables](query-piv-uniform-part-tbl.html)
 -   Query plan can contain the Partition selector operator.
 -   Partitions are not enumerated in EXPLAIN plans.
 

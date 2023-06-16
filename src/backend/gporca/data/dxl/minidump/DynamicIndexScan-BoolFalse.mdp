@@ -450,7 +450,7 @@
         <dxl:Commutator Mdid="0.523.1.0"/>
         <dxl:InverseOp Mdid="0.97.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.296845.1.0" Name="pp_c_1_prt_1" IsClustered="false" KeyColumns="2" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.296845.1.0" Name="pp_c_1_prt_1" IsClustered="false" KeyColumns="2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

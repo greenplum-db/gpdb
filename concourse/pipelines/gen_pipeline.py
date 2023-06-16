@@ -98,12 +98,26 @@ def create_pipeline(args, git_remote, git_branch):
     os_username = {
         "rhel8" : "rhel",
         "rocky8" : "rocky",
-        "oel8" : "oel"
+        "oel8" : "oel",
+        "rhel9" : "rhel",
+        "rocky9" : "rocky",
+        "oel9" : "oel"
     }
     test_os = {
         "rhel8" : "centos",
         "rocky8": "centos",
-        "oel8" : "centos"
+        "oel8" : "centos",
+        "rhel9" : "centos",
+        "rocky9": "centos",
+        "oel9" : "centos"
+    }
+    compile_platform = {
+        "rhel8" : "rocky8",
+        "rocky8": "rocky8",
+        "oel8" : "rocky8",
+        "rhel9" : "rocky9",
+        "rocky9": "rocky9",
+        "oel9" : "rocky9"
     }
 
 
@@ -115,6 +129,7 @@ def create_pipeline(args, git_remote, git_branch):
         'default_os_type': default_os_type,
         'os_username': os_username[args.os_type],
         'test_os': test_os[args.os_type],
+        'compile_platform': compile_platform[args.os_type],
         'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'use_ICW_workers': args.use_ICW_workers,
@@ -240,7 +255,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['rhel8', 'rocky8', 'oel8'],
+        choices=['rhel8', 'rocky8', 'oel8', 'rhel9', 'rocky9', 'oel9'],
         help='OS value to support'
     )
 
@@ -320,7 +335,7 @@ def main():
         print("You can only use one of --output or --user.")
         exit(1)
 
-    if args.pipeline_target == 'prod' and not args.directed_release:
+    if args.pipeline_target == 'prod' and not args.directed_release and args.os_type not in ["rocky9", "oel9", "rhel9"]:
         args.test_sections = [
             'ICW',
             'CLI',
@@ -341,11 +356,13 @@ def main():
         pipeline_file_suffix = suggested_git_branch()
         if args.user != getpass.getuser():
             pipeline_file_suffix = args.user
+        pipeline_file_suffix = pipeline_file_suffix.replace("/", "_")
         default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '-' + args.os_type + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     if args.directed_release:
         pipeline_file_suffix = suggested_git_branch()
+        pipeline_file_suffix = pipeline_file_suffix.replace("/", "_")
         default_dev_output_filename = pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 

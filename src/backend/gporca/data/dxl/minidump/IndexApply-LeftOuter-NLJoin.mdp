@@ -68,7 +68,7 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
       <dxl:TraceFlags Value="101013,102001,102002,102003,103045,102046,102048,102053,102054,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Index Mdid="0.195590.1.0" Name="t1_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.195590.1.0" Name="t1_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -122,7 +122,7 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.195606.1.0" Name="t2_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.195606.1.0" Name="t2_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -241,7 +241,7 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.195652.1.0" Name="idx_t4_a" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4">
+      <dxl:Index Mdid="0.195652.1.0" Name="idx_t4_a" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -332,7 +332,7 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
           <dxl:Opfamily Mdid="0.7027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.195690.1.0" Name="idx_t3_a" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4">
+      <dxl:Index Mdid="0.195690.1.0" Name="idx_t3_a" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>

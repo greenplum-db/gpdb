@@ -399,7 +399,6 @@ typedef struct _tableInfo
 
 	/* GPDB */
 	Oid		toast_index; 				/* OID of toast table's index */
-	Oid		toast_type;					/* OID of toast table's composite type */
 	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
 	char	*distclause; /* distributed by clause */
 	char	*partclause;	/* partition definition, if table is partition parent */

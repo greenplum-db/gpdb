@@ -1511,6 +1511,19 @@ CREATE_DATABASE () {
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
+# Creating core GPDB extension(s) in 'template1' and 'postgres' databases
+CREATE_GPEXTENSIONS() {
+		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
+		LOG_MSG "[INFO]:-Creating core GPDB extensions" 1
+		declare -a extnames=("gp_toolkit")
+		for ext in ${extnames[@]};
+		do
+			$PSQL -d template1 -X -A -t -c "CREATE EXTENSION $ext" >> $LOG_FILE 2>&1;
+			$PSQL -d postgres -X -A -t -c "CREATE EXTENSION $ext" >> $LOG_FILE 2>&1;
+		done
+}
+
+
 FORCE_FTS_PROBE () {
     LOG_MSG "[INFO]:-Start Function $FUNCNAME"
     SET_VAR $QD_PRIMARY_ARRAY
@@ -1941,6 +1954,8 @@ fi
 
 STOP_QD_PRODUCTION
 START_QD_PRODUCTION
+
+CREATE_GPEXTENSIONS
 
 if [ x"" != x"$DATABASE_NAME" ]; then
 	CREATE_DATABASE

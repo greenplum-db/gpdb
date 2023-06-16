@@ -659,9 +659,6 @@ typedef struct DynamicIndexScan
  * contain such Vars.  Also, for the convenience of setrefs.c, TLEs in
  * indextlist are marked as resjunk if they correspond to columns that
  * the index AM cannot reconstruct.
- * 
- * GPDB: We need indexqualorig to determine direct dispatch, however there
- * is no need to dispatch it.
  * ----------------
  */
 typedef struct IndexOnlyScan

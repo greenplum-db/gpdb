@@ -27,7 +27,7 @@ $$ /*in func*/
 LANGUAGE plpgsql;
 
 -- create a resource group with memory limit 100 Mb
-CREATE RESOURCE GROUP rg_memory_test WITH(memory_limit=100, cpu_hard_quota_limit=20, concurrency=2);
+CREATE RESOURCE GROUP rg_memory_test WITH(memory_limit=100, cpu_max_percent=20, concurrency=2);
 CREATE ROLE role_memory_test RESOURCE GROUP rg_memory_test;
 
 -- session1: explain memory used by query
@@ -50,6 +50,11 @@ CREATE ROLE role_memory_test RESOURCE GROUP rg_memory_test;
 1: RESET gp_resgroup_memory_query_fixed_mem;
 
 1: RESET ROLE;
+
+-- gp_resgroup_memory_query_fixed_mem cannot larger than max_statement_mem
+show max_statement_mem;
+set gp_resgroup_memory_query_fixed_mem ='2048MB';
+
 -- clean
 DROP FUNCTION func_memory_test(text);
 DROP TABLE t_memory_limit;

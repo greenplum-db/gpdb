@@ -66,6 +66,7 @@ public:
 		EreldistrHash,
 		EreldistrRandom,
 		EreldistrReplicated,
+		EreldistrUniversal,
 		EreldistrSentinel
 	};
 

@@ -46,21 +46,18 @@
 #include "utils/faultinjector.h"
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
-#define RESGROUP_DEFAULT_CPU_SOFT_PRIORITY (100)
+#define RESGROUP_DEFAULT_CPU_WEIGHT (100)
 
 #define RESGROUP_MIN_CONCURRENCY	(0)
 #define RESGROUP_MAX_CONCURRENCY	(MaxConnections)
 
-#define RESGROUP_MAX_CPU_HARD_QUOTA_LIMIT	(100)
-#define RESGROUP_MIN_CPU_HARD_QUOTA_LIMIT	(1)
+#define RESGROUP_MAX_CPU_MAX_PERCENT	(100)
+#define RESGROUP_MIN_CPU_MAX_PERCENT	(1)
 
-#define RESGROUP_MIN_CPU_SOFT_PRIORITY	(1)
-#define RESGROUP_MAX_CPU_SOFT_PRIORITY	(500)
+#define RESGROUP_MIN_CPU_WEIGHT	(1)
+#define RESGROUP_MAX_CPU_WEIGHT	(500)
 
 #define RESGROUP_MIN_MIN_COST		(0)
-#define RESGROUP_MAX_MIN_COST		(500)
-
-
 static int str2Int(const char *str, const char *prop);
 static ResGroupLimitType getResgroupOptionType(const char* defname);
 static ResGroupCap getResgroupOptionValue(DefElem *defel);
@@ -233,8 +230,8 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
-			cgroupOpsRoutine->setcpulimit(groupid, caps.cpuHardQuotaLimit);
-			cgroupOpsRoutine->setcpupriority(groupid, caps.cpuSoftPriority);
+			cgroupOpsRoutine->setcpulimit(groupid, caps.cpuMaxPercent);
+			cgroupOpsRoutine->setcpuweight(groupid, caps.cpuWeight);
 		}
 		else
 		{
@@ -445,19 +442,19 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	switch (limitType)
 	{
 		case RESGROUP_LIMIT_TYPE_CPU:
-			caps.cpuHardQuotaLimit = value;
+			caps.cpuMaxPercent = value;
 			SetCpusetEmpty(caps.cpuset, sizeof(caps.cpuset));
 			break;
 		case RESGROUP_LIMIT_TYPE_CPU_SHARES:
-			caps.cpuSoftPriority = value;
+			caps.cpuWeight = value;
 			break;
 		case RESGROUP_LIMIT_TYPE_CONCURRENCY:
 			caps.concurrency = value;
 			break;
 		case RESGROUP_LIMIT_TYPE_CPUSET:
 			StrNCpy(caps.cpuset, cpuset, sizeof(caps.cpuset));
-			caps.cpuHardQuotaLimit = CPU_HARD_QUOTA_LIMIT_DISABLED;
-			caps.cpuSoftPriority = RESGROUP_DEFAULT_CPU_SOFT_PRIORITY;
+			caps.cpuMaxPercent = CPU_MAX_PERCENT_DISABLED;
+			caps.cpuWeight = RESGROUP_DEFAULT_CPU_WEIGHT;
 			break;
 		case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 			caps.memory_limit = value;
@@ -474,17 +471,17 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 
 	validateCapabilities(pg_resgroupcapability_rel, groupid, &caps, false);
 
-	/* cpuset & cpu_hard_quota_limit can not coexist.
-	 * if cpuset is active, then cpu_hard_quota_limit must set to CPU_RATE_LIMIT_DISABLED,
-	 * if cpu_hard_quota_limit is active, then cpuset must set to "" */
+	/* cpuset & cpu_max_percent can not coexist.
+	 * if cpuset is active, then cpu_max_percent must set to CPU_RATE_LIMIT_DISABLED,
+	 * if cpu_max_percent is active, then cpuset must set to "" */
 	if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{
 		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
 									  groupid, RESGROUP_LIMIT_TYPE_CPU,
-									  CPU_HARD_QUOTA_LIMIT_DISABLED, "");
+									  CPU_MAX_PERCENT_DISABLED, "");
 		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
 									  groupid, RESGROUP_LIMIT_TYPE_CPU_SHARES,
-									  RESGROUP_DEFAULT_CPU_SOFT_PRIORITY, "");
+									  RESGROUP_DEFAULT_CPU_WEIGHT, "");
 
 		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
 									  groupid, RESGROUP_LIMIT_TYPE_CPUSET, 
@@ -613,12 +610,12 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 													getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPU:
-				resgroupCaps->cpuHardQuotaLimit = str2Int(value,
-														  getResgroupOptionName(type));
+				resgroupCaps->cpuMaxPercent = str2Int(value,
+													  getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPU_SHARES:
-				resgroupCaps->cpuSoftPriority = str2Int(value,
-														getResgroupOptionName(type));
+				resgroupCaps->cpuWeight = str2Int(value,
+												  getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPUSET:
 				StrNCpy(resgroupCaps->cpuset, value, sizeof(resgroupCaps->cpuset));
@@ -800,13 +797,13 @@ ResGroupCheckForRole(Oid groupId)
 static ResGroupLimitType
 getResgroupOptionType(const char* defname)
 {
-	if (strcmp(defname, "cpu_hard_quota_limit") == 0)
+	if (strcmp(defname, "cpu_max_percent") == 0)
 		return RESGROUP_LIMIT_TYPE_CPU;
 	else if (strcmp(defname, "concurrency") == 0)
 		return RESGROUP_LIMIT_TYPE_CONCURRENCY;
 	else if (strcmp(defname, "cpuset") == 0)
 		return RESGROUP_LIMIT_TYPE_CPUSET;
-	else if (strcmp(defname, "cpu_soft_priority") == 0)
+	else if (strcmp(defname, "cpu_weight") == 0)
 		return RESGROUP_LIMIT_TYPE_CPU_SHARES;
 	else if (strcmp(defname, "memory_limit") == 0)
 		return RESGROUP_LIMIT_TYPE_MEMORY_LIMIT;
@@ -850,11 +847,11 @@ getResgroupOptionName(ResGroupLimitType type)
 		case RESGROUP_LIMIT_TYPE_CONCURRENCY:
 			return "concurrency";
 		case RESGROUP_LIMIT_TYPE_CPU:
-			return "cpu_hard_quota_limit";
+			return "cpu_max_percent";
 		case RESGROUP_LIMIT_TYPE_CPUSET:
 			return "cpuset";
 		case RESGROUP_LIMIT_TYPE_CPU_SHARES:
-			return "cpu_soft_priority";
+			return "cpu_weight";
 		case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 			return "memory_limit";
 		case RESGROUP_LIMIT_TYPE_MIN_COST:
@@ -882,34 +879,33 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 				break;
 
 			case RESGROUP_LIMIT_TYPE_CPU:
-				if (value > RESGROUP_MAX_CPU_HARD_QUOTA_LIMIT ||
-					(value < RESGROUP_MIN_CPU_HARD_QUOTA_LIMIT && value != CPU_HARD_QUOTA_LIMIT_DISABLED))
+				if (value > RESGROUP_MAX_CPU_MAX_PERCENT ||
+					(value < RESGROUP_MIN_CPU_MAX_PERCENT && value != CPU_MAX_PERCENT_DISABLED))
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("cpu_hard_quota_limit range is [%d, %d] or equals to %d",
-								   RESGROUP_MIN_CPU_HARD_QUOTA_LIMIT, RESGROUP_MAX_CPU_HARD_QUOTA_LIMIT,
-								   CPU_HARD_QUOTA_LIMIT_DISABLED)));
+							errmsg("cpu_max_percent range is [%d, %d] or equals to %d",
+								   RESGROUP_MIN_CPU_MAX_PERCENT, RESGROUP_MAX_CPU_MAX_PERCENT,
+								   CPU_MAX_PERCENT_DISABLED)));
 				break;
 
 			case RESGROUP_LIMIT_TYPE_CPU_SHARES:
-				if (value < RESGROUP_MIN_CPU_SOFT_PRIORITY ||
-					value > RESGROUP_MAX_CPU_SOFT_PRIORITY)
+				if (value < RESGROUP_MIN_CPU_WEIGHT ||
+					value > RESGROUP_MAX_CPU_WEIGHT)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-									errmsg("cpu_soft_priority range is [%d, %d]",
-										   RESGROUP_MIN_CPU_SOFT_PRIORITY, RESGROUP_MAX_CPU_SOFT_PRIORITY)));
+									errmsg("cpu_weight range is [%d, %d]",
+										   RESGROUP_MIN_CPU_WEIGHT, RESGROUP_MAX_CPU_WEIGHT)));
 				break;
 
 			case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 				break;
 
 			case RESGROUP_LIMIT_TYPE_MIN_COST:
-				if (value < RESGROUP_MIN_MIN_COST ||
-					value > RESGROUP_MAX_MIN_COST)
+				if (value < RESGROUP_MIN_MIN_COST)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-									errmsg("min_cost range is [%d, %d]",
-										RESGROUP_MIN_MIN_COST, RESGROUP_MAX_MIN_COST)));
+									errmsg("The min_cost value can't be less than %d.",
+										RESGROUP_MIN_MIN_COST)));
 				break;
 
 			default:
@@ -954,8 +950,8 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 			const char *cpuset = defGetString(defel);
 			StrNCpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
       checkCpuSetByRole(cpuset);
-			caps->cpuHardQuotaLimit = CPU_HARD_QUOTA_LIMIT_DISABLED;
-			caps->cpuSoftPriority = RESGROUP_DEFAULT_CPU_SOFT_PRIORITY;
+			caps->cpuMaxPercent = CPU_MAX_PERCENT_DISABLED;
+			caps->cpuWeight = RESGROUP_DEFAULT_CPU_WEIGHT;
 		}
 		else if (type == RESGROUP_LIMIT_TYPE_IO_LIMIT)
 		{
@@ -973,11 +969,11 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 					caps->concurrency = value;
 					break;
 				case RESGROUP_LIMIT_TYPE_CPU:
-					caps->cpuHardQuotaLimit = value;
+					caps->cpuMaxPercent = value;
 					SetCpusetEmpty(caps->cpuset, sizeof(caps->cpuset));
 					break;
 				case RESGROUP_LIMIT_TYPE_CPU_SHARES:
-					caps->cpuSoftPriority = value;
+					caps->cpuWeight = value;
 					break;
 				case RESGROUP_LIMIT_TYPE_MEMORY_LIMIT:
 					caps->memory_limit = value;
@@ -998,13 +994,13 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		(mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("can't specify both cpu_hard_quota_limit and cpuset")));
+				errmsg("can't specify both cpu_max_percent and cpuset")));
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		!(mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("must specify cpu_hard_quota_limit or cpuset")));
+				errmsg("must specify cpu_max_percent or cpuset")));
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CONCURRENCY)))
 		caps->concurrency = RESGROUP_DEFAULT_CONCURRENCY;
@@ -1017,7 +1013,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		!(mask & (1 << RESGROUP_LIMIT_TYPE_CPU_SHARES)))
-		caps->cpuSoftPriority = RESGROUP_DEFAULT_CPU_SOFT_PRIORITY;
+		caps->cpuWeight = RESGROUP_DEFAULT_CPU_WEIGHT;
 }
 
 /*
@@ -1104,11 +1100,11 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CONCURRENCY, value);
 
-	snprintf(value, sizeof(value), "%d", caps->cpuHardQuotaLimit);
+	snprintf(value, sizeof(value), "%d", caps->cpuMaxPercent);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CPU, value);
 
-	snprintf(value, sizeof(value), "%d", caps->cpuSoftPriority);
+	snprintf(value, sizeof(value), "%d", caps->cpuWeight);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_CPU_SHARES, value);
 

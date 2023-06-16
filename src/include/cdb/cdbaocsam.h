@@ -419,6 +419,11 @@ extern void aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc);
 extern void aoco_dml_init(Relation relation);
 extern void aoco_dml_finish(Relation relation);
 
+extern bool aocs_positionscan(AOCSScanDesc aoscan,
+							  AppendOnlyBlockDirectoryEntry *dirEntry,
+							  int colIdx,
+							  int fsInfoIdx);
+
 /*
  * Update total bytes read for the entire scan. If the block was compressed,
  * update it with the compressed length. If the block was not compressed, update

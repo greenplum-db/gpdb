@@ -33,12 +33,8 @@
 # RowExclusiveLock and the tests can probably be enabled back.
 # Additionally, skip-locked-4 uses pg_advisory_lock() which only takes the lock
 # on QD, but it needs to take it on QE segments as well.
-# GPDB_95_MERGE_FIXME: insert-conflict-do-nothing, insert-conflict-do-update,
-# and insert-conflict-do-update-2 fail because isolationtester does not include
-# QEs when checking pg_locks. If we are able to add the QE backend pids of gang
-# to this list then these tests can be enabled.  insert-conflict-do-update-2
-# has additional issue where GPDB does not support creating unique indexes on
-# mutated columns via lower().
+# insert-conflict-do-update-3 related to issue https://github.com/greenplum-db/gpdb/issues/15635
+
 #
 # GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: tuplelock-upgrade-no-deadlock, freeze-the-dead
 # don't pass in normal mode for GPDB as SELECT..FOR SHARE/UPDATE can
@@ -88,10 +84,10 @@ test: deadlock-soft-2
 #test: lock-update-traversal
 test: inherit-temp
 test: temp-schema-cleanup
-#test: insert-conflict-do-nothing
-#test: insert-conflict-do-nothing-2
-#test: insert-conflict-do-update
-#test: insert-conflict-do-update-2
+test: insert-conflict-do-nothing
+test: insert-conflict-do-nothing-2
+test: insert-conflict-do-update
+test: insert-conflict-do-update-2
 #test: insert-conflict-do-update-3
 test: insert-conflict-toast
 test: insert-conflict-specconflict

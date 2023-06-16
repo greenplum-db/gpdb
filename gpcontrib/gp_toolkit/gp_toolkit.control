@@ -1,0 +1,5 @@
+# gp_toolkit extension
+
+comment = 'various GPDB administrative views/functions'
+default_version = '1.0'
+relocatable = true

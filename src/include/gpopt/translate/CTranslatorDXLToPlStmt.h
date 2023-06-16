@@ -296,11 +296,14 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
-	Plan *TranslateDXLProjectSet(
-		const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
-		CDXLTranslationContextArray *
-			ctxt_translation_prev_siblings	// translation contexts of previous siblings
-	);
+	Plan *TranslateDXLProjectSet(const CDXLNode *result_dxlnode);
+
+	Plan *CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
+								   Plan *result_node_plan, Plan *child_plan,
+								   Plan *&project_set_child_plan,
+								   BOOL &will_require_result_node);
+
+	void MutateFuncExprToVarProjectSet(Plan *final_plan);
 
 	Plan *TranslateDXLResult(
 		const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
@@ -591,6 +594,8 @@ private:
 	static List *TranslateNestLoopParamList(
 		CDXLColRefArray *pdrgdxlcrOuterRefs, CDXLTranslateContext *dxltrctxLeft,
 		CDXLTranslateContext *dxltrctxRight);
+
+	static Node *FixUpperExprMutatorProjectSet(Node *node, List *context);
 };
 }  // namespace gpdxl
 

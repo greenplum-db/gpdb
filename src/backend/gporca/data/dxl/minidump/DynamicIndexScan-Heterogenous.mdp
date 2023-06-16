@@ -87,7 +87,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.27119.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.27119.1.1.4" Name="cmin" Width="4.000000"/>
-      <dxl:Index Mdid="0.27323.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.27323.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -99,7 +99,7 @@
           <dxl:Partition Mdid="6.27323005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.2732323.1.0" Name="p2_ind" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.2732323.1.0" Name="p2_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

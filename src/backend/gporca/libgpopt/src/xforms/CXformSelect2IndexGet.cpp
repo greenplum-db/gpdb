@@ -98,12 +98,7 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	GPOS_ASSERT(pdrgpexpr->Size() > 0);
 
 	// derive the scalar and relational properties to build set of required columns
-	CColRefSet *pcrsOutput = pexpr->DeriveOutputColumns();
 	CColRefSet *pcrsScalarExpr = pexprScalar->DeriveUsedColumns();
-
-	CColRefSet *pcrsReqd = GPOS_NEW(mp) CColRefSet(mp);
-	pcrsReqd->Include(pcrsOutput);
-	pcrsReqd->Include(pcrsScalarExpr);
 
 	// find the indexes whose included columns meet the required columns
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
@@ -116,14 +111,13 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
 		CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
-			pcrsReqd, pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel);
+			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel);
 		if (nullptr != pexprIndexGet)
 		{
 			pxfres->Add(pexprIndexGet);
 		}
 	}
 
-	pcrsReqd->Release();
 	pdrgpexpr->Release();
 }
 

@@ -81,7 +81,7 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 		context = (Context *) palloc0(sizeof(Context));
 
 		context->aorel = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAppendOptimized(context->aorel))
+		if (!RelationStorageIsAO(context->aorel))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
@@ -195,7 +195,7 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		context = (Context *) palloc0(sizeof(Context));
 
 		context->parentRelation = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAppendOptimized(context->parentRelation))
+		if (!RelationStorageIsAO(context->parentRelation))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
@@ -372,7 +372,7 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 		context = (Context *) palloc0(sizeof(Context));
 
 		context->parentRelation = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAppendOptimized(context->parentRelation))
+		if (!RelationStorageIsAO(context->parentRelation))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));

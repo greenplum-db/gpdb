@@ -39,7 +39,7 @@ drop database gpsd_db_without_hll;
 create database gpsd_db_without_hll;
 
 -- start_ignore
-\! psql -f data/gpsd-without-hll.sql gpsd_db_without_hll
+\! psql -Xf data/gpsd-without-hll.sql gpsd_db_without_hll
 -- end_ignore
 \c gpsd_db_without_hll
 
@@ -105,7 +105,7 @@ drop database gpsd_db_with_hll;
 create database gpsd_db_with_hll;
 
 -- start_ignore
-\! psql -f data/gpsd-with-hll.sql gpsd_db_with_hll
+\! psql -Xf data/gpsd-with-hll.sql gpsd_db_with_hll
 -- end_ignore
 \c gpsd_db_with_hll
 
@@ -172,7 +172,7 @@ drop database gpsd_db_ext_data;
 create database gpsd_db_ext_data;
 
 -- start_ignore
-\! psql -f data/gpsd_db_ext_data.sql gpsd_db_ext_data
+\! psql -Xf data/gpsd_db_ext_data.sql gpsd_db_ext_data
 -- end_ignore
 \c gpsd_db_ext_data
 

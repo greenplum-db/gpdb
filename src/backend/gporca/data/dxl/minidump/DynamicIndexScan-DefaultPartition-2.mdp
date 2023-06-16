@@ -288,7 +288,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="1000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.274813.1.0" Name="p_1_prt_3_ind_bc" IsClustered="false" KeyColumns="1,2" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.274813.1.0" Name="p_1_prt_3_ind_bc" IsClustered="false" KeyColumns="1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
@@ -487,7 +487,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="50"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.267021.1.0" Name="p_def_ind_c" IsClustered="false" KeyColumns="2" IncludedColumns="0,1,2,3,4,5,6,7,8,9">
+      <dxl:Index Mdid="0.267021.1.0" Name="p_def_ind_c" IsClustered="false" KeyColumns="2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

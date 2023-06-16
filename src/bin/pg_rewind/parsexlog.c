@@ -419,19 +419,7 @@ extractPageInfo(XLogReaderState *record)
 			 * and will copy the missing tail from remote system.
 			 */
 		}
-
-		/*
-		 * GPDB_95_MERGE_FIXME: should we just return here? there seems be no buffer
-		 * registered when xlog is inserted.
-		 */
 	}
-	/*
-	 * GPDB_95_MERGE_FIXME:
-	 * 1. should RM_DISTRIBUTEDLOG_ID be taken care of
-	 * 2. we used to have a special treat towards RM_BITMAP_ID, now we hope the
-	 * buffers are registered properly when the xlog is inserted. We need to
-	 * revisit here to make sure RM_BITMAP_ID works.
-	 */
 
 	for (block_id = 0; block_id <= record->max_block_id; block_id++)
 	{
