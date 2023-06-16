@@ -204,7 +204,7 @@ void fill_bdi_list(TblSpcIOLimit *iolimit, List *result)
 		while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 		{
 			char *ts_dir;
-			char data_dir[1024];
+			char data_path[1024];
 			bdi_t *bdi;
 			Form_pg_tablespace spaceform = (Form_pg_tablespace) GETSTRUCT(tuple);
 			Oid dbid = MyDatabaseId;
@@ -212,10 +212,10 @@ void fill_bdi_list(TblSpcIOLimit *iolimit, List *result)
 				dbid = 0;
 
 			ts_dir = GetDatabasePath(dbid, spaceform->oid);
-			sprintf(data_dir, "%s/%s", DataDir, ts_dir);
+			sprintf(data_path, "%s/%s", DataDir, ts_dir);
 
 			bdi = (bdi_t *)palloc0(sizeof(bdi_t));
-			*bdi = get_bdi_of_path(data_dir);
+			*bdi = get_bdi_of_path(data_path);
 			iolimit->bdi_list = lappend(iolimit->bdi_list, bdi);
 		}
 		table_endscan(scan);
@@ -224,17 +224,17 @@ void fill_bdi_list(TblSpcIOLimit *iolimit, List *result)
 	else
 	{
 		char *ts_dir;
-		char data_dir[1024];
+		char data_path[1024];
 		Oid dbid = MyDatabaseId;
 		bdi_t *bdi;
 		if (iolimit->tablespace_oid == GLOBALTABLESPACE_OID)
 			dbid = 0;
 
 		ts_dir = GetDatabasePath(dbid, iolimit->tablespace_oid);
-		sprintf(data_dir, "%s/%s", DataDir, ts_dir);
+		sprintf(data_path, "%s/%s", DataDir, ts_dir);
 
 		bdi = (bdi_t *)palloc0(sizeof(bdi_t));
-		*bdi = get_bdi_of_path(data_dir);
+		*bdi = get_bdi_of_path(data_path);
 
 		ListCell      *limit_cell;
 		ListCell      *bdi_cell;
