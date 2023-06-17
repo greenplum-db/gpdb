@@ -325,3 +325,42 @@ select with_test2.* from with_test2
 where value < all (select total from my_group_sum where my_group_sum.i = with_test2.i)
 order by 1,2
 limit 15;
+
+-- Test case for Issue 15794, 15767 and 15793
+create table t_15767 (c0 int, c1 int);
+insert into t_15767 values(1,0),(2,1);
+
+select max(c0) from t_15767
+union all
+select max(c0) from t_15767
+group by 1*t_15767.c0;
+
+drop table t_15767;
+
+create table t2_15794(
+  id integer,
+  x double precision,
+  y double precision,
+  position double precision[]
+);
+
+insert into t2_15794 values (1,1,1,array[1,1]);
+insert into t2_15794 values (2,2,2,array[2,2]);
+
+select array_agg(length) from (
+select (
+array_upper( position, 1)
+- array_lower( position, 1) + 1
+) as length,
+array_lower( position, 1) as lower
+from t2_15794
+group by length, lower) t;
+
+drop table t2_15794;
+
+create table t1_15793 (c0 int);
+create table t2_15793 (c0 int);
+select * from t1_15793 cross join t2_15793 where not ((t1_15793.c0)+(t1_15793.c0)!=(t2_15793.c0));
+
+drop table t1_15793;
+drop table t2_15793;
