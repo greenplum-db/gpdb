@@ -224,7 +224,7 @@ createMotionLayerState(int maxMotNodeID)
 
 		/*
 		 * we'll just set this to 0.  later, ml_ipc will call
-		 * setExpectedReceivers() to set this if we are a "Receiving" motion node.
+		 * UpdateMotionExpectedReceivers() to set this if we are a "Receiving" motion node.
 		 */
 		pEntry->num_senders = 0;
 	}
