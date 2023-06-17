@@ -8,6 +8,7 @@ Serves data files to or writes data files out from Greenplum Database segments.
 gpfdist [-d <directory>] [-p <http_port>] [-P <last_http_port>] [-l <log_file>]
    [-t <timeout>] [-k <clean_up_timeout>] [-S] [-w <time>] [-v | -V] [-s] [-m <max_length>]
    [--ssl <certificate_path> [--sslclean <wait_time>] ]
+   [--compress] [--multi_thread <num_threads>]
    [-c <config.yml>]
 
 gpfdist -? | --help 
@@ -95,6 +96,15 @@ Most likely, you will want to run `gpfdist` on your ETL machines rather than the
 
 :   In some cases, this error might occur when copying large amounts of data: `gpfdist server closed connection`. To avoid the error, you can add a delay, for example `--sslclean 5`.
 
+--compress
+:   Enable compression during data transfer. When specified, `gpfdist` utilizes the Zstandard (`zstd`) compression algorithm.
+:   This option is not available on Windows platforms.
+
+--multi\_threads num\_threads
+:   Sets the maximum number of threads that `gpfdist` uses during data transfer, parallelizing the operation. When specified, `gpfdist` automatically compresses the data (also parallelized) before transferring.
+:   `gpfdist` supports a maximum of 256 threads.
+:   This option is not available on Windows platforms.
+
 -c config.yaml
 :   Specifies rules that `gpfdist` uses to select a transform to apply when loading or extracting data. The `gpfdist` configuration file is a YAML 1.1 document.
 
@@ -133,6 +143,8 @@ This example sets the environment variable on a Linux system so that `gpfdist` e
 export GPFDIST_WATCHDOG_TIMER=300
 ```
 
+When you enable compression, `gpfdist` transmits a larger amount of data while maintaining low network usage. Note that compression can be time-intensive, and may potentially reduce transmission speeds. When you utilize multi-threaded execution, the overall time required for compression may decrease, which facilitates faster data transmission while maintaining low network occupancy and high speed.
+
 ## <a id="section6"></a>Examples 
 
 To serve files from a specified directory using port 8081 \(and start `gpfdist` in the background\):
@@ -145,6 +157,12 @@ To start `gpfdist` in the background and redirect output and errors to a log fil
 
 ```
 gpfdist -d /var/load_files -p 8081 -l /home/gpadmin/log &
+```
+
+To enable multi-threaded data transfer (with implicit compression) using four threads, start `gpfdist` as follows:
+
+```
+gpfdist -d /var/load_files -p 8081 --multi_thread 4
 ```
 
 To stop `gpfdist` when it is running in the background:
