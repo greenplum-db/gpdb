@@ -27,18 +27,9 @@
 #include "cdb/cdbpullup.h"		/* me */
 
 
-static bool  cdbpullup_missingVarCheck(Expr *node, List *targetlist);
-static List *cdbpullup_getall_vars(Node *node);
-static bool  cdbpullup_getall_vars_walker(Node *node, void *context);
-static bool  cdbpullup_missingVarCheckWalker(Node *node, void *context);
+static bool cdbpullup_missingVarWalker(Expr *node, void *targetlist);
 static Expr *cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modifyOld);
 
-
-typedef struct MissingVarContext
-{
-	List   *vars;
-	List   *findvars;
-} MissingVarContext;
 /*
  * cdbpullup_expr
  *
@@ -324,8 +315,10 @@ cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist,
 
 		/* Return this item if all referenced Vars are in targetlist. */
 		if (!IsA(key, Var) &&
-			!cdbpullup_missingVarCheck(key, targetlist))
+			!cdbpullup_missingVarWalker(key, targetlist))
+		{
 			return key;
+		}
 	}
 
 	return NULL;
@@ -419,85 +412,46 @@ cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modify
 	}
 }								/* cdbpullup_make_var */
 
+
 /*
- * cdbpullup_missingVarCheck
- *   Given an expression and a targetlist, check if the expression
- *   can be represented by the exprs in the targetlist.
+ * cdbpullup_missingVarWalker
  *
- *   This function return true when Expr node cannot be represented
- *   based on targetlist (which matches the name that we have missing vars).
+ * Returns true if some Var in expr is not in targetlist.
+ * 'targetlist' is either a List of TargetEntry, or a plain List of Expr.
  *
- *   The implementaion is as below:
- *     1. build the list of all Vars in the Expr node, it is a set (created
- *        by list_append_unique_ptr in the helper function cdbpullup_getall_vars)
- *     2. walk the targetlist to build a set (created by list_append_unique_ptr)
- *        for all Vars in targetlist that is member of Varset built in 1st step,
- *        here membership test is using list_member which call equal to test.
- *     3. if the size of the 2nd step's var set is smaller than the 1st step's,
- *        it means the targetlist misses some vars.
+ * NB:  A Var in the expr is considered as matching a Var in the targetlist
+ * without regard for whether or not there is a RelabelType node atop the
+ * targetlist Var.
+ *
  */
 static bool
-cdbpullup_missingVarCheck(Expr *node, List *targetlist)
+cdbpullup_missingVarWalker(Expr *node, void *targetlist)
 {
-	List             *vars    = NIL;
-	MissingVarContext context;
-	bool              missing;
-
-	vars = cdbpullup_getall_vars((Node *) node);
-	if (list_length(vars) == 0)
-		return true;
-
-	context.vars = vars;
-	context.findvars = NIL;
-	(void) expression_tree_walker((Node *) targetlist,
-								  cdbpullup_missingVarCheckWalker,
-								  (void *) &context);
-	missing = (list_length(context.findvars) < list_length(vars));
-	list_free(vars);
-	list_free(context.findvars);
-	return missing;
-}
-
-static List *
-cdbpullup_getall_vars(Node *node)
-{
-	List *vars = NIL;
-
-	(void) expression_tree_walker(node, cdbpullup_getall_vars_walker, (void *) &vars);
-	return vars;
-}
-
-static bool
-cdbpullup_getall_vars_walker(Node *node, void *context)
-{
-	List **vars = context;
-
-	if (node == NULL)
+	if (!node)
 		return false;
 
-	if (IsA(node, Var))
+	/*
+	 * Should also consider PlaceHolderVar in the targetlist.
+	 * See github issue: https://github.com/greenplum-db/gpdb/issues/10315
+	 */
+	if (IsA(node, Var) || IsA(node, PlaceHolderVar))
 	{
-		*vars = list_append_unique_ptr(*vars, node);
-		return false;
+		if (!targetlist)
+			return true;
+
+		/* is targetlist a List of TargetEntry? */
+		if (IsA(linitial(targetlist), TargetEntry))
+		{
+			if (tlist_member_ignore_relabel(node, (List *) targetlist))
+				return false;	/* this Var ok - go on to check rest of expr */
+		}
+
+		/* targetlist must be a List of Expr */
+		else if (list_member((List *) targetlist, node))
+			return false;		/* this Var ok - go on to check rest of expr */
+
+		return true;			/* Var is not in targetlist - quit the walk */
 	}
 
-	return expression_tree_walker(node, cdbpullup_getall_vars_walker, (void *) vars);
-}
-
-static bool
-cdbpullup_missingVarCheckWalker(Node *node, void *context)
-{
-	MissingVarContext *ctx = context;
-
-	if (node == NULL)
-		return false;
-
-	if (IsA(node, Var))
-	{
-		if (list_member(ctx->vars, node))
-			ctx->findvars = list_append_unique_ptr(ctx->findvars, node);
-		return false;
-	}
-
-	return expression_tree_walker(node, cdbpullup_missingVarCheckWalker, (void *) ctx);
-}
+	return expression_tree_walker((Node *) node, cdbpullup_missingVarWalker, targetlist);
+}								/* cdbpullup_missingVarWalker */

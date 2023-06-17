@@ -325,8 +325,3 @@ select with_test2.* from with_test2
 where value < all (select total from my_group_sum where my_group_sum.i = with_test2.i)
 order by 1,2
 limit 15;
-
--- test case for Github Issue 15079
-create table if not exists issue_15079(c0 real, c1 boolean);
-select * from (select bool_or(issue_15079.c1) from issue_15079 group by random()) as result;
-drop table issue_15079;
