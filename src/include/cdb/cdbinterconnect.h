@@ -532,8 +532,10 @@ typedef struct ChunkTransportState
 	struct ICProxyBackendContext *proxyContext;
 } ChunkTransportState;
 
+#ifdef DEBUG
 extern void dumpICBufferList(ICBufferList *list, const char *fname);
 extern void dumpUnackQueueRing(const char *fname);
 extern void dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname);
+#endif
 
 #endif   /* CDBINTERCONNECT_H */

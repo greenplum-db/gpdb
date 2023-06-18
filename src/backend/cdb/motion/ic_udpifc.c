@@ -6696,6 +6696,7 @@ cleanupStartupCache()
  * These functions can be called from gdb to output internal information to a file.
  */
 
+#ifdef DEBUG
 /*
  * dumpICBufferList_Internal
  * 		Dump a buffer list.
@@ -6865,6 +6866,7 @@ dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname)
 	}
 	fclose(ofile);
 }
+#endif
 
 void
 WaitInterconnectQuitUDPIFC(void)
