@@ -50,6 +50,7 @@ io_limit_validate(List *limit_list)
 {
 	ListCell *limit_cell;
 	int bdi_count = 0;
+	int i = 0;
 	bdi_t *bdi_array;
 
 	foreach (limit_cell, limit_list)
@@ -61,7 +62,6 @@ io_limit_validate(List *limit_list)
 	bdi_array = (bdi_t *) palloc(bdi_count * sizeof(bdi_t));
 	foreach (limit_cell, limit_list)
 	{
-		int i = 0;
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
 
 
