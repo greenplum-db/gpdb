@@ -75,24 +75,6 @@ static CGroupSystemInfo cgroupSystemInfoV2 = {
 #define RESGROUP_IOMAX  (-1)
 #define RESGROUP_IONULL (0)
 
-
-#define SET_IOCONFIG_FIELD(io_config, offset, value) \
-	do \
-	{ \
-		int *io_param; \
-		io_param = (int *) (((char *) (io_config)) + offset); \
-		if (*io_param != RESGROUP_IONULL) \
-		{ \
-			ereport(ERROR, \
-					(errcode(ERRCODE_SYNTAX_ERROR), \
-					 errmsg("duplicated io paramters"))); \
-		} \
-		*io_param = value; \
-	} \
-	while (0)
-
-typedef void *(FuncParse)(const char *, int, void *);
-
 /* The functions current file used */
 static void dump_component_dir_v2(void);
 
@@ -846,13 +828,17 @@ getmemoryusage_v2(Oid group)
 }
 
 
-static List*
+static List *
 parseio_v2(const char *io_limit)
 {
+	List *result;
 	if (io_limit == NULL)
 		return NIL;
 
-	return io_limit_parse(io_limit);
+	result = io_limit_parse(io_limit);
+	io_limit_validate(result);
+
+	return result;
 }
 
 static void

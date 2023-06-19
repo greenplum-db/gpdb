@@ -21,6 +21,7 @@ OBJS += cgroup-ops-linux-v1.o
 OBJS += cgroup-ops-linux-v2.o
 OBJS += io_limit_lex.o
 OBJS += io_limit_gram.o
+OBJS += cgroup_io_limit.o
 
 io_limit_gram.h: io_limit_gram.c
 	touch $@

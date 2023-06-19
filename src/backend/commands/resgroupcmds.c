@@ -463,7 +463,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 			caps.min_cost = value;
 			break;
 		case RESGROUP_LIMIT_TYPE_IO_LIMIT:
-			caps.io_limit = pstrdup(io_limit);
+			caps.io_limit = io_limit;
 			break;
 		default:
 			break;
@@ -629,7 +629,7 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 													getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_IO_LIMIT:
-				if (strcmp(value, "-1") != 0)
+				if (strcmp(value, DefaultIOLimit) != 0)
 					resgroupCaps->io_limit = pstrdup(value);
 				else
 				    resgroupCaps->io_limit = NULL;
@@ -954,10 +954,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 			caps->cpuWeight = RESGROUP_DEFAULT_CPU_WEIGHT;
 		}
 		else if (type == RESGROUP_LIMIT_TYPE_IO_LIMIT)
-		{
-			const char *io_limit_tmp = defGetString(defel);
-			caps->io_limit = pstrdup(io_limit_tmp);
-		}
+			caps->io_limit = defGetString(defel);
 		else
 		{
 			value = getResgroupOptionValue(defel);
@@ -1192,6 +1189,7 @@ updateResgroupCapabilityEntry(Relation rel,
 	}
 
 	if (limitType == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+		/* Because stringBuffer is a limited length array, so it not suitable for io limit. */
 		values[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(strValue);
 	else
 		values[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(stringBuffer);

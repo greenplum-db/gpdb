@@ -30,6 +30,16 @@ typedef struct IOconifg
 	uint64 wiops;
 } IOconfig;
 
+const extern int	IOconfigTotalFields;
+/* the order must be same as struct IOconfig */
+const extern char	*IOconfigFields[4];
+
+typedef struct IOconfigItem
+{
+	int offset;
+	uint64 value;
+} IOconfigItem;
+
 /*
  * TblSpcIOLimit connects IOconfig and gpdb tablespace.
  * GPDB tablespace is a directory in filesystem, but the back of this directory
@@ -46,6 +56,13 @@ typedef struct TblSpcIOLimit
 	IOconfig  *ioconfig;
 } TblSpcIOLimit;
 
+typedef struct IO_LIMIT_PARSER_CONTEXT
+{
+	List *result;
+	int normal_tablespce_cnt;
+	int star_tablespace_cnt;
+} IO_LIMIT_PARSER_CONTEXT;
+
 typedef struct IO_LIMIT_PARSER_STATE
 {
 	void *state;
@@ -53,7 +70,13 @@ typedef struct IO_LIMIT_PARSER_STATE
 } IO_LIMIT_PARSER_STATE;
 
 IO_LIMIT_PARSER_STATE *io_limit_begin_scan(const char *limit_str);
-List *io_limit_parse(const char *limit_str);
 void io_limit_end_scan(IO_LIMIT_PARSER_STATE *state);
+
+bdi_t get_bdi_of_path(const char *ori_path);
+int fill_bdi_list(TblSpcIOLimit *io_limit);
+
+List *io_limit_parse(const char *limit_str);
+void io_limit_validate(List *limit_list);
+
 
 #endif
