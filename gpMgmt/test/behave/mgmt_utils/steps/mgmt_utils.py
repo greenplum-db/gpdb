@@ -634,7 +634,7 @@ def impl(context, process_name, secs):
 @when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in the logs')
 def impl(context, process_name, log_msg):
     command = "while sleep 0.1; " \
-              "do if egrep --quiet %s  ~/gpAdminLogs/%s*log ; " \
+              "do if grep -E --quiet %s  ~/gpAdminLogs/%s*log ; " \
               "then ps ux | grep bin/%s |awk '{print $2}' | xargs kill ;break 2; " \
               "fi; done" % (log_msg, process_name, process_name)
     run_async_command(context, command)
@@ -642,7 +642,7 @@ def impl(context, process_name, log_msg):
 @then('the user asynchronously sets up to end {kill_process_name} process when {log_msg} is printed in the {logfile_name} logs')
 def impl(context, kill_process_name, log_msg, logfile_name):
     command = "while sleep 0.1; " \
-              "do if egrep --quiet %s  ~/gpAdminLogs/%s*log ; " \
+              "do if grep -E --quiet %s  ~/gpAdminLogs/%s*log ; " \
               "then ps ux | grep bin/%s |awk '{print $2}' | xargs kill -2 ;break 2; " \
               "fi; done" % (log_msg, logfile_name, kill_process_name)
     run_async_command(context, command)
@@ -1234,7 +1234,7 @@ def impl(context, options):
 @then('gpintsystem logs should {contain} lines about running backout script')
 def impl(context, contain):
     string_to_find = 'Run command bash .*backout_gpinitsystem.* on coordinator to remove these changes$'
-    command = "egrep '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
+    command = "grep -E '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
     run_command(context, command)
     if contain == "contain":
         if has_exception(context):

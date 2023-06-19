@@ -256,7 +256,7 @@ Feature: gpinitsystem tests
         When the user runs command "source $GPHOME/greenplum_path.sh; __DCA_VERSION_FILE__=/tmp/gpinitsystem/gpdb-appliance-version $GPHOME/bin/gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
         Then gpinitsystem should return a return code of 0
         # the log file must have the entry indicating that DCA specific configuration has been set
-        And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
+        And the user runs command "grep -E 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
 
     Scenario: gpinitsystem uses the system locale if no locale is specified
         Given the database is not running
