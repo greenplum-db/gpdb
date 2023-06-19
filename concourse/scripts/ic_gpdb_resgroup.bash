@@ -52,6 +52,14 @@ make_cgroups_dir() {
 EOF
 }
 
+install_python_dependency() {
+    local host_alias=$1
+
+    ssh $host_alias bash -ex <<EOF
+        pip3 install -r python-dependencies.txt
+EOF
+}
+
 run_resgroup_test() {
     local gpdb_master_alias=$1
 
@@ -68,8 +76,6 @@ run_resgroup_test() {
             --without-libedit-preferred --without-docdir --without-readline \
             --disable-gpcloud --disable-gpfdist --disable-orca \
             --without-python PKG_CONFIG_PATH="\${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
-
-        pip3 install -r python-dependencies.txt
 
         make -C /home/gpadmin/gpdb_src/src/test/regress
         ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/regress </dev/null
@@ -144,6 +150,9 @@ mount_cgroups ccp-${CLUSTER_NAME}-0
 mount_cgroups ccp-${CLUSTER_NAME}-1
 make_cgroups_dir ccp-${CLUSTER_NAME}-0
 make_cgroups_dir ccp-${CLUSTER_NAME}-1
+install_python_dependency ccp-${CLUSTER_NAME}-0
+install_python_dependency ccp-${CLUSTER_NAME}-1
+install_python_dependency cdw
 run_resgroup_test cdw
 
 #
