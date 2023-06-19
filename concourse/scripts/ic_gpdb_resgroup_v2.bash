@@ -31,7 +31,7 @@ install_python_dependency() {
     local host_alias=$1
 
     ssh $host_alias bash -ex <<EOF
-        pip3 install -r python-dependencies.txt
+        pip3 install paramiko==3.1.0
 EOF
 }
 
