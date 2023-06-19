@@ -246,7 +246,7 @@ $$ LANGUAGE plpython3u;
 
 0: CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$
     import subprocess
-	import paramiko
+    import paramiko
 
     sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid
     result = plpy.execute(sql)
@@ -258,7 +258,7 @@ $$ LANGUAGE plpython3u;
 
     sql = "select hostname from gp_segment_configuration group by hostname"
     result = plpy.execute(sql)
-    hosts = results[0]
+    hosts = [_['hostname'] for _ in result]
 
     def get_result(host):
         import paramiko
@@ -270,7 +270,7 @@ $$ LANGUAGE plpython3u;
         stdin, stdout, stderr = ssh.exec_command("ps -ef | grep postgres | grep con{} | grep -v grep | awk '{{print $2}}'".format(session_id))
         session_pids = [i.strip() for i in stdout.readlines()]
 
-        path = "/sys/fs/cgroup/cpu/gpdb/{}/cgroup.procs".format(group_id)
+        path = "/sys/fs/cgroup/cpu/gpdb/{}/cgroup.procs".format(groupid)
         stdin, stdout, stderr = ssh.exec_command("cat {}".format(path))
         cgroups_pids = [i.strip() for i in stdout.readlines()]
 

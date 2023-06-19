@@ -82,7 +82,7 @@ SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wai
 1: SELECT gp_wait_until_triggered_fault('resource_group_give_away_begin', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
 1: SELECT gp_inject_fault('resource_group_give_away_begin', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
 2<:
-2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
 
 -- test5: check destination group has no slot leaking if move signal processed at the time target process became dead
 -- start transaction at first process
@@ -100,7 +100,7 @@ SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wai
 3: SELECT gp_wait_until_triggered_fault('resource_group_give_away_begin', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
 3: SELECT gp_inject_fault('resource_group_give_away_begin', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
 2<:
-2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
 
 -- test6: check destination group has no slot leaking if we got an error on latch waiting
 -- sleep at first process
@@ -125,13 +125,13 @@ SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wai
 2<:
 2: SELECT gp_inject_fault('resource_group_move_handler_after_qd_control', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
 1<:
-2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
 --if there any next command called in the same transaction, segments will try to fix the situation and move out of inconsistent state
 1: SELECT * FROM gp_dist_random('gp_id'), pg_sleep(1) LIMIT 1;
 2: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
-2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
 1: END;
-2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
 1q:
 
 -- test7: check destination group has no slot leaking if target process set latch at the last moment
@@ -163,7 +163,7 @@ SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wai
 2: RESET gp_resource_group_move_timeout;
 3: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
 1: END;
-3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
 1q:
 
 -- test8: check destination group has no slot leaking if taget process recieved one move command at the time of processing another
@@ -186,8 +186,8 @@ SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wai
 2<:
 3: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
 1: END;
-3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
-3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='default_group';
+3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
+3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='default_group';
 1q:
 
 -- Test9: check we'll wait and quit by gp_resource_group_move_timeout if target process stuck on signal handling
@@ -201,7 +201,7 @@ SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wai
 2: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
 2: RESET gp_resource_group_move_timeout;
 1<:
-2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
 1: END;
 
 -- Test10: check entrydb queries working
