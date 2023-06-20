@@ -1241,19 +1241,41 @@ CREATE VIEW pg_stat_archiver AS
         s.stats_reset
     FROM pg_stat_get_archiver() s;
 
-CREATE VIEW pg_stat_bgwriter AS
+-- Internal function for pg_stat_bgwriter. It needs to be VOLATILE in order
+-- for pg_stat_bgwriter to work correctly with gp_dist_random.
+CREATE OR REPLACE FUNCTION pg_stat_bgwriter_func()
+RETURNS TABLE (
+    checkpoints_timed BIGINT,
+    checkpoints_req BIGINT,
+    checkpoint_write_time FLOAT,
+    checkpoint_sync_time FLOAT,
+    buffers_checkpoint BIGINT,
+    buffers_clean BIGINT,
+    maxwritten_clean BIGINT,
+    buffers_backend BIGINT,
+    buffers_backend_fsync BIGINT,
+    buffers_alloc BIGINT,
+    stats_reset TIMESTAMPTZ
+)
+AS
+$$
     SELECT
-        pg_stat_get_bgwriter_timed_checkpoints() AS checkpoints_timed,
-        pg_stat_get_bgwriter_requested_checkpoints() AS checkpoints_req,
-        pg_stat_get_checkpoint_write_time() AS checkpoint_write_time,
-        pg_stat_get_checkpoint_sync_time() AS checkpoint_sync_time,
-        pg_stat_get_bgwriter_buf_written_checkpoints() AS buffers_checkpoint,
-        pg_stat_get_bgwriter_buf_written_clean() AS buffers_clean,
-        pg_stat_get_bgwriter_maxwritten_clean() AS maxwritten_clean,
-        pg_stat_get_buf_written_backend() AS buffers_backend,
-        pg_stat_get_buf_fsync_backend() AS buffers_backend_fsync,
-        pg_stat_get_buf_alloc() AS buffers_alloc,
-        pg_stat_get_bgwriter_stat_reset_time() AS stats_reset;
+        pg_stat_get_bgwriter_timed_checkpoints(),
+        pg_stat_get_bgwriter_requested_checkpoints(),
+        pg_stat_get_checkpoint_write_time(),
+        pg_stat_get_checkpoint_sync_time(),
+        pg_stat_get_bgwriter_buf_written_checkpoints(),
+        pg_stat_get_bgwriter_buf_written_clean(),
+        pg_stat_get_bgwriter_maxwritten_clean(),
+        pg_stat_get_buf_written_backend(),
+        pg_stat_get_buf_fsync_backend(),
+        pg_stat_get_buf_alloc(),
+        pg_stat_get_bgwriter_stat_reset_time();
+$$
+LANGUAGE SQL;
+
+CREATE VIEW pg_stat_bgwriter AS
+    SELECT * FROM pg_stat_bgwriter_func();
 
 CREATE VIEW pg_stat_wal AS
     SELECT
