@@ -214,12 +214,15 @@ main(int argc, char **argv)
 	else
 	{
 		/*
-		 * Restore scripts contains statements to update relfrozenxid and relminxmid
-		 * for the relations according to the master, and the same data is copied to the
-		 * segments but on segments those should reflect the values from the corresponding
-		 * segment database. So, update the xids on the segments for user and catalog tables.
-		 * If this step is not done on segment, subsequent vacuum freeze can complain that
-		 * the xmin <some low number> from before relfrozenxid <some higher number>
+		 * GPDB: We run set_frozenxids, update_db_xids, and freeze_master_data
+		 * to update relfrozenxid and relminmxid for all applicable relations
+		 * according to the master. This same catalog was copied over to the
+		 * segments to initialize their catalog but the relfrozenxid and
+		 * relminmxid should reflect the values from the corresponding segment
+		 * database. So, update the xids on the segments for user and catalog
+		 * tables. If this step is not done on segments, subsequent vacuum
+		 * freeze can complain that the xmin <some low number> from before
+		 * relfrozenxid <some higher number>.
 		 */
 		set_frozenxids(false);
 	}
@@ -835,6 +838,10 @@ copy_clog_xlog_xid(void)
  * pre-9.3 database, which does not store per-table or per-DB minmxid, then
  * the relminmxid/datminmxid values filled in by the restore script will just
  * be zeroes.
+ *
+ * GPDB: We've disabled the relfrozenxid/relminmxid preservation in the
+ * binary-upgrade restore scripts in favor of doing bulk pg_class updates
+ * mainly via update_db_xids().
  *
  * Hence, with a pre-9.3 source database, a second call occurs after
  * everything is restored, with minmxid_only = true.  This pass will

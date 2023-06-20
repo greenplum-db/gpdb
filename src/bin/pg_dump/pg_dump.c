@@ -14160,7 +14160,21 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * TOAST tables semi-independently, here we see them only as children
 		 * of other relations; so this "if" lacks RELKIND_TOASTVALUE, and the
 		 * child toast table is handled below.)
+		 *
+		 * GPDB: We don't need to restore old relfrozenxid since the
+		 * pg_restore will only occur on the target coordinator segment which
+		 * will not have any user data. Either way, pg_upgrade runs a bulk
+		 * update of the target coordinator segment's pg_class to set all
+		 * applicable rows to have relfrozenxid be equal to the source
+		 * coordinator segment's datfrozenxid for each respective database
+		 * (mainly to set the relfrozenxid for the reconstructed catalog
+		 * tables but user tables are touched too) so not doing the below
+		 * logic should be okay. The logic is ifdef'd out instead of deleted
+		 * to help preserve context, make Postgres merges easier, and to make
+		 * it easy to fallback to if the pg_upgrade logic is removed or
+		 * changed.
 		 */
+#ifdef NOT_USED
 		if (binary_upgrade &&
 			(tbinfo->relkind == RELKIND_RELATION ||
 			 tbinfo->relkind == RELKIND_MATVIEW))
@@ -14196,6 +14210,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			 */
 			appendPQExpBuffer(q, "RESET allow_system_table_mods;\n");
 		}
+#endif
 
 		/*
 		 * In binary_upgrade mode, restore matviews' populated status by
