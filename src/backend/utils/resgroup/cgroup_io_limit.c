@@ -179,6 +179,12 @@ get_bdi_of_path(const char *ori_path)
 			{
 				max_match_cnt = dir_len;
 				match_mnt     = *mnt;
+
+				/* copy string */
+				match_mnt.mnt_fsname = pstrdup(mnt->mnt_fsname);
+				match_mnt.mnt_dir = pstrdup(mnt->mnt_dir);
+				match_mnt.mnt_type = pstrdup(mnt->mnt_type);
+				match_mnt.mnt_opts = pstrdup(mnt->mnt_opts);
 			}
 		}
 	}
