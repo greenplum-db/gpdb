@@ -211,7 +211,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 
 		/* Argument of callback function should be allocated in heap region */
 		oldContext = MemoryContextSwitchTo(TopMemoryContext);
-		callbackCtx = (ResourceGroupCallbackContext *)palloc0(sizeof(*callbackCtx));
+		callbackCtx = (ResourceGroupCallbackContext *) palloc0(sizeof(*callbackCtx));
 		callbackCtx->groupid = groupid;
 		callbackCtx->caps = caps;
 
@@ -529,7 +529,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	{
 		/* Argument of callback function should be allocated in heap region */
 		oldContext = MemoryContextSwitchTo(TopMemoryContext);
-		callbackCtx = (ResourceGroupCallbackContext *)palloc0(sizeof(*callbackCtx));
+		callbackCtx = (ResourceGroupCallbackContext *) palloc0(sizeof(*callbackCtx));
 		callbackCtx->groupid = groupid;
 		callbackCtx->limittype = limitType;
 		callbackCtx->caps = caps;
@@ -630,7 +630,7 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 				break;
 			case RESGROUP_LIMIT_TYPE_IO_LIMIT:
 				if (strcmp(value, DefaultIOLimit) != 0)
-					resgroupCaps->io_limit = pstrdup(value);
+					resgroupCaps->io_limit = value;
 				else
 				    resgroupCaps->io_limit = NULL;
 			default:
@@ -1189,8 +1189,10 @@ updateResgroupCapabilityEntry(Relation rel,
 	}
 
 	if (limitType == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+	{
 		/* Because stringBuffer is a limited length array, so it not suitable for io limit. */
 		values[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(strValue);
+	}
 	else
 		values[Anum_pg_resgroupcapability_value - 1] = CStringGetTextDatum(stringBuffer);
 

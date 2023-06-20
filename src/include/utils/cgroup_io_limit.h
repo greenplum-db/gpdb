@@ -13,6 +13,9 @@ typedef dev_t bdi_t;
 #define bdi_major(bdi) major(bdi)
 #define bdi_minor(bdi) minor(bdi)
 
+
+#define IO_LIMIT_MAX  (0)
+
 /*
  * IOconfig represents the io.max of cgroup v2 io controller.
  * Fiels: each field correspond to cgroup v2 io.max file.
@@ -69,14 +72,14 @@ typedef struct IO_LIMIT_PARSER_STATE
 	void *scanner;
 } IO_LIMIT_PARSER_STATE;
 
-IO_LIMIT_PARSER_STATE *io_limit_begin_scan(const char *limit_str);
-void io_limit_end_scan(IO_LIMIT_PARSER_STATE *state);
+extern IO_LIMIT_PARSER_STATE *io_limit_begin_scan(const char *limit_str);
+extern void io_limit_end_scan(IO_LIMIT_PARSER_STATE *state);
 
-bdi_t get_bdi_of_path(const char *ori_path);
-int fill_bdi_list(TblSpcIOLimit *io_limit);
+extern bdi_t get_bdi_of_path(const char *ori_path);
+extern int fill_bdi_list(TblSpcIOLimit *io_limit);
 
-List *io_limit_parse(const char *limit_str);
-void io_limit_validate(List *limit_list);
+extern List *io_limit_parse(const char *limit_str);
+extern void io_limit_validate(List *limit_list);
 
 
 #endif

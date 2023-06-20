@@ -48,14 +48,16 @@ max          {
 %%
 
 
-void *yyalloc (yy_size_t  size , yyscan_t yyscanner)
+void *
+yyalloc(yy_size_t  size , yyscan_t yyscanner)
 {
 	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	(void)yyg;
 	return palloc(size);
 }
 
-void *yyrealloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
+void *
+yyrealloc(void * ptr, yy_size_t  size , yyscan_t yyscanner)
 {
 	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	(void)yyg;
@@ -70,7 +72,8 @@ void *yyrealloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
 	return repalloc(ptr, size);
 }
 
-void yyfree (void * ptr , yyscan_t yyscanner)
+void
+yyfree(void * ptr , yyscan_t yyscanner)
 {
 	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	(void)yyg;
@@ -78,7 +81,8 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 }
 
 
-IO_LIMIT_PARSER_STATE *io_limit_begin_scan(const char *limit_str)
+IO_LIMIT_PARSER_STATE *
+io_limit_begin_scan(const char *limit_str)
 {
     IO_LIMIT_PARSER_STATE *state = (IO_LIMIT_PARSER_STATE *)palloc0(sizeof(IO_LIMIT_PARSER_STATE));
     yyscan_t scanner;
@@ -91,7 +95,8 @@ IO_LIMIT_PARSER_STATE *io_limit_begin_scan(const char *limit_str)
 }
 
 
-void io_limit_end_scan(IO_LIMIT_PARSER_STATE *state)
+void
+io_limit_end_scan(IO_LIMIT_PARSER_STATE *state)
 {
     io_limit_yy_delete_buffer((YY_BUFFER_STATE)state->state, (yyscan_t)state->scanner);
     pfree(state);

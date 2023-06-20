@@ -16,7 +16,6 @@
 #include "postgres.h"
 
 #include <math.h>
-#include <string.h>
 
 #include "libpq-fe.h"
 #include "access/genam.h"
@@ -34,7 +33,6 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/memquota.h"
 #include "commands/resgroupcmds.h"
-#include "commands/tablespace.h"
 #include "common/hashfn.h"
 #include "funcapi.h"
 #include "miscadmin.h"

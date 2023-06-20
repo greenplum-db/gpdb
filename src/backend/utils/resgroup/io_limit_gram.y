@@ -132,18 +132,13 @@ ioconfig: IO_KEY '=' io_value
 			$$ = item;
 		  }
 
-io_value: VALUE
-		  {
-			if ($1 < 2)
-				io_limit_yyerror(NIL, NULL, "io limit: value cannot smaller than 2");
-
-			$$ = $1;
-		  }
-		| VALUE_MAX { $$ = -1; }
+io_value: VALUE { $$ = $1; }
+		| VALUE_MAX { $$ = 0; }
 
 %%
 
-int io_limit_yyerror(IO_LIMIT_PARSER_CONTEXT *parser_context, void *scanner, const char *message)
+int
+io_limit_yyerror(IO_LIMIT_PARSER_CONTEXT *parser_context, void *scanner, const char *message)
 {
 	ereport(ERROR, \
 		(errcode(ERRCODE_SYNTAX_ERROR), \
@@ -154,7 +149,8 @@ int io_limit_yyerror(IO_LIMIT_PARSER_CONTEXT *parser_context, void *scanner, con
 /*
  * Parse io limit string to list of TblSpcIOLimit.
  */
-List *io_limit_parse(const char *limit_str)
+List *
+io_limit_parse(const char *limit_str)
 {
 	List *result = NIL;
 	IO_LIMIT_PARSER_CONTEXT *context = (IO_LIMIT_PARSER_CONTEXT *)palloc0(sizeof(IO_LIMIT_PARSER_CONTEXT));

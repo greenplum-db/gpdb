@@ -17,18 +17,12 @@
 
 #include <limits.h>
 
-#include "access/heapam.h"
-#include "access/relscan.h"
-#include "access/table.h"
-#include "access/tableam.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "utils/cgroup.h"
-#include "utils/elog.h"
 #include "utils/resgroup.h"
 #include "utils/cgroup-ops-v2.h"
 #include "utils/vmem_tracker.h"
-
 
 #ifndef __linux__
 #error  cgroup is only available on linux
@@ -71,9 +65,6 @@ static CGroupSystemInfo cgroupSystemInfoV2 = {
  */
 #define CGROUP_CPUSET_IS_OPTIONAL (GP_VERSION_NUM < 60000)
 
-
-#define RESGROUP_IOMAX  (-1)
-#define RESGROUP_IONULL (0)
 
 /* The functions current file used */
 static void dump_component_dir_v2(void);
@@ -861,22 +852,22 @@ setio_v2(Oid group, List *limit_list)
 	{
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(tblspc_cell);
 
-		if (limit->ioconfig->rbps == RESGROUP_IOMAX || limit->ioconfig->rbps == RESGROUP_IONULL)
+		if (limit->ioconfig->rbps == IO_LIMIT_MAX )
 			sprintf(rbps_str, "rbps=max");
 		else
-			sprintf(rbps_str, "rbps=%ull", limit->ioconfig->rbps * 1024 * 1024);
+			sprintf(rbps_str, "rbps=%lu", limit->ioconfig->rbps * 1024 * 1024);
 
-		if (limit->ioconfig->wbps == RESGROUP_IOMAX || limit->ioconfig->wbps == RESGROUP_IONULL)
+		if (limit->ioconfig->wbps == IO_LIMIT_MAX)
 			sprintf(wbps_str, "wbps=max");
 		else
-			sprintf(wbps_str, "wbps=%ull", limit->ioconfig->wbps * 1024 * 1024);
+			sprintf(wbps_str, "wbps=%lu", limit->ioconfig->wbps * 1024 * 1024);
 
-		if (limit->ioconfig->riops == RESGROUP_IOMAX || limit->ioconfig->riops == RESGROUP_IONULL)
+		if (limit->ioconfig->riops == IO_LIMIT_MAX)
 			sprintf(riops_str, "riops=max");
 		else
 			sprintf(riops_str, "riops=%u", (uint32)limit->ioconfig->riops);
 
-		if (limit->ioconfig->wiops == RESGROUP_IOMAX || limit->ioconfig->wiops == RESGROUP_IONULL)
+		if (limit->ioconfig->wiops == IO_LIMIT_MAX)
 			sprintf(wiops_str, "wiops=max");
 		else
 			sprintf(wiops_str, "wiops=%u", (uint32)limit->ioconfig->wiops);

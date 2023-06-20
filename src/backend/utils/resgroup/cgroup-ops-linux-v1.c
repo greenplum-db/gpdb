@@ -19,7 +19,6 @@
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "utils/cgroup.h"
-#include "utils/elog.h"
 #include "utils/resgroup.h"
 #include "utils/cgroup-ops-v1.h"
 #include "utils/vmem_tracker.h"
