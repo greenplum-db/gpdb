@@ -683,7 +683,7 @@ gccVersionCheck :
 	    $(BLD_CC) --version ; \
 	    exit 1 ; \
 	fi
-	@$(BLD_CC) --version | head -n 1 | cut -d' ' -f3 | egrep '[0-3]\.[0-4]\.[0-1]' > /dev/null 2>&1 ; \
+	@$(BLD_CC) --version | head -n 1 | cut -d' ' -f3 | egrep '^[0-3]\.[0-4]\.[0-1]' > /dev/null 2>&1 ; \
 	if [ $$? -eq 0 ] ; then \
 	    echo "Error: GPDB must be compiled with GCC 3.4.2 or later." ; \
 	    echo "Current GCC version:" ; \
