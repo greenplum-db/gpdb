@@ -697,7 +697,6 @@ static void parse_command_line(int argc, const char* const argv[],
 	{"compress", 258, 0, "turn on compressed transmission"},
 	{"multi_thread", 259, 1, "turn on multi-thread and compressed transmission"},
 #endif
-	{ NULL, 'k', 1, "timeout to clean up sessions in seconds" },
 	{ 0 } };
 
 	status = apr_getopt_init(&os, pool, argc, argv);
@@ -4900,7 +4899,7 @@ static void request_cleanup(request_t *r)
 	if (r->zstd && !r->is_get)
 	{
 		ZSTD_freeDCtx(r->zstd_dctx);
-		r->zstd_cctx = NULL;
+		r->zstd_dctx = NULL;
 	}
 #endif
 }
