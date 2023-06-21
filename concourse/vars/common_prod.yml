@@ -38,6 +38,8 @@ reduced-frequency-trigger-start-oel8: 8:00 AM
 reduced-frequency-trigger-stop-oel8: 8:59 AM
 reduced-frequency-trigger-start-oel7: 10:00 AM
 reduced-frequency-trigger-stop-oel7: 10:59 AM
+reduced-frequency-trigger-start-rhel9: 12:00 PM
+reduced-frequency-trigger-stop-rhel9: 12:59 PM
 gpdb_src-trigger-flag: true
 configure_flags: "--enable-cassert --enable-tap-tests"
 configure_flags_with_extensions: "--enable-cassert --enable-tap-tests --enable-debug-extensions"

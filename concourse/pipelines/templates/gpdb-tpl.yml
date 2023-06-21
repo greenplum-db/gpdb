@@ -509,7 +509,7 @@ resources:
   type: registry-image
   source:
     tag: latest
-    {% if os_type == "rhel8" %}
+    {% if os_type == "rhel8" or os_type == "rhel9" %}
     repository: gcr.io/data-gpdb-private-images/gpdb6-[[ os_type ]]-build
     username: _json_key
     password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
@@ -536,7 +536,7 @@ resources:
   type: registry-image
   source:
     tag: latest
-    {% if os_type == "rhel8" %}
+    {% if os_type == "rhel8" or os_type == "rhel9" %}
     repository: gcr.io/data-gpdb-private-images/gpdb6-[[ os_type ]]-test
     username: _json_key
     password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
