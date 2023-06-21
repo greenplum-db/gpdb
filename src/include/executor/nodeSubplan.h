@@ -34,4 +34,6 @@ extern void ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDes
 
 extern void ExecSetParamPlanMulti(const Bitmapset *params, ExprContext *econtext, QueryDesc *gbl_queryDesc);
 
+extern void PrefetchbuildSubPlanHash(SubPlanState *node);
+
 #endif							/* NODESUBPLAN_H */

@@ -1631,3 +1631,23 @@ ExecAlternativeSubPlan(AlternativeSubPlanState *node,
 
 	return ExecSubPlan(activesp, econtext, isNull);
 }
+
+/*
+ * Greenplum specific code.
+ * Prebuild the hash table of hash subplan to
+ * get rid of interconnect UDP deadlock.
+ */
+void
+PrefetchbuildSubPlanHash(SubPlanState *node)
+{
+	ExprContext *econtext;
+
+	Assert(node->hashtable == NULL &&
+		   node->subplan->useHashTable);
+
+	econtext = CreateExprContext(node->planstate->state);
+	ResetExprContext(econtext);
+	buildSubPlanHash(node, econtext);
+	ResetExprContext(econtext);
+	FreeExprContext(econtext, false);
+}

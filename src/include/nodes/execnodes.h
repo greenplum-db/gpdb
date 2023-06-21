@@ -1139,6 +1139,7 @@ typedef struct PlanState
 	bool		fHadSentNodeStart;
 
 	bool		squelched;		/* has ExecSquelchNode() been called already? */
+	bool		prefetch_subplans_done;		/* prefetch_subplans already done? */
 } PlanState;
 
 extern uint64 PlanStateOperatorMemKB(const PlanState *ps);
@@ -2251,8 +2252,6 @@ typedef struct NestLoopState
 	bool		nl_MatchedOuter;
 	bool		shared_outer;
 	bool		prefetch_inner;
-	bool		prefetch_joinqual;
-	bool		prefetch_qual;
 	bool		reset_inner; /*CDB-OLAP*/
 	bool		require_inner_reset; /*CDB-OLAP*/
 
@@ -2310,8 +2309,6 @@ typedef struct MergeJoinState
 	ExprContext *mj_OuterEContext;
 	ExprContext *mj_InnerEContext;
 	bool		prefetch_inner; /* MPP-3300 */
-	bool		prefetch_joinqual;
-	bool		prefetch_qual;
 } MergeJoinState;
 
 /* ----------------
@@ -2368,8 +2365,6 @@ typedef struct HashJoinState
 	bool		hj_OuterNotEmpty;
 	bool		hj_InnerEmpty;  /* set to true if inner side is empty */
 	bool		prefetch_inner;
-	bool		prefetch_joinqual;
-	bool		prefetch_qual;
 	bool		hj_nonequijoin;
 
 	/* set if the operator created workfiles */
@@ -2403,6 +2398,7 @@ typedef struct MaterialState
 	bool		ts_destroyed;	/* called destroy tuple store? */
 	bool		delayEagerFree;	/* is is safe to free memory used by this node,
 								 * when this node has outputted its last row? */
+	bool		cdb_strict;
 } MaterialState;
 
 /* ----------------

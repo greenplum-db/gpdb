@@ -153,7 +153,6 @@
 		"temp_buffers",
 		"temp_tablespaces",
 		"test_copy_qd_qe_split",
-		"test_print_prefetch_joinqual",
 		"TimeZone",
 		"timezone_abbreviations",
 		"trace_syncscan",
