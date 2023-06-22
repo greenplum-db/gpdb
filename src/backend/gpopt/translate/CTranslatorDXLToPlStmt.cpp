@@ -1076,6 +1076,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		m_mp, base_table_context, ctxt_translation_prev_siblings,
 		output_context, m_dxl_to_plstmt_context);
 
+	BOOL is_index_for_orderby = false;
 	const ULONG arity = index_cond_list_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
@@ -1087,6 +1088,13 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		Expr *index_cond_expr =
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
+
+		if (IsA(index_cond_expr, Const))
+		{
+			is_index_for_orderby = true;
+			break;
+		}
+
 		GPOS_ASSERT((IsA(index_cond_expr, OpExpr) ||
 					 IsA(index_cond_expr, ScalarArrayOpExpr)) &&
 					"expected OpExpr or ScalarArrayOpExpr in index qual");
@@ -1185,6 +1193,12 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
 			attno, index_cond_expr, original_index_cond_expr, strategy_num,
 			index_subtype_oid));
+	}
+
+	if (is_index_for_orderby)
+	{
+		index_qual_info_array->Release();
+		return;
 	}
 
 	// the index quals much be ordered by attribute number

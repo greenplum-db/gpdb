@@ -509,9 +509,7 @@ select count(*) from tenk1
                                        ->  Gather Motion 3:1  (slice3; segments: 3)
                                              Merge Key: tenk2.unique1
                                              ->  Limit
-                                                   ->  Sort
-                                                         Sort Key: tenk2.unique1
-                                                         ->  Seq Scan on tenk2
+                                                   ->  Index Scan using tenk2_unique1 on tenk2
  Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
 

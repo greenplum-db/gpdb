@@ -185,7 +185,8 @@ private:
 		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-		const IMDIndex *pmdindex, const IMDRelation *pmdrel);
+		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
+		BOOL indexForOrderBy = false);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
@@ -444,11 +445,12 @@ public:
 						 CExpression *pexprGet, ULONG ulOriginOpId,
 						 CExpressionArray *pdrgpexprConds,
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-						 const IMDIndex *pmdindex, const IMDRelation *pmdrel)
+						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
+						 BOOL indexForOrderBy = false)
 	{
-		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
-										pdrgpexprConds, pcrsScalarExpr,
-										outer_refs, pmdindex, pmdrel);
+		return PexprBuildBtreeIndexPlan(
+			mp, md_accessor, pexprGet, ulOriginOpId, pdrgpexprConds,
+			pcrsScalarExpr, outer_refs, pmdindex, pmdrel, indexForOrderBy);
 	}
 
 	// helper for creating bitmap bool op expressions

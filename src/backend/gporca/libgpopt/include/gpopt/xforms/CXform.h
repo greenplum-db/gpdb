@@ -227,6 +227,7 @@ public:
 		ExfExpandDynamicGetWithForeignPartitions,
 		ExfPushJoinBelowLeftUnionAll,
 		ExfPushJoinBelowRightUnionAll,
+		ExfLimit2IndexGet,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

@@ -2088,8 +2088,7 @@ explain (costs off)
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, i
-         ->  Limit
-               ->  Index Scan using boolindex_b_i_key on boolindex
+         ->  Index Scan using boolindex_b_i_key on boolindex
  Optimizer: Postgres query optimizer
 (6 rows)
 
