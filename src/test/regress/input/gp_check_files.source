@@ -9,6 +9,7 @@
 -- s/aovisimap_\d+/aovisimap_xxx/g
 -- end_matchsubs
 
+-- start from a clean state
 checkpoint;
 
 create extension gp_check_functions;
@@ -61,13 +62,12 @@ insert into checknormal_ao select i,i,i from generate_series(1,100)i;
 insert into checknormal_co select i,i,i from generate_series(1,100)i;
 
 -- check non-extended files
-select gp_segment_id, filename from gp_check_orphaned_files;
 select gp_segment_id, regexp_replace(filename, '\d+', 'x'), relname from gp_check_missing_files;
 
 SET client_min_messages = ERROR;
 
 -- check extended files
-select gp_segment_id, filename from gp_check_orphaned_files_ext;
+select gp_segment_id, filename from gp_check_orphaned_files;
 select gp_segment_id, regexp_replace(filename, '\d+', 'x'), relname from gp_check_missing_files_ext;
 
 RESET client_min_messages;

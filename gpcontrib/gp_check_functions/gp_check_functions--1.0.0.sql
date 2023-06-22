@@ -15,6 +15,7 @@ LANGUAGE C;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AO segment file numbers for each ao_row table
@@ -22,7 +23,7 @@ LANGUAGE C;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION __get_ao_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -40,15 +41,15 @@ BEGIN
     table_name := rec.relname;
     -- Fetch and return each row from the aoseg table
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT segno '
-                                  'FROM gp_toolkit.__gp_aoseg(''%I.%I'') '
-                                  'WHERE eof > 0',
+      OPEN cur FOR EXECUTE format('SELECT segno, eof '
+                                  'FROM gp_toolkit.__gp_aoseg(''%I.%I'') ',
                                    rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -76,6 +77,7 @@ GRANT EXECUTE ON FUNCTION __get_ao_segno_list() TO public;
 -- @out:
 --        oid - relation oid
 --        int - segment number
+--        eof - eof of the segment file
 --
 -- @doc:
 --        UDF to retrieve AOCO segment file numbers for each ao_column table
@@ -83,7 +85,7 @@ GRANT EXECUTE ON FUNCTION __get_ao_segno_list() TO public;
 --------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION __get_aoco_segno_list()
-RETURNS TABLE (relid oid, segno int) AS
+RETURNS TABLE (relid oid, segno int, eof bigint) AS
 $$
 DECLARE
   table_name text;
@@ -101,15 +103,15 @@ BEGIN
     table_name := rec.relname;
     -- Fetch and return each extended segno corresponding to attnum and segno in the aocoseg table
     BEGIN
-      OPEN cur FOR EXECUTE format('SELECT physical_segno as segno '
-                                  'FROM gp_toolkit.__gp_aocsseg(''%I.%I'') '
-                                  'WHERE eof > 0',
+      OPEN cur FOR EXECUTE format('SELECT physical_segno as segno, eof '
+                                  'FROM gp_toolkit.__gp_aocsseg(''%I.%I'') ',
                                    rec.nspname, rec.relname);
       SELECT rec.tableoid INTO relid;
       LOOP
         FETCH cur INTO row;
         EXIT WHEN NOT FOUND;
         segno := row.segno;
+        eof := row.eof;
         IF segno <> 0 THEN -- there's no '.0' file, it means the file w/o extension
           RETURN NEXT;
         END IF;
@@ -190,6 +192,12 @@ GRANT SELECT ON __get_expect_files TO public;
 --        using the knowledge from catalogs. This includes all
 --        the extended data files for AO/CO tables, nor does it
 --        include external, foreign or virtual tables.
+--        Also ignore AO segments w/ eof=0. They might be created just for
+--        modcount whereas no data has ever been inserted to the seg.
+--        Or, they could be created when a seg has only aborted rows.
+--        In both cases, we can ignore these segs, because no matter
+--        whether the data files exist or not, the rest of the system
+--        can handle them gracefully.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW __get_expect_files_ext AS
@@ -203,14 +211,14 @@ SELECT c.reltablespace AS tablespace, c.relname, c.relstorage,
        format(c.relfilenode::text || '.' || s.segno::text) AS filename
 FROM __get_ao_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
-WHERE c.relstorage NOT IN ('x', 'v', 'f')
+WHERE s.eof >0 AND c.relstorage NOT IN ('x', 'v', 'f')
 UNION
 -- CO extended files
 SELECT c.reltablespace AS tablespace, c.relname, c.relstorage,
        format(c.relfilenode::text || '.' || s.segno::text) AS filename
 FROM __get_aoco_segno_list() s
 JOIN pg_class c ON s.relid = c.oid
-WHERE c.relstorage NOT IN ('x', 'v', 'f');
+WHERE s.eof > 0 AND c.relstorage NOT IN ('x', 'v', 'f');
 
 GRANT SELECT ON __get_expect_files_ext TO public;
 
@@ -219,46 +227,23 @@ GRANT SELECT ON __get_expect_files_ext TO public;
 --        __check_orphaned_files
 --
 -- @doc:
---        Check orphaned data files on default and user tablespaces,
---        not including extended files.
+--        Check orphaned data files on default and user tablespaces.
+--        A file is considered orphaned if its main relfilenode is not expected
+--        to exist. For example, '12345.1' is an orphaned file if there is no
+--        table has relfilenode=12345, but not otherwise.
+--        Therefore, this view counts for file extension as well and we do not
+--        need a "_ext" view like the missing file view.
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW __check_orphaned_files AS
 SELECT f1.tablespace, f1.filename
 from __get_exist_files f1
 LEFT JOIN __get_expect_files f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
+ON f1.tablespace = f2.tablespace AND substring(f1.filename from '[0-9]+') = f2.filename
 WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+';
+  AND f1.filename SIMILAR TO '[0-9]+(\.)?(\_)?%';
 
 GRANT SELECT ON __check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        __check_orphaned_files_ext
---
--- @doc:
---        Check orphaned data files on default and user tablespaces,
---        including extended files.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW __check_orphaned_files_ext AS
-SELECT f1.tablespace, f1.filename
-FROM __get_exist_files f1
-LEFT JOIN __get_expect_files_ext f2
-ON f1.tablespace = f2.tablespace AND f1.filename = f2.filename
-WHERE f2.tablespace IS NULL
-  AND f1.filename SIMILAR TO '[0-9]+(\.[0-9]+)?'
-  AND NOT EXISTS (
-    -- XXX: not supporting heap for now, do not count them
-    SELECT 1 FROM pg_class c 
-    WHERE c.relfilenode::text = split_part(f1.filename, '.', 1) 
-        AND c.relstorage = 'h'
-  )
-  -- If the base file exists, do not count the extension files
-  AND substring(f1.filename from '[0-9]+') IN (SELECT filename FROM __check_orphaned_files);
-
-GRANT SELECT ON __check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -315,24 +300,6 @@ SELECT -1 AS gp_segment_id, *
 FROM __check_orphaned_files;
 
 GRANT SELECT ON gp_check_orphaned_files TO public;
-
---------------------------------------------------------------------------------
--- @view:
---        gp_check_orphaned_files_ext
---
--- @doc:
---        User-facing view of __check_orphaned_files_ext.
---        Gather results from coordinator and all segments.
---
---------------------------------------------------------------------------------
-CREATE OR REPLACE VIEW gp_check_orphaned_files_ext AS 
-SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
-FROM gp_dist_random('__check_orphaned_files_ext')
-UNION ALL 
-SELECT -1 AS gp_segment_id, *
-FROM __check_orphaned_files; -- not checking ext on coordinator
-
-GRANT SELECT ON gp_check_orphaned_files_ext TO public;
 
 --------------------------------------------------------------------------------
 -- @view:

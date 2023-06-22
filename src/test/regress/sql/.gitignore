@@ -38,6 +38,7 @@ bb_mpph.sql
 transient_types.sql
 hooktest.sql
 gpcopy.sql
+gp_check_files.sql
 trigger_sets_oid.sql
 query_info_hook_test.sql
 gp_tablespace.sql
