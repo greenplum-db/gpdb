@@ -105,7 +105,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	/*
 	 * Check for various failure cases
 	 */
-	report_progress(&old_cluster, CHECK, "Failure checks");
+	report_progress(&old_cluster, CHECK, "Running checks");
 	check_is_super_user(&old_cluster); /* GPDB: Don't skip super user check since it populates old_cluster.install_role_oid */
 	if (skip_checks())
 	{
