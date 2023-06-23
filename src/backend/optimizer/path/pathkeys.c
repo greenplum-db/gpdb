@@ -1494,22 +1494,27 @@ cdb_pull_up_eclass(PlannerInfo *root,
 				   Relids relids,
 				   List *targetlist,
 				   List *newvarlist,
-				   Index newrelid)
+				   Index newrelid,
+				   bool ignore_relabel)
 {
 	Expr	   *sub_distkeyexpr;
 	EquivalenceClass *outer_ec;
 	Expr	   *newexpr = NULL;
+	bool	relabel_stripped = false;
 
 	Assert(eclass);
 	Assert(!newvarlist ||
 		   list_length(newvarlist) == list_length(targetlist));
 
 	/* Find an expr that we can rewrite to use the projected columns. */
-	sub_distkeyexpr = cdbpullup_findEclassInTargetList(eclass, targetlist, InvalidOid);
+	sub_distkeyexpr = cdbpullup_findEclassInTargetList(eclass, targetlist, InvalidOid, &relabel_stripped);
 
 	/* Replace expr's Var nodes with new ones referencing the targetlist. */
 	if (sub_distkeyexpr)
 	{
+		if (ignore_relabel && relabel_stripped)
+			return eclass;
+
 		newexpr = cdbpullup_expr(sub_distkeyexpr,
 								 targetlist,
 								 newvarlist,

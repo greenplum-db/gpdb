@@ -239,7 +239,7 @@ cdbpullup_expr(Expr *expr, List *targetlist, List *newvarlist, Index newvarno)
  */
 Expr *
 cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist,
-								 Oid hashOpFamily)
+								 Oid hashOpFamily, bool *relabel_stripped)
 {
 	ListCell   *lc;
 
@@ -274,7 +274,11 @@ cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist,
 		 *-------
 		 */
 		while (IsA(key, RelabelType))
+		{
 			key = (Expr *) ((RelabelType *) key)->arg;
+			if(relabel_stripped && (!*relabel_stripped))
+				*relabel_stripped = true;
+		}
 
 		foreach(lc_tle, targetlist)
 		{
@@ -291,7 +295,11 @@ cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist,
 			/* ignore RelabelType nodes on both sides */
 			naked_tlexpr = tlexpr;
 			while (naked_tlexpr && IsA(naked_tlexpr, RelabelType))
+			{
 				naked_tlexpr = (Node *) ((RelabelType *) naked_tlexpr)->arg;
+				if(relabel_stripped && (!*relabel_stripped))
+					*relabel_stripped = true;
+			}
 
 			if (IsA(key, Var))
 			{
@@ -340,7 +348,7 @@ cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist)
 	{
 		PathKey	   *pk = (PathKey *) lfirst(lc);
 
-		if (!cdbpullup_findEclassInTargetList(pk->pk_eclass, targetlist, InvalidOid))
+		if (!cdbpullup_findEclassInTargetList(pk->pk_eclass, targetlist, InvalidOid, NULL))
 			break;
 
 		new_pathkeys = lappend(new_pathkeys, pk);
