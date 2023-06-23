@@ -290,3 +290,68 @@ drop function clean_roles();
 -- end_ignore
 -- free pg_global space, otherwise it fails db_size_functions
 VACUUM FULL pg_authid, pg_database;
+
+-- Test that VACUUM FREEZE should leave no unfrozen rows in pg_stat_last_operation and pg_stat_last_shoperation
+
+drop table if exists vacfrzt;
+drop database if exists vacfrzdb;
+create extension if not exists pageinspect;
+-- autovacuum needs to be turned off for this test
+show autovacuum;
+
+-- helper function to get the number of unfrozen rows in a table
+-- as of GPDB7/PG12, we don't have a convenient function to decode the infomask bits like
+-- heap_tuple_infomask_flags which only comes after PG13, so just manually checking if it
+-- is marked frozen which is (HEAP_XMIN_COMMITTED | HEAP_XMIN_INVALID)=(0x0100 | 0x0200)=768
+CREATE OR REPLACE FUNCTION count_unfrozen_rows(rel text)
+RETURNS INT AS
+$$
+DECLARE
+    i INTEGER;
+    num_pages INTEGER;
+    total_count BIGINT := 0;
+BEGIN
+    SELECT relpages INTO num_pages
+    FROM pg_class
+    WHERE relname = rel;
+
+    FOR i IN 0..num_pages - 1 LOOP
+        total_count := total_count +
+        (SELECT count(*)
+        FROM heap_page_items(get_raw_page(rel, i))
+        WHERE t_infomask & 768 = 0);
+    END LOOP;
+
+    RETURN total_count;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- start off cleanly
+vacuum freeze;
+
+-- these will create an unfrozen row in pg_stat_last_operation and pg_stat_last_shoperation, respectively
+create table vacfrzt(a int);
+create database vacfrzdb;
+
+-- we should see unfrozen rows created above.
+select count_unfrozen_rows('pg_stat_last_operation');
+select count_unfrozen_rows('pg_stat_last_shoperation');
+
+vacuum freeze;
+
+-- now should have zero unfrozen rows
+select count_unfrozen_rows('pg_stat_last_operation');
+select count_unfrozen_rows('pg_stat_last_shoperation');
+
+-- per-table vacuum freeze of normal table will leave an unfrozen row in pg_stat_last_operation
+vacuum freeze vacfrzt;
+select count_unfrozen_rows('pg_stat_last_operation');
+
+-- per-table vacuum freeze of the lastop/lastshop won't leave unfrozen rows
+vacuum freeze pg_stat_last_operation;
+vacuum freeze pg_stat_last_shoperation;
+
+select count_unfrozen_rows('pg_stat_last_operation');
+select count_unfrozen_rows('pg_stat_last_shoperation');
+
