@@ -1752,6 +1752,11 @@ expand_all_col_privileges(Oid table_oid, Form_pg_class classForm,
 		if (classForm->relkind == RELKIND_VIEW && curr_att < 0)
 			continue;
 
+		/* AO rows and columns do not have system columns: cmin, cmax, xmin, and xmax */
+		if ((classForm->relam == AO_COLUMN_TABLE_AM_OID || classForm->relam == AO_ROW_TABLE_AM_OID) &&
+			(curr_att >= -5) && (curr_att <=-2))
+			continue;
+
 		attTuple = SearchSysCache2(ATTNUM,
 								   ObjectIdGetDatum(table_oid),
 								   Int16GetDatum(curr_att));

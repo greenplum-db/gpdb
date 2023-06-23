@@ -26,6 +26,8 @@ test: gp_dispatch_keepalives
 # copy form a file with different EOL
 test: copy_eol
 
+test: storage_pg_attributes
+
 test: disable_autovacuum
 # test gp_fastsequence allocation (early in schedule as log grepping is expensive)
 # These tests gp_log_system could have issue reading partial log that's generated

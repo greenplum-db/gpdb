@@ -282,6 +282,8 @@ static FormData_pg_attribute a8 = {
 };
 
 static const FormData_pg_attribute *SysAtt[] = {&a1, &a2, &a3, &a4, &a5, &a6, &a8};
+/* Applies for both AO and AOCO */
+static const FormData_pg_attribute *AOSysAtt[] = {&a1, &a6, &a8};
 
 /*
  * This function returns a Form_pg_attribute pointer for a system attribute.
@@ -1132,7 +1134,8 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 static void
 AddNewAttributeTuples(Oid new_rel_oid,
 					  TupleDesc tupdesc,
-					  char relkind)
+					  char relkind,
+					  bool is_append_optimized)
 {
 	Form_pg_attribute attr;
 	int			i;
@@ -1141,6 +1144,8 @@ AddNewAttributeTuples(Oid new_rel_oid,
 	int			natts = tupdesc->natts;
 	ObjectAddress myself,
 				referenced;
+	const FormData_pg_attribute **default_att = SysAtt;
+	int			default_att_len = (int) lengthof(SysAtt);
 
 	/*
 	 * open pg_attribute and its indexes.
@@ -1183,18 +1188,28 @@ AddNewAttributeTuples(Oid new_rel_oid,
 		}
 	}
 
+	/* Override the default system attributes.
+	 * AO tables do not contain system columns cmin, cmax, xmin, xmax, so
+	 * do not put them as part of pg_attribute.
+	 */
+	if (is_append_optimized)
+	{
+		default_att = AOSysAtt;
+		default_att_len = (int) lengthof(AOSysAtt);
+	}
+
 	/*
-	 * Next we add the system attributes.  Skip OID if rel has no OIDs. Skip
+	 * Next we add the "default" attributes.  Skip OID if rel has no OIDs. Skip
 	 * all for a view or type relation.  We don't bother with making datatype
 	 * dependencies here, since presumably all these types are pinned.
 	 */
 	if (relkind != RELKIND_VIEW && relkind != RELKIND_COMPOSITE_TYPE)
 	{
-		for (i = 0; i < (int) lengthof(SysAtt); i++)
+		for (i = 0; i < default_att_len; i++)
 		{
 			FormData_pg_attribute attStruct;
 
-			memcpy(&attStruct, SysAtt[i], sizeof(FormData_pg_attribute));
+			memcpy(&attStruct, default_att[i], sizeof(FormData_pg_attribute));
 
 			/* Fill in the correct relation OID in the copied tuple */
 			attStruct.attrelid = new_rel_oid;
@@ -1744,7 +1759,7 @@ heap_create_with_catalog(const char *relname,
 	/*
 	 * now add tuples to pg_attribute for the attributes in our new relation.
 	 */
-	AddNewAttributeTuples(relid, new_rel_desc->rd_att, relkind);
+	AddNewAttributeTuples(relid, new_rel_desc->rd_att, relkind, RelationIsAppendOptimized(new_rel_desc));
 
 	/*
 	 * Make a dependency link to force the relation to be deleted if its
