@@ -290,8 +290,8 @@ SELECT count(*) FROM table_no_cols;
      1
 (1 row)
 
-COPY table_no_cols TO '@abs_srcdir@/data/copy_no_cols.data' DELIMITER ',';
-COPY table_no_cols FROM '@abs_srcdir@/data/copy_no_cols.data' DELIMITER ',';
+COPY table_no_cols TO '@abs_srcdir@/results/copy_no_cols.data' DELIMITER ',';
+COPY table_no_cols FROM '@abs_srcdir@/results/copy_no_cols.data' DELIMITER ',';
 SELECT count(*) FROM table_no_cols;
  count 
 -------
