@@ -1193,7 +1193,7 @@ brin_summarize_range_internal(PG_FUNCTION_ARGS)
  * SQL-callable interface to mark a range as no longer summarized
  */
 Datum
-brin_desummarize_range(PG_FUNCTION_ARGS)
+brin_desummarize_range_internal(PG_FUNCTION_ARGS)
 {
 	Oid			indexoid = PG_GETARG_OID(0);
 	int64		heapBlk64 = PG_GETARG_INT64(1);

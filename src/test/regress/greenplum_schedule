@@ -123,7 +123,7 @@ test: partition partition1 partition_indexing partition_storage partition_ddl pa
 
 test: index_constraint_naming index_constraint_naming_partition index_constraint_naming_upgrade
 
-test: brin_ao brin_aocs
+test: brin_ao brin_aocs brin_interface
 
 test: sreh
 
