@@ -102,24 +102,17 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 
 	get_loadable_libraries();
 
-
-	if (skip_checks())
-	{
-		/*
-		 * GPDB: This check is needed even when skipping checks since it has a
-		 * side effect of populating old_cluster.install_role_oid
-		 */
-		check_is_super_user(&old_cluster);
-		prep_status("Skipping Consistency Checks");
-		check_ok();
-		goto dump_old_cluster;
-	}
-
 	/*
 	 * Check for various failure cases
 	 */
 	report_progress(&old_cluster, CHECK, "Failure checks");
-	check_is_super_user(&old_cluster);
+	check_is_super_user(&old_cluster); /* GPDB: Don't skip super user check since it populates old_cluster.install_role_oid */
+	if (skip_checks())
+	{
+		prep_status("Skipping Consistency Checks");
+		check_ok();
+		goto dump_old_cluster;
+	}
 	check_proper_datallowconn(&old_cluster);
 	check_for_prepared_transactions(&old_cluster);
 	check_for_reg_data_type_usage(&old_cluster);
@@ -140,6 +133,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		old_cluster.controldata.cat_ver < JSONB_FORMAT_CHANGE_CAT_VER)
 		check_for_jsonb_9_4_usage(&old_cluster);
 
+dump_old_cluster: /* GPDB: Don't skip checks that output scripts. */
 	/* old = PG 8.3 checks? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) == 803)
 	{
@@ -164,7 +158,6 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		}
 	}
 
-dump_old_cluster:
 	/*
 	 * While not a check option, we do this now because this is the only time
 	 * the old server is running.
