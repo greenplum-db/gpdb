@@ -144,5 +144,15 @@ SELECT gp_execution_segment(), (brin_page_items(get_raw_page('brin_interface_i_i
                     2 |          5 |      3 |      1 | f        | f        | f           | f     | {8218 .. 10000}
 (15 rows)
 
+-- Error out when autosummarize is specified as true during index build.
+CREATE INDEX brin_interface_error_idx ON brin_interface USING brin(i) WITH (autosummarize=true);
+ERROR:  autosummarize is not supported
+-- Don't error out when autosummarize is specified as false during index build.
+CREATE INDEX brin_interface_idx ON brin_interface USING brin(i) WITH (autosummarize=false);
+-- Altering it to false should not result in an error.
+ALTER INDEX brin_interface_idx SET (autosummarize=false);
+-- Altering it to true should result in an error.
+ALTER INDEX brin_interface_idx SET (autosummarize=true);
+ERROR:  autosummarize is not supported
 DROP EXTENSION pageinspect CASCADE;
 NOTICE:  drop cascades to view revmap_page1

@@ -41,6 +41,7 @@
 #include "utils/rel.h"
 
 /* GPDB includes */
+#include "cdb/cdbvars.h"
 #include "storage/procarray.h"
 #include "utils/faultinjector.h"
 
@@ -1060,6 +1061,15 @@ brinoptions(Datum reloptions, bool validate)
 
 	fillRelOptions((void *) rdopts, sizeof(BrinOptions), options, numoptions,
 				   validate, tab, lengthof(tab));
+
+	/*
+	 * GPDB: We don't support autosummarize yet, as we don't support user-table
+	 * autovacuum. So, ERROR out accordingly.
+	 */
+	if (IS_QUERY_DISPATCHER() && validate && rdopts->autosummarize)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("autosummarize is not supported")));
 
 	free_options_deep(options, numoptions);
 

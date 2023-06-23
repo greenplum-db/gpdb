@@ -41,5 +41,14 @@ SELECT gp_execution_segment(), * FROM gp_dist_random('revmap_page1') ORDER BY 1;
 SELECT gp_execution_segment(), (brin_page_items(get_raw_page('brin_interface_i_idx', 2),
     'brin_interface_i_idx')).* from gp_dist_random('gp_id') ORDER BY 1;
 
+-- Error out when autosummarize is specified as true during index build.
+CREATE INDEX brin_interface_error_idx ON brin_interface USING brin(i) WITH (autosummarize=true);
+-- Don't error out when autosummarize is specified as false during index build.
+CREATE INDEX brin_interface_idx ON brin_interface USING brin(i) WITH (autosummarize=false);
+-- Altering it to false should not result in an error.
+ALTER INDEX brin_interface_idx SET (autosummarize=false);
+-- Altering it to true should result in an error.
+ALTER INDEX brin_interface_idx SET (autosummarize=true);
+
 DROP EXTENSION pageinspect CASCADE;
 
