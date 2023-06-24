@@ -1237,7 +1237,7 @@ add_rowid_to_path(PlannerInfo *root, Path *path, int *rowidexpr_id)
  * Decides where a join should be done.  Adds Motion operators atop
  * the subpaths if needed to deliver their results to the join locus.
  * Returns the join locus if ok, or a null locus otherwise. If
- * jointype is JOIN_SEMI_DEDUP or JOIN_SEMI_DEDUP_REVERSE, this also
+ * jointype is JOIN_DEDUP_SEMI or JOIN_DEDUP_SEMI_REVERSE, this also
  * tacks a RowIdExpr on one side of the join, and *p_rowidexpr_id is
  * set to the ID of that. The caller is expected to uniquefy
  * the result after the join, passing the rowidexpr_id to
