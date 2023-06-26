@@ -24,7 +24,7 @@ CREATE RESOURCE GROUP
 
 -- Alter a resource group from / to all the cpu cores should also work.
 ALTER RESOURCE GROUP rg1_cpuset_test SET cpuset '0';
-ALTER
+ALTER RESOURCE GROUP
 ! psql -d isolation2resgrouptest -Ac "ALTER RESOURCE GROUP rg1_cpuset_test SET cpuset '0-$(($(nproc)-1))'";
 ALTER RESOURCE GROUP
 
@@ -35,4 +35,4 @@ ALTER RESOURCE GROUP
 
 -- Cleanup in a new connection as the default one is disconnected by gpstop
 10: DROP RESOURCE GROUP rg1_cpuset_test;
-DROP
+DROP RESOURCE GROUP

@@ -6,7 +6,7 @@ select gp_inject_fault('bump_oid', 'skip', dbid) from gp_segment_configuration w
 (1 row)
 
 create database db_large_oid;
-CREATE
+CREATE DATABASE
 
 select gp_inject_fault('bump_oid', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
  gp_inject_fault 
@@ -28,7 +28,7 @@ select pg_basebackup(address, dbid, port, true, 'some_replication_slot', '@testt
 
 
 drop database db_large_oid;
-DROP
+DROP DATABASE
 
 0U: select * from pg_drop_replication_slot('some_replication_slot');
  pg_drop_replication_slot 

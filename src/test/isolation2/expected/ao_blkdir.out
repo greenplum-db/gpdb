@@ -7,12 +7,12 @@
 --------------------------------------------------------------------------------
 
 CREATE TABLE ao_blkdir_test(i int, j int) USING ao_row DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 CREATE INDEX ao_blkdir_test_idx ON ao_blkdir_test(i);
-CREATE
+CREATE INDEX
 
 1: INSERT INTO ao_blkdir_test SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 -- There should be 1 block directory row with a single entry covering 10 rows
 SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
@@ -21,7 +21,7 @@ SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test')).* FROM gp_dist_random('gp_id
 (1 row)
 
 1: INSERT INTO ao_blkdir_test SELECT i, 2 FROM generate_series(11, 30) i;
-INSERT 20
+INSERT 0 20
 -- There should be 2 block directory entries in a new block directory row, and
 -- the row from the previous INSERT should not be visible. The entry from the
 -- first INSERT should remain unchanged.
@@ -35,11 +35,11 @@ SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test')).* FROM gp_dist_random('gp_id
 1: BEGIN;
 BEGIN
 1: INSERT INTO ao_blkdir_test SELECT i, 2 FROM generate_series(31, 60) i;
-INSERT 30
+INSERT 0 30
 2: BEGIN;
 BEGIN
 2: INSERT INTO ao_blkdir_test SELECT i, 2 FROM generate_series(71, 110) i;
-INSERT 40
+INSERT 0 40
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -57,10 +57,10 @@ SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test')).* FROM gp_dist_random('gp_id
 (4 rows)
 
 TRUNCATE ao_blkdir_test;
-TRUNCATE
+TRUNCATE TABLE
 -- Insert enough rows to overflow the first block directory minipage by 2.
 INSERT INTO ao_blkdir_test SELECT i, 2 FROM generate_series(1, 292700) i;
-INSERT 292700
+INSERT 0 292700
 -- There should be 2 block directory rows, one with 161 entries covering 292698
 -- rows and the other with 1 entry covering the 2 overflow rows.
 SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
@@ -232,9 +232,9 @@ SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test')).* FROM gp_dist_random('gp_id
 
 -- Unique index white box tests
 DROP TABLE ao_blkdir_test;
-DROP
+DROP TABLE
 CREATE TABLE ao_blkdir_test(i int UNIQUE, j int) USING ao_row DISTRIBUTED BY (i);
-CREATE
+CREATE TABLE
 
 SELECT gp_inject_fault('appendonly_insert', 'suspend', '', '', 'ao_blkdir_test', 1, 1, 0, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
  gp_inject_fault 
@@ -280,7 +280,7 @@ SELECT gp_inject_fault('appendonly_insert', 'reset', dbid) FROM gp_segment_confi
  Success:        
 (1 row)
 1<:  <... completed>
-INSERT 1
+INSERT 0 1
 
 -- The placeholder row is invisible to the INSERTing transaction. Since the
 -- INSERT finished, there should be 1 visible blkdir row representing the INSERT.
@@ -313,14 +313,14 @@ COMMIT
 (1 row)
 
 DROP TABLE ao_blkdir_test;
-DROP
+DROP TABLE
 
 -- Test `tupcount` in pg_aoseg == sum of number of `row_count` across all
 -- aoblkdir entries for each segno. Test with commits, aborts and deletes.
 
 -- Case1: without VACUUM ANALYZE
 CREATE TABLE ao_blkdir_test_rowcount(i int, j int) USING ao_row DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -330,19 +330,19 @@ BEGIN
 4: BEGIN;
 BEGIN
 1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
-INSERT 20
+INSERT 0 20
 3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
-INSERT 30
+INSERT 0 30
 3: ABORT;
-ABORT
+ROLLBACK
 3: BEGIN;
 BEGIN
 3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 40) i;
-INSERT 40
+INSERT 0 40
 4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
-INSERT 50
+INSERT 0 50
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -355,7 +355,7 @@ DELETE FROM ao_blkdir_test_rowcount WHERE j = 7;
 DELETE 50
 
 CREATE INDEX ao_blkdir_test_rowcount_idx ON ao_blkdir_test_rowcount(i);
-CREATE
+CREATE INDEX
 
 SELECT segno, sum(row_count) AS totalrows FROM (SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno;
  segno | totalrows 
@@ -376,11 +376,11 @@ SELECT segno, sum(tupcount) AS totalrows FROM gp_toolkit.__gp_aoseg('ao_blkdir_t
 
 -- Case2: with VACUUM ANALYZE
 DROP TABLE ao_blkdir_test_rowcount;
-DROP
+DROP TABLE
 CREATE TABLE ao_blkdir_test_rowcount(i int, j int) USING ao_row DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 CREATE INDEX ao_blkdir_test_rowcount_idx ON ao_blkdir_test_rowcount(i);
-CREATE
+CREATE INDEX
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -390,35 +390,35 @@ BEGIN
 4: BEGIN;
 BEGIN
 1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM ao_blkdir_test_rowcount;
-INSERT 10
+INSERT 0 10
 1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM ao_blkdir_test_rowcount;
-INSERT 20
+INSERT 0 20
 2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
-INSERT 20
+INSERT 0 20
 2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM ao_blkdir_test_rowcount;
-INSERT 20
+INSERT 0 20
 2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM ao_blkdir_test_rowcount;
-INSERT 40
+INSERT 0 40
 3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
-INSERT 30
+INSERT 0 30
 3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM ao_blkdir_test_rowcount;
-INSERT 30
+INSERT 0 30
 3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM ao_blkdir_test_rowcount;
-INSERT 60
+INSERT 0 60
 4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
-INSERT 50
+INSERT 0 50
 4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM ao_blkdir_test_rowcount;
-INSERT 50
+INSERT 0 50
 4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM ao_blkdir_test_rowcount;
-INSERT 100
+INSERT 0 100
 1: COMMIT;
 COMMIT
 2: COMMIT;
 COMMIT
 3: ABORT;
-ABORT
+ROLLBACK
 4: COMMIT;
 COMMIT
 
@@ -462,24 +462,24 @@ SELECT segno, sum(tupcount) AS totalrows FROM gp_toolkit.__gp_aoseg('ao_blkdir_t
 (4 rows)
 
 DROP TABLE ao_blkdir_test_rowcount;
-DROP
+DROP TABLE
 
 --
 -- Test tuple fetch with holes from ABORTs
 --
 CREATE TABLE ao_fetch_hole(i int, j int) USING ao_row;
-CREATE
+CREATE TABLE
 CREATE INDEX ON ao_fetch_hole(i);
-CREATE
+CREATE INDEX
 INSERT INTO ao_fetch_hole VALUES (2, 0);
-INSERT 1
+INSERT 0 1
 -- Create a hole after the last entry (of the last minipage) in the blkdir.
 BEGIN;
 BEGIN
 INSERT INTO ao_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
-INSERT 20
+INSERT 0 20
 ABORT;
-ABORT
+ROLLBACK
 SELECT (gp_toolkit.__gp_aoblkdir('ao_fetch_hole')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
@@ -534,7 +534,7 @@ SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbi
 -- Now do 1 more insert, so that the hole is sandwiched between two successive
 -- minipage entries.
 INSERT INTO ao_fetch_hole VALUES (4, 21);
-INSERT 1
+INSERT 0 1
 SELECT (gp_toolkit.__gp_aoblkdir('ao_fetch_hole')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
@@ -598,12 +598,12 @@ RESET
 --------------------------------------------------------------------------------
 
 CREATE TABLE aoco_blkdir_test(i int, j int) USING ao_column DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 CREATE INDEX aoco_blkdir_test_idx ON aoco_blkdir_test(i);
-CREATE
+CREATE INDEX
 
 1: INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 -- There should be 2 block directory rows with a single entry covering 10 rows,
 -- (1 for each column).
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
@@ -614,7 +614,7 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
 (2 rows)
 
 1: INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(11, 30) i;
-INSERT 20
+INSERT 0 20
 -- There should be 2 block directory rows, carrying 2 entries each. The rows
 -- from the previous INSERT should not be visible. The entries from the first
 -- INSERT should remain unchanged.
@@ -630,11 +630,11 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
 1: BEGIN;
 BEGIN
 1: INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(31, 60) i;
-INSERT 30
+INSERT 0 30
 2: BEGIN;
 BEGIN
 2: INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(71, 110) i;
-INSERT 40
+INSERT 0 40
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -656,10 +656,10 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
 (8 rows)
 
 TRUNCATE aoco_blkdir_test;
-TRUNCATE
+TRUNCATE TABLE
 -- Insert enough rows to overflow the first block directory minipage by 2.
 INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(1, 1317143) i;
-INSERT 1317143
+INSERT 0 1317143
 -- There should be 2 block directory rows, 2 for each column, one with 161
 -- entries covering 1317141 rows and the other with 1 entry covering the 2
 -- overflow rows.
@@ -994,9 +994,9 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
 
 -- Unique index white box tests
 DROP TABLE aoco_blkdir_test;
-DROP
+DROP TABLE
 CREATE TABLE aoco_blkdir_test(h int, i int UNIQUE, j int) USING ao_column DISTRIBUTED BY (i);
-CREATE
+CREATE TABLE
 
 SELECT gp_inject_fault('appendonly_insert', 'suspend', '', '', 'aoco_blkdir_test', 1, 1, 0, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
  gp_inject_fault 
@@ -1047,7 +1047,7 @@ SELECT gp_inject_fault('appendonly_insert', 'reset', dbid) FROM gp_segment_confi
  Success:        
 (1 row)
 1<:  <... completed>
-INSERT 1
+INSERT 0 1
 
 -- The placeholder row is invisible to the INSERTing transaction. Since the
 -- INSERT finished, there should be 3 visible blkdir rows representing the
@@ -1088,13 +1088,13 @@ COMMIT
 -- properly resolve uniqueness checks (by consulting the first non-dropped
 -- column's block directory row).
 3<:  <... completed>
-ALTER
+ALTER TABLE
 4: INSERT INTO aoco_blkdir_test VALUES (2, 2);
 ERROR:  duplicate key value violates unique constraint "aoco_blkdir_test_i_key"  (seg0 192.168.0.148:7002 pid=176693)
 DETAIL:  Key (i)=(2) already exists.
 
 DROP TABLE aoco_blkdir_test;
-DROP
+DROP TABLE
 
 -- Test `tupcount` in pg_ao(cs)seg == sum of number of `row_count` across all
 -- aoblkdir entries for each <segno, columngroup_no>. Test with commits, aborts
@@ -1102,7 +1102,7 @@ DROP
 
 -- Case1: without VACUUM ANALYZE
 CREATE TABLE aoco_blkdir_test_rowcount(i int, j int) USING ao_column DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -1112,19 +1112,19 @@ BEGIN
 4: BEGIN;
 BEGIN
 1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
-INSERT 20
+INSERT 0 20
 3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
-INSERT 30
+INSERT 0 30
 3: ABORT;
-ABORT
+ROLLBACK
 3: BEGIN;
 BEGIN
 3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 40) i;
-INSERT 40
+INSERT 0 40
 4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
-INSERT 50
+INSERT 0 50
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -1137,7 +1137,7 @@ DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
 DELETE 50
 
 CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
-CREATE
+CREATE INDEX
 
 SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
  segno | columngroup_no | totalrows 
@@ -1166,11 +1166,11 @@ SELECT segno, column_num, sum(tupcount) AS totalrows FROM gp_toolkit.__gp_aocsse
 
 -- Case2: with VACUUM ANALYZE
 DROP TABLE aoco_blkdir_test_rowcount;
-DROP
+DROP TABLE
 CREATE TABLE aoco_blkdir_test_rowcount(i int, j int) USING ao_column DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
-CREATE
+CREATE INDEX
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -1180,35 +1180,35 @@ BEGIN
 4: BEGIN;
 BEGIN
 1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM aoco_blkdir_test_rowcount;
-INSERT 10
+INSERT 0 10
 1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM aoco_blkdir_test_rowcount;
-INSERT 20
+INSERT 0 20
 2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
-INSERT 20
+INSERT 0 20
 2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM aoco_blkdir_test_rowcount;
-INSERT 20
+INSERT 0 20
 2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM aoco_blkdir_test_rowcount;
-INSERT 40
+INSERT 0 40
 3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
-INSERT 30
+INSERT 0 30
 3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM aoco_blkdir_test_rowcount;
-INSERT 30
+INSERT 0 30
 3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM aoco_blkdir_test_rowcount;
-INSERT 60
+INSERT 0 60
 4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
-INSERT 50
+INSERT 0 50
 4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM aoco_blkdir_test_rowcount;
-INSERT 50
+INSERT 0 50
 4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM aoco_blkdir_test_rowcount;
-INSERT 100
+INSERT 0 100
 1: COMMIT;
 COMMIT
 2: COMMIT;
 COMMIT
 3: ABORT;
-ABORT
+ROLLBACK
 4: COMMIT;
 COMMIT
 
@@ -1263,24 +1263,24 @@ SELECT segno, column_num, sum(tupcount) AS totalrows FROM gp_toolkit.__gp_aocsse
 (8 rows)
 
 DROP TABLE aoco_blkdir_test_rowcount;
-DROP
+DROP TABLE
 
 --
 -- Test tuple fetch with holes from ABORTs
 --
 CREATE TABLE aoco_fetch_hole(i int, j int) USING ao_row;
-CREATE
+CREATE TABLE
 CREATE INDEX ON aoco_fetch_hole(i);
-CREATE
+CREATE INDEX
 INSERT INTO aoco_fetch_hole VALUES (2, 0);
-INSERT 1
+INSERT 0 1
 -- Create a hole after the last entry (of the last minipage) in the blkdir.
 BEGIN;
 BEGIN
 INSERT INTO aoco_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
-INSERT 20
+INSERT 0 20
 ABORT;
-ABORT
+ROLLBACK
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
@@ -1335,7 +1335,7 @@ SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbi
 -- Now do 1 more insert, so that the hole is sandwiched between two successive
 -- minipage entries.
 INSERT INTO aoco_fetch_hole VALUES (4, 21);
-INSERT 1
+INSERT 0 1
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------

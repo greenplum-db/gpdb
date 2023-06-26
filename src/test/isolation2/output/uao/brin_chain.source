@@ -2,7 +2,7 @@
 -- These are in a separate file as they take longer and deal with more data.
 
 CREATE EXTENSION pageinspect;
-CREATE
+CREATE EXTENSION
 
 -- All tests insert rows into content=1.
 
@@ -16,11 +16,11 @@ CREATE
 -- * seg3: 32768 aborted rows (1 logical heap block), 3000 committed rows -> 1 revmap page.
 
 CREATE TABLE brin_chain_@amname@(i character(1)) USING heap;
-CREATE
+CREATE TABLE
 INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 1000);
-INSERT 1000
+INSERT 0 1000
 ALTER TABLE brin_chain_@amname@ SET ACCESS METHOD @amname@;
-ALTER
+ALTER TABLE
 
 1: BEGIN;
 BEGIN
@@ -43,26 +43,26 @@ COPY 180000000
 -- end_ignore
 (exited with code 0)
 2: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 2000);
-INSERT 2000
+INSERT 0 2000
 3: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 32768);
-INSERT 32768
+INSERT 0 32768
 3: ABORT;
-ABORT
+ROLLBACK
 3: BEGIN;
 BEGIN
 3: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 3000);
-INSERT 3000
+INSERT 0 3000
 
 1: COMMIT;
 COMMIT
 2: ABORT;
-ABORT
+ROLLBACK
 3: COMMIT;
 COMMIT
 
 -- Create the index.
 CREATE INDEX ON brin_chain_@amname@ USING brin(i) WITH (pages_per_range=1);
-CREATE
+CREATE INDEX
 
 -- Sanity: Inspect the revmap chain information (limit to first 5 segments)
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_chain_@amname@_i_idx', blkno)) FROM generate_series(0, nblocks('brin_chain_@amname@_i_idx') - 1) blkno;
@@ -133,4 +133,4 @@ SELECT count(*) FROM brin_chain_@amname@ WHERE i > '1' and i < '3';
 (1 row)
 
 DROP EXTENSION pageinspect;
-DROP
+DROP EXTENSION

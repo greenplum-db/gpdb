@@ -1,10 +1,10 @@
 -- TEST 1: Fix Github issue https://github.com/greenplum-db/gpdb/issues/9208
 1: create schema sync_np1;
-CREATE
+CREATE SCHEMA
 1: create schema sync_np2;
-CREATE
+CREATE SCHEMA
 1: CREATE OR REPLACE FUNCTION public.segment_setting(guc text) RETURNS SETOF text EXECUTE ON ALL SEGMENTS AS $$ BEGIN RETURN NEXT pg_catalog.current_setting(guc); END $$ LANGUAGE plpgsql;
-CREATE
+CREATE FUNCTION
 1q: ... <quitting>
 -- The SET command will create a Gang on the primaries, and the GUC
 -- values should be the same on all QD/QEs.
@@ -30,18 +30,18 @@ RESET
  "$user", public 
 (3 rows)
 2: create or replace function sync_f1() returns int as $$ select 1234; $$language sql;
-CREATE
+CREATE FUNCTION
 2: select sync_f1();
  sync_f1 
 ---------
  1234    
 (1 row)
 2: drop function sync_f1();
-DROP
+DROP FUNCTION
 2: drop schema sync_np1;
-DROP
+DROP SCHEMA
 2: drop schema sync_np2;
-DROP
+DROP SCHEMA
 2q: ... <quitting>
 
 -- TEST 2: Fix Github issue https://github.com/greenplum-db/gpdb/issues/685
@@ -66,9 +66,9 @@ RESET
  off             
 (3 rows)
 3: create table sync_t1(i int);
-CREATE
+CREATE TABLE
 3: insert into sync_t1 select i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 3: delete from sync_t1;
 DELETE 10
 3: select * from sync_t1;
@@ -76,19 +76,19 @@ DELETE 10
 ---
 (0 rows)
 3: drop table sync_t1;
-DROP
+DROP TABLE
 3q: ... <quitting>
 
 1: drop function public.segment_setting(guc text);
-DROP
+DROP FUNCTION
 1q: ... <quitting>
 
 -- TEST 3: make sure all QEs call RESET if there are more than 1 QE of the session
 -- in the primary
 4: create temp table sync_t11(a int, b int) distributed by(b);
-CREATE
+CREATE TABLE
 4: create temp table sync_t12(a int, b int) distributed by(a);
-CREATE
+CREATE TABLE
 
 -- The join will create 2 slices on each primary, and 1 entrydb on the coordinator.
 -- So, every primary and the coordinator should trigger 2 SET/RESET

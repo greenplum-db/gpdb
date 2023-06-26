@@ -2,9 +2,9 @@
 -- in the face of deadlocks and statement cancellations, when there is more than
 -- one active portal in the session.
 0:CREATE RESOURCE QUEUE rq_multi_portal WITH (active_statements = 2);
-CREATE
+CREATE QUEUE
 0:CREATE ROLE role_multi_portal RESOURCE QUEUE rq_multi_portal;
-CREATE
+CREATE ROLE
 
 1:SET ROLE role_multi_portal;
 SET
@@ -19,12 +19,12 @@ SET
 1:BEGIN;
 BEGIN
 1:DECLARE c1 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 
 2:BEGIN;
 BEGIN
 2:DECLARE c2 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 
 -- There should be 2 active statements.
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
@@ -45,7 +45,7 @@ DECLARE
 
 -- This should cause a deadlock.
 2:DECLARE c4 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 
 -- After the deadlock report, one session should have ERRORed out with the
 -- deadlock report and aborted, while the other session should remain active
@@ -74,9 +74,9 @@ DETAIL:  Process 738539 waits for ExclusiveLock on resource queue 90366; blocked
 Process 738548 waits for ExclusiveLock on resource queue 90366; blocked by process 738539.
 HINT:  See server log for query details.
 1:END;
-END
+ROLLBACK
 2:END;
-END
+COMMIT
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
  rsqcountlimit | rsqcountvalue 
 ---------------+---------------
@@ -90,9 +90,9 @@ END
 1:BEGIN;
 BEGIN
 1:DECLARE c1 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 1:DECLARE c2 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 
 -- There should be 2 active statements.
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
@@ -114,7 +114,7 @@ ERROR:  deadlock detected, locking against self
 (1 row)
 
 1:END;
-END
+ROLLBACK
 
 --
 -- Scenario 3:
@@ -123,12 +123,12 @@ END
 1:BEGIN;
 BEGIN
 1:DECLARE c1 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 
 2:BEGIN;
 BEGIN
 2:DECLARE c2 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 
 -- This should block as it will exceed the active statements limit.
 1&:DECLARE c3 CURSOR FOR SELECT 1;  <waiting ...>
@@ -164,9 +164,9 @@ DECLARE
 1<:  <... completed>
 ERROR:  canceling statement due to user request
 1:END;
-END
+ROLLBACK
 2:END;
-END
+COMMIT
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
  rsqcountlimit | rsqcountvalue 
 ---------------+---------------
@@ -175,6 +175,6 @@ END
 
 -- Cleanup
 0:DROP ROLE role_multi_portal;
-DROP
+DROP ROLE
 0:DROP RESOURCE QUEUE rq_multi_portal;
-DROP
+DROP QUEUE

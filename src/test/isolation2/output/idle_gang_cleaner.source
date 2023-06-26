@@ -5,12 +5,12 @@
 -- no snapshot collision error should occur.
 
 create or replace language plpython3u;
-CREATE
+CREATE LANGUAGE
 create extension if not exists gp_inject_fault;
-CREATE
+CREATE EXTENSION
 
 CREATE OR REPLACE FUNCTION idle_gang_pressure_test() RETURNS VOID LANGUAGE plpython3u AS $$ plpy.execute("SET gp_vmem_idle_resource_timeout = 1") for i in range(1000): plpy.execute("SELECT count(*) from idle_gang_cleaner_t a join idle_gang_cleaner_t b using (c2);") plpy.execute("RESET gp_vmem_idle_resource_timeout") $$;
-CREATE
+CREATE FUNCTION
 
 set gp_vmem_idle_resource_timeout to '0.5s';
 SET
@@ -18,12 +18,12 @@ set gp_snapshotadd_timeout to 0;
 SET
 
 create table target_session_id_t(target_session_id int) DISTRIBUTED REPLICATED;
-CREATE
+CREATE TABLE
 insert into target_session_id_t values(current_setting('gp_session_id')::int);
-INSERT 1
+INSERT 0 1
 
 create table idle_gang_cleaner_t (c1 int, c2 int);
-CREATE
+CREATE TABLE
 
 0U: select gp_inject_fault('proc_kill', 'suspend', 2, target_session_id) from target_session_id_t;
  gp_inject_fault 
@@ -80,7 +80,7 @@ select count(*) from idle_gang_cleaner_t a join idle_gang_cleaner_t b using (c2)
  Success:        
 (1 row)
 end;
-END
+COMMIT
 
 select idle_gang_pressure_test();
  idle_gang_pressure_test 
@@ -89,9 +89,9 @@ select idle_gang_pressure_test();
 (1 row)
 
 drop table target_session_id_t;
-DROP
+DROP TABLE
 drop table idle_gang_cleaner_t;
-DROP
+DROP TABLE
 reset gp_vmem_idle_resource_timeout;
 RESET
 reset gp_snapshotadd_timeout;

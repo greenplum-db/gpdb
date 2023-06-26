@@ -1,9 +1,9 @@
 -- Test on AO ROW tables with bloat, and with auxiliary tables included.  Check both physical and
 -- logical size, check with seg0, and also check if rewrite removes the bloat
 CREATE TABLE aorowsizetest (a int, col1 int, col2 text) WITH (appendonly=true, orientation=row);
-CREATE
+CREATE TABLE
 INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -11,17 +11,17 @@ BEGIN
 3: BEGIN;
 BEGIN
 1: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 2: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 3: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 1: COMMIT;
 COMMIT
 2: COMMIT;
 COMMIT
 3: ABORT;
-ABORT
+ROLLBACK
 select pg_relation_size('aorowsizetest', /* include_ao_aux */ false, /* physical_ao_size */ true) between 10000000 and 10500000;
  ?column? 
 ----------
@@ -58,9 +58,9 @@ select pg_total_relation_size('aorowsizetest') = pg_table_size('aorowsizetest');
 1: BEGIN;
 BEGIN
 1: ALTER TABLE aorowsizetest SET WITH (reorganize = 'true');
-ALTER
+ALTER TABLE
 1: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 1: COMMIT;
 COMMIT
 SELECT * FROM gp_toolkit.__gp_aoseg('aorowsizetest') ORDER BY segment_id;
@@ -108,9 +108,9 @@ select pg_total_relation_size('aorowsizetest') = pg_table_size('aorowsizetest');
 -- Test on AOCO tables with bloat, and with auxiliary tables included.  Check both physical and
 -- logical size, check with seg0, and also check if rewrite removes the bloat
 CREATE TABLE aocssizetest (a int, col1 int, col2 text) WITH (appendonly=true, orientation=column);
-CREATE
+CREATE TABLE
 INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -118,17 +118,17 @@ BEGIN
 3: BEGIN;
 BEGIN
 1: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 2: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 3: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 1: COMMIT;
 COMMIT
 2: COMMIT;
 COMMIT
 3: ABORT;
-ABORT
+ROLLBACK
 select pg_relation_size('aocssizetest', /* include_ao_aux */ false, /* physical_ao_size */ true) between 5000000 and 6000000;
  ?column? 
 ----------
@@ -165,9 +165,9 @@ select pg_total_relation_size('aocssizetest') = pg_table_size('aocssizetest');
 1: BEGIN;
 BEGIN
 1: ALTER TABLE aocssizetest SET WITH (reorganize = 'true');
-ALTER
+ALTER TABLE
 1: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
-INSERT 100000
+INSERT 0 100000
 1: COMMIT;
 COMMIT
 SELECT * FROM gp_toolkit.__gp_aocsseg('aocssizetest') ORDER BY segment_id, column_num;

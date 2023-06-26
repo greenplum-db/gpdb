@@ -13,7 +13,7 @@ CHECKPOINT
 2: begin;
 BEGIN
 2: create table t_commit_transaction_block_checkpoint (c int) distributed by (c);
-CREATE
+CREATE TABLE
 2&: commit;  <waiting ...>
 
 -- wait for the fault to trigger since following checkpoint could be faster
@@ -53,7 +53,7 @@ CHECKPOINT
 2: begin;
 BEGIN
 2: drop table t_commit_transaction_block_checkpoint;
-DROP
+DROP TABLE
 2&: commit;  <waiting ...>
 
 -- wait for the fault to trigger since following checkpoint could be faster

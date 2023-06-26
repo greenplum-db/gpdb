@@ -3,32 +3,32 @@
 -- ----------------------------------------------------------------------
 
 DROP ROLE IF EXISTS rg_test_role;
-DROP
+DROP ROLE
 
 -- positive
 CREATE ROLE rg_test_role;
-CREATE
+CREATE ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
  rolresgroup 
 -------------
  6437        
 (1 row)
 CREATE ROLE rg_test_role_super SUPERUSER;
-CREATE
+CREATE ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
  rolresgroup 
 -------------
  6438        
 (1 row)
 ALTER ROLE rg_test_role_super NOSUPERUSER;
-ALTER
+ALTER ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
  rolresgroup 
 -------------
  6437        
 (1 row)
 ALTER ROLE rg_test_role_super SUPERUSER;
-ALTER
+ALTER ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
  rolresgroup 
 -------------
@@ -36,14 +36,14 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
 (1 row)
 
 ALTER ROLE rg_test_role RESOURCE GROUP none;
-ALTER
+ALTER ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
  rolresgroup 
 -------------
  6437        
 (1 row)
 ALTER ROLE rg_test_role_super RESOURCE GROUP none;
-ALTER
+ALTER ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
  rolresgroup 
 -------------
@@ -51,14 +51,14 @@ SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
 (1 row)
 
 ALTER ROLE rg_test_role RESOURCE GROUP default_group;
-ALTER
+ALTER ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role';
  rolresgroup 
 -------------
  6437        
 (1 row)
 ALTER ROLE rg_test_role_super RESOURCE GROUP admin_group;
-ALTER
+ALTER ROLE
 SELECT rolresgroup FROM pg_authid WHERE rolname = 'rg_test_role_super';
  rolresgroup 
 -------------
@@ -76,7 +76,7 @@ ERROR:  only superuser can be assigned to admin resgroup
 CREATE ROLE r_test_system_group RESOURCE GROUP system_group;
 ERROR:  assigning to system resgroup is not allowed
 CREATE ROLE r_test_system_group;
-CREATE
+CREATE ROLE
 ALTER ROLE r_test_system_group RESOURCE GROUP system_group;
 ERROR:  assigning to system resgroup is not allowed
 
@@ -88,11 +88,11 @@ ERROR:  only superuser can be assigned to admin resgroup
 
 -- cleanup
 DROP ROLE rg_test_role;
-DROP
+DROP ROLE
 DROP ROLE rg_test_role_super;
-DROP
+DROP ROLE
 DROP ROLE r_test_system_group;
-DROP
+DROP ROLE
 
 -- ----------------------------------------------------------------------
 -- Test: create/drop a resource group
@@ -123,11 +123,11 @@ ERROR:  resource group name "none" is reserved
 
 -- multiple resource groups can't share the same name
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
 ERROR:  resource group "rg_test_group" already exists
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 
 -- can't specify the resource limit type multiple times
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_max_percent=5, concurrency=1);
@@ -180,7 +180,7 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 ERROR:  the length of cpuset reached the upper limit 1024
 -- can't alter to invalid cpuset
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
-CREATE
+CREATE RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group set CPUSET '';
 ERROR:  cpuset invalid
 ALTER RESOURCE GROUP rg_test_group set CPUSET ',';
@@ -219,7 +219,7 @@ ERROR:  cpu cores 1024 are unavailable on the system
 ALTER RESOURCE GROUP rg_test_group set CPUSET '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,';
 ERROR:  the length of cpuset reached the upper limit 1024
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 -- can't drop non-exist resource group
 DROP RESOURCE GROUP non_exist_group;
 ERROR:  resource group "non_exist_group" does not exist
@@ -235,68 +235,68 @@ ERROR:  resource group "none" does not exist
 
 -- positive
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_max_percent | cpu_weight 
 ---------------+-------------+-----------------+------------
  rg_test_group | 20          | 10              | 100        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpuset='0');
-CREATE
+CREATE RESOURCE GROUP
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_max_percent | cpu_weight 
 ---------------+-------------+-----------------+------------
  rg_test_group | 1           | -1              | 100        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=500);
-CREATE
+CREATE RESOURCE GROUP
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_max_percent | cpu_weight 
 ---------------+-------------+-----------------+------------
  rg_test_group | 20          | 10              | 500        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=-1, cpu_weight=500);
-CREATE
+CREATE RESOURCE GROUP
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_max_percent | cpu_weight 
 ---------------+-------------+-----------------+------------
  rg_test_group | 20          | -1              | 500        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpu_weight=500);
-CREATE
+CREATE RESOURCE GROUP
 SELECT groupname,concurrency,cpu_max_percent, cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_max_percent | cpu_weight 
 ---------------+-------------+-----------------+------------
  rg_test_group | 20          | -1              | 500        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
-CREATE
+CREATE RESOURCE GROUP
 SELECT groupname,concurrency,cpu_max_percent,cpu_weight FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_max_percent | cpu_weight 
 ---------------+-------------+-----------------+------------
  rg_test_group | 20          | -1              | 100        
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0;0-1');
-CREATE
+CREATE RESOURCE GROUP
 SELECT groupname,concurrency,cpu_max_percent,cpu_weight,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | concurrency | cpu_max_percent | cpu_weight | cpuset 
 ---------------+-------------+-----------------+------------+--------
  rg_test_group | 20          | -1              | 100        | 0;0-1  
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 -- ----------------------------------------------------------------------
 -- Test: boundary check in create resource group syntax
 -- ----------------------------------------------------------------------
@@ -315,11 +315,11 @@ ERROR:  concurrency range is [0, 'max_connections']
 
 -- negative: the cores of cpuset in different groups mustn't overlap
 CREATE RESOURCE GROUP rg_test_group1 WITH (cpuset='0');
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group2 WITH (cpuset='0');
 ERROR:  cpu cores 0 are used by resource group rg_test_group1
 DROP RESOURCE GROUP rg_test_group1;
-DROP
+DROP RESOURCE GROUP
 
 -- negative: cpu_weight should be in [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=0);
@@ -333,63 +333,63 @@ ERROR:  cpu_weight range is [1, 500]
 
 -- positive: cpu_max_percent should be in [1, 100]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=60);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=1);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 
 -- positive: cpu_weight should be in [1, 500]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=100);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, cpu_weight=500);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 
 -- positive: concurrency should be in [0, max_connections]
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=0, cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=25, cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP rg1_test_group WITH (concurrency=1, cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP rg2_test_group WITH (concurrency=1, cpu_max_percent=500);
 ERROR:  cpu_max_percent range is [1, 100] or equals to -1
 DROP RESOURCE GROUP rg1_test_group;
-DROP
+DROP RESOURCE GROUP
 DROP RESOURCE GROUP rg2_test_group;
 ERROR:  resource group "rg2_test_group" does not exist
 
 -- positive: min_cost should be in [0,INT32_MAX]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=0);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP rg1_test_group WITH (cpu_max_percent=10, min_cost=2147483647);
-CREATE
+CREATE RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET min_cost 2147483647;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg1_test_group SET min_cost 0;
-ALTER
+ALTER RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 DROP RESOURCE GROUP rg1_test_group;
-DROP
+DROP RESOURCE GROUP
 
 -- negative: min_cost should be in [0,INT32_MAX]
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=-1);
@@ -397,7 +397,7 @@ ERROR:  The min_cost value can't be less than 0.
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=2147483648);
 ERROR:  capability min_cost is out of range
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, min_cost=0);
-CREATE
+CREATE RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET min_cost -1;
 ERROR:  The min_cost value can't be less than 0.
 ALTER RESOURCE GROUP rg_test_group SET min_cost 2147483648;
@@ -405,14 +405,14 @@ ERROR:  syntax error at or near "2147483648"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET min_cost 2147483648;
                                                         ^
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 
 --
 -- ----------------------------------------------------------------------
 -- Test: alter a resource group
 -- ----------------------------------------------------------------------
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=5);
-CREATE
+CREATE RESOURCE GROUP
 
 -- ALTER RESOURCE GROUP SET CONCURRENCY N
 -- negative: concurrency should be in [1, max_connections]
@@ -444,13 +444,13 @@ LINE 1: ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY '1';
                                                            ^
 -- positive: concurrency should be in [1, max_connections]
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 0;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 2;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 25;
-ALTER
+ALTER RESOURCE GROUP
 
 -- ALTER RESOURCE GROUP SET cpu_max_percent VALUE
 -- negative: cpu_max_percent should be in [1, 100]
@@ -459,7 +459,7 @@ ERROR:  syntax error at or near "0.1"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent -0.1;
                                                                 ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent -1;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0;
 ERROR:  cpu_max_percent range is [1, 100] or equals to -1
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.7;
@@ -471,7 +471,7 @@ ERROR:  syntax error at or near "1.7"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 1.7;
                                                                ^
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 61;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent a;
 ERROR:  syntax error at or near "a"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent a;
@@ -490,35 +490,35 @@ LINE 1: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 0.2%;
                                                                ^
 -- positive: cpu_max_percent should be in [1, 100]
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 1;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 2;
-ALTER
+ALTER RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 60;
-ALTER
+ALTER RESOURCE GROUP
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 
 -- positive: cpuset and cpu_max_percent are exclusive,
 -- if cpu_max_percent is set, cpuset is empty
 -- if cpuset is set, cpuset is -1
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER RESOURCE GROUP rg_test_group SET CPUSET '0';
-ALTER
+ALTER RESOURCE GROUP
 SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | cpu_max_percent | cpuset 
 ---------------+-----------------+--------
  rg_test_group | -1              | 0      
 (1 row)
 ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 10;
-ALTER
+ALTER RESOURCE GROUP
 SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
  groupname     | cpu_max_percent | cpuset 
 ---------------+-----------------+--------
  rg_test_group | 10              | -1     
 (1 row)
 DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 
 -- test set cpu_max_percent to high value when gp_resource_group_cpu_limit is low
 -- start_ignore
@@ -532,11 +532,11 @@ DROP
 (exited with code 0)
 -- end_ignore
 0: CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 0: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 100;
-ALTER
+ALTER RESOURCE GROUP
 0: DROP RESOURCE GROUP rg_test_group;
-DROP
+DROP RESOURCE GROUP
 -- start_ignore
 !\retcode gpconfig -c gp_resource_group_cpu_limit -v 1;
 -- start_ignore

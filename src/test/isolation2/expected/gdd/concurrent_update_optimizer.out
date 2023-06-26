@@ -1,8 +1,8 @@
 -- Test concurrent update a table with a varying length type
 CREATE TABLE t_concurrent_update(a int, b int, c char(84));
-CREATE
+CREATE TABLE
 INSERT INTO t_concurrent_update VALUES(1,1,'test');
-INSERT 1
+INSERT 0 1
 
 1: BEGIN;
 BEGIN
@@ -14,7 +14,7 @@ UPDATE 1
 SET
 2&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;  <waiting ...>
 1: END;
-END
+COMMIT
 2<:  <... completed>
 UPDATE 1
 1: SELECT * FROM t_concurrent_update;
@@ -26,13 +26,13 @@ UPDATE 1
 2q: ... <quitting>
 
 DROP TABLE t_concurrent_update;
-DROP
+DROP TABLE
 
 -- Test the concurrent update transaction order on the segment is reflected on coordinator
 1: CREATE TABLE t_concurrent_update(a int, b int);
-CREATE
+CREATE TABLE
 1: INSERT INTO t_concurrent_update VALUES(1,1);
-INSERT 1
+INSERT 0 1
 
 2: BEGIN;
 BEGIN
@@ -76,9 +76,9 @@ UPDATE 1
  Success:        
 (1 row)
 2<:  <... completed>
-END
+COMMIT
 3<:  <... completed>
-END
+COMMIT
 2q: ... <quitting>
 3q: ... <quitting>
 
@@ -117,7 +117,7 @@ SET
  Success:                      
 (1 row)
 4: END;
-END
+COMMIT
 4: SELECT gp_inject_fault('before_get_distributed_xid', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=1;
  gp_inject_fault 
 -----------------
@@ -127,14 +127,14 @@ END
 5<:  <... completed>
 UPDATE 1
 5: END;
-END
+COMMIT
 6: SELECT * FROM t_concurrent_update;
  a | b  
 ---+----
  1 | 41 
 (1 row)
 6: DROP TABLE t_concurrent_update;
-DROP
+DROP TABLE
 4q: ... <quitting>
 5q: ... <quitting>
 6q: ... <quitting>
@@ -152,9 +152,9 @@ DROP
 -- distribution keys is updated.
 
 0: create table tab_update_hashcol (c1 int, c2 int) distributed by(c1);
-CREATE
+CREATE TABLE
 0: insert into tab_update_hashcol values(1,1);
-INSERT 1
+INSERT 0 1
 0: select * from tab_update_hashcol;
  c1 | c2 
 ----+----
@@ -169,18 +169,18 @@ BEGIN
 UPDATE 1
 2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
 1: end;
-END
+COMMIT
 2<:  <... completed>
 ERROR:  EvalPlanQual can not handle subPlan with Motion node
 2: end;
-END
+ROLLBACK
 0: select * from tab_update_hashcol;
  c1 | c2 
 ----+----
  2  | 1  
 (1 row)
 0: drop table tab_update_hashcol;
-DROP
+DROP TABLE
 
 -- Test EvalplanQual
 -- If we enable the GDD, then the lock maybe downgrade to
@@ -192,13 +192,13 @@ DROP
 -- GDD is enabled and EvalPlanQual is tiggered.
 
 0: create table tab_update_epq1 (c1 int, c2 int) distributed randomly;
-CREATE
+CREATE TABLE
 0: create table tab_update_epq2 (c1 int, c2 int) distributed randomly;
-CREATE
+CREATE TABLE
 0: insert into tab_update_epq1 values(1,1);
-INSERT 1
+INSERT 0 1
 0: insert into tab_update_epq2 values(1,1);
-INSERT 1
+INSERT 0 1
 0: select * from tab_update_epq1;
  c1 | c2 
 ----+----
@@ -223,11 +223,11 @@ BEGIN
 UPDATE 1
 2&: update tab_update_epq1 set c1 = tab_update_epq1.c1 + 1 from tab_update_epq2 where tab_update_epq1.c2 = tab_update_epq2.c2;  <waiting ...>
 1: end;
-END
+COMMIT
 2<:  <... completed>
 ERROR:  EvalPlanQual can not handle subPlan with Motion node  (seg1 127.0.1.1:6003 pid=76275)
 2: end;
-END
+ROLLBACK
 
 0: select * from tab_update_epq1;
  c1 | c2 
@@ -235,16 +235,16 @@ END
  2  | 1  
 (1 row)
 0: drop table tab_update_epq1;
-DROP
+DROP TABLE
 0: drop table tab_update_epq2;
-DROP
+DROP TABLE
 0q: ... <quitting>
 1q: ... <quitting>
 2q: ... <quitting>
 
 -- check that orca concurrent delete transaction won't delete tuple, updated in other transaction (which doesn't match predicate anymore)
 create table test as select 0 as i distributed randomly;
-CREATE 1
+SELECT 1
 1: begin;
 BEGIN
 1: update test set i = i + 1;
@@ -253,17 +253,17 @@ UPDATE 1
 -- the following SQL will hang due to XID lock
 2&: delete from test where i = 0;  <waiting ...>
 1: end;
-END
+COMMIT
 2<:  <... completed>
 DELETE 0
 drop table test;
-DROP
+DROP TABLE
 1q: ... <quitting>
 2q: ... <quitting>
 
 -- check that orca concurrent delete transaction will delete tuple, updated in other transaction (which still matches predicate)
 create table test as select 0 as i distributed randomly;
-CREATE 1
+SELECT 1
 1: begin;
 BEGIN
 1: update test set i = i;
@@ -272,19 +272,19 @@ UPDATE 1
 -- the following SQL will hang due to XID lock
 2&: delete from test where i = 0;  <waiting ...>
 1: end;
-END
+COMMIT
 2<:  <... completed>
 DELETE 1
 drop table test;
-DROP
+DROP TABLE
 1q: ... <quitting>
 2q: ... <quitting>
 
 -- test ORCA partition table
 create table test(a int, b int, c int) partition by range(b) (start (1) end (7) every (3));
-CREATE
+CREATE TABLE
 insert into test values (1, 1, 1);
-INSERT 1
+INSERT 0 1
 1: begin;
 BEGIN
 1: delete from test where b = 1;
@@ -293,7 +293,7 @@ DELETE 1
 -- the following SQL will hang due to XID lock
 2&: update test set b = 1;  <waiting ...>
 1: end;
-END
+COMMIT
 2<:  <... completed>
 ERROR:  could not split update tuple which has been deleted by other transaction  (seg1 127.0.0.1:7003 pid=22726)
 
@@ -302,7 +302,7 @@ ERROR:  could not split update tuple which has been deleted by other transaction
 ---+---+---
 (0 rows)
 0: drop table test;
-DROP
+DROP TABLE
 0q: ... <quitting>
 1q: ... <quitting>
 2q: ... <quitting>
@@ -310,9 +310,9 @@ DROP
 -- test ORCA partition table
 -- related github issue https://github.com/greenplum-db/gpdb/issues/14935
 create table test(a int, b int, c int) partition by range(b) (start (1) end (7) every (3));
-CREATE
+CREATE TABLE
 insert into test values (1, 1, 1), (1, 2, 1);
-INSERT 2
+INSERT 0 2
 1: begin;
 BEGIN
 1: update test set c = 1;
@@ -321,7 +321,7 @@ UPDATE 2
 -- the following SQL will hang due to XID lock
 2&: update test set c = 1;  <waiting ...>
 1: end;
-END
+COMMIT
 2<:  <... completed>
 UPDATE 2
 
@@ -332,7 +332,7 @@ UPDATE 2
  1 | 2 | 1 
 (2 rows)
 0: drop table test;
-DROP
+DROP TABLE
 0q: ... <quitting>
 1q: ... <quitting>
 2q: ... <quitting>
@@ -346,9 +346,9 @@ DROP
 -- See github issue: https://github.com/greenplum-db/gpdb/issues/8919
 
 0:create table t_splitupdate_raise_error (a int, b int) distributed by (a);
-CREATE
+CREATE TABLE
 0:insert into t_splitupdate_raise_error values (1, 1);
-INSERT 1
+INSERT 0 1
 
 -- test delete will throw error
 1: begin;
@@ -361,12 +361,12 @@ BEGIN
 2&: delete from t_splitupdate_raise_error;  <waiting ...>
 
 1: end;
-END
+COMMIT
 2<:  <... completed>
 ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg1 127.0.1.1:6003 pid=76275)
 
 2: abort;
-ABORT
+ROLLBACK
 1q: ... <quitting>
 2q: ... <quitting>
 
@@ -381,12 +381,12 @@ BEGIN
 2&: update t_splitupdate_raise_error set b = 999;  <waiting ...>
 
 1: end;
-END
+COMMIT
 2<:  <... completed>
 ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg0 127.0.1.1:6002 pid=76337)
 
 2: abort;
-ABORT
+ROLLBACK
 1q: ... <quitting>
 2q: ... <quitting>
 
@@ -409,14 +409,14 @@ SET
 2&: select * from t_splitupdate_raise_error for update;  <waiting ...>
 
 1: end;
-END
+COMMIT
 2<:  <... completed>
 ERROR:  tuple to be locked was already moved to another partition or segment due to concurrent update  (seg0 slice1 127.0.1.1:7002 pid=43866)
 
 2: abort;
-ABORT
+ROLLBACK
 1q: ... <quitting>
 2q: ... <quitting>
 
 0:drop table t_splitupdate_raise_error;
-DROP
+DROP TABLE

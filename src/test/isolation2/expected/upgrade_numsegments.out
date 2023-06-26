@@ -9,13 +9,13 @@
 -- numsegments in utility mode, so we use it to test the
 -- function.
 -1U: create temp table t1(c1 int, c2 int);
-CREATE
+CREATE TABLE
 0U: create temp table t1(c1 int, c2 int);
-CREATE
+CREATE TABLE
 1U: create temp table t1(c1 int, c2 int);
-CREATE
+CREATE TABLE
 2U: create temp table t1(c1 int, c2 int);
-CREATE
+CREATE TABLE
 -- start_ignore
 -1Uq: ... <quitting>
 0Uq: ... <quitting>

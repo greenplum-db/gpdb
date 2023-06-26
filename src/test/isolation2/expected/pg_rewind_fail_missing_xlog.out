@@ -4,9 +4,9 @@
 -- gprecoverseg (based on pg_rewind) would fail due to missing wal file
 
 CREATE TABLE tst_missing_tbl (a int);
-CREATE
+CREATE TABLE
 INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 
 -- Make the test faster by not preserving any extra wal segment files
 !\retcode gpconfig -c wal_keep_size -v 0;
@@ -37,7 +37,7 @@ CHECKPOINT
  t        
 (1 row)
 1: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 -- Should be not needed mostly but let's 100% ensure since pg_switch_wal()
 -- won't switch if it has been on the boundary (seldom though).
 0U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
@@ -46,7 +46,7 @@ INSERT 3
  t        
 (1 row)
 1: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 0Uq: ... <quitting>
 
 -- Make sure primary/mirror pair is in sync, otherwise FTS can't promote mirror
@@ -82,9 +82,9 @@ CHECKPOINT
 0M: BEGIN;
 BEGIN
 0M: DROP TABLE tst_missing_tbl;
-DROP
+DROP TABLE
 0M: ABORT;
-ABORT
+ROLLBACK
 0M: CHECKPOINT;
 CHECKPOINT
 0Mq: ... <quitting>
@@ -94,7 +94,7 @@ CHECKPOINT
 -- know that a wal divergence is explicitly triggered and 100% completed.  Also
 -- sanity check the tuple distribution (assumption of the test).
 2: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 2: SELECT gp_segment_id, count(*) from tst_missing_tbl group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
@@ -142,21 +142,21 @@ CHECKPOINT
  t        
 (1 row)
 3: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 1U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
  ?column? 
 ----------
  t        
 (1 row)
 3: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 1U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
  ?column? 
 ----------
  t        
 (1 row)
 3: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 -- Should be not needed mostly but let's 100% ensure since pg_switch_wal()
 -- won't switch if it is on the boundary already (seldom though).
 1U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
@@ -165,7 +165,7 @@ INSERT 3
  t        
 (1 row)
 3: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 
 -- Hang at checkpointer before writing checkpoint xlog.
 3: SELECT gp_inject_fault('checkpoint_after_redo_calculated', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 1;
@@ -215,7 +215,7 @@ INSERT 3
 (2 rows)
 
 4: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 4: SELECT gp_segment_id, count(*) from tst_missing_tbl group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
@@ -273,7 +273,7 @@ CHECKPOINT
  t        
 (1 row)
 1: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 -- Should be not needed mostly but let's 100% ensure since pg_switch_wal()
 -- won't switch if it has been on the boundary (seldom though).
 0U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
@@ -282,7 +282,7 @@ INSERT 3
  t        
 (1 row)
 1: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 0Uq: ... <quitting>
 
 -- Make sure primary/mirror pair is in sync, otherwise FTS can't promote mirror
@@ -316,17 +316,17 @@ INSERT 3
 0M: BEGIN;
 BEGIN
 0M: DROP TABLE tst_missing_tbl;
-DROP
+DROP TABLE
 0M: ABORT;
-ABORT
+ROLLBACK
 0M: CHECKPOINT;
 CHECKPOINT
 0M: BEGIN;
 BEGIN
 0M: DROP TABLE tst_missing_tbl;
-DROP
+DROP TABLE
 0M: ABORT;
-ABORT
+ROLLBACK
 0M: CHECKPOINT;
 CHECKPOINT
 
@@ -357,7 +357,7 @@ CHECKPOINT
 -- know that a wal divergence is explicitly triggered and 100% completed.  Also
 -- sanity check the tuple distribution (assumption of the test).
 2: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 2: SELECT gp_segment_id, count(*) from tst_missing_tbl group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
@@ -405,7 +405,7 @@ CHECKPOINT
  t        
 (1 row)
 3: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 -- Should be not needed mostly but let's 100% ensure since pg_switch_wal()
 -- won't switch if it is on the boundary already (seldom though).
 1U: SELECT pg_switch_wal is not null FROM pg_switch_wal();
@@ -414,7 +414,7 @@ INSERT 3
  t        
 (1 row)
 3: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 
 -- Have primary/mirror pair in sync before suspending the wal sender.
 3: SELECT wait_until_all_segments_synchronized();
@@ -480,7 +480,7 @@ INSERT 3
 
 -- Write something on the current primary
 4: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 4: SELECT gp_segment_id, count(*) from tst_missing_tbl group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
@@ -533,9 +533,9 @@ server closed the connection unexpectedly
 
 -- Create an unlogged table on the primary that remembers replication slot's last restart_lsn and number of WAL files.
 1U: CREATE UNLOGGED TABLE unlogged_wal_retention_test(restart_lsn_before pg_lsn, wal_count_before int);
-CREATE
+CREATE TABLE
 1U: INSERT INTO unlogged_wal_retention_test SELECT (select restart_lsn FROM pg_replication_slots WHERE slot_name = 'internal_wal_replication_slot') as restart_lsn_before, (select count(*) from pg_ls_waldir()) as wal_count_before;
-INSERT 1
+INSERT 0 1
 5: CHECKPOINT;
 CHECKPOINT
 -- Replication slot's restart_lsn should advance to the checkpoint's redo location.
@@ -565,7 +565,7 @@ UPDATE 1
  t        
 (1 row)
 5: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 -- Replication slot's restart_lsn should NOT change regardless mirror has received more wals.
 1U: select pg_wal_lsn_diff(restart_lsn, restart_lsn_before) = 0 FROM pg_replication_slots, unlogged_wal_retention_test WHERE slot_name = 'internal_wal_replication_slot';
  ?column? 
@@ -607,7 +607,7 @@ CHECKPOINT
 (1 row)
 -- Perform transaction to make sure wals are in sync.
 5: INSERT INTO tst_missing_tbl values(2),(1),(5);
-INSERT 3
+INSERT 0 3
 -- Replication slot's restart_lsn should now advance to the checkpoint's redo location.
 1U: SELECT pg_wal_lsn_diff(restart_lsn, restart_lsn_before) > 0 from pg_replication_slots, unlogged_wal_retention_test WHERE slot_name = 'internal_wal_replication_slot';
  ?column? 
@@ -631,11 +631,11 @@ CHECKPOINT
 
 -- Cleanup
 1U: DROP TABLE unlogged_wal_retention_test;
-DROP
+DROP TABLE
 1Uq: ... <quitting>
 
 5: DROP TABLE tst_missing_tbl;
-DROP
+DROP TABLE
 !\retcode gpconfig -r wal_keep_size;
 (exited with code 0)
 !\retcode gpconfig -r wal_recycle;

@@ -1,57 +1,57 @@
 -- @Description Ensures that a serializable select before during a vacuum operation blocks the vacuum.
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 DROP TABLE IF EXISTS ao2;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT) USING @amname@;
-CREATE
+CREATE TABLE
 CREATE TABLE ao2 (a INT) USING @amname@;
-CREATE
+CREATE TABLE
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao2 select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 
 DELETE FROM ao WHERE a < 128;
 DELETE 2667
@@ -72,4 +72,4 @@ VACUUM
 1: COMMIT;
 COMMIT
 3: INSERT INTO ao VALUES (0);
-INSERT 1
+INSERT 0 1

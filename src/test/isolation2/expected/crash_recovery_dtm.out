@@ -15,7 +15,7 @@
 -- Make the test faster and also make some queries fail as expected after
 -- 2pc retry PANIC (do not finish earlier before PANIC happens).
 alter system set dtx_phase2_retry_second to 5;
-ALTER
+ALTER SYSTEM
 select pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -85,7 +85,7 @@ server closed the connection unexpectedly
 ---+---
 (0 rows)
 4: INSERT INTO commit_phase1_panic select i,i from generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 4: SELECT count(*) from commit_phase1_panic;
  count 
 -------
@@ -186,9 +186,9 @@ LINE 1: SELECT count(*) from abort_fatal_fault_test_table;
 -- should cause coordinator to broadcast abort and QEs handle the abort in
 -- DTX_CONTEXT_LOCAL_ONLY context.
 11: CREATE TABLE QE_panic_test_table(a int, b int);
-CREATE
+CREATE TABLE
 11: INSERT INTO QE_panic_test_table SELECT * from generate_series(0, 9);
-INSERT 10
+INSERT 0 10
 -- To help speedy recovery
 11: CHECKPOINT;
 CHECKPOINT
@@ -196,7 +196,7 @@ CHECKPOINT
 -- system is required to set the GUC and can't be set on session level
 -- as session reset happens for every abort retry.
 11: alter system set dtx_phase2_retry_second to 600;
-ALTER
+ALTER SYSTEM
 11: select pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -254,7 +254,7 @@ ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=25361: server closed the c
  Success:        
 (1 row)
 13: alter system reset dtx_phase2_retry_second;
-ALTER
+ALTER SYSTEM
 13: select pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -264,7 +264,7 @@ ALTER
 -- Scenario 5: QD panics when a QE process is doing prepare but not yet finished.
 -- This should cause dtx recovery finally aborts the orphaned prepared transaction.
 15: CREATE TABLE coordinator_reset(a int);
-CREATE
+CREATE TABLE
 15: SELECT gp_inject_fault_infinite('before_xlog_xact_prepare', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 1;
  gp_inject_fault_infinite 
 --------------------------
@@ -284,9 +284,9 @@ CREATE
 
 -- set gucs to speed up testing
 15: ALTER SYSTEM SET gp_dtx_recovery_prepared_period to 0;
-ALTER
+ALTER SYSTEM
 15: ALTER SYSTEM SET gp_dtx_recovery_interval to 5;
-ALTER
+ALTER SYSTEM
 15: SELECT pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -366,11 +366,11 @@ server closed the connection unexpectedly
  Success:                 
 (1 row)
 19: DROP TABLE coordinator_reset;
-DROP
+DROP TABLE
 19: ALTER SYSTEM RESET gp_dtx_recovery_interval;
-ALTER
+ALTER SYSTEM
 19: ALTER SYSTEM RESET gp_dtx_recovery_prepared_period;
-ALTER
+ALTER SYSTEM
 19: SELECT pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -388,11 +388,11 @@ ALTER
 
 -- speed up testing by setting some gucs.
 20: ALTER SYSTEM SET gp_dtx_recovery_prepared_period to 0;
-ALTER
+ALTER SYSTEM
 20: ALTER SYSTEM SET gp_dtx_recovery_interval to 5;
-ALTER
+ALTER SYSTEM
 20: ALTER SYSTEM SET dtx_phase2_retry_second to 5;
-ALTER
+ALTER SYSTEM
 20: SELECT pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -400,7 +400,7 @@ ALTER
 (1 row)
 
 20: CREATE TABLE test_retry_abort(a int);
-CREATE
+CREATE TABLE
 
 -- coordinator: set fault to trigger abort prepare
 -- primary 0: set fault so that retry prepared abort fails.
@@ -473,11 +473,11 @@ ERROR:  fault triggered, fault name:'dtm_broadcast_prepare' fault type:'error'
 
 -- cleanup
 20: ALTER SYSTEM RESET gp_dtx_recovery_interval;
-ALTER
+ALTER SYSTEM
 20: ALTER SYSTEM RESET gp_dtx_recovery_prepared_period;
-ALTER
+ALTER SYSTEM
 20: ALTER SYSTEM RESET dtx_phase2_retry_second;
-ALTER
+ALTER SYSTEM
 20: SELECT pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -494,4 +494,4 @@ ALTER
  Success:                 
 (1 row)
 20: DROP TABLE test_retry_abort;
-DROP
+DROP TABLE

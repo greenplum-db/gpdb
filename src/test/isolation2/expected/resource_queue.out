@@ -1,14 +1,14 @@
 0:CREATE RESOURCE QUEUE rq_concurrency_test WITH (active_statements = 1);
-CREATE
+CREATE QUEUE
 0:CREATE role role_concurrency_test RESOURCE QUEUE rq_concurrency_test;
-CREATE
+CREATE ROLE
 
 1:SET role role_concurrency_test;
 SET
 1:BEGIN;
 BEGIN
 1:DECLARE c1 CURSOR FOR SELECT 1;
-DECLARE
+DECLARE CURSOR
 
 2:SET role role_concurrency_test;
 SET
@@ -55,7 +55,7 @@ PREPARE
 (3 rows)
 
 1:END;
-END
+COMMIT
 
 2<:  <... completed>
  ?column? 
@@ -63,7 +63,7 @@ END
  1        
 (1 row)
 2:END;
-END
+COMMIT
 
 3<:  <... completed>
  ?column? 
@@ -71,7 +71,7 @@ END
  1        
 (1 row)
 3:END;
-END
+COMMIT
 
 -- Sanity check: Ensure that the resource queue is now empty.
 0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';
@@ -81,6 +81,6 @@ END
 (1 row)
 
 0:DROP role role_concurrency_test;
-DROP
+DROP ROLE
 0:DROP RESOURCE QUEUE rq_concurrency_test;
-DROP
+DROP QUEUE

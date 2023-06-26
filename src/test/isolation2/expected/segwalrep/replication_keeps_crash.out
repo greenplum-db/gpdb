@@ -11,9 +11,9 @@
 
 -- modify fts gucs to speed up the test.
 1: alter system set gp_fts_probe_interval to 10;
-ALTER
+ALTER SYSTEM
 1: alter system set gp_fts_replication_attempt_count to 3;
-ALTER
+ALTER SYSTEM
 1: select pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -62,7 +62,7 @@ select gp_request_fts_probe_scan();
 -- Without gp_fts_replication_attempt_count mirror will continuously connect and re-connect and
 -- be in grace period to not be marked down.
 1<:  <... completed>
-CREATE
+CREATE TABLE
 
 -- expect: to see the content 0, mirror is mark down
 select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
@@ -105,12 +105,12 @@ SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration
 (8 rows)
 
 drop table mirror_block_t1;
-DROP
+DROP TABLE
 
 1: alter system reset gp_fts_probe_interval;
-ALTER
+ALTER SYSTEM
 1: alter system reset gp_fts_replication_attempt_count;
-ALTER
+ALTER SYSTEM
 1: select pg_reload_conf();
  pg_reload_conf 
 ----------------

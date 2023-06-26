@@ -4,9 +4,9 @@
 
 -- set GUCs to speed-up the test
 1: alter system set gp_fts_probe_retries to 2;
-ALTER
+ALTER SYSTEM
 1: alter system set gp_fts_probe_timeout to 5;
-ALTER
+ALTER SYSTEM
 1: select pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -79,9 +79,9 @@ select wait_until_all_segments_synchronized();
 
 -- reset fts GUCs.
 3: alter system reset gp_fts_probe_retries;
-ALTER
+ALTER SYSTEM
 3: alter system reset gp_fts_probe_timeout;
-ALTER
+ALTER SYSTEM
 3: select pg_reload_conf();
  pg_reload_conf 
 ----------------

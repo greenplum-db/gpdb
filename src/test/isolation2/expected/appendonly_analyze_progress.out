@@ -1,9 +1,9 @@
 -- Test gp_stat_progress_analyze_summary
 -- setup hash distributed table
 CREATE TABLE t_analyze_part (a INT, b INT) USING ao_row DISTRIBUTED BY (a);
-CREATE
+CREATE TABLE
 INSERT INTO t_analyze_part SELECT i, i FROM generate_series(1, 1000000) i;
-INSERT 1000000
+INSERT 0 1000000
 
 -- Suspend analyze after scanning 1000 rows on each segment
 SELECT gp_inject_fault('analyze_block', 'suspend', '', '', '', 1000, 1000, 0, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
@@ -44,13 +44,13 @@ ANALYZE
 
 -- teardown
 DROP TABLE t_analyze_part;
-DROP
+DROP TABLE
 
 -- setup replicated table
 CREATE TABLE t_analyze_repl (a INT, b INT) USING ao_row DISTRIBUTED REPLICATED;
-CREATE
+CREATE TABLE
 INSERT INTO t_analyze_repl SELECT i, i FROM generate_series(1, 1000000) i;
-INSERT 1000000
+INSERT 0 1000000
 
 -- Suspend analyze after scanning 1000 rows on each segment
 SELECT gp_inject_fault('analyze_block', 'suspend', '', '', '', 1000, 1000, 0, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
@@ -91,5 +91,5 @@ ANALYZE
 
 -- teardown
 DROP TABLE t_analyze_repl;
-DROP
+DROP TABLE
 
