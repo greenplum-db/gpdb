@@ -24,6 +24,11 @@ const char	*IOconfigFields[4] = { "rbps", "wbps", "riops", "wiops" };
 static int bdi_cmp(const void *a, const void *b);
 static void ioconfig_validate(IOconfig *config);
 
+typedef struct BDICmp {
+	Oid ts;
+	bdi_t bdi;
+} BDICmp;
+
 /*
  * Why not use 'return a - b' directly?
  * Because bdi_t is unsigned long now, larger than int. And the
@@ -32,12 +37,12 @@ static void ioconfig_validate(IOconfig *config);
 static int
 bdi_cmp(const void *a, const void *b)
 {
-	int x = *(bdi_t *)a;
-	int y = *(bdi_t *)b;
+	BDICmp x = *(BDICmp *)a;
+	BDICmp y = *(BDICmp *)b;
 
-	if (x < y)
+	if (x.bdi < y.bdi)
 		return -1;
-	if (x > y)
+	if (x.bdi > y.bdi)
 		return 1;
 
 	return 0;
@@ -55,7 +60,7 @@ io_limit_validate(List *limit_list)
 	ListCell *limit_cell;
 	int bdi_count = 0;
 	int i = 0;
-	bdi_t *bdi_array;
+	BDICmp *bdi_array;
 
 	foreach (limit_cell, limit_list)
 	{
@@ -63,7 +68,7 @@ io_limit_validate(List *limit_list)
 		bdi_count += fill_bdi_list(limit);
 	}
 
-	bdi_array = (bdi_t *) palloc(bdi_count * sizeof(bdi_t));
+	bdi_array = (BDICmp *) palloc(bdi_count * sizeof(BDICmp));
 	/* fill bdi list and check wbps/rbps range */
 	foreach (limit_cell, limit_list)
 	{
@@ -73,18 +78,26 @@ io_limit_validate(List *limit_list)
 		ioconfig_validate(limit->ioconfig);
 
 		foreach (bdi_cell, limit->bdi_list)
-			bdi_array[i++] = *(bdi_t *)lfirst(bdi_cell);
+		{
+			bdi_array[i].bdi = *(bdi_t *)lfirst(bdi_cell);
+			bdi_array[i].ts = limit->tablespace_oid;
+			i++;
+		}
 	}
 
+	Assert(i == bdi_count);
+
 	/* check duplicate bdi */
-	pg_qsort(bdi_array, bdi_count, sizeof(bdi_t), bdi_cmp);
-	for (int i = 0; i < bdi_count - 1; ++i)
+	qsort(bdi_array, bdi_count, sizeof(BDICmp), bdi_cmp);
+	for (i = 0; i < bdi_count - 1; ++i)
 	{
-		if (bdi_array[i] == bdi_array[i + 1])
+		if (bdi_array[i].bdi == bdi_array[i + 1].bdi)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("io limit: tablespaces of io limit must located at different disks")));
+					 errmsg("io limit: tablespaces of io limit must locate at different disks, tablespace '%s' and '%s' have the same disk identifier.",
+						 get_tablespace_name(bdi_array[i].ts),
+						 get_tablespace_name(bdi_array[i + 1].ts))));
 		}
 	}
 
@@ -101,19 +114,21 @@ int fill_bdi_list(TblSpcIOLimit *iolimit)
 {
 	int result_cnt = 0;
 
+	/* caller should init the bdi_list */
+	Assert(iolimit->bdi_list == NULL);
+
 	if (iolimit->tablespace_oid == InvalidOid)
 	{
 		Relation rel = table_open(TableSpaceRelationId, AccessShareLock);
 		TableScanDesc scan = table_beginscan_catalog(rel, 0, NULL);
 		HeapTuple tuple;
 		/*
-		 * scan all tablespace and get bdi
+		 * scan all tablespaces and get bdi
 		 */
-		iolimit->bdi_list = NULL;
 		while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 		{
 			char *ts_dir;
-			char data_path[1024];
+			char data_path[MAXPGPATH];
 			bdi_t *bdi;
 			Form_pg_tablespace spaceform = (Form_pg_tablespace) GETSTRUCT(tuple);
 			Oid dbid = MyDatabaseId;
@@ -121,7 +136,7 @@ int fill_bdi_list(TblSpcIOLimit *iolimit)
 				dbid = 0;
 
 			ts_dir = GetDatabasePath(dbid, spaceform->oid);
-			sprintf(data_path, "%s/%s", DataDir, ts_dir);
+			snprintf(data_path, sizeof(data_path), "%s/%s", DataDir, ts_dir);
 
 			bdi = (bdi_t *)palloc0(sizeof(bdi_t));
 			*bdi = get_bdi_of_path(data_path);
@@ -134,14 +149,14 @@ int fill_bdi_list(TblSpcIOLimit *iolimit)
 	else
 	{
 		char *ts_dir;
-		char data_path[1024];
+		char data_path[MAXPGPATH];
 		Oid dbid = MyDatabaseId;
 		bdi_t *bdi;
 		if (iolimit->tablespace_oid == GLOBALTABLESPACE_OID)
 			dbid = 0;
 
 		ts_dir = GetDatabasePath(dbid, iolimit->tablespace_oid);
-		sprintf(data_path, "%s/%s", DataDir, ts_dir);
+		snprintf(data_path, sizeof(data_path), "%s/%s", DataDir, ts_dir);
 
 		bdi = (bdi_t *)palloc0(sizeof(bdi_t));
 		*bdi = get_bdi_of_path(data_path);
@@ -158,16 +173,30 @@ int fill_bdi_list(TblSpcIOLimit *iolimit)
  *
  * First find mountpoint from /proc/self/mounts, then find bdi of mountpoints.
  * Check this bdi is a disk or a partition(via check 'start' file in
- * /sys/deb/block/{bdi}), if it is a disk, just return it, if not, find the disk
+ * /sys/dev/block/{bdi}), if it is a disk, just return it, if not, find the disk
  * and return it's bdi.
  */
 bdi_t
 get_bdi_of_path(const char *ori_path)
 {
+	int maj;
+	int min;
 	struct mntent *mnt;
+	struct mntent result;
+	/* default size of glibc */
+	char mntent_buffer[PATH_MAX];
+	char sysfs_path[PATH_MAX];
+	char sysfs_path_start[PATH_MAX];
+	char real_path[PATH_MAX];
+	char path[PATH_MAX];
 
-	char path[1024];
-	realpath(ori_path, path);
+	char *res = realpath(ori_path, path);
+	if (res == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("io limit: cannot find realpath of %s, details: %m.", ori_path)));
+	}
 
 	FILE *fp = setmntent("/proc/self/mounts", "r");
 
@@ -175,7 +204,7 @@ get_bdi_of_path(const char *ori_path)
 	struct mntent match_mnt;
 
 	/* find mount point of path */
-	while ((mnt = getmntent(fp)) != NULL)
+	while ((mnt = getmntent_r(fp, &result, mntent_buffer, sizeof(mntent_buffer))) != NULL)
 	{
 		size_t dir_len = strlen(mnt->mnt_dir);
 
@@ -194,33 +223,30 @@ get_bdi_of_path(const char *ori_path)
 			}
 		}
 	}
-	fclose(fp);
+	endmntent(fp);
 
 	struct stat sb;
 	if (stat(match_mnt.mnt_fsname, &sb) == -1)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_IO_ERROR),
-				 errmsg("cannot find disk of %s\n", path)));
+				 errmsg("cannot find disk of %s, details: %m", path)));
 	}
 
-	int maj = major(sb.st_rdev);
-	int min = minor(sb.st_rdev);
+	maj = major(sb.st_rdev);
+	min = minor(sb.st_rdev);
 
-	char sysfs_path[64];
-	sprintf(sysfs_path, "/sys/dev/block/%d:%d", maj, min);
+	snprintf(sysfs_path, sizeof(sysfs_path), "/sys/dev/block/%d:%d", maj, min);
 
-	char sysfs_path_start[64];
-	sprintf(sysfs_path_start, "%s/start", sysfs_path);
+	snprintf(sysfs_path_start, sizeof(sysfs_path_start), "%s/start", sysfs_path);
 
 	if (access(sysfs_path_start, F_OK) == -1)
 		return make_bdi(maj, min);
 
-	char real_path[1024];
 	realpath(sysfs_path, real_path);
 	dirname(real_path);
 
-	sprintf(real_path, "%s/dev", real_path);
+	snprintf(real_path, sizeof(real_path), "%s/dev", real_path);
 
 	FILE *f = fopen(real_path, "r");
 	if (f == NULL)
@@ -241,8 +267,8 @@ get_bdi_of_path(const char *ori_path)
 static void
 ioconfig_validate(IOconfig *config)
 {
-	uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
-	uint32 UMAX = UINT_MAX;
+	const uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
+	const uint32 UMAX = UINT_MAX;
 
 	if (config->rbps != IO_LIMIT_MAX && (config->rbps > ULMAX || config->rbps < 2))
 		ereport(ERROR,
