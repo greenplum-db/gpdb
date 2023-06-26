@@ -4080,8 +4080,3 @@ def impl(context):
     else:
         return
 
-
-@when('the user asynchronously sets up to end {process_name} process with SIGHUP')
-def impl(context, process_name):
-    command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -9" % (process_name)
-    run_async_command(context, command)
