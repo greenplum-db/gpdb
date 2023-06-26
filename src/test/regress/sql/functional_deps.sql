@@ -106,8 +106,38 @@ SELECT product_id, p.name, (sum(s.units) * p.price) AS sales
 
 -- OK, test GPDB case
 set enable_groupagg = off;
+set gp_eager_two_phase_agg = on;
 SELECT count(distinct name), price FROM products GROUP BY product_id;
+
+create table funcdep1(a int primary key, b int, c int, d int);
+create table funcdep2(a int, b int, c int, d int);
+
+insert into funcdep1 values(1,1,1,1);
+insert into funcdep1 values(2,1,1,1);
+insert into funcdep1 values(3,1,1,1);
+insert into funcdep2 values(1,1,1,1);
+
+explain (costs off) select sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+select sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+
+explain (costs off) select sum(b), c, d, grouping(a) from funcdep1 group by grouping sets((a), ());
+select sum(b), c, d, grouping(a) from funcdep1 group by grouping sets((a), ());
+explain (costs off) select sum(b), c, d, grouping(a) from funcdep1 group by rollup(a);
+select sum(b), c, d, grouping(a) from funcdep1 group by rollup(a);
+explain (costs off) select sum(b), c, d, grouping(a) from funcdep1 group by cube(a);
+select sum(b), c, d, grouping(a) from funcdep1 group by cube(a);
+
+explain (costs off) select count(distinct b), c, d from funcdep1 group by a;
+select count(distinct b), c, d from funcdep1 group by a;
+explain (costs off) select count(distinct b), sum(b), c from funcdep1 group by a;
+select count(distinct b), sum(b), c from funcdep1 group by a;
+explain (costs off) select count(distinct b), count(distinct c) from funcdep1 group by a;
+select count(distinct b), count(distinct c) from funcdep1 group by a;
+
 reset enable_groupagg;
+reset gp_eager_two_phase_agg;
+drop table funcdep1;
+drop table funcdep2;
 
 -- Drupal example, http://drupal.org/node/555530
 

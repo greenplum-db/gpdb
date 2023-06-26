@@ -127,12 +127,229 @@ SELECT product_id, p.name, (sum(s.units) * p.price) AS sales
 
 -- OK, test GPDB case
 set enable_groupagg = off;
+set gp_eager_two_phase_agg = on;
 SELECT count(distinct name), price FROM products GROUP BY product_id;
  count | price 
 -------+-------
 (0 rows)
 
+create table funcdep1(a int primary key, b int, c int, d int);
+create table funcdep2(a int, b int, c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into funcdep1 values(1,1,1,1);
+insert into funcdep1 values(2,1,1,1);
+insert into funcdep1 values(3,1,1,1);
+insert into funcdep2 values(1,1,1,1);
+explain (costs off) select sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   ->  HashAggregate
+         Group Key: t1.a, t1.b, t1.c
+         ->  Redistribute Motion 3:3  (slice3; segments: 3)
+               Hash Key: t1.a, t1.b, t1.c
+               ->  HashAggregate
+                     Group Key: t1.a, t1.b, t1.c
+                     ->  Hash Join
+                           Hash Cond: (t1.b = t2.b)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Hash Key: t1.b
+                                 ->  Seq Scan on funcdep1 t1
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: t2.b
+                                       ->  Seq Scan on funcdep2 t2
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+ sum | a | b | c 
+-----+---+---+---
+   1 | 3 | 1 | 1
+   1 | 2 | 1 | 1
+   1 | 1 | 1 | 1
+(3 rows)
+
+explain (costs off) select sum(b), c, d, grouping(a) from funcdep1 group by grouping sets((a), ());
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  GroupAggregate
+         Group Key: "rollup".prelim_aggref_1, "rollup"."grouping", "rollup"."group_id"
+         ->  Subquery Scan on "rollup"
+               ->  Sort
+                     Sort Key: rollup_1.prelim_aggref_1, (Grouping), (group_id())
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: rollup_1.prelim_aggref_1, (Grouping), group_id()
+                           ->  GroupAggregate
+                                 Group Key: rollup_1."grouping", rollup_1."group_id", rollup_1.prelim_aggref_1
+                                 ->  Subquery Scan on rollup_1
+                                       ->  GroupAggregate
+                                             Group Key: funcdep1.a
+                                             ->  Sort
+                                                   Sort Key: funcdep1.a
+                                                   ->  Seq Scan on funcdep1
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select sum(b), c, d, grouping(a) from funcdep1 group by grouping sets((a), ());
+ sum | c | d | grouping 
+-----+---+---+----------
+   1 | 1 | 1 |        0
+   1 | 1 | 1 |        0
+   1 | 1 | 1 |        0
+   3 | 1 | 1 |        1
+(4 rows)
+
+explain (costs off) select sum(b), c, d, grouping(a) from funcdep1 group by rollup(a);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  GroupAggregate
+         Group Key: "rollup".prelim_aggref_1, "rollup"."grouping", "rollup"."group_id"
+         ->  Subquery Scan on "rollup"
+               ->  Sort
+                     Sort Key: rollup_1.prelim_aggref_1, (Grouping), (group_id())
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: rollup_1.prelim_aggref_1, (Grouping), group_id()
+                           ->  GroupAggregate
+                                 Group Key: rollup_1."grouping", rollup_1."group_id", rollup_1.prelim_aggref_1
+                                 ->  Subquery Scan on rollup_1
+                                       ->  GroupAggregate
+                                             Group Key: funcdep1.a
+                                             ->  Sort
+                                                   Sort Key: funcdep1.a
+                                                   ->  Seq Scan on funcdep1
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select sum(b), c, d, grouping(a) from funcdep1 group by rollup(a);
+ sum | c | d | grouping 
+-----+---+---+----------
+   1 | 1 | 1 |        0
+   1 | 1 | 1 |        0
+   1 | 1 | 1 |        0
+   3 | 1 | 1 |        1
+(4 rows)
+
+explain (costs off) select sum(b), c, d, grouping(a) from funcdep1 group by cube(a);
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  GroupAggregate
+         Group Key: "rollup".prelim_aggref_1, "rollup"."grouping", "rollup"."group_id"
+         ->  Subquery Scan on "rollup"
+               ->  Sort
+                     Sort Key: rollup_1.prelim_aggref_1, (Grouping), (group_id())
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: rollup_1.prelim_aggref_1, (Grouping), group_id()
+                           ->  GroupAggregate
+                                 Group Key: rollup_1."grouping", rollup_1."group_id", rollup_1.prelim_aggref_1
+                                 ->  Subquery Scan on rollup_1
+                                       ->  GroupAggregate
+                                             Group Key: funcdep1.a
+                                             ->  Sort
+                                                   Sort Key: funcdep1.a
+                                                   ->  Seq Scan on funcdep1
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select sum(b), c, d, grouping(a) from funcdep1 group by cube(a);
+ sum | c | d | grouping 
+-----+---+---+----------
+   1 | 1 | 1 |        0
+   1 | 1 | 1 |        0
+   1 | 1 | 1 |        0
+   3 | 1 | 1 |        1
+(4 rows)
+
+explain (costs off) select count(distinct b), c, d from funcdep1 group by a;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: funcdep1.a, funcdep1.b, funcdep1.c, funcdep1.d
+         ->  HashAggregate
+               Group Key: funcdep1.a, funcdep1.b, funcdep1.c, funcdep1.d, funcdep1.b
+               ->  HashAggregate
+                     Group Key: funcdep1.a, funcdep1.b, funcdep1.c, funcdep1.d, funcdep1.b
+                     ->  Seq Scan on funcdep1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select count(distinct b), c, d from funcdep1 group by a;
+ count | c | d 
+-------+---+---
+     1 | 1 | 1
+     1 | 1 | 1
+     1 | 1 | 1
+(3 rows)
+
+explain (costs off) select count(distinct b), sum(b), c from funcdep1 group by a;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: funcdep1.a, funcdep1.b, funcdep1.c
+         ->  HashAggregate
+               Group Key: funcdep1.a, funcdep1.b, funcdep1.c, funcdep1.b
+               ->  HashAggregate
+                     Group Key: funcdep1.a, funcdep1.b, funcdep1.c, funcdep1.b
+                     ->  Seq Scan on funcdep1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select count(distinct b), sum(b), c from funcdep1 group by a;
+ count | sum | c 
+-------+-----+---
+     1 |   1 | 1
+     1 |   1 | 1
+     1 |   1 | 1
+(3 rows)
+
+explain (costs off) select count(distinct b), count(distinct c) from funcdep1 group by a;
+                                                                                         QUERY PLAN                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((NOT (share0_ref2.a IS DISTINCT FROM share0_ref1.a)) AND (NOT (share0_ref2.b IS DISTINCT FROM share0_ref1.b)) AND (NOT (share0_ref2.c IS DISTINCT FROM share0_ref1.c)))
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: share0_ref2.a, share0_ref2.b, share0_ref2.b
+               ->  HashAggregate
+                     Group Key: share0_ref2.a, share0_ref2.b, share0_ref2.c
+                     ->  HashAggregate
+                           Group Key: share0_ref2.a, share0_ref2.b, share0_ref2.c, share0_ref2.b
+                           ->  HashAggregate
+                                 Group Key: share0_ref2.a, share0_ref2.b, share0_ref2.c, share0_ref2.b
+                                 ->  Shared Scan (share slice:id 1:0)
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: share0_ref1.a, share0_ref1.b, share0_ref1.b
+                     ->  HashAggregate
+                           Group Key: share0_ref1.a, share0_ref1.b, share0_ref1.c
+                           ->  HashAggregate
+                                 Group Key: share0_ref1.a, share0_ref1.b, share0_ref1.c, share0_ref1.c
+                                 ->  HashAggregate
+                                       Group Key: share0_ref1.a, share0_ref1.b, share0_ref1.c, share0_ref1.c
+                                       ->  Shared Scan (share slice:id 2:0)
+                                             ->  Materialize
+                                                   ->  Seq Scan on funcdep1
+ Optimizer: Postgres query optimizer
+(25 rows)
+
+select count(distinct b), count(distinct c) from funcdep1 group by a;
+ count | count 
+-------+-------
+     1 |     1
+     1 |     1
+     1 |     1
+(3 rows)
+
 reset enable_groupagg;
+reset gp_eager_two_phase_agg;
+drop table funcdep1;
+drop table funcdep2;
 -- Drupal example, http://drupal.org/node/555530
 CREATE TEMP TABLE node (
     nid SERIAL,

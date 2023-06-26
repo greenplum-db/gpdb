@@ -1255,15 +1255,6 @@ make_two_stage_agg_plan(PlannerInfo *root,
 	(long) *(ctx->p_dNumGroups);
 
 	/*
-	 * Copy these from context rather than using them directly because we may
-	 * scribble on them in plan_grouping_extension().  It would be good to
-	 * clean this up, but not today.
-	 */
-	numGroupCols = ctx->numGroupCols;
-	groupColIdx = ctx->groupColIdx;
-	groupOperators = ctx->groupOperators;
-
-	/*
 	 * Create the base plan which will serve as the outer plan (argument) of
 	 * the partial Agg node.
 	 */
@@ -1350,6 +1341,15 @@ make_two_stage_agg_plan(PlannerInfo *root,
 								NULL,
 								&final_tlist,
 								&final_qual);
+
+	/*
+	 * Copy these from context rather than using them directly because we may
+	 * scribble on them in plan_grouping_extension().  It would be good to
+	 * clean this up, but not today.
+	 */
+	numGroupCols = ctx->numGroupCols;
+	groupColIdx = ctx->groupColIdx;
+	groupOperators = ctx->groupOperators;
 
 	/*
 	 * Since the grouping attributes, if any, are on the front and in order on
@@ -3195,6 +3195,14 @@ generate_three_tlists(List *tlist,
 	 */
 	int			middle_varno = 1;
 
+	/* Avoid free origin pointer of groupColIdx and groupOperators in function
+	 * generate_multi_stage_tlists(), we have to palloc duplicated one.
+	 */
+	AttrNumber * new_grpColIdx = palloc0(numGroupCols * sizeof(AttrNumber));
+	Oid *new_grpOperators = palloc0(numGroupCols * sizeof(Oid));
+	memcpy(new_grpColIdx, groupColIdx, numGroupCols * sizeof(AttrNumber));
+	memcpy(new_grpOperators, groupOperators, numGroupCols * sizeof(Oid));
+
 	/*
 	 * Generate the top and bottom tlists by calling the multi-phase
 	 * aggregation code in cdbgroup.c.
@@ -3203,8 +3211,8 @@ generate_three_tlists(List *tlist,
 	ctx.sub_tlist = sub_tlist;
 	ctx.havingQual = havingQual;
 	ctx.numGroupCols = numGroupCols;
-	ctx.groupColIdx = groupColIdx;
-	ctx.groupOperators = groupOperators;
+	ctx.groupColIdx = new_grpColIdx;
+	ctx.groupOperators = new_grpOperators;
 	ctx.numDistinctCols = 0;
 	ctx.distinctColIdx = NULL;
 	ctx.root = root;
