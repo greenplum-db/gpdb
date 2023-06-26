@@ -447,7 +447,7 @@ constructIndexHashKey(Oid partOid,
 		{
 			ii->ii_KeyAttrNumbers[i] = attMap[(ii->ii_KeyAttrNumbers[i]) - 1];
 		}
-		appendStringInfo(&buf, "%d", ii->ii_KeyAttrNumbers[i]);
+		appendStringInfo(&buf, "%d,", ii->ii_KeyAttrNumbers[i]);
 	}
 
 	/* map the attrnos in indPred */
