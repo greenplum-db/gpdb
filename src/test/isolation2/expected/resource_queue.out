@@ -39,7 +39,7 @@ SET
 PREPARE
 3&:EXECUTE fooplan;  <waiting ...>
 
--- Check pg_stat_activity and pg_locks again.
+-- Check pg_stat_activity and pg_locks.
 0:SELECT wait_event_type, wait_event from pg_stat_activity where query = 'EXECUTE fooplan;';
  wait_event_type | wait_event    
 -----------------+---------------
@@ -72,6 +72,12 @@ END
 (1 row)
 3:END;
 END
+
+-- Sanity check: Ensure that all locks were released.
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
+ granted | locktype | mode 
+---------+----------+------
+(0 rows)
 
 -- Sanity check: Ensure that the resource queue is now empty.
 0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';
