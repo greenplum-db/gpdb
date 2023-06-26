@@ -286,9 +286,6 @@ def parseCommandLine():
             print('[INFO] --buffer-size value is not specified or invalid. Using default (8 kilobytes)')
             GV.opt['--buffer-size'] = 8
 
-    if GV.opt['--buffer-size'] <= 0:
-        GV.opt['--buffer-size'] = 8
-
     # strip the last '/' from the dir
     dd = []
     for d in GV.opt['-d']:
@@ -556,8 +553,6 @@ def spawnNetperfTestBetween(x, y, netperf_path, netserver_port, sec=5):
     else:
         cmd = ('%s -H %s -p %d -l %s -P 0 -b %s'
                % (netperf_path, y, netserver_port, sec, GV.opt['--buffer-size']))
-
-    assert cmd is not None
 
     c = ['ssh', '-o', 'BatchMode yes',
          '-o', 'StrictHostKeyChecking no',

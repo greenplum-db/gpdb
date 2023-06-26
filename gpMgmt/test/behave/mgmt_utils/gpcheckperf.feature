@@ -76,10 +76,10 @@ Feature: Tests for gpcheckperf
   @concourse_cluster
   Scenario: gpcheckperf runs sequential network test with buffer size flag
     Given the database is running
-    When  the user runs "gpcheckperf -h cdw -h sdw1 -d /data/gpdata/ -r n --buffer-size 8"
+    When  the user runs "gpcheckperf -h cdw -h sdw1 -d /data/gpdata/ -r n --buffer-size 8 -v"
     Then  gpcheckperf should return a return code of 0
     And   gpcheckperf should print "avg = " to stdout
-    And   gpcheckperf should not print "NOTICE: -t is deprecated " to stdout
+    And   gpcheckperf should print "gpnetbenchClient -H cdw -p 23000 -l 15 -P 0 -b 8" to stdout
 
   @concourse_cluster
   Scenario: gpcheckperf runs sequential network test with buffer size flag and netperf option
@@ -92,6 +92,5 @@ Feature: Tests for gpcheckperf
     Given the database is running
     When  the user runs "gpcheckperf -h cdw -h sdw1 -d /data/gpdata/ -r n"
     Then  gpcheckperf should return a return code of 0
-    And   gpcheckperf should print "--buffer-size value is not specified or invalid. Using default (8 kilobytes)" to stdout
+    And   gpcheckperf should print "--buffer-size value is not specified or invalid. Using default \(8 kilobytes\)" to stdout
     And   gpcheckperf should print "avg = " to stdout
-    And   gpcheckperf should not print "NOTICE: -t is deprecated " to stdout
