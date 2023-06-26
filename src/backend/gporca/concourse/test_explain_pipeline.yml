@@ -31,6 +31,7 @@ resources:
   type: registry-image
   source:
     repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-build
+    tag: latest
 
 - name: libquicklz-centos7
   type: gcs
