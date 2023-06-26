@@ -2271,6 +2271,8 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 	int			partition;
 	bool		have_fast_path_lwlock = false;
 
+	Assert(lockmethodid != RESOURCE_LOCKMETHOD);
+
 	if (lockmethodid <= 0 || lockmethodid >= lengthof(LockMethods))
 		elog(ERROR, "unrecognized lock method: %d", lockmethodid);
 	lockMethodTable = LockMethods[lockmethodid];
@@ -2307,11 +2309,21 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 		 * If the LOCALLOCK entry is unused, we must've run out of shared
 		 * memory while trying to set up this lock.  Just forget the local
 		 * entry.
+		 *
+		 * GPDB: Add an exception for resource queue based locallocks. Neither
+		 * do we maintain nLocks for them, nor do we use the resource owner
+		 * mechanism for them.
 		 */
 		if (locallock->nLocks == 0)
 		{
-			RemoveLocalLock(locallock);
-			continue;
+			if (locallock->lock &&
+				locallock->lock->tag.locktag_type == LOCKTAG_RESOURCE_QUEUE)
+				Assert(locallock->numLockOwners == 0);
+			else
+			{
+				RemoveLocalLock(locallock);
+				continue;
+			}
 		}
 
 		/* Ignore items that are not of the lockmethod to be removed */

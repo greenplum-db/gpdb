@@ -460,6 +460,13 @@ typedef struct LOCALLOCKOWNER
 	int64		nLocks;			/* # of times held by this owner */
 } LOCALLOCKOWNER;
 
+/*
+ * GPDB: For resource queue based LOCALLOCKs, we don't maintain nLocks or any
+ * of the owner related fields, after their initialization in ResLockAcquire().
+ * We don't use the resource owner mechanism for resource queue based
+ * LOCALLOCKs. This is key to avoid inadvertently operating on these in upstream
+ * lock routines where such LOCALLOCKs aren't meant to be manipulated.
+ */
 typedef struct LOCALLOCK
 {
 	/* tag */

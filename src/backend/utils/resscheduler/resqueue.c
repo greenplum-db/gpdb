@@ -211,13 +211,16 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		locallock->lock = NULL;
 		locallock->proclock = NULL;
 		locallock->hashcode = LockTagHashCode(&(localtag.lock));
-		locallock->istemptable = false;
+
+		/* must remain 0 for the entire lifecycle of the LOCALLOCK */
 		locallock->nLocks = 0;
 		locallock->numLockOwners = 0;
-		locallock->maxLockOwners = 8;
+
+		/* initialized but unused for the entire lifecycle of the LOCALLOCK */
+		locallock->istemptable = false;
 		locallock->holdsStrongLockCount = FALSE;
 		locallock->lockCleared = false;
-		locallock->lockOwners = NULL;
+		locallock->maxLockOwners = 8;
 		locallock->lockOwners = (LOCALLOCKOWNER *)
 			MemoryContextAlloc(TopMemoryContext, locallock->maxLockOwners * sizeof(LOCALLOCKOWNER));
 	}

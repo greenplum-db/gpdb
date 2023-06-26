@@ -25,5 +25,20 @@
 -- Sanity check: Ensure that the resource queue is now empty.
 0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';
 
+-- Introduce a holdable cursor.
+3:SET role role_concurrency_test;
+3:DECLARE c_hold CURSOR WITH HOLD FOR SELECT 1;
+
+-- Sanity check: The holdable cursor should be accounted for in pg_locks.
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
+
+3q:
+
+-- Sanity check: Ensure that all locks were released.
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
+
+-- Sanity check: Ensure that the resource queue is now empty.
+0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';
+
 0:DROP role role_concurrency_test;
 0:DROP RESOURCE QUEUE rq_concurrency_test;
