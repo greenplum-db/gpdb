@@ -588,8 +588,62 @@ fillfactor
 orientation
 :   Set to `column` for column-oriented storage, or `row` (the default) for row-oriented storage. This option is only valid if the table is append-optimized. Heap-storage tables can only be row-oriented.
 
-vacuum_index_cleanup
-:   Specifies whether `VACUUM` attempts to remove index entries pointing to dead tuples. The default is `true`. Setting this to false may be useful when you need to run `VACUUM` as quickly as possible, for example to prevent imminent transaction ID wraparound. However, if you do not perform index cleanup regularly, performance may suffer, because as the table is modified, indexes accumulate dead tuples and the table itself accumulates dead line pointers that cannot be removed until index cleanup completes.
+
+
+toast_tuple_target (integer)
+:   `The toast_tuple_target` specifies the minimum tuple length required before Greenplum attempts to compress and/or move long column values into TOAST tables, and is also the target length Greenplum tries to reduce the length below once toasting begins. This affects columns marked as External (for move), Main (for compression), or Extended (for both) and applies only to new tuples. There is no effect on existing rows. By default this parameter is set to allow at least 4 tuples per block, which with the default blocksize will be 2040 bytes. Valid values are between 128 bytes and the (blocksize - header), by default 8160 bytes. Changing this value may not be useful for very short or very long rows. Note that the default setting is often close to optimal, and it is possible that setting this parameter could have negative effects in some cases. You can not set this parameter for TOAST tables.
+
+parallel_workers (integer)
+:   Sets the number of workers that should be used to assist a parallel scan of this table. If not set, Greenplum determines a value based on the relation size. The actual number of workers chosen by the planner or by utility statements that use parallel scans may be less, for example due to the setting of `max_worker_processes`.
+
+autovacuum_enabled, toast.autovacuum_enabled (boolean)
+:   Enables or disables the autovacuum daemon for a particular table. If `true`, the autovacuum daemon will perform automatic `VACUUM` and/or `ANALYZE` operations on this table following the rules discussed in [The Autovacuum Daemon](https://www.postgresql.org/docs/12/routine-vacuuming.html#AUTOVACUUM) in the PostgreSQL documentation. If `false`, Greenplum does not autovacuum the table, except to prevent transaction ID wraparound. Note that the autovacuum daemon does not run at all (except to prevent transaction ID wraparound) if the [autovacuum](../config_params/guc-list.html#autovacuum) parameter is `false`; setting individual tables' storage parameters does not override that. So there is seldom much point in explicitly setting this storage parameter to `true`, only to `false`.
+
+vacuum_index_cleanup, toast.vacuum_index_cleanup (boolean)
+:   Enables or disables index cleanup when `VACUUM` is run on this table. The default value is `true`. Disabling index cleanup can speed up `VACUUM` very significantly, but may also lead to severely bloated indexes if table modifications are frequent. The `INDEX_CLEANUP` parameter of `VACUUM`, if specified, overrides the value of this option.
+:   Setting this to `false` may be useful when you need to run `VACUUM` as quickly as possible, for example to prevent imminent transaction ID wraparound. However, if you do not perform index cleanup regularly, performance may suffer, because as the table is modified, indexes accumulate dead tuples and the table itself accumulates dead line pointers that cannot be removed until index cleanup completes.
+
+vacuum_truncate, toast.vacuum_truncate (boolean)
+:   Enables or disables vacuum to attempt to truncate any empty pages at the end of this table. The default value is `true`. If `true`, `VACUUM` and autovacuum do the truncation and the disk space for the truncated pages is returned to the operating system. Note that the truncation requires `ACCESS EXCLUSIVE` lock on the table. The `TRUNCATE` parameter of `VACUUM`, if specified, overrides the value of this option.
+
+autovacuum_vacuum_threshold, toast.autovacuum_vacuum_threshold (integer)
+:   Per-table value for the [autovacuum_vacuum_threshold](../config_params/guc-list.html#autovacuum_vacuum_threshold) server configuration parameter.
+
+autovacuum_vacuum_scale_factor, toast.autovacuum_vacuum_scale_factor (floating point)
+:   Per-table value for the [autovacuum_vacuum_scale_factor](../config_params/guc-list.html#autovacuum_vacuum_scale_factor) server configuration parameter.
+
+autovacuum_analyze_threshold (integer)
+:   Per-table value for the `autovacuum_analyze_threshold` server configuration parameter.
+
+autovacuum_analyze_scale_factor (floating point)
+:   Per-table value for the `autovacuum_analyze_scale_factor` server configuration parameter.
+
+autovacuum_vacuum_cost_delay, toast.autovacuum_vacuum_cost_delay (floating point)
+:   Per-table value for the `autovacuum_vacuum_cost_delay` server configuration parameter.
+
+autovacuum_vacuum_cost_limit, toast.autovacuum_vacuum_cost_limit (integer)
+:   Per-table value for the `autovacuum_vacuum_cost_limit` server configuration parameter.
+
+autovacuum_freeze_min_age, toast.autovacuum_freeze_min_age (integer)
+:   Per-table value for the [vacuum_freeze_min_age](../config_params/guc-list.html#vacuum_freeze_min_age) parameter. Note that autovacuum will ignore per-table `autovacuum_freeze_min_age` parameters that are larger than half the system-wide `autovacuum_freeze_max_age` setting.
+
+autovacuum_freeze_max_age, toast.autovacuum_freeze_max_age (integer)
+:   Per-table value for the [autovacuum_freeze_max_age](../config_params/guc-list.html#autovacuum_freeze_max_age) server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_freeze_max_age` parameters that are larger than the system-wide setting (it can only be set smaller).
+
+autovacuum_freeze_table_age, toast.autovacuum_freeze_table_age (integer)
+:   Per-table value for the `vacuum_freeze_table_age` server configuration parameter.
+
+autovacuum_multixact_freeze_min_age, toast.autovacuum_multixact_freeze_min_age (integer)
+:   Per-table value for the `vacuum_multixact_freeze_min_age` server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_multixact_freeze_min_age` parameters that are larger than half the system-wide `autovacuum_multixact_freeze_max_age` setting.
+
+autovacuum_multixact_freeze_max_age, toast.autovacuum_multixact_freeze_max_age (integer)
+:   Per-table value for the `autovacuum_multixact_freeze_max_age` server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_multixact_freeze_max_age` parameters that are larger than the system-wide setting (it can only be set smaller).
+
+autovacuum_multixact_freeze_table_age, toast.autovacuum_multixact_freeze_table_age (integer)
+:   Per-table value for the `vacuum_multixact_freeze_table_age` server configuration parameter.
+
+log_autovacuum_min_duration, toast.log_autovacuum_min_duration (integer)
+:   Per-table value for the `log_autovacuum_min_duration` server configuration parameter.
 
 ## <a id="section5"></a>Notes 
 
