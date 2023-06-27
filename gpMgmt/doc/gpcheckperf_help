@@ -13,7 +13,7 @@ gpcheckperf -d <test_directory> [-d <test_directory> ...]
 
 gpcheckperf -d <temp_directory>
         {-f <hostfile_gpchecknet> | -h <hostname> [-h <hostname> ...]} 
-        [ -r n|N|M [--duration <time>] [--netperf] ] [-D] [-v|-V]
+        [ -r n|N|M [--duration <time>] [--netperf] ] [-D] [-v|-V] [--buffer-size <kbytes>]
 
 
 gpcheckperf -? 
@@ -96,6 +96,11 @@ OPTIONS
 Specifies the block size (in KB or MB) to use for disk I/O test. 
 The default is 32KB, which is the same as the Greenplum Database 
 page size. The maximum block size is 1 MB.
+
+--buffersize <kbytes>
+
+ Specifies size of the send buffer in kilobytes, which is used by gpnetbenchClient.
+ Default size is 32 kilobytes.
 
 
 -d <test_directory>

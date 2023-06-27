@@ -29,6 +29,7 @@ Usage: gpcheckperf <options>
     -f file    : a file listing all hosts to connect to
     --duration : how long to run network test (default 5 seconds)
     --netperf  : use netperf instead of gpnetbenchServer/gpnetbenchClient
+    --buffer-size : the size of the send buffer in kilobytes ( default 32 kilobytes)
 """
 
 import datetime
@@ -70,7 +71,7 @@ class Global():
     opt = {'-d': [], '-D': False, '-v': False, '-V': False, '-r': '',
            '-B': 1024 * 32, '-S': 0, '-h': [], '-f': None,
            '--duration': 15, '--net': None, '--netserver': 'gpnetbenchServer',
-           '--netclient': 'gpnetbenchClient'}
+           '--netclient': 'gpnetbenchClient', '--buffer-size': 0}
 
 
 GV = Global()
@@ -243,7 +244,7 @@ def print_version():
 
 def parseCommandLine():
     try:
-        (options, args) = getopt.getopt(sys.argv[1:], '?vVDd:r:B:S:p:h:f:', ['duration=', 'version', 'netperf'])
+        (options, args) = getopt.getopt(sys.argv[1:], '?vVDd:r:B:S:p:h:f:', ['duration=', 'version', 'netperf', 'buffer-size='])
     except Exception, e:
         usage('Error: ' + str(e))
         exit(1)
@@ -266,6 +267,8 @@ def parseCommandLine():
         elif switch == '--netperf':
             GV.opt['--netserver'] = 'netserver'
             GV.opt['--netclient'] = 'netperf'
+        elif switch == '--buffer-size':
+            GV.opt[switch] = int(val)
 
     # run default tests (if not specified)
     if GV.opt['-r'] == '':
@@ -314,6 +317,14 @@ def parseCommandLine():
     if GV.opt['--duration'] <= 0:
         GV.opt['--duration'] = 15
         print '[INFO] Invalid network duration specified.  Using default (15 seconds)'
+
+    if GV.opt['--netclient'].find('netperf') >= 0:
+        if GV.opt['--buffer-size']:
+            print('[Warning] --buffer-size option will be ignored when the --netperf option is enabled')
+    else:
+        if GV.opt['--buffer-size'] <= 0:
+            print('[INFO] --buffer-size value is not specified or invalid. Using default (32 kilobytes)')
+            GV.opt['--buffer-size'] = 32
 
     # strip the last '/' from the dir
     dd = []
@@ -575,8 +586,9 @@ def spawnNetperfTestBetween(x, y, netperf_path, netserver_port, sec=5):
         cmd = ('%s -H %s -p %d -t TCP_STREAM -l %s -f M -P 0 '
                % (netperf_path, y, netserver_port, sec))
     else:
-        cmd = ('%s -H %s -p %d -l %s -P 0 '
-               % (netperf_path, y, netserver_port, sec))
+        cmd = ('%s -H %s -p %d -l %s -P 0 -b %s'
+               % (netperf_path, y, netserver_port, sec, GV.opt['--buffer-size']))
+
     c = ['ssh', '-o', 'BatchMode yes',
          '-o', 'StrictHostKeyChecking no',
          x, cmd]
