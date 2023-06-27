@@ -682,14 +682,17 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	GPMemoryProtect_Init();
 
 #ifdef USE_ORCA
-	/* Initialize GPOPT */
-	OptimizerMemoryContext = AllocSetContextCreate(TopMemoryContext,
-												   "GPORCA Top-level Memory Context",
-												   ALLOCSET_DEFAULT_MINSIZE,
-												   ALLOCSET_DEFAULT_INITSIZE,
-												   ALLOCSET_DEFAULT_MAXSIZE);
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/* Initialize GPOPT */
+		OptimizerMemoryContext = AllocSetContextCreate(TopMemoryContext,
+													"GPORCA Top-level Memory Context",
+													ALLOCSET_DEFAULT_MINSIZE,
+													ALLOCSET_DEFAULT_INITSIZE,
+													ALLOCSET_DEFAULT_MAXSIZE);
 
-	InitGPOPT();
+		InitGPOPT();
+	}
 #endif
 
 	/*
@@ -1455,10 +1458,13 @@ ShutdownPostgres(int code, Datum arg)
 	ReportOOMConsumption();
 
 #ifdef USE_ORCA
-	TerminateGPOPT();
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		TerminateGPOPT();
 
-	if (OptimizerMemoryContext != NULL)
-		MemoryContextDelete(OptimizerMemoryContext);
+		if (OptimizerMemoryContext != NULL)
+			MemoryContextDelete(OptimizerMemoryContext);
+	}
 #endif
 
 	/* Disable memory protection */
