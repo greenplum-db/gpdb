@@ -20,6 +20,7 @@ resources:
   type: registry-image
   source:
     repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-build
+    tag: latest
 
 - name: gpdb6-centos7-test
   type: registry-image
