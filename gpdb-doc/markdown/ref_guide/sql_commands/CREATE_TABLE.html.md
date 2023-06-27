@@ -591,7 +591,7 @@ orientation
 
 
 toast_tuple_target (integer)
-:   `The toast_tuple_target` specifies the minimum tuple length required before Greenplum attempts to compress and/or move long column values into TOAST tables, and is also the target length Greenplum tries to reduce the length below once toasting begins. This affects columns marked as External (for move), Main (for compression), or Extended (for both) and applies only to new tuples. There is no effect on existing rows. By default this parameter is set to allow at least 4 tuples per block, which with the default blocksize will be 2040 bytes. Valid values are between 128 bytes and the (blocksize - header), by default 8160 bytes. Changing this value may not be useful for very short or very long rows. Note that the default setting is often close to optimal, and it is possible that setting this parameter could have negative effects in some cases. You can not set this parameter for TOAST tables.
+:   The `toast_tuple_target` specifies the minimum tuple length required before Greenplum attempts to compress and/or move long column values into TOAST tables, and is also the target length Greenplum tries to reduce the length below once toasting begins. This affects columns marked as External (for move), Main (for compression), or Extended (for both) and applies only to new tuples. There is no effect on existing rows. By default this parameter is set to allow at least 4 tuples per block, which with the default blocksize will be 2040 bytes. Valid values are between 128 bytes and the (blocksize - header), by default 8160 bytes. Changing this value may not be useful for very short or very long rows. Note that the default setting is often close to optimal, and it is possible that setting this parameter could have negative effects in some cases. You can not set this parameter for TOAST tables.
 
 parallel_workers (integer)
 :   Sets the number of workers that should be used to assist a parallel scan of this table. If not set, Greenplum determines a value based on the relation size. The actual number of workers chosen by the planner or by utility statements that use parallel scans may be less, for example due to the setting of `max_worker_processes`.
@@ -604,7 +604,7 @@ vacuum_index_cleanup, toast.vacuum_index_cleanup (boolean)
 :   Setting this to `false` may be useful when you need to run `VACUUM` as quickly as possible, for example to prevent imminent transaction ID wraparound. However, if you do not perform index cleanup regularly, performance may suffer, because as the table is modified, indexes accumulate dead tuples and the table itself accumulates dead line pointers that cannot be removed until index cleanup completes.
 
 vacuum_truncate, toast.vacuum_truncate (boolean)
-:   Enables or disables vacuum to attempt to truncate any empty pages at the end of this table. The default value is `true`. If `true`, `VACUUM` and autovacuum do the truncation and the disk space for the truncated pages is returned to the operating system. Note that the truncation requires `ACCESS EXCLUSIVE` lock on the table. The `TRUNCATE` parameter of `VACUUM`, if specified, overrides the value of this option.
+:   Enables or disables vacuum to attempt to truncate any empty pages at the end of this table. The default value is `true`. If `true`, `VACUUM` and autovacuum truncate the empty pages, and the disk space for the truncated pages is returned to the operating system. Note that the truncation requires an `ACCESS EXCLUSIVE` lock on the table. The `TRUNCATE` parameter of `VACUUM`, if specified, overrides the value of this option.
 
 autovacuum_vacuum_threshold, toast.autovacuum_vacuum_threshold (integer)
 :   Per-table value for the [autovacuum_vacuum_threshold](../config_params/guc-list.html#autovacuum_vacuum_threshold) server configuration parameter.
@@ -625,7 +625,7 @@ autovacuum_vacuum_cost_limit, toast.autovacuum_vacuum_cost_limit (integer)
 :   Per-table value for the `autovacuum_vacuum_cost_limit` server configuration parameter.
 
 autovacuum_freeze_min_age, toast.autovacuum_freeze_min_age (integer)
-:   Per-table value for the [vacuum_freeze_min_age](../config_params/guc-list.html#vacuum_freeze_min_age) parameter. Note that autovacuum will ignore per-table `autovacuum_freeze_min_age` parameters that are larger than half the system-wide `autovacuum_freeze_max_age` setting.
+:   Per-table value for the [vacuum_freeze_min_age](../config_params/guc-list.html#vacuum_freeze_min_age) parameter. Note that autovacuum will ignore per-table `autovacuum_freeze_min_age` parameters that are larger than half of the system-wide `autovacuum_freeze_max_age` setting.
 
 autovacuum_freeze_max_age, toast.autovacuum_freeze_max_age (integer)
 :   Per-table value for the [autovacuum_freeze_max_age](../config_params/guc-list.html#autovacuum_freeze_max_age) server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_freeze_max_age` parameters that are larger than the system-wide setting (it can only be set smaller).
@@ -634,7 +634,7 @@ autovacuum_freeze_table_age, toast.autovacuum_freeze_table_age (integer)
 :   Per-table value for the `vacuum_freeze_table_age` server configuration parameter.
 
 autovacuum_multixact_freeze_min_age, toast.autovacuum_multixact_freeze_min_age (integer)
-:   Per-table value for the `vacuum_multixact_freeze_min_age` server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_multixact_freeze_min_age` parameters that are larger than half the system-wide `autovacuum_multixact_freeze_max_age` setting.
+:   Per-table value for the `vacuum_multixact_freeze_min_age` server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_multixact_freeze_min_age` parameters that are larger than half of the system-wide `autovacuum_multixact_freeze_max_age` setting.
 
 autovacuum_multixact_freeze_max_age, toast.autovacuum_multixact_freeze_max_age (integer)
 :   Per-table value for the `autovacuum_multixact_freeze_max_age` server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_multixact_freeze_max_age` parameters that are larger than the system-wide setting (it can only be set smaller).
