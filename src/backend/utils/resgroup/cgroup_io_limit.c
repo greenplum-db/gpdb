@@ -61,11 +61,15 @@ io_limit_validate(List *limit_list)
 	int bdi_count = 0;
 	int i = 0;
 	BDICmp *bdi_array;
+	bool is_star = false;
 
 	foreach (limit_cell, limit_list)
 	{
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
 		bdi_count += fill_bdi_list(limit);
+
+		if (limit->tablespace_oid == InvalidOid)
+			is_star = true;
 	}
 
 	bdi_array = (BDICmp *) palloc(bdi_count * sizeof(BDICmp));
@@ -88,6 +92,9 @@ io_limit_validate(List *limit_list)
 	Assert(i == bdi_count);
 
 	/* check duplicate bdi */
+	if (is_star)
+		return;
+
 	qsort(bdi_array, bdi_count, sizeof(BDICmp), bdi_cmp);
 	for (i = 0; i < bdi_count - 1; ++i)
 	{
