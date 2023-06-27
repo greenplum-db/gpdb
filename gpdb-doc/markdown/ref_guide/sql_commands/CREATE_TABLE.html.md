@@ -588,7 +588,7 @@ fillfactor
 orientation
 :   Set to `column` for column-oriented storage, or `row` (the default) for row-oriented storage. This option is only valid if the table is append-optimized. Heap-storage tables can only be row-oriented.
 
-
+*The following parameters are supported for heap tables only:*
 
 toast_tuple_target (integer)
 :   The `toast_tuple_target` specifies the minimum tuple length required before Greenplum attempts to compress and/or move long column values into TOAST tables, and is also the target length Greenplum tries to reduce the length below once toasting begins. This affects columns marked as External (for move), Main (for compression), or Extended (for both) and applies only to new tuples. There is no effect on existing rows. By default this parameter is set to allow at least 4 tuples per block, which with the default blocksize will be 2040 bytes. Valid values are between 128 bytes and the (blocksize - header), by default 8160 bytes. Changing this value may not be useful for very short or very long rows. Note that the default setting is often close to optimal, and it is possible that setting this parameter could have negative effects in some cases. You can not set this parameter for TOAST tables.
