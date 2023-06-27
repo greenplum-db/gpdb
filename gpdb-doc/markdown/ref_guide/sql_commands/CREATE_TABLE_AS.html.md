@@ -45,7 +45,12 @@ column\_name
 :   The name of a column in the new table. If column names are not provided, they are taken from the output column names of the query.
 
 USING access\_method
-:   This optional clause specifies the table access method to use to store the contents for the new table; the method must be an access method of type [TABLE](SELECT.html#table-command). Refer to [Table Access Method Interface Definition](https://www.postgresql.org/docs/12/tableam.html) in the PostgreSQL documentation for more information. If this option is not specified, Greenplum Database chooses the default table access method for the new table. See [default_table_access_method](../config_params/guc-list.html#default_table_access_method) for more information.
+:   The optional `USING` clause specifies the table access method to use to store the contents for the new table you are creating; the method must be an access method of type [TABLE](SELECT.html#table-command). Set to `heap` to access the table as a heap-storage table, `ao_row` to access the table as an append-optimized table with row-oriented storage (AO), or `ao_column` to access the table as an append-optimized table with column-oriented storage (AO/CO). The default access method is determined by the value of the [default\_table\_access\_method](../config_params/guc-list.html#default_table_access_method) server configuration parameter.
+
+:   <p class="note">
+<strong>Note:</strong>
+Although you can specify the table's access method using <code>WITH (appendoptimized=true|false, orientation=row|column)</code> VMware recommends that you use <code>USING <access_method></code> instead.
+</p>
 
 WITH ( storage\_parameter=value )
 :   The `WITH` clause specifies optional storage parameters for the new table. Refer to the [Storage Parameters](CREATE_TABLE.html#storage_parameters) section on the `CREATE TABLE` reference page for more information.

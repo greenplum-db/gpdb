@@ -599,8 +599,6 @@ Unique constraints and primary keys are not inherited.
 
 You cannot define a table with more than 1600 columns. (In practice, the effective limit is usually lower because of tuple-length constraints.)
 
-XXX
-
 The Greenplum Database data types `VARCHAR` or `TEXT` handle padding added to the textual data (space characters added after the last non-space character) as significant characters; the data type `CHAR` does not.
 
 In Greenplum Database, values of type `CHAR(<n>)` are padded with trailing spaces to the specified width `<n>`. The values are stored and displayed with the spaces. However, the padding spaces are treated as semantically insignificant. When the values are distributed, the trailing spaces are disregarded. The trailing spaces are also treated as semantically insignificant when comparing two values of data type `CHAR`, and the trailing spaces are removed when converting a character value to one of the other string types.
@@ -615,11 +613,13 @@ Foreign key constraints are not supported in Greenplum Database.
 
 For inherited tables, unique constraints, primary key constraints, indexes and table privileges are *not* inherited in the current implementation.
 
-For append-optimized tables, `UPDATE` and `DELETE` are not allowed in a repeatable read or serializable transaction and will cause the transaction to end prematurely. `DECLARE...FOR UPDATE`, and triggers are not supported with append-optimized tables. `CLUSTER` on append-optimized tables is only supported over B-tree indexes.
+For append-optimized tables, `UPDATE` and `DELETE` are not allowed in a repeatable read or serializable transaction and will cause the transaction to end prematurely.
+
+`DECLARE...FOR UPDATE`, and triggers are not supported with append-optimized tables.
+
+`CLUSTER` on append-optimized tables is only supported over B-tree indexes.
 
 The Greenplum Query Optimizer does not support list partitions with multi-column (composite) partition keys.
-
-XXX
 
 ## <a id="section6"></a>Examples
 
