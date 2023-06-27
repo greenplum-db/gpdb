@@ -20,7 +20,7 @@ madlib-git-branch: master
 madlib-git-tag-filter: rel/*
 madlib-git-remote: https://github.com/apache/madlib.git
 madlib-ci-git-remote: git@github.com:Pivotal-DataFabric/madlib-ci.git
-madlib-ci-tag-filter: rel/v*
+madlib-ci-tag-filter: rel/v1*
 # Originally from gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.prod.yml
 gpdb-git-branch: 6X_STABLE
 gpdb-git-remote: https://github.com/greenplum-db/gpdb.git
