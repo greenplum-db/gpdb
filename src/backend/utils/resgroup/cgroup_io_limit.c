@@ -127,19 +127,11 @@ int fill_bdi_list(TblSpcIOLimit *iolimit)
 		 */
 		while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 		{
-			char *ts_dir;
-			char data_path[MAXPGPATH];
 			bdi_t *bdi;
 			Form_pg_tablespace spaceform = (Form_pg_tablespace) GETSTRUCT(tuple);
-			Oid dbid = MyDatabaseId;
-			if (spaceform->oid == GLOBALTABLESPACE_OID)
-				dbid = 0;
-
-			ts_dir = GetDatabasePath(dbid, spaceform->oid);
-			snprintf(data_path, sizeof(data_path), "%s/%s", DataDir, ts_dir);
 
 			bdi = (bdi_t *)palloc0(sizeof(bdi_t));
-			*bdi = get_bdi_of_path(data_path);
+			*bdi = get_bdi_of_path(get_tablespace_path(spaceform->oid));
 			iolimit->bdi_list = lappend(iolimit->bdi_list, bdi);
 			result_cnt++;
 		}
@@ -148,18 +140,10 @@ int fill_bdi_list(TblSpcIOLimit *iolimit)
 	}
 	else
 	{
-		char *ts_dir;
-		char data_path[MAXPGPATH];
-		Oid dbid = MyDatabaseId;
 		bdi_t *bdi;
-		if (iolimit->tablespace_oid == GLOBALTABLESPACE_OID)
-			dbid = 0;
-
-		ts_dir = GetDatabasePath(dbid, iolimit->tablespace_oid);
-		snprintf(data_path, sizeof(data_path), "%s/%s", DataDir, ts_dir);
 
 		bdi = (bdi_t *)palloc0(sizeof(bdi_t));
-		*bdi = get_bdi_of_path(data_path);
+		*bdi = get_bdi_of_path(get_tablespace_path(iolimit->tablespace_oid));
 
 		iolimit->bdi_list = lappend(iolimit->bdi_list, bdi);
 		result_cnt++;
@@ -289,4 +273,24 @@ ioconfig_validate(IOconfig *config)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("io limit: riops must in range [2, %u] or equal 0", UMAX)));
+}
+
+char *
+get_tablespace_path(Oid spcid)
+{
+	if (spcid == InvalidOid)
+		return NULL;
+
+	if (spcid == DEFAULTTABLESPACE_OID ||
+		spcid == GLOBALTABLESPACE_OID)
+	{
+		Oid dbid = MyDatabaseId;
+
+		if (spcid == GLOBALTABLESPACE_OID)
+			dbid = 0;
+
+		return GetDatabasePath(dbid, spcid);
+	}
+
+	return psprintf("pg_tblspc/%u", spcid);
 }

@@ -261,3 +261,43 @@ $$ LANGUAGE plpython3u;
 
     return set(session_pids).issubset(set(cgroups_pids))
 $$ LANGUAGE plpython3u;
+
+0: CREATE OR REPLACE FUNCTION check_cgroup_io_max(groupname text, tablespace_name text, parameters text) RETURNS BOOL AS $$
+    import ctypes
+    import os
+
+    postgres = ctypes.CDLL(None)
+    get_bdi_of_path = postgres['get_bdi_of_path']
+    get_tablespace_path = postgres['get_tablespace_path']
+    get_tablespace_oid = postgres['get_tablespace_oid']
+
+    # get group oid
+    sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname = '%s'" % groupname
+    result = plpy.execute(sql)
+    groupid = result[0]['groupid']
+
+    cgroup_path = "/sys/fs/cgroup/gpdb/%d" % groupid
+
+    # get path of tablespace
+    spcoid = get_tablespace_oid(tablespace_name.encode('utf-8'), False)
+    location = ctypes.cast(get_tablespace_path(spcoid), ctypes.c_char_p).value
+
+    if location == "":
+        return False
+
+    bdi = get_bdi_of_path(location)
+    major = os.major(bdi)
+    minor = os.minor(bdi)
+
+    match_string = "{}:{} {}".format(major, minor, parameters)
+    match = False
+    with open(os.path.join(cgroup_path, "io.max")) as f:
+        for line in f.readlines():
+            line = line.strip()
+            if match_string == line:
+                match = True
+                break
+
+    return match
+
+$$ LANGUAGE plpython3u;

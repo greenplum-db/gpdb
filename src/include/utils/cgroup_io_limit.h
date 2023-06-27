@@ -75,6 +75,7 @@ typedef struct IO_LIMIT_PARSER_STATE
 extern IO_LIMIT_PARSER_STATE *io_limit_begin_scan(const char *limit_str);
 extern void io_limit_end_scan(IO_LIMIT_PARSER_STATE *state);
 
+extern char *get_tablespace_path(Oid spcid);
 extern bdi_t get_bdi_of_path(const char *ori_path);
 extern int fill_bdi_list(TblSpcIOLimit *io_limit);
 
