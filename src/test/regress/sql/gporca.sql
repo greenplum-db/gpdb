@@ -3297,6 +3297,31 @@ select *
 from empty_cte_tl_test
 where id in(select id from cte);
 reset optimizer_trace_fallback;
+-- Test the indexing on partitions when index on one partition is on columns numbered(1 and 2)
+-- and index on another partition on column numbered(12)
+CREATE TABLE index_confusion(
+                                col1 int,
+                                col2 int,
+                                col3 int,
+                                col4 int,
+                                col5 int,
+                                col6 int,
+                                col7 int,
+                                col8 int,
+                                col9 int,
+                                col10 int,
+                                col11 int,
+                                col12 int)
+    PARTITION BY RANGE (col1) (START (1) END (100000) EVERY (50000));
+INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM GENERATE_SERIES(1, 10000) g;
+ANALYZE index_confusion;
+
+CREATE INDEX i_a ON index_confusion_1_prt_1 (col12);
+CREATE INDEX i_b ON index_confusion_1_prt_2 (col1, col2);
+-- Select should return one row
+EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE col12 = '1';
+SELECT * FROM index_confusion WHERE col12 = '1';
+DROP TABLE index_confusion;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;
