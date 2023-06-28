@@ -2817,7 +2817,7 @@ CXformUtils::PexprBitmapSelectBestIndex(
 	CTableDescriptor *ptabdesc, const IMDRelation *pmdrel,
 	CColRefArray *pdrgpcrOutput, CColRefSet *pcrsOuterRefs,
 	CExpression **ppexprRecheck, CExpression **ppexprResidual,
-	BOOL alsoConsiderBTreeIndexes)
+	BOOL considerBitmapAltForArrayCmp)
 {
 	CColRefSet *pcrsScalar = pexprPred->DeriveUsedColumns();
 	ULONG ulBestIndex = 0;
@@ -2828,7 +2828,7 @@ CXformUtils::PexprBitmapSelectBestIndex(
 	ULONG bestNumIndexCols = gpos::ulong_max;
 	IMDIndex::EmdindexType altIndexType = IMDIndex::EmdindBitmap;
 
-	if (alsoConsiderBTreeIndexes)
+	if (considerBitmapAltForArrayCmp)
 	{
 		altIndexType = IMDIndex::EmdindBtree;
 	}
@@ -2856,7 +2856,7 @@ CXformUtils::PexprBitmapSelectBestIndex(
 			CPredicateUtils::ExtractIndexPredicates(
 				mp, md_accessor, pdrgpexprScalar, pmdindex, pdrgpcrIndexCols,
 				pdrgpexprIndex, pdrgpexprResidual, pcrsOuterRefs,
-				alsoConsiderBTreeIndexes);
+				considerBitmapAltForArrayCmp);
 
 			pdrgpexprScalar->Release();
 
@@ -3113,7 +3113,7 @@ CXformUtils::CreateBitmapIndexProbesWithOrWithoutPredBreakdown(
 				pmp, pmda, pexprPred, ptabdesc, pmdrel, pdrgpcrOutput,
 				pcrsOuterRefs, &pexprRecheckLocal, &pexprResidualLocal,
 				isAPartialPredicateOrArrayCmp  // for partial preds or array comps
-				// we want to consider btree indexes
+				// we want to consider btree/hash indexes
 			);
 
 			// since we did not break the conjunct tree, the index path found may cover a part of the

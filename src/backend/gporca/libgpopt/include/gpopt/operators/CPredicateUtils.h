@@ -403,7 +403,7 @@ public:
 		CExpressionArray *pdrgpexprResidual,
 		CColRefSet *pcrsAcceptedOuterRefs =
 			nullptr,  // outer refs that are acceptable in an index predicate
-		BOOL allowArrayCmpForBTreeIndexes = false);
+		BOOL considerBitmapAltForArrayCmp = false);
 
 	// return the inverse of given comparison expression
 	static CExpression *PexprInverseComparison(CMemoryPool *mp,
@@ -433,7 +433,7 @@ public:
 	static CExpression *PexprIndexLookup(
 		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpPred,
 		const IMDIndex *pmdindex, CColRefArray *pdrgpcrIndex,
-		CColRefSet *outer_refs, BOOL allowArrayCmpForBTreeIndexes);
+		CColRefSet *outer_refs, BOOL considerBitmapAltForArrayCmp);
 
 	// split given scalar expression into two conjunctions; without and with outer references
 	static void SeparateOuterRefs(CMemoryPool *mp, CExpression *pexprScalar,

@@ -249,7 +249,7 @@ private:
 		CTableDescriptor *ptabdesc, const IMDRelation *pmdrel,
 		CColRefArray *pdrgpcrOutput, CColRefSet *pcrsOuterRefs,
 		CExpression **ppexprRecheck, CExpression **ppexprResidual,
-		BOOL alsoConsiderBTreeIndexes);
+		BOOL alsoConsiderOtherIndexes);
 
 	// iterate over given hash map and return array of arrays of project elements sorted by the column id of the first entries
 	static CExpressionArrays *PdrgpdrgpexprSortedPrjElemsArray(

@@ -111,7 +111,8 @@ CBitmapScanTest:
 IndexedNLJBitmap BitmapIndex-ChooseHashJoin BitmapTableScan-AO-Btree-PickOnlyHighNDV
 BitmapIndex-Against-InList BitmapTableScan-AO-Btree-PickIndexWithNoGap
 BitmapTableScan-ComplexConjDisj BitmapTableScan-ConjDisjWithOuterRefs
-BRINScan-Or BitmapScan-Hetrogeneous-Partitioned Hash-BitmapScan;
+BRINScan-Or BitmapScan-Hetrogeneous-Partitioned Hash-BitmapScan Hash-BitmapScan-InArray
+Hash-TableScan-AllArray;
 
 CIndexApplyTest:
 IndexNLJ-IndexGet-OuterRef IndexApply_NestLoopWithNestParamTrue IndexApply1
