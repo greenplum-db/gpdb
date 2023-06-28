@@ -1257,7 +1257,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * report this backend in the PgBackendStatus array, meanwhile, we do not
 	 * want users to see auxiliary background worker like fts in pg_stat_* views.
 	 */
-	if (!bootstrap && !amAuxiliaryBgWorker())
+	if (!bootstrap && (!amAuxiliaryBgWorker() || IsDtxRecoveryProcess()))
 		pgstat_bestart();
 
 	/* 
