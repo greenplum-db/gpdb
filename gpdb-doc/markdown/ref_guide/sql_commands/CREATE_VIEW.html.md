@@ -85,7 +85,7 @@ is bad form in two ways: the column name defaults to `?column?`, and the column 
 CREATE VIEW vista AS SELECT text 'Hello World' AS hello;
 ```
 
-Access to tables referenced in the view is determined by permissions of the view owner XXX not the current user \(even if the current user is a superuser\). This can be confusing in the case of superusers, since superusers typically have access to all objects. In the case of a view, even superusers must be explicitly granted access to tables referenced in the view if they are not the owner of the view. XXX  In some cases, a view can be used to provide secure but restricted access to the underlying tables. However, not all views are secure against tampering, see [Rules and Privileges](https://www.postgresql.org/docs/12/rules-privileges.html) in the PostgreSQL documentation for details.
+Access to tables referenced in the view is determined by permissions of the view owner not the current user \(even if the current user is a superuser\). This can be confusing in the case of superusers, since superusers typically have access to all objects. In the case of a view, even superusers must be explicitly granted access to tables referenced in the view if they are not the owner of the view. In some cases, a view can be used to provide secure but restricted access to the underlying tables. However, not all views are secure against tampering, see [Rules and Privileges](https://www.postgresql.org/docs/12/rules-privileges.html) in the PostgreSQL documentation for details.
 
 Functions called in the view are treated the same as if they had been called directly from the query using the view. Therefore the user of a view must have permissions to call any functions used by the view.
 
