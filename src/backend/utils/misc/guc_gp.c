@@ -262,6 +262,7 @@ bool		gp_cte_sharing = false;
 bool		gp_enable_relsize_collection = false;
 bool		gp_recursive_cte = true;
 bool		gp_eager_two_phase_agg = false;
+bool		gp_force_random_redistribution = false;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -387,6 +388,7 @@ bool		optimizer_enable_space_pruning;
 bool		optimizer_enable_associativity;
 bool		optimizer_enable_eageragg;
 bool		optimizer_enable_range_predicate_dpe;
+bool		optimizer_enable_push_join_below_union_all;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -1797,6 +1799,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_force_random_redistribution", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Force redistribution of insert for randomly-distributed."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_force_random_redistribution,
+		false, NULL, NULL
+	},
+
+	{
 		{"optimizer", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable GPORCA."),
 			NULL
@@ -2860,6 +2872,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_range_predicate_dpe,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_push_join_below_union_all", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable transform of join of union all to union all of joins. May improve the join performance."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_push_join_below_union_all,
 		false,
 		NULL, NULL, NULL
 	},

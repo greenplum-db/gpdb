@@ -124,7 +124,7 @@ IndexOnlyNext(IndexOnlyScanState *node)
 
 		CHECK_FOR_INTERRUPTS();
 
-		if (RelationAMIsAO(scandesc->xs_heapfetch->rel))
+		if (RelationIsAppendOptimized(scandesc->xs_heapfetch->rel))
 		{
 			if (!table_index_fetch_tuple_visible(scandesc->xs_heapfetch,
 												 tid,

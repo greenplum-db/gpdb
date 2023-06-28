@@ -521,7 +521,6 @@ You can use the `gp_resgroup_config` view to check the configuration of each res
 -   [gp\_resgroup\_config](#topic27x)
 -   [gp\_resgroup\_status](#topic31x)
 -   [gp\_resgroup\_status\_per\_host](#perhost)
--   [gp\_resgroup\_status\_per\_segment](#perseg)
 
 **Parent topic:** [The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
@@ -536,7 +535,7 @@ This view is accessible to all users.
 |groupid|The ID of the resource group.|
 |groupname|The name of the resource group.|
 |concurrency|The concurrency \(`CONCURRENCY`\) value specified for the resource group.|
-|cpu\_rate\_limit|The CPU limit \(`cpu_max_percent`\) value specified for the resource group, or -1.|
+|cpu\_rate\_limit|The CPU limit \(`CPU_MAX_PERCENT`\) value specified for the resource group, or -1.|
 |memory\_limit|The memory limit \(`MEMORY_LIMIT`\) value specified for the resource group.|
 |memory\_shared\_quota|The shared memory quota \(`MEMORY_SHARED_QUOTA`\) value specified for the resource group.|
 |memory\_spill\_ratio|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|

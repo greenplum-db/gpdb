@@ -247,6 +247,7 @@ test: basebackup_progress
 test: vacuum_progress_row
 test: vacuum_progress_column
 
+test: ao_relation_size
 test: analyze_progress
 test: appendonly_analyze_progress
 test: aoco_analyze_progress

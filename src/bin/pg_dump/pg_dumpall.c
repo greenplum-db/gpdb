@@ -773,9 +773,9 @@ dumpResGroups(PGconn *conn)
 	PGresult   *res;
 	int		i;
 	int		i_groupname,
-			i_cpu_hard_quota_limit,
+			i_cpu_max_percent,
 			i_concurrency,
-			i_cpu_soft_priority,
+			i_cpu_weight,
 			i_cpuset;
 
 	printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
@@ -793,8 +793,8 @@ dumpResGroups(PGconn *conn)
 
 	i_groupname = PQfnumber(res, "groupname");
 	i_concurrency = PQfnumber(res, "concurrency");
-	i_cpu_hard_quota_limit = PQfnumber(res, "cpu_max_percent");
-	i_cpu_soft_priority = PQfnumber(res, "cpu_weight");
+	i_cpu_max_percent = PQfnumber(res, "cpu_max_percent");
+	i_cpu_weight = PQfnumber(res, "cpu_weight");
 	i_cpuset = PQfnumber(res, "cpuset");
 
 	if (PQntuples(res) > 0)
@@ -810,8 +810,8 @@ dumpResGroups(PGconn *conn)
 
 		groupname = PQgetvalue(res, i, i_groupname);
 		concurrency = PQgetvalue(res, i, i_concurrency);
-		cpu_max_percent = PQgetvalue(res, i, i_cpu_hard_quota_limit);
-		cpu_weight = PQgetvalue(res, i, i_cpu_soft_priority);
+		cpu_max_percent = PQgetvalue(res, i, i_cpu_max_percent);
+		cpu_weight = PQgetvalue(res, i, i_cpu_weight);
 		cpuset = PQgetvalue(res, i, i_cpuset);
 
 		resetPQExpBuffer(buf);

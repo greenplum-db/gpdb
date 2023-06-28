@@ -2977,7 +2977,7 @@ my %tests = (
 			\s+\QINCREMENT BY 1\E\n
 			\s+\QNO MINVALUE\E\n
 			\s+\QNO MAXVALUE\E\n
-			\s+\QCACHE 1\E\n
+			\s+\QCACHE 20\E\n
 			\);
 			/xms,
 		like =>
@@ -3163,7 +3163,7 @@ my %tests = (
 			\n\s+\QINCREMENT BY 1\E
 			\n\s+\QNO MINVALUE\E
 			\n\s+\QNO MAXVALUE\E
-			\n\s+\QCACHE 1;\E
+			\n\s+\QCACHE 20;\E
 			/xm,
 		like => {
 			%full_runs,

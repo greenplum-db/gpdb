@@ -96,7 +96,7 @@ When upgrading PostGIS you must check the version of the Greenplum PostGIS packa
 
     If PostGIS is not enabled for the database, Greenplum returns a `function does not exist` error.
 
--   For the Geenplum PostGIS package `postgis-2.5.4+pivotal.2` and later, you can display the PostGIS extension version and state in a database with this query.
+-   For the Greenplum PostGIS package `postgis-2.5.4+pivotal.2` and later, you can display the PostGIS extension version and state in a database with this query.
 
     ```
     # SELECT * FROM pg_available_extensions WHERE name = 'postgis' ;

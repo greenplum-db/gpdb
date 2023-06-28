@@ -2062,8 +2062,18 @@ AcquireNumberOfBlocks(Relation onerel)
 		/* Query the segments using pg_relation_size(<rel>). */
 		char		relsize_sql[100];
 
-		snprintf(relsize_sql, sizeof(relsize_sql),
-				 "select pg_catalog.pg_relation_size(%u, 'main')", RelationGetRelid(onerel));
+		if (RelationStorageIsAO(onerel))
+			/* 
+			 * For AO tables, we want to consider only the core relation, no auxiliary tables.
+			 * We also want to pull the logical size (based on the seg eof values),
+			 * not physical, to most accurately inform optimizer and
+			 * other consumers of these statistics.
+			 */
+			snprintf(relsize_sql, sizeof(relsize_sql),
+					"select pg_catalog.pg_relation_size(%u, /* include_ao_aux */ false, /* physical_ao_size */ false)", RelationGetRelid(onerel));
+		else
+			snprintf(relsize_sql, sizeof(relsize_sql),
+					"select pg_catalog.pg_relation_size(%u, 'main')", RelationGetRelid(onerel));
 		totalbytes = get_size_from_segDBs(relsize_sql);
 		if (GpPolicyIsReplicated(onerel->rd_cdbpolicy))
 		{

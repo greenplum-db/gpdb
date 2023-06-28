@@ -338,11 +338,11 @@ SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapbase
 
 -- aux tables are not created for child table
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild');
-ERROR:  'heapchild' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+ERROR:  Relation 'heapchild' does not have appendoptimized row-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=26472)
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapchild')).* FROM gp_dist_random('gp_id');
 ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild2');
-ERROR:  'heapchild2' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+ERROR:  Relation 'heapchild2' does not have appendoptimized row-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=26472)
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapchild2')).* FROM gp_dist_random('gp_id');
 ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapchild%' AND c.oid = p.relid;
@@ -421,13 +421,13 @@ SELECT * FROM ao2heap2;
 
 -- No AO aux tables should be left
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap');
-ERROR:  'ao2heap' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+ERROR:  Relation 'ao2heap' does not have appendoptimized row-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=26472)
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('ao2heap')).* FROM gp_dist_random('gp_id');
 ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
 SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('ao2heap')).* FROM gp_dist_random('gp_id');
 ERROR:  function not supported on non append-optimized relation  (seg2 slice1 192.168.0.148:7004 pid=1401173)
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
-ERROR:  'ao2heap2' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+ERROR:  Relation 'ao2heap2' does not have appendoptimized row-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=26472)
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('ao2heap2')).* FROM gp_dist_random('gp_id');
 ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
 -- No pg_appendonly entries should be left too
@@ -705,7 +705,7 @@ SELECT count(*) FROM ao2co4;
 -- Only tested for 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
 -- No need to test the other ones created by the alternative syntax SET WITH().
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2co');
-ERROR:  'ao2co' is not an append-only row relation
+ERROR:  Relation 'ao2co' does not have appendoptimized row-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=26472)
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2co');
  tid | segno | row_num 
 -----+-------+---------
@@ -723,7 +723,7 @@ SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co');
 (0 rows)
 
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2co3');
-ERROR:  'ao2co3' is not an append-only row relation
+ERROR:  Relation 'ao2co3' does not have appendoptimized row-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=26472)
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2co3');
  tid | segno | row_num 
 -----+-------+---------
@@ -864,19 +864,19 @@ SELECT count(*) FROM co2heap4;
 -- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
 -- No need to test the other ones created by the alternative syntax SET WITH().
 SELECT * FROM gp_toolkit.__gp_aoseg('co2heap');
-ERROR:  'co2heap' is not an append-only row relation
+ERROR:  Relation 'co2heap' does not have appendoptimized row-oriented storage  (seg1 slice1 127.0.1.1:7003 pid=26473)
 SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap');
 ERROR:  function not supported on relation
 SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2heap');
-ERROR:  'co2heap' is not an append-only columnar relation
+ERROR:  Relation 'co2heap' does not have append-optimized column-oriented storage  (seg1 slice1 127.0.1.1:7003 pid=26473)
 SELECT * FROM gp_toolkit.__gp_aoblkdir('co2heap');
 ERROR:  function not supported on non append-optimized relation
 SELECT * FROM gp_toolkit.__gp_aoseg('co2heap3');
-ERROR:  'co2heap3' is not an append-only row relation
+ERROR:  Relation 'co2heap3' does not have appendoptimized row-oriented storage  (seg1 slice1 127.0.1.1:7003 pid=26473)
 SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap3');
 ERROR:  function not supported on relation
 SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2heap3');
-ERROR:  'co2heap3' is not an append-only columnar relation
+ERROR:  Relation 'co2heap3' does not have append-optimized column-oriented storage  (seg1 slice1 127.0.1.1:7003 pid=26473)
 SELECT * FROM gp_toolkit.__gp_aoblkdir('co2heap3');
 ERROR:  function not supported on non append-optimized relation
 -- No pg_appendonly entries should be left too
@@ -1044,7 +1044,7 @@ SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
 (3 rows)
 
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao');
-ERROR:  'co2ao' is not an append-only columnar relation
+ERROR:  Relation 'co2ao' does not have append-optimized column-oriented storage  (seg2 slice1 127.0.1.1:7004 pid=26474)
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('co2ao')).* FROM gp_dist_random('gp_id');
  gp_segment_id | tid | segno | row_num 
 ---------------+-----+-------+---------
@@ -1067,7 +1067,7 @@ SELECT * FROM gp_toolkit.__gp_aoseg('co2ao3');
 (3 rows)
 
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao3');
-ERROR:  'co2ao3' is not an append-only columnar relation
+ERROR:  Relation 'co2ao3' does not have append-optimized column-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=26472)
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('co2ao3')).* FROM gp_dist_random('gp_id');
  gp_segment_id | tid | segno | row_num 
 ---------------+-----+-------+---------

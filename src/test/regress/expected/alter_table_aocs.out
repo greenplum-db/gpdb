@@ -326,15 +326,11 @@ WHERE relname='addcol6'));
 -- add column with default value as sequence
 alter table addcol6 add column d serial;
 -- select, insert, update after 'add column'
-select c,d from addcol6 where d > 15 order by d;
-  c  | d  
------+----
- 1.2 | 16
- 1.2 | 17
- 1.2 | 18
- 1.2 | 19
- 1.2 | 20
-(5 rows)
+select count(*) from addcol6 where d > 4;
+ count 
+-------
+    16
+(1 row)
 
 insert into addcol6 select i, i, 71/i from generate_series(21,30)i;
 select count(*) from addcol6;
@@ -343,11 +339,11 @@ select count(*) from addcol6;
     30
 (1 row)
 
-update addcol6 set b = 0, c = 0 where d > 15;
+update addcol6 set b = 0, c = 0 where d > 4;
 select count(*) from addcol6 where b = 0 and c = 0;
  count 
 -------
-    15
+    26
 (1 row)
 
 -- partitioned table tests

@@ -565,6 +565,7 @@ extern bool optimizer_cte_inlining;
 extern bool optimizer_enable_space_pruning;
 extern bool optimizer_enable_associativity;
 extern bool optimizer_enable_range_predicate_dpe;
+extern bool optimizer_enable_push_join_below_union_all;
 
 /* Analyze related GUCs for Optimizer */
 extern bool optimizer_analyze_root_partition;

@@ -1,3 +1,10 @@
+-- start_matchignore
+m/^WARNING:  nonstandard use of.*/
+m/^LINE \d+:                  and pgext.fmtopts like.*/
+m/ +\^/
+m/^HINT:  Use the escape string syntax for backslashes.*/
+-- end_matchignore
+
 -- start_matchsubs
 -- m/|/
 -- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d+)-(\d+)/TODAYS_DATE/

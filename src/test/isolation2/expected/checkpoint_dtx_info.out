@@ -26,6 +26,9 @@
 -- segments. As a result the SELECT executed by session3 used to fail
 -- because the twopcbug table only existed on the coordinator.
 --
+-- start_ignore
+100: alter resource group admin_group set concurrency 30;
+-- end_ignore
 1: select gp_inject_fault_infinite('start_insertedDistributedCommitted', 'suspend', 1);
  gp_inject_fault_infinite 
 --------------------------
@@ -363,3 +366,7 @@ server closed the connection unexpectedly
 
 3: drop table ckpt_xlog_len_tbl;
 DROP
+
+-- start_ignore
+alter resource group admin_group set concurrency 10;
+-- end_ignore

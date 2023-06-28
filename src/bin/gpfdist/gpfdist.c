@@ -4913,7 +4913,7 @@ static void request_cleanup(request_t *r)
 	if (r->zstd && !r->is_get)
 	{
 		ZSTD_freeDCtx(r->zstd_dctx);
-		r->zstd_cctx = NULL;
+		r->zstd_dctx = NULL;
 	}
 #endif
 }

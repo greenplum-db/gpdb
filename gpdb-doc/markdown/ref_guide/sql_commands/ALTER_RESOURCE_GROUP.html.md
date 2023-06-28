@@ -93,7 +93,7 @@ ALTER RESOURCE GROUP rgroup1 SET CONCURRENCY 13;
 Update the CPU limit for a resource group:
 
 ```
-ALTER RESOURCE GROUP rgroup2 SET cpu_max_percent 45;
+ALTER RESOURCE GROUP rgroup2 SET CPU_MAX_PERCENT 45;
 ```
 
 Update the memory limit for a resource group:

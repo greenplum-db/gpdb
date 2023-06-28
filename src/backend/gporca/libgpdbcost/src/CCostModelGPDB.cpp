@@ -1578,6 +1578,10 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupCostUnit)
 			->Get();
+	const CDouble dIndexOnlyScanTupCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexOnlyScanTupCostUnit)
+			->Get();
 	const CDouble dIndexScanTupRandomFactor =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupRandomFactor)
@@ -1588,15 +1592,29 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 
 	CDouble dRowsIndex = pci->Rows();
 
+	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
+	// cost per index row. Account for that cost in dCostPerIndexRow.
+	CColumnDescriptorArray *indexIncludedArray = nullptr;
 	ULONG ulIndexKeys = 1;
 	if (COperator::EopPhysicalIndexScan == op_id)
 	{
 		ulIndexKeys = CPhysicalIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
+		indexIncludedArray = CPhysicalIndexScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
 	}
 	else
 	{
 		ulIndexKeys =
 			CPhysicalDynamicIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
+		indexIncludedArray = CPhysicalDynamicIndexScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
+	}
+	ULONG ulIncludedColWidth = 0;
+	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
+	{
+		ulIncludedColWidth += (*indexIncludedArray)[ul]->Width();
 	}
 
 	// TODO: 2014-02-01
@@ -1605,12 +1623,14 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 
 	// index scan cost contains two parts: index-column lookup and output tuple cost.
 	// 1. index-column lookup: correlated with index lookup rows, the number of index columns used in lookup,
-	// table width and a randomIOFactor.
+	// table width and a randomIOFactor. also accounts for included columns which adds to the payload of index leaf
+	// pages that leads to bigger a btree which subsequently leads to more random IO during index lookup.
 	// 2. output tuple cost: this is handled by the Filter on top of IndexScan, if no Filter exists, we add output cost
 	// when we sum-up children cost
 
 	CDouble dCostPerIndexRow = ulIndexKeys * dIndexFilterCostUnit +
-							   dTableWidth * dIndexScanTupCostUnit;
+							   dTableWidth * dIndexScanTupCostUnit +
+							   ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
 	return CCost(pci->NumRebinds() *
 				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor));
 }
@@ -1640,6 +1660,10 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupCostUnit)
 			->Get();
+	const CDouble dIndexOnlyScanTupCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexOnlyScanTupCostUnit)
+			->Get();
 	const CDouble dIndexScanTupRandomFactor =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupRandomFactor)
@@ -1655,22 +1679,46 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	IStatistics *stats =
 		CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
 
-	// Calculating cost of index-only-scan is identical to index-scan with the
-	// addition of dPartialVisFrac which indicates the percentage of pages not
-	// currently marked as all-visible. Planner has similar logic inside
-	// `cost_index()` to calculate pages fetched from index-only-scan.
+	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
+	// cost per index row. Account for that cost in dCostPerIndexRow.
+	CColumnDescriptorArray *indexIncludedArray =
+		CPhysicalIndexOnlyScan::PopConvert(pop)
+			->Pindexdesc()
+			->PdrgpcoldescIncluded();
+	ULONG ulIncludedColWidth = 0;
+	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
+	{
+		ulIncludedColWidth += (*indexIncludedArray)[ul]->Width();
+	}
 
-	CDouble dCostPerIndexRow = ulIndexKeys * dIndexFilterCostUnit +
-							   dTableWidth * dIndexScanTupCostUnit;
+	// The cost of index-only-scan is similar to index-scan with the additional
+	// dimension of variable size I/O. More specifically, index-scan I/O is
+	// bound to the fixed width of the relation times the number of output
+	// rows. However, index-only-scan may be able to sometimes avoid the cost
+	// of the full width of the relation (when the page is all visible) and
+	// instead directly retrieve the row from a narrow index.
+	//
+	// The percent of rows that can avoid I/O on full table width is
+	// approximately equal to the precent of tuples in all-visible blocks
+	// compared to total blocks. It is approximate because there is no
+	// guarantee that blocks are equally filled with live tuples.
+
 	CDouble dPartialVisFrac(1);
 	if (stats->RelPages() != 0)
 	{
 		dPartialVisFrac =
 			1 - (CDouble(stats->RelAllVisible()) / CDouble(stats->RelPages()));
 	}
+
+	CDouble dCostPerIndexRow =
+		ulIndexKeys * dIndexFilterCostUnit +
+		// partial visibile read from table
+		dTableWidth * dIndexScanTupCostUnit * dPartialVisFrac +
+		// always read from index (partial and full visible)
+		ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
+
 	return CCost(pci->NumRebinds() *
-				 (dRowsIndex * dCostPerIndexRow +
-				  dIndexScanTupRandomFactor * dPartialVisFrac));
+				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor));
 }
 
 CCost

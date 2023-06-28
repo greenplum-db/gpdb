@@ -60,8 +60,8 @@ SELECT * FROM users;
  john    | doe    | johnd    |      2
  willem  | doe    | w_doe    |      3
  rick    | smith  | slash    |      4
- willem  | smith  | w_smith  |      5
- charles | darwin | beagle   |      6
+ willem  | smith  | w_smith  |     21
+ charles | darwin | beagle   |     22
 (6 rows)
 
 -- dump trigger data

@@ -225,6 +225,8 @@ public:
 		ExfImplementInnerJoin,
 		ExfDynamicForeignGet2DynamicForeignScan,
 		ExfExpandDynamicGetWithForeignPartitions,
+		ExfPushJoinBelowLeftUnionAll,
+		ExfPushJoinBelowRightUnionAll,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

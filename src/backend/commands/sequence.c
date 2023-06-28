@@ -1794,12 +1794,7 @@ init_params(ParseState *pstate, List *options, bool for_identity,
 	}
 	else if (isInit)
 	{
-		/*
-		 * PostgreSQL default value is 1, GPDB privately bump up to 20.
-		 * If a sequence in UDF, QE executor need to apply sequence value from QD.
-		 * Frequent sequence application is network bottleneck for query execution.
-		 */
-		seqform->seqcache = 20;
+		seqform->seqcache = SEQ_CACHE_DEFAULT;
 	}
 }
 

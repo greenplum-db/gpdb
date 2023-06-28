@@ -58,7 +58,7 @@ AOCSCompaction_DropSegmentFile(Relation aorel, int segno, AOVacuumRelStats *vacr
 {
 	int			col;
 
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 
 	for (col = 0; col < RelationGetNumberOfAttributes(aorel); col++)
 	{
@@ -110,7 +110,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, AOCSVPInfo *vpinfo, AOVa
 	const char *relname = RelationGetRelationName(aorel);
 	int			j;
 
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 
 	for (j = 0; j < vpinfo->nEntry; ++j)
 	{
@@ -234,7 +234,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	int64		prev_heap_blks_scanned = 0;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 	Assert(insertDesc);
 
 	compact_segno = fsinfo->segno;
@@ -381,7 +381,7 @@ AOCSCompact(Relation aorel,
 	AOCSFileSegInfo *fsinfo;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 
 	relname = RelationGetRelationName(aorel);

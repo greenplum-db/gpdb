@@ -609,6 +609,8 @@ choose_new_segfile(Relation rel, bool *used, List *avoid_segnos)
 {
 	int		chosen_segno = -1;
 
+	Assert(RelationStorageIsAO(rel));
+
 	/* No segment found. Try to create a new one. */
 	for (int segno = 0; segno < MAX_AOREL_CONCURRENCY; segno++)
 	{
@@ -666,6 +668,8 @@ get_aoseg_fields(Relation rel, Relation pg_aoseg_rel, HeapTuple tuple,
 	TupleDesc	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 	bool		isNull;
 
+	Assert(RelationStorageIsAO(rel));
+
 	if (RelationIsAoRows(rel))
 	{
 		*segno = DatumGetInt32(fastgetattr(tuple,
@@ -721,6 +725,8 @@ void
 AORelIncrementModCount(Relation parentrel)
 {
 	int			segno;
+
+	Assert(RelationStorageIsAO(parentrel));
 
 	if (Debug_appendonly_print_segfile_choice)
 		ereport(LOG,

@@ -562,27 +562,21 @@ SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
  4          | 67108864 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (4 rows)
 
--- Now test desummarization
--- XXX: We currently use utility mode as brin_desummarize_range() is not MPPized yet.
-
 -- Desummarization of a block falling beyond the end of aoseg1 should be a no-op.
 SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554436);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 -- Desummarization of a block falling in aoseg0 should be a no-op (as aoseg0 doesn't exist).
 SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 1);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 -- Desummarization of a block falling in aoseg3 should be a no-op (as aoseg3 doesn't exist).
 SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Sanity: Nothing should have changed.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_specific_@amname@_i_idx', blkno)) FROM generate_series(0, nblocks('brin_ao_specific_@amname@_i_idx') - 1) blkno;
@@ -615,21 +609,18 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
 (4 rows)
 
 -- Should be able to desummarize all existing blocks in aoseg1.
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554432);
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554432);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554433);
+(0 rows)
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554433);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
+(0 rows)
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Sanity: All revmap entries corresponding to aoseg1 have been set to invalid
 -- and all their data page tuples have been deleted (marked unused).
@@ -650,11 +641,10 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
 (4 rows)
 
 -- Now desummarize the last remaining range in the data page (from aoseg2).
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 67108864);
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 67108864);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Sanity: The revmap entry should be marked invalid.
 -- Also, this time instead of looking up the data page, look at the data page
@@ -1460,11 +1450,10 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_
 (1 row)
 
 -- Desummarize the last block (test iteration to target range across chain)
-1U: SELECT brin_desummarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
+SELECT brin_desummarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Sanity: The revmap entry for the last block should be marked invalid.
 -- Also, this time instead of looking up the data page, look at the data page

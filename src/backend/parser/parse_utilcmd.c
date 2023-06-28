@@ -558,14 +558,10 @@ generateSerialExtraStmts(CreateStmtContext *cxt, ColumnDef *column,
 											 -1),
 								 seqstmt->options);
 
-	/*
-	 * gpdb sequence default cache is 20 to avoid frequent sequence value apply
-	 * in QE, we do not need this optimize here. Since each input data populate
-	 * serial column in QD and then dispatch to QE
-	 */
+	/* keep the same with explicitly created sequence, use default cache value */
 	if (!has_cache_option)
 		seqstmt->options = lappend(seqstmt->options,
-								   makeDefElem("cache", (Node *) makeInteger((long) 1), -1));
+								   makeDefElem("cache", (Node *) makeInteger((long) SEQ_CACHE_DEFAULT), -1));
 
 	/*
 	 * If this is ALTER ADD COLUMN, make sure the sequence will be owned by
