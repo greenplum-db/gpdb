@@ -99,7 +99,8 @@ DECLARE CURSOR
  t       | resource queue | ExclusiveLock 
 (1 row)
 
-4q: ... <quitting>
+4:CLOSE c_hold;
+CLOSE CURSOR
 
 -- Sanity check: Ensure that all locks were released.
 0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
