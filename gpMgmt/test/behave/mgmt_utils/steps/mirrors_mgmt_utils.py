@@ -534,6 +534,30 @@ def impl(context, content):
             break
 
 
+@given("a temporary directory with mode '{mode}' is created under data_dir of primary with content {content}")
+@when("a temporary directory with mode '{mode}' is created under data_dir of primary with content {content}")
+@then("a temporary directory with mode '{mode}' is created under data_dir of primary with content {content}")
+def impl(context, mode, content):
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    primary_segment = list(filter(lambda seg: seg.getSegmentRole() == ROLE_PRIMARY and
+                                  seg.getSegmentContentId() == int(content), all_segments))[0]
+    mirror_segment = list(filter(lambda seg: seg.getSegmentRole() == ROLE_MIRROR and
+                                             seg.getSegmentContentId() == int(content), all_segments))[0]
+    make_temp_dir(context, primary_segment.getSegmentDataDirectory(), mode=mode)
+    context.mirror_datadir = mirror_segment.getSegmentDataDirectory()
+
+
+@when('the temporary directory is removed')
+@then('the temporary directory is removed')
+def impl(context):
+    if 'temp_base_dir' in context and os.path.exists(context.temp_base_dir):
+        base = os.path.basename(context.temp_base_dir)
+        os.chmod(context.temp_base_dir, 0o700)
+        os.chmod(os.path.join(context.mirror_datadir, base), 0o700)
+        shutil.rmtree(context.temp_base_dir)
+        shutil.rmtree(os.path.join(context.mirror_datadir, base))
+
+
 @given("{num} {utility} directory under '{parent_dir}' with mode '{mode}' is created")
 @when("{num} {utility} directory under '{parent_dir}' with mode '{mode}' is created")
 @then("{num} {utility} directory under '{parent_dir}' with mode '{mode}' is created")
@@ -791,6 +815,17 @@ def impl(context):
 def impl(context):
     context.execute_steps(u'''
         Then the user runs "gprecoverseg -aF"
+        And gprecoverseg should return a return code of 0
+        And user can start transactions
+        And the segments are synchronized
+        And the cluster is rebalanced
+        ''')
+
+
+@then('the cluster is recovered using differential and rebalanced')
+def impl(context):
+    context.execute_steps(u'''
+        Then the user runs "gprecoverseg -a --differential"
         And gprecoverseg should return a return code of 0
         And user can start transactions
         And the segments are synchronized

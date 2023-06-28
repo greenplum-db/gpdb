@@ -218,7 +218,7 @@ def impl(context, utility, output, segment_type):
 def impl(context, utility, recovery_type, content_ids):
     if content_ids == "None":
         return
-    if recovery_type not in ("incremental", "full", "start"):
+    if recovery_type not in ("incremental", "full", "differential", "start"):
         raise Exception("Expected recovery_type to be 'incremental', 'full' or 'start, but found '%s'." % recovery_type)
     content_list = [int(c) for c in content_ids.split(',')]
 
@@ -231,6 +231,10 @@ def impl(context, utility, recovery_type, content_ids):
             expected = r'hostname: {}; port: {}; logfile: {}/gpAdminLogs/pg_{}.\d{{8}}_\d{{6}}.dbid{}.out; recoverytype: {}'.format(
                 segment.getSegmentHostName(), segment.getSegmentPort(), os.path.expanduser("~"),
                 'rewind' if recovery_type == 'incremental' else 'basebackup', segment.getSegmentDbId(), recovery_type)
+        if recovery_type == 'differential':
+            expected = r'hostname: {}; port: {}; logfile: {}/gpAdminLogs/rsync.\d{{8}}_\d{{6}}.dbid{}.out; recoverytype: {}'.format(
+                segment.getSegmentHostName(), segment.getSegmentPort(), os.path.expanduser("~"),
+                segment.getSegmentDbId(), recovery_type)
         elif recovery_type == 'start':
             expected = r'hostname: {}; port: {}; datadir: {}'.format(segment.getSegmentHostName(), segment.getSegmentPort(),
                                                                      segment.getSegmentDataDirectory())
@@ -273,8 +277,11 @@ def impl(context, recovery_type, content_ids):
         print_msg = 'Done!'
     elif recovery_type == 'full':
         print_msg = 'pg_basebackup: base backup completed'
+    elif recovery_type == 'differential':
+        print_msg = 'rsync error:'
+        logfile_name = 'rsync*'
     else:
-        raise Exception("Expected recovery_type to be 'incremental', 'full' but found '%s'." % recovery_type)
+        raise Exception("Expected recovery_type to be 'incremental', 'full', 'differential' but found '%s'." % recovery_type)
     context.execute_steps(u'''
     Then gprecoverseg should print "{print_msg}" to stdout for mirrors with content {content_ids}
     And gprecoverseg should print "Initiating segment recovery." to stdout
@@ -295,8 +302,11 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
     elif recovery_type == 'full':
         print_msg = 'pg_basebackup: could not access directory' #TODO also assert for the directory location here
         logfile_name = 'pg_basebackup*'
+    elif recovery_type == 'differential':
+        print_msg = 'rsync error:'
+        logfile_name = 'rsync*'
     else:
-        raise Exception("Expected recovery_type to be 'incremental', 'full' but found '%s'." % recovery_type)
+        raise Exception("Expected recovery_type to be 'incremental', 'full' , 'differential' but found '%s'." % recovery_type)
     context.execute_steps(u'''
     Then gprecoverseg should return a return code of {return_code}
     And user can start transactions
@@ -306,10 +316,17 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
     And gprecoverseg should print "{recovery_type}" errors to stdout for content {content_ids}
     And gpAdminLogs directory has "{logfile_name}" files on respective hosts only for content {content_ids}
     And verify that mirror on content {content_ids} is down
-    And gprecoverseg should print "gprecoverseg failed. Please check the output" to stdout
     And gprecoverseg should not print "Segments successfully recovered" to stdout
     '''.format(return_code=return_code, print_msg=print_msg, content_ids=content_ids, recovery_type=recovery_type,
                logfile_name=logfile_name))
+
+    if recovery_type == 'differential':
+        context.execute_steps(u'''Then gprecoverseg should print "gprecoverseg differential recovery failed. Please check the gpsegrecovery.py log file and rsync log file for more details." to stdout
+            ''')
+
+    else:
+        context.execute_steps(u'''
+                        Then gprecoverseg should print "gprecoverseg failed. Please check the output" to stdout''')
 
 
 @when('check if start failed for contents {content_ids} during full recovery for {utility}')

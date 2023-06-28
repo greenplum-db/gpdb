@@ -166,6 +166,18 @@ def impl(context, dbname, psql_cmd):
     if context.ret_code != 0:
         raise Exception('%s' % context.error_message)
 
+@given('the user runs sql "{query}" in "{db}" on primary segment with content {contentids}')
+@when('the user runs sql "{query}" in "{db}" on primary segment with content {contentids}')
+@then('the user runs sql "{query}" in "{db}" on primary segment with content {contentids}')
+def impl(context, query, db, contentids):
+    content_ids = [int(i) for i in contentids.split(',')]
+
+    for content in content_ids:
+        host, port = get_primary_segment_host_port_for_content(content)
+        psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+            db, host, port, query)
+        Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
+
 
 @given('the user connects to "{dbname}" with named connection "{cname}"')
 def impl(context, dbname, cname):
@@ -446,9 +458,9 @@ def impl(context, logdir):
                 context.recovery_lines = fp.readlines()
             for line in context.recovery_lines:
                 recovery_type, dbid, progress = line.strip().split(':', 2)
-                progress_pattern = re.compile(get_recovery_progress_pattern())
+                progress_pattern = re.compile(get_recovery_progress_pattern(recovery_type))
                 # TODO: assert progress line in the actual hosts bb/rewind progress file
-                if re.search(progress_pattern, progress) and dbid.isdigit() and recovery_type in ['full', 'incremental']:
+                if re.search(progress_pattern, progress) and dbid.isdigit() and recovery_type in ['full', 'differential', 'incremental']:
                     return
                 else:
                     raise Exception('File present but incorrect format line "{}"'.format(line))
@@ -486,7 +498,12 @@ def impl(context, logdir):
         seg_dbid = seg.getSegmentDbId()
         if seg_dbid in all_progress_lines_by_dbid:
             recovery_type, line_from_combined_progress_file = all_progress_lines_by_dbid[seg_dbid]
-            process_name = 'pg_basebackup' if recovery_type == 'full' else 'pg_rewind'
+            if recovery_type == "full":
+                process_name = 'pg_basebackup'
+            elif recovery_type == "differential":
+                process_name = 'rsync'
+            else:
+                process_name = 'pg_rewind'
             seg_progress_file = '{}/{}.*.dbid{}.out'.format(log_dir, process_name, seg_dbid)
             check_cmd_str = 'grep "{}" {}'.format(line_from_combined_progress_file, seg_progress_file)
             check_cmd = Command(name='check line in segment progress file',
@@ -3567,7 +3584,7 @@ def impl(context, table1, table2, dbname):
 
 def _get_row_count_per_segment(table, dbname):
     with dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False) as conn:
-        query = "SELECT gp_segment_id,COUNT(i) FROM %s GROUP BY gp_segment_id ORDER BY gp_segment_id;" % table
+        query = "SELECT gp_segment_id,COUNT(*) FROM %s GROUP BY gp_segment_id ORDER BY gp_segment_id;" % table
         cursor = dbconn.execSQL(conn, query)
         rows = cursor.fetchall()
         return [row[1] for row in rows] # indices are the gp segment id's, so no need to store them explicitly
@@ -3924,6 +3941,26 @@ def impl(context, segment, contentid):
                        target_gp_dbid=basebackup_target.getSegmentDbId())
     asyncproc = cmd.runNoWait()
     context.asyncproc = asyncproc
+
+
+@then('verify replication slot {slot} is available on all the segments')
+@when('verify replication slot {slot} is available on all the segments')
+@given('verify replication slot {slot} is available on all the segments')
+def impl(context, slot):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+    dbname = "template1"
+    query = "SELECT count(*) FROM pg_catalog.pg_replication_slots WHERE slot_name = '{}'".format(slot)
+
+    for seg in segments:
+        if seg.isSegmentPrimary(current_role=True):
+            host = seg.getSegmentHostName()
+            port = seg.getSegmentPort()
+            with closing(dbconn.connect(dbconn.DbURL(dbname=dbname, port=port, hostname=host),
+                                        utility=True, unsetSearchPath=False)) as conn:
+                result = dbconn.execSQLForSingleton(conn, query)
+                if result == 0:
+                    raise Exception("Slot does not exist for host:{}, port:{}".format(host, port))
 
 
 @given('gp_stat_replication table has pg_basebackup entry for content {contentid}')
