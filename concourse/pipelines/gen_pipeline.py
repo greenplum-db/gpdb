@@ -373,8 +373,10 @@ def main():
 
     # use_ICW_workers adds tags to the specified concourse definitions which
     # correspond to dedicated concourse workers to increase performance.
-    if args.pipeline_target in ['prod', 'dev', 'cm'] and args.os_type not in ["rhel9", "oel9"]:
+    if args.pipeline_target in ['prod', 'dev', 'cm']:
         args.use_ICW_workers = True
+
+    if args.pipeline_target in ['prod'] and args.os_type not in ["rhel9", "oel9"]:
         args.test_sections = [
             'ICW',
             'CLI',
