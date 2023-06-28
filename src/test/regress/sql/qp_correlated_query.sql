@@ -741,6 +741,99 @@ reset optimizer_enforce_subplans;
 DROP TABLE IF EXISTS t1;
 DROP TABLE IF EXISTS supplier;
 
+--------------------------------------------------------------------------------
+-- Planner should fail due to skip-level correlation not supported. Query should
+-- not cause segfault on ORCA. Currently ORCA is falling back to planner which
+-- is undesired. Github Issue #15693
+--------------------------------------------------------------------------------
+set optimizer_join_order to exhaustive2;
+set optimizer_trace_fallback to on;
+
+CREATE TABLE skip_correlated_t1 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+
+CREATE TABLE skip_correlated_t2 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+
+CREATE TABLE skip_correlated_t3 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+
+CREATE TABLE skip_correlated_t4 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON EXISTS (
+        SELECT skip_correlated_t1.b
+        FROM skip_correlated_t2
+    )
+);
+
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON (
+        EXISTS (
+            SELECT 1
+            FROM skip_correlated_t2
+            WHERE a > skip_correlated_t1.b
+        )
+        )
+);
+
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             INNER JOIN skip_correlated_t3 ON skip_correlated_t2.a = skip_correlated_t3.a
+             LEFT JOIN skip_correlated_t4 ON (
+        EXISTS (
+            SELECT skip_correlated_t1.b
+            FROM skip_correlated_t2
+        )
+        )
+);
+
+--------------------------------------------------------------------------------
+-- Query should not cause segfault on ORCA. Will fallback to planner as no plan
+-- is computed by ORCA. Github Issue #15693
+--------------------------------------------------------------------------------
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON skip_correlated_t3.a = ALL (
+        SELECT skip_correlated_t1.a
+        FROM skip_correlated_t2
+    )
+);
+
+DROP TABLE skip_correlated_t1;
+DROP TABLE skip_correlated_t2;
+DROP TABLE skip_correlated_t3;
+DROP TABLE skip_correlated_t4;
+reset optimizer_join_order;
+reset optimizer_trace_fallback;
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------

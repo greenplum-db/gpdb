@@ -3930,6 +3930,126 @@ select * from t1 where 0 < (select count(*) from generate_series(1, a), t1);
 reset optimizer_enforce_subplans;
 DROP TABLE IF EXISTS t1;
 DROP TABLE IF EXISTS supplier;
+--------------------------------------------------------------------------------
+-- Planner should fail due to skip-level correlation not supported. Query should
+-- not cause segfault on ORCA. Currently ORCA is falling back to planner which
+-- is undesired. Github Issue #15693
+--------------------------------------------------------------------------------
+set optimizer_join_order to exhaustive2;
+set optimizer_trace_fallback to on;
+CREATE TABLE skip_correlated_t1 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+CREATE TABLE skip_correlated_t2 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+CREATE TABLE skip_correlated_t3 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+CREATE TABLE skip_correlated_t4 (
+    a INT,
+    b INT
+) DISTRIBUTED BY (a);
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON EXISTS (
+        SELECT skip_correlated_t1.b
+        FROM skip_correlated_t2
+    )
+);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
+ERROR:  correlated subquery with skip-level correlations is not supported
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON (
+        EXISTS (
+            SELECT 1
+            FROM skip_correlated_t2
+            WHERE a > skip_correlated_t1.b
+        )
+        )
+);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
+ERROR:  correlated subquery with skip-level correlations is not supported
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             INNER JOIN skip_correlated_t3 ON skip_correlated_t2.a = skip_correlated_t3.a
+             LEFT JOIN skip_correlated_t4 ON (
+        EXISTS (
+            SELECT skip_correlated_t1.b
+            FROM skip_correlated_t2
+        )
+        )
+);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
+ERROR:  correlated subquery with skip-level correlations is not supported
+--------------------------------------------------------------------------------
+-- Query should not cause segfault on ORCA. Will fallback to planner as no plan
+-- is computed by ORCA. Github Issue #15693
+--------------------------------------------------------------------------------
+EXPLAIN (COSTS OFF)
+SELECT *
+FROM skip_correlated_t1
+WHERE EXISTS (
+    SELECT skip_correlated_t2.a
+    FROM skip_correlated_t2
+             LEFT JOIN skip_correlated_t3 ON skip_correlated_t3.a = ALL (
+        SELECT skip_correlated_t1.a
+        FROM skip_correlated_t2
+    )
+);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
+                                                 QUERY PLAN
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   ->  Seq Scan on skip_correlated_t1
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice4; segments: 3)
+           ->  Nested Loop Left Join
+                 ->  Result
+                       ->  Materialize
+                             ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                   ->  Seq Scan on skip_correlated_t2
+                 ->  Materialize
+                       ->  Nested Loop Left Anti Semi (Not-In) Join
+                             Join Filter: (skip_correlated_t3.a <> skip_correlated_t1.a)
+                             ->  Result
+                                   ->  Materialize
+                                         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                               ->  Seq Scan on skip_correlated_t3
+                             ->  Materialize
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                                     ->  Seq Scan on skip_correlated_t2 skip_correlated_t2_1
+ Optimizer: Postgres query optimizer
+(22 rows)
+
+DROP TABLE skip_correlated_t1;
+DROP TABLE skip_correlated_t2;
+DROP TABLE skip_correlated_t3;
+DROP TABLE skip_correlated_t4;
+reset optimizer_join_order;
+reset optimizer_trace_fallback;
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
