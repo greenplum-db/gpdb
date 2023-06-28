@@ -7,9 +7,9 @@
 
 -- modify fts gucs to speed up the test.
 1: alter system set gp_fts_probe_interval to 10;
-ALTER
+ALTER SYSTEM
 1: alter system set gp_fts_probe_retries to 1;
-ALTER
+ALTER SYSTEM
 1: select pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -17,7 +17,7 @@ ALTER
 (1 row)
 
 1: create table t_wait_lsn(a int);
-CREATE
+CREATE TABLE
 
 -- suspend segment 0 before performing 'COMMIT PREPARED'
 2: select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', dbid) from gp_segment_configuration where content=0 and role='p';
@@ -153,12 +153,12 @@ server closed the connection unexpectedly
  2     
 (1 row)
 4: drop table t_wait_lsn;
-DROP
+DROP TABLE
 
 4: alter system reset gp_fts_probe_interval;
-ALTER
+ALTER SYSTEM
 4: alter system reset gp_fts_probe_retries;
-ALTER
+ALTER SYSTEM
 4: select pg_reload_conf();
  pg_reload_conf 
 ----------------

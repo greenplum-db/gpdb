@@ -98,3 +98,14 @@ WHERE c.oid < 16384 AND
       relkind = 'r' AND
       attstorage != 'p'
 ORDER BY 1, 2;
+
+-- **************** others ****************
+
+-- For better performance, we hardcode some attribute values of gp_segment_id in
+-- GetContentIdsFromPlanForSingleRelation() of src/backend/cdb/cdbtargeteddispatch.c
+-- PR: https://github.com/greenplum-db/gpdb/pull/15659
+
+-- Normally, they shouldn't change in a major version. But just in case, add tests
+-- to notice the possible changes in future.
+select distinct atttypmod, atttypid from pg_attribute where attname='gp_segment_id';
+select oid, opfname from pg_opfamily where oid=1977;

@@ -1,10 +1,10 @@
 -- setup
 1: drop table if exists alter_block;
-DROP
+DROP TABLE
 1: create table alter_block(a int, b int) distributed by (a);
-CREATE
+CREATE TABLE
 1: insert into alter_block select 1, 1;
-INSERT 1
+INSERT 0 1
 -- Validate UPDATE blocks the Alter
 2: BEGIN;
 BEGIN
@@ -20,12 +20,12 @@ UPDATE 1
 2: COMMIT;
 COMMIT
 1<:  <... completed>
-ALTER
+ALTER TABLE
 -- Now validate ALTER blocks the UPDATE
 2: BEGIN;
 BEGIN
 2: ALTER TABLE alter_block SET DISTRIBUTED BY (a);
-ALTER
+ALTER TABLE
 1&: UPDATE alter_block SET b = b + 1;  <waiting ...>
 2: SELECT wait_event_type FROM pg_stat_activity where query like 'UPDATE alter_block SET %';
  wait_event_type 

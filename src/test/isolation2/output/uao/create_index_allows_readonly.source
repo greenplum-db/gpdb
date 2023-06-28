@@ -5,9 +5,9 @@ set default_table_access_method=@amname@;
 SET
 
 create table @amname@_create_index_with_select_tbl(a int, b int);
-CREATE
+CREATE TABLE
 insert into @amname@_create_index_with_select_tbl select a,a from generate_series(1,10) a;
-INSERT 10
+INSERT 0 10
 
 -- Verify readonly transaction is able to run concurrently with index creation.
 
@@ -23,7 +23,7 @@ BEGIN
 BEGIN
 -- expect no hang
 2: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);
-CREATE
+CREATE INDEX
 -- expect no hang
 3: select * from @amname@_create_index_with_select_tbl where a = 2;
  a | b 
@@ -32,16 +32,16 @@ CREATE
 (1 row)
 
 1: end;
-END
+COMMIT
 2: end;
-END
+COMMIT
 
 -- Verify behaviors of select with locking clause (i.e. select for update)
 -- when running concurrently with index creation, expect blocking with each other.
 -- This is only for AO/CO tables, for Heap tables, refer to lockmodes.sql.
 
 drop index @amname@_create_index_with_select_idx;
-DROP
+DROP INDEX
 
 1: begin;
 BEGIN
@@ -60,17 +60,17 @@ BEGIN
 COMMIT
 
 2<:  <... completed>
-CREATE
+CREATE INDEX
 2: commit;
 COMMIT
 
 drop index @amname@_create_index_with_select_idx;
-DROP
+DROP INDEX
 
 2: begin;
 BEGIN
 2: create index @amname@_create_index_with_select_idx on @amname@_create_index_with_select_tbl(a);
-CREATE
+CREATE INDEX
 
 1: begin;
 BEGIN
@@ -89,6 +89,6 @@ COMMIT
 COMMIT
 
 drop table @amname@_create_index_with_select_tbl;
-DROP
+DROP TABLE
 reset default_table_access_method;
 RESET

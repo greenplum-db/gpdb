@@ -1,14 +1,14 @@
 DROP TABLE IF EXISTS reindex_crtab_ao_btree;
-DROP
+DROP TABLE
 
 CREATE TABLE reindex_crtab_ao_btree (a INT) WITH (appendonly=true);
-CREATE
+CREATE TABLE
 insert into reindex_crtab_ao_btree select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into reindex_crtab_ao_btree select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 create index idx_reindex_crtab_ao_btree on reindex_crtab_ao_btree(a);
-CREATE
+CREATE INDEX
 select 1 as oid_same_on_all_segs from gp_dist_random('pg_class')   where relname = 'idx_reindex_crtab_ao_btree' group by oid having count(*) = (select count(*) from gp_segment_configuration where role='p' and content > -1);
  oid_same_on_all_segs 
 ----------------------
@@ -30,7 +30,7 @@ REINDEX
 1: COMMIT;
 COMMIT
 2<:  <... completed>
-CREATE
+CREATE INDEX
 2: COMMIT;
 COMMIT
 3: SELECT 1 AS oid_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_reindex_crtab_ao_btree' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);

@@ -2060,7 +2060,7 @@ AcquireNumberOfBlocks(Relation onerel)
 		onerel->rd_cdbpolicy && !GpPolicyIsEntry(onerel->rd_cdbpolicy))
 	{
 		/* Query the segments using pg_relation_size(<rel>). */
-		char		relsize_sql[100];
+		char		*relsize_sql;
 
 		if (RelationStorageIsAO(onerel))
 			/* 
@@ -2069,12 +2069,14 @@ AcquireNumberOfBlocks(Relation onerel)
 			 * not physical, to most accurately inform optimizer and
 			 * other consumers of these statistics.
 			 */
-			snprintf(relsize_sql, sizeof(relsize_sql),
-					"select pg_catalog.pg_relation_size(%u, /* include_ao_aux */ false, /* physical_ao_size */ false)", RelationGetRelid(onerel));
+			relsize_sql = psprintf("select pg_catalog.pg_relation_size(%u, /* include_ao_aux */ false, "
+								   "/* physical_ao_size */ false)",
+								   RelationGetRelid(onerel));
 		else
-			snprintf(relsize_sql, sizeof(relsize_sql),
-					"select pg_catalog.pg_relation_size(%u, 'main')", RelationGetRelid(onerel));
+			relsize_sql = psprintf("select pg_catalog.pg_relation_size(%u, 'main')", RelationGetRelid(onerel));
+
 		totalbytes = get_size_from_segDBs(relsize_sql);
+		pfree(relsize_sql);
 		if (GpPolicyIsReplicated(onerel->rd_cdbpolicy))
 		{
 			/*

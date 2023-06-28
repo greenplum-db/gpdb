@@ -7,9 +7,9 @@
 --
 
 create table starve (c int);
-CREATE
+CREATE TABLE
 create table starve_helper (name varchar, sessionid int);
-CREATE
+CREATE TABLE
 
 -- Function to access a table so that AccessShare lock is requested on
 -- the table.  Use a non-SQL language for this function so that parser
@@ -19,13 +19,13 @@ CREATE
 -- ENTRY_DB_SINGLETON reader that executes this function won't go
 -- through the waitMask conflict check in LockAcquire().
 CREATE OR REPLACE FUNCTION function_starve_volatile(x int) /*in func*/ RETURNS int AS $$ /*in func*/ declare /*in func*/ v int; /*in func*/ BEGIN /*in func*/ SELECT count(c) into v FROM starve; /*in func*/ RETURN $1 + 1; /*in func*/ END $$ /*in func*/ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
-CREATE
+CREATE FUNCTION
 
 -- Function to wait until a specific session is reported as waiting on
 -- a lock.  The session's mppsessionid is obtained from starve_helper
 -- table.  Timeout if no locks are awaited within 2 seconds.
 CREATE OR REPLACE FUNCTION wait_until_locks_awaited(sess_name varchar) /*in func*/ RETURNS bool AS $$ /*in func*/ declare /*in func*/ num_awaited int := 0; /*in func*/ iterations int := 0; /*in func*/ sessions_waiting_for_locks int[]; /*in func*/ begin /*in func*/ while num_awaited = 0 and iterations < 20 loop /*in func*/ select array_agg(mppsessionid) into sessions_waiting_for_locks from pg_locks where granted = false and gp_segment_id = -1; /*in func*/ select count(*) into num_awaited from starve_helper s where /*in func*/ s.name = sess_name and s.sessionid = ANY (sessions_waiting_for_locks); /*in func*/ perform pg_sleep(.1); /*in func*/ iterations := iterations + 1; /*in func*/ end loop; /*in func*/ return num_awaited > 0; /*in func*/ end $$ /*in func*/ LANGUAGE plpgsql STABLE;
-CREATE
+CREATE FUNCTION
 
 -- Hold access shared lock, so that session2 must wait.
 1: begin;
@@ -36,7 +36,7 @@ BEGIN
 (0 rows)
 
 2: insert into starve_helper select 'session2', setting::int from pg_settings where name = 'gp_session_id';
-INSERT 1
+INSERT 0 1
 -- Wait on access exclusive lock.
 2: begin;
 BEGIN
@@ -49,7 +49,7 @@ select wait_until_locks_awaited('session2');
 (1 row)
 
 3: insert into starve_helper select 'session3', setting::int from pg_settings where name = 'gp_session_id';
-INSERT 1
+INSERT 0 1
 -- ENTRY_DB_SINGLETON reader requests access share lock on table
 -- starve.  The lockmode conflicts with already existing waiter's
 -- lockmode (access exclusive).  And the writer is not holding any
@@ -79,7 +79,7 @@ COMMIT
 
 -- session2 is granted the lock on starve table first.
 2<:  <... completed>
-ALTER
+ALTER TABLE
 2: select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
  mode            
 -----------------
@@ -94,7 +94,7 @@ COMMIT
 ERROR:  column "c" does not exist  (entry db 127.0.0.1:15432 pid=94829)
 CONTEXT:  PL/pgSQL function "function_starve_volatile" line 5 at SQL statement
 3: commit;
-COMMIT
+ROLLBACK
 
 
 --
@@ -102,7 +102,7 @@ COMMIT
 -- on a lock in case of waitMask conflict.
 --
 truncate table starve_helper;
-TRUNCATE
+TRUNCATE TABLE
 
 -- Hold access shared lock, so that session2 must wait.
 1: begin;
@@ -113,7 +113,7 @@ BEGIN
 (0 rows)
 
 2: insert into starve_helper select 'session2', setting::int from pg_settings where name = 'gp_session_id';
-INSERT 1
+INSERT 0 1
 -- Wait on access exclusive lock.
 2: begin;
 BEGIN
@@ -126,7 +126,7 @@ select wait_until_locks_awaited('session2');
 (1 row)
 
 3: insert into starve_helper select 'session3', setting::int from pg_settings where name = 'gp_session_id';
-INSERT 1
+INSERT 0 1
 3: begin;
 BEGIN
 -- Wait on RowExclusiveLock on table starve because session2 is
@@ -143,7 +143,7 @@ select wait_until_locks_awaited('session3');
 COMMIT
 -- Session2 must go first.
 2<:  <... completed>
-ALTER
+ALTER TABLE
 -- Ensure that session3 is still waiting.
 2: select mode from pg_locks where granted=false and relation='starve'::regclass and gp_segment_id=-1;
  mode             
@@ -155,6 +155,6 @@ COMMIT
 
 -- Session3 gets the lock only after session2 commits.
 3<:  <... completed>
-INSERT 2
+INSERT 0 2
 3: commit;
 COMMIT

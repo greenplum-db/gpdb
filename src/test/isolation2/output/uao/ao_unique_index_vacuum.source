@@ -3,9 +3,9 @@
 
 -- Case 1: Basic case with a few deleted tuples---------------------------------
 CREATE TABLE unique_index_vacuum_@amname@(i int UNIQUE) USING @amname@ DISTRIBUTED REPLICATED;
-CREATE
+CREATE TABLE
 INSERT INTO unique_index_vacuum_@amname@ SELECT generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 DELETE FROM unique_index_vacuum_@amname@ WHERE i = 5;
 DELETE 1
 -- should succeed (and not raise conflicts for rows [1,4] while moving rows [1,4])
@@ -18,15 +18,15 @@ SELECT (gp_toolkit.__gp_aoblkdir('unique_index_vacuum_@amname@')).* FROM gp_dist
  (0,3)   | 2     | 0              | 0        | 1            | 0           | 4         
 (1 row)
 DROP TABLE unique_index_vacuum_@amname@;
-DROP
+DROP TABLE
 
 -- Case 2: Concurrent case showcasing that a placeholder block directory row is
 -- not necessary to be inserted for the rows transferred to a new segment by
 -- a VACUUM operation.
 CREATE TABLE unique_index_vacuum_@amname@(i int UNIQUE) USING @amname@ DISTRIBUTED REPLICATED;
-CREATE
+CREATE TABLE
 INSERT INTO unique_index_vacuum_@amname@ SELECT generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 DELETE FROM unique_index_vacuum_@amname@ WHERE i = 5;
 DELETE 1
 
@@ -72,14 +72,14 @@ SELECT gp_inject_fault('appendonly_insert', 'reset', dbid) FROM gp_segment_confi
 1<:  <... completed>
 VACUUM
 DROP TABLE unique_index_vacuum_@amname@;
-DROP
+DROP TABLE
 
 -- Case 3: Concurrent case with a conflicting insert where the vacuum is hung
 -- just after it has bulk deleted the old index entries.
 CREATE TABLE unique_index_vacuum_@amname@(i int UNIQUE) USING @amname@ DISTRIBUTED REPLICATED;
-CREATE
+CREATE TABLE
 INSERT INTO unique_index_vacuum_@amname@ SELECT generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 DELETE FROM unique_index_vacuum_@amname@ WHERE i = 5;
 DELETE 1
 
@@ -121,4 +121,4 @@ SELECT gp_inject_fault('vacuum_ao_after_index_delete', 'reset', dbid) FROM gp_se
 1<:  <... completed>
 VACUUM
 DROP TABLE unique_index_vacuum_@amname@;
-DROP
+DROP TABLE

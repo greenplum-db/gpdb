@@ -2,17 +2,17 @@
 -- that was acquired before vacuum.
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT, b INT) USING @amname@;
-CREATE
+CREATE TABLE
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
-INSERT 100
+INSERT 0 100
 
 DELETE FROM ao WHERE a <= 30;
 DELETE 30
 
 create or replace function myfunc() returns bigint as $$ begin  /* inside a function */ perform pg_sleep(10); /* inside a function */ return (select count(*) from ao);  /* inside a function */ end;  /* inside a function */ $$ stable language plpgsql;
-CREATE
+CREATE FUNCTION
 
 -- Launch function into the background.
 1&: select myfunc();  <waiting ...>

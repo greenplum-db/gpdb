@@ -143,7 +143,7 @@ LINE 1: INSERT INTO tolerance_test_table VALUES(42);
  Success:        
 (1 row)
 1<:  <... completed>
-CREATE
+CREATE TABLE
 
 1:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
  gp_inject_fault 
@@ -162,7 +162,7 @@ CREATE
  p    | m              
 (2 rows)
 1:INSERT INTO tolerance_test_table VALUES(42);
-INSERT 1
+INSERT 0 1
 
 -- Scenario 3: Commit-Prepare received on primary but not acknowledged to coordinator
 -- NOTICE: Don't use session 2 again because it's cached gang is invalid
@@ -194,7 +194,7 @@ INSERT 1
  t                         
 (1 row)
 1<:  <... completed>
-DROP
+DROP TABLE
 
 -- Use new connection session. This helps is to make sure coordinator is up and
 -- running, even if in worst case the above Drop command commit-prepared retries

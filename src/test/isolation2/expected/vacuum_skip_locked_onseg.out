@@ -5,13 +5,13 @@
 -- on coordinator).
 
 1: CREATE TABLE vacuum_tbl (c1 int) DISTRIBUTED BY (c1);
-CREATE
+CREATE TABLE
 
 -- Connect to seg #0 in utility mode, lock the table in share mode
 0U: BEGIN;
 BEGIN
 0U: LOCK vacuum_tbl IN SHARE MODE;
-LOCK
+LOCK TABLE
 
 -- Issue vacuum with SKIP_LOCKED option
 -- Note that some ANALYZE options are disabled here because the ANALYZE
@@ -32,7 +32,7 @@ COMMIT
 0U: BEGIN;
 BEGIN
 0U: LOCK vacuum_tbl IN ACCESS EXCLUSIVE MODE;
-LOCK
+LOCK TABLE
 
 -- Issue vacuum with SKIP_LOCKED option
 -- Note that some ANALYZE options are disabled here because the ANALYZE
@@ -50,4 +50,4 @@ VACUUM
 COMMIT
 
 1: DROP TABLE IF EXISTS vacuum_tbl;
-DROP
+DROP TABLE

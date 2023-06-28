@@ -3,10 +3,10 @@
 
 -- The age of the table is 1 after the following statement
 2: create table ao_@amname@_vacuum_cleanup2(a int, b int) using @amname@;
-CREATE
+CREATE TABLE
 -- The age of the table is 2 after the following statement
 2: insert into ao_@amname@_vacuum_cleanup2 select i, i from generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 -- The age of the table is 7 after the following 5 statements
 2: update ao_@amname@_vacuum_cleanup2 set b = b + 1;
 UPDATE 100
@@ -50,13 +50,13 @@ VACUUM
  1   | pg_aovisimap_<oid> 
 (2 rows)
 2: end;
-END
+COMMIT
 
 -- Check that drop phase is not skipped, when there are concurrent serializable transactions.
 1: create table ao_@amname@_vacuum_cleanup3(a int, b int) using @amname@;
-CREATE
+CREATE TABLE
 1: insert into ao_@amname@_vacuum_cleanup3 select i, i from generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 1: delete from ao_@amname@_vacuum_cleanup3;
 DELETE 100
 
@@ -136,14 +136,14 @@ COMMIT
 
 create or replace function show_aoseg(tabname text) returns table (segno int, tupcount bigint, modcount bigint, formatversion smallint, state smallint) as $$ declare tabrelid oid; /* in func */ tabsegrelid oid; /* in func */ tabsegrelname text; /* in func */ begin select tabname::regclass::oid into tabrelid; /* in func */ select segrelid from pg_appendonly where relid = tabrelid into tabsegrelid; /* in func */ select relname from pg_class where oid = tabsegrelid into tabsegrelname; /* in func */ 
 return query execute 'select segno,tupcount,modcount,formatversion,state from pg_aoseg.' || tabsegrelname; /* in func */ end; /* in func */ $$ language plpgsql;
-CREATE
+CREATE FUNCTION
 
 create table vacuum_concurrent_test_@amname@ (a int, b int, c int) using @amname@;
-CREATE
+CREATE TABLE
 insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(1, 11) b;
-INSERT 11
+INSERT 0 11
 create index i_b_vacuum_concurrent_reader_@amname@ on vacuum_concurrent_test_@amname@(b);
-CREATE
+CREATE INDEX
 update vacuum_concurrent_test_@amname@ set b = b + 1;
 UPDATE 11
 
@@ -195,7 +195,7 @@ VACUUM
  2 | 12 | 11 
 (11 rows)
 1: end;
-END
+COMMIT
 
 -- start another reader after VACUUM
 2: begin;
@@ -246,7 +246,7 @@ VACUUM
  2 | 12 | 11 
 (11 rows)
 2: end;
-END
+COMMIT
 
 1q: ... <quitting>
 2q: ... <quitting>
@@ -257,16 +257,16 @@ END
 -- the corresponding index entries should not be deleted.
 
 truncate table vacuum_concurrent_test_@amname@;
-TRUNCATE
+TRUNCATE TABLE
 insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(1, 5) b;
-INSERT 5
+INSERT 0 5
 delete from vacuum_concurrent_test_@amname@;
 DELETE 5
 
 1: begin;
 BEGIN
 1: insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(6, 10) b;
-INSERT 5
+INSERT 0 5
 
 2: vacuum vacuum_concurrent_test_@amname@;
 VACUUM
@@ -457,6 +457,6 @@ reset gp_select_invisible;
 RESET
 
 drop table vacuum_concurrent_test_@amname@;
-DROP
+DROP TABLE
 drop function show_aoseg;
-DROP
+DROP FUNCTION

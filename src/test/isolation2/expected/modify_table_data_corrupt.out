@@ -24,18 +24,18 @@ DROP
 -- and see if it is motioned to other segments.
 
 create table tab1(a int, b int) distributed by (b);
-CREATE
+CREATE TABLE
 create table tab2(a int, b int) distributed by (a);
-CREATE
+CREATE TABLE
 create table tab3 (a int, b int) distributed by (b);
-CREATE
+CREATE TABLE
 
 insert into tab1 values (1, 1);
-INSERT 1
+INSERT 0 1
 insert into tab2 values (1, 1);
-INSERT 1
+INSERT 0 1
 insert into tab3 values (1, 1);
-INSERT 1
+INSERT 0 1
 
 analyze tab1;
 ANALYZE
@@ -56,7 +56,7 @@ update pg_class set reltuples = 100000 where relname='tab3';
 UPDATE 1
 
 0U: insert into tab1 values (1, 1);
-INSERT 1
+INSERT 0 1
 
 select gp_segment_id, * from tab1;
  gp_segment_id | a | b 
@@ -90,7 +90,7 @@ BEGIN
 delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:735)  (seg1 127.0.1.1:7003 pid=89508) (nodeModifyTable.c:735)
 abort;
-ABORT
+ROLLBACK
 
 -- For planner, this will error out
 explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
@@ -117,7 +117,7 @@ BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 ERROR:  distribution key of the tuple (0, 1) doesn't belong to current segment (actually from seg0) (nodeModifyTable.c:1276)  (seg1 127.0.1.1:7003 pid=89508) (nodeModifyTable.c:1276)
 abort;
-ABORT
+ROLLBACK
 
 -- For orca, this will error out
 explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
@@ -144,7 +144,7 @@ BEGIN
 delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 DELETE 2
 abort;
-ABORT
+ROLLBACK
 
 -- For orca, this will error out
 explain (costs off) update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
@@ -171,7 +171,7 @@ BEGIN
 update tab1 set a = 999 from tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.a;
 UPDATE 2
 abort;
-ABORT
+ROLLBACK
 
 -- test splitupdate.
 -- For orca, the plan contains a redistribute motion, so that
@@ -193,11 +193,11 @@ BEGIN
 update tab1 set b = b + 1;
 UPDATE 2
 abort;
-ABORT
+ROLLBACK
 
 drop table tab1;
-DROP
+DROP TABLE
 drop table tab2;
-DROP
+DROP TABLE
 drop table tab3;
-DROP
+DROP TABLE

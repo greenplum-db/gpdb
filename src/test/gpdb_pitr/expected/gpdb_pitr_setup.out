@@ -1,26 +1,26 @@
 -- Create some tables and load some data
 -- We do 1 row for gpdb_one_phase_commit to bypass autostats later
 CREATE TABLE gpdb_two_phase_commit_before_acquire_share_lock(num int);
-CREATE
+CREATE TABLE
 CREATE TABLE gpdb_two_phase_commit_after_acquire_share_lock(num int);
-CREATE
+CREATE TABLE
 CREATE TABLE gpdb_one_phase_commit(num int);
-CREATE
+CREATE TABLE
 CREATE TABLE gpdb_two_phase_commit_after_restore_point(num int);
-CREATE
+CREATE TABLE
 INSERT INTO gpdb_two_phase_commit_before_acquire_share_lock SELECT generate_series(1, 10);
-INSERT 10
+INSERT 0 10
 INSERT INTO gpdb_two_phase_commit_after_acquire_share_lock SELECT generate_series(1, 10);
-INSERT 10
+INSERT 0 10
 INSERT INTO gpdb_one_phase_commit VALUES (1);
-INSERT 1
+INSERT 0 1
 
 -- Inject suspend faults that will be used later to test different
 -- distributed commit scenarios, and to also test the commit blocking
 -- requirement which should only block twophase commits during
 -- distributed commit broadcast when a restore point is being created.
 1: CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
+CREATE EXTENSION
 1: SELECT gp_inject_fault('dtm_broadcast_prepare', 'suspend', 1);
  gp_inject_fault 
 -----------------
@@ -50,7 +50,7 @@ DELETE 10
 4: BEGIN;
 BEGIN
 4: INSERT INTO gpdb_two_phase_commit_after_restore_point SELECT generate_series(1, 10);
-INSERT 10
+INSERT 0 10
 4&: SELECT gp_segment_id, count(*) FROM gp_create_restore_point('test_restore_point') GROUP BY gp_segment_id ORDER BY gp_segment_id;  <waiting ...>
 1: SELECT gp_wait_until_triggered_fault('gp_create_restore_point_acquired_lock', 1, 1);
  gp_wait_until_triggered_fault 
@@ -72,7 +72,7 @@ INSERT 10
 3&: COMMIT;  <waiting ...>
 -- One-phase commit query should not block.
 1: INSERT INTO gpdb_one_phase_commit VALUES (2);
-INSERT 1
+INSERT 0 1
 -- Read-only query should not block.
 1: SELECT * FROM gpdb_two_phase_commit_before_acquire_share_lock;
  num 
@@ -154,7 +154,7 @@ SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
 -- must do this in a plpgsql cursor because of a known limitation with
 -- CTAS on an EXECUTE ON COORDINATOR function.
 CREATE TEMP TABLE switch_walfile_names(content_id smallint, walfilename text);
-CREATE
+CREATE TABLE
 CREATE OR REPLACE FUNCTION populate_switch_walfile_names() RETURNS void AS $$ DECLARE curs CURSOR FOR SELECT * FROM gp_switch_wal(); /*in func*/ DECLARE rec record; /*in func*/ BEGIN /*in func*/ OPEN curs; /*in func*/ LOOP FETCH curs INTO rec; /*in func*/ EXIT WHEN NOT FOUND; /*in func*/ 
 INSERT INTO switch_walfile_names VALUES (rec.gp_segment_id, rec.pg_walfile_name); /*in func*/ END LOOP; /*in func*/ END $$ LANGUAGE plpgsql; /*in func*/ SELECT populate_switch_walfile_names();
  populate_switch_walfile_names 
@@ -166,7 +166,7 @@ INSERT INTO switch_walfile_names VALUES (rec.gp_segment_id, rec.pg_walfile_name)
 -- This function loops until the archival is complete. It times out after
 -- approximately 10mins.
 CREATE OR REPLACE FUNCTION check_archival() RETURNS BOOLEAN AS $$ DECLARE archived BOOLEAN; /*in func*/ DECLARE archived_count INTEGER; /*in func*/ BEGIN /*in func*/ FOR i in 1..3000 LOOP SELECT bool_and(seg_archived), count(*) FROM (SELECT last_archived_wal = l.walfilename AS seg_archived FROM switch_walfile_names l INNER JOIN gp_stat_archiver a ON l.content_id = a.gp_segment_id) s INTO archived, archived_count; /*in func*/ IF archived AND archived_count = 4 THEN RETURN archived; /*in func*/ END IF; /*in func*/ PERFORM pg_sleep(0.2); /*in func*/ END LOOP; /*in func*/ END $$ LANGUAGE plpgsql;
-CREATE
+CREATE FUNCTION
 
 SELECT check_archival();
  check_archival 

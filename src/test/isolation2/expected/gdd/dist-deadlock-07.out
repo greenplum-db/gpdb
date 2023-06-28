@@ -1,15 +1,15 @@
 DROP TABLE IF EXISTS t07a;
-DROP
+DROP TABLE
 DROP TABLE IF EXISTS t07b;
-DROP
+DROP TABLE
 CREATE TABLE t07a (c1 int, c2 int);
-CREATE
+CREATE TABLE
 CREATE TABLE t07b (c1 int, c2 int);
-CREATE
+CREATE TABLE
 INSERT INTO t07a (c1, c2) SELECT i, i FROM generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 INSERT INTO t07b (c1, c2) SELECT i, i FROM generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 
 -- gang creation order is important, reset any guc to force the creation
 10: RESET optimizer;
@@ -37,7 +37,7 @@ UPDATE 1
 UPDATE 1
 
 30: LOCK t07a;
-LOCK
+LOCK TABLE
 -- seg 0: con30 ==> con10, xid lock
 30&: UPDATE t07b SET c2 = 21 WHERE c1 = segid(0,1);  <waiting ...>
 

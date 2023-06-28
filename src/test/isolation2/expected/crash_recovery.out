@@ -1,5 +1,5 @@
 1:CREATE TABLE crash_test_table(c1 int);
-CREATE
+CREATE TABLE
 
 -- Verify that all primary segments are good.
 -- We don't print mode directly because mirrored/mirrorless cluster is different: mirrorless cluster

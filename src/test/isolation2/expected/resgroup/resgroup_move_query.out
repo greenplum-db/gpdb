@@ -21,9 +21,9 @@ CREATE
 -- end_ignore
 
 DROP ROLE IF EXISTS role_move_query;
-DROP
+DROP ROLE
 DROP ROLE IF EXISTS role_move_query_small;
-DROP
+DROP ROLE
 -- start_ignore
 DROP RESOURCE GROUP rg_move_query;
 ERROR:  resource group "rg_move_query" does not exist
@@ -32,16 +32,16 @@ ERROR:  resource group "rg_move_query_small" does not exist
 -- end_ignore
 
 CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_max_percent=20);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP rg_move_query_small WITH (concurrency=1, cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE ROLE role_move_query RESOURCE GROUP rg_move_query;
-CREATE
+CREATE ROLE
 CREATE ROLE role_move_query_small RESOURCE GROUP rg_move_query_small;
-CREATE
+CREATE ROLE
 
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
+CREATE EXTENSION
 
 
 
@@ -74,11 +74,11 @@ SELECT is_session_in_group(pid, 'default_group') FROM pg_stat_activity WHERE wai
  f                   
 (1 row)
 1: END;
-END
+COMMIT
 2<:  <... completed>
 BEGIN
 2: END;
-END
+COMMIT
 
 -- test3: the destination group will wake up 'pg_resgroup_move_query' when a new slot become available
 1: SET ROLE role_move_query;
@@ -140,7 +140,7 @@ BEGIN
 (1 row)
 2&: SELECT pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_class%' AND rsgname='rg_move_query_small';  <waiting ...>
 1: END;
-END
+COMMIT
 1: SELECT gp_wait_until_triggered_fault('resource_group_give_away_begin', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -185,7 +185,7 @@ BEGIN
 (1 row)
 2&: SELECT pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_class%' AND rsgname='rg_move_query_small';  <waiting ...>
 1: END;
-END
+COMMIT
 1q: ... <quitting>
 3: SELECT gp_wait_until_triggered_fault('resource_group_give_away_begin', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
  gp_wait_until_triggered_fault 
@@ -289,7 +289,7 @@ ERROR:  canceling statement due to user request
  1           
 (1 row)
 1: END;
-END
+COMMIT
 2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
  num_running 
 -------------
@@ -386,7 +386,7 @@ RESET
  f                   
 (1 row)
 1: END;
-END
+COMMIT
 3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
  num_running 
 -------------
@@ -445,7 +445,7 @@ ERROR:  cannot send signal to process
  t                   
 (1 row)
 1: END;
-END
+COMMIT
 3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE groupname='rg_move_query';
  num_running 
 -------------
@@ -496,7 +496,7 @@ RESET
  0           
 (1 row)
 1: END;
-END
+COMMIT
 
 -- Test10: check entrydb queries working
 -- Previously, we sent a signal to only one process - dispatcher or entrydb.
@@ -547,13 +547,13 @@ BEGIN
  t                   
 (1 row)
 1: END;
-END
+COMMIT
 
 DROP ROLE role_move_query;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_move_query;
-DROP
+DROP RESOURCE GROUP
 DROP ROLE role_move_query_small;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_move_query_small;
-DROP
+DROP RESOURCE GROUP

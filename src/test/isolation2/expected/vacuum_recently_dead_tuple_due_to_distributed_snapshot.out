@@ -2,10 +2,10 @@
 -- visible to a distributed snapshot, even if there is no corresponding
 -- local snapshot in a QE node yet.
 create table test_recently_dead_utility(a int);
-CREATE
+CREATE TABLE
 
 insert into test_recently_dead_utility select g from generate_series(1, 100) g;
-INSERT 100
+INSERT 0 100
 
 -- A function that:
 --
@@ -24,7 +24,7 @@ INSERT 100
 -- (All on one line because of limitations in the isolation2 test language.)
 
 create or replace function afunc() returns int4 as $$ declare c int; begin select count(*) into c from pg_Database; perform pg_sleep(10); select count(*) into c from test_recently_dead_utility; return c; end; $$ language plpgsql stable;
-CREATE
+CREATE FUNCTION
 
 -- In one session, launch afunc().
 1&: select afunc();  <waiting ...>

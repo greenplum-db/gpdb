@@ -37,7 +37,7 @@
 1: begin;
 BEGIN
 1: create table twopcbug(i int, j int);
-CREATE
+CREATE TABLE
 1&: commit;  <waiting ...>
 -- wait to make sure the commit is taking place and blocked at start_insertedDistributedCommitted
 2: select gp_wait_until_triggered_fault('start_insertedDistributedCommitted', 1, 1);
@@ -105,7 +105,7 @@ server closed the connection unexpectedly
 -- failure on coordinator. The solution is adding the expected length
 -- in SizeOfXLogRecordDataHeaderLong also, to fixup the missing condition.
 create table ckpt_xlog_len_tbl(a int, b int);
-CREATE
+CREATE TABLE
 
 -- Need to start at least 18 concurrent sessions to create a long header
 -- CHECKPOINT WAL record, which size is not less than 256.
@@ -121,115 +121,115 @@ CREATE
 10: begin;
 BEGIN
 10: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 10&: commit;  <waiting ...>
 
 11: begin;
 BEGIN
 11: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 11&: commit;  <waiting ...>
 
 12: begin;
 BEGIN
 12: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 12&: commit;  <waiting ...>
 
 13: begin;
 BEGIN
 13: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 13&: commit;  <waiting ...>
 
 14: begin;
 BEGIN
 14: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 14&: commit;  <waiting ...>
 
 15: begin;
 BEGIN
 15: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 15&: commit;  <waiting ...>
 
 16: begin;
 BEGIN
 16: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 16&: commit;  <waiting ...>
 
 17: begin;
 BEGIN
 17: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 17&: commit;  <waiting ...>
 
 18: begin;
 BEGIN
 18: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 18&: commit;  <waiting ...>
 
 19: begin;
 BEGIN
 19: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 19&: commit;  <waiting ...>
 
 20: begin;
 BEGIN
 20: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 20&: commit;  <waiting ...>
 
 21: begin;
 BEGIN
 21: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 21&: commit;  <waiting ...>
 
 22: begin;
 BEGIN
 22: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 22&: commit;  <waiting ...>
 
 23: begin;
 BEGIN
 23: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 23&: commit;  <waiting ...>
 
 24: begin;
 BEGIN
 24: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 24&: commit;  <waiting ...>
 
 25: begin;
 BEGIN
 25: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 25&: commit;  <waiting ...>
 
 26: begin;
 BEGIN
 26: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 26&: commit;  <waiting ...>
 
 27: begin;
 BEGIN
 27: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 27&: commit;  <waiting ...>
 
 28: begin;
 BEGIN
 28: insert into ckpt_xlog_len_tbl select i,i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 28&: commit;  <waiting ...>
 
 -- wait to make sure the commit is taking place and blocked at start_insertedDistributedCommitted
@@ -365,7 +365,7 @@ server closed the connection unexpectedly
 (1 row)
 
 3: drop table ckpt_xlog_len_tbl;
-DROP
+DROP TABLE
 
 -- start_ignore
 alter resource group admin_group set concurrency 10;

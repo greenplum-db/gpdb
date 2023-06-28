@@ -9,7 +9,7 @@
 
 -- Test AO table.
 CREATE TABLE ao_sparse (id int) with(appendonly = true) DISTRIBUTED BY (id);
-CREATE
+CREATE TABLE
 
 1: begin;
 BEGIN
@@ -17,9 +17,9 @@ BEGIN
 BEGIN
 
 1: INSERT INTO ao_sparse SELECT i%10000 FROM generate_series(1, 1000000) AS i;
-INSERT 1000000
+INSERT 0 1000000
 2: INSERT INTO ao_sparse SELECT i%10000 FROM generate_series(1, 1000000) AS i;
-INSERT 1000000
+INSERT 0 1000000
 
 1: commit;
 COMMIT
@@ -34,7 +34,7 @@ SELECT count(*) FROM ao_sparse WHERE id >= 97 and id <= 99 and gp_segment_id = 0
 (1 row)
 
 CREATE INDEX idx_ao_sparse_id ON ao_sparse USING bitmap (id);
-CREATE
+CREATE INDEX
 
 
 -- Should generate Bitmap Heap Scan on the bitmap index.
@@ -74,7 +74,7 @@ SET
 
 -- Test AOCS table.
 CREATE TABLE aocs_sparse (id int) with(appendonly = true, orientation = COLUMN) DISTRIBUTED BY (id);
-CREATE
+CREATE TABLE
 
 1: begin;
 BEGIN
@@ -82,9 +82,9 @@ BEGIN
 BEGIN
 
 1: INSERT INTO aocs_sparse SELECT i%10000 FROM generate_series(1, 1000000) AS i;
-INSERT 1000000
+INSERT 0 1000000
 2: INSERT INTO aocs_sparse SELECT i%10000 FROM generate_series(1, 1000000) AS i;
-INSERT 1000000
+INSERT 0 1000000
 
 1: commit;
 COMMIT

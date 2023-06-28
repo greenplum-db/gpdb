@@ -1,14 +1,14 @@
 -- @Description Tests retrieve session functionality restriction for security.
 --
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t1 select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 CREATE OR REPLACE FUNCTION myappend(anyarray, anyelement) RETURNS anyarray AS $$ SELECT $1 || $2 $$ LANGUAGE SQL;
-CREATE
+CREATE FUNCTION
 
 -- Test: Retrieve login without valid token.
 1: @pre_run 'export RETRIEVE_TOKEN="123" ; echo $RAW_STR' : SELECT 1;
@@ -25,7 +25,7 @@ CREATE
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY

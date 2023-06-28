@@ -8,7 +8,7 @@
 
 create or replace function wait_for_standby_replay (retries int) returns bool as $$ declare i int; /* in func */ standby_is_up bool; /* in func */ result bool; /* in func */ begin i := 0; /* in func */ -- Wait until the mirror/standby has replayed up to flush location loop SELECT flush_lsn = replay_lsn INTO result from pg_stat_replication; /* in func */ if not found then return false; /* in func */ end if; /* in func */ if result then return true; /* in func */ end if; /* in func */ 
 if i >= retries then return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ perform pg_stat_clear_snapshot(); /* in func */ i := i + 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
-CREATE
+CREATE FUNCTION
 
 select wait_for_standby_replay(1200);
  wait_for_standby_replay 
@@ -16,7 +16,7 @@ select wait_for_standby_replay(1200);
  t                       
 (1 row)
 create table test_dtx_standby_tbl(c1 int);
-CREATE
+CREATE TABLE
 
 -- We have just created a checkpoint.  The next automatic checkpoint
 -- will be triggered only after 5 minutes or after CheckPointSegments
@@ -58,7 +58,7 @@ CHECKPOINT
  Success:                 
 (1 row)
 2<:  <... completed>
-INSERT 10
+INSERT 0 10
 1: select gp_inject_fault_infinite('checkpoint_after_redo_calculated', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
  gp_inject_fault_infinite 
 --------------------------
@@ -76,7 +76,7 @@ CHECKPOINT
 
 -- this DTX might overflow gxacts array
 2: insert into test_dtx_standby_tbl select generate_series(11,20);
-INSERT 10
+INSERT 0 10
 
 -- Wait standby to replay all XLOG
 select wait_for_standby_replay(1200);
@@ -91,6 +91,6 @@ select gp_inject_fault_infinite('standby_gxacts_overflow', 'reset', dbid) from g
  Success:                 
 (1 row)
 drop table test_dtx_standby_tbl;
-DROP
+DROP TABLE
 drop function wait_for_standby_replay(int);
-DROP
+DROP FUNCTION

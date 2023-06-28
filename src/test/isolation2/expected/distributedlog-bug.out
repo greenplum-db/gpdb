@@ -6,7 +6,7 @@
 -- in-progress.
 --
 CREATE TABLE distributed_snapshot_test ( id INTEGER, f FLOAT);
-CREATE
+CREATE TABLE
 
 1: BEGIN;
 BEGIN
@@ -27,7 +27,7 @@ SET
 
 -- Drop table in a transaction
 1: drop table distributed_snapshot_test;
-DROP
+DROP TABLE
 
 3: vacuum pg_class;
 VACUUM
