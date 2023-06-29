@@ -287,14 +287,19 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 	Assert(size == 1);
 
 	/*
-	 * parse the http response line (code and message) from
+	 * Parse the http response line (code and message) from
 	 * the http header that we get. Basically it's the whole
 	 * first line (e.g: "HTTP/1.0 400 time out"). We do this
 	 * in order to capture any error message that comes from
 	 * gpfdist, and later use it to report the error string in
 	 * check_response() to the database user.
+	 * As we can get multiple header blocks for multiple HTTP
+	 * messages, we need to parse all headers and get the last
+	 * one. First header may contain only successfull status and
+	 * no info about the error.
 	 */
-	if (url->http_response == 0)
+
+	if (len > 5 && *ptr == 'H' && 0 == strncmp("HTTP/", ptr, 5))
 	{
 		int 	n = nmemb;
 		char* 	p;
@@ -309,6 +314,9 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 
 			if (n > 0 && (p[n-1] == '\r' || p[n-1] == '\n'))
 				p[--n] = 0;
+
+			if (url->http_response)
+				pfree(url->http_response);
 
 			url->http_response = p;
 		}

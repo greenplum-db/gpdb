@@ -484,7 +484,9 @@ COPY wet_region FROM STDIN DELIMITER '|';
 3|EUROPE|ly final courts cajole furiously final excuse
 \.
 INSERT INTO wet_region VALUES(4,'MIDDLE EAST','uickly special');
-
+-- Check error correctness, if trying to insert too long row
+INSERT INTO wet_pos1(a)
+SELECT string_agg(md5(random()::text), '') from generate_series(1,1100);
 --
 -- Now use RET to see if data was exported correctly.
 -- NOTE: since we don't bother cleaning up the exported file, it may grow bigger
