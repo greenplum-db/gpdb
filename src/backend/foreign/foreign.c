@@ -989,6 +989,9 @@ BuildForeignScan(Oid relid, Index scanrelid, List *qual, List *targetlist, Query
 	root->is_from_orca = true;
 	root->parse = query;
 
+	/* cdb_build_distribution_keys need to makeNode in root->planner_cxt. */
+	root->planner_cxt = CurrentMemoryContext;
+
 	int	targetlist_length = scanrelid + 1;
 	/* Arrays are accessed using RT indexes (1..N) */
 	root->simple_rel_array_size = targetlist_length;
