@@ -3,10 +3,10 @@
 -- 
 -- Test for enhancements to table function support
 -- ===================
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
 CREATE SCHEMA table_function;
 SET search_path TO table_function, public;
-
-CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 CREATE TABLE example(a int, b text) DISTRIBUTED by (a);
 COPY example FROM stdin;
