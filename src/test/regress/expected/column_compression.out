@@ -2008,12 +2008,12 @@ INSERT INTO ccddl values ( generate_series(1,25000), 23, 'JUMBO CASE', 1001.00, 
 INSERT INTO ccddl values ( generate_series(1,25000), 29, 'JUMBO CASE', 1001.00, 'ronic dependencies d' );
 INSERT INTO ccddl values ( generate_series(1,25000), 37, 'JUMBO CASE', 1001.00, 'ronic dependencies d' );
 ALTER TABLE ccddl DROP COLUMN P_PARTKEY;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 ALTER TABLE ccddl ADD COLUMN   P_PARTKEY  INTEGER  DEFAULT 100;
 -----------------------------------------------------------------------
 -- MPP-14477 cdbfast regression: Bitmap Index scan on AO tables with compression fails with SIGSEGV

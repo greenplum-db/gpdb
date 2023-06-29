@@ -1352,12 +1352,12 @@ DROP INDEX idx6;
 --
 CREATE INDEX idx1 on pt_lt_tab(col4);
 ALTER TABLE pt_lt_tab DROP column col1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 SELECT * FROM pt_lt_tab WHERE col4 is False ORDER BY col2,col3 LIMIT 5;
  col2 | col3 | col4 
 ------+------+------

@@ -1,7 +1,8 @@
 --
 -- Test cases for COPY (INSERT/UPDATE/DELETE) TO
 --
-create table copydml_test (id serial, t text);
+create sequence copydml_test_id_seq cache 1;
+create table copydml_test (id int default nextval('copydml_test_id_seq'), t text);
 insert into copydml_test (t) values ('a');
 insert into copydml_test (t) values ('b');
 insert into copydml_test (t) values ('c');
@@ -106,3 +107,4 @@ copy (delete from copydml_test where t = 'g' returning id) to stdout;
 
 drop table copydml_test;
 drop function qqq_trig();
+drop sequence copydml_test_id_seq;

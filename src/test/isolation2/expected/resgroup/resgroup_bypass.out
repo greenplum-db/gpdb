@@ -11,14 +11,14 @@ ERROR:  resource group "rg_bypass" does not exist
 
 -- create a resource group with concurrency = 1.
 CREATE RESOURCE GROUP rg_bypass WITH(cpu_max_percent=20, concurrency=1);
-CREATE
+CREATE RESOURCE GROUP
 CREATE ROLE role_bypass RESOURCE GROUP rg_bypass;
-CREATE
+CREATE ROLE
 
 SET ROLE role_bypass;
 SET
 CREATE TABLE t_bypass(a int) distributed by (a);
-CREATE
+CREATE TABLE
 
 -- gp_resource_group_bypass can only be set by super user
 -- below set statement will error out
@@ -170,7 +170,7 @@ SELECT gp_inject_fault('func_init_plan_end', 'reset', 1);
 (1 row)
 
 1<:  <... completed>
-INSERT 1
+INSERT 0 1
 1q: ... <quitting>
 2q: ... <quitting>
 
@@ -227,7 +227,7 @@ SELECT gp_inject_fault('func_init_plan_end', 'reset', 1);
 -- min_cost will not work for above.
 -- alter resource group's min_cost
 ALTER RESOURCE GROUP rg_bypass SET min_cost 500;
-ALTER
+ALTER RESOURCE GROUP
 ANALYZE t_bypass;
 ANALYZE
 -- Session1: for quries with cost under the min_cost limit, they will be unassigned and bypassed.
@@ -285,9 +285,9 @@ SELECT gp_inject_fault('func_init_plan_end', 'reset', 1);
 -- cleanup
 -- start_ignore
 DROP TABLE t_bypass;
-DROP
+DROP TABLE
 DROP ROLE role_bypass;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_bypass;
-DROP
+DROP RESOURCE GROUP
 -- end_ignore

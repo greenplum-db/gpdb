@@ -421,9 +421,9 @@ RemoveFastSequenceEntry(Oid relid, Oid objid)
 	/*
 	 * Currently lastrownums are only used by ao_row tables. Once ao_column
 	 * tables need them (i.e. when the same ADD COLUMN optimization for 
-	 * ao_column), we can remove this check.
+	 * ao_column), we can change this check to RelationStorageIsAO.
 	 */
-	if (RelationIsAoRows(rel))
+	if (RelationStorageIsAoRows(rel))
 		ClearAttributeEncodingLastrownums(relid);
 	table_close(rel, NoLock);
 }

@@ -326,7 +326,7 @@ GetAllAOCSFileSegInfo(Relation prel,
 	AOCSFileSegInfo **results;
 	Oid         segrelid;
 
-	Assert(RelationIsAoCols(prel));
+	Assert(RelationStorageIsAoCols(prel));
 
 	GetAppendOnlyEntryAuxOids(prel,
 							  &segrelid,
@@ -516,7 +516,7 @@ GetAOCSSSegFilesTotalsWithProj(Relation parentrel,
 	FileSegTotals *totals;
 
 	Assert(RelationIsValid(parentrel));
-	Assert(RelationIsAoCols(parentrel));
+	Assert(RelationStorageIsAoCols(parentrel));
 
 	/*
 	 * The projection list must be non-empty. If there are no columns projected,
@@ -583,7 +583,7 @@ MarkAOCSFileSegInfoAwaitingDrop(Relation prel, int segno)
 			 "changing state of segfile %d of table '%s' to AWAITING_DROP",
 			 segno, RelationGetRelationName(prel));
 
-	Assert(RelationIsAoCols(prel));
+	Assert(RelationStorageIsAoCols(prel));
 
 	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 	GetAppendOnlyEntryAuxOids(prel,
@@ -666,7 +666,7 @@ ClearAOCSFileSegInfo(Relation prel, int segno)
 	Oid			segrelid;
 	Snapshot	appendOnlyMetaDataSnapshot;
 
-	Assert(RelationIsAoCols(prel));
+	Assert(RelationStorageIsAoCols(prel));
 
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Clear seg file info: segno %d table '%s'",
@@ -1257,11 +1257,10 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		context->aocsRelOid = aocsRelOid;
 
 		aocsRel = heap_open(aocsRelOid, AccessShareLock);
-		if (!RelationIsAoCols(aocsRel) ||
-				aocsRel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+		if (!RelationStorageIsAoCols(aocsRel))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("'%s' is not an append-only columnar relation",
+					 errmsg("Relation '%s' does not have append-optimized column-oriented storage",
 							RelationGetRelationName(aocsRel))));
 
 		/* Remember the number of columns. */
@@ -1476,12 +1475,12 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 		context->aocsRelOid = aocsRelOid;
 
 		aocsRel = heap_open(aocsRelOid, AccessShareLock);
-		if (!RelationIsAoCols(aocsRel))
+		if (!RelationStorageIsAoCols(aocsRel))
 		{
 			heap_close(aocsRel, AccessShareLock);
 			ereport(ERROR,
 			        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				        errmsg("'%s' is not an append-only columnar relation",
+					 errmsg("Relation '%s' does not have append-optimized column-oriented storage",
 				               RelationGetRelationName(aocsRel))));
 		}
 

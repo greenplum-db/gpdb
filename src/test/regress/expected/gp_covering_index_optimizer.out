@@ -5,7 +5,7 @@
 --          number of output rows from each query.
 --          Does the plan use index-scan, index-only-scan, or seq-scan?
 --
--- N.B. "VACUUM ANALZE" is to update relallvisible used to determine cost of an
+-- N.B. "VACUUM ANALYZE" is to update relallvisible used to determine cost of an
 --      index-only scan.
 -- start_matchsubs
 -- m/Memory: \d+kB/
@@ -36,7 +36,6 @@ SELECT b FROM test_basic_cover_index WHERE a>42 AND b>42;
 -- Test CTE with cover indexes
 --
 -- Check that CTE over scan with cover index and cover index over cte both work
--- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS
@@ -44,16 +43,16 @@ WITH cte AS
     SELECT b FROM test_basic_cover_index WHERE a < 42
 )
 SELECT b FROM cte WHERE b%2=0;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Index Scan using i_test_basic_index on test_basic_cover_index (actual rows=16 loops=1)
+   ->  Index Only Scan using i_test_basic_index on test_basic_cover_index (actual rows=16 loops=1)
          Index Cond: (a < 42)
          Filter: ((b % 2) = 0)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(6 rows)
 
--- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS
@@ -61,13 +60,14 @@ WITH cte AS
     SELECT a, b FROM test_basic_cover_index
 )
 SELECT b FROM cte WHERE a<42;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Index Scan using i_test_basic_index on test_basic_cover_index (actual rows=16 loops=1)
+   ->  Index Only Scan using i_test_basic_index on test_basic_cover_index (actual rows=16 loops=1)
          Index Cond: (a < 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(4 rows)
+(5 rows)
 
 -- Views over cover indexes
 CREATE VIEW view_test_cover_indexes_with_filter AS
@@ -295,12 +295,13 @@ SELECT a, b, c FROM test_ao WHERE c>42;
 CREATE TABLE test_select_best_cover(a int, b int, c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
-CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
-CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
-CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
-CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(a) INCLUDE (b);
 CREATE INDEX i_test_select_best_cover_a_bc ON test_select_best_cover(a) INCLUDE (b, c);
+CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
+CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
+CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
+CREATE INDEX i_test_select_best_cover_b_ac ON test_select_best_cover(b) INCLUDE (a, c);
+CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(b) INCLUDE (a);
+CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
 INSERT INTO test_select_best_cover SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_select_best_cover;
 -- KEYS: [a]    INCLUDED: []
@@ -604,6 +605,89 @@ SELECT b FROM test_combined_index_scan WHERE a < 42 OR b < 42;
    ->  Seq Scan on test_combined_index_scan (actual rows=16 loops=1)
          Filter: ((a < 42) OR (b < 42))
          Rows Removed by Filter: 22
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- Test UNIQUE constraint with INCLUDE clause
+--
+CREATE TABLE test_unique_index_include(a int, b int, c int) DISTRIBUTED BY (a);
+CREATE UNIQUE INDEX i_test_unique_index_include_a ON test_unique_index_include(a) INCLUDE (b);
+INSERT INTO test_unique_index_include SELECT i, i+i, i*i FROM generate_series(1, 10)i;
+INSERT INTO test_unique_index_include SELECT max(a)+1, max(b), max(c) FROM test_unique_index_include;
+ALTER TABLE test_unique_index_include add UNIQUE (b) INCLUDE (c);
+ERROR:  UNIQUE constraint must contain all columns in the table's distribution key
+DETAIL:  Distribution key column "a" is not included in the constraint.
+ALTER TABLE test_unique_index_include add UNIQUE (a) INCLUDE (c);
+VACUUM ANALYZE test_unique_index_include;
+-- KEYS: [a]    INCLUDED: [b]
+-- index-only scan using i_test_unique_index_include_a
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT b FROM test_unique_index_include WHERE a > 5;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=6 loops=1)
+   ->  Index Only Scan using i_test_unique_index_include_a on test_unique_index_include (actual rows=4 loops=1)
+         Index Cond: (a > 5)
+         Heap Fetches: 0
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- KEYS: [a]    INCLUDED: [c]
+-- index-only scan using test_unique_index_include_a_c_key
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT c FROM test_unique_index_include WHERE a > 5;
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=6 loops=1)
+   ->  Index Only Scan using test_unique_index_include_a_c_key on test_unique_index_include (actual rows=4 loops=1)
+         Index Cond: (a > 5)
+         Heap Fetches: 0
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- KEYS: [a]
+-- index scan using i_test_unique_index_include_a
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT b, c FROM test_unique_index_include WHERE a > 5;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=6 loops=1)
+   ->  Index Scan using i_test_unique_index_include_a on test_unique_index_include (actual rows=4 loops=1)
+         Index Cond: (a > 5)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+-- Test drop behavior
+--
+CREATE TABLE test_cover_index_drop(a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX i_test_cover_index_drop ON test_cover_index_drop(a) INCLUDE (b);
+INSERT INTO test_cover_index_drop SELECT i, i+i, i*i FROM generate_series(1, 10)i;
+VACUUM ANALYZE test_cover_index_drop;
+-- before dropping column b, index-only scan
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a FROM test_cover_index_drop WHERE a > 5;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
+   ->  Index Only Scan using i_test_cover_index_drop on test_cover_index_drop (actual rows=3 loops=1)
+         Index Cond: (a > 5)
+         Heap Fetches: 0
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+ALTER TABLE test_cover_index_drop DROP column b;
+-- after dropping column b, seqscan
+-- Index has been dropped as a result of dropping the column.
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a FROM test_cover_index_drop WHERE a > 5;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
+   ->  Seq Scan on test_cover_index_drop (actual rows=3 loops=1)
+         Filter: (a > 5)
+         Rows Removed by Filter: 1
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 

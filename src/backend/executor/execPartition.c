@@ -585,9 +585,18 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate,
 	partrel = table_open(dispatch->partdesc->oids[partidx], RowExclusiveLock);
 
 	leaf_part_rri = makeNode(ResultRelInfo);
-	InitResultRelInfo(leaf_part_rri,
+
+    /*
+     * Init leaf partition ResultRelInfo
+     * Here ResultRelInfo->ri_RangeTableIndex is a dummy element, because we
+     * will rebuild ri_RelationDesc later. So we assign 1 for it instead of 0
+     * which cause failure in EPQ process, and fwd scenarios should still keep 0
+     * since it will handle 0 in their own fwd process.
+     * related issue https://github.com/greenplum-db/gpdb/issues/14935
+     */ 
+    InitResultRelInfo(leaf_part_rri,
 					  partrel,
-					  0,
+					  partrel->rd_rel->relkind != RELKIND_FOREIGN_TABLE ? 1 : 0,
 					  rootResultRelInfo,
 					  estate->es_instrument);
 
@@ -1019,6 +1028,12 @@ ExecInitRoutingInfo(ModifyTableState *mtstate,
 
 	partRelInfo->ri_PartitionInfo = partrouteinfo;
 	partRelInfo->ri_CopyMultiInsertBuffer = NULL;
+
+	/*
+	 * If junkFilter is NULL then we try to inherit it from rootRelInfo.
+	 */
+	if (partRelInfo->ri_junkFilter == NULL)
+		partRelInfo->ri_junkFilter = rootRelInfo->ri_junkFilter;
 
 	/*
 	 * Keep track of it in the PartitionTupleRouting->partitions array.

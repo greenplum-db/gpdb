@@ -5,7 +5,7 @@ top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
 # Greenplum specific changes to the targetlist:
-# tsearch2 and postgres_fdw are currently disabled due to test failures.
+# tsearch2 is currently disabled due to test failures.
 # cube and the related earthdistance are disabled since GPDB define CUBE
 # as a keyword. lo is disabled since large objects aren't supported.
 # adminpack is disabled since the functionality has been imported into
@@ -23,6 +23,7 @@ SUBDIRS = \
 		dict_int	\
 		dict_xsyn	\
 		file_fdw	\
+		postgres_fdw	\
 		fuzzystrmatch	\
 		hstore		\
 		intagg		\

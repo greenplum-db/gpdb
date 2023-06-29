@@ -5,7 +5,7 @@
 --          number of output rows from each query.
 --          Does the plan use index-scan, index-only-scan, or seq-scan?
 --
--- N.B. "VACUUM ANALZE" is to update relallvisible used to determine cost of an
+-- N.B. "VACUUM ANALYZE" is to update relallvisible used to determine cost of an
 --      index-only scan.
 
 -- start_matchsubs
@@ -31,7 +31,6 @@ SELECT b FROM test_basic_cover_index WHERE a>42 AND b>42;
 -- Test CTE with cover indexes
 --
 -- Check that CTE over scan with cover index and cover index over cte both work
--- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS
@@ -40,7 +39,6 @@ WITH cte AS
 )
 SELECT b FROM cte WHERE b%2=0;
 
--- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 WITH cte AS
@@ -165,12 +163,13 @@ SELECT a, b, c FROM test_ao WHERE c>42;
 -- Check that the best cover index is chosen for a plan when multiple cover
 -- indexes are available.
 CREATE TABLE test_select_best_cover(a int, b int, c int);
-CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
-CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
-CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
-CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
-CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(a) INCLUDE (b);
 CREATE INDEX i_test_select_best_cover_a_bc ON test_select_best_cover(a) INCLUDE (b, c);
+CREATE INDEX i_test_select_best_cover_a_b ON test_select_best_cover(a) INCLUDE (b);
+CREATE INDEX i_test_select_best_cover_a ON test_select_best_cover(a);
+CREATE INDEX i_test_select_best_cover_ab ON test_select_best_cover(a, b);
+CREATE INDEX i_test_select_best_cover_b_ac ON test_select_best_cover(b) INCLUDE (a, c);
+CREATE INDEX i_test_select_best_cover_b_a ON test_select_best_cover(b) INCLUDE (a);
+CREATE INDEX i_test_select_best_cover_b ON test_select_best_cover(b);
 INSERT INTO test_select_best_cover SELECT i, i+i, i*i FROM generate_series(1, 100)i;
 VACUUM ANALYZE test_select_best_cover;
 
@@ -356,6 +355,48 @@ VACUUM ANALYZE test_combined_index_scan;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_combined_index_scan WHERE a < 42 OR b < 42;
 
+-- Test UNIQUE constraint with INCLUDE clause
+--
+CREATE TABLE test_unique_index_include(a int, b int, c int) DISTRIBUTED BY (a);
+CREATE UNIQUE INDEX i_test_unique_index_include_a ON test_unique_index_include(a) INCLUDE (b);
+INSERT INTO test_unique_index_include SELECT i, i+i, i*i FROM generate_series(1, 10)i;
+INSERT INTO test_unique_index_include SELECT max(a)+1, max(b), max(c) FROM test_unique_index_include;
+ALTER TABLE test_unique_index_include add UNIQUE (b) INCLUDE (c);
+ALTER TABLE test_unique_index_include add UNIQUE (a) INCLUDE (c);
+VACUUM ANALYZE test_unique_index_include;
+
+-- KEYS: [a]    INCLUDED: [b]
+-- index-only scan using i_test_unique_index_include_a
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT b FROM test_unique_index_include WHERE a > 5;
+
+-- KEYS: [a]    INCLUDED: [c]
+-- index-only scan using test_unique_index_include_a_c_key
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT c FROM test_unique_index_include WHERE a > 5;
+
+-- KEYS: [a]
+-- index scan using i_test_unique_index_include_a
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT b, c FROM test_unique_index_include WHERE a > 5;
+
+-- Test drop behavior
+--
+CREATE TABLE test_cover_index_drop(a int, b int, c int);
+CREATE INDEX i_test_cover_index_drop ON test_cover_index_drop(a) INCLUDE (b);
+INSERT INTO test_cover_index_drop SELECT i, i+i, i*i FROM generate_series(1, 10)i;
+VACUUM ANALYZE test_cover_index_drop;
+
+-- before dropping column b, index-only scan
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a FROM test_cover_index_drop WHERE a > 5;
+
+ALTER TABLE test_cover_index_drop DROP column b;
+
+-- after dropping column b, seqscan
+-- Index has been dropped as a result of dropping the column.
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a FROM test_cover_index_drop WHERE a > 5;
 
 reset optimizer_trace_fallback;
 reset enable_seqscan;

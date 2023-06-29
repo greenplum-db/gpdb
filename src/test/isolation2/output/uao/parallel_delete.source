@@ -2,11 +2,11 @@
 -- until the transaction is committed.
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT) USING @amname@ DISTRIBUTED BY (a);
-CREATE
+CREATE TABLE
 insert into ao select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 -- The actual test begins
 1: BEGIN;

@@ -250,16 +250,31 @@ $$ LANGUAGE plpython3u;
     result = plpy.execute(sql)
     groupid = result[0]['groupid']
 
-    process = subprocess.Popen("ps -ef | grep postgres | grep con%d | grep -v grep | awk '{print $2}'" % session_id, shell=True, stdout=subprocess.PIPE)
-    session_pids = process.communicate()[0].decode().split('\n')[:-1]
+    sql = "select hostname from gp_segment_configuration group by hostname"
+    result = plpy.execute(sql)
+    hosts = [_['hostname'] for _ in result]
 
-    cgroups_pids = []
-    path = "/sys/fs/cgroup/gpdb/%d/cgroup.procs" % groupid
-    fd = open(path)
-    for line in fd.readlines():
-        cgroups_pids.append(line.strip('\n'))
+    def get_result(host):
+        import paramiko
 
-    return set(session_pids).issubset(set(cgroups_pids))
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=host)
+
+        stdin, stdout, stderr = ssh.exec_command("ps -ef | grep postgres | grep con{} | grep -v grep | awk '{{print $2}}'".format(session_id))
+        session_pids = [i.strip() for i in stdout.readlines()]
+
+        path = "/sys/fs/cgroup/gpdb/{}/cgroup.procs".format(groupid)
+        stdin, stdout, stderr = ssh.exec_command("cat {}".format(path))
+        cgroups_pids = [i.strip() for i in stdout.readlines()]
+
+        return set(session_pids).issubset(set(cgroups_pids))
+
+    for host in hosts:
+        if not get_result(host):
+            return False
+    return True
+
 $$ LANGUAGE plpython3u;
 
 0: CREATE OR REPLACE FUNCTION check_cgroup_io_max(groupname text, tablespace_name text, parameters text) RETURNS BOOL AS $$

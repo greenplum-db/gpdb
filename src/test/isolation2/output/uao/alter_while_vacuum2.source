@@ -1,19 +1,19 @@
 -- @Description Ensures that an alter table while a vacuum operation is ok
 --
 CREATE TABLE alter_while_vacuum2_@amname@ (a INT, b INT) USING @amname@;
-CREATE
+CREATE TABLE
 INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT 100000
+INSERT 0 100000
 INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT 100000
+INSERT 0 100000
 INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT 100000
+INSERT 0 100000
 INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT 100000
+INSERT 0 100000
 INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT 100000
+INSERT 0 100000
 INSERT INTO alter_while_vacuum2_@amname@ SELECT i as a, i as b FROM generate_series(1, 100000) AS i;
-INSERT 100000
+INSERT 0 100000
 
 DELETE FROM alter_while_vacuum2_@amname@ WHERE a < 12000;
 DELETE 71994
@@ -26,7 +26,7 @@ DELETE 71994
 SET
 2>: VACUUM alter_while_vacuum2_@amname@;  <waiting ...>
 1: Alter table alter_while_vacuum2_@amname@ set with ( reorganize='true') distributed randomly;
-ALTER
+ALTER TABLE
 2<:  <... completed>
 VACUUM
 1: SELECT COUNT(*) FROM alter_while_vacuum2_@amname@ WHERE a < 12010;

@@ -435,3 +435,24 @@ RESET log_statement;
 SET statement_mem = '4000MB';
 RESET statement_mem;
 
+-- enabling gp_force_random_redistribution makes sure random redistribution happens
+-- only relevant to postgres optimizer
+set optimizer = false;
+
+create table t1_dist_rand(a int) distributed randomly;
+create table t2_dist_rand(a int) distributed randomly;
+create table t_dist_hash(a int) distributed by (a);
+
+-- with the GUC turned off, redistribution won't happen (no redistribution motion)
+set gp_force_random_redistribution = false;
+explain insert into t2_dist_rand select * from t1_dist_rand;
+explain insert into t2_dist_rand select * from t_dist_hash;
+
+-- with the GUC turned on, redistribution would happen
+set gp_force_random_redistribution = true;
+explain insert into t2_dist_rand select * from t1_dist_rand;
+explain insert into t2_dist_rand select * from t_dist_hash;
+
+reset gp_force_random_redistribution;
+reset optimizer;
+

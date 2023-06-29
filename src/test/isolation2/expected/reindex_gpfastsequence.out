@@ -1,11 +1,11 @@
 -- Test concurrent reindex gp_fastsequence and insert on an AO table
 
 create table test_fastseqence ( a int, b char(20)) with (appendonly = true, orientation=column);
-CREATE
+CREATE TABLE
 create index test_fastseqence_idx on test_fastseqence(b);
-CREATE
+CREATE INDEX
 insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
-INSERT 100
+INSERT 0 100
 
 select gp_inject_fault_infinite('reindex_relation', 'suspend', 2);
  gp_inject_fault_infinite 
@@ -32,7 +32,7 @@ select gp_inject_fault('reindex_relation', 'reset', 2);
 1<:  <... completed>
 REINDEX
 2<:  <... completed>
-INSERT 100
+INSERT 0 100
 
 -- Validate that gp_fastsequence works as expected after reindex
 SELECT 1 AS oid_same_on_all_segs from gp_dist_random('pg_class') WHERE relname = 'gp_fastsequence_objid_objmod_index' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
@@ -53,7 +53,7 @@ select last_sequence from gp_dist_random('gp_fastsequence') where objid = (selec
 (6 rows)
 
 insert into test_fastseqence select i , 'aa'||i from generate_series(1,100) i;
-INSERT 100
+INSERT 0 100
 
 select last_sequence from gp_dist_random('gp_fastsequence') where objid = (select segrelid from pg_appendonly where relid = (select oid from pg_class where relname = 'test_fastseqence'));
  last_sequence 

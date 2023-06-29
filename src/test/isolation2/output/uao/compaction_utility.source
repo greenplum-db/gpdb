@@ -1,13 +1,13 @@
 -- @Description Tests the basic behavior of (lazy) vacuum when called from utility mode
 --
 DROP TABLE IF EXISTS foo;
-DROP
+DROP TABLE
 CREATE TABLE foo (a INT, b INT, c CHAR(128)) USING @amname@;
-CREATE
+CREATE TABLE
 CREATE INDEX foo_index ON foo(b);
-CREATE
+CREATE INDEX
 INSERT INTO foo SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 100) AS i;
-INSERT 100
+INSERT 0 100
 
 DELETE FROM foo WHERE a < 20;
 DELETE 19

@@ -6,26 +6,26 @@ SET
 
 -- Setup the append-optimized table to be clustered
 CREATE TABLE cluster_progress_ao(i int, j int);
-CREATE
+CREATE TABLE
 -- Insert all tuples to seg1
 INSERT INTO cluster_progress_ao SELECT 0, i FROM generate_series(1, 100000) i;
-INSERT 100000
+INSERT 0 100000
 INSERT INTO cluster_progress_ao SELECT 2, i FROM generate_series(1, 100000) i;
-INSERT 100000
+INSERT 0 100000
 INSERT INTO cluster_progress_ao SELECT 5, i FROM generate_series(1, 100000) i;
-INSERT 100000
+INSERT 0 100000
 -- Create two btree indexes
 CREATE INDEX idx_cluster_progress_ao_i on cluster_progress_ao(i);
-CREATE
+CREATE INDEX
 CREATE INDEX idx_cluster_progress_ao_j on cluster_progress_ao(j);
-CREATE
+CREATE INDEX
 -- Delete some tuples
 DELETE FROM cluster_progress_ao where j % 5 = 0;
 DELETE 60000
 
 -- Create a helper table that records storage-dependent static numbers.
 CREATE TABLE helper_table AS SELECT gp_segment_id AS segid, (pg_relation_size(oid) + (current_setting('block_size')::int - 1)) / current_setting('block_size')::int AS heap_blks_total_before, CASE current_setting('default_table_access_method') WHEN 'ao_row' THEN 1 ELSE 2 END AS n_segfiles_per_tuple FROM gp_dist_random('pg_class') WHERE relname = 'cluster_progress_ao';
-CREATE 3
+SELECT 3
 
 -- Perform cluster and observe the progress
 
@@ -231,6 +231,6 @@ SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configurat
 reset default_table_access_method;
 RESET
 DROP TABLE cluster_progress_ao;
-DROP
+DROP TABLE
 DROP TABLE helper_table;
-DROP
+DROP TABLE

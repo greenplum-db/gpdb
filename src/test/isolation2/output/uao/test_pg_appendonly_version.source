@@ -2,7 +2,7 @@
 -- as it requires pg_appendonly.version >= AORelationVersion_GP7.
 
 create table @amname@_version_tbl (a int) using @amname@;
-CREATE
+CREATE TABLE
 
 -- unique index on AO is supported starting from version 2 (AORelationVersion_GP7)
 select version from pg_appendonly where relid = '@amname@_version_tbl'::regclass;
@@ -11,11 +11,11 @@ select version from pg_appendonly where relid = '@amname@_version_tbl'::regclass
  2       
 (1 row)
 create unique index on @amname@_version_tbl(a);
-CREATE
+CREATE INDEX
 insert into @amname@_version_tbl select generate_series(1, 10);
-INSERT 10
+INSERT 0 10
 create unique index on @amname@_version_tbl(a);
-CREATE
+CREATE INDEX
 set enable_seqscan = off;
 SET
 select * from @amname@_version_tbl where a = 2;
@@ -43,14 +43,14 @@ HINT:  ALTER TABLE <table-name> SET WITH (REORGANIZE = true) before creating the
 
 -- alter table with reorganize to verify pg_appendonly being rewritten
 alter table @amname@_version_tbl set with (reorganize = true);
-ALTER
+ALTER TABLE
 select version from pg_appendonly where relid = '@amname@_version_tbl'::regclass;
  version 
 ---------
  2       
 (1 row)
 create unique index on @amname@_version_tbl(a);
-CREATE
+CREATE INDEX
 select * from @amname@_version_tbl where a = 3;
  a 
 ---
@@ -58,6 +58,6 @@ select * from @amname@_version_tbl where a = 3;
 (1 row)
 
 drop table @amname@_version_tbl;
-DROP
+DROP TABLE
 reset allow_system_table_mods;
 RESET

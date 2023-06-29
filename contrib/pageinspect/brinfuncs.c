@@ -232,8 +232,8 @@ brin_page_items(PG_FUNCTION_ARGS)
 	dtup = NULL;
 	for (;;)
 	{
-		Datum		values[7];
-		bool		nulls[7];
+		Datum		values[8];
+		bool		nulls[8] = {0};
 
 		/*
 		 * This loop is called once for every attribute of every tuple in the
@@ -272,6 +272,7 @@ brin_page_items(PG_FUNCTION_ARGS)
 			nulls[4] = true;
 			nulls[5] = true;
 			nulls[6] = true;
+			nulls[7] = true;
 		}
 		else
 		{
@@ -283,6 +284,7 @@ brin_page_items(PG_FUNCTION_ARGS)
 			values[3] = BoolGetDatum(dtup->bt_columns[att].bv_allnulls);
 			values[4] = BoolGetDatum(dtup->bt_columns[att].bv_hasnulls);
 			values[5] = BoolGetDatum(dtup->bt_placeholder);
+			values[6] = BoolGetDatum(dtup->bt_empty_range);
 			if (!dtup->bt_columns[att].bv_allnulls)
 			{
 				BrinValues *bvalues = &dtup->bt_columns[att];
@@ -308,12 +310,12 @@ brin_page_items(PG_FUNCTION_ARGS)
 				}
 				appendStringInfoChar(&s, '}');
 
-				values[6] = CStringGetTextDatum(s.data);
+				values[7] = CStringGetTextDatum(s.data);
 				pfree(s.data);
 			}
 			else
 			{
-				nulls[6] = true;
+				nulls[7] = true;
 			}
 		}
 

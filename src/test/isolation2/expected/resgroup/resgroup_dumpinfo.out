@@ -1,7 +1,7 @@
 DROP ROLE IF EXISTS role_dumpinfo_test;
-DROP
+DROP ROLE
 DROP ROLE IF EXISTS role_permission;
-DROP
+DROP ROLE
 -- start_ignore
 DROP RESOURCE GROUP rg_dumpinfo_test;
 ERROR:  resource group "rg_dumpinfo_test" does not exist
@@ -20,12 +20,12 @@ r = plpy.execute("select value from pg_resgroup_get_status_kv('dump');") json_te
 plpy.execute("""CREATE TEMPORARY TABLE t_pg_resgroup_get_status_kv AS SELECT * FROM pg_resgroup_get_status_kv('dump');""") r = plpy.execute("SELECT value FROM t_pg_resgroup_get_status_kv;") json_text = r[0]['value'] json_obj = json.loads(json_text) 
 return validate(json_obj, n) 
 $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
 CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_max_percent=20);
-CREATE
+CREATE RESOURCE GROUP
 CREATE ROLE role_dumpinfo_test RESOURCE GROUP rg_dumpinfo_test;
-CREATE
+CREATE ROLE
 
 2:SET ROLE role_dumpinfo_test;
 SET
@@ -46,19 +46,19 @@ SELECT dump_test_check();
 (1 row)
 
 2:END;
-END
+COMMIT
 3:END;
-END
+COMMIT
 4<:  <... completed>
 BEGIN
 4:END;
-END
+COMMIT
 2q: ... <quitting>
 3q: ... <quitting>
 4q: ... <quitting>
 
 CREATE ROLE role_permission;
-CREATE
+CREATE ROLE
 SET ROLE role_permission;
 SET
 select value from pg_resgroup_get_status_kv('dump');
@@ -81,10 +81,10 @@ SELECT count(*) FROM pg_resgroup_get_status_kv(NULL);
 (1 row)
 
 DROP ROLE role_dumpinfo_test;
-DROP
+DROP ROLE
 DROP ROLE role_permission;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_dumpinfo_test;
-DROP
+DROP RESOURCE GROUP
 DROP LANGUAGE plpython3u CASCADE;
-DROP
+DROP LANGUAGE

@@ -107,8 +107,6 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_extension](../system_catalogs/pg_extension.html)  
 
--   [pg\_exttable](../system_catalogs/pg_exttable.html)  
-
 -   [pg\_foreign\_data\_wrapper](../system_catalogs/pg_foreign_data_wrapper.html)  
 
 -   [pg\_foreign\_server](../system_catalogs/pg_foreign_server.html)  

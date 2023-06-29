@@ -6,14 +6,14 @@
 -- entries that should be involved.
 
 CREATE EXTENSION pageinspect;
-CREATE
+CREATE EXTENSION
 
 --------------------------------------------------------------------------------
 ----                            ao_row tables
 --------------------------------------------------------------------------------
 
 CREATE TABLE ao_partial_scan1(i int, j int) USING ao_row;
-CREATE
+CREATE TABLE
 
 --------------------------------------------------------------------------------
 -- Scenario 1: Starting block number of scans map to block directory entries,
@@ -26,9 +26,9 @@ BEGIN
 2: BEGIN;
 BEGIN
 1: INSERT INTO ao_partial_scan1 SELECT 1,j FROM generate_series(1, 300000) j;
-INSERT 300000
+INSERT 0 300000
 2: INSERT INTO ao_partial_scan1 SELECT 20,-j FROM generate_series(1, 300000) j;
-INSERT 300000
+INSERT 0 300000
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -41,7 +41,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON ao_partial_scan1 USING brin(j) WITH (pages_per_range = 3);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                     
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -66,39 +66,35 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan1_j_idx', 2), 'ao_partial_scan1_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value                
-------------+----------+--------+----------+----------+-------------+----------------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 98303}         
- 2          | 33554435 | 1      | f        | f        | f           | {98304 .. 196607}    
- 3          | 33554438 | 1      | f        | f        | f           | {196608 .. 294911}   
- 4          | 33554441 | 1      | f        | f        | f           | {294912 .. 300000}   
- 5          | 67108864 | 1      | f        | f        | f           | {-98303 .. -1}       
- 6          | 67108867 | 1      | f        | f        | f           | {-196607 .. -98304}  
- 7          | 67108870 | 1      | f        | f        | f           | {-294911 .. -196608} 
- 8          | 67108873 | 1      | f        | f        | f           | {-300000 .. -294912} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value                
+------------+----------+--------+----------+----------+-------------+-------+----------------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 98303}         
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {98304 .. 196607}    
+ 3          | 33554438 | 1      | f        | f        | f           | f     | {196608 .. 294911}   
+ 4          | 33554441 | 1      | f        | f        | f           | f     | {294912 .. 300000}   
+ 5          | 67108864 | 1      | f        | f        | f           | f     | {-98303 .. -1}       
+ 6          | 67108867 | 1      | f        | f        | f           | f     | {-196607 .. -98304}  
+ 7          | 67108870 | 1      | f        | f        | f           | f     | {-294911 .. -196608} 
+ 8          | 67108873 | 1      | f        | f        | f           | f     | {-300000 .. -294912} 
 (8 rows)
 
 -- Now desummarize a few ranges.
 1U: SELECT brin_desummarize_range('ao_partial_scan1_j_idx', 33554432);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 1U: SELECT brin_desummarize_range('ao_partial_scan1_j_idx', 33554438);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 1U: SELECT brin_desummarize_range('ao_partial_scan1_j_idx', 33554441);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 1U: SELECT brin_desummarize_range('ao_partial_scan1_j_idx', 67108867);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Now summarize these desummarized ranges piecemeal and check that we scan only
 -- a subset of the blocks each time.
@@ -189,17 +185,17 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan1_j_idx', 2), 'ao_partial_scan1_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value                
-------------+----------+--------+----------+----------+-------------+----------------------
- 1          |          |        |          |          |             |                      
- 2          | 33554435 | 1      | f        | f        | f           | {98304 .. 196607}    
- 3          |          |        |          |          |             |                      
- 4          |          |        |          |          |             |                      
- 5          | 67108864 | 1      | f        | f        | f           | {-98303 .. -1}       
- 6          |          |        |          |          |             |                      
- 7          | 67108870 | 1      | f        | f        | f           | {-294911 .. -196608} 
- 8          | 67108873 | 1      | f        | f        | f           | {-300000 .. -294912} 
- 9          | 33554432 | 1      | f        | f        | f           | {1 .. 98303}         
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value                
+------------+----------+--------+----------+----------+-------------+-------+----------------------
+ 1          |          |        |          |          |             |       |                      
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {98304 .. 196607}    
+ 3          |          |        |          |          |             |       |                      
+ 4          |          |        |          |          |             |       |                      
+ 5          | 67108864 | 1      | f        | f        | f           | f     | {-98303 .. -1}       
+ 6          |          |        |          |          |             |       |                      
+ 7          | 67108870 | 1      | f        | f        | f           | f     | {-294911 .. -196608} 
+ 8          | 67108873 | 1      | f        | f        | f           | f     | {-300000 .. -294912} 
+ 9          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 98303}         
 (9 rows)
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -226,18 +222,18 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan1_j_idx', 2), 'ao_partial_scan1_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value                
-------------+----------+--------+----------+----------+-------------+----------------------
- 1          |          |        |          |          |             |                      
- 2          | 33554435 | 1      | f        | f        | f           | {98304 .. 196607}    
- 3          |          |        |          |          |             |                      
- 4          |          |        |          |          |             |                      
- 5          | 67108864 | 1      | f        | f        | f           | {-98303 .. -1}       
- 6          |          |        |          |          |             |                      
- 7          | 67108870 | 1      | f        | f        | f           | {-294911 .. -196608} 
- 8          | 67108873 | 1      | f        | f        | f           | {-300000 .. -294912} 
- 9          | 33554432 | 1      | f        | f        | f           | {1 .. 98303}         
- 10         | 33554438 | 1      | f        | f        | f           | {196608 .. 294911}   
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value                
+------------+----------+--------+----------+----------+-------------+-------+----------------------
+ 1          |          |        |          |          |             |       |                      
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {98304 .. 196607}    
+ 3          |          |        |          |          |             |       |                      
+ 4          |          |        |          |          |             |       |                      
+ 5          | 67108864 | 1      | f        | f        | f           | f     | {-98303 .. -1}       
+ 6          |          |        |          |          |             |       |                      
+ 7          | 67108870 | 1      | f        | f        | f           | f     | {-294911 .. -196608} 
+ 8          | 67108873 | 1      | f        | f        | f           | f     | {-300000 .. -294912} 
+ 9          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 98303}         
+ 10         | 33554438 | 1      | f        | f        | f           | f     | {196608 .. 294911}   
 (10 rows)
 
 -- Range scan beginning at 33554441 maps to the 2nd block directory row's
@@ -277,19 +273,19 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan1_j_idx', 2), 'ao_partial_scan1_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value                
-------------+----------+--------+----------+----------+-------------+----------------------
- 1          |          |        |          |          |             |                      
- 2          | 33554435 | 1      | f        | f        | f           | {98304 .. 196607}    
- 3          |          |        |          |          |             |                      
- 4          |          |        |          |          |             |                      
- 5          | 67108864 | 1      | f        | f        | f           | {-98303 .. -1}       
- 6          |          |        |          |          |             |                      
- 7          | 67108870 | 1      | f        | f        | f           | {-294911 .. -196608} 
- 8          | 67108873 | 1      | f        | f        | f           | {-300000 .. -294912} 
- 9          | 33554432 | 1      | f        | f        | f           | {1 .. 98303}         
- 10         | 33554438 | 1      | f        | f        | f           | {196608 .. 294911}   
- 11         | 33554441 | 1      | f        | f        | f           | {294912 .. 300000}   
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value                
+------------+----------+--------+----------+----------+-------------+-------+----------------------
+ 1          |          |        |          |          |             |       |                      
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {98304 .. 196607}    
+ 3          |          |        |          |          |             |       |                      
+ 4          |          |        |          |          |             |       |                      
+ 5          | 67108864 | 1      | f        | f        | f           | f     | {-98303 .. -1}       
+ 6          |          |        |          |          |             |       |                      
+ 7          | 67108870 | 1      | f        | f        | f           | f     | {-294911 .. -196608} 
+ 8          | 67108873 | 1      | f        | f        | f           | f     | {-300000 .. -294912} 
+ 9          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 98303}         
+ 10         | 33554438 | 1      | f        | f        | f           | f     | {196608 .. 294911}   
+ 11         | 33554441 | 1      | f        | f        | f           | f     | {294912 .. 300000}   
 (11 rows)
 
 -- A similar 55 blocks can be expected from scanning the first range in seg2.
@@ -317,20 +313,20 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan1_j_idx', 2), 'ao_partial_scan1_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value                
-------------+----------+--------+----------+----------+-------------+----------------------
- 1          |          |        |          |          |             |                      
- 2          | 33554435 | 1      | f        | f        | f           | {98304 .. 196607}    
- 3          |          |        |          |          |             |                      
- 4          |          |        |          |          |             |                      
- 5          | 67108864 | 1      | f        | f        | f           | {-98303 .. -1}       
- 6          |          |        |          |          |             |                      
- 7          | 67108870 | 1      | f        | f        | f           | {-294911 .. -196608} 
- 8          | 67108873 | 1      | f        | f        | f           | {-300000 .. -294912} 
- 9          | 33554432 | 1      | f        | f        | f           | {1 .. 98303}         
- 10         | 33554438 | 1      | f        | f        | f           | {196608 .. 294911}   
- 11         | 33554441 | 1      | f        | f        | f           | {294912 .. 300000}   
- 12         | 67108867 | 1      | f        | f        | f           | {-196607 .. -98304}  
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value                
+------------+----------+--------+----------+----------+-------------+-------+----------------------
+ 1          |          |        |          |          |             |       |                      
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {98304 .. 196607}    
+ 3          |          |        |          |          |             |       |                      
+ 4          |          |        |          |          |             |       |                      
+ 5          | 67108864 | 1      | f        | f        | f           | f     | {-98303 .. -1}       
+ 6          |          |        |          |          |             |       |                      
+ 7          | 67108870 | 1      | f        | f        | f           | f     | {-294911 .. -196608} 
+ 8          | 67108873 | 1      | f        | f        | f           | f     | {-300000 .. -294912} 
+ 9          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 98303}         
+ 10         | 33554438 | 1      | f        | f        | f           | f     | {196608 .. 294911}   
+ 11         | 33554441 | 1      | f        | f        | f           | f     | {294912 .. 300000}   
+ 12         | 67108867 | 1      | f        | f        | f           | f     | {-196607 .. -98304}  
 (12 rows)
 
 --------------------------------------------------------------------------------
@@ -338,18 +334,18 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- minipage (after the last entry).
 --------------------------------------------------------------------------------
 CREATE TABLE ao_partial_scan2(i int, j int) USING ao_row;
-CREATE
+CREATE TABLE
 -- Fill 1 logical heap block with committed rows.
 INSERT INTO ao_partial_scan2 SELECT 1, j FROM generate_series(1, 32767) j;
-INSERT 32767
+INSERT 0 32767
 -- Now add some aborted rows at the end of the segfile, resulting in a hole at
 -- the end of the minipage.
 BEGIN;
 BEGIN
 INSERT INTO ao_partial_scan2 SELECT 20, j FROM generate_series(1, 32768) j;
-INSERT 32768
+INSERT 0 32768
 ABORT;
-ABORT
+ROLLBACK
 
 -- Doing an index build will result in scanning the committed rows only.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -358,7 +354,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON ao_partial_scan2 USING brin(i) WITH (pages_per_range = 1);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -399,17 +395,16 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan2_i_idx', 2), 'ao_partial_scan2_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (1 row)
 
 -- Now desummarize the first range of committed rows.
 1U: SELECT brin_desummarize_range('ao_partial_scan2_i_idx', 33554432);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Summarizing the first range now should only scan the committed rows. (same
 -- as the index build). In other words, we will scan an equal number of
@@ -438,9 +433,9 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan2_i_idx', 2), 'ao_partial_scan2_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
 (1 row)
 
 -- The start of 33554433 falls into a hole at the end of the segfile. In this
@@ -470,10 +465,10 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan2_i_idx', 2), 'ao_partial_scan2_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value    
-------------+----------+--------+----------+----------+-------------+----------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 33554433 | 1      | t        | f        | f           |          
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+----------+--------+----------+----------+-------------+-------+----------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 33554433 | 1      | t        | f        | f           | t     |          
 (2 rows)
 
 --------------------------------------------------------------------------------
@@ -481,17 +476,17 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- segfile (and before the first entry of the first minipage).
 --------------------------------------------------------------------------------
 CREATE TABLE ao_partial_scan3(i int, j int) USING ao_row;
-CREATE
+CREATE TABLE
 -- Create a hole with 1 logical heap block worth of aborted rows.
 BEGIN;
 BEGIN
 INSERT INTO ao_partial_scan3 SELECT 1, j FROM generate_series(1, 32767) j;
-INSERT 32767
+INSERT 0 32767
 ABORT;
-ABORT
+ROLLBACK
 -- Fill the next 3 logical heap blocks with committed rows.
 INSERT INTO ao_partial_scan3 SELECT 20, j FROM generate_series(1, 32768 * 3) j;
-INSERT 98304
+INSERT 0 98304
 
 -- Doing an index build will result in scanning the committed rows only.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -500,7 +495,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON ao_partial_scan3 USING brin(i) WITH (pages_per_range = 3);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -578,10 +573,10 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan3_i_idx', 2), 'ao_partial_scan3_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {20 .. 20} 
- 2          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (2 rows)
 
 -- Now desummarize the range with 1 block of aborted rows and 2 blocks of
@@ -589,8 +584,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 1U: SELECT brin_desummarize_range('ao_partial_scan3_i_idx', 33554432);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Summarizing this range should scan blocks corresponding to the 2 final logical
 -- heap blocks in the range only. This means that we will restrict our scan to
@@ -662,11 +656,11 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan3_i_idx', 2), 'ao_partial_scan3_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          |          |        |          |          |             |            
- 2          | 33554435 | 1      | f        | f        | f           | {20 .. 20} 
- 3          | 33554432 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          |          |        |          |          |             |       |            
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 3          | 33554432 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (3 rows)
 
 --------------------------------------------------------------------------------
@@ -675,14 +669,14 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 --------------------------------------------------------------------------------
 
 CREATE TABLE ao_partial_scan4(i int, j int) USING ao_row;
-CREATE
+CREATE TABLE
 
 -- Insert one logical heap block worth of committed rows.
 INSERT INTO ao_partial_scan4 SELECT 1, j FROM generate_series(1, 32767) j;
-INSERT 32767
+INSERT 0 32767
 -- Insert one more row for the next logical heap block.
 INSERT INTO ao_partial_scan4 SELECT 20, j FROM generate_series(1, 1) j;
-INSERT 1
+INSERT 0 1
 
 -- Doing an index build will result in scanning the whole relation.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -691,7 +685,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON ao_partial_scan4 USING brin(i) WITH (pages_per_range = 1);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -734,18 +728,17 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan4_i_idx', 2), 'ao_partial_scan4_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (2 rows)
 
 -- Now desummarize a range.
 1U: SELECT brin_desummarize_range('ao_partial_scan4_i_idx', 33554433);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Summarizing 33554433 will map to a hole between block directory entries, so
 -- we will start our scan from the entry preceding the hole. So, we will scan
@@ -774,10 +767,10 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('ao_partial_scan4_i_idx', 2), 'ao_partial_scan4_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (2 rows)
 
 --------------------------------------------------------------------------------
@@ -789,7 +782,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- read being counted)
 
 CREATE TABLE aoco_partial_scan1(i int, j int2, k int) USING ao_column;
-CREATE
+CREATE TABLE
 
 --------------------------------------------------------------------------------
 -- Scenario 1: Starting block number of scans map to block directory entries,
@@ -802,9 +795,9 @@ BEGIN
 2: BEGIN;
 BEGIN
 1: INSERT INTO aoco_partial_scan1 SELECT 1,100,k FROM generate_series(1, 1320000) k;
-INSERT 1320000
+INSERT 0 1320000
 2: INSERT INTO aoco_partial_scan1 SELECT 20,200,k FROM generate_series(1, 1320000) k;
-INSERT 1320000
+INSERT 0 1320000
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -817,7 +810,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON aoco_partial_scan1 USING brin(i, j) WITH (pages_per_range = 3);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                     
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -843,87 +836,83 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}     
- 1          | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
- 2          | 33554435 | 1      | f        | f        | f           | {1 .. 1}     
- 2          | 33554435 | 2      | f        | f        | f           | {100 .. 100} 
- 3          | 33554438 | 1      | f        | f        | f           | {1 .. 1}     
- 3          | 33554438 | 2      | f        | f        | f           | {100 .. 100} 
- 4          | 33554441 | 1      | f        | f        | f           | {1 .. 1}     
- 4          | 33554441 | 2      | f        | f        | f           | {100 .. 100} 
- 5          | 33554444 | 1      | f        | f        | f           | {1 .. 1}     
- 5          | 33554444 | 2      | f        | f        | f           | {100 .. 100} 
- 6          | 33554447 | 1      | f        | f        | f           | {1 .. 1}     
- 6          | 33554447 | 2      | f        | f        | f           | {100 .. 100} 
- 7          | 33554450 | 1      | f        | f        | f           | {1 .. 1}     
- 7          | 33554450 | 2      | f        | f        | f           | {100 .. 100} 
- 8          | 33554453 | 1      | f        | f        | f           | {1 .. 1}     
- 8          | 33554453 | 2      | f        | f        | f           | {100 .. 100} 
- 9          | 33554456 | 1      | f        | f        | f           | {1 .. 1}     
- 9          | 33554456 | 2      | f        | f        | f           | {100 .. 100} 
- 10         | 33554459 | 1      | f        | f        | f           | {1 .. 1}     
- 10         | 33554459 | 2      | f        | f        | f           | {100 .. 100} 
- 11         | 33554462 | 1      | f        | f        | f           | {1 .. 1}     
- 11         | 33554462 | 2      | f        | f        | f           | {100 .. 100} 
- 12         | 33554465 | 1      | f        | f        | f           | {1 .. 1}     
- 12         | 33554465 | 2      | f        | f        | f           | {100 .. 100} 
- 13         | 33554468 | 1      | f        | f        | f           | {1 .. 1}     
- 13         | 33554468 | 2      | f        | f        | f           | {100 .. 100} 
- 14         | 33554471 | 1      | f        | f        | f           | {1 .. 1}     
- 14         | 33554471 | 2      | f        | f        | f           | {100 .. 100} 
- 15         | 67108864 | 1      | f        | f        | f           | {20 .. 20}   
- 15         | 67108864 | 2      | f        | f        | f           | {200 .. 200} 
- 16         | 67108867 | 1      | f        | f        | f           | {20 .. 20}   
- 16         | 67108867 | 2      | f        | f        | f           | {200 .. 200} 
- 17         | 67108870 | 1      | f        | f        | f           | {20 .. 20}   
- 17         | 67108870 | 2      | f        | f        | f           | {200 .. 200} 
- 18         | 67108873 | 1      | f        | f        | f           | {20 .. 20}   
- 18         | 67108873 | 2      | f        | f        | f           | {200 .. 200} 
- 19         | 67108876 | 1      | f        | f        | f           | {20 .. 20}   
- 19         | 67108876 | 2      | f        | f        | f           | {200 .. 200} 
- 20         | 67108879 | 1      | f        | f        | f           | {20 .. 20}   
- 20         | 67108879 | 2      | f        | f        | f           | {200 .. 200} 
- 21         | 67108882 | 1      | f        | f        | f           | {20 .. 20}   
- 21         | 67108882 | 2      | f        | f        | f           | {200 .. 200} 
- 22         | 67108885 | 1      | f        | f        | f           | {20 .. 20}   
- 22         | 67108885 | 2      | f        | f        | f           | {200 .. 200} 
- 23         | 67108888 | 1      | f        | f        | f           | {20 .. 20}   
- 23         | 67108888 | 2      | f        | f        | f           | {200 .. 200} 
- 24         | 67108891 | 1      | f        | f        | f           | {20 .. 20}   
- 24         | 67108891 | 2      | f        | f        | f           | {200 .. 200} 
- 25         | 67108894 | 1      | f        | f        | f           | {20 .. 20}   
- 25         | 67108894 | 2      | f        | f        | f           | {200 .. 200} 
- 26         | 67108897 | 1      | f        | f        | f           | {20 .. 20}   
- 26         | 67108897 | 2      | f        | f        | f           | {200 .. 200} 
- 27         | 67108900 | 1      | f        | f        | f           | {20 .. 20}   
- 27         | 67108900 | 2      | f        | f        | f           | {200 .. 200} 
- 28         | 67108903 | 1      | f        | f        | f           | {20 .. 20}   
- 28         | 67108903 | 2      | f        | f        | f           | {200 .. 200} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 1          | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 2          | 33554435 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 3          | 33554438 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 3          | 33554438 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 4          | 33554441 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 4          | 33554441 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 5          | 33554444 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 5          | 33554444 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 6          | 33554447 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 6          | 33554447 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 7          | 33554450 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 7          | 33554450 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 8          | 33554453 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 8          | 33554453 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 9          | 33554456 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 9          | 33554456 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 10         | 33554459 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 10         | 33554459 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 11         | 33554462 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 11         | 33554462 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 12         | 33554465 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 12         | 33554465 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 13         | 33554468 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 13         | 33554468 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 14         | 33554471 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 14         | 33554471 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 15         | 67108864 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 15         | 67108864 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 16         | 67108867 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 16         | 67108867 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 17         | 67108870 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 17         | 67108870 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 18         | 67108873 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 18         | 67108873 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 19         | 67108876 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 19         | 67108876 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 20         | 67108879 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 20         | 67108879 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 21         | 67108882 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 21         | 67108882 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 22         | 67108885 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 22         | 67108885 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 23         | 67108888 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 23         | 67108888 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 24         | 67108891 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 24         | 67108891 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 25         | 67108894 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 25         | 67108894 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 26         | 67108897 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 26         | 67108897 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 27         | 67108900 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 27         | 67108900 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 28         | 67108903 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 28         | 67108903 | 2      | f        | f        | f           | f     | {200 .. 200} 
 (56 rows)
 
 -- Now desummarize a few ranges.
 1U: SELECT brin_desummarize_range('aoco_partial_scan1_i_j_idx', 33554432);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 1U: SELECT brin_desummarize_range('aoco_partial_scan1_i_j_idx', 33554438);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 1U: SELECT brin_desummarize_range('aoco_partial_scan1_i_j_idx', 33554471);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 1U: SELECT brin_desummarize_range('aoco_partial_scan1_i_j_idx', 67108867);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Range scans beginning at 33554432 and 33554438 will span 13 block directory
 -- entries (13 varblocks) for col i and 7 entries (7 varblocks) for col j.
@@ -978,62 +967,62 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          |          |        |          |          |             |              
- 2          | 33554435 | 1      | f        | f        | f           | {1 .. 1}     
- 2          | 33554435 | 2      | f        | f        | f           | {100 .. 100} 
- 3          |          |        |          |          |             |              
- 4          | 33554441 | 1      | f        | f        | f           | {1 .. 1}     
- 4          | 33554441 | 2      | f        | f        | f           | {100 .. 100} 
- 5          | 33554444 | 1      | f        | f        | f           | {1 .. 1}     
- 5          | 33554444 | 2      | f        | f        | f           | {100 .. 100} 
- 6          | 33554447 | 1      | f        | f        | f           | {1 .. 1}     
- 6          | 33554447 | 2      | f        | f        | f           | {100 .. 100} 
- 7          | 33554450 | 1      | f        | f        | f           | {1 .. 1}     
- 7          | 33554450 | 2      | f        | f        | f           | {100 .. 100} 
- 8          | 33554453 | 1      | f        | f        | f           | {1 .. 1}     
- 8          | 33554453 | 2      | f        | f        | f           | {100 .. 100} 
- 9          | 33554456 | 1      | f        | f        | f           | {1 .. 1}     
- 9          | 33554456 | 2      | f        | f        | f           | {100 .. 100} 
- 10         | 33554459 | 1      | f        | f        | f           | {1 .. 1}     
- 10         | 33554459 | 2      | f        | f        | f           | {100 .. 100} 
- 11         | 33554462 | 1      | f        | f        | f           | {1 .. 1}     
- 11         | 33554462 | 2      | f        | f        | f           | {100 .. 100} 
- 12         | 33554465 | 1      | f        | f        | f           | {1 .. 1}     
- 12         | 33554465 | 2      | f        | f        | f           | {100 .. 100} 
- 13         | 33554468 | 1      | f        | f        | f           | {1 .. 1}     
- 13         | 33554468 | 2      | f        | f        | f           | {100 .. 100} 
- 14         |          |        |          |          |             |              
- 15         | 67108864 | 1      | f        | f        | f           | {20 .. 20}   
- 15         | 67108864 | 2      | f        | f        | f           | {200 .. 200} 
- 16         |          |        |          |          |             |              
- 17         | 67108870 | 1      | f        | f        | f           | {20 .. 20}   
- 17         | 67108870 | 2      | f        | f        | f           | {200 .. 200} 
- 18         | 67108873 | 1      | f        | f        | f           | {20 .. 20}   
- 18         | 67108873 | 2      | f        | f        | f           | {200 .. 200} 
- 19         | 67108876 | 1      | f        | f        | f           | {20 .. 20}   
- 19         | 67108876 | 2      | f        | f        | f           | {200 .. 200} 
- 20         | 67108879 | 1      | f        | f        | f           | {20 .. 20}   
- 20         | 67108879 | 2      | f        | f        | f           | {200 .. 200} 
- 21         | 67108882 | 1      | f        | f        | f           | {20 .. 20}   
- 21         | 67108882 | 2      | f        | f        | f           | {200 .. 200} 
- 22         | 67108885 | 1      | f        | f        | f           | {20 .. 20}   
- 22         | 67108885 | 2      | f        | f        | f           | {200 .. 200} 
- 23         | 67108888 | 1      | f        | f        | f           | {20 .. 20}   
- 23         | 67108888 | 2      | f        | f        | f           | {200 .. 200} 
- 24         | 67108891 | 1      | f        | f        | f           | {20 .. 20}   
- 24         | 67108891 | 2      | f        | f        | f           | {200 .. 200} 
- 25         | 67108894 | 1      | f        | f        | f           | {20 .. 20}   
- 25         | 67108894 | 2      | f        | f        | f           | {200 .. 200} 
- 26         | 67108897 | 1      | f        | f        | f           | {20 .. 20}   
- 26         | 67108897 | 2      | f        | f        | f           | {200 .. 200} 
- 27         | 67108900 | 1      | f        | f        | f           | {20 .. 20}   
- 27         | 67108900 | 2      | f        | f        | f           | {200 .. 200} 
- 28         | 67108903 | 1      | f        | f        | f           | {20 .. 20}   
- 28         | 67108903 | 2      | f        | f        | f           | {200 .. 200} 
- 29         | 33554432 | 1      | f        | f        | f           | {1 .. 1}     
- 29         | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          |          |        |          |          |             |       |              
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 2          | 33554435 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 3          |          |        |          |          |             |       |              
+ 4          | 33554441 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 4          | 33554441 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 5          | 33554444 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 5          | 33554444 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 6          | 33554447 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 6          | 33554447 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 7          | 33554450 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 7          | 33554450 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 8          | 33554453 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 8          | 33554453 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 9          | 33554456 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 9          | 33554456 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 10         | 33554459 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 10         | 33554459 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 11         | 33554462 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 11         | 33554462 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 12         | 33554465 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 12         | 33554465 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 13         | 33554468 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 13         | 33554468 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 14         |          |        |          |          |             |       |              
+ 15         | 67108864 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 15         | 67108864 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 16         |          |        |          |          |             |       |              
+ 17         | 67108870 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 17         | 67108870 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 18         | 67108873 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 18         | 67108873 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 19         | 67108876 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 19         | 67108876 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 20         | 67108879 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 20         | 67108879 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 21         | 67108882 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 21         | 67108882 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 22         | 67108885 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 22         | 67108885 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 23         | 67108888 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 23         | 67108888 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 24         | 67108891 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 24         | 67108891 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 25         | 67108894 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 25         | 67108894 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 26         | 67108897 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 26         | 67108897 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 27         | 67108900 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 27         | 67108900 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 28         | 67108903 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 28         | 67108903 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 29         | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 29         | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
 (54 rows)
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1060,64 +1049,64 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          |          |        |          |          |             |              
- 2          | 33554435 | 1      | f        | f        | f           | {1 .. 1}     
- 2          | 33554435 | 2      | f        | f        | f           | {100 .. 100} 
- 3          |          |        |          |          |             |              
- 4          | 33554441 | 1      | f        | f        | f           | {1 .. 1}     
- 4          | 33554441 | 2      | f        | f        | f           | {100 .. 100} 
- 5          | 33554444 | 1      | f        | f        | f           | {1 .. 1}     
- 5          | 33554444 | 2      | f        | f        | f           | {100 .. 100} 
- 6          | 33554447 | 1      | f        | f        | f           | {1 .. 1}     
- 6          | 33554447 | 2      | f        | f        | f           | {100 .. 100} 
- 7          | 33554450 | 1      | f        | f        | f           | {1 .. 1}     
- 7          | 33554450 | 2      | f        | f        | f           | {100 .. 100} 
- 8          | 33554453 | 1      | f        | f        | f           | {1 .. 1}     
- 8          | 33554453 | 2      | f        | f        | f           | {100 .. 100} 
- 9          | 33554456 | 1      | f        | f        | f           | {1 .. 1}     
- 9          | 33554456 | 2      | f        | f        | f           | {100 .. 100} 
- 10         | 33554459 | 1      | f        | f        | f           | {1 .. 1}     
- 10         | 33554459 | 2      | f        | f        | f           | {100 .. 100} 
- 11         | 33554462 | 1      | f        | f        | f           | {1 .. 1}     
- 11         | 33554462 | 2      | f        | f        | f           | {100 .. 100} 
- 12         | 33554465 | 1      | f        | f        | f           | {1 .. 1}     
- 12         | 33554465 | 2      | f        | f        | f           | {100 .. 100} 
- 13         | 33554468 | 1      | f        | f        | f           | {1 .. 1}     
- 13         | 33554468 | 2      | f        | f        | f           | {100 .. 100} 
- 14         |          |        |          |          |             |              
- 15         | 67108864 | 1      | f        | f        | f           | {20 .. 20}   
- 15         | 67108864 | 2      | f        | f        | f           | {200 .. 200} 
- 16         |          |        |          |          |             |              
- 17         | 67108870 | 1      | f        | f        | f           | {20 .. 20}   
- 17         | 67108870 | 2      | f        | f        | f           | {200 .. 200} 
- 18         | 67108873 | 1      | f        | f        | f           | {20 .. 20}   
- 18         | 67108873 | 2      | f        | f        | f           | {200 .. 200} 
- 19         | 67108876 | 1      | f        | f        | f           | {20 .. 20}   
- 19         | 67108876 | 2      | f        | f        | f           | {200 .. 200} 
- 20         | 67108879 | 1      | f        | f        | f           | {20 .. 20}   
- 20         | 67108879 | 2      | f        | f        | f           | {200 .. 200} 
- 21         | 67108882 | 1      | f        | f        | f           | {20 .. 20}   
- 21         | 67108882 | 2      | f        | f        | f           | {200 .. 200} 
- 22         | 67108885 | 1      | f        | f        | f           | {20 .. 20}   
- 22         | 67108885 | 2      | f        | f        | f           | {200 .. 200} 
- 23         | 67108888 | 1      | f        | f        | f           | {20 .. 20}   
- 23         | 67108888 | 2      | f        | f        | f           | {200 .. 200} 
- 24         | 67108891 | 1      | f        | f        | f           | {20 .. 20}   
- 24         | 67108891 | 2      | f        | f        | f           | {200 .. 200} 
- 25         | 67108894 | 1      | f        | f        | f           | {20 .. 20}   
- 25         | 67108894 | 2      | f        | f        | f           | {200 .. 200} 
- 26         | 67108897 | 1      | f        | f        | f           | {20 .. 20}   
- 26         | 67108897 | 2      | f        | f        | f           | {200 .. 200} 
- 27         | 67108900 | 1      | f        | f        | f           | {20 .. 20}   
- 27         | 67108900 | 2      | f        | f        | f           | {200 .. 200} 
- 28         | 67108903 | 1      | f        | f        | f           | {20 .. 20}   
- 28         | 67108903 | 2      | f        | f        | f           | {200 .. 200} 
- 29         | 33554432 | 1      | f        | f        | f           | {1 .. 1}     
- 29         | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
- 30         | 33554438 | 1      | f        | f        | f           | {1 .. 1}     
- 30         | 33554438 | 2      | f        | f        | f           | {100 .. 100} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          |          |        |          |          |             |       |              
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 2          | 33554435 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 3          |          |        |          |          |             |       |              
+ 4          | 33554441 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 4          | 33554441 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 5          | 33554444 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 5          | 33554444 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 6          | 33554447 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 6          | 33554447 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 7          | 33554450 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 7          | 33554450 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 8          | 33554453 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 8          | 33554453 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 9          | 33554456 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 9          | 33554456 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 10         | 33554459 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 10         | 33554459 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 11         | 33554462 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 11         | 33554462 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 12         | 33554465 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 12         | 33554465 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 13         | 33554468 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 13         | 33554468 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 14         |          |        |          |          |             |       |              
+ 15         | 67108864 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 15         | 67108864 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 16         |          |        |          |          |             |       |              
+ 17         | 67108870 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 17         | 67108870 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 18         | 67108873 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 18         | 67108873 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 19         | 67108876 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 19         | 67108876 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 20         | 67108879 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 20         | 67108879 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 21         | 67108882 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 21         | 67108882 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 22         | 67108885 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 22         | 67108885 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 23         | 67108888 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 23         | 67108888 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 24         | 67108891 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 24         | 67108891 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 25         | 67108894 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 25         | 67108894 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 26         | 67108897 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 26         | 67108897 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 27         | 67108900 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 27         | 67108900 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 28         | 67108903 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 28         | 67108903 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 29         | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 29         | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 30         | 33554438 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 30         | 33554438 | 2      | f        | f        | f           | f     | {100 .. 100} 
 (56 rows)
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1144,66 +1133,66 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          |          |        |          |          |             |              
- 2          | 33554435 | 1      | f        | f        | f           | {1 .. 1}     
- 2          | 33554435 | 2      | f        | f        | f           | {100 .. 100} 
- 3          |          |        |          |          |             |              
- 4          | 33554441 | 1      | f        | f        | f           | {1 .. 1}     
- 4          | 33554441 | 2      | f        | f        | f           | {100 .. 100} 
- 5          | 33554444 | 1      | f        | f        | f           | {1 .. 1}     
- 5          | 33554444 | 2      | f        | f        | f           | {100 .. 100} 
- 6          | 33554447 | 1      | f        | f        | f           | {1 .. 1}     
- 6          | 33554447 | 2      | f        | f        | f           | {100 .. 100} 
- 7          | 33554450 | 1      | f        | f        | f           | {1 .. 1}     
- 7          | 33554450 | 2      | f        | f        | f           | {100 .. 100} 
- 8          | 33554453 | 1      | f        | f        | f           | {1 .. 1}     
- 8          | 33554453 | 2      | f        | f        | f           | {100 .. 100} 
- 9          | 33554456 | 1      | f        | f        | f           | {1 .. 1}     
- 9          | 33554456 | 2      | f        | f        | f           | {100 .. 100} 
- 10         | 33554459 | 1      | f        | f        | f           | {1 .. 1}     
- 10         | 33554459 | 2      | f        | f        | f           | {100 .. 100} 
- 11         | 33554462 | 1      | f        | f        | f           | {1 .. 1}     
- 11         | 33554462 | 2      | f        | f        | f           | {100 .. 100} 
- 12         | 33554465 | 1      | f        | f        | f           | {1 .. 1}     
- 12         | 33554465 | 2      | f        | f        | f           | {100 .. 100} 
- 13         | 33554468 | 1      | f        | f        | f           | {1 .. 1}     
- 13         | 33554468 | 2      | f        | f        | f           | {100 .. 100} 
- 14         |          |        |          |          |             |              
- 15         | 67108864 | 1      | f        | f        | f           | {20 .. 20}   
- 15         | 67108864 | 2      | f        | f        | f           | {200 .. 200} 
- 16         |          |        |          |          |             |              
- 17         | 67108870 | 1      | f        | f        | f           | {20 .. 20}   
- 17         | 67108870 | 2      | f        | f        | f           | {200 .. 200} 
- 18         | 67108873 | 1      | f        | f        | f           | {20 .. 20}   
- 18         | 67108873 | 2      | f        | f        | f           | {200 .. 200} 
- 19         | 67108876 | 1      | f        | f        | f           | {20 .. 20}   
- 19         | 67108876 | 2      | f        | f        | f           | {200 .. 200} 
- 20         | 67108879 | 1      | f        | f        | f           | {20 .. 20}   
- 20         | 67108879 | 2      | f        | f        | f           | {200 .. 200} 
- 21         | 67108882 | 1      | f        | f        | f           | {20 .. 20}   
- 21         | 67108882 | 2      | f        | f        | f           | {200 .. 200} 
- 22         | 67108885 | 1      | f        | f        | f           | {20 .. 20}   
- 22         | 67108885 | 2      | f        | f        | f           | {200 .. 200} 
- 23         | 67108888 | 1      | f        | f        | f           | {20 .. 20}   
- 23         | 67108888 | 2      | f        | f        | f           | {200 .. 200} 
- 24         | 67108891 | 1      | f        | f        | f           | {20 .. 20}   
- 24         | 67108891 | 2      | f        | f        | f           | {200 .. 200} 
- 25         | 67108894 | 1      | f        | f        | f           | {20 .. 20}   
- 25         | 67108894 | 2      | f        | f        | f           | {200 .. 200} 
- 26         | 67108897 | 1      | f        | f        | f           | {20 .. 20}   
- 26         | 67108897 | 2      | f        | f        | f           | {200 .. 200} 
- 27         | 67108900 | 1      | f        | f        | f           | {20 .. 20}   
- 27         | 67108900 | 2      | f        | f        | f           | {200 .. 200} 
- 28         | 67108903 | 1      | f        | f        | f           | {20 .. 20}   
- 28         | 67108903 | 2      | f        | f        | f           | {200 .. 200} 
- 29         | 33554432 | 1      | f        | f        | f           | {1 .. 1}     
- 29         | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
- 30         | 33554438 | 1      | f        | f        | f           | {1 .. 1}     
- 30         | 33554438 | 2      | f        | f        | f           | {100 .. 100} 
- 31         | 33554471 | 1      | f        | f        | f           | {1 .. 1}     
- 31         | 33554471 | 2      | f        | f        | f           | {100 .. 100} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          |          |        |          |          |             |       |              
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 2          | 33554435 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 3          |          |        |          |          |             |       |              
+ 4          | 33554441 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 4          | 33554441 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 5          | 33554444 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 5          | 33554444 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 6          | 33554447 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 6          | 33554447 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 7          | 33554450 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 7          | 33554450 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 8          | 33554453 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 8          | 33554453 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 9          | 33554456 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 9          | 33554456 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 10         | 33554459 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 10         | 33554459 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 11         | 33554462 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 11         | 33554462 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 12         | 33554465 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 12         | 33554465 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 13         | 33554468 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 13         | 33554468 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 14         |          |        |          |          |             |       |              
+ 15         | 67108864 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 15         | 67108864 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 16         |          |        |          |          |             |       |              
+ 17         | 67108870 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 17         | 67108870 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 18         | 67108873 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 18         | 67108873 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 19         | 67108876 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 19         | 67108876 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 20         | 67108879 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 20         | 67108879 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 21         | 67108882 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 21         | 67108882 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 22         | 67108885 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 22         | 67108885 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 23         | 67108888 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 23         | 67108888 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 24         | 67108891 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 24         | 67108891 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 25         | 67108894 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 25         | 67108894 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 26         | 67108897 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 26         | 67108897 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 27         | 67108900 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 27         | 67108900 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 28         | 67108903 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 28         | 67108903 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 29         | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 29         | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 30         | 33554438 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 30         | 33554438 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 31         | 33554471 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 31         | 33554471 | 2      | f        | f        | f           | f     | {100 .. 100} 
 (58 rows)
 
 -- A similar result is expected from scanning the first range in seg2, as for
@@ -1232,68 +1221,68 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          |          |        |          |          |             |              
- 2          | 33554435 | 1      | f        | f        | f           | {1 .. 1}     
- 2          | 33554435 | 2      | f        | f        | f           | {100 .. 100} 
- 3          |          |        |          |          |             |              
- 4          | 33554441 | 1      | f        | f        | f           | {1 .. 1}     
- 4          | 33554441 | 2      | f        | f        | f           | {100 .. 100} 
- 5          | 33554444 | 1      | f        | f        | f           | {1 .. 1}     
- 5          | 33554444 | 2      | f        | f        | f           | {100 .. 100} 
- 6          | 33554447 | 1      | f        | f        | f           | {1 .. 1}     
- 6          | 33554447 | 2      | f        | f        | f           | {100 .. 100} 
- 7          | 33554450 | 1      | f        | f        | f           | {1 .. 1}     
- 7          | 33554450 | 2      | f        | f        | f           | {100 .. 100} 
- 8          | 33554453 | 1      | f        | f        | f           | {1 .. 1}     
- 8          | 33554453 | 2      | f        | f        | f           | {100 .. 100} 
- 9          | 33554456 | 1      | f        | f        | f           | {1 .. 1}     
- 9          | 33554456 | 2      | f        | f        | f           | {100 .. 100} 
- 10         | 33554459 | 1      | f        | f        | f           | {1 .. 1}     
- 10         | 33554459 | 2      | f        | f        | f           | {100 .. 100} 
- 11         | 33554462 | 1      | f        | f        | f           | {1 .. 1}     
- 11         | 33554462 | 2      | f        | f        | f           | {100 .. 100} 
- 12         | 33554465 | 1      | f        | f        | f           | {1 .. 1}     
- 12         | 33554465 | 2      | f        | f        | f           | {100 .. 100} 
- 13         | 33554468 | 1      | f        | f        | f           | {1 .. 1}     
- 13         | 33554468 | 2      | f        | f        | f           | {100 .. 100} 
- 14         |          |        |          |          |             |              
- 15         | 67108864 | 1      | f        | f        | f           | {20 .. 20}   
- 15         | 67108864 | 2      | f        | f        | f           | {200 .. 200} 
- 16         |          |        |          |          |             |              
- 17         | 67108870 | 1      | f        | f        | f           | {20 .. 20}   
- 17         | 67108870 | 2      | f        | f        | f           | {200 .. 200} 
- 18         | 67108873 | 1      | f        | f        | f           | {20 .. 20}   
- 18         | 67108873 | 2      | f        | f        | f           | {200 .. 200} 
- 19         | 67108876 | 1      | f        | f        | f           | {20 .. 20}   
- 19         | 67108876 | 2      | f        | f        | f           | {200 .. 200} 
- 20         | 67108879 | 1      | f        | f        | f           | {20 .. 20}   
- 20         | 67108879 | 2      | f        | f        | f           | {200 .. 200} 
- 21         | 67108882 | 1      | f        | f        | f           | {20 .. 20}   
- 21         | 67108882 | 2      | f        | f        | f           | {200 .. 200} 
- 22         | 67108885 | 1      | f        | f        | f           | {20 .. 20}   
- 22         | 67108885 | 2      | f        | f        | f           | {200 .. 200} 
- 23         | 67108888 | 1      | f        | f        | f           | {20 .. 20}   
- 23         | 67108888 | 2      | f        | f        | f           | {200 .. 200} 
- 24         | 67108891 | 1      | f        | f        | f           | {20 .. 20}   
- 24         | 67108891 | 2      | f        | f        | f           | {200 .. 200} 
- 25         | 67108894 | 1      | f        | f        | f           | {20 .. 20}   
- 25         | 67108894 | 2      | f        | f        | f           | {200 .. 200} 
- 26         | 67108897 | 1      | f        | f        | f           | {20 .. 20}   
- 26         | 67108897 | 2      | f        | f        | f           | {200 .. 200} 
- 27         | 67108900 | 1      | f        | f        | f           | {20 .. 20}   
- 27         | 67108900 | 2      | f        | f        | f           | {200 .. 200} 
- 28         | 67108903 | 1      | f        | f        | f           | {20 .. 20}   
- 28         | 67108903 | 2      | f        | f        | f           | {200 .. 200} 
- 29         | 33554432 | 1      | f        | f        | f           | {1 .. 1}     
- 29         | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
- 30         | 33554438 | 1      | f        | f        | f           | {1 .. 1}     
- 30         | 33554438 | 2      | f        | f        | f           | {100 .. 100} 
- 31         | 33554471 | 1      | f        | f        | f           | {1 .. 1}     
- 31         | 33554471 | 2      | f        | f        | f           | {100 .. 100} 
- 32         | 67108867 | 1      | f        | f        | f           | {20 .. 20}   
- 32         | 67108867 | 2      | f        | f        | f           | {200 .. 200} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          |          |        |          |          |             |       |              
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 2          | 33554435 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 3          |          |        |          |          |             |       |              
+ 4          | 33554441 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 4          | 33554441 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 5          | 33554444 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 5          | 33554444 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 6          | 33554447 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 6          | 33554447 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 7          | 33554450 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 7          | 33554450 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 8          | 33554453 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 8          | 33554453 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 9          | 33554456 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 9          | 33554456 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 10         | 33554459 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 10         | 33554459 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 11         | 33554462 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 11         | 33554462 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 12         | 33554465 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 12         | 33554465 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 13         | 33554468 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 13         | 33554468 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 14         |          |        |          |          |             |       |              
+ 15         | 67108864 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 15         | 67108864 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 16         |          |        |          |          |             |       |              
+ 17         | 67108870 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 17         | 67108870 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 18         | 67108873 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 18         | 67108873 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 19         | 67108876 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 19         | 67108876 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 20         | 67108879 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 20         | 67108879 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 21         | 67108882 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 21         | 67108882 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 22         | 67108885 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 22         | 67108885 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 23         | 67108888 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 23         | 67108888 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 24         | 67108891 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 24         | 67108891 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 25         | 67108894 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 25         | 67108894 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 26         | 67108897 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 26         | 67108897 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 27         | 67108900 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 27         | 67108900 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 28         | 67108903 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 28         | 67108903 | 2      | f        | f        | f           | f     | {200 .. 200} 
+ 29         | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 29         | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 30         | 33554438 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 30         | 33554438 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 31         | 33554471 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 31         | 33554471 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 32         | 67108867 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 32         | 67108867 | 2      | f        | f        | f           | f     | {200 .. 200} 
 (60 rows)
 
 --------------------------------------------------------------------------------
@@ -1301,18 +1290,18 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- minipage (after the last entry).
 --------------------------------------------------------------------------------
 CREATE TABLE aoco_partial_scan2(i int, j int, k int) USING ao_column;
-CREATE
+CREATE TABLE
 -- Fill 1 logical heap block with committed rows.
 INSERT INTO aoco_partial_scan2 SELECT 1, 100, k FROM generate_series(1, 32767) k;
-INSERT 32767
+INSERT 0 32767
 -- Now add some aborted rows at the end of the segfile, resulting in a hole at
 -- the end of the minipage.
 BEGIN;
 BEGIN
 INSERT INTO aoco_partial_scan2 SELECT 20, 200, k FROM generate_series(1, 32768) k;
-INSERT 32768
+INSERT 0 32768
 ABORT;
-ABORT
+ROLLBACK
 
 -- Doing an index build will result in scanning the committed rows only.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1321,7 +1310,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON aoco_partial_scan2 USING brin(i, j) WITH (pages_per_range = 1);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1353,18 +1342,17 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan2_i_j_idx', 2), 'aoco_partial_scan2_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}     
- 1          | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 1          | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
 (2 rows)
 
 -- Now desummarize the first range of committed rows.
 1U: SELECT brin_desummarize_range('aoco_partial_scan2_i_j_idx', 33554432);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Summarizing the first range now should only scan the committed rows. (same
 -- as the index build). In other words, we will scan an equal number of
@@ -1419,12 +1407,12 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan2_i_j_idx', 2), 'aoco_partial_scan2_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}     
- 1          | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
- 2          | 33554433 | 1      | t        | f        | f           |              
- 2          | 33554433 | 2      | t        | f        | f           |              
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}     
+ 1          | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 2          | 33554433 | 1      | t        | f        | f           | t     |              
+ 2          | 33554433 | 2      | t        | f        | f           | t     |              
 (4 rows)
 
 --------------------------------------------------------------------------------
@@ -1432,17 +1420,17 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- segfile (and before the first entry of the first minipage).
 --------------------------------------------------------------------------------
 CREATE TABLE aoco_partial_scan3(i int, j int, k int) USING ao_column;
-CREATE
+CREATE TABLE
 -- Create a hole with 1 logical heap block worth of aborted rows.
 BEGIN;
 BEGIN
 INSERT INTO aoco_partial_scan3 SELECT 1, 100, k FROM generate_series(1, 32767) k;
-INSERT 32767
+INSERT 0 32767
 ABORT;
-ABORT
+ROLLBACK
 -- Fill the next 3 logical heap blocks with committed rows.
 INSERT INTO aoco_partial_scan3 SELECT 20, 100, k FROM generate_series(1, 32768 * 3) k;
-INSERT 98304
+INSERT 0 98304
 
 -- Doing an index build will result in scanning the committed rows only.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1451,7 +1439,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON aoco_partial_scan3 USING brin(i, j) WITH (pages_per_range = 3);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1500,12 +1488,12 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan3_i_j_idx', 2), 'aoco_partial_scan3_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          | 33554432 | 1      | f        | f        | f           | {20 .. 20}   
- 1          | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
- 2          | 33554435 | 1      | f        | f        | f           | {20 .. 20}   
- 2          | 33554435 | 2      | f        | f        | f           | {100 .. 100} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 1          | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 2          | 33554435 | 2      | f        | f        | f           | f     | {100 .. 100} 
 (4 rows)
 
 -- Now desummarize the range with 1 block of aborted rows and 2 blocks of
@@ -1513,8 +1501,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 1U: SELECT brin_desummarize_range('aoco_partial_scan3_i_j_idx', 33554432);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Summarizing this range should scan blocks corresponding to the 2 final logical
 -- heap blocks in the range only. This means that we will restrict our scan to
@@ -1566,13 +1553,13 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan3_i_j_idx', 2), 'aoco_partial_scan3_i_j_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value        
-------------+----------+--------+----------+----------+-------------+--------------
- 1          |          |        |          |          |             |              
- 2          | 33554435 | 1      | f        | f        | f           | {20 .. 20}   
- 2          | 33554435 | 2      | f        | f        | f           | {100 .. 100} 
- 3          | 33554432 | 1      | f        | f        | f           | {20 .. 20}   
- 3          | 33554432 | 2      | f        | f        | f           | {100 .. 100} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          |          |        |          |          |             |       |              
+ 2          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 2          | 33554435 | 2      | f        | f        | f           | f     | {100 .. 100} 
+ 3          | 33554432 | 1      | f        | f        | f           | f     | {20 .. 20}   
+ 3          | 33554432 | 2      | f        | f        | f           | f     | {100 .. 100} 
 (5 rows)
 
 --------------------------------------------------------------------------------
@@ -1581,14 +1568,14 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 --------------------------------------------------------------------------------
 
 CREATE TABLE aoco_partial_scan4(i int) USING ao_column;
-CREATE
+CREATE TABLE
 
 -- Insert one logical heap block worth of committed rows.
 INSERT INTO aoco_partial_scan4 SELECT 1 FROM generate_series(1, 32767);
-INSERT 32767
+INSERT 0 32767
 -- Insert one more row for the next logical heap block.
 INSERT INTO aoco_partial_scan4 SELECT 20 FROM generate_series(1, 1);
-INSERT 1
+INSERT 0 1
 
 -- Doing an index build will result in scanning the whole relation.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1597,7 +1584,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', ''
  Success:        
 (1 row)
 CREATE INDEX ON aoco_partial_scan4 USING brin(i) WITH (pages_per_range = 1);
-CREATE
+CREATE INDEX
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                   
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1626,18 +1613,17 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan4_i_idx', 2), 'aoco_partial_scan4_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (2 rows)
 
 -- Now desummarize a range.
 1U: SELECT brin_desummarize_range('aoco_partial_scan4_i_idx', 33554433);
  brin_desummarize_range 
 ------------------------
-                        
-(1 row)
+(0 rows)
 
 -- Summarizing 33554433 will map to a hole between block directory entries, so
 -- we will start our scan from the entry preceding the hole. So, we will scan
@@ -1666,11 +1652,11 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan4_i_idx', 2), 'aoco_partial_scan4_i_idx');
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | value      
-------------+----------+--------+----------+----------+-------------+------------
- 1          | 33554432 | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 33554433 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (2 rows)
 
 DROP EXTENSION pageinspect;
-DROP
+DROP EXTENSION

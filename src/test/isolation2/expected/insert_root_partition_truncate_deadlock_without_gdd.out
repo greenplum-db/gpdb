@@ -11,7 +11,7 @@
 -- without GDD it is running to show that no deadlock happens.
 
 create table rank_13652 (id int, year int) partition by range (year) (start (2006) end (2009) every (1));
-CREATE
+CREATE TABLE
 
 1: select gp_inject_fault('func_init_plan_end', 'suspend', dbid, current_setting('gp_session_id')::int) from gp_segment_configuration where content = 0 and role = 'p';
  gp_inject_fault 
@@ -35,12 +35,12 @@ select gp_inject_fault('func_init_plan_end', 'reset', dbid) from gp_segment_conf
 (1 row)
 
 1<:  <... completed>
-INSERT 30
+INSERT 0 30
 2<:  <... completed>
-TRUNCATE
+TRUNCATE TABLE
 
 1q: ... <quitting>
 2q: ... <quitting>
 
 drop table rank_13652;
-DROP
+DROP TABLE

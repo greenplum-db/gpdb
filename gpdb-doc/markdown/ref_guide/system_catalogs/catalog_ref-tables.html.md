@@ -31,7 +31,6 @@
 -   [pg\_db\_role\_setting](pg_db_role_setting.html)
 -   [pg\_depend](pg_depend.html)
 -   [pg\_description](pg_description.html)
--   [pg\_exttable](pg_exttable.html)
 -   [pg\_foreign\_data\_wrapper](pg_foreign_data_wrapper.html)
 -   [pg\_foreign\_server](pg_foreign_server.html)
 -   [pg\_foreign\_table](pg_foreign_table.html)

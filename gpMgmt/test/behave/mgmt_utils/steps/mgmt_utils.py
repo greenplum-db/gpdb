@@ -634,7 +634,7 @@ def impl(context, process_name, secs):
 @when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in the logs')
 def impl(context, process_name, log_msg):
     command = "while sleep 0.1; " \
-              "do if egrep --quiet %s  ~/gpAdminLogs/%s*log ; " \
+              "do if grep -E --quiet %s  ~/gpAdminLogs/%s*log ; " \
               "then ps ux | grep bin/%s |awk '{print $2}' | xargs kill ;break 2; " \
               "fi; done" % (log_msg, process_name, process_name)
     run_async_command(context, command)
@@ -642,7 +642,7 @@ def impl(context, process_name, log_msg):
 @then('the user asynchronously sets up to end {kill_process_name} process when {log_msg} is printed in the {logfile_name} logs')
 def impl(context, kill_process_name, log_msg, logfile_name):
     command = "while sleep 0.1; " \
-              "do if egrep --quiet %s  ~/gpAdminLogs/%s*log ; " \
+              "do if grep -E --quiet %s  ~/gpAdminLogs/%s*log ; " \
               "then ps ux | grep bin/%s |awk '{print $2}' | xargs kill -2 ;break 2; " \
               "fi; done" % (log_msg, logfile_name, kill_process_name)
     run_async_command(context, command)
@@ -1234,7 +1234,7 @@ def impl(context, options):
 @then('gpintsystem logs should {contain} lines about running backout script')
 def impl(context, contain):
     string_to_find = 'Run command bash .*backout_gpinitsystem.* on coordinator to remove these changes$'
-    command = "egrep '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
+    command = "grep -E '{}' ~/gpAdminLogs/gpinitsystem*log".format(string_to_find)
     run_command(context, command)
     if contain == "contain":
         if has_exception(context):
@@ -3984,3 +3984,31 @@ def impl(context):
         for pid in host_to_pid_map[host]:
             if unix.check_pid_on_remotehost(pid, host):
                 raise Exception("Postgres process {0} not killed on {1}.".format(pid, host))
+
+
+@then('the database segments are in execute mode')
+def impl(context):
+    # Get all up segments details except coordinator/standby
+    with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
+        sql = "SELECT dbid, hostname, port  FROM gp_segment_configuration WHERE content > -1 and status = 'u'"
+        rows = dbconn.query(conn, sql).fetchall()
+
+        if len(rows) <= 0:
+            raise Exception("Found no entries in gp_segment_configuration table")
+    # Check for each segment if the process is in
+    for row in rows:
+        dbid = row[0]
+        hostname = row[1].strip()
+        portnum = row[2]
+        cmd = "psql -d template1 -p {0} -h {1} -c \";\"".format(portnum, hostname)
+        run_command(context, cmd)
+        # If node is in execute mode, psql shoud return 2 and the print one of the following error message:
+        # For a primary segment: "psql: error: FATAL:  connections to primary segments are not allowed"
+        # For a mirror segment: "FATAL:  the database system is in recovery mode"
+        if context.ret_code == 2 and \
+        ("FATAL:  connections to primary segments are not allowed" in context.error_message or
+         "FATAL:  the database system is in recovery mode" in context.error_message):
+            continue
+        else:
+            context.stdout_message
+            raise Exception("segment process not running in execute mode for DBID:{0}".format(dbid))

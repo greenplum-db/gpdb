@@ -3,7 +3,7 @@
 -- successfully (to avoid cases where ranges have brin data tuples without
 -- values or where the range is not covered by the revmap etc)
 CREATE EXTENSION pageinspect;
-CREATE
+CREATE EXTENSION
 
 -- Turn off sequential scans to force usage of BRIN indexes for scans.
 SET enable_seqscan TO off;
@@ -13,9 +13,9 @@ SET
 -- by another transaction, while summarization was in flight.
 
 CREATE TABLE brin_range_extended_heap(i int) USING heap;
-CREATE
+CREATE TABLE
 CREATE INDEX ON brin_range_extended_heap USING brin(i) WITH (pages_per_range=5);
-CREATE
+CREATE INDEX
 
 -- Insert 9 blocks of data on 1 QE; 8 blocks full, 1 block with 1 tuple.
 SELECT populate_pages('brin_range_extended_heap', 1, tid '(8, 0)');
@@ -56,10 +56,10 @@ SELECT gp_wait_until_triggered_fault('summarize_last_partial_range', 1, dbid) FR
  (2,2) 
 (2 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended_heap_i_idx', 2), 'brin_range_extended_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value    
-------------+--------+--------+----------+----------+-------------+----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 5      | 1      | t        | f        | t           |          
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+--------+--------+----------+----------+-------------+-------+----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 5      | 1      | t        | f        | t           | t     |          
 (2 rows)
 
 -- Extend the last partial range by 1 block.
@@ -97,19 +97,19 @@ SELECT gp_inject_fault('summarize_last_partial_range', 'reset', dbid) FROM gp_se
  (2,2) 
 (2 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_range_extended_heap_i_idx', 2), 'brin_range_extended_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value     
-------------+--------+--------+----------+----------+-------------+-----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1}  
- 2          | 5      | 1      | f        | f        | f           | {1 .. 20} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value     
+------------+--------+--------+----------+----------+-------------+-------+-----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1}  
+ 2          | 5      | 1      | f        | f        | f           | f     | {1 .. 20} 
 (2 rows)
 
 
 -- Test build/summarize with aborted rows.
 
 CREATE TABLE brin_abort_heap(i int);
-CREATE
+CREATE TABLE
 CREATE INDEX ON brin_abort_heap USING brin(i) WITH (pages_per_range=1);
-CREATE
+CREATE INDEX
 BEGIN;
 BEGIN
 -- Create 3 blocks all on 1 QE, in 1 aoseg: 2 blocks full, 1 block with 1 tuple.
@@ -119,7 +119,7 @@ SELECT populate_pages('brin_abort_heap', 1, tid '(2, 0)');
                 
 (1 row)
 ABORT;
-ABORT
+ROLLBACK
 
 -- Sanity: There is 1 revmap page and 1 data page, with 1 range (summarized).
 -- This first range being summarized highlights a difference with AO/CO tables.
@@ -136,9 +136,9 @@ ABORT
  (2,1) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value    
-------------+--------+--------+----------+----------+-------------+----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+--------+--------+----------+----------+-------------+-------+----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1} 
 (1 row)
 
 -- Summarize over the aborted rows.
@@ -166,11 +166,11 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
  (2,3) 
 (3 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value    
-------------+--------+--------+----------+----------+-------------+----------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1} 
- 2          | 1      | 1      | t        | f        | f           |          
- 3          | 2      | 1      | t        | f        | f           |          
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value    
+------------+--------+--------+----------+----------+-------------+-------+----------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1} 
+ 2          | 1      | 1      | t        | f        | f           | t     |          
+ 3          | 2      | 1      | t        | f        | f           | t     |          
 (3 rows)
 
 -- Sanity: Scan should only return the 1st block and ignore the blocks for which
@@ -229,12 +229,12 @@ SELECT brin_summarize_new_values('brin_abort_heap_i_idx');
  (2,4) 
 (4 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value      
-------------+--------+--------+----------+----------+-------------+------------
- 1          | 0      | 1      | f        | f        | f           | {1 .. 1}   
- 2          | 1      | 1      | t        | f        | f           |            
- 3          | 2      | 1      | f        | f        | f           | {20 .. 20} 
- 4          | 3      | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+--------+--------+----------+----------+-------------+-------+------------
+ 1          | 0      | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 2          | 1      | 1      | t        | f        | f           | t     |            
+ 3          | 2      | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 4          | 3      | 1      | f        | f        | f           | f     | {20 .. 20} 
 (4 rows)
 
 -- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
@@ -262,9 +262,9 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_
 
 -- Drop and re-create the index to test build.
 DROP INDEX brin_abort_heap_i_idx;
-DROP
+DROP INDEX
 CREATE INDEX ON brin_abort_heap USING brin(i) WITH (pages_per_range=1);
-CREATE
+CREATE INDEX
 
 -- Sanity: There is 1 revmap page and 1 data page, with 4 ranges. Only the last
 -- two ranges (covering the committed rows) have non-empty tuples.
@@ -284,12 +284,12 @@ CREATE
  (2,4) 
 (4 rows)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_abort_heap_i_idx', 2), 'brin_abort_heap_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | value      
-------------+--------+--------+----------+----------+-------------+------------
- 1          | 0      | 1      | t        | f        | f           |            
- 2          | 1      | 1      | t        | f        | f           |            
- 3          | 2      | 1      | f        | f        | f           | {20 .. 20} 
- 4          | 3      | 1      | f        | f        | f           | {20 .. 20} 
+ itemoffset | blknum | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+--------+--------+----------+----------+-------------+-------+------------
+ 1          | 0      | 1      | t        | f        | f           | t     |            
+ 2          | 1      | 1      | t        | f        | f           | t     |            
+ 3          | 2      | 1      | f        | f        | f           | f     | {20 .. 20} 
+ 4          | 3      | 1      | f        | f        | f           | f     | {20 .. 20} 
 (4 rows)
 
 -- Sanity: Scan should only return the 2 blocks matching the predicate, in the tidbitmap.
@@ -318,4 +318,4 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_
 RESET enable_seqscan;
 RESET
 DROP EXTENSION pageinspect;
-DROP
+DROP EXTENSION

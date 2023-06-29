@@ -75,7 +75,7 @@ def check_group_shares(name): cpu_weight = int(plpy.execute(''' SELECT value FRO
 # check default groups check_group_shares('default_group') check_group_shares('admin_group') check_group_shares('system_group') 
 # check user groups check_group_shares('rg1_cpu_test') check_group_shares('rg2_cpu_test') 
 return True $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
 
 -- check whether the queries running on the specific core set
@@ -92,7 +92,7 @@ expect_cpu = []
 for token in tokens: if token.find('-') != -1: interval = token.split("-") num1 = interval[0] num2 = interval[1] for num in range(int(num1), int(num2) + 1): expect_cpu.append(str(num)) else: expect_cpu.append(token) sess_ids = get_all_sess_ids_in_group(grp) 
 for i in range(1000): time.sleep(0.01) if not check(expect_cpu, sess_ids): return False 
 return True $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
 -- create a resource group that contains all the cpu cores
 0: CREATE OR REPLACE FUNCTION create_allcores_group(grp TEXT) RETURNS BOOL AS $$ import subprocess 
@@ -100,7 +100,7 @@ file = "/sys/fs/cgroup/cpuset/gpdb/cpuset.cpus" fd = open(file) line = fd.readli
 # plpy SPI will always start a transaction, but res group cannot be created in a transaction. ret = subprocess.run(['psql', 'postgres', '-c' , '{}'.format(sql)], capture_output=True) if ret.returncode != 0: plpy.error('failed to create resource group.\n {} \n {}'.format(ret.stdout, ret.stderr)) 
 file = "/sys/fs/cgroup/cpuset/gpdb/1/cpuset.cpus" fd = open(file) line = fd.readline() fd.close() line = line.strip('\n') if line != "0": return False 
 return True $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
 -- check whether the cpuset value in cgroup is valid according to the rule
 0: CREATE OR REPLACE FUNCTION check_cpuset_rules() RETURNS BOOL AS $$ def get_all_group_which_cpuset_is_set(): sql = "select groupid,cpuset from gp_toolkit.gp_resgroup_config where cpuset != '-1'" result = plpy.execute(sql) return result 
@@ -111,13 +111,18 @@ config_groups = get_all_group_which_cpuset_is_set() groups_cpuset = set([])
 if not (config_cpuset.issubset(cgroup_cpuset) and cgroup_cpuset.issubset(config_cpuset)): return False 
 # check whether cpuset in resource group union default group is universal set default_cpuset = get_cgroup_cpuset(1) all_cpuset = get_cgroup_cpuset(0) if not (default_cpuset | groups_cpuset).issubset(all_cpuset): return False if not all_cpuset.issubset(default_cpuset | groups_cpuset): return False # if all the cores are allocated to resource group, default group must has a core left if len(default_cpuset & groups_cpuset) > 0 and (len(default_cpuset) != 1 or (not default_cpuset.issubset(all_cpuset))): return False 
 return True $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
 
-0: CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$ import subprocess 
+0: CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$ import subprocess import paramiko 
 sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid result = plpy.execute(sql) session_id = result[0]['sess_id'] 
 sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname='%s'" % groupname result = plpy.execute(sql) groupid = result[0]['groupid'] 
-process = subprocess.Popen("ps -ef | grep postgres | grep con%d | grep -v grep | awk '{print $2}'" % session_id, shell=True, stdout=subprocess.PIPE) session_pids = process.communicate()[0].decode().split('\n')[:-1] 
-cgroups_pids = [] path = "/sys/fs/cgroup/cpu/gpdb/%d/cgroup.procs" % groupid fd = open(path) for line in fd.readlines(): cgroups_pids.append(line.strip('\n')) 
-return set(session_pids).issubset(set(cgroups_pids)) $$ LANGUAGE plpython3u;
-CREATE
+sql = "select hostname from gp_segment_configuration group by hostname" result = plpy.execute(sql) hosts = [_['hostname'] for _ in result] 
+def get_result(host): import paramiko 
+ssh = paramiko.SSHClient() ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) ssh.connect(hostname=host) 
+stdin, stdout, stderr = ssh.exec_command("ps -ef | grep postgres | grep con{} | grep -v grep | awk '{{print $2}}'".format(session_id)) session_pids = [i.strip() for i in stdout.readlines()] 
+path = "/sys/fs/cgroup/cpu/gpdb/{}/cgroup.procs".format(groupid) stdin, stdout, stderr = ssh.exec_command("cat {}".format(path)) cgroups_pids = [i.strip() for i in stdout.readlines()] 
+return set(session_pids).issubset(set(cgroups_pids)) 
+for host in hosts: if not get_result(host): return False return True 
+$$ LANGUAGE plpython3u;
+CREATE FUNCTION

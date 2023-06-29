@@ -1,6 +1,7 @@
 MODULE_big = gpextprotocol
 OBJS       = gpextprotocol.o
 REGRESS = setup exttableext
+REGRESS_OPTS = --init-file=../file_fdw/init_file
 
 PG_CPPFLAGS = -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)

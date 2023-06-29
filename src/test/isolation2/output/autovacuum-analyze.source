@@ -4,9 +4,9 @@
 
 -- Speed up test.
 ALTER SYSTEM SET autovacuum_naptime = 5;
-ALTER
+ALTER SYSTEM
 ALTER SYSTEM SET autovacuum_vacuum_threshold = 50;
-ALTER
+ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -25,7 +25,7 @@ ANALYZE
 
 -- Prepare the table to be ANALYZEd
 1: CREATE TABLE anatest (id bigint);
-CREATE
+CREATE TABLE
 
 -- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anatest', 1, -1, 0, 1);
@@ -61,7 +61,7 @@ SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 (1 row)
 
 1<:  <... completed>
-INSERT 1000
+INSERT 0 1000
 
 -- Wait until autovacuum is triggered
 SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
@@ -112,7 +112,7 @@ select relpages, reltuples from pg_class where oid = 'anatest'::regclass;
 
 -- Prepare the table to be ANALYZEd
 1: CREATE TABLE rankpart (id int, rank int, product int) DISTRIBUTED BY (id) PARTITION BY RANGE (rank) ( START (1) END (10) EVERY (2), DEFAULT PARTITION extra );
-CREATE
+CREATE TABLE
 
 -- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'rankpart_1_prt_extra', 1, -1, 0, 1);
@@ -149,7 +149,7 @@ SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 (1 row)
 
 1<:  <... completed>
-INSERT 1000
+INSERT 0 1000
 
 -- Wait until autovacuum is triggered
 SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
@@ -260,7 +260,7 @@ select relpages, reltuples from pg_class where oid = 'rankpart'::regclass;
 --
 
 1: CREATE TABLE anaabort(id int);
-CREATE
+CREATE TABLE
 
 -- Track report gpstat on coordinator
 SELECT gp_inject_fault('gp_pgstat_report_on_master', 'suspend', '', '', 'anaabort', 1, -1, 0, 1);
@@ -302,7 +302,7 @@ SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 (1 row)
 
 1<:  <... completed>
-INSERT 1000
+INSERT 0 1000
 
 -- Wait until autovacuum is triggered
 SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
@@ -353,7 +353,7 @@ SELECT gp_inject_fault('analyze_after_hold_lock', 'reset', 1);
 
 -- Get lock
 1<:  <... completed>
-LOCK
+LOCK TABLE
 
 -- Shouldn't have statistic updated.
 SELECT count(*) FROM pg_statistic where starelid = 'anaabort'::regclass;
@@ -368,7 +368,7 @@ select relpages, reltuples from pg_class where oid = 'anaabort'::regclass;
 (1 row)
 
 1: END;
-END
+COMMIT
 
 --
 -- Test 4, auto-ANALYZE and auto_stats could work at the same time.
@@ -387,7 +387,7 @@ SET
 
 -- Prepare the table to be ANALYZEd
 2: CREATE TABLE autostatstbl (id bigint);
-CREATE
+CREATE TABLE
 
 -- Track that we have updated the attributes stats in pg_statistic when finished
 SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'autostatstbl', 1, -1, 0, 1);
@@ -404,7 +404,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
 
 -- with auto_stats, the auto-ANALYZE still trigger
 2: INSERT INTO autostatstbl select i from generate_series(1, 1000) as i;
-INSERT 1000
+INSERT 0 1000
 2: select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat. 
 -- auto_stats executed but auto-ANALYZE not execute yet since we suspend before finish ANALYZE.
 SELECT count(*) FROM pg_statistic where starelid = 'autostatstbl'::regclass;
@@ -489,7 +489,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
 (1 row)
 
 2: INSERT INTO autostatstbl select i from generate_series(1001, 2000) as i;
-INSERT 1000
+INSERT 0 1000
 2: select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat. 
 -- auto_stats executed but auto-ANALYZE not execute yet since we suspend before finish ANALYZE.
 select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
@@ -568,7 +568,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
 (1 row)
 
 2: INSERT INTO autostatstbl select i from generate_series(2001, 3000) as i;
-INSERT 1000
+INSERT 0 1000
 2: select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat. 
 -- auto_stats should not executed and auto-ANALYZE not execute yet since we suspend before finish ANALYZE.
 select relpages, reltuples from pg_class where oid = 'autostatstbl'::regclass;
@@ -629,9 +629,9 @@ select analyze_count, autoanalyze_count, n_mod_since_analyze from pg_stat_all_ta
 
 -- Reset GUCs.
 ALTER SYSTEM RESET autovacuum_naptime;
-ALTER
+ALTER SYSTEM
 ALTER SYSTEM RESET autovacuum_vacuum_threshold;
-ALTER
+ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
 ----------------

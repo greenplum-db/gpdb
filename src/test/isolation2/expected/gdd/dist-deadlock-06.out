@@ -1,9 +1,9 @@
 DROP TABLE IF EXISTS t06;
-DROP
+DROP TABLE
 CREATE TABLE t06 (id int, val int);
-CREATE
+CREATE TABLE
 INSERT INTO t06 (id, val) SELECT i, i FROM generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 
 -- gang creation order is important, reset any guc to force the creation
 10: RESET optimizer;

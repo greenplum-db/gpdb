@@ -1,16 +1,16 @@
 -- @Description Tests the visibility when a cursor has been created before the delete.
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT) USING @amname@;
-CREATE
+CREATE TABLE
 insert into ao select generate_series(1, 100);
-INSERT 100
+INSERT 0 100
 
 1: BEGIN;
 BEGIN
 1: DECLARE cur CURSOR FOR SELECT a FROM ao ORDER BY a;
-DECLARE
+DECLARE CURSOR
 1: FETCH NEXT IN cur;
  a 
 ---
@@ -43,19 +43,19 @@ COMMIT
  5 
 (1 row)
 1: CLOSE cur;
-CLOSE
+CLOSE CURSOR
 1: COMMIT;
 COMMIT
 3: BEGIN;
 BEGIN
 3: DECLARE cur CURSOR FOR SELECT a FROM ao ORDER BY a;
-DECLARE
+DECLARE CURSOR
 3: FETCH NEXT IN cur;
  a 
 ---
  5 
 (1 row)
 3: CLOSE cur;
-CLOSE
+CLOSE CURSOR
 3: COMMIT;
 COMMIT

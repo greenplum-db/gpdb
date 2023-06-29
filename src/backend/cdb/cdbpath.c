@@ -1237,7 +1237,7 @@ add_rowid_to_path(PlannerInfo *root, Path *path, int *rowidexpr_id)
  * Decides where a join should be done.  Adds Motion operators atop
  * the subpaths if needed to deliver their results to the join locus.
  * Returns the join locus if ok, or a null locus otherwise. If
- * jointype is JOIN_SEMI_DEDUP or JOIN_SEMI_DEDUP_REVERSE, this also
+ * jointype is JOIN_DEDUP_SEMI or JOIN_DEDUP_SEMI_REVERSE, this also
  * tacks a RowIdExpr on one side of the join, and *p_rowidexpr_id is
  * set to the ID of that. The caller is expected to uniquefy
  * the result after the join, passing the rowidexpr_id to
@@ -2303,7 +2303,8 @@ create_motion_path_for_insert(PlannerInfo *root, GpPolicy *policy,
 			/*
 			 * If the target table is DISTRIBUTED RANDOMLY, we can insert the
 			 * rows anywhere. So if the input path is already partitioned, let
-			 * the insertions happen where they are.
+			 * the insertions happen where they are. Unless the GUC gp_force_random_redistribution
+			 * tells us to force the redistribution.
 			 *
 			 * If you `explain` the query insert into tab_random select * from tab_partition
 			 * there is not Motion node in plan. However, it is not means that the query only
@@ -2312,7 +2313,7 @@ create_motion_path_for_insert(PlannerInfo *root, GpPolicy *policy,
 			 * But, we need to grant a Motion node if target locus' segnumber is different with
 			 * subpath.
 			 */
-			if(targetLocus.numsegments != subpath->locus.numsegments)
+			if (gp_force_random_redistribution || targetLocus.numsegments != subpath->locus.numsegments)
 			{
 				CdbPathLocus_MakeStrewn(&targetLocus, policy->numsegments);
 				subpath = cdbpath_create_motion_path(root, subpath, NIL, false, targetLocus);

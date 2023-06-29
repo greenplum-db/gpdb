@@ -753,7 +753,6 @@
                       <dxl:TableDescriptor Mdid="6.57345.1.0" TableName="country">
                         <dxl:Columns>
                           <dxl:Column ColId="20" Attno="1" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7" ColWidth="4"/>
-                          <dxl:Column ColId="22" Attno="2" ColName="name" TypeMdid="0.25.1.0" ColWidth="4"/>
                           <dxl:Column ColId="23" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
                           <dxl:Column ColId="24" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
                           <dxl:Column ColId="25" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>

@@ -592,7 +592,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	// Lock any table we are to scan, since it may not have been properly locked
 	// by the parser (e.g in case of generated scans for partitioned tables)
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(md_rel->MDId());
-	GPOS_RTL_ASSERT(dxl_table_descr->LockMode() != -1);
+	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
 	Index index =
@@ -778,7 +778,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	// Lock any table we are to scan, since it may not have been properly locked
 	// by the parser (e.g in case of generated scans for partitioned tables)
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(md_rel->MDId());
-	GPOS_RTL_ASSERT(dxl_table_descr->LockMode() != -1);
+	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
 	Index index =
@@ -6204,7 +6204,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	// Lock any table we are to scan, since it may not have been properly locked
 	// by the parser (e.g in case of generated scans for partitioned tables)
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(md_rel->MDId());
-	GPOS_RTL_ASSERT(table_descr->LockMode() != -1);
+	GPOS_ASSERT(table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), table_descr->LockMode());
 
 	Index index =

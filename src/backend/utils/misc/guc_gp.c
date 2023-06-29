@@ -262,6 +262,7 @@ bool		gp_cte_sharing = false;
 bool		gp_enable_relsize_collection = false;
 bool		gp_recursive_cte = true;
 bool		gp_eager_two_phase_agg = false;
+bool		gp_force_random_redistribution = false;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -331,7 +332,6 @@ bool		optimizer_enable_hashagg;
 bool		optimizer_enable_groupagg;
 bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
-bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
 bool		optimizer_force_comprehensive_join_implementation;
 bool		optimizer_enable_replicated_table;
@@ -388,6 +388,7 @@ bool		optimizer_enable_space_pruning;
 bool		optimizer_enable_associativity;
 bool		optimizer_enable_eageragg;
 bool		optimizer_enable_range_predicate_dpe;
+bool		optimizer_enable_push_join_below_union_all;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -434,7 +435,6 @@ bool		gp_log_endpoints = false;
 bool		gp_allow_date_field_width_5digits = false;
 
 /* GUCs for Just In Time (JIT) compilation */
-bool		optimizer_jit_enabled;
 double		optimizer_jit_above_cost;
 double		optimizer_jit_inline_above_cost;
 double		optimizer_jit_optimize_above_cost;
@@ -1798,6 +1798,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_force_random_redistribution", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Force redistribution of insert for randomly-distributed."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_force_random_redistribution,
+		false, NULL, NULL
+	},
+
+	{
 		{"optimizer", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable GPORCA."),
 			NULL
@@ -2855,23 +2865,23 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_prune_unused_columns", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Prune unused table columns during query optimization."),
-			NULL,
-			GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_prune_unused_columns,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"optimizer_enable_range_predicate_dpe", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable range predicates for dynamic partition elimination."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_range_predicate_dpe,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_push_join_below_union_all", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable transform of join of union all to union all of joins. May improve the join performance."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_push_join_below_union_all,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2962,16 +2972,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL,
 		},
 		&gp_log_suboverflow_statement,
-		false,
-		NULL, NULL, NULL
-	},
-	{
-		{"optimizer_jit", PGC_USERSET, QUERY_TUNING_OTHER,
-		 gettext_noop("Allow Optimizer based JIT compilation."),
-		 NULL,
-		 GUC_EXPLAIN
-		},
-		&optimizer_jit_enabled,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3839,6 +3839,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_resource_group_queuing_timeout,
 		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+	{
+		{"gp_resource_group_move_timeout", PGC_USERSET, RESOURCES_MGM,
+			gettext_noop("Wait up to the specified time (in ms) while moving process to another resource group (after queuing on it) before give up."),
+			NULL,
+			GUC_UNIT_MS
+		},
+		&gp_resource_group_move_timeout,
+		30000, 10, INT_MAX,
 		NULL, NULL, NULL
 	},
 	{

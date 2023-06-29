@@ -4,7 +4,7 @@
 -- These tests ensure that we achieve our ANALYZE targets for AO/CO tables.
 --
 CREATE TABLE fast_analyze_@amname@_1(i int, j int) USING @amname@ DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 
 -- Stats target info shows that we will sample 300 * (100) rows.
 SHOW default_statistics_target;
@@ -37,11 +37,11 @@ BEGIN
 3: BEGIN;
 BEGIN
 1: INSERT INTO fast_analyze_@amname@_1 SELECT i, 2 FROM generate_series(1, 10500) i;
-INSERT 10500
+INSERT 0 10500
 2: INSERT INTO fast_analyze_@amname@_1 SELECT i, 1 FROM generate_series(1, 10500) i;
-INSERT 10500
+INSERT 0 10500
 3: INSERT INTO fast_analyze_@amname@_1 SELECT i, 5 FROM generate_series(1, 10500) i;
-INSERT 10500
+INSERT 0 10500
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -83,7 +83,7 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 -- (b) With blkdir subcase
 
 CREATE INDEX ON fast_analyze_@amname@_1(i);
-CREATE
+CREATE INDEX
 
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
@@ -125,7 +125,7 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 --------------------------------------------------------------------------------
 
 CREATE TABLE fast_analyze_@amname@_2(i int, j int) USING @amname@ DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 
 -- (a) Without blkdir subcase
 
@@ -137,11 +137,11 @@ BEGIN
 3: BEGIN;
 BEGIN
 1: INSERT INTO fast_analyze_@amname@_2 SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 2: INSERT INTO fast_analyze_@amname@_2 SELECT i, 1 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 3: INSERT INTO fast_analyze_@amname@_2 SELECT i, 5 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -183,7 +183,7 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 -- (b) With blkdir subcase
 
 CREATE INDEX ON fast_analyze_@amname@_2(i);
-CREATE
+CREATE INDEX
 
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
@@ -223,7 +223,7 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 --------------------------------------------------------------------------------
 
 CREATE TABLE fast_analyze_@amname@_3(i int, j int) USING @amname@ DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 
 -- (a) Without blkdir subcase
 
@@ -235,17 +235,17 @@ BEGIN
 3: BEGIN;
 BEGIN
 1: INSERT INTO fast_analyze_@amname@_3 SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 2: INSERT INTO fast_analyze_@amname@_3 SELECT i, 1 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 3: INSERT INTO fast_analyze_@amname@_3 SELECT i, 5 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 1: ABORT;
-ABORT
+ROLLBACK
 2: ABORT;
-ABORT
+ROLLBACK
 3: ABORT;
-ABORT
+ROLLBACK
 
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
@@ -281,7 +281,7 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 -- (b) With blkdir subcase
 
 CREATE INDEX ON fast_analyze_@amname@_3(i);
-CREATE
+CREATE INDEX
 
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
@@ -321,7 +321,7 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 --------------------------------------------------------------------------------
 
 CREATE TABLE fast_analyze_@amname@_4(i int, j int) USING @amname@ DISTRIBUTED BY (j);
-CREATE
+CREATE TABLE
 
 -- (a) Without blkdir subcase
 
@@ -333,11 +333,11 @@ BEGIN
 3: BEGIN;
 BEGIN
 1: INSERT INTO fast_analyze_@amname@_4 SELECT i, 2 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 2: INSERT INTO fast_analyze_@amname@_4 SELECT i, 1 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 3: INSERT INTO fast_analyze_@amname@_4 SELECT i, 5 FROM generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 1: COMMIT;
 COMMIT
 2: COMMIT;
@@ -381,7 +381,7 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 -- (b) With blkdir subcase
 
 CREATE INDEX ON fast_analyze_@amname@_4(i);
-CREATE
+CREATE INDEX
 
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
@@ -415,13 +415,13 @@ SELECT gp_inject_fault('returned_sample_row', 'reset', dbid) FROM gp_segment_con
 (3 rows)
 
 DROP TABLE fast_analyze_@amname@_1;
-DROP
+DROP TABLE
 DROP TABLE fast_analyze_@amname@_2;
-DROP
+DROP TABLE
 DROP TABLE fast_analyze_@amname@_3;
-DROP
+DROP TABLE
 DROP TABLE fast_analyze_@amname@_4;
-DROP
+DROP TABLE
 
 --
 -- The following tests ensure fast analyze function to work
@@ -429,35 +429,35 @@ DROP
 --
 
 create table analyze_@amname@ (id int, a int, b inet, c inet) using @amname@ with (compresstype=zlib, compresslevel=3);
-CREATE
+CREATE TABLE
 
 insert into analyze_@amname@ select 2, i, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text))::inet, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text))::inet from generate_series(1,30000)i;
-INSERT 30000
+INSERT 0 30000
 
 insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 -- test ANALYZE after concurrent inserts commit
 
 1: begin;
 BEGIN
 1: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 2: begin;
 BEGIN
 2: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 3: begin;
 BEGIN
 3: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 4: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 5: analyze analyze_@amname@;
 ANALYZE
@@ -467,7 +467,7 @@ COMMIT
 2: commit;
 COMMIT
 3: abort;
-ABORT
+ROLLBACK
 
 1: analyze analyze_@amname@;
 ANALYZE
@@ -475,25 +475,25 @@ ANALYZE
 -- test aoblkdir based ANALYZE
 
 create index on analyze_@amname@(id);
-CREATE
+CREATE INDEX
 
 1: begin;
 BEGIN
 1: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 2: begin;
 BEGIN
 2: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 3: begin;
 BEGIN
 3: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 4: insert into analyze_@amname@ select * from analyze_@amname@ limit 1000;
-INSERT 1000
+INSERT 0 1000
 
 5: analyze analyze_@amname@;
 ANALYZE
@@ -503,45 +503,45 @@ COMMIT
 2: commit;
 COMMIT
 3: abort;
-ABORT
+ROLLBACK
 
 1: analyze analyze_@amname@;
 ANALYZE
 
 drop table analyze_@amname@;
-DROP
+DROP TABLE
 
 -- test more data and stability, note, it could take a little long time
 
 create table analyze_@amname@_2 (id int, a int, b inet, c inet) using @amname@ with (compresstype=zlib, compresslevel=3);
-CREATE
+CREATE TABLE
 insert into analyze_@amname@_2 select 2, i, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text))::inet, (select ((i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text || '.' || (i%255)::text))::inet from generate_series(1,1000)i;
-INSERT 1000
+INSERT 0 1000
 
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 1000
+INSERT 0 1000
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 2000
+INSERT 0 2000
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 4000
+INSERT 0 4000
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 8000
+INSERT 0 8000
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 16000
+INSERT 0 16000
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 32000
+INSERT 0 32000
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 64000
+INSERT 0 64000
 insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 128000
+INSERT 0 128000
 
 1: begin;
 BEGIN
 1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 256000
+INSERT 0 256000
 
 2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 256000
+INSERT 0 256000
 
 1: commit;
 COMMIT
@@ -560,13 +560,13 @@ ANALYZE
 1: begin;
 BEGIN
 1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 768000
+INSERT 0 768000
 
 2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 768000
+INSERT 0 768000
 
 1: abort;
-ABORT
+ROLLBACK
 
 1: analyze analyze_@amname@_2;
 ANALYZE
@@ -582,15 +582,15 @@ ANALYZE
 -- test with aoblkdir
 
 create index on analyze_@amname@_2(a);
-CREATE
+CREATE INDEX
 
 1: begin;
 BEGIN
 1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 1536000
+INSERT 0 1536000
 
 2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 1536000
+INSERT 0 1536000
 
 1: commit;
 COMMIT
@@ -609,13 +609,13 @@ ANALYZE
 1: begin;
 BEGIN
 1: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 4608000
+INSERT 0 4608000
 
 2: insert into analyze_@amname@_2 select * from analyze_@amname@_2;
-INSERT 4608000
+INSERT 0 4608000
 
 1: abort;
-ABORT
+ROLLBACK
 
 1: analyze analyze_@amname@_2;
 ANALYZE
@@ -629,4 +629,4 @@ ANALYZE
 ANALYZE
 
 drop table analyze_@amname@_2;
-DROP
+DROP TABLE

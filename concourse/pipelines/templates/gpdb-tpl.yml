@@ -229,6 +229,8 @@ groups:
   - gpexpand_[[ os_type ]]
   - pg_upgrade_[[ os_type ]]
   - interconnect_[[ os_type ]]
+  - icw_planner_resgroup_[[ os_type ]]
+  - icw_gporca_resgroup_[[ os_type ]]
   - gate_icw_end
 {% endif %}
 {% if "CLI" in test_sections %}
@@ -299,6 +301,8 @@ groups:
   - gpexpand_[[ os_type ]]
   - pg_upgrade_[[ os_type ]]
   - interconnect_[[ os_type ]]
+  - icw_planner_resgroup_[[ os_type ]]
+  - icw_gporca_resgroup_[[ os_type ]]
   - gate_icw_end
 {% endif %}
 
@@ -859,7 +863,7 @@ jobs:
     image: gpdb7-[[ os_type ]]-test
     timeout: 24h
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on -c jit=on -c jit_above_cost=0 -c gp_explain_jit=off' installcheck
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on -c jit=on -c jit_above_cost=0 -c optimizer_jit_above_cost=0 -c gp_explain_jit=off' installcheck
       TEST_OS: [[ test_os ]]
       CONFIGURE_FLAGS: ((configure_flags))
 
@@ -1213,6 +1217,93 @@ jobs:
         sqldump: icw_planner_[[ os_type ]]_dump
       params:
         NUMBER_OF_NODES: 2
+
+- name: icw_planner_resgroup_[[ os_type ]]
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [gate_icw_start]
+          - get: gpdb_binary
+            resource: bin_gpdb
+            passed: [gate_icw_start]
+            trigger: true
+          - get: ccp_src
+          - get: ccp-image
+          - get: terraform.d
+            params:
+              unpack: true
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          <<: *ccp_default_vars
+          instance_type: n1-standard-32
+          number_of_nodes: 1
+          segments_per_host: 3
+          disk_size: 800
+    - task: gen_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        DATA_MOUNT_DIR: "/home/gpadmin"
+        CREATE_DATA_DIR: false
+    - task: run_tests
+      file: gpdb_src/concourse/tasks/ic_resgroup.yml
+      image: ccp-image
+      params:
+        TEST_OS: [[ os_type ]]
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off -c jit=off' installcheck-world
+        BLDWRAP_POSTGRES_CONF_ADDONS:
+          - gp_resource_manager=group
+      on_success:
+        <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
+- name: icw_gporca_resgroup_[[ os_type ]]
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [gate_icw_start]
+          - get: gpdb_binary
+            resource: bin_gpdb
+            passed: [gate_icw_start]
+            trigger: true
+          - get: ccp_src
+          - get: ccp-image
+          - get: terraform.d
+            params:
+              unpack: true
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          <<: *ccp_default_vars
+          instance_type: n1-standard-32
+          number_of_nodes: 1
+          segments_per_host: 3
+          disk_size: 800
+    - task: gen_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        DATA_MOUNT_DIR: "/home/gpadmin"
+        CREATE_DATA_DIR: false
+    - task: run_tests
+      file: gpdb_src/concourse/tasks/ic_resgroup.yml
+      image: ccp-image
+      params:
+        TEST_OS: [[ os_type ]]
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on -c jit=off' installcheck-world
+        BLDWRAP_POSTGRES_CONF_ADDONS:
+          - gp_resource_manager=group
+      on_success:
+        <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
 - name: gate_icw_end
   plan:
   - in_parallel:
@@ -1256,6 +1347,8 @@ jobs:
         - gpdb_pitr_[[ os_type ]]
         - gpexpand_[[ os_type ]]
         - pg_upgrade_[[ os_type ]]
+        - icw_planner_resgroup_[[ os_type ]]
+        - icw_gporca_resgroup_[[ os_type ]]
         - interconnect_[[ os_type ]]
         trigger: true
       - get: bin_gpdb_clients

@@ -504,7 +504,6 @@ extern bool optimizer_expand_fulljoin;
 extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;
 extern bool optimizer_enable_mergejoin;
-extern bool optimizer_prune_unused_columns;
 extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
 extern bool optimizer_force_comprehensive_join_implementation;
 extern bool optimizer_enable_replicated_table;
@@ -517,7 +516,6 @@ extern int	optimizer_plan_id;
 extern int	optimizer_samples_number;
 
 /* Optimizer Just In Time (JIT) compilation related GUCs*/
-extern  bool	optimizer_jit_enabled;
 extern  double  optimizer_jit_above_cost;
 extern  double  optimizer_jit_inline_above_cost;
 extern  double  optimizer_jit_optimize_above_cost;
@@ -566,6 +564,7 @@ extern bool optimizer_cte_inlining;
 extern bool optimizer_enable_space_pruning;
 extern bool optimizer_enable_associativity;
 extern bool optimizer_enable_range_predicate_dpe;
+extern bool optimizer_enable_push_join_below_union_all;
 
 /* Analyze related GUCs for Optimizer */
 extern bool optimizer_analyze_root_partition;

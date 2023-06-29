@@ -1898,6 +1898,8 @@ appendonly_index_validate_scan(Relation heapRelation,
 
 /*
  * This pretends that the all the space is taken by the main fork.
+ * The size returned is logical in the sense that it is based on
+ * the sum of all eof values of all segs.
  */
 static uint64
 appendonly_relation_size(Relation rel, ForkNumber forkNumber)

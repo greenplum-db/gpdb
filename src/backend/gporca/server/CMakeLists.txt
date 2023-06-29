@@ -250,7 +250,7 @@ PartTbl-SPE-Boolean1 PartTbl-SPE-Boolean2;
 CSetop1Test:
 ValueScanWithDuplicateAndSelfComparison PushGbBelowNaryUnionAll
 PushGbBelowNaryUnion-1 PushGbBelowNaryUnion-2 MS-UnionAll-1
-MS-UnionAll-5 MS-UnionAll-6 MS-UnionAll-7 ManyTextUnionsInSubquery;
+MS-UnionAll-5 MS-UnionAll-6 MS-UnionAll-7 ManyTextUnionsInSubquery JoinBelowUnionAll;
 
 CSetop2Test:
 Cascaded-UnionAll-Same-Cols-Order Cascaded-UnionAll-Differing-Cols
@@ -369,7 +369,7 @@ Subq2PartialDecorrelate Subq2CorrSQInLOJOn Subq2NotInWhereLOJ Subq2OuterRef2InJo
 Index-Join-With-Subquery-In-Pred NestedSubqLimitBindings;
 
 CIndexOnlyScanTest:
-IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache;
+IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache IndexOnlyScan-CTE;
 
 CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF
@@ -388,7 +388,7 @@ OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_
 OrderedAgg_skewed_data;
 
 CoverintIndexTest:
-CoveringIndex-1 CoveringIndex-2 CoveringIndex-3;
+CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2;
 
 CForeignPartTest:
 ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin ForeignPartOneTimeFilterDPE

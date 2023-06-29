@@ -326,7 +326,7 @@ update pg_appendonly
   set visimaprelid=16383
   where relid=(select oid from pg_class where relname='ao_with_malformed_visimaprelid');
 select pg_table_size('ao_with_malformed_visimaprelid');
-ERROR:  invalid auxiliary relation oid 16383 for appendonly relation 'ao_with_malformed_visimaprelid' (dbsize.c:610)
+ERROR:  invalid auxiliary relation oid 16383 for appendonly relation "ao_with_malformed_visimaprelid" (dbsize.c:465)
 drop table ao_with_malformed_visimaprelid;
 -- Also test pg_relation_size() in a query that selects from pg_class. It is a
 -- very typical way to use the functions, so make sure it works. (A

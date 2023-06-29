@@ -2,11 +2,11 @@
 -- until the transaction is committed.
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT, b INT) USING @amname@;
-CREATE
+CREATE TABLE
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1,10) AS i;
-INSERT 10
+INSERT 0 10
 
 -- The actual test begins
 1: BEGIN;

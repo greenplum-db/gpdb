@@ -194,7 +194,7 @@ The `vm.overcommit_memory` Linux kernel parameter is used by the OS to determine
 
 `vm.overcommit_ratio` is the percent of RAM that is used for application processes and the remainder is reserved for the operating system. The default is 50 on Red Hat Enterprise Linux.
 
-For `vm.overcommit_ratio` tuning and calculation recommendations with resource group-based resource management or resource queue-based resource management, refer to [Options for Configuring Segment Host Memory](../admin_guide/wlmgmt_intro.html) in the *Geenplum Database Administrator Guide*.
+For `vm.overcommit_ratio` tuning and calculation recommendations with resource group-based resource management or resource queue-based resource management, refer to [Options for Configuring Segment Host Memory](../admin_guide/wlmgmt_intro.html) in the *Greenplum Database Administrator Guide*.
 
 **Port Settings**
 

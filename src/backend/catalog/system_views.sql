@@ -1798,6 +1798,13 @@ $$
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
 
+create or replace function brin_desummarize_range(t regclass, block_number int8) returns setof void as
+$$
+  -- brin_desummarize_range_internal is marked as EXECUTE ON ALL SEGMENTS.
+select brin_desummarize_range_internal(t, block_number);
+$$
+LANGUAGE SQL READS SQL DATA EXECUTE ON COORDINATOR;
+
 ------------------------------------------------------------------
 -- GPDB endpoint related views and functions
 ------------------------------------------------------------------

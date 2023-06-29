@@ -95,20 +95,20 @@ SELECT * FROM gp_toolkit.gp_resgroup_config;
 Create a resource group with CPU and memory limit percentages of 35:
 
 ```
-CREATE RESOURCE GROUP rgroup1 WITH (cpu_max_percent=35, MEMORY_LIMIT=35);
+CREATE RESOURCE GROUP rgroup1 WITH (CPU_MAX_PERCENT=35, MEMORY_LIMIT=35);
 ```
 
 Create a resource group with a concurrent transaction limit of 20, a memory limit of 15, and a CPU limit of 25:
 
 ```
 CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
-  MEMORY_LIMIT=15, cpu_max_percent=25);
+  MEMORY_LIMIT=15, CPU_MAX_PERCENT=25);
 ```
 
 Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:
 
 ```
-CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, cpu_max_percent=10,
+CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, CPU_MAX_PERCENT=10,
   CONCURRENCY=0);
 ```
 

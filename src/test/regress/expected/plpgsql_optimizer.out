@@ -2183,7 +2183,7 @@ select sp_add_user('user1');
 select sp_add_user('user2');
  sp_add_user 
 -------------
-           2
+          21
 (1 row)
 
 select sp_add_user('user2');
@@ -2195,7 +2195,7 @@ select sp_add_user('user2');
 select sp_add_user('user3');
  sp_add_user 
 -------------
-           3
+          22
 (1 row)
 
 select sp_add_user('user3');

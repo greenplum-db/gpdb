@@ -19,7 +19,7 @@
 --
 
 CREATE OR REPLACE VIEW rg_name_view AS SELECT S.groupname, C.concurrency FROM gp_toolkit.gp_resgroup_config C, gp_toolkit.gp_resgroup_status S WHERE C.groupid = S.groupid AND C.groupname != 'default_group' AND C.groupname != 'admin_group' AND C.groupname != 'system_group' ORDER BY C.groupid;
-CREATE
+CREATE VIEW
 
 -- TODO: need to cleanup all existing resgroups
 
@@ -29,65 +29,65 @@ CREATE
 
 -- by default resgroup names have the form of [_a-zA-Z][_a-zA-Z0-9]*
 CREATE RESOURCE GROUP rgNameTest01 WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP rgNameTest01 SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname    | concurrency 
 --------------+-------------
  rgnametest01 | 2           
 (1 row)
 DROP   RESOURCE GROUP rgNameTest01;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP __rg_name_test_01__ WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP __rg_name_test_01__ SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname           | concurrency 
 ---------------------+-------------
  __rg_name_test_01__ | 2           
 (1 row)
 DROP   RESOURCE GROUP __rg_name_test_01__;
-DROP
+DROP RESOURCE GROUP
 
 -- min length is 1 character
 CREATE RESOURCE GROUP Z WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 DROP   RESOURCE GROUP Z;
-DROP
+DROP RESOURCE GROUP
 
 -- max length is 63 characters
 CREATE RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789 WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789 SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname                                                       | concurrency 
 -----------------------------------------------------------------+-------------
  max012345678901234567890123456789012345678901234567890123456789 | 2           
 (1 row)
 DROP   RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789;
-DROP
+DROP RESOURCE GROUP
 -- characters exceed the max length are ignored
 CREATE RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789further WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789are SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname                                                       | concurrency 
 -----------------------------------------------------------------+-------------
  max012345678901234567890123456789012345678901234567890123456789 | 2           
 (1 row)
 DROP   RESOURCE GROUP max012345678901234567890123456789012345678901234567890123456789ignored;
-DROP
+DROP RESOURCE GROUP
 
 -- special characters are allowed with double quotation marks
 -- white spaces
 CREATE RESOURCE GROUP "newlines s p a c e s t	a	b	s" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "newlines s p a c e s t	a	b	s" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname                    | concurrency 
 ------------------------------+-------------
@@ -96,92 +96,92 @@ s p a c e s
 t	a	b	s | 2           
 (1 row)
 DROP   RESOURCE GROUP "newlines s p a c e s t	a	b	s";
-DROP
+DROP RESOURCE GROUP
 -- punctuations
 CREATE RESOURCE GROUP "!#$%&`()*+,-./:;<=>?@[]^_{|}~" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "!#$%&`()*+,-./:;<=>?@[]^_{|}~" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname                     | concurrency 
 -------------------------------+-------------
  !#$%&`()*+,-./:;<=>?@[]^_{|}~ | 2           
 (1 row)
 DROP   RESOURCE GROUP "!#$%&`()*+,-./:;<=>?@[]^_{|}~";
-DROP
+DROP RESOURCE GROUP
 -- quotation marks
 CREATE RESOURCE GROUP "'' are 2 single quotation marks" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "'' are 2 single quotation marks" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname                       | concurrency 
 ---------------------------------+-------------
  '' are 2 single quotation marks | 2           
 (1 row)
 DROP   RESOURCE GROUP "'' are 2 single quotation marks";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP """ is 1 double quotation mark" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP """ is 1 double quotation mark" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname                    | concurrency 
 ------------------------------+-------------
  " is 1 double quotation mark | 2           
 (1 row)
 DROP   RESOURCE GROUP """ is 1 double quotation mark";
-DROP
+DROP RESOURCE GROUP
 
 -- nothing special with leading character
 CREATE RESOURCE GROUP "0 as prefix" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "0 as prefix" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname   | concurrency 
 -------------+-------------
  0 as prefix | 2           
 (1 row)
 DROP   RESOURCE GROUP "0 as prefix";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP " leading space" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP " leading space" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname      | concurrency 
 ----------------+-------------
   leading space | 2           
 (1 row)
 DROP   RESOURCE GROUP " leading space";
-DROP
+DROP RESOURCE GROUP
 
 -- backslash is not used as the escape character
 CREATE RESOURCE GROUP "\\ are two backslashes" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "\\ are two backslashes" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname              | concurrency 
 ------------------------+-------------
  \\ are two backslashes | 2           
 (1 row)
 DROP   RESOURCE GROUP "\\ are two backslashes";
-DROP
+DROP RESOURCE GROUP
 -- below are octal, hex and unicode representations of "rg1"
 CREATE RESOURCE GROUP "\o162\o147\o61" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP "\x72\x67\x31" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP "\u0072\u0067\u0031" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "\o162\o147\o61" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 ALTER  RESOURCE GROUP "\x72\x67\x31" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 ALTER  RESOURCE GROUP "\u0072\u0067\u0031" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname          | concurrency 
 --------------------+-------------
@@ -195,84 +195,84 @@ SELECT * FROM rg_name_view;
 DROP   RESOURCE GROUP "rg1";
 ERROR:  resource group "rg1" does not exist
 DROP   RESOURCE GROUP "\o162\o147\o61";
-DROP
+DROP RESOURCE GROUP
 DROP   RESOURCE GROUP "\x72\x67\x31";
-DROP
+DROP RESOURCE GROUP
 DROP   RESOURCE GROUP "\u0072\u0067\u0031";
-DROP
+DROP RESOURCE GROUP
 
 -- unicode escapes are supported
 CREATE RESOURCE GROUP U&"\0441\043B\043E\043D" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP U&"\0441\043B\043E\043D" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  слон      | 2           
 (1 row)
 DROP   RESOURCE GROUP U&"\0441\043B\043E\043D";
-DROP
+DROP RESOURCE GROUP
 -- unicode representation of "rg1"
 CREATE RESOURCE GROUP U&"\0072\0067\0031" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "rg1" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  rg1       | 2           
 (1 row)
 DROP   RESOURCE GROUP "rg1";
-DROP
+DROP RESOURCE GROUP
 
 -- CJK characters are allowed with or without double quotation marks
 CREATE RESOURCE GROUP 资源组 WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "资源组" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  资源组       | 2           
 (1 row)
 DROP   RESOURCE GROUP 资源组;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP リソース・グループ WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "リソース・グループ" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  リソース・グループ | 2           
 (1 row)
 DROP   RESOURCE GROUP リソース・グループ;
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP 자원그룹 WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "자원그룹" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  자원그룹      | 2           
 (1 row)
 DROP   RESOURCE GROUP 자원그룹;
-DROP
+DROP RESOURCE GROUP
 
 -- names are case sensitive,
 -- but are always converted to lower case unless around with quotation marks
 CREATE RESOURCE GROUP "RG_NAME_TEST" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP rg_Name_Test WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE RESOURCE GROUP "rg_name_test" WITH (cpu_max_percent=10);
 ERROR:  resource group "rg_name_test" already exists
 ALTER  RESOURCE GROUP Rg_NaMe_TeSt SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 ALTER  RESOURCE GROUP "RG_NAME_TEST" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname    | concurrency 
 --------------+-------------
@@ -280,101 +280,101 @@ SELECT * FROM rg_name_view;
  rg_name_test | 2           
 (2 rows)
 DROP   RESOURCE GROUP "RG_NAME_TEST";
-DROP
+DROP RESOURCE GROUP
 DROP   RESOURCE GROUP RG_nAME_tEST;
-DROP
+DROP RESOURCE GROUP
 
 -- reserved names are all lower case: "default_group", "admin_group", "none",
 -- they can be used by users with at least one upper case character.
 CREATE RESOURCE GROUP "None" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "None" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  None      | 2           
 (1 row)
 DROP   RESOURCE GROUP "None";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP "NONE" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "NONE" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  NONE      | 2           
 (1 row)
 DROP   RESOURCE GROUP "NONE";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP "DEFAULT_GROup" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "DEFAULT_GROup" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname     | concurrency 
 ---------------+-------------
  DEFAULT_GROup | 2           
 (1 row)
 DROP   RESOURCE GROUP "DEFAULT_GROup";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP "ADMIN_GROUP" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "ADMIN_GROUP" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname   | concurrency 
 -------------+-------------
  ADMIN_GROUP | 2           
 (1 row)
 DROP   RESOURCE GROUP "ADMIN_GROUP";
-DROP
+DROP RESOURCE GROUP
 
 CREATE RESOURCE GROUP "with" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "with" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  with      | 2           
 (1 row)
 DROP   RESOURCE GROUP "with";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP "WITH" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "WITH" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  WITH      | 2           
 (1 row)
 DROP   RESOURCE GROUP "WITH";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP "group" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "group" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  group     | 2           
 (1 row)
 DROP   RESOURCE GROUP "group";
-DROP
+DROP RESOURCE GROUP
 CREATE RESOURCE GROUP "create" WITH (cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 ALTER  RESOURCE GROUP "create" SET concurrency 2;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_name_view;
  groupname | concurrency 
 -----------+-------------
  create    | 2           
 (1 row)
 DROP   RESOURCE GROUP "create";
-DROP
+DROP RESOURCE GROUP
 
 --
 -- negative

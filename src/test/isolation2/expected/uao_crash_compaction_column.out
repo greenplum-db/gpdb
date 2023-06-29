@@ -31,24 +31,24 @@ SET
  ao_column                   
 (1 row)
 3:DROP TABLE IF EXISTS crash_before_cleanup_phase CASCADE;
-DROP
+DROP TABLE
 3:CREATE TABLE crash_before_cleanup_phase (a INT, b INT, c CHAR(20));
-CREATE
+CREATE TABLE
 3:CREATE INDEX crash_before_cleanup_phase_index ON crash_before_cleanup_phase(b);
-CREATE
+CREATE INDEX
 3:INSERT INTO crash_before_cleanup_phase SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
-INSERT 10
+INSERT 0 10
 3:DELETE FROM crash_before_cleanup_phase WHERE a < 4;
 DELETE 3
 -- for crash_vacuum_in_appendonly_insert
 3:DROP TABLE IF EXISTS crash_vacuum_in_appendonly_insert CASCADE;
-DROP
+DROP TABLE
 3:CREATE TABLE crash_vacuum_in_appendonly_insert (a INT, b INT, c CHAR(20));
-CREATE
+CREATE TABLE
 3:CREATE INDEX crash_vacuum_in_appendonly_insert_index ON crash_vacuum_in_appendonly_insert(b);
-CREATE
+CREATE INDEX
 3:INSERT INTO crash_vacuum_in_appendonly_insert SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
-INSERT 10
+INSERT 0 10
 3:UPDATE crash_vacuum_in_appendonly_insert SET b = 2;
 UPDATE 10
 
@@ -83,7 +83,7 @@ BEGIN
  Success:                      
 (1 row)
 3:END;
-END
+COMMIT
 
 -- we already waited for suspend faults to trigger and hence we can proceed to
 -- run next command which would trigger panic fault and help test
@@ -137,7 +137,7 @@ ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=18463: server closed the c
  2     | 2          | 258            | 3        | 0        | 1     
 (15 rows)
 1:INSERT INTO crash_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
-INSERT 2
+INSERT 0 2
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=25;
 UPDATE 1
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
@@ -199,7 +199,7 @@ VACUUM
  2     | 2          | 258            | 5        | 0        | 1     
 (18 rows)
 1:INSERT INTO crash_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
-INSERT 2
+INSERT 0 2
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=26;
 UPDATE 1
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
@@ -263,7 +263,7 @@ VACUUM
  2     | 2          | 258            | 5        | 0        | 1     
 (18 rows)
 1:INSERT INTO crash_vacuum_in_appendonly_insert VALUES(21, 1, 'c'), (26, 1, 'c');
-INSERT 2
+INSERT 0 2
 1:UPDATE crash_vacuum_in_appendonly_insert SET b = b+10 WHERE a=26;
 UPDATE 1
 1:SELECT * FROM crash_vacuum_in_appendonly_insert ORDER BY a,b;
@@ -295,13 +295,13 @@ SET
  ao_column                   
 (1 row)
 2:DROP TABLE IF EXISTS crash_coordinator_before_cleanup_phase CASCADE;
-DROP
+DROP TABLE
 2:CREATE TABLE crash_coordinator_before_cleanup_phase (a INT, b INT, c CHAR(20));
-CREATE
+CREATE TABLE
 2:CREATE INDEX crash_coordinator_before_cleanup_phase_index ON crash_coordinator_before_cleanup_phase(b);
-CREATE
+CREATE INDEX
 2:INSERT INTO crash_coordinator_before_cleanup_phase SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
-INSERT 10
+INSERT 0 10
 2:DELETE FROM crash_coordinator_before_cleanup_phase WHERE a < 4;
 DELETE 3
 
@@ -346,7 +346,7 @@ server closed the connection unexpectedly
  2     | 2          | 258            | 3        | 0        | 1     
 (15 rows)
 4:INSERT INTO crash_coordinator_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
-INSERT 2
+INSERT 0 2
 4:UPDATE crash_coordinator_before_cleanup_phase SET b = b+10 WHERE a=25;
 UPDATE 1
 4:SELECT * FROM crash_coordinator_before_cleanup_phase ORDER BY a,b;
@@ -406,7 +406,7 @@ VACUUM
  2     | 2          | 258            | 5        | 0        | 1     
 (18 rows)
 4:INSERT INTO crash_coordinator_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
-INSERT 2
+INSERT 0 2
 4:UPDATE crash_coordinator_before_cleanup_phase SET b = b+10 WHERE a=26;
 UPDATE 1
 4:SELECT * FROM crash_coordinator_before_cleanup_phase ORDER BY a,b;
@@ -446,7 +446,7 @@ UPDATE 1
 4:SET default_table_access_method = ao_column;
 SET
 4:CREATE TABLE crash_vacuum_in_appendonly_insert_1 (a INT, b INT, c CHAR(20));
-CREATE
+CREATE TABLE
 -- just sanity check to make sure appendonly table is created
 4:SELECT count(*) from pg_appendonly where relid in (select oid from pg_class where relname='crash_vacuum_in_appendonly_insert_1');
  count 
@@ -454,7 +454,7 @@ CREATE
  1     
 (1 row)
 4:INSERT INTO crash_vacuum_in_appendonly_insert_1 SELECT i AS a, 1 AS b, 'hello world' AS c FROM generate_series(1, 10) AS i;
-INSERT 10
+INSERT 0 10
 4:UPDATE crash_vacuum_in_appendonly_insert_1 SET b = 2;
 UPDATE 10
 4:SELECT gp_inject_fault('xlog_ao_insert', 'infinite_loop', 2);

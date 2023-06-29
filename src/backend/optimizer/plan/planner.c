@@ -290,7 +290,7 @@ static split_rollup_data *make_new_rollups_for_hash_grouping_set(PlannerInfo *ro
 																 Path *path,
 																 grouping_sets_data *gd);
 
-static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca);
+static void compute_jit_flags(PlannedStmt* pstmt);
 
 /*****************************************************************************
  *
@@ -383,10 +383,9 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (result)
 		{
 			/*
-			 * True in the following call means we are
-			 * setting Jit flags for Optimizer
+			 * Setting Jit flags for Optimizer
 			 */
-			compute_jit_flags(result, true /* use_gporca */);
+			compute_jit_flags(result);
 		}
 
 		if (gp_log_optimization_time)
@@ -757,8 +756,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->stmt_len = parse->stmt_len;
 
 	/* GPDB: JIT flags are set in wrapper function */
-	/* False in the following call means that we are setting Jit flags for planner */
-	compute_jit_flags(result, false /* use_gporca */);
+	compute_jit_flags(result);
 
 	if (glob->partition_directory != NULL)
 		DestroyPartitionDirectory(glob->partition_directory);
@@ -8614,7 +8612,7 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
  * for Optimizer and used here for setting the JIT flags.
  *
  */
-static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
+static void compute_jit_flags(PlannedStmt* pstmt)
 {
 	Plan* top_plan = pstmt->planTree;
 	pstmt->jitFlags = PGJIT_NONE;
@@ -8623,18 +8621,16 @@ static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
 	 * Common variables to hold values for optimizer or planner
 	 * based on function call.
 	 */
-	bool jit_on;
 	double above_cost;
 	double inline_above_cost;
 	double optimize_above_cost;
 
-	if (use_gporca)
+	if (pstmt->planGen == PLANGEN_OPTIMIZER)
 	{
 
 		/*
-		 * True means, we have to set values for ORCA.
+		 * Setting values for ORCA.
 		 */
-		jit_on = optimizer_jit_enabled;
 		above_cost = optimizer_jit_above_cost;
 		inline_above_cost = optimizer_jit_inline_above_cost;
 		optimize_above_cost = optimizer_jit_optimize_above_cost;
@@ -8643,16 +8639,15 @@ static void compute_jit_flags(PlannedStmt* pstmt, bool use_gporca)
 	{
 
 		/*
-		 * False means, we have to set values for Planner.
+		 * Setting values for Planner.
 		 */
-		jit_on = jit_enabled;
 		above_cost = jit_above_cost;
 		inline_above_cost = jit_inline_above_cost;
 		optimize_above_cost = jit_optimize_above_cost;
 
 	}
 
-	if (jit_on && above_cost >= 0 &&
+	if (jit_enabled && above_cost >= 0 &&
 		top_plan->total_cost > above_cost)
 	{
 		pstmt->jitFlags |= PGJIT_PERFORM;

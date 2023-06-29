@@ -154,7 +154,7 @@ DROP FUNCTION IF EXISTS blip(int);
 NOTICE:  function blip(pg_catalog.int4) does not exist, skipping
 DROP TABLE IF EXISTS calls_to_blip;
 NOTICE:  table "calls_to_blip" does not exist, skipping
-CREATE TABLE calls_to_blip (n serial, v int) DISTRIBUTED RANDOMLY;
+CREATE TABLE calls_to_blip (v int) DISTRIBUTED RANDOMLY;
 CREATE OR REPLACE FUNCTION blip(int) RETURNS int
 LANGUAGE plpgsql MODIFIES SQL DATA
 VOLATILE
@@ -178,13 +178,13 @@ SELECT CASE blip(1)
 (1 row)
 
 SELECT * FROM calls_to_blip ORDER BY 1;
- n |  v  
----+-----
- 1 |   1
- 2 |   2
- 3 |   3
- 4 |   4
- 5 | 666
+  v  
+-----
+   1
+   2
+   3
+   4
+ 666
 (5 rows)
 
 -- Negative test

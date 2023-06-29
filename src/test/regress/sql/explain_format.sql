@@ -84,6 +84,7 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- end_matchsubs
 -- start_matchignore
 -- m/\s*optimizer:\s*"off"/
+-- m/^\s+optimizer_jit\w*:/
 -- end_matchignore
 -- Check Explain YAML output
 EXPLAIN (FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
@@ -106,6 +107,8 @@ EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id
 -- end_matchsubs
 -- ignore the variable JIT gucs and "optimizer = 'off'" in Settings (unaligned mode + text format)
 -- start_matchsubs
+-- m/^Settings:.*/
+-- s/,?\s*optimizer_jit\w*\s*=\s*[^,\n]+//g
 -- m/^Settings:.*/
 -- s/,?\s*jit\w*\s*=\s*[^,\n]+//g
 -- m/^Settings:.*/
@@ -159,8 +162,7 @@ SET jit_above_cost = 0;
 SET gp_explain_jit = on;
 
 -- ORCA GUCs to enable JIT
-set optimizer_jit to on;
-set optimizer_jit_above_cost to 1;
+set optimizer_jit_above_cost to 0;
 
 -- explain_processing_off
 EXPLAIN SELECT * FROM jit_explain_output LIMIT 10;
@@ -213,7 +215,6 @@ EXPLAIN (ANALYZE, FORMAT json) SELECT * FROM jit_explain_output LIMIT 10;
 RESET jit;
 RESET jit_above_cost;
 RESET gp_explain_jit;
-RESET optimizer_jit;
 RESET optimizer_jit_above_cost;
 -- Cleanup
 DROP TABLE boxes;

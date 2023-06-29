@@ -6,15 +6,15 @@ SET
 
 -- Setup the append-optimized table to be vacuumed
 DROP TABLE IF EXISTS vacuum_progress_ao_row;
-DROP
+DROP TABLE
 CREATE TABLE vacuum_progress_ao_row(i int, j int);
-CREATE
+CREATE TABLE
 
 -- Add two indexes to be vacuumed as well
 CREATE INDEX on vacuum_progress_ao_row(i);
-CREATE
+CREATE INDEX
 CREATE INDEX on vacuum_progress_ao_row(j);
-CREATE
+CREATE INDEX
 
 -- Insert from two current sessions so that data are stored in two segment files.
 1: BEGIN;
@@ -22,23 +22,23 @@ BEGIN
 2: BEGIN;
 BEGIN
 1: INSERT INTO vacuum_progress_ao_row SELECT i, i FROM generate_series(1, 100000) i;
-INSERT 100000
+INSERT 0 100000
 2: INSERT INTO vacuum_progress_ao_row SELECT i, i FROM generate_series(1, 100000) i;
-INSERT 100000
+INSERT 0 100000
 -- Commit so that the logical EOF of segno 2 is non-zero.
 2: COMMIT;
 COMMIT
 2: BEGIN;
 BEGIN
 2: INSERT INTO vacuum_progress_ao_row SELECT i, i FROM generate_series(1, 100000) i;
-INSERT 100000
+INSERT 0 100000
 -- Abort so that segno 2 has dead tuples after its logical EOF
 2: ABORT;
-ABORT
+ROLLBACK
 2q: ... <quitting>
 -- Abort so that segno 1 has logical EOF = 0.
 1: ABORT;
-ABORT
+ROLLBACK
 
 -- Also delete half of the tuples evenly before the EOF of segno 2.
 DELETE FROM vacuum_progress_ao_row where j % 2 = 0;

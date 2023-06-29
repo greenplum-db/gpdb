@@ -643,7 +643,6 @@
                       <dxl:Columns>
                         <dxl:Column ColId="50" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="51" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="52" Attno="3" ColName="c" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="53" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
                         <dxl:Column ColId="54" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
                         <dxl:Column ColId="55" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>

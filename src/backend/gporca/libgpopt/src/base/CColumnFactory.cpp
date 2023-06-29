@@ -208,9 +208,9 @@ CColumnFactory::PcrCreate(const CColumnDescriptor *pcoldesc, ULONG id,
 //---------------------------------------------------------------------------
 CColRef *
 CColumnFactory::PcrCreate(const IMDType *pmdtype, INT type_modifier,
-						  IMDId *mdid_table, INT attno, BOOL is_nullable,
-						  ULONG id, const CName &name, ULONG ulOpSource,
-						  BOOL isDistCol, ULONG ulWidth)
+						  BOOL mark_as_used, IMDId *mdid_table, INT attno,
+						  BOOL is_nullable, ULONG id, const CName &name,
+						  ULONG ulOpSource, BOOL isDistCol, ULONG ulWidth)
 {
 	CName *pnameCopy = GPOS_NEW(m_mp) CName(m_mp, name);
 	CAutoP<CName> a_pnameCopy(pnameCopy);
@@ -224,7 +224,10 @@ CColumnFactory::PcrCreate(const IMDType *pmdtype, INT type_modifier,
 	// ensure uniqueness
 	GPOS_ASSERT(nullptr == LookupColRef(id));
 	m_sht.Insert(colref);
-	colref->MarkAsUsed();
+	if (mark_as_used)
+	{
+		colref->MarkAsUsed();
+	}
 	colref->SetMdidTable(mdid_table);
 
 	return a_pcr.Reset();
@@ -271,6 +274,7 @@ CColumnFactory::PcrCopy(const CColRef *colref)
 		CColRefTable::PcrConvert(const_cast<CColRef *>(colref));
 
 	return PcrCreate(colref->RetrieveType(), colref->TypeModifier(),
+					 colref->GetUsage(true, true) == CColRef::EUsed,
 					 colref->GetMdidTable(), pcrTable->AttrNum(),
 					 pcrTable->IsNullable(), id, name, pcrTable->UlSourceOpId(),
 					 colref->IsDistCol(), pcrTable->Width());

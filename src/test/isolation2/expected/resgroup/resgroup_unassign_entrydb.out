@@ -5,15 +5,15 @@
 
 -- start_ignore
 DROP ROLE IF EXISTS role_test;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_test;
 ERROR:  resource group "rg_test" does not exist
 -- end_ignore
 
 CREATE RESOURCE GROUP rg_test WITH (concurrency=2, cpu_max_percent=10);
-CREATE
+CREATE RESOURCE GROUP
 CREATE ROLE role_test RESOURCE GROUP rg_test;
-CREATE
+CREATE ROLE
 
 -- By pass this session, else this affects the testing session, i.e. 1:
 SET gp_resource_group_bypass = true;
@@ -95,6 +95,6 @@ SET
 
 -- Clean up
 DROP ROLE role_test;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_test;
-DROP
+DROP RESOURCE GROUP

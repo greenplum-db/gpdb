@@ -230,9 +230,6 @@ SELECT brin_summarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2),
   'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
 
--- Now test desummarization
--- XXX: We currently use utility mode as brin_desummarize_range() is not MPPized yet.
-
 -- Desummarization of a block falling beyond the end of aoseg1 should be a no-op.
 SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554436);
 -- Desummarization of a block falling in aoseg0 should be a no-op (as aoseg0 doesn't exist).
@@ -251,9 +248,9 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
   'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
 
 -- Should be able to desummarize all existing blocks in aoseg1.
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554432);
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554433);
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554432);
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554433);
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
 
 -- Sanity: All revmap entries corresponding to aoseg1 have been set to invalid
 -- and all their data page tuples have been deleted (marked unused).
@@ -263,7 +260,7 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 100663296);
   'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
 
 -- Now desummarize the last remaining range in the data page (from aoseg2).
-1U: SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 67108864);
+SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 67108864);
 
 -- Sanity: The revmap entry should be marked invalid.
 -- Also, this time instead of looking up the data page, look at the data page
@@ -648,7 +645,7 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 -- Desummarize the last block (test iteration to target range across chain)
-1U: SELECT brin_desummarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
+SELECT brin_desummarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
 
 -- Sanity: The revmap entry for the last block should be marked invalid.
 -- Also, this time instead of looking up the data page, look at the data page

@@ -7577,7 +7577,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	/*
 	 * Add a pg_attribute_encoding entry for ao_row tables, containing the last row numbers of each segfile.
 	 */
-	if (RelationIsAoRows(rel) && rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+	if (RelationStorageIsAoRows(rel))
 	{
 		Oid 	segrelid;
 		int64 	lastrownums[MAX_AOREL_CONCURRENCY];
@@ -9115,40 +9115,6 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 						colName, RelationGetRelationName(rel))));
 
 	ReleaseSysCache(tuple);
-
-	if (GpPolicyIsPartitioned(rel->rd_cdbpolicy))
-	{
-		int			ia = 0;
-
-		for (ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
-		{
-			if (attnum == rel->rd_cdbpolicy->attrs[ia])
-			{
-				MemoryContext oldcontext;
-				GpPolicy *policy;
-
-				/* force a random distribution */
-				rel->rd_cdbpolicy->nattrs = 0;
-
-				oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-				policy = GpPolicyCopy(rel->rd_cdbpolicy);
-				MemoryContextSwitchTo(oldcontext);
-
-				/*
-				 * replace policy first in catalog and then assign to
-				 * rd_cdbpolicy to make sure we have intended policy in relcache
-				 * even with relcache invalidation. Otherwise rd_cdbpolicy can
-				 * become invalid soon after assignment.
-				 */
-				GpPolicyReplace(RelationGetRelid(rel), policy);
-				rel->rd_cdbpolicy = policy;
-				if (Gp_role != GP_ROLE_EXECUTE)
-				    ereport(NOTICE,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("dropping a column that is part of the distribution policy forces a NULL distribution policy")));
-			}
-		}
-	}
 
 	/*
 	 * Propagate to children as appropriate.  Unlike most other ALTER
@@ -17726,12 +17692,17 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (need_reorg)
 		{
 			/*
+			 * Make sure the redistribution happens for a randomly distributed table.
+			 *
 			 * Force the use of Postgres query optimizer, since Pivotal Optimizer (GPORCA) will not
 			 * redistribute the tuples if the current and required distributions
 			 * are both RANDOM even when reorganize is set to "true"
+			 * Also set gp_force_random_redistribution to true.
 			 */
 			bool saveOptimizerGucValue = optimizer;
+			bool saveRedistributeGucValue = gp_force_random_redistribution;
 			optimizer = false;
+			gp_force_random_redistribution = true;
 
 			if (saveOptimizerGucValue)
 				ereport(LOG,
@@ -17822,6 +17793,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			PopActiveSnapshot();
 			optimizer = saveOptimizerGucValue;
 			optimizer_replicated_table_insert = save_optimizer_replicated_table_insert;
+			gp_force_random_redistribution = saveRedistributeGucValue;
 
 			CommandCounterIncrement(); /* see the effects of the command */
 
