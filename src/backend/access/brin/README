@@ -347,3 +347,25 @@ insert. So, we can safely position the revmap iterator at the end of the chain
 (instead of traversing the chain unnecessarily from the front).
 
 Note: Multiple revmap pages across chains can map to the same data page.
+
+(4) VACUUM:
+
+We perform bulk desummarization of BRIN ranges at VACUUM time, so that the
+ranges corresponding to the old seg files are no longer represented in the index.
+Scrubbing these ranges mean that they will not be falsely consulted during a
+scan, thereby bloating the output tidbitmap, and adding to needless work for
+the subsequent BitmapHeapScan.
+
+To scrub these ranges, we introduce an alternative flavor to
+brinDesummarizeRange(), where the next tid to be wiped off is provided from the
+caller (which loops over all tids in each revmap page in the chain corresponding
+to the dead segno).
+
+After scrubbing these ranges, as a further optimization, we ensure that we don't
+attempt to summarize these ranges again during brinvacuumcleanup(). We do this
+by omitting segs awaiting drop from the table AM APIs. They have no business
+being scanned or summarized.
+
+Note: these dead ranges will make a reappearance if we summarize the same
+segfile again (just as it would if these ranges were aborted). However, these
+ranges would have empty tuples and would never be considered for scans.

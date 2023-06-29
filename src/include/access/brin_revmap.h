@@ -41,6 +41,7 @@
 
 /* struct definition lives in brin_revmap.c */
 typedef struct BrinRevmap BrinRevmap;
+typedef struct BulkDesummarizeState BulkDesummarizeState;
 
 extern BrinRevmap *brinRevmapInitialize(Relation idxrel,
 										BlockNumber *pagesPerRange, Snapshot snapshot);
@@ -55,7 +56,10 @@ extern void brinSetHeapBlockItemptr(Buffer rmbuf, BlockNumber pagesPerRange,
 extern BrinTuple *brinGetTupleForHeapBlock(BrinRevmap *revmap,
 										   BlockNumber heapBlk, Buffer *buf, OffsetNumber *off,
 										   Size *size, int mode, Snapshot snapshot);
-extern bool brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk);
+extern bool brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk,
+									   BulkDesummarizeState *bulkDesummarizeState);
+
+extern void brinRevmapAOBulkDesummarize(BrinRevmap *revmap, int segno);
 
 /* GPDB specific */
 extern void brinRevmapAOPositionAtStart(BrinRevmap *revmap, int seqNum);

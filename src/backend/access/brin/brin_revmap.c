@@ -26,12 +26,12 @@
 #include "access/brin_tuple.h"
 #include "access/brin_xlog.h"
 #include "access/rmgr.h"
+#include "access/tableam.h"
 #include "access/xloginsert.h"
 #include "miscadmin.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "utils/rel.h"
-
 
 struct BrinRevmap
 {
@@ -48,6 +48,19 @@ struct BrinRevmap
 	int         	rm_aoIterBlockSeqNum;
 	BlockNumber 	rm_aoIterRevmapPage;
 	LogicalPageNum 	rm_aoIterRevmapPageNum;
+};
+
+/*
+ * GPDB: Context for bulk desummarization operation.
+ */
+struct BulkDesummarizeState
+{
+	/* reference to the revmap already set up */
+	BrinRevmap		*revmap;
+	/* reference to the exclusive locked current revmap page's buffer */
+	Buffer			rm_buf;
+	/* reference to the next tid in the current revmap page to be killed off */
+	int 			rm_tid_idx;
 };
 
 /* typedef appears in brin_revmap.h */
@@ -331,9 +344,17 @@ brinGetTupleForHeapBlock(BrinRevmap *revmap, BlockNumber heapBlk,
  * Index must be locked in ShareUpdateExclusiveLock mode.
  *
  * Return false if caller should retry.
+ *
+ * GPDB: We have augmented this interface with a 'bulkDesummarizeState', to
+ * support bulk desummarization of ranges. This is currently used by VACUUM as a
+ * performance optimization for AO/CO tables. When bulk ops is in progress, we
+ * already have a revmap struct initialized, and we have the current revmap page
+ * loaded and ready, along with the next tid to be killed pre-determined. In
+ * this mode, we don't have to provide a 'heapBlk' at all.
  */
 bool
-brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
+brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk,
+						   BulkDesummarizeState *bulkDesummarizeState)
 {
 	BrinRevmap *revmap;
 	BlockNumber pagesPerRange;
@@ -345,9 +366,15 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 	Buffer		regBuf;
 	Page		revmapPg;
 	Page		regPg;
-	OffsetNumber revmapOffset;
+	OffsetNumber revmapOffset = InvalidOffsetNumber;
 	OffsetNumber regOffset;
 	ItemId		lp;
+
+	if (!bulkDesummarizeState)
+	{
+	/* unindented to prevent merge conflicts */
+
+	Assert(BlockNumberIsValid(heapBlk));
 
 	revmap = brinRevmapInitialize(idxrel, &pagesPerRange, NULL);
 
@@ -379,6 +406,35 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 		brinRevmapTerminate(revmap);
 		return true;
 	}
+	/* end if */
+	}
+	else
+	{
+		Assert(!BlockNumberIsValid(heapBlk));
+		Assert(!OffsetNumberIsValid(revmapOffset));
+		/*
+		 * GPDB: We are performing bulk desummarization for an AO/CO table, with
+		 * the help of the bulk desummarization state. We can assume that the
+		 * revmap is already set up, along with the current revmap page loaded
+		 * in a buffer, with an exclusive lock. Also, we have the tid that is
+		 * the target of this desummarization operation.
+		 */
+		Assert(bulkDesummarizeState->revmap);
+		Assert(bulkDesummarizeState->revmap->rm_isAO);
+		Assert(BufferIsValid(bulkDesummarizeState->rm_buf));
+		Assert(bulkDesummarizeState->rm_tid_idx >= 0 &&
+			bulkDesummarizeState->rm_tid_idx < REVMAP_PAGE_MAXITEMS);
+
+		revmap = bulkDesummarizeState->revmap;
+		revmapBuf = bulkDesummarizeState->rm_buf;
+		revmapPg = BufferGetPage(revmapBuf);
+		contents = (RevmapContents *) PageGetContents(revmapPg);
+		iptr = contents->rm_tids;
+		iptr += bulkDesummarizeState->rm_tid_idx;
+
+		if (!ItemPointerIsValid(iptr))
+			return true;
+	}
 
 	regBuf = ReadBuffer(idxrel, ItemPointerGetBlockNumber(iptr));
 	LockBuffer(regBuf, BUFFER_LOCK_EXCLUSIVE);
@@ -391,6 +447,11 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 	/* if this is no longer a regular page, tell caller to start over */
 	if (!BRIN_IS_REGULAR_PAGE(regPg))
 	{
+		/* No page evacuation for AO/CO tables */
+		Assert(!revmap->rm_isAO);
+		/* We only perform bulk desummarization for AO/CO tables */
+		Assert(!bulkDesummarizeState);
+
 		LockBuffer(revmapBuf, BUFFER_LOCK_UNLOCK);
 		LockBuffer(regBuf, BUFFER_LOCK_UNLOCK);
 		brinRevmapTerminate(revmap);
@@ -418,9 +479,21 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 
 	START_CRIT_SECTION();
 
-	ItemPointerSetInvalid(&invalidIptr);
-	brinSetHeapBlockItemptr(revmapBuf, revmap->rm_pagesPerRange, heapBlk,
-							invalidIptr);
+	if (!bulkDesummarizeState)
+	{
+		ItemPointerSetInvalid(&invalidIptr);
+		brinSetHeapBlockItemptr(revmapBuf, revmap->rm_pagesPerRange, heapBlk,
+								invalidIptr);
+	}
+	else
+	{
+		/*
+		 * GPDB: If we are doing bulk desummarization, we already have the item
+		 * pointer we need to kill off.
+		 */
+		ItemPointerSetInvalid(iptr);
+	}
+
 	PageIndexTupleDeleteNoCompact(regPg, regOffset);
 	/* XXX record free space in FSM? */
 
@@ -436,6 +509,18 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 		xlrec.heapBlk = heapBlk;
 		xlrec.regOffset = regOffset;
 
+		/*
+		 * GPDB: Emit revmapTidIdx in case we are doing bulk desummarization,
+		 * instead of the heapBlk.
+		 */
+		if (bulkDesummarizeState)
+		{
+			Assert(!BlockNumberIsValid(xlrec.heapBlk));
+			xlrec.revmapTidIdx = bulkDesummarizeState->rm_tid_idx;
+		}
+		else
+			xlrec.revmapTidIdx = -1;
+
 		XLogBeginInsert();
 		XLogRegisterData((char *) &xlrec, SizeOfBrinDesummarize);
 		XLogRegisterBuffer(0, revmapBuf, 0);
@@ -448,10 +533,65 @@ brinRevmapDesummarizeRange(Relation idxrel, BlockNumber heapBlk)
 	END_CRIT_SECTION();
 
 	UnlockReleaseBuffer(regBuf);
-	LockBuffer(revmapBuf, BUFFER_LOCK_UNLOCK);
-	brinRevmapTerminate(revmap);
+
+	/* GPDB: Bulk state implies that cleanup is deferred */
+	if (!bulkDesummarizeState)
+	{
+		LockBuffer(revmapBuf, BUFFER_LOCK_UNLOCK);
+		brinRevmapTerminate(revmap);
+	}
 
 	return true;
+}
+
+/*
+ * Interface to perform a bulk desummarization of a BRIN index on an AO/CO
+ * table, for a specific 'segno' which represents a dead segment, during the
+ * course of a VACUUM. 'revmap' is already set up in the caller.
+ */
+void
+brinRevmapAOBulkDesummarize(BrinRevmap *revmap, int segno)
+{
+	BulkDesummarizeState 	bulkDesummarizeState;
+	BlockNumber 			currRevmapBlk;
+
+	Assert(revmap);
+	Assert(revmap->rm_isAO);
+	Assert(segno != InvalidFileSegNumber);
+
+	bulkDesummarizeState.revmap = revmap;
+	currRevmapBlk = revmap->rm_aoChainInfo[segno].firstPage;
+
+	/* iterate through each page in the revmap chain for segno */
+	while (currRevmapBlk != InvalidBlockNumber)
+	{
+		Buffer 	currBuf;
+		bool	success;
+
+		currBuf = ReadBuffer(revmap->rm_irel, currRevmapBlk);
+		LockBuffer(currBuf, BUFFER_LOCK_EXCLUSIVE);
+		bulkDesummarizeState.rm_buf = currBuf;
+
+		/* iterate through each tid in the revmap page and desummarize */
+		for (int i = 0; i < REVMAP_PAGE_MAXITEMS; i++)
+		{
+			bulkDesummarizeState.rm_tid_idx = i;
+			success = brinRevmapDesummarizeRange(revmap->rm_irel,
+												 InvalidBlockNumber,
+												 &bulkDesummarizeState);
+			/*
+			 * We always expect the operation to be successful as there are no
+			 * retries for AO/CO tables. Also for invalid tids passed in, we
+			 * perform a "success"-ful no-op.
+			 */
+			Assert(success);
+		}
+
+		/* Look at the chain link to see what the next revmap blknum is */
+		currRevmapBlk = BrinNextRevmapPage(BufferGetPage(currBuf));
+
+		UnlockReleaseBuffer(currBuf);
+	}
 }
 
 /*

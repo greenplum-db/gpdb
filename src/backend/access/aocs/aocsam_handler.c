@@ -2209,6 +2209,9 @@ aoco_relation_size(Relation rel, ForkNumber forkNumber)
  *
  * The number of heap blocks can be determined from the last row number present
  * in the segment. See appendonlytid.h for details.
+ *
+ * We skip segments awaiting drop -> they need not be summarized/scanned and are
+ * thus safe to omit, saving us cycles.
  */
 static BlockSequence *
 aoco_relation_get_block_sequences(Relation rel, int *numSequences)
@@ -2218,6 +2221,7 @@ aoco_relation_get_block_sequences(Relation rel, int *numSequences)
 	int					nsegs;
 	BlockSequence		*sequences;
 	AOCSFileSegInfo 	**seginfos;
+	int         		numValidSequences = 0;
 
 	Assert(RelationIsValid(rel));
 	Assert(numSequences);
@@ -2226,7 +2230,6 @@ aoco_relation_get_block_sequences(Relation rel, int *numSequences)
 
 	seginfos = GetAllAOCSFileSegInfo(rel, snapshot, &nsegs, &segrelid);
 	sequences = (BlockSequence *) palloc(sizeof(BlockSequence) * nsegs);
-	*numSequences = nsegs;
 
 	/*
 	 * For each aoseg, the sequence starts at a fixed heap block number and
@@ -2234,7 +2237,20 @@ aoco_relation_get_block_sequences(Relation rel, int *numSequences)
 	 * lastSequence value of that segment.
 	 */
 	for (int i = 0; i < nsegs; i++)
-		AOSegment_PopulateBlockSequence(&sequences[i], segrelid, seginfos[i]->segno);
+	{
+		/*
+		 * We skip segs that are awaiting drop. They have no business being
+		 * summarized or considered for scans.
+		 */
+		if (seginfos[i]->state != AOSEG_STATE_AWAITING_DROP)
+		{
+			AOSegment_PopulateBlockSequence(&sequences[numValidSequences],
+											segrelid,
+											seginfos[i]->segno);
+			numValidSequences++;
+		}
+	}
+	*numSequences = numValidSequences;
 
 	UnregisterSnapshot(snapshot);
 

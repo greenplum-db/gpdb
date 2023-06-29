@@ -337,10 +337,28 @@ brin_xlog_desummarize_page(XLogReaderState *record)
 	action = XLogReadBufferForRedo(record, 0, &buffer);
 	if (action == BLK_NEEDS_REDO)
 	{
-		ItemPointerData iptr;
+		if (xlrec->revmapTidIdx == -1)
+		{
+			ItemPointerData iptr;
+			ItemPointerSetInvalid(&iptr);
+			brinSetHeapBlockItemptr(buffer, xlrec->pagesPerRange, xlrec->heapBlk, iptr);
+		}
+		else
+		{
+			/* GPDB: bulk desummarize operation: set provided iptr invalid */
+			Page revmapPg;
+			RevmapContents *contents;
+			ItemPointerData *iptr;
 
-		ItemPointerSetInvalid(&iptr);
-		brinSetHeapBlockItemptr(buffer, xlrec->pagesPerRange, xlrec->heapBlk, iptr);
+			Assert(!BlockNumberIsValid(xlrec->heapBlk));
+			Assert(xlrec->revmapTidIdx != -1);
+
+			revmapPg = BufferGetPage(buffer);
+			contents = (RevmapContents *) PageGetContents(revmapPg);
+			iptr = contents->rm_tids;
+			iptr += xlrec->revmapTidIdx;
+			ItemPointerSetInvalid(iptr);
+		}
 
 		PageSetLSN(BufferGetPage(buffer), lsn);
 		MarkBufferDirty(buffer);

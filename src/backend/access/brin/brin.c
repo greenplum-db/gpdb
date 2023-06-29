@@ -993,14 +993,52 @@ brinbuildempty(Relation index)
  * XXX we could mark item tuples as "dirty" (when a minimum or maximum heap
  * tuple is deleted), meaning the need to re-run summarization on the affected
  * range.  Would need to add an extra flag in brintuples for that.
+ *
+ * GPDB: For AO/CO tables, we bulk desummarize ranges corresponding to the
+ * segments awaiting drop, as a result of VACUUM.
  */
 IndexBulkDeleteResult *
 brinbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 			   IndexBulkDeleteCallback callback, void *callback_state)
 {
+	Buffer				metabuffer;
+	Page				metapage;
+	BrinMetaPageData 	*metadata;
+
+	/* GPDB: Read the metabuf to check if this is an AO/CO relation */
+	metabuffer = ReadBuffer(info->index, BRIN_METAPAGE_BLKNO);
+	LockBuffer(metabuffer, BUFFER_LOCK_SHARE);
+	metapage = BufferGetPage(metabuffer);
+	metadata = (BrinMetaPageData *) PageGetContents(metapage);
+	UnlockReleaseBuffer(metabuffer);
+
 	/* allocate stats if first time through, else re-use existing struct */
 	if (stats == NULL)
 		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
+
+	/*
+	 * GPDB: If the table is an AO/CO table, we will go and desummarize the
+	 * ranges that belong to the dead segments.
+	 */
+	if (metadata->isAO)
+	{
+		Bitmapset 	*dead_segs = (Bitmapset *) callback_state;
+
+		if (!bms_is_empty(dead_segs))
+		{
+			int			segno = -1;
+			BrinRevmap 	*revmap;
+			BlockNumber	pagesPerRange;
+
+			revmap = brinRevmapInitialize(info->index, &pagesPerRange, NULL);
+
+			/* invoke bulk desummarization on each vacuumed seg */
+			while ((segno = bms_next_member(dead_segs, segno)) >= 0)
+				brinRevmapAOBulkDesummarize(revmap, segno);
+
+			brinRevmapTerminate(revmap);
+		}
+	}
 
 	return stats;
 }
@@ -1273,7 +1311,7 @@ brin_desummarize_range_internal(PG_FUNCTION_ARGS)
 	/* the revmap does the hard work */
 	do
 	{
-		done = brinRevmapDesummarizeRange(indexRel, heapBlk);
+		done = brinRevmapDesummarizeRange(indexRel, heapBlk, NULL);
 	}
 	while (!done);
 

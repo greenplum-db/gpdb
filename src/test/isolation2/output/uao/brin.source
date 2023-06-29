@@ -334,27 +334,19 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_
 VACUUM brin_ao_summarize_@amname@;
 VACUUM
 
--- A new INSERT would always map to the last range on the old segment and that
--- range will be updated to hold the new value, as part of INSERT.
-INSERT INTO brin_ao_summarize_@amname@ VALUES(40);
-INSERT 0 1
-
 -- All the live tuples will have been moved to a single new logical heap block
--- in seg2 (67108864). The 1 tuple INSERTed after the VACUUM should have gone to
--- the last block in seg1 (33554438).
+-- in seg2 (67108864).
 SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum FROM brin_ao_summarize_@amname@;
  blknum   
 ----------
- 33554438 
  67108864 
-(2 rows)
+(1 row)
 
 -- Sanity: There should now be 2 revmap pages (1 new one for the new seg). Also,
 -- there will be a new index tuple mapping to that new seg and block number.
--- Note: Since VACUUM summarizes all logical heap blocks (invokes summarization
--- with BRIN_ALL_BLOCKRANGES), and doesn't clean up existing summary info, we
--- can expect entries from the 1st seg to be still there (including blank entries
--- added for the 6th and 7th blocks)
+-- The revmap page belonging to the old segment will have all tids marked dead
+-- by VACUUM and the 1 data page will now contain empty ranges for all block
+-- numbers belonging to the old seg.
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
  blkno | brin_page_type 
 -------+----------------
@@ -364,36 +356,100 @@ SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum FROM brin_a
  3     | revmap         
 (4 rows)
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
- pages 
--------
- (2,1) 
- (2,2) 
- (2,3) 
- (2,4) 
- (2,5) 
- (2,6) 
- (2,7) 
-(7 rows)
+ pages          
+----------------
+ (4294967295,0) 
+ (4294967295,0) 
+ (4294967295,0) 
+ (4294967295,0) 
+ (4294967295,0) 
+(5 rows)
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3)) WHERE pages != '(0,0)' order by 1;
  pages 
 -------
- (2,8) 
+ (2,5) 
 (1 row)
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
  itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
 ------------+----------+--------+----------+----------+-------------+-------+------------
- 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}   
- 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 20}  
- 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
- 5          | 33554436 | 1      | f        | f        | f           | f     | {20 .. 30} 
- 6          | 33554437 | 1      | t        | f        | f           | t     |            
- 7          | 33554438 | 1      | f        | f        | f           | f     | {40 .. 40} 
- 8          | 67108864 | 1      | f        | f        | f           | f     | {20 .. 30} 
-(8 rows)
+ 5          | 67108864 | 1      | f        | f        | f           | f     | {20 .. 30} 
+ 1          |          |        |          |          |             |       |            
+ 2          |          |        |          |          |             |       |            
+ 3          |          |        |          |          |             |       |            
+ 4          |          |        |          |          |             |       |            
+(5 rows)
 
--- Sanity: Scan should return only first 3 blocks corresponding to the vacuumed
--- seg, as those ranges are left over from the vacuum.
+-- Now, populate some more pages in the old seg.
+SELECT populate_pages('brin_ao_summarize_@amname@', 40, tid '(33554440, 0)');
+ populate_pages 
+----------------
+                
+(1 row)
+-- And re-summarize so that the newly added values are considered.
+SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
+ brin_summarize_new_values 
+---------------------------
+ 9                         
+(1 row)
+
+-- Sanity: The old seg's revmap page has been reused for new summary values for
+-- the new tuples in the old seg (ranges: 33554438 .. 3554440). The dead ranges
+-- of the old seg 33554432 .. 33554437 will be present, but empty.
+SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum FROM brin_ao_summarize_@amname@;
+ blknum   
+----------
+ 33554438 
+ 33554439 
+ 33554440 
+ 67108864 
+(4 rows)
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+ 3     | revmap         
+(4 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
+ pages  
+--------
+ (2,6)  
+ (2,7)  
+ (2,8)  
+ (2,9)  
+ (2,10) 
+ (2,11) 
+ (2,12) 
+ (2,13) 
+ (2,14) 
+(9 rows)
+1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3)) WHERE pages != '(0,0)' order by 1;
+ pages 
+-------
+ (2,5) 
+(1 row)
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 6          | 33554432 | 1      | t        | f        | f           | t     |            
+ 7          | 33554433 | 1      | t        | f        | f           | t     |            
+ 8          | 33554434 | 1      | t        | f        | f           | t     |            
+ 9          | 33554435 | 1      | t        | f        | f           | t     |            
+ 10         | 33554436 | 1      | t        | f        | f           | t     |            
+ 11         | 33554437 | 1      | t        | f        | f           | t     |            
+ 12         | 33554438 | 1      | f        | f        | f           | f     | {40 .. 40} 
+ 13         | 33554439 | 1      | f        | f        | f           | f     | {40 .. 40} 
+ 14         | 33554440 | 1      | f        | f        | f           | f     | {40 .. 40} 
+ 5          | 67108864 | 1      | f        | f        | f           | f     | {20 .. 30} 
+ 4          |          |        |          |          |             |       |            
+ 3          |          |        |          |          |             |       |            
+ 2          |          |        |          |          |             |       |            
+ 1          |          |        |          |          |             |       |            
+(14 rows)
+
+-- Sanity: The following query should return none of the ranges in the tidbitmap
+-- as they were all desummarized by VACUUM.
 SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault_infinite 
 --------------------------
@@ -403,6 +459,30 @@ SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 1;
  count 
 -------
  0     
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault                                                                                                                                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'brin_bitmap_page_added' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'set'  num times hit:'0' 
+ 
+(1 row)
+SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Sanity: The following query should be able to use the newly added summary
+-- info for the old seg, and populate those pages in the tidbitmap.
+SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 40;
+ count 
+-------
+ 655   
 (1 row)
 SELECT gp_inject_fault('brin_bitmap_page_added', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                              
@@ -415,52 +495,6 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_
 -----------------
  Success:        
 (1 row)
-
--- VACUUM should have already summarized this one logical heap block, so
--- invoking summarization again will be a no-op.
-SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
- brin_summarize_new_values 
----------------------------
- 0                         
-(1 row)
-
--- Sanity: Index contents should not have changed due to the no-op summarize.
-1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
- blkno | brin_page_type 
--------+----------------
- 0     | meta           
- 1     | revmap         
- 2     | regular        
- 3     | revmap         
-(4 rows)
-1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1)) WHERE pages != '(0,0)' order by 1;
- pages 
--------
- (2,1) 
- (2,2) 
- (2,3) 
- (2,4) 
- (2,5) 
- (2,6) 
- (2,7) 
-(7 rows)
-1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3)) WHERE pages != '(0,0)' order by 1;
- pages 
--------
- (2,8) 
-(1 row)
-1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2), 'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
- itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
-------------+----------+--------+----------+----------+-------------+-------+------------
- 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
- 2          | 33554433 | 1      | f        | f        | f           | f     | {1 .. 1}   
- 3          | 33554434 | 1      | f        | f        | f           | f     | {1 .. 20}  
- 4          | 33554435 | 1      | f        | f        | f           | f     | {20 .. 20} 
- 5          | 33554436 | 1      | f        | f        | f           | f     | {20 .. 30} 
- 6          | 33554437 | 1      | t        | f        | f           | t     |            
- 7          | 33554438 | 1      | f        | f        | f           | f     | {40 .. 40} 
- 8          | 67108864 | 1      | f        | f        | f           | f     | {20 .. 30} 
-(8 rows)
 
 --------------------------------------------------------------------------------
 -- Specific range summarization/desummarization

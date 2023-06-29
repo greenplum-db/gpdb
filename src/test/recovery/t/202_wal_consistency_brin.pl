@@ -82,6 +82,13 @@ UPDATE gp_fastsequence SET last_sequence = 180000000 WHERE
   objid = (SELECT segrelid FROM pg_appendonly WHERE relid='tbl_ao_row2'::regclass);
 INSERT INTO tbl_ao_row2 SELECT generate_series(6, 10);
 CREATE INDEX ON tbl_ao_row2 USING brin (i) WITH (pages_per_range = 1, autosummarize=false);
+
+-- Case 3 (VACUUM and bulk-desummarization)
+CREATE TABLE tbl_ao_row3 (i int) USING ao_row;
+INSERT INTO tbl_ao_row3 SELECT generate_series(1, 5);
+CREATE INDEX ON tbl_ao_row3 using brin (i) with (pages_per_range = 1, autosummarize=false);
+DELETE FROM tbl_ao_row3;
+VACUUM tbl_ao_row3;
 });
 
 # ao_column:
@@ -103,6 +110,13 @@ UPDATE gp_fastsequence SET last_sequence = 180000000 WHERE
   objid = (SELECT segrelid FROM pg_appendonly WHERE relid='tbl_ao_column2'::regclass);
 INSERT INTO tbl_ao_column2 SELECT generate_series(6, 10);
 CREATE INDEX ON tbl_ao_column2 USING brin (i) WITH (pages_per_range = 1, autosummarize=false);
+
+-- Case 3 (VACUUM and bulk-desummarization)
+CREATE TABLE tbl_ao_column3 (i int) USING ao_column;
+INSERT INTO tbl_ao_column3 SELECT generate_series(1, 5);
+CREATE INDEX ON tbl_ao_column3 using brin (i) with (pages_per_range = 1, autosummarize=false);
+DELETE FROM tbl_ao_column3;
+VACUUM tbl_ao_column3;
 });
 
 $whiskey->wait_for_catchup($charlie, 'replay', $whiskey->lsn('insert'));

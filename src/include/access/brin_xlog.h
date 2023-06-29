@@ -140,14 +140,16 @@ typedef struct xl_brin_revmap_extend
 typedef struct xl_brin_desummarize
 {
 	BlockNumber pagesPerRange;
-	/* page number location to set to invalid */
+	/* page number location to set to invalid (invalid for bulk operation) */
 	BlockNumber heapBlk;
 	/* offset of item to delete in regular index page */
 	OffsetNumber regOffset;
+	/* GPDB: index of item in revmap page tid array to delete (for bulk operation) */
+	int          revmapTidIdx;
 } xl_brin_desummarize;
 
-#define SizeOfBrinDesummarize	(offsetof(xl_brin_desummarize, regOffset) + \
-								 sizeof(OffsetNumber))
+#define SizeOfBrinDesummarize	(offsetof(xl_brin_desummarize, revmapTidIdx) + \
+								 sizeof(int))
 
 
 extern void brin_redo(XLogReaderState *record);
