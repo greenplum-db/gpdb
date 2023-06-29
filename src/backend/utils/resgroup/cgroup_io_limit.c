@@ -104,7 +104,8 @@ io_limit_validate(List *limit_list)
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("io limit: tablespaces of io limit must locate at different disks, tablespace '%s' and '%s' have the same disk identifier.",
 						 get_tablespace_name(bdi_array[i].ts),
-						 get_tablespace_name(bdi_array[i + 1].ts))));
+						 get_tablespace_name(bdi_array[i + 1].ts))),
+					 errhint("either omit these tablespaces from the IO limit or mount them separately"));
 		}
 	}
 

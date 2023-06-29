@@ -19,7 +19,7 @@ ifeq ($(PORTNAME),linux)
 OBJS += cgroup.o
 OBJS += cgroup-ops-linux-v1.o
 OBJS += cgroup-ops-linux-v2.o
-OBJS += io_limit_lex.o
+OBJS += io_limit_scanner.o
 OBJS += io_limit_gram.o
 OBJS += cgroup_io_limit.o
 

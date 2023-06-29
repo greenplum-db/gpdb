@@ -1,8 +1,3 @@
-%option noinput nounput noyywrap
-%option noyyalloc noyyfree noyyrealloc
-%option prefix="io_limit_yy"
-%option reentrant bison-bridge
-
 %{
 #include "postgres.h"
 #include "io_limit_gram.h"
@@ -10,12 +5,18 @@
 #define YYSTYPE IO_LIMIT_YYSTYPE
 %}
 
+%option noinput nounput noyywrap
+%option noyyalloc noyyfree noyyrealloc
+%option prefix="io_limit_yy"
+%option reentrant bison-bridge
+
 id  [a-zA-Z_][a-zA-Z0-9_]*
+wildcard \*
 
 %%
 [wr](b|io)ps {
-                    yylval->str = pstrdup(yytext);
-                    return IO_KEY;
+                yylval->str = pstrdup(yytext);
+                return IO_KEY;
              }
 
 {id}         {
@@ -34,6 +35,10 @@ id  [a-zA-Z_][a-zA-Z0-9_]*
                 return VALUE;
              }
 
+{wildcard}   {
+                return STAR;
+             }
+
 max          {
                 yylval->str = pstrdup("max");
                 return VALUE_MAX;
@@ -49,7 +54,7 @@ max          {
 
 
 void *
-yyalloc(yy_size_t  size , yyscan_t yyscanner)
+io_limit_yyalloc(yy_size_t  size , yyscan_t yyscanner)
 {
 	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	(void)yyg;
@@ -57,7 +62,7 @@ yyalloc(yy_size_t  size , yyscan_t yyscanner)
 }
 
 void *
-yyrealloc(void * ptr, yy_size_t  size , yyscan_t yyscanner)
+io_limit_yyrealloc(void * ptr, yy_size_t  size , yyscan_t yyscanner)
 {
 	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	(void)yyg;
@@ -73,7 +78,7 @@ yyrealloc(void * ptr, yy_size_t  size , yyscan_t yyscanner)
 }
 
 void
-yyfree(void * ptr , yyscan_t yyscanner)
+io_limit_yyfree(void * ptr , yyscan_t yyscanner)
 {
 	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	(void)yyg;
@@ -81,23 +86,19 @@ yyfree(void * ptr , yyscan_t yyscanner)
 }
 
 
-IO_LIMIT_PARSER_STATE *
-io_limit_begin_scan(const char *limit_str)
+void
+io_limit_scanner_begin(IOLimitScannerState *state, const char *limit_str)
 {
-    IO_LIMIT_PARSER_STATE *state = (IO_LIMIT_PARSER_STATE *)palloc0(sizeof(IO_LIMIT_PARSER_STATE));
     yyscan_t scanner;
-    io_limit_yylex_init(&scanner);
+    yylex_init(&scanner);
 
-    state->state = (void *)io_limit_yy_scan_string(limit_str, scanner);
+    state->state = (void *)yy_scan_string(limit_str, scanner);
     state->scanner = scanner;
-
-    return state;
 }
 
 
 void
-io_limit_end_scan(IO_LIMIT_PARSER_STATE *state)
+io_limit_scanner_finish(IOLimitScannerState *state)
 {
-    io_limit_yy_delete_buffer((YY_BUFFER_STATE)state->state, (yyscan_t)state->scanner);
-    pfree(state);
+    yy_delete_buffer((YY_BUFFER_STATE)state->state, (yyscan_t)state->scanner);
 }

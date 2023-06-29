@@ -9,7 +9,6 @@
 
 	#define YYMALLOC palloc
 	#define YYFREE	 pfree
-	#define YYERROR_VERBOSE 1
 }
 
 %code requires {
@@ -26,16 +25,16 @@
 }
 
 
-%parse-param { IO_LIMIT_PARSER_CONTEXT *context }
+%parse-param { IOLimitParserContext *context }
 
 %param { void *scanner }
 
 %code {
 	int io_limit_yylex(void *lval, void *scanner);
-	int io_limit_yyerror(IO_LIMIT_PARSER_CONTEXT *parser_context, void *scanner, const char *message);
+	void io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message);
 }
 
-%token <str> ID IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START IOCONFIG_DELIM VALUE_MAX IO_KEY
+%token <str> ID IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START IOCONFIG_DELIM VALUE_MAX IO_KEY STAR
 %token <integer> VALUE
 
 %type <str> tablespace_name
@@ -45,7 +44,7 @@
 %type <list> iolimit_config_string start
 %type <ioconfigitem> ioconfig
 
-%destructor { pfree($$); } <str> <integer> <ioconfig> <ioconfigitem>
+%destructor { pfree($$); } <str> <ioconfig> <ioconfigitem>
 %destructor {
 	pfree($$->ioconfig);
 	list_free_deep($$->bdi_list);
@@ -71,30 +70,33 @@ iolimit_config_string: tablespace_io_config
 							$$ = lappend($1, $3);
 					   }
 
-tablespace_name: ID  { $$ = $1; } | '*' { $$ = "*"; }
+tablespace_name: ID  { $$ = $1; }
 
 tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 					  {
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
-							if (strcmp($1, "*") == 0)
-							{
-								if (context->normal_tablespce_cnt > 0)
-									ereport(ERROR,
-											(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-											errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
-								tblspciolimit->tablespace_oid = InvalidOid;
-								context->star_tablespace_cnt++;
-							}
-							else
-							{
-								if (context->star_tablespace_cnt > 0)
-									ereport(ERROR,
-											(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-											errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
-								tblspciolimit->tablespace_oid = get_tablespace_oid($1, false);
-								context->normal_tablespce_cnt++;
-							}
+							if (context->star_tablespace_cnt > 0)
+								ereport(ERROR,
+										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+										errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
+							tblspciolimit->tablespace_oid = get_tablespace_oid($1, false);
+							context->normal_tablespce_cnt++;
+
+							tblspciolimit->ioconfig = $3;
+
+							$$ = tblspciolimit;
+					  }
+					| STAR TABLESPACE_IO_CONFIG_START ioconfigs
+					  {
+							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
+
+							if (context->normal_tablespce_cnt > 0)
+								ereport(ERROR,
+										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+										errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
+							tblspciolimit->tablespace_oid = InvalidOid;
+							context->star_tablespace_cnt++;
 
 							tblspciolimit->ioconfig = $3;
 
@@ -106,7 +108,7 @@ ioconfigs: ioconfig
 				IOconfig *config = (IOconfig *)palloc0(sizeof(IOconfig));
 				uint64 *config_var = (uint64 *)config;
 				if (config == NULL)
-					io_limit_yyerror(NIL, NULL, "io limit: cannot allocate memory");
+					io_limit_yyerror(NULL, NULL, "io limit: cannot allocate memory");
 
 				*(config_var + $1->offset) = $1->value;
 				$$ = config;
@@ -122,7 +124,7 @@ ioconfig: IO_KEY '=' io_value
 		  {
 			IOconfigItem *item = (IOconfigItem *)palloc0(sizeof(IOconfigItem));
 			if (item == NULL)
-				io_limit_yyerror(NIL, NULL, "io limit: cannot allocate memory");
+				io_limit_yyerror(NULL, NULL, "io limit: cannot allocate memory");
 
 			item->value = $3;
 			for (int i = 0;i < IOconfigTotalFields; ++i)
@@ -137,13 +139,12 @@ io_value: VALUE { $$ = $1; }
 
 %%
 
-int
-io_limit_yyerror(IO_LIMIT_PARSER_CONTEXT *parser_context, void *scanner, const char *message)
+void
+io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message)
 {
 	ereport(ERROR, \
 		(errcode(ERRCODE_SYNTAX_ERROR), \
 		errmsg("%s", message))); \
-	return 0;
 }
 
 /*
@@ -153,16 +154,19 @@ List *
 io_limit_parse(const char *limit_str)
 {
 	List *result = NIL;
-	IO_LIMIT_PARSER_CONTEXT *context = (IO_LIMIT_PARSER_CONTEXT *)palloc0(sizeof(IO_LIMIT_PARSER_CONTEXT));
+	IOLimitParserContext context;
+	IOLimitScannerState state;
 
-	IO_LIMIT_PARSER_STATE *state = io_limit_begin_scan(limit_str);
-	if (io_limit_yyparse(context, state->scanner) != 0)
-		io_limit_yyerror(context, state->scanner, "io limit: parse error");
+	context.result = NIL;
+	context.normal_tablespce_cnt = 0;
+	context.star_tablespace_cnt = 0;
+	io_limit_scanner_begin(&state, limit_str);
+	if (yyparse(&context, state.scanner) != 0)
+		yyerror(&context, state.scanner, "io limit: parse error");
 
-	io_limit_end_scan(state);
+	io_limit_scanner_finish(&state);
 
-	result = context->result;
-	pfree(context);
+	result = context.result;
 
 	return result;
 }

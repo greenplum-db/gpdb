@@ -59,21 +59,21 @@ typedef struct TblSpcIOLimit
 	IOconfig  *ioconfig;
 } TblSpcIOLimit;
 
-typedef struct IO_LIMIT_PARSER_CONTEXT
+typedef struct IOLimitParserContext
 {
 	List *result;
 	int normal_tablespce_cnt;
 	int star_tablespace_cnt;
-} IO_LIMIT_PARSER_CONTEXT;
+} IOLimitParserContext;
 
-typedef struct IO_LIMIT_PARSER_STATE
+typedef struct IOLimitScannerState
 {
 	void *state;
 	void *scanner;
-} IO_LIMIT_PARSER_STATE;
+} IOLimitScannerState;
 
-extern IO_LIMIT_PARSER_STATE *io_limit_begin_scan(const char *limit_str);
-extern void io_limit_end_scan(IO_LIMIT_PARSER_STATE *state);
+extern void io_limit_scanner_begin(IOLimitScannerState *state, const char *limit_str);
+extern void io_limit_scanner_finish(IOLimitScannerState *state);
 
 extern char *get_tablespace_path(Oid spcid);
 extern bdi_t get_bdi_of_path(const char *ori_path);
