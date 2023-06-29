@@ -213,7 +213,7 @@ PartTbl-ComplexPredicate4 PartTbl-ComplexPredicate5 LargeMultiColumnInList;
 CPartTbl5Test:
 PartTbl-IsNullPredicate PartTbl-IsNotNullPredicate PartTbl-IndexOnDefPartOnly
 PartTbl-SubqueryOuterRef PartTbl-CSQ-PartKey PartTbl-CSQ-NonPartKey
-PartTbl-AggWithExistentialSubquery PartPredsWithRandom;
+PartTbl-AggWithExistentialSubquery PartPredsWithRandom PartTbl-IndexConfusion;
 
 CPartTbl6Test:
 PartTbl-PredicateWithCast PartTbl-IDFList PartTbl-IDFNull
