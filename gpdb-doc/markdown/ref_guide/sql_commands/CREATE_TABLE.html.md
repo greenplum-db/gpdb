@@ -554,7 +554,7 @@ Note that you can also set storage parameters for a particular partition or subp
 
 You can specify the defaults for some of the table storage options with the server configuration parameter [gp\_default\_storage\_options](../config_params/guc-list.html#gp_default_storage_options). For information about setting default storage options, see [Notes](#section5).
 
-> **Note** Because Greenplum Database does not permit autovacuuming user tables, it accepts, but does not apply, certain parameter settings as noted below.
+> **Note** Because Greenplum Database does not permit autovacuuming user tables, it accepts, but does not apply, certain per-table parameter settings as noted below.
 
 The following table storage parameters are available:
 
