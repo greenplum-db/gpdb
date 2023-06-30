@@ -697,7 +697,7 @@ resources:
     regexp: server/published/gpdb6/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
-{% if "Release" in test_sections or build_test_rc_rpm %}
+{% if not directed_release and "Release" in test_sections or build_test_rc_rpm %}
 {% if os_type != "ubuntu20.04" and os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" %}
 - name: gpdb_rpm_installer_[[ os_type ]]
   type: gcs
@@ -1968,7 +1968,7 @@ jobs:
           skip_download: 'true'
         passed: [ unit_tests_gporca_[[ os_type ]] ]
       {% endif %}
-{% if "Release" in test_sections %}
+{% if not directed_release and "Release" in test_sections %}
   - put: bin_gpdb_icw_green
     params:
       file: bin_gpdb/bin_gpdb.tar.gz
