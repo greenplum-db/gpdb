@@ -554,6 +554,8 @@ Note that you can also set storage parameters for a particular partition or subp
 
 You can specify the defaults for some of the table storage options with the server configuration parameter [gp\_default\_storage\_options](../config_params/guc-list.html#gp_default_storage_options). For information about setting default storage options, see [Notes](#section5).
 
+> **Note** Because Greenplum Database does not permit autovacuuming user tables, it accepts, but does not apply, certain parameter settings as noted below.
+
 The following table storage parameters are available:
 
 analyze_hll_non_part_table
@@ -591,7 +593,7 @@ orientation
 *The following parameters are supported for heap tables only:*
 
 toast_tuple_target (integer)
-:   The `toast_tuple_target` specifies the minimum tuple length required before Greenplum attempts to compress and/or move long column values into TOAST tables, and is also the target length Greenplum tries to reduce the length below once toasting begins. This affects columns marked as External (for move), Main (for compression), or Extended (for both) and applies only to new tuples. There is no effect on existing rows. By default this parameter is set to allow at least 4 tuples per block, which with the default blocksize will be 2040 bytes. Valid values are between 128 bytes and the (blocksize - header), by default 8160 bytes. Changing this value may not be useful for very short or very long rows. Note that the default setting is often close to optimal, and it is possible that setting this parameter could have negative effects in some cases. You can not set this parameter for TOAST tables.
+:   The `toast_tuple_target` specifies the minimum tuple length required before Greenplum attempts to compress and/or move long column values into TOAST tables, and is also the target length Greenplum tries to reduce the length below once toasting begins. This affects columns marked as External (for move), Main (for compression), or Extended (for both) and applies only to new tuples. There is no effect on existing rows. By default this parameter is set to allow at least 4 tuples per block, which with the default blocksize will be 8184 bytes. Valid values are between 128 bytes and the (blocksize - header), by default 8160 bytes. Changing this value may not be useful for very short or very long rows. Note that the default setting is often close to optimal, and it is possible that setting this parameter could have negative effects in some cases. You can not set this parameter for TOAST tables.
 
 parallel_workers (integer)
 :   Sets the number of workers that should be used to assist a parallel scan of this table. If not set, Greenplum determines a value based on the relation size. The actual number of workers chosen by the planner or by utility statements that use parallel scans may be less, for example due to the setting of `max_worker_processes`.
@@ -608,9 +610,11 @@ vacuum_truncate, toast.vacuum_truncate (boolean)
 
 autovacuum_vacuum_threshold, toast.autovacuum_vacuum_threshold (integer)
 :   Per-table value for the [autovacuum_vacuum_threshold](../config_params/guc-list.html#autovacuum_vacuum_threshold) server configuration parameter.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_vacuum_scale_factor, toast.autovacuum_vacuum_scale_factor (floating point)
 :   Per-table value for the [autovacuum_vacuum_scale_factor](../config_params/guc-list.html#autovacuum_vacuum_scale_factor) server configuration parameter.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_analyze_threshold (integer)
 :   Per-table value for the `autovacuum_analyze_threshold` server configuration parameter.
@@ -620,30 +624,39 @@ autovacuum_analyze_scale_factor (floating point)
 
 autovacuum_vacuum_cost_delay, toast.autovacuum_vacuum_cost_delay (floating point)
 :   Per-table value for the `autovacuum_vacuum_cost_delay` server configuration parameter.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_vacuum_cost_limit, toast.autovacuum_vacuum_cost_limit (integer)
 :   Per-table value for the `autovacuum_vacuum_cost_limit` server configuration parameter.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_freeze_min_age, toast.autovacuum_freeze_min_age (integer)
 :   Per-table value for the [vacuum_freeze_min_age](../config_params/guc-list.html#vacuum_freeze_min_age) parameter. Note that autovacuum will ignore per-table `autovacuum_freeze_min_age` parameters that are larger than half of the system-wide `autovacuum_freeze_max_age` setting.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_freeze_max_age, toast.autovacuum_freeze_max_age (integer)
 :   Per-table value for the [autovacuum_freeze_max_age](../config_params/guc-list.html#autovacuum_freeze_max_age) server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_freeze_max_age` parameters that are larger than the system-wide setting (it can only be set smaller).
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_freeze_table_age, toast.autovacuum_freeze_table_age (integer)
 :   Per-table value for the `vacuum_freeze_table_age` server configuration parameter.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_multixact_freeze_min_age, toast.autovacuum_multixact_freeze_min_age (integer)
 :   Per-table value for the `vacuum_multixact_freeze_min_age` server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_multixact_freeze_min_age` parameters that are larger than half of the system-wide `autovacuum_multixact_freeze_max_age` setting.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_multixact_freeze_max_age, toast.autovacuum_multixact_freeze_max_age (integer)
 :   Per-table value for the `autovacuum_multixact_freeze_max_age` server configuration parameter. Note that autovacuum will ignore per-table `autovacuum_multixact_freeze_max_age` parameters that are larger than the system-wide setting (it can only be set smaller).
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 autovacuum_multixact_freeze_table_age, toast.autovacuum_multixact_freeze_table_age (integer)
 :   Per-table value for the `vacuum_multixact_freeze_table_age` server configuration parameter.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 log_autovacuum_min_duration, toast.log_autovacuum_min_duration (integer)
 :   Per-table value for the `log_autovacuum_min_duration` server configuration parameter.
+:   > **Note** Greenplum accepts, but does not apply, values for these storage parameters.
 
 ## <a id="section5"></a>Notes 
 
