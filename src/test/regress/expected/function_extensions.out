@@ -319,17 +319,14 @@ NOTICE:  unique_violation
 -- the function on initplan to overcome the above issue.
 -- Helper function to count the number of temporary files in
 -- pgsql_tmp.
-CREATE or replace FUNCTION get_temp_file_num() returns text as
+CREATE or replace FUNCTION get_temp_file_num() returns int as
 $$
 import os
 fileNum = 0
-dirNum = 0
 for root, directories, filenames in os.walk('base/pgsql_tmp'):
   for filename in filenames:
     fileNum += 1
-  for dir in directories:
-    dirNum += 1
-return '{} files and {} directories'.format(fileNum, dirNum)
+return fileNum
 $$ language plpython3u;
 CREATE OR REPLACE FUNCTION get_country()
  RETURNS TABLE (
@@ -355,12 +352,8 @@ AS $$
   end; $$
 LANGUAGE 'plpgsql' EXECUTE ON INITPLAN;
 -- Temp file number before running INITPLAN function
-SELECT get_temp_file_num();
-     get_temp_file_num     
----------------------------
- 0 files and 0 directories
-(1 row)
-
+SELECT get_temp_file_num() AS num_temp_files_before
+\gset
 SELECT * FROM get_country();
 NOTICE:  table "country" does not exist, skipping
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'country_id' as the Greenplum Database data distribution key for this table.
@@ -507,12 +500,13 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '?c
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  division by zero  (entry db 10.146.0.4:7000 pid=20360)
 -- Temp file number after running INITPLAN function. All the files should've
--- been cleaned up, but it's normal that the temp directory to hold them is
--- still around.
-SELECT get_temp_file_num();
-     get_temp_file_num     
----------------------------
- 0 files and 1 directories
+-- been cleaned up
+SELECT get_temp_file_num() AS num_temp_files_after
+\gset
+SELECT :num_temp_files_before = :num_temp_files_after;
+ ?column? 
+----------
+ t
 (1 row)
 
 -- test join case with two INITPLAN functions
