@@ -157,6 +157,9 @@ static CdbVisitOpt planstate_walk_kids(PlanState *planstate,
 					void *context,
 					int flags);
 
+static List *find_all_mat_nodes(PlanState *ps);
+static void  prefetch_subplans(PlanState *node);
+
 /*
  * saveExecutorMemoryAccount saves an operator specific memory account
  * into the PlanState of that operator
@@ -959,6 +962,31 @@ ExecProcNode(PlanState *node)
 		if (query_info_collect_hook)
 			(*query_info_collect_hook)(METRICS_PLAN_NODE_EXECUTING, node);
 		node->fHadSentNodeStart = true;
+	}
+
+	/*
+	 * Greenplum specific code.
+	 * For historical background, please refer to the comments of
+	 * motion_sanity_walker to understand interconnect UDP deadlock.
+	 * Previous methods focus on joinqual and join node's plan qual's
+	 * motion node. In fact, motion nodes from SubPlan might also exist
+	 * in target list and qual (or join qual) from upper level nodes.
+	 * See Github Issue 15719 for examples of motion deadlock involving
+	 * target list subplan.
+	 *
+	 * For SubPlan in Greenplum, most of the cases it contains material
+	 * over broadcast (or gather motion) to make it rescannable. So if
+	 * there is data returned by plan node, anyway, the SubPlan will
+	 * fetch all data from motion and materialize it.
+	 *
+	 * To get rid of interconnect UDP deadlock involving SubPlan, we
+	 * prefetch them before actually execute the plannode at the first
+	 * time.
+	 */
+	if (!node->prefetch_subplans_done && node->subPlan != NIL)
+	{
+		prefetch_subplans(node);
+		node->prefetch_subplans_done = true;
 	}
 
 	switch (nodeTag(node))
@@ -1803,3 +1831,90 @@ planstate_walk_kids(PlanState *planstate,
 
 	return v;
 }	/* planstate_walk_kids */
+
+/*
+ * Greenplum specific code.
+ * Interconnect UDP deadlock might happen between outer plan and SubPlans.
+ * This kind of deadlock in fact is not directly related to Join Plan. To
+ * Get rid of this kind of deadlock, the method here is to prefetch all
+ * SubPlans for a node at the first time.
+ *
+ * For more details please refer to the thread in gpdb-dev mailing list:
+ * https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/Y4ajINeKeUw
+ */
+static void
+prefetch_subplans(PlanState *node)
+{
+	ListCell *lc        = NULL;
+	List     *mat_nodes = NIL;
+
+	if (node->subPlan == NIL)
+		return;
+
+	foreach(lc, node->subPlan)
+	{
+		PlanState *ps = ((SubPlanState *) lfirst(lc))->planstate;
+		mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(ps));
+	}
+
+	if (mat_nodes != NIL)
+	{
+		foreach(lc, mat_nodes)
+		{
+			PlanState *ps = (PlanState *) lfirst(lc);
+			Assert(IsA(ps, MaterialState));
+
+			((MaterialState *) ps)->cdb_strict = true;
+			((MaterialState *) ps)->eflags |= EXEC_FLAG_REWIND;
+
+			(void) ExecProcNode(ps);
+			ExecReScan(ps);
+		}
+	}
+}
+
+/*
+ * Greenplum specific code.
+ * InitPlans are separately dispatched before the main plan,
+ * we don't want walk into them.
+ */
+static List *
+find_all_mat_nodes(PlanState *ps)
+{
+	List     *mat_nodes = NIL;
+	ListCell *lc        = NULL;
+
+	if (ps == NULL)
+		return NIL;
+
+	if (IsA(ps, MotionState))
+	{
+		/*
+		 * This function is only designed to search in a SubPlan.
+		 * In SubPlan, motion nodes should be wrapped by a MaterialState
+		 * to make it rescannable. Only exception case I can think of,
+		 * is HashSubPlan, which will be handled below. So if we meet a
+		 * motion here, just return not recursively walk into other slice.
+		 */
+		return NIL;
+	}
+
+	if (IsA(ps, MaterialState) &&
+		IsA(outerPlanState(ps), MotionState))
+		return list_make1(ps);
+
+	if (outerPlanState(ps))
+		mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(outerPlanState(ps)));
+	if (innerPlanState(ps))
+		mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(innerPlanState(ps)));
+	if (ps->subPlan)
+	{
+		foreach(lc, ps->subPlan)
+		{
+			PlanState *sps = ((SubPlanState *) lfirst(lc))->planstate;
+			mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(sps));
+		}
+	}
+
+	return mat_nodes;
+}

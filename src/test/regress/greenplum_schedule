@@ -88,7 +88,7 @@ test: event_trigger_gp
 
 # deadlock tests run separately - because we don't know which one gets stuck.
 test: deadlock
-test: deadlock2
+test: motion_deadlock
 
 # test workfiles
 test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill workfile/sisc_mat_sort workfile/sisc_sort_spill workfile/sort_spill workfile/spilltodisk

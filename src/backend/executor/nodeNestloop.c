@@ -166,23 +166,6 @@ ExecNestLoop_guts(NestLoopState *node)
 	}
 
 	/*
-	 * Prefetch JoinQual or NonJoinQual to prevent motion hazard.
-	 *
-	 * See ExecPrefetchQual() for details.
-	 */
-	if (node->prefetch_joinqual)
-	{
-		ExecPrefetchQual(&node->js, true);
-		node->prefetch_joinqual = false;
-	}
-
-	if (node->prefetch_qual)
-	{
-		ExecPrefetchQual(&node->js, false);
-		node->prefetch_qual = false;
-	}
-
-	/*
 	 * Ok, everything is setup for the join so now loop until we return a
 	 * qualifying join tuple.
 	 */
@@ -422,22 +405,21 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->shared_outer = node->shared_outer;
 
 	nlstate->prefetch_inner = node->join.prefetch_inner;
-	nlstate->prefetch_joinqual = node->join.prefetch_joinqual;
-	nlstate->prefetch_qual = node->join.prefetch_qual;
-
-	if (Test_print_prefetch_joinqual && nlstate->prefetch_joinqual)
-		elog(NOTICE,
-			 "prefetch join qual in slice %d of plannode %d",
-			 currentSliceId, ((Plan *) node)->plan_node_id);
 
 	/*
-	 * reuse GUC Test_print_prefetch_joinqual to output debug information for
-	 * prefetching non join qual
+	 * Greeplum specific:
+	 * prefetch joinqual and prefetch qual are old methods
+	 * to get rid of motion deadlock. Motion nodes in joinqual
+	 * or planqual are in SubPlan expressions. Thus the motion
+	 * can also appear in any TargetList which means old ways
+	 * do not consider all cases and motion dealocks are not
+	 * only limited JOIN. For 6X Stable version, we have to make
+	 * sure for ABI compatible thus we have to keep these fields
+	 * introduced by previous fix, just set them to false. This
+	 * logic also exists in ExecInitHashJoin & ExecInitMergeJoin.
 	 */
-	if (Test_print_prefetch_joinqual && nlstate->prefetch_qual)
-		elog(NOTICE,
-			 "prefetch non join qual in slice %d of plannode %d",
-			 currentSliceId, ((Plan *) node)->plan_node_id);
+	nlstate->prefetch_joinqual = false;
+	nlstate->prefetch_qual = false;
 
 	/*CDB-OLAP*/
 	nlstate->reset_inner = false;

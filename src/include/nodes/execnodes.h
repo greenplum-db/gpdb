@@ -1432,6 +1432,8 @@ typedef struct PlanState
 
 	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
 	MemoryAccountIdType memoryAccountId;
+
+	bool		prefetch_subplans_done;
 } PlanState;
 
 /* Gpperfmon helper functions defined in execGpmon.c */
@@ -2467,6 +2469,7 @@ typedef struct MaterialState
 	void	   *ts_markpos;
 	void	   *share_lk_ctxt;
 	char	   *share_bufname_prefix;
+	bool        cdb_strict;
 } MaterialState;
 
 /* ----------------

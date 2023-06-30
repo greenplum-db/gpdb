@@ -128,8 +128,7 @@ ExecMaterial(MaterialState *node)
 		 * is used to share input, we will need to fetch all rows and put
 		 * them in tuple store
 		 */
-		while (((Material *) node->ss.ps.plan)->cdb_strict
-				|| ma->share_type != SHARE_NOTSHARED)
+		while (node->cdb_strict || ma->share_type != SHARE_NOTSHARED)
 		{
 			TupleTableSlot *outerslot = ExecProcNode(outerPlanState(node));
 
@@ -261,7 +260,10 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	matstate->ss.ps.state = estate;
 
 	if (node->cdb_strict)
+	{
 		eflags |= EXEC_FLAG_REWIND;
+		matstate->cdb_strict = true;
+	}
 
 	/*
 	 * If the Material node was inserted to protect the child node from rescanning, don't
