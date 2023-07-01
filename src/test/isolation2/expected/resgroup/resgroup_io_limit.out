@@ -1,42 +1,72 @@
 -- positive: io limit with correct syntax
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000');
-CREATE
-SELECT io_limit FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+CREATE RESOURCE GROUP rg_test_group1 WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
+SELECT io_limit FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group1';
  io_limit                                             
 ------------------------------------------------------
  pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000 
 (1 row)
-DROP RESOURCE GROUP rg_test_group;
-DROP
+
+SELECT check_cgroup_io_max('rg_test_group1', 'pg_default', 'rbps=1048576000 wbps=1048576000 riops=1000 wiops=1000');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
+
+ALTER RESOURCE GROUP rg_test_group1 SET io_limit 'pg_default:rbps=1000,wbps=1000';
+ALTER RESOURCE GROUP
+
+SELECT check_cgroup_io_max('rg_test_group1', 'pg_default', 'rbps=1048576000 wbps=1048576000 riops=max wiops=max');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
 
 -- with space
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit=' pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000');
-CREATE
-DROP RESOURCE GROUP rg_test_group;
-DROP
+CREATE RESOURCE GROUP rg_test_group2 WITH (concurrency=10, cpu_max_percent=10, io_limit=' pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
 
 -- with space
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000, wbps=1000,riops=1000,wiops=1000');
-CREATE
-DROP RESOURCE GROUP rg_test_group;
-DROP
+CREATE RESOURCE GROUP rg_test_group3 WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000, wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
 
 -- with *
-CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='*:rbps=1000,wbps=1000,riops=1000,wiops=1000');
-CREATE
-DROP RESOURCE GROUP rg_test_group;
-DROP
+CREATE RESOURCE GROUP rg_test_group4 WITH (concurrency=10, cpu_max_percent=10, io_limit='*:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
+
+SELECT check_cgroup_io_max('rg_test_group4', 'pg_default', 'rbps=1048576000 wbps=1048576000 riops=1000 wiops=1000');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
 
 -- negative: io limit with incorrect syntax
 -- * must be unique tablespace
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;*:wbps=1000');
-ERROR:  io limit: tablespace '*' cannot be used with other tablespaces  (seg1 127.0.0.2:6001 pid=203823)
+ERROR:  io limit: tablespace '*' cannot be used with other tablespaces  (seg0 127.0.0.2:6000 pid=62791)
 
 -- tail ;
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;');
-ERROR:  syntax error  (seg1 127.0.0.2:6001 pid=203823)
+ERROR:  syntax error  (seg0 127.0.0.2:6000 pid=62791)
 
 -- tail ,
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,');
-ERROR:  syntax error  (seg1 127.0.0.2:6001 pid=203823)
+ERROR:  syntax error  (seg1 127.0.0.2:6001 pid=62792)
 
+-- wrong key
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rrbps=1000');
+ERROR:  syntax error  (seg0 127.0.0.2:6000 pid=62791)
+
+-- wrong tablespace name
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pgdefault:rbps=1000,wbps=1000,riops=1000');
+ERROR:  tablespace "pgdefault" does not exist  (seg0 127.0.0.2:6000 pid=62791)
+
+-- clean
+DROP RESOURCE GROUP rg_test_group1;
+DROP RESOURCE GROUP
+DROP RESOURCE GROUP rg_test_group2;
+DROP RESOURCE GROUP
+DROP RESOURCE GROUP rg_test_group3;
+DROP RESOURCE GROUP
+DROP RESOURCE GROUP rg_test_group4;
+DROP RESOURCE GROUP

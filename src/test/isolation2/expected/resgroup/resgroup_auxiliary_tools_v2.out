@@ -112,6 +112,7 @@ if not (config_cpuset.issubset(cgroup_cpuset) and cgroup_cpuset.issubset(config_
 return True $$ LANGUAGE plpython3u;
 CREATE FUNCTION
 
+
 0: CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETURNS BOOL AS $$ import subprocess 
 sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid result = plpy.execute(sql) session_id = result[0]['sess_id'] 
 sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname='%s'" % groupname result = plpy.execute(sql) groupid = result[0]['groupid'] 
