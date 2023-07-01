@@ -274,3 +274,4 @@ DROP RESOURCE GROUP rg_test_group;
 !\retcode gpconfig -c gp_resource_group_cpu_limit -v 1; 
 !\retcode gpstop -ari;
 -- end_ignore
+
