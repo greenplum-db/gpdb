@@ -1663,7 +1663,7 @@ appendonly_index_build_range_scan(Relation heapRelation,
 		 * have a non-empty blkdir to help guide our partial scan.
 		 */
 		int 							fsInfoIdx;
-		AppendOnlyBlockDirectoryEntry 	dirEntry = {0};
+		AppendOnlyBlockDirectoryEntry 	dirEntry = {{0}};
 
 		/* The range is contained within one seg. */
 		Assert(AOSegmentGet_segno(start_blockno) ==
