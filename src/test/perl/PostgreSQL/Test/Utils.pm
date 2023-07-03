@@ -216,14 +216,27 @@ sub all_tests_passing
 #
 # Helper functions
 #
+=pod
+
+=item tempdir(prefix)
+
+Securely create a temporary directory inside C<$tmp_check>, like C<mkdtemp>,
+and return its name.  The directory will be removed automatically at the
+end of the tests, unless the environment variable PG_TEST_NOCLEAN is provided.
+
+If C<prefix> is given, the new directory is templated as C<${prefix}_XXXX>.
+Otherwise the template is C<tmp_test_XXXX>.
+
+=cut
+
 sub tempdir
 {
 	my ($prefix) = @_;
 	$prefix = "tmp_test" unless defined $prefix;
 	return File::Temp::tempdir(
 		$prefix . '_XXXX',
-		DIR     => $tmp_check,
-		CLEANUP => 1);
+		DIR => $tmp_check,
+		CLEANUP => not defined $ENV{'PG_TEST_NOCLEAN'});
 }
 
 sub tempdir_short
@@ -232,6 +245,9 @@ sub tempdir_short
 	# Use a separate temp dir outside the build tree for the
 	# Unix-domain socket, to avoid file name length issues.
 	return File::Temp::tempdir(CLEANUP => 1);
+	return File::Temp::tempdir(
+		CLEANUP => not defined $ENV{'PG_TEST_NOCLEAN'});
+
 }
 
 =pod
