@@ -3296,7 +3296,6 @@ with cte as (
 select * 
 from empty_cte_tl_test
 where id in(select id from cte);
-reset optimizer_trace_fallback;
 -- Test the indexing on partitions when index on one partition is on columns numbered(1 and 2)
 -- and index on another partition on column numbered(12)
 CREATE TABLE index_confusion(
@@ -3313,7 +3312,7 @@ CREATE TABLE index_confusion(
                                 col11 int,
                                 col12 int)
     PARTITION BY RANGE (col1) (START (1) END (100000) EVERY (50000));
-INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM GENERATE_SERIES(1, 10000) g;
+INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM generate_series(1, 10000) g;
 ANALYZE index_confusion;
 
 CREATE INDEX i_a ON index_confusion_1_prt_1 (col12);
