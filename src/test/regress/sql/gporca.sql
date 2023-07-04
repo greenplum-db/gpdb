@@ -3299,27 +3299,26 @@ where id in(select id from cte);
 -- Test the indexing on partitions when index on one partition is on columns numbered(1 and 2)
 -- and index on another partition on column numbered(12)
 CREATE TABLE index_confusion(
-                                col1 int,
-                                col2 int,
-                                col3 int,
-                                col4 int,
-                                col5 int,
-                                col6 int,
-                                col7 int,
-                                col8 int,
-                                col9 int,
-                                col10 int,
-                                col11 int,
-                                col12 int)
-    PARTITION BY RANGE (col1) (START (1) END (100000) EVERY (50000));
-INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM generate_series(1, 10000) g;
+                                a int,
+                                b int,
+                                c int,
+                                d int,
+                                e int,
+                                f int,
+                                g int,
+                                h int,
+                                i int,
+                                j int,
+                                k int,
+                                l int)
+    PARTITION BY RANGE (a) (START (1) END (100) EVERY (50));
+INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM generate_series(1, 99) g;
 ANALYZE index_confusion;
-
-CREATE INDEX i_a ON index_confusion_1_prt_1 (col12);
-CREATE INDEX i_b ON index_confusion_1_prt_2 (col1, col2);
+CREATE INDEX i_l ON index_confusion_1_prt_1 (l);
+CREATE INDEX i_ab ON index_confusion_1_prt_2 (a, b);
 -- Select should return one row
-EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE col12 = '1';
-SELECT * FROM index_confusion WHERE col12 = '1';
+EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE l = '1';
+SELECT * FROM index_confusion WHERE l = '1';
 DROP TABLE index_confusion;
 
 -- start_ignore

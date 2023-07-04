@@ -14731,29 +14731,29 @@ DETAIL:  Feature not supported: Empty target list
 -- Test the indexing on partitions when index on one partition is on columns numbered(1 and 2)
 -- and index on another partition on column numbered(12)
 CREATE TABLE index_confusion(
-                                col1 int,
-                                col2 int,
-                                col3 int,
-                                col4 int,
-                                col5 int,
-                                col6 int,
-                                col7 int,
-                                col8 int,
-                                col9 int,
-                                col10 int,
-                                col11 int,
-                                col12 int)
-    PARTITION BY RANGE (col1) (START (1) END (100000) EVERY (50000));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
+                                a int,
+                                b int,
+                                c int,
+                                d int,
+                                e int,
+                                f int,
+                                g int,
+                                h int,
+                                i int,
+                                j int,
+                                k int,
+                                l int)
+    PARTITION BY RANGE (a) (START (1) END (100) EVERY (50));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "index_confusion_1_prt_1" for table "index_confusion"
 NOTICE:  CREATE TABLE will create partition "index_confusion_1_prt_2" for table "index_confusion"
-INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM generate_series(1, 10000) g;
+INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM generate_series(1, 99) g;
 ANALYZE index_confusion;
-CREATE INDEX i_a ON index_confusion_1_prt_1 (col12);
-CREATE INDEX i_b ON index_confusion_1_prt_2 (col1, col2);
+CREATE INDEX i_l ON index_confusion_1_prt_1 (l);
+CREATE INDEX i_ab ON index_confusion_1_prt_2 (a, b);
 -- Select should return one row
-EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE col12 = '1';
+EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE l = '1';
                                QUERY PLAN                                
 -------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -14761,14 +14761,14 @@ EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE col12 = '1';
          ->  Partition Selector for index_confusion (dynamic scan id: 1)
                Partitions selected: 2 (out of 2)
          ->  Dynamic Seq Scan on index_confusion (dynamic scan id: 1)
-               Filter: (col12 = 1)
+               Filter: (l = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
-SELECT * FROM index_confusion WHERE col12 = '1';
- col1 | col2 | col3 | col4 | col5 | col6 | col7 | col8 | col9 | col10 | col11 | col12 
-------+------+------+------+------+------+------+------+------+-------+-------+-------
-    1 |    2 |    3 |    4 |    5 |    6 |    7 |    8 |    9 |    10 |    11 |     1
+SELECT * FROM index_confusion WHERE l = '1';
+ a | b | c | d | e | f | g | h | i | j  | k  | l 
+---+---+---+---+---+---+---+---+---+----+----+---
+ 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 1
 (1 row)
 
 DROP TABLE index_confusion;
