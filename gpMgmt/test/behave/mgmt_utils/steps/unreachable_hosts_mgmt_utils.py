@@ -1,10 +1,12 @@
 import subprocess
 import tempfile
+import platform
 
 from behave import given, when, then
 
 from gppylib.gparray import GpArray
 from gppylib.db import dbconn
+from gppylib.commands.base import Command, REMOTE
 
 # These utilities are intended to help various Behave tests handle disconnecting
 # and reconnecting hosts from the current GPDB cluster.  They are not intended to be
@@ -108,7 +110,13 @@ def impl(context, action, env):
     else:
         cmdstr = "echo '{} {}' | sudo tee -a /etc/ssh/sshd_config".format("AcceptEnv", env)
 
-    cmds = [cmdstr, "sudo systemctl restart sshd.service"]
+    # if it is a centos6 machine, use service command to restart sshd
+    os, version, _ = platform.linux_distribution()
+    major_version = version.split('.')[0].strip()
+    if 'centos' in os.lower() and '6' == major_version:
+            cmds = [cmdstr, "sudo service sshd restart"]
+    else:
+        cmds = [cmdstr, "sudo systemctl restart sshd.service"]
 
     hosts = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
     for host in hosts:
