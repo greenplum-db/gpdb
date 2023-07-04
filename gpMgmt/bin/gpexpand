@@ -10,6 +10,7 @@ import copy
 import datetime
 import os
 import random
+import re
 import sys
 import json
 import shutil
@@ -1362,7 +1363,7 @@ class gpexpand:
         dbconn.execSQL(self.conn, "CHECKPOINT")
         self.conn.close()
 
-        # increase expand version 
+        # increase expand version
         self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
         dbconn.execSQL(self.conn, "select gp_expand_bump_version()")
         self.conn.close()
@@ -1741,7 +1742,7 @@ class gpexpand:
             FROM
                 pg_inherits a,
                 pg_partitioned_table b,
-                pg_class c, 
+                pg_class c,
                 pg_class d,
                 pg_namespace n
             WHERE
@@ -2059,8 +2060,17 @@ class ExpandTable():
 
         # check is atomic in python
         if not cancel_flag:
-            dbconn.execSQL(table_conn, sql)
-            # the ALTER TABLE command requires a commit to execute
+            try:
+                dbconn.execSQL(table_conn, sql)
+            except DatabaseError, ex:
+                if re.search('DETAIL:\s*table has already been expanded', ex.message):
+                    logger.info('Table %s.%s seems to be already expanded, marking as done' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
+                elif re.search('ERROR:\s+relation not found', ex.message):
+                    logger.warn('Table %s.%s seems to be partially droppend, skipping' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
+                    table_conn.rollback()
+                    return True
+                else:
+                    raise
             table_conn.commit()
             if self.options.analyze:
                 sql = 'ANALYZE %s' % (self.fq_name)
