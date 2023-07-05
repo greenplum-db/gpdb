@@ -14728,8 +14728,8 @@ DETAIL:  Feature not supported: Empty target list
 ----
 (0 rows)
 
--- Test the indexing on partitions when index on one partition is on columns numbered(1 and 2)
--- and index on another partition on column numbered(12)
+-- Test the indexing on partitions when one partition has an index on columns with pg_attribute.attnum 1 and 2 ,
+-- while another partition has an index on a column with pg_attribute.attnum 12.
 -- github issue: https://github.com/greenplum-db/gpdb/issues/6392
 CREATE TABLE index_confusion(
                                 a int,  -- column 1
