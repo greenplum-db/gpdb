@@ -252,7 +252,7 @@ groups:
 
 - name: Release
   jobs:
-{% if  os_type == default_os_type %}
+{% if  os_type == default_os_type and not build_test_rc_rpm %}
   - gate_icw_end
   - gate_cli_end
 {% else %}
