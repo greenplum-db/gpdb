@@ -3298,20 +3298,23 @@ from empty_cte_tl_test
 where id in(select id from cte);
 -- Test the indexing on partitions when index on one partition is on columns numbered(1 and 2)
 -- and index on another partition on column numbered(12)
+-- github issue: https://github.com/greenplum-db/gpdb/issues/6392
 CREATE TABLE index_confusion(
-                                a int,
-                                b int,
-                                c int,
-                                d int,
-                                e int,
-                                f int,
-                                g int,
-                                h int,
-                                i int,
-                                j int,
-                                k int,
-                                l int)
-    PARTITION BY RANGE (a) (START (1) END (100) EVERY (50));
+                                a int,  -- column 1
+                                b int,  -- column 2
+                                c int,  -- column 3
+                                d int,  -- column 4
+                                e int,  -- column 5
+                                f int,  -- column 6
+                                g int,  -- column 7
+                                h int,  -- column 8
+                                i int,  -- column 9
+                                j int,  -- column 10
+                                k int,  -- column 11
+                                l int   -- column 12
+                              )
+    DISTRIBUTED RANDOMLY 
+    PARTITION BY RANGE (a) (start (1) end (100) every (50));
 INSERT INTO index_confusion SELECT g, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, g FROM generate_series(1, 99) g;
 ANALYZE index_confusion;
 CREATE INDEX i_l ON index_confusion_1_prt_1 (l);
@@ -3319,7 +3322,6 @@ CREATE INDEX i_ab ON index_confusion_1_prt_2 (a, b);
 -- Select should return one row
 EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE l = '1';
 SELECT * FROM index_confusion WHERE l = '1';
-DROP TABLE index_confusion;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;
