@@ -2479,6 +2479,9 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	// expression must include outer references for it to be an alternative
 	// worth considering. Otherwise it has the same effect as a regular NLJ
 	// with an index lookup.
+	//
+	// Both (1) and (2) doesn't apply if index is used for ORDER BY. Because
+	// a query with just order by doesn't have index-able predicates.
 	if ((0 == pdrgpexprIndex->Size() || outer_refs_in_index_get->Size() == 0) &&
 		!indexForOrderBy)
 	{

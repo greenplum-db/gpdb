@@ -1089,6 +1089,8 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
 
+		// A bool Const expression is used as index condition if index column is used
+		// as part of ORDER BY clause. Because ORDER BY doesn't have any index conditions.
 		if (IsA(index_cond_expr, Const))
 		{
 			is_index_for_orderby = true;
@@ -1195,6 +1197,8 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			index_subtype_oid));
 	}
 
+	// index_qual_info_array is empty if index is used in ORDER BY. So release
+	// memory for it and return.
 	if (is_index_for_orderby)
 	{
 		index_qual_info_array->Release();

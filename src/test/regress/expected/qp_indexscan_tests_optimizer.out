@@ -149,4 +149,99 @@ explain (costs off) select * from test_index_with_orderby_limit order by c, b, a
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
+-- with offset and without limit
+explain (costs off) select * from test_index_with_orderby_limit order by a offset 10;
+                              QUERY PLAN
+-----------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Index Scan using index_a on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- limit value in subquery
+explain (costs off) select * from test_index_with_orderby_limit order by a limit (select min(a) from test_index_with_orderby_limit);
+                                                         QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------
+ Limit
+   InitPlan 2 (returns $1)  (slice2)
+     ->  Result
+           InitPlan 1 (returns $0)  (slice3)
+             ->  Limit
+                   ->  Gather Motion 3:1  (slice4; segments: 3)
+                         Merge Key: test_index_with_orderby_limit_1.a
+                         ->  Index Only Scan using index_a on test_index_with_orderby_limit test_index_with_orderby_limit_1
+                               Index Cond: (a IS NOT NULL)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_index_with_orderby_limit.a
+         ->  Limit
+               ->  Index Scan using index_a on test_index_with_orderby_limit
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+-- offset value in a subquery
+explain (costs off) select * from test_index_with_orderby_limit order by c offset (select min(a) from test_index_with_orderby_limit);
+                                                         QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------
+ Limit
+   InitPlan 2 (returns $1)  (slice2)
+     ->  Result
+           InitPlan 1 (returns $0)  (slice3)
+             ->  Limit
+                   ->  Gather Motion 3:1  (slice4; segments: 3)
+                         Merge Key: test_index_with_orderby_limit_1.a
+                         ->  Index Only Scan using index_a on test_index_with_orderby_limit test_index_with_orderby_limit_1
+                               Index Cond: (a IS NOT NULL)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_index_with_orderby_limit.c
+         ->  Sort
+               Sort Key: test_index_with_orderby_limit.c
+               ->  Seq Scan on test_index_with_orderby_limit
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+-- order by opposite to index sort direction
+explain (costs off) select * from test_index_with_orderby_limit order by a desc limit 10;
+                                    QUERY PLAN
+-----------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a DESC
+                     ->  Index Scan using index_a on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+-- order by opposite to nulls direction in index
+explain (costs off) select * from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
+                                    QUERY PLAN
+-----------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a NULLS FIRST
+                     ->  Index Scan using index_a on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+-- check if index-only scan is leveraged when required
+-- vacuum table to ensure IndexOnly Scan is picked
+VACUUM test_index_with_orderby_limit;
+-- project only columns in the Index
+explain (costs off) select a from test_index_with_orderby_limit order by a limit 10;
+                                    QUERY PLAN
+----------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Index Only Scan using index_a on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
 DROP TABLE test_index_with_orderby_limit;

@@ -41,9 +41,10 @@ private:
 		BOOL fHasCount,					// does limit specify a number of rows
 		BOOL fTopLimitUnderDML);
 
-	// helper function to validate if index is applicable, given order by
-	// and index columns
-	static BOOL FIndexApplicableForOrderBy(CColRefArray *pOrderByCols,
+	// helper function to validate if index is applicable, given OrderSpec
+	// and index columns. This function checks if ORDER BY columns are prefix of
+	// the index columns.
+	static BOOL FIndexApplicableForOrderBy(COrderSpec *pos,
 										   CColRefArray *pdrgpcrIndexColumns);
 
 public:

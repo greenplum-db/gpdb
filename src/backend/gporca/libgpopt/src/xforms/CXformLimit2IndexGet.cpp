@@ -105,25 +105,14 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CExpression *boolConstExpr = nullptr;
 	boolConstExpr = CUtils::PexprScalarConstBool(mp, true);
 
-	CExpressionArray *pdrgpexpr =
-		CPredicateUtils::PdrgpexprConjuncts(mp, boolConstExpr);
-	GPOS_ASSERT(pdrgpexpr->Size() > 0);
+	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+	pdrgpexpr->Append(boolConstExpr);
 
 	popGet->AddRef();
 	CExpression *pexprUpdtdRltn =
 		GPOS_NEW(mp) CExpression(mp, popGet, boolConstExpr);
 
 	CColRefSet *pcrsScalarExpr = popLimit->PcrsLocalUsed();
-
-	// get order by columns specified
-	ULONG totalOrderByCols = popLimit->Pos()->UlSortColumns();
-	CColRefArray *pOrderByCols = GPOS_NEW(mp) CColRefArray(mp);
-
-	for (ULONG i = 0; i < totalOrderByCols; i++)
-	{
-		const CColRef *orderByCol = popLimit->Pos()->Pcr(i);
-		pOrderByCols->Append(const_cast<CColRef *>(orderByCol));
-	}
 
 	// find the indexes whose included columns meet the required columns
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
@@ -138,7 +127,7 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		// get columns in the index
 		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
 			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
-		if (FIndexApplicableForOrderBy(pOrderByCols, pdrgpcrIndexColumns))
+		if (FIndexApplicableForOrderBy(popLimit->Pos(), pdrgpcrIndexColumns))
 		{
 			// build IndexGet expression
 			CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
@@ -162,7 +151,6 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	}
 
 	pdrgpexpr->Release();
-	pOrderByCols->Release();
 	pexprUpdtdRltn->Release();
 }
 
@@ -171,21 +159,24 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //		CXformLimit2IndexGet::FIndexApplicableForOrderBy
 //
 //	@doc:
-//		Function to validate if index is applicable, given order by and index
-// 	    columns
+//		Function to validate if index is applicable, given OrderSpec and index
+// 	    columns. This function checks if ORDER BY columns are prefix of
+//		the index columns.
 //---------------------------------------------------------------------------
 BOOL
 CXformLimit2IndexGet::FIndexApplicableForOrderBy(
-	CColRefArray *pOrderByCols, CColRefArray *pdrgpcrIndexColumns)
+	COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns)
 {
-	if (pdrgpcrIndexColumns->Size() < pOrderByCols->Size())
+	// get order by columns size
+	ULONG totalOrderByCols = pos->UlSortColumns();
+	if (pdrgpcrIndexColumns->Size() < totalOrderByCols)
 	{
 		return false;
 	}
 	BOOL indexApplicable = true;
-	for (ULONG i = 0; i < pOrderByCols->Size(); i++)
+	for (ULONG i = 0; i < totalOrderByCols; i++)
 	{
-		if ((*pOrderByCols)[i] != (*pdrgpcrIndexColumns)[i])
+		if (!CColRef::Equals(pos->Pcr(i), (*pdrgpcrIndexColumns)[i]))
 		{
 			indexApplicable = false;
 			break;

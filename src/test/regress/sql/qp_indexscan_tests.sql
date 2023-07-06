@@ -28,5 +28,20 @@ explain (costs off) select * from test_index_with_orderby_limit order by b, d, a
 explain (costs off) select * from test_index_with_orderby_limit order by b, d, c limit 10;
 -- should use seq scan
 explain (costs off) select * from test_index_with_orderby_limit order by c, b, a limit 10;
+-- with offset and without limit
+explain (costs off) select * from test_index_with_orderby_limit order by a offset 10;
+-- limit value in subquery
+explain (costs off) select * from test_index_with_orderby_limit order by a limit (select min(a) from test_index_with_orderby_limit);
+-- offset value in a subquery
+explain (costs off) select * from test_index_with_orderby_limit order by c offset (select min(a) from test_index_with_orderby_limit);
+-- order by opposite to index sort direction
+explain (costs off) select * from test_index_with_orderby_limit order by a desc limit 10;
+-- order by opposite to nulls direction in index
+explain (costs off) select * from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
+-- check if index-only scan is leveraged when required
+-- vacuum table to ensure IndexOnly Scan is picked
+VACUUM test_index_with_orderby_limit;
+-- project only columns in the Index
+explain (costs off) select a from test_index_with_orderby_limit order by a limit 10;
 
 DROP TABLE test_index_with_orderby_limit;
