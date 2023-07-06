@@ -17,6 +17,7 @@
 #include <sys/sysmacros.h>
 #include <mntent.h>
 #include <libgen.h>
+#include <unistd.h>
 
 const int	IOconfigTotalFields = 4;
 const char	*IOconfigFields[4] = { "rbps", "wbps", "riops", "wiops" };
