@@ -354,6 +354,32 @@ RESET optimizer_enable_tablescan;
 RESET optimizer_enable_indexscan;
 RESET optimizer_enable_indexonlyscan;
 
+--
+-- Test ORCA generates BitmapIndexScan alternative for ScalarArrayOpExpr ANY only
+--
+
+CREATE TABLE bitmap_alt (id int, bitmap_idx_col int, btree_idx_col int);
+CREATE INDEX bitmap_alt_idx1 on bitmap_alt using bitmap(bitmap_idx_col);
+CREATE INDEX bitmap_alt_idx2 on bitmap_alt using btree(btree_idx_col);
+INSERT INTO bitmap_alt SELECT i, i, i from generate_series(1,10)i;
+ANALYZE bitmap_alt;
+
+-- ORCA should generate bitmap index scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+
+-- ORCA should generate seq scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3]);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3]);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3]);
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3]);
+
 -- The following tests are to verify a fix that allows ORCA to
 -- choose the bitmap index scan alternative when the predicate
 -- is in the form of `value operator cast(column)`. The fix

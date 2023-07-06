@@ -1923,6 +1923,8 @@ CPredicateUtils::PexprIndexLookup(CMemoryPool *mp, CMDAccessor *md_accessor,
 		cmptype = CScalarCmp::PopConvert(pexprScalar->Pop())->ParseCmpType();
 	}
 	else if (CUtils::FScalarArrayCmp(pexprScalar) &&
+			 CScalarArrayCmp::EarrcmpAny ==
+				 CScalarArrayCmp::PopConvert(pexprScalar->Pop())->Earrcmpt() &&
 			 (IMDIndex::EmdindBitmap == pmdindex->IndexType() ||
 			  (allowArrayCmpForBTreeIndexes &&
 			   IMDIndex::EmdindBtree == pmdindex->IndexType())))
