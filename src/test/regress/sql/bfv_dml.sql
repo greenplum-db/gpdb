@@ -355,3 +355,9 @@ delete from foo using (select a from foo union all select b from bar) v;
 select * from foo;
 drop table foo;
 drop table bar;
+
+-- This test is to verify ORCA can generate plans with empty
+-- target lists. This can happen when inserting rows with no
+-- columns into a table with no columns
+create table test();
+explain (analyze, costs off, timing off, summary off) insert into test default values;
