@@ -3443,123 +3443,6 @@ generate_dqa_pruning_tlists(MppGroupContext *ctx,
 }
 
 /*
- * Determines, given the range table in use by the query, whether one Var has a
- * functional dependency on another. "Functional dependency" is defined in the
- * same way as check_functional_grouping() in pg_constraint, and this function
- * is a copy of that logic. This is used by find_group_dependent_targets() to
- * discover columns that need to be added back to the grouping target list.
- *
- * GPDB_91_MERGE_FIXME: This duplication is brittle. We should modify our
- * grouping planner to remove the assumptions on target list structure, and find
- * a better way to construct a correct series of Aggref stages.
- */
-static bool
-has_functional_dependency(Var *from, Var *to, List *rangeTable)
-{
-	Oid			relid;
-	bool		to_is_primary = false;
-	Relation	pg_constraint;
-	HeapTuple	tuple;
-	SysScanDesc scan;
-	ScanKeyData skey[1];
-	RangeTblEntry *rte;
-
-	if (from->varno != to->varno)
-	{
-		/* These aren't part of the same table; get out. */
-		return false;
-	}
-
-	/* Look up the relid of the "to" Var from the range table. */
-	rte = list_nth(rangeTable, to->varno - 1);
-	Assert(rte);
-
-	if (rte->rtekind != RTE_RELATION)
-	{
-		/* We don't have functional dependencies on subquery results. */
-		return false;
-	}
-
-	relid = rte->relid;
-
-	/* Scan pg_constraint for constraints of the target rel */
-	pg_constraint = heap_open(ConstraintRelationId, AccessShareLock);
-
-	ScanKeyInit(&skey[0],
-				Anum_pg_constraint_conrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_constraint, ConstraintRelidIndexId, true,
-							  NULL, 1, skey);
-
-	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
-	{
-		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
-		Datum		adatum;
-		bool		isNull;
-		ArrayType  *arr;
-		int16	   *attnums;
-		int			numkeys;
-		int			i;
-		bool		found_col;
-
-		/* Only PK constraints are of interest for now, see comment above */
-		if (con->contype != CONSTRAINT_PRIMARY)
-			continue;
-		/* Constraint must be non-deferrable */
-		if (con->condeferrable)
-			continue;
-
-		/* Extract the conkey array, ie, attnums of PK's columns */
-		adatum = heap_getattr(tuple, Anum_pg_constraint_conkey,
-							  RelationGetDescr(pg_constraint), &isNull);
-		if (isNull)
-			elog(ERROR, "null conkey for constraint %u",
-				 HeapTupleGetOid(tuple));
-		arr = DatumGetArrayTypeP(adatum);		/* ensure not toasted */
-		numkeys = ARR_DIMS(arr)[0];
-		if (ARR_NDIM(arr) != 1 ||
-			numkeys < 0 ||
-			ARR_HASNULL(arr) ||
-			ARR_ELEMTYPE(arr) != INT2OID)
-			elog(ERROR, "conkey is not a 1-D smallint array");
-		attnums = (int16 *) ARR_DATA_PTR(arr);
-
-		found_col = false;
-		for (i = 0; i < numkeys; i++)
-		{
-			AttrNumber	attnum = attnums[i];
-
-			found_col = false;
-
-			if (IsA(to, Var) &&
-				to->varno == from->varno &&
-				to->varlevelsup == 0 &&
-				to->varattno == attnum)
-			{
-				found_col = true;
-			}
-
-			if (!found_col)
-				break;
-		}
-
-		if (found_col)
-		{
-			to_is_primary = true;
-			break;
-		}
-	}
-
-	systable_endscan(scan);
-
-	heap_close(pg_constraint, AccessShareLock);
-
-	return to_is_primary;
-}
-
-/*
  * State struct for find_group_dependent_targets. See that function for usage.
  */
 struct groupdep_ctx
@@ -3571,8 +3454,8 @@ struct groupdep_ctx
 
 /*
  * Callback for expression_tree_walker. Walks the node tree searching for Vars
- * that have a functional dependency (as defined by has_functional_dependency,
- * above) on Vars in the grouping target list. Any such Vars that are found are
+ * that have a functional dependency (as defined by check_functional_grouping)
+ * on Vars in the grouping target list. Any such Vars that are found are
  * wrapped in a TargetEntry and added to the context's output target list.
  *
  * Set up the context struct as follows:
@@ -3594,38 +3477,31 @@ find_group_dependent_targets(Node *node, struct groupdep_ctx *ctx)
 		Var		   *var = (Var *) node;
 		ListCell   *grp_lc;
 		bool		has_dep = false;
+		List	   *grp_list = NIL;
+		List	   *constraintDeps = NIL;
 
 		/* Search the grouping target list for Vars this one is dependent on. */
 		foreach (grp_lc, ctx->grps_tlist)
 		{
 			TargetEntry *grp_tle = lfirst(grp_lc);
 			Expr		*grp_expr = grp_tle->expr;
-			Var			*grp_var;
 
-			if (!IsA(grp_expr, Var))
-			{
-				/*
-				 * Ignore any expressions that aren't Vars; they can't have
-				 * functional dependencies.
-				 */
-				continue;
-			}
-
-			grp_var = (Var *) grp_expr;
-
-			if (equal(var, grp_var))
+			if (IsA(grp_expr, Var) && equal(var, grp_expr))
 			{
 				/* Don't add duplicates. */
-				has_dep = false;
-				break;
+				return false;
 			}
 
-			if (!has_dep && has_functional_dependency(var, grp_var,
-													  ctx->rangeTable))
-			{
-				has_dep = true;
-			}
+			grp_list = lappend(grp_list, grp_expr);
 		}
+
+		/* Look up the relid of the "to" Var from the range table. */
+		RangeTblEntry *rte = list_nth(ctx->rangeTable, var->varno - 1);
+		has_dep = check_functional_grouping(rte->relid,
+											var->varno,
+											0,
+											grp_list,
+											&constraintDeps);
 
 		if (has_dep)
 		{

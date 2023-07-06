@@ -134,10 +134,23 @@ select count(distinct b), sum(b), c from funcdep1 group by a;
 explain (costs off) select count(distinct b), count(distinct c) from funcdep1 group by a;
 select count(distinct b), count(distinct c) from funcdep1 group by a;
 
+-- test multi primary key in group by clause
+create table mfuncdep1(a int, b int, c int, d int, e int, primary key (a, b));
+create table mfuncdep2(a2 int, b2 int);
+insert into mfuncdep1 select i, i, i, i, i from generate_series(1, 10) i;
+insert into mfuncdep2 select i, i from generate_series(1, 10000) i;
+analyze mfuncdep1;
+analyze mfuncdep2;
+
+explain (verbose on, costs off) select a, b , sum(c + d), e from mfuncdep1 join mfuncdep2 on c = b2 group by a,b order by 1;
+select a, b , sum(c + d), e from mfuncdep1 join mfuncdep2 on c = b2 group by a,b order by 1;
+
 reset enable_groupagg;
 reset gp_eager_two_phase_agg;
 drop table funcdep1;
 drop table funcdep2;
+drop table mfuncdep1;
+drop table mfuncdep2;
 
 -- Drupal example, http://drupal.org/node/555530
 
