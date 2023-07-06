@@ -427,7 +427,6 @@ ENCODING ( <storage_directive> [,...] )
     2.  The table's data compression setting specified in the `WITH` clause when the table was created.
     3.  The compression parameter setting specified in the server configuration parameter [gp\_default\_storage\_option](../config_params/guc-list.html).
     4.  The default compression parameter value.
-:   For append-optimized and hash tables, `ADD COLUMN` requires a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
 :   For more information about the supported `ENCODING` storage directives, refer to [CREATE TABLE](CREATE_TABLE.html).
 
 CASCADE
@@ -555,7 +554,7 @@ FOR ('value')
 
 ## <a id="section5"></a>Notes 
 
-The key word COLUMN is noise and can be omitted.
+The key word `COLUMN` is noise and can be omitted.
 
 When a column is added with `ADD COLUMN`, all existing rows in the table are initialized with the column's default value, or `NULL` if no `DEFAULT` clause is specified. Adding a column with a non-null default or changing the type of an existing column will require the entire table and indexes to be rewritten. As an exception, if the `USING` clause does not change the column contents and the old type is either binary coercible to the new type or an unconstrained domain over the new type, a table rewrite is not needed, but any indexes on the affected columns must still be rebuilt. Table and/or index rebuilds may take a significant amount of time for a large table; and will temporarily require as much as double the disk space.
 
@@ -576,8 +575,8 @@ This table lists the `ALTER TABLE` operations that require a table rewrite when 
 |Operation \(See Note\)|Append-Optimized, Column-Oriented|Append-Optimized|Heap|
 |----------------------|---------------------------------|----------------|----|
 |`ALTER COLUMN TYPE`|No|Yes|Yes|
-|`ADD COLUMN`|No|Yes|Yes|
-| `ALTER COLUMN SET ENCODING`|Yes|N/A|N/A|
+|`ADD COLUMN`|No|No|No|
+| `ALTER COLUMN SET ENCODING`|No|N/A|N/A|
 
 > **Important** The forms of `ALTER TABLE` that perform a table rewrite are not MVCC-safe. After a table rewrite, the table will appear empty to concurrent transactions if they are using a snapshot taken before the rewrite occurred. See [MVCC Caveats](https://www.postgresql.org/docs/12/mvcc-caveats.html) for more details.
 
