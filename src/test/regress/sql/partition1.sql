@@ -1487,3 +1487,26 @@ SELECT user_name FROM users_test_1_prt_p2019;
 SELECT user_name FROM users_test_1_prt_p2020;
 -- Expect C
 SELECT user_name FROM users_test_1_prt_extra;
+
+--
+-- Test handling of redundant indexes in SPLIT PARTITION.
+--
+DROP TABLE IF EXISTS partition_test;
+
+CREATE TABLE partition_test
+(
+  id INT,
+  tm TIMESTAMP
+)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE(tm)
+(
+  PARTITION p2022 START ('2022-01-01'::TIMESTAMP) END ('2023-01-01'::TIMESTAMP),
+  DEFAULT PARTITION extra
+);
+
+CREATE INDEX partition_test_idx1 ON partition_test(id);
+CREATE INDEX partition_test_idx2 ON partition_test(id);
+
+ALTER TABLE partition_test SPLIT DEFAULT PARTITION START ('2023-01-01'::TIMESTAMP) END ('2024-01-01'::TIMESTAMP)
+ INTO (PARTITION p2023, DEFAULT PARTITION);
