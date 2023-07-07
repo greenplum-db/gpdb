@@ -18062,6 +18062,8 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ||
 			rel_is_external_table(RelationGetRelid(rel)))
 			need_reorg = false;
+		else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+			elog(ERROR, "Greenplum don't support to modify distributed key of distributed foreign table.");
 		else
 			elog(ERROR, "unexpected relkind '%c'", rel->rd_rel->relkind);
 
