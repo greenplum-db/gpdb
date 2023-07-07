@@ -273,7 +273,7 @@
     <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.057401" Rows="1.000000" Width="6"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.034418" Rows="1.000000" Width="6"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -287,7 +287,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.057379" Rows="1.000000" Width="6"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.034395" Rows="1.000000" Width="6"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -341,7 +341,7 @@
           </dxl:TableScan>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.017761" Rows="400.000000" Width="3"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.017022" Rows="1.000000" Width="3"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="8" Alias="a">
@@ -350,10 +350,10 @@
             </dxl:ProjList>
             <dxl:Filter>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUs=" LintValue="160784940"/>
                 <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                   <dxl:Ident ColId="8" ColName="a" TypeMdid="0.1043.1.0"/>
                 </dxl:Cast>
+                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUs=" LintValue="160784940"/>
               </dxl:Comparison>
             </dxl:Filter>
             <dxl:TableDescriptor Mdid="6.40981.1.0" TableName="infer_vc">

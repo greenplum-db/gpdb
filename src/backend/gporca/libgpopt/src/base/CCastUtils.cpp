@@ -170,6 +170,14 @@ CCastUtils::FScalarCast(CExpression *pexpr)
 	return COperator::EopScalarCast == pop->Eopid();
 }
 
+BOOL
+CCastUtils::FScalarCastIdent(CExpression *pexpr)
+{
+	GPOS_ASSERT(NULL != pexpr);
+
+	return FScalarCast(pexpr) && CUtils::FScalarIdent((*pexpr)[0]);
+}
+
 // return the given expression without any binary coercible casts
 // that exist on the top
 CExpression *

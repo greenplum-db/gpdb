@@ -353,3 +353,60 @@ RESET enable_bitmapscan;
 RESET optimizer_enable_tablescan;
 RESET optimizer_enable_indexscan;
 RESET optimizer_enable_indexonlyscan;
+
+-- The following tests are to verify a fix that allows ORCA to
+-- choose the bitmap index scan alternative when the predicate
+-- is in the form of `value operator cast(column)`. The fix
+-- converts the scalar comparison expression to the more common 
+-- form of `cast(column) operator value` in the preprocessor.
+
+-- Each test includes two queries. One query's predicate has 
+-- the column on the left side, and the other has the column
+-- on the right side. We expect the two queries to generate
+-- identical plans with bitmap index scan.
+
+-- Index only scan will probably be selected once index only
+-- scan in enabled for AO tables in ORCA. To prevent retain
+-- the bitmap scan alternative, turn off index only scan.
+set optimizer_enable_indexonlyscan=off;
+-- Test AO table
+-- Index scan is disabled in AO table, so bitmap scan is the
+-- most performant
+create table ao_tbl (
+    path_hash character varying(10)
+) with (appendonly='true');
+create index ao_idx on ao_tbl using btree (path_hash);
+insert into ao_tbl select 'abc' from generate_series(1,20) i;
+analyze ao_tbl;
+-- identical plans
+explain select * from ao_tbl where path_hash = 'ABC'; 
+explain select * from ao_tbl where 'ABC' = path_hash;
+
+-- Test AO partition table
+-- Dynamic index scan is disabled in AO table, so dynamic bitmap
+-- scan is the most performant
+create table part_tbl (
+    path_hash character varying(10)
+) partition by list(path_hash) 
+          (partition pics values('a') , 
+          default partition other with (appendonly='true'));
+create index part_idx on part_tbl using btree (path_hash);
+insert into part_tbl select 'abc' from generate_series(1,20) i;
+analyze part_tbl;
+-- identical plans
+explain select * from part_tbl where path_hash = 'ABC'; 
+explain select * from part_tbl where 'ABC' = path_hash; 
+
+-- Test table indexed on two columns
+-- Two indices allow ORCA to generate the bitmap scan alternative
+create table two_idx_tbl (x varchar(10), y varchar(10));
+create index x_idx on two_idx_tbl using btree (x);
+create index y_idx on two_idx_tbl using btree (y);
+insert into two_idx_tbl select 'aa', 'bb' from generate_series(1,10000) i;
+analyze two_idx_tbl;
+-- encourage bitmap scan by discouraging index scan
+set optimizer_enable_indexscan=off;
+-- identical plans
+explain select * from two_idx_tbl where x = 'cc' or y = 'dd';
+explain select * from two_idx_tbl where 'cc' = x or 'dd' = y;
+

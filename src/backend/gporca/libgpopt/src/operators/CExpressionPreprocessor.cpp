@@ -16,6 +16,7 @@
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CAutoTimer.h"
 
+#include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
@@ -2609,7 +2610,8 @@ CExpressionPreprocessor::PexprPruneProjListProjectOrGbAgg(
 	return pexprResult;
 }
 
-// reorder the child for scalar comparision to ensure that left child is a scalar ident and right child is a scalar const if not
+// reorder the child for scalar comparision to ensure that left child is a scalar ident
+// or cast(ident) and right child is a scalar const
 CExpression *
 CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 													   CExpression *pexpr)
@@ -2624,7 +2626,11 @@ CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 		CExpression *pexprLeft = (*pexpr)[0];
 		CExpression *pexprRight = (*pexpr)[1];
 
-		if (CUtils::FScalarConst(pexprLeft) && CUtils::FScalarIdent(pexprRight))
+		// left side is const
+		// right side is either ident, or, cast of ident
+		if (CUtils::FScalarConst(pexprLeft) &&
+			(CUtils::FScalarIdent(pexprRight) ||
+			 CCastUtils::FScalarCastIdent(pexprRight)))
 		{
 			CScalarCmp *popScalarCmpCommuted =
 				(dynamic_cast<CScalarCmp *>(pop))->PopCommutedOp(mp, pop);

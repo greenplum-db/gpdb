@@ -369,10 +369,10 @@
                 <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                   <dxl:If TypeMdid="0.1043.1.0">
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                      <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB2FiYw==" LintValue="578839396"/>
                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                         <dxl:Ident ColId="2" ColName="c" TypeMdid="0.1043.1.0" TypeModifier="14"/>
                       </dxl:Cast>
+                      <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB2FiYw==" LintValue="578839396"/>
                     </dxl:Comparison>
                     <dxl:Ident ColId="1" ColName="b" TypeMdid="0.1043.1.0" TypeModifier="14"/>
                     <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABmNk" LintValue="538477356"/>
