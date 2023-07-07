@@ -837,10 +837,10 @@ setio_v2(Oid group, List *limit_list)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
 
-	char rbps_str[20];
-	char wbps_str[20];
-	char riops_str[20];
-	char wiops_str[20];
+	char rbps_str[64] = {0};
+	char wbps_str[64] = {0};
+	char riops_str[64] = {0};
+	char wiops_str[64] = {0};
 
 	ListCell *tblspc_cell;
 	ListCell *bdi_cell;

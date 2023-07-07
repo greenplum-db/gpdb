@@ -127,7 +127,7 @@ ioconfig: IO_KEY '=' io_value
 				io_limit_yyerror(NULL, NULL, "io limit: cannot allocate memory");
 
 			item->value = $3;
-			for (int i = 0;i < IOconfigTotalFields; ++i)
+			for (int i = 0;i < lengthof(IOconfigFields); ++i)
 				if (strcmp($1, IOconfigFields[i]) == 0)
 					item->offset = i;
 

@@ -33,7 +33,6 @@ typedef struct IOconifg
 	uint64 wiops;
 } IOconfig;
 
-const extern int	IOconfigTotalFields;
 /* the order must be same as struct IOconfig */
 const extern char	*IOconfigFields[4];
 
