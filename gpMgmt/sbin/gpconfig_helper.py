@@ -126,7 +126,7 @@ def main():
             return
         except Exception as err:
             sys.stderr.write("Failed to get value for parameter '%s' in file %s due to: %s" % (
-                options.get_parameter, options.file, err.message))
+                options.get_parameter, options.file, str(err)))
             sys.exit(1)
 
     if options.remove_parameter:
@@ -135,7 +135,7 @@ def main():
             return
         except Exception as err:
             sys.stderr.write("Failed to remove parameter '%s' in file %s due to: %s" %
-                             (options.remove_parameter, options.file, err.message))
+                             (options.remove_parameter, options.file, str(err)))
             sys.exit(1)
 
     if options.add_parameter:
@@ -145,7 +145,7 @@ def main():
             return
         except Exception as err:
             sys.stderr.write("Failed to add parameter '%s' in file %s due to: %s" %
-                             (options.add_parameter, options.file, err.message))
+                             (options.add_parameter, options.file, str(err)))
             sys.exit(1)
 
 
