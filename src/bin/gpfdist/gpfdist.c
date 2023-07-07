@@ -3414,7 +3414,7 @@ int check_output_to_file(request_t *r, int wrote)
 	else
 	{
 		gwarning(r, "handle_post_request, left incomplete line: %d bytes", *buftop - wrote);
-		snprintf(error_msg, "Incomplete data written into file, left bytes: %d bytes", *buftop - wrote);
+		snprintf(error_msg, sizeof(error_msg), "Incomplete data written into file, left bytes: %d bytes", *buftop - wrote);
 		request_end(r, ERROR_CODE_GENERIC, error_msg);
 		return -1;
 	}
