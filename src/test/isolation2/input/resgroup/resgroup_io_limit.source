@@ -36,7 +36,7 @@ CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pgdefault:rbps=1000,wbps=1000,riops=1000');
 
 -- use another tablespace
-!\retcode mkdir -p @testtablespace@/rg_io_limit_ts_1;
+select mkdir('@testtablespace@/rg_io_limit_ts_1') from gp_dist_random('gp_id') intersect select mkdir('@testtablespace@/rg_io_limit_ts_1') from gp_id;
 
 CREATE TABLESPACE rg_io_limit_ts_1 LOCATION '@testtablespace@/rg_io_limit_ts_1';
 
@@ -57,4 +57,4 @@ DROP RESOURCE GROUP rg_test_group5;
 
 DROP TABLESPACE rg_io_limit_ts_1;
 
-!\retcode rm -rf @testtablespace@/rg_io_limit_ts_1;
+select rmdir('@testtablespace@/rg_io_limit_ts_1') from gp_dist_random('gp_id') intersect select rmdir('@testtablespace@/rg_io_limit_ts_1') from gp_id;

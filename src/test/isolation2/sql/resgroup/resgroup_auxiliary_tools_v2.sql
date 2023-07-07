@@ -316,3 +316,32 @@ $$ LANGUAGE plpython3u;
     return match
 
 $$ LANGUAGE plpython3u;
+
+0: CREATE OR REPLACE FUNCTION mkdir(dirname text) RETURNS BOOL AS $$
+    import os
+
+    if os.path.exists(dirname):
+        return True
+
+    try:
+        os.mkdir(dirname)
+    except Exception as e:
+        plpy.error("cannot create dir {}".format(e))
+    else:
+        return True
+$$ LANGUAGE plpython3u;
+
+0: CREATE OR REPLACE FUNCTION rmdir(dirname text) RETURNS BOOL AS $$
+    import shutil
+    import os
+
+    if not os.path.exists(dirname):
+        return True
+
+    try:
+        shutil.rmtree(dirname)
+    except Exception as e:
+        plpy.error("cannot remove dir {}".format(e))
+    else:
+        return True
+$$ LANGUAGE plpython3u;
