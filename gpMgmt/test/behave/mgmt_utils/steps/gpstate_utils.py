@@ -24,7 +24,7 @@ def impl(context):
 def impl(context):
     bg_pid = context.bg_pid
     if not unix.check_pid(bg_pid):
-        raise Exception("Postgres process {0} not killed.".format(bg_pid))
+        raise Exception("The background process with PID {} is not running.".format(bg_pid))
     gprecoverseg_lock_dir = os.path.join(get_coordinatordatadir() + '/gprecoverseg.lock')
     os.mkdir(gprecoverseg_lock_dir)
 
