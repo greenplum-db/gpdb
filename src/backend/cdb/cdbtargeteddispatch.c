@@ -52,8 +52,6 @@
 #define GP_SEGMENTID_TYPCOLL 0
 #define GP_SEGMENTID_OPFAMILY 1977	/* integer_ops */
 
-static char *gp_test_options = "";
-
 /* PRINT_DISPATCH_DECISIONS_STRING; */
 
 /**
