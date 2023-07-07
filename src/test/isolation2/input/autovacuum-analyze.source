@@ -123,12 +123,12 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
 SELECT gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 
--- Once all partitions are analyzed, statistics should be collected for root
+-- Once all partitions are analyzed, statistics should have been collected for root
 SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_6'::regclass;
 SELECT count(*) FROM pg_statistic where starelid = 'rankpart'::regclass;
 SELECT relpages, reltuples FROM pg_class WHERE oid = 'rankpart_1_prt_6'::regclass;
 SELECT relpages, reltuples FROM pg_class where oid = 'rankpart'::regclass;
--- Extended stats should not be collected
+-- Extended stats should not have been collected
 SELECT d.stxddependencies FROM pg_statistic_ext s, pg_statistic_ext_data d WHERE s.stxrelid = 'rankpart'::regclass AND d.stxoid = s.oid;
 
 

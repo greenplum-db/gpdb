@@ -2038,7 +2038,19 @@ do_autovacuum(void)
 	bool		did_vacuum = false;
 	bool		found_concurrent_worker = false;
 	int			i;
-	Bitmapset  *partition_roots_to_analyze = NULL;
+
+	HTAB		*top_level_partition_roots;
+	HASHCTL		hash_ctl;
+
+	memset(&hash_ctl, 0, sizeof(hash_ctl));
+	hash_ctl.keysize = sizeof(Oid);
+	hash_ctl.entrysize = sizeof(Oid);
+	hash_ctl.hcxt = CurrentMemoryContext;
+	top_level_partition_roots = hash_create("Temporary table of top level partition OIDs",
+					   32,
+					   &hash_ctl,
+					   HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
+
 
 	/*
 	 * StartTransactionCommand and CommitTransactionCommand will automatically
@@ -2206,12 +2218,12 @@ do_autovacuum(void)
 		if (dovacuum || doanalyze)
 			table_oids = lappend_oid(table_oids, relid);
 
-		/* add partition root to separate set */
+		/* Get oid of partition root and add to separate set */
 		if (doanalyze && classForm->relispartition)
 		{
 			List *ancestors = get_partition_ancestors(relid);
 			Oid root_parent_relid = llast_oid(ancestors);
-			partition_roots_to_analyze = bms_add_member(partition_roots_to_analyze, root_parent_relid);
+			(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
 		}
 		/*
 		 * Remember TOAST associations for the second pass.  Note: we must do
@@ -2403,15 +2415,20 @@ do_autovacuum(void)
 										  ALLOCSET_DEFAULT_SIZES);
 
 	/*
-	 * analyze all partition roots at end. This ensures we only merge stats once
-	 * per root partition
+	 * Analyze all top-level partition roots at the end. This ensures that
+	 * we only merge leaf stats once per top-level root partition.
 	 */
+	HASH_SEQ_STATUS hash_seq;
+	hash_seq_init(&hash_seq, top_level_partition_roots);
+
 	int k = -1;
-	while ((k = bms_next_member(partition_roots_to_analyze, k)) >= 0)
+	Oid* entry;
+	while ((entry = (Oid*) hash_seq_search(&hash_seq)) != NULL)
 	{
-		table_oids = lappend_oid(table_oids, k);
+		table_oids = lappend_oid(table_oids, *entry);
 	}
 
+	hash_destroy(top_level_partition_roots);
 	/*
 	 * Perform operations on collected tables.
 	 */

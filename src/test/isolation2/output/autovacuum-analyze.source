@@ -324,7 +324,7 @@ SELECT gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
  Success:        
 (1 row)
 
--- Once all partitions are analyzed, statistics should be collected for root
+-- Once all partitions are analyzed, statistics should have been collected for root
 SELECT count(*) FROM pg_statistic where starelid = 'rankpart_1_prt_6'::regclass;
  count 
 -------
@@ -345,7 +345,7 @@ SELECT relpages, reltuples FROM pg_class where oid = 'rankpart'::regclass;
 ----------+-----------
  0        | 0         
 (1 row)
--- Extended stats should not be collected
+-- Extended stats should not have been collected
 SELECT d.stxddependencies FROM pg_statistic_ext s, pg_statistic_ext_data d WHERE s.stxrelid = 'rankpart'::regclass AND d.stxoid = s.oid;
  stxddependencies 
 ------------------
