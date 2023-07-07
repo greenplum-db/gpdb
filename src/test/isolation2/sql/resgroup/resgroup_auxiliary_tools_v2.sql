@@ -324,7 +324,7 @@ $$ LANGUAGE plpython3u;
         return True
 
     try:
-        os.mkdir(dirname)
+        os.makedirs(dirname)
     except Exception as e:
         plpy.error("cannot create dir {}".format(e))
     else:
