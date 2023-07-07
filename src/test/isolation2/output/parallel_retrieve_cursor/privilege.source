@@ -167,6 +167,11 @@ DECLARE
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
 (3 rows)
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+ cursorname | username 
+------------+----------
+ c3         | uu1      
+(1 row)
 --- u1 can not see uu1's endpoints.
 1: SET ROLE u1;
 SET

@@ -60,6 +60,7 @@ RESET SESSION AUTHORIZATION;
 1: SELECT SESSION_USER, CURRENT_USER;
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 2: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
 --- u1 can not see uu1's endpoints.
 1: SET ROLE u1;
 1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
