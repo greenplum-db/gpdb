@@ -1119,7 +1119,7 @@ parseio_v1(const char *io_limit)
 static void
 setio_v1(Oid group, List *limit_list)
 {
-	ereport(ERROR,
+	ereport(WARNING,
 			(errcode(ERRCODE_SYSTEM_ERROR),
 			 errmsg("resource group io limit only can be used in cgroup v2.")));
 }
