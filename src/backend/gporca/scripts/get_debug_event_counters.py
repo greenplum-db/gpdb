@@ -172,8 +172,9 @@ def processLogFile(logFileLines, allruns):
 
 
 def parseargs():
-	parser = argparse.ArgumentParser(description=_help, version='1.0')
+	parser = argparse.ArgumentParser(description=_help)
 
+	parser.add_argument('--version', action='version', version='1.0')
 	parser.add_argument("--logFile", default="",
 						help="GPDB log file saved from a run with debug event counters enabled (default is to search "
 							 "GPDB coordinator log directory)")
