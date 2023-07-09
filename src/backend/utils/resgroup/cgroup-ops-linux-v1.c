@@ -1110,7 +1110,7 @@ getmemoryusage_v1(Oid group)
 static List*
 parseio_v1(const char *io_limit)
 {
-	ereport(ERROR,
+	ereport(WARNING,
 			(errcode(ERRCODE_SYSTEM_ERROR),
 			 errmsg("resource group io limit only can be used in cgroup v2.")));
 	return NULL;
@@ -1127,7 +1127,7 @@ setio_v1(Oid group, List *limit_list)
 static void
 freeio_v1(List *limit_list)
 {
-	ereport(ERROR,
+	ereport(WARNING,
 			(errcode(ERRCODE_SYSTEM_ERROR),
 			 errmsg("resource group io limit only can be used in cgroup v2.")));
 }
