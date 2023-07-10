@@ -59,7 +59,9 @@ DEPENDENCY_EXCLUSION = [
     'pg_resourcetype',
     'pg_resqueue',
     'pg_resqueuecapability',
-    'pg_tablespace'
+    'pg_subscription',
+    'pg_tablespace',
+    'pg_transform'
     ]
 
 # ============================================================================
