@@ -1107,7 +1107,7 @@ getmemoryusage_v1(Oid group)
 	return readInt64(group, BASEDIR_GPDB, component, "memory.usage_in_bytes");
 }
 
-static List*
+static List *
 parseio_v1(const char *io_limit)
 {
 	ereport(WARNING,

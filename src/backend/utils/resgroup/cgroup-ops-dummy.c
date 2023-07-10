@@ -217,7 +217,7 @@ convertcpuusage_dummy(int64 usage, int64 duration)
 }
 
 
-static List*
+static List *
 parseio_dummy(const char *io_limit)
 {
 	unsupported_system();

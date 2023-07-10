@@ -24,7 +24,8 @@ const char	*IOconfigFields[4] = { "rbps", "wbps", "riops", "wiops" };
 static int bdi_cmp(const void *a, const void *b);
 static void ioconfig_validate(IOconfig *config);
 
-typedef struct BDICmp {
+typedef struct BDICmp
+{
 	Oid ts;
 	bdi_t bdi;
 } BDICmp;
@@ -118,7 +119,8 @@ io_limit_validate(List *limit_list)
  *
  * Return bdi count of tablespace.
  */
-int fill_bdi_list(TblSpcIOLimit *iolimit)
+int
+fill_bdi_list(TblSpcIOLimit *iolimit)
 {
 	int result_cnt = 0;
 
