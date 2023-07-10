@@ -89,6 +89,21 @@ SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=104857600
  t                   
 (1 row)
 
+-- fault injector
+SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+CREATE RESOURCE GROUP rg_test_group6 WITH (concurrency=10, cpu_max_percent=10, io_limit='rg_io_limit_ts_1:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+ERROR:  fault triggered, fault name:'create_resource_group_fail' fault type:'error'
+
+SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname = 'rg_test_group6';
+ groupid | groupname | cpuset 
+---------+-----------+--------
+(0 rows)
+
 -- clean
 DROP RESOURCE GROUP rg_test_group1;
 DROP RESOURCE GROUP

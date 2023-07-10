@@ -48,6 +48,13 @@ ALTER RESOURCE GROUP rg_test_group5 SET io_limit 'rg_io_limit_ts_1:rbps=1000,wbp
 
 SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=1048576000 wbps=1048576000 riops=max wiops=max');
 
+-- fault injector
+SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);
+
+CREATE RESOURCE GROUP rg_test_group6 WITH (concurrency=10, cpu_max_percent=10, io_limit='rg_io_limit_ts_1:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+
+SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname = 'rg_test_group6';
+
 -- clean
 DROP RESOURCE GROUP rg_test_group1;
 DROP RESOURCE GROUP rg_test_group2;
