@@ -846,6 +846,7 @@ SELECT count(*) FROM pg_statistic where starelid = 'p4'::regclass;
 -------
  1     
 (1 row)
+- relpages/reltuples for root partitions are retrieved at planning time, not during analyze
 select relpages, reltuples from pg_class where oid = 'multipart'::regclass;
  relpages | reltuples 
 ----------+-----------

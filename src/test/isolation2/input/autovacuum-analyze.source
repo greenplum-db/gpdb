@@ -343,6 +343,7 @@ SELECT count(*) FROM pg_statistic where starelid = 'multipart'::regclass;
 SELECT count(*) FROM pg_statistic where starelid = 'part2'::regclass;
 SELECT count(*) FROM pg_statistic where starelid = 'part3'::regclass;
 SELECT count(*) FROM pg_statistic where starelid = 'p4'::regclass;
+- relpages/reltuples for root partitions are retrieved at planning time, not during analyze
 select relpages, reltuples from pg_class where oid = 'multipart'::regclass;
 select relpages, reltuples from pg_class where oid = 'part2'::regclass;
 select relpages, reltuples from pg_class where oid = 'part3'::regclass;

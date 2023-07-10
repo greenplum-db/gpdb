@@ -1032,7 +1032,6 @@ getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, int nPa
 bool
 needs_sample(Relation rel, VacAttrStats **vacattrstats, int attr_cnt)
 {
-
 	Assert(vacattrstats != NULL);
 	List *statext_oids;
 	int			i;

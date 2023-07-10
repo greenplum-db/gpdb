@@ -700,7 +700,6 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	}
 
 	sample_needed = needs_sample(onerel, vacattrstats, attr_cnt);
-
 	if (ctx || sample_needed)
 	{
 		if (ctx)
@@ -823,6 +822,11 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 				MemoryContextResetAndDeleteChildren(col_context);
 				continue;
 			}
+			/*
+			 * if merge_stats is not set, it is still possible that we don't want to sample
+			 * (eg: in the case of autoanalyze). In this case, don't populate statistics
+			 * for this attribute
+			 */
 			if (!sample_needed)
 				continue;
 			Assert(sample_needed);
@@ -996,8 +1000,6 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		 *
 		 * For now we only build extended statistics on individual relations,
 		 * not for relations representing inheritance trees.
-		 *
-		 *
 		 */
 		if (build_ext_stats)
 			BuildRelationExtStatistics(onerel, totalrows, numrows, rows,
