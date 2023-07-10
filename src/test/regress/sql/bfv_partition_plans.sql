@@ -108,6 +108,7 @@ drop table mpp7980;
 -- start_ignore
 set optimizer_enable_bitmapscan=on;
 set optimizer_enable_indexjoin=on;
+set optimizer_enable_dynamicindexonlyscan=off;
 drop table if exists mpp23195_t1;
 drop table if exists mpp23195_t2;
 -- end_ignore
@@ -129,6 +130,7 @@ drop table if exists mpp23195_t1;
 drop table if exists mpp23195_t2;
 set optimizer_enable_bitmapscan=off;
 set optimizer_enable_indexjoin=off;
+reset optimizer_enable_dynamicindexonlyscan;
 -- end_ignore
 
 

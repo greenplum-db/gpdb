@@ -78,7 +78,7 @@ insert into pt1 select dist, pt1, pt2, pt3, ptid-100 from pt;
 
 alter table pt1 set with(REORGANIZE=false) DISTRIBUTED RANDOMLY;
 
-analyze pt;
+vacuum analyze pt;
 analyze pt1;
 analyze t;
 analyze t1;

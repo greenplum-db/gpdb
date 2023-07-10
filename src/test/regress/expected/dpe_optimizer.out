@@ -74,7 +74,7 @@ insert into t1 select i, i % 6, 'hello' || i, 'bar' from generate_series(1,2) i;
 insert into pt1 select * from pt;
 insert into pt1 select dist, pt1, pt2, pt3, ptid-100 from pt;
 alter table pt1 set with(REORGANIZE=false) DISTRIBUTED RANDOMLY;
-analyze pt;
+vacuum analyze pt;
 analyze pt1;
 analyze t;
 analyze t1;
@@ -323,12 +323,13 @@ explain (costs off, timing off, summary off, analyze) select count(*) from t, pt
                      Join Filter: true
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
-                     ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                     ->  Dynamic Index Only Scan on ptid_idx on pt (actual rows=4 loops=2)
                            Index Cond: (ptid = t.tid)
+                           Heap Fetches: 0
                            Number of partitions to scan: 6 (out of 6)
                            Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(13 rows)
 
 select count(*) from t, pt where tid = ptid;
  count 

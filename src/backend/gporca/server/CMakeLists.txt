@@ -143,6 +143,9 @@ DynamicIndexScan-Heterogenous-PartSelectEquality
 DynamicIndexScan-Heterogenous-PartSelectRange DynamicIndexScan-OpenEndedPartitions
 DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols;
 
+CDynamicIndexOnlyScanTest:
+DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin;
+
 CIndexScanOnLeafTest:
 IndexOnLeaf-AddNewPartitionToRootTableContainingHeterogenousIndex
 IndexOnLeaf-AddPartitionToRootWithHomogenousIndex IndexOnLeaf-AddPartitionToRootWithHomogenousIndex
