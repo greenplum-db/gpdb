@@ -194,6 +194,9 @@ public:
 	// add a range table entry
 	void AddRTE(RangeTblEntry *rte, BOOL is_result_relation = false);
 
+	void InsertUsedRTEIndexes(ULONG assigned_query_id_for_target_rel,
+							  Index index);
+
 	void AddSubplan(Plan *);
 
 	// add a slice table entry
@@ -243,8 +246,8 @@ public:
 	// get rte from m_rtable_entries_list by given index
 	RangeTblEntry *GetRTEByIndex(Index index);
 
-	Index GetRTEIndexByTableDescr(const CDXLTableDescr *table_descr,
-								  BOOL *is_rte_exists);
+	Index GetRTEIndexByAssignedQueryId(ULONG assigned_query_id_for_target_rel,
+									   BOOL *is_rte_exists);
 };
 
 }  // namespace gpdxl

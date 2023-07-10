@@ -5188,8 +5188,10 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	GPOS_ASSERT(nullptr != table_descr);
 
 	BOOL rte_was_translated = false;
-	Index index = m_dxl_to_plstmt_context->GetRTEIndexByTableDescr(
-		table_descr, &rte_was_translated);
+
+	ULONG assigned_query_id = table_descr->GetAssignedQueryIdForTargetRel();
+	Index index = m_dxl_to_plstmt_context->GetRTEIndexByAssignedQueryId(
+		assigned_query_id, &rte_was_translated);
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	const ULONG num_of_non_sys_cols =
@@ -5281,6 +5283,9 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	rte->eref = alias;
 
 	m_dxl_to_plstmt_context->AddRTE(rte);
+	GPOS_ASSERT(gpdb::ListLength(
+					m_dxl_to_plstmt_context->GetRTableEntriesList()) == index);
+	m_dxl_to_plstmt_context->InsertUsedRTEIndexes(assigned_query_id, index);
 
 	return index;
 }
