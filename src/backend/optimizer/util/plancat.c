@@ -720,6 +720,41 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 }
 
 /*
+ * Get the total pages of a partitioned table, including all partitions.
+ *
+ * Only used with ORCA, currently.
+ */
+PageEstimate
+cdb_estimate_partitioned_numpages(Relation rel)
+{
+	List	   *inheritors;
+	ListCell   *lc;
+
+	PageEstimate estimate = { .totalpages = 0, .totalallvisiblepages = 0};
+
+	inheritors = find_all_inheritors(RelationGetRelid(rel),
+									 NoLock,
+									 NULL);
+	foreach(lc, inheritors)
+	{
+		Oid			childid = lfirst_oid(lc);
+		Relation	childrel;
+
+		if (childid != RelationGetRelid(rel))
+			childrel = RelationIdGetRelation(childid);
+		else
+			childrel = rel;
+
+		estimate.totalpages += childrel->rd_rel->relpages;
+		estimate.totalallvisiblepages += childrel->rd_rel->relallvisible;
+
+		if (childrel != rel)
+			heap_close(childrel, NoLock);
+	}
+	return estimate;
+}
+
+/*
  * get_relation_foreign_keys -
  *	  Retrieves foreign key information for a given relation.
  *

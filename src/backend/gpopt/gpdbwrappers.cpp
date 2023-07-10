@@ -1835,6 +1835,16 @@ gpdb::CdbEstimatePartitionedNumTuples(Relation rel)
 	GP_WRAP_END;
 }
 
+PageEstimate
+gpdb::CdbEstimatePartitionedNumPages(Relation rel)
+{
+	GP_WRAP_START;
+	{
+		return cdb_estimate_partitioned_numpages(rel);
+	}
+	GP_WRAP_END;
+}
+
 void
 gpdb::CloseRelation(Relation rel)
 {

@@ -1808,8 +1808,10 @@ CTranslatorRelcacheToDXL::RetrieveRelStats(CMemoryPool *mp, IMDId *mdid)
 		relation_empty = true;
 	}
 
-	ULONG relpages = rel->rd_rel->relpages;
-	ULONG relallvisible = rel->rd_rel->relallvisible;
+	PageEstimate pages = gpdb::CdbEstimatePartitionedNumPages(rel.get());
+
+	ULONG relpages = pages.totalpages;
+	ULONG relallvisible = pages.totalallvisiblepages;
 
 	CDXLRelStats *dxl_rel_stats = GPOS_NEW(mp)
 		CDXLRelStats(mp, m_rel_stats_mdid, mdname, CDouble(num_rows),
