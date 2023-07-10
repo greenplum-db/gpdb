@@ -33,6 +33,7 @@
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
+#include "executor/execDynamic.h"
 #include "executor/nodeBitmapIndexscan.h"
 #include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeDynamicBitmapIndexscan.h"
@@ -111,7 +112,7 @@ BitmapIndexScan_ReMapColumns(DynamicBitmapIndexScan *dbiScan, Oid oldOid, Oid ne
 		return;
 	}
 
-	attMap = IndexScan_GetColumnMapping(oldOid, newOid);
+	attMap = GetColumnMapping(oldOid, newOid);
 
 	if (attMap)
 	{

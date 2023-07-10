@@ -42,8 +42,10 @@ OBJS += nodeMotion.o \
        nodeTupleSplit.o \
        nodePartitionSelector.o
 
-OBJS += nodeDynamicSeqscan.o \
+OBJS += execDynamic.o \
+        nodeDynamicSeqscan.o \
         nodeDynamicIndexscan.o \
+        nodeDynamicIndexOnlyscan.o \
         nodeDynamicBitmapHeapscan.o \
         nodeDynamicBitmapIndexscan.o \
         nodeDynamicForeignscan.o

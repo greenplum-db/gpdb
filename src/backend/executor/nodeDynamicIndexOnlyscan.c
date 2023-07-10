@@ -4,12 +4,11 @@
  *	  Support routines for scanning one or more indexes that are
  *	  determined at runtime.
  *
- * DynamicIndexScan node scans each index one after the other. For each
- * index, it creates a regular IndexScan executor node, scans, and returns
+ * DynamicIndexOnlyScan node scans each index one after the other. For each
+ * index, it creates a regular IndexOnlyScan executor node, scans, and returns
  * the relevant tuples.
  *
- * Portions Copyright (c) 2013 - present, EMC/Greenplum
- * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
+ * Copyright (C) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
  *
  *
  * IDENTIFICATION
@@ -26,83 +25,83 @@
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
 #include "executor/execPartition.h"
-#include "executor/nodeIndexscan.h"
-#include "executor/nodeDynamicIndexscan.h"
+#include "executor/nodeIndexonlyscan.h"
+#include "executor/nodeDynamicIndexOnlyscan.h"
 #include "access/table.h"
 #include "access/tableam.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
 
 /*
- * Initialize ScanState in DynamicIndexScan.
+ * Initialize ScanState in DynamicIndexOnlyScan.
  */
 DynamicIndexScanState *
-ExecInitDynamicIndexScan(DynamicIndexScan *node, EState *estate, int eflags)
+ExecInitDynamicIndexOnlyScan(DynamicIndexOnlyScan *node, EState *estate, int eflags)
 {
-	DynamicIndexScanState *dynamicIndexScanState;
+	DynamicIndexScanState *dynamicIndexOnlyScanState;
 	ListCell   *lc;
 	int			i;
 
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)));
 
-	dynamicIndexScanState = makeNode(DynamicIndexScanState);
-	dynamicIndexScanState->ss.ps.plan = (Plan *) node;
-	dynamicIndexScanState->ss.ps.state = estate;
-	dynamicIndexScanState->ss.ps.ExecProcNode = ExecDynamicIndexScan;
-	dynamicIndexScanState->eflags = eflags;
+	dynamicIndexOnlyScanState = makeNode(DynamicIndexScanState);
+	dynamicIndexOnlyScanState->ss.ps.plan = (Plan *) node;
+	dynamicIndexOnlyScanState->ss.ps.state = estate;
+	dynamicIndexOnlyScanState->ss.ps.ExecProcNode = ExecDynamicIndexOnlyScan;
+	dynamicIndexOnlyScanState->eflags = eflags;
 
-	dynamicIndexScanState->scan_state = SCAN_INIT;
-	dynamicIndexScanState->whichPart = -1;
-	dynamicIndexScanState->nOids = list_length(node->partOids);
-	dynamicIndexScanState->partOids = palloc(sizeof(Oid) * dynamicIndexScanState->nOids);
+	dynamicIndexOnlyScanState->scan_state = SCAN_INIT;
+	dynamicIndexOnlyScanState->whichPart = -1;
+	dynamicIndexOnlyScanState->nOids = list_length(node->partOids);
+	dynamicIndexOnlyScanState->partOids = palloc(sizeof(Oid) * dynamicIndexOnlyScanState->nOids);
 	foreach_with_count(lc, node->partOids, i)
-		dynamicIndexScanState->partOids[i] = lfirst_oid(lc);
+		dynamicIndexOnlyScanState->partOids[i] = lfirst_oid(lc);
 
 	/*
 	 * Initialize child expressions
 	 *
-	 * These are not used for anything, we rely on the child IndexScan node to
-	 * do all evaluation for us. But I think this is still needed to find and
-	 * process any SubPlans. See comment in ExecInitIndexScan.
+	 * These are not used for anything, we rely on the child IndexOnlyScan
+	 * node to do all evaluation for us. But I think this is still needed to
+	 * find and process any SubPlans. See comment in ExecInitIndexOnlyScan.
 	 */
-	dynamicIndexScanState->ss.ps.qual = ExecInitQual(node->indexscan.scan.plan.qual,
-													 (PlanState *) dynamicIndexScanState);
+	dynamicIndexOnlyScanState->ss.ps.qual = ExecInitQual(node->indexscan.scan.plan.qual,
+														 (PlanState *) dynamicIndexOnlyScanState);
 
 	/*
 	 * tuple table initialization
 	 */
 	Relation	scanRel = ExecOpenScanRelation(estate, node->indexscan.scan.scanrelid, eflags);
 
-	ExecInitScanTupleSlot(estate, &dynamicIndexScanState->ss, RelationGetDescr(scanRel), table_slot_callbacks(scanRel));
+	ExecInitScanTupleSlot(estate, &dynamicIndexOnlyScanState->ss, RelationGetDescr(scanRel), table_slot_callbacks(scanRel));
 
 	/*
 	 * Initialize result tuple type and projection info.
 	 */
-	ExecInitResultTypeTL(&dynamicIndexScanState->ss.ps);
+	ExecInitResultTypeTL(&dynamicIndexOnlyScanState->ss.ps);
 
 	/*
 	 * This context will be reset per-partition to free up per-partition copy
 	 * of LogicalIndexInfo
 	 */
-	dynamicIndexScanState->partitionMemoryContext = AllocSetContextCreate(CurrentMemoryContext,
-																		  "DynamicIndexScanPerPartition",
-																		  ALLOCSET_DEFAULT_MINSIZE,
-																		  ALLOCSET_DEFAULT_INITSIZE,
-																		  ALLOCSET_DEFAULT_MAXSIZE);
+	dynamicIndexOnlyScanState->partitionMemoryContext = AllocSetContextCreate(CurrentMemoryContext,
+																			  "DynamicIndexOnlyScanPerPartition",
+																			  ALLOCSET_DEFAULT_MINSIZE,
+																			  ALLOCSET_DEFAULT_INITSIZE,
+																			  ALLOCSET_DEFAULT_MAXSIZE);
 
-	return dynamicIndexScanState;
+	return dynamicIndexOnlyScanState;
 }
 
 /*
- * Execution of DynamicIndexScan
+ * Execution of DynamicIndexOnlyScan
  */
 TupleTableSlot *
-ExecDynamicIndexScan(PlanState *pstate)
+ExecDynamicIndexOnlyScan(PlanState *pstate)
 {
 	DynamicIndexScanState *node = castNode(DynamicIndexScanState, pstate);
 
-	DynamicIndexScan *plan = (DynamicIndexScan *) node->ss.ps.plan;
+	DynamicIndexOnlyScan *plan = (DynamicIndexOnlyScan *) node->ss.ps.plan;
 
 	node->as_valid_subplans = NULL;
 	if (NULL != plan->join_prune_paramids && !node->did_pruning)

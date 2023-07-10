@@ -672,6 +672,33 @@ typedef struct IndexOnlyScan
 	List	   *recheckqual;	/* index quals in recheckable form */
 } IndexOnlyScan;
 
+/*
+ * DynamicIndexOnlyScan
+ *   Scan a list of indexes that will be determined at run time.
+ *   The primary application of this operator is to be used
+ *   for partition tables.
+*/
+typedef struct DynamicIndexOnlyScan
+{
+	/* Fields shared with a normal IndexScan. Must be first! */
+	IndexOnlyScan	indexscan;
+
+	/*
+	 * List of partition OIDs to scan.
+	 */
+	List	   *partOids;
+
+	/* Info for run-time subplan pruning; NULL if we're not doing that */
+	struct PartitionPruneInfo *part_prune_info;
+
+	/*
+	 * Info for run-time join pruning, using Partition Selector nodes.
+	 * These param IDs contain additional Bitmapsets containing selected
+	 * partitions.
+	 */
+	List	   *join_prune_paramids;
+} DynamicIndexOnlyScan;
+
 /* ----------------
  *		bitmap index scan node
  *
