@@ -220,13 +220,15 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 			callbackCtx->caps.io_limit = pstrdup(caps.io_limit);
 			callbackCtx->ioLimit = cgroupOpsRoutine->parseio(caps.io_limit);
 		}
+
 		MemoryContextSwitchTo(oldContext);
 		RegisterXactCallbackOnce(createResgroupCallback, callbackCtx);
 
 		/* Create os dependent part for this resource group */
 		cgroupOpsRoutine->createcgroup(groupid);
 
-		cgroupOpsRoutine->setio(groupid, callbackCtx->ioLimit);
+		if (caps.io_limit != NULL)
+			cgroupOpsRoutine->setio(groupid, callbackCtx->ioLimit);
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
