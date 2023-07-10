@@ -4002,9 +4002,10 @@ def impl(context):
 
 @then('the database segments are in execute mode')
 def impl(context):
-    # Get all up segments details except coordinator/standby
+    # Get all primary segments details
+    # For mirror segments, there's no way to distinguish if in execute mode or utility mode
     with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
-        sql = "SELECT dbid, hostname, port  FROM gp_segment_configuration WHERE content > -1 and status = 'u'"
+        sql = "SELECT dbid, hostname, port  FROM gp_segment_configuration WHERE content > -1 and status = 'u' and role = 'p'"
         rows = dbconn.query(conn, sql).fetchall()
 
         if len(rows) <= 0:
@@ -4016,13 +4017,11 @@ def impl(context):
         portnum = row[2]
         cmd = "psql -d template1 -p {0} -h {1} -c \";\"".format(portnum, hostname)
         run_command(context, cmd)
-        # If node is in execute mode, psql shoud return 2 and the print one of the following error message:
-        # For a primary segment: "psql: error: FATAL:  connections to primary segments are not allowed"
-        # For a mirror segment: "FATAL:  the database system is in recovery mode"
+        # If node is in execute mode, psql should return value 2 and the print the following error message:
+        # For a primary segment: "FATAL:  connections to primary segments are not allowed"
+        # For a mirror segment, always prints: "FATAL:  the database system is in recovery mode"
         if context.ret_code == 2 and \
-        ("FATAL:  connections to primary segments are not allowed" in context.error_message or
-         "FATAL:  the database system is in recovery mode" in context.error_message):
+           "FATAL:  connections to primary segments are not allowed" in context.error_message:
             continue
         else:
-            context.stdout_message
             raise Exception("segment process not running in execute mode for DBID:{0}".format(dbid))
