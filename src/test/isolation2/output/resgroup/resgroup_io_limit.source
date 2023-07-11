@@ -104,6 +104,12 @@ SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE group
 ---------+-----------+--------
 (0 rows)
 
+SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
 -- clean
 DROP RESOURCE GROUP rg_test_group1;
 DROP RESOURCE GROUP
