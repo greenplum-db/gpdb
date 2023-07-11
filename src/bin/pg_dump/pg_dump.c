@@ -6393,8 +6393,6 @@ getTables(Archive *fout, int *numTables)
 	int			i_parlevel;
 	int			i_toast_index_oid;
 	int			i_distclause;
-	int			i_partclause;
-	int			i_parttemplate;
 
 	/*
 	 * Find all the tables and table-like objects.
@@ -6573,11 +6571,7 @@ getTables(Archive *fout, int *numTables)
 		appendPQExpBufferStr(query,
 						  "NULL AS partkeydef, "
 						  "0 AS ispartition,"
-						  "NULL AS partbound, "
-							"CASE WHEN pl.parlevel = 0 THEN "
-							"(SELECT pg_get_partition_def(c.oid, true, true)) END AS partclause, "
-							"CASE WHEN pl.parlevel = 0 THEN "
-							"(SELECT pg_get_partition_template_def(c.oid, true, true)) END as parttemplate ");
+						  "NULL AS partbound ");
 
 	/*
 	 * Left join to pg_depend to pick up dependency info linking sequences to
@@ -6713,8 +6707,6 @@ getTables(Archive *fout, int *numTables)
 	i_parlevel = PQfnumber(res, "parlevel");
 	i_toast_index_oid = PQfnumber(res, "toast_index_oid");
 	i_distclause = PQfnumber(res, "distclause");
-	i_partclause = PQfnumber(res, "partclause");
-	i_parttemplate = PQfnumber(res, "parttemplate");
 
 	if (dopt->lockWaitTimeout)
 	{
@@ -6803,11 +6795,7 @@ getTables(Archive *fout, int *numTables)
 			atoi(PQgetvalue(res, i, i_parlevel)) > 0)
 			tblinfo[i].parparent = false;
 		else
-		{
 			tblinfo[i].parparent = true;
-			tblinfo[i].partclause = pg_strdup(PQgetvalue(res, i, i_partclause));
-			tblinfo[i].parttemplate = pg_strdup(PQgetvalue(res, i, i_parttemplate));
-		}
 
 		if (!tblinfo[i].parparent && tblinfo[i].parrelid != 0 && tblinfo[i].relstorage == 'x')
 		{
@@ -7182,6 +7170,89 @@ getInherits(Archive *fout, int *numInherits)
 	destroyPQExpBuffer(query);
 
 	return inhinfo;
+}
+
+/*
+ * getPartitionDefs
+ *	get information about GPDB partition definitions on a dumpable table
+ */
+
+void
+getPartitionDefs(Archive *fout, TableInfo tblinfo[], int numTables)
+{
+
+	PQExpBuffer query = createPQExpBuffer();
+	PQExpBuffer tbloids = createPQExpBuffer();
+	PGresult   *res;
+	int			ntups;
+	int			i_oid;
+	int			i_partclause;
+	int			i_parttemplate;
+
+	/* Only relevant for GP5/GP6 */
+	if (fout->remoteVersion > GPDB6_MAJOR_PGVERSION)
+		return;
+
+	/*
+	 * We want to perform just one query against pg_class.
+	 * However, we mustn't try to select every row of those catalogs and then
+	 * sort it out on the client side, because some of the server-side functions
+	 * we need would be unsafe to apply to tables we don't have lock on.
+	 * Hence, we build an array of the OIDs of tables we care about
+	 * (and now have lock on!), and use a WHERE clause to constrain which rows are selected.
+	 */
+	appendPQExpBufferChar(tbloids, '{');
+	for (int i = 0; i < numTables; i++)
+	{
+		TableInfo  *tbinfo = &tblinfo[i];
+
+		/* We're only interested in dumping the partition definition for parent partitions */
+		if (!tbinfo->parparent)
+			continue;
+
+		/*
+		 * We can ignore uninteresting tables, i.e. tables that will not be dumped.
+		 */
+		if (!tbinfo->interesting)
+			continue;
+
+		/* OK, we need info for this table */
+		if (tbloids->len > 1)	/* do we have more than the '{'? */
+			appendPQExpBufferChar(tbloids, ',');
+		appendPQExpBuffer(tbloids, "%u", tbinfo->dobj.catId.oid);
+	}
+
+	appendPQExpBufferChar(tbloids, '}');
+	resetPQExpBuffer(query);
+
+	appendPQExpBuffer(query,
+						"SELECT src.oid,\n"
+						"(SELECT pg_get_partition_def(src.oid, true, true)) AS partclause,\n"
+						"(SELECT pg_get_partition_template_def(src.oid, true, true)) AS parttemplate\n"
+						"FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n", tbloids->data);
+
+	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+
+	i_oid = PQfnumber(res, "oid");
+	i_partclause = PQfnumber(res, "partclause");
+	i_parttemplate = PQfnumber(res, "parttemplate");
+
+	for (int i = 0; i < ntups; i++)
+	{
+		TableInfo *tbinfo = findTableByOid(atooid(PQgetvalue(res, i, i_oid)));
+		if (tblinfo)
+		{
+			tbinfo->partclause = pg_strdup(PQgetvalue(res, i, i_partclause));
+			tbinfo->parttemplate = pg_strdup(PQgetvalue(res, i, i_parttemplate));
+		}
+
+	}
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+	destroyPQExpBuffer(tbloids);
 }
 
 /*
