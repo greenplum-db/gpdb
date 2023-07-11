@@ -666,6 +666,7 @@ extern void getBinaryUpgradeTypeArrInfo(Archive *fout, BinaryUpgradeInfo *binfo,
 extern bool	testExtProtocolSupport(Archive *fout);
 extern void getAOTableInfo(Archive *fout);
 extern void getBMIndxInfo(Archive *fout);
+extern void getPartitionDefs(Archive *fout, TableInfo tblinfo[], int numTables);
 /* END MPP ADDITION */
 
 

@@ -1,0 +1,39 @@
+-- Ensure that pg_dump only locks partition tables that are included in the backup set.
+-- An existing ACCESS EXCLUSIVE lock on a partition table outside the backup set should
+-- not block pg_dump execution.
+CREATE SCHEMA dump_this_schema;
+CREATE SCHEMA locked_table_schema;
+CREATE TABLE dump_this_schema.dump_this_table (
+    a int,
+    b char,
+    c varchar(50)
+) DISTRIBUTED BY (b)
+PARTITION BY RANGE (a)
+(
+    PARTITION p1 START(1) END(5),
+    PARTITION p2 START(5)
+);
+NOTICE:  CREATE TABLE will create partition "dump_this_table_1_prt_p1" for table "dump_this_table"
+NOTICE:  CREATE TABLE will create partition "dump_this_table_1_prt_p2" for table "dump_this_table"
+CREATE TABLE locked_table_schema.locked_table (
+    a int,
+    b char,
+    c varchar(50)
+) DISTRIBUTED BY (b)
+PARTITION BY RANGE (a)
+(
+    PARTITION p1 START(1) END(5),
+    PARTITION p2 START(5)
+);
+NOTICE:  CREATE TABLE will create partition "locked_table_1_prt_p1" for table "locked_table"
+NOTICE:  CREATE TABLE will create partition "locked_table_1_prt_p2" for table "locked_table"
+BEGIN; LOCK TABLE locked_table_schema.locked_table IN ACCESS EXCLUSIVE MODE;
+-- Run pg_dump with the Access Exclusive lock held. We expect pg_dump to complete
+-- and output a CREATE TABLE statement for dump_this_schema.dump_this_table.
+\! pg_dump -s -t dump_this_schema.dump_this_table regression | grep 'CREATE TABLE'
+CREATE TABLE dump_this_schema.dump_this_table (
+END;
+DROP SCHEMA dump_this_schema CASCADE;
+NOTICE:  drop cascades to table dump_this_schema.dump_this_table
+DROP SCHEMA locked_table_schema CASCADE;
+NOTICE:  drop cascades to table locked_table_schema.locked_table

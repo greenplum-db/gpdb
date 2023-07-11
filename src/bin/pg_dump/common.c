@@ -156,6 +156,8 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 		write_msg(NULL, "reading user-defined tables\n");
 	tblinfo = getTables(fout, &numTables);
 
+	getPartitionDefs(fout, tblinfo, numTables);
+
 	getOwnedSeqs(fout, tblinfo, numTables);
 
 	if (g_verbose)

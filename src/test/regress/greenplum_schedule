@@ -17,6 +17,8 @@
 
 test: pg_dump_binary_upgrade
 
+test: pg_dump_locking
+
 test: gp_dispatch_keepalives
 
 # copy command
