@@ -228,6 +228,7 @@ public:
 		ExfPushJoinBelowLeftUnionAll,
 		ExfPushJoinBelowRightUnionAll,
 		ExfLimit2IndexGet,
+		ExfDynamicIndexGet2DynamicIndexOnlyScan,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

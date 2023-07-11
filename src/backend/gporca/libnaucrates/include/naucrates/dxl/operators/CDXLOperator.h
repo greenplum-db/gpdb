@@ -148,6 +148,7 @@ enum Edxlopid
 	EdxlopPhysicalSequence,
 	EdxlopPhysicalDynamicTableScan,
 	EdxlopPhysicalDynamicIndexScan,
+	EdxlopPhysicalDynamicIndexOnlyScan,
 	EdxlopPhysicalPartitionSelector,
 	EdxlopPhysicalTVF,
 	EdxlopPhysicalWindow,

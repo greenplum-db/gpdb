@@ -23,6 +23,7 @@
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalDynamicIndexOnlyScan.h"
 #include "gpopt/operators/CPhysicalDynamicIndexScan.h"
 #include "gpopt/operators/CPhysicalHashAgg.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
@@ -1647,7 +1648,8 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	GPOS_ASSERT(nullptr != pci);
 
 	COperator *pop = exprhdl.Pop();
-	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid());
+	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid() ||
+				COperator::EopPhysicalDynamicIndexOnlyScan == pop->Eopid());
 
 	const CDouble dTableWidth =
 		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
@@ -1674,17 +1676,34 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 
 	CDouble dRowsIndex = pci->Rows();
 
-	ULONG ulIndexKeys =
-		CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->Keys();
-	IStatistics *stats =
-		CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+	ULONG ulIndexKeys = 1;
+	IStatistics *stats = nullptr;
 
 	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
 	// cost per index row. Account for that cost in dCostPerIndexRow.
-	CColumnDescriptorArray *indexIncludedArray =
-		CPhysicalIndexOnlyScan::PopConvert(pop)
-			->Pindexdesc()
-			->PdrgpcoldescIncluded();
+	CColumnDescriptorArray *indexIncludedArray = nullptr;
+
+	if (COperator::EopPhysicalIndexOnlyScan == pop->Eopid())
+	{
+		ulIndexKeys =
+			CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->Keys();
+		stats = CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+		indexIncludedArray = CPhysicalIndexOnlyScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
+	}
+	else
+	{
+		ulIndexKeys = CPhysicalDynamicIndexOnlyScan::PopConvert(pop)
+						  ->Pindexdesc()
+						  ->Keys();
+		stats =
+			CPhysicalDynamicIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+		indexIncludedArray = CPhysicalDynamicIndexOnlyScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
+	}
+
 	ULONG ulIncludedColWidth = 0;
 	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
 	{
@@ -2115,6 +2134,7 @@ CCostModelGPDB::Cost(
 			return CostFilter(m_mp, exprhdl, this, pci);
 		}
 
+		case COperator::EopPhysicalDynamicIndexOnlyScan:
 		case COperator::EopPhysicalIndexOnlyScan:
 		{
 			return CostIndexOnlyScan(m_mp, exprhdl, this, pci);
