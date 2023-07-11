@@ -2744,8 +2744,8 @@ class gpload:
                 self.rowsUpdated = self.db.query(sql.encode('utf-8'))
             except Exception as e:
                 # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
+                strE = str(e)
+                strF = str(sql)
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
 				
     def get_qualified_tablename(self):
@@ -2841,8 +2841,8 @@ class gpload:
             try:
                 self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
+                strE = str(e)
+                strF = str(sql)
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
 
         # insert new rows to the target table
@@ -2863,8 +2863,8 @@ class gpload:
                 self.rowsInserted = self.db.query(sql.encode('utf-8'))
             except Exception as e:
                 # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
+                strE = str(e)
+                strF = str(sql)
                 self.log(self.ERROR, strE + ' encountered while running ' + strF)
 
     def do_truncate(self, tblname):
