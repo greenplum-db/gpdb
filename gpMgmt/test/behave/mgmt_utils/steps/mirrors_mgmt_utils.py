@@ -518,6 +518,45 @@ def impl(context, content):
                 fd.write('{} {}\n'.format(valid_config, valid_config))
             break
 
+@given("edit the hostsname input file to recover segment with content {content} full inplace")
+def impl(context,  content):
+    content = int(content)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}|{} localhost|{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory())
+            context.hostname = mirror.getSegmentHostName()
+
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{}'.format(valid_config))
+            break
+
+@given("edit the hostsname input file to recover segment with content {content} with invalid hostname")
+def impl(context,  content):
+    content = int(content)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}|{} invalid_host|{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory())
+
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{}'.format(valid_config))
+            break
+
 
 @given("edit the input file to recover mirror with content {content} incremental")
 def impl(context, content):

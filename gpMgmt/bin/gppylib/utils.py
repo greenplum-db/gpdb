@@ -10,6 +10,7 @@ from xml.dom import minidom
 from xml.dom import Node
 
 from gppylib.gplog import *
+from socket import gethostbyaddr
 
 logger = get_default_logger()
 
@@ -529,3 +530,30 @@ def escapeDoubleQuoteInSQLString(string, forceDoubleQuote=True):
     if forceDoubleQuote:
         string = '"' + string + '"'
     return string
+
+def validateHostnameAddress(hostname, address):
+    """
+    validateHostnameAddress : validates that given hostname and address are for the same host
+    Address can be hostname/alias also. Resolves hostname and address both to get the associated addresses.
+
+    @param hostname Name of the host to be validated
+    @param address Address of the host to be validated. Can be hostname/alias also
+    @return if the address and hostname are of the same host
+    """
+    try:
+        resolved_hostname, _, resolved_address_list = gethostbyaddr(hostname)
+        resolved_hostname_2, _, resolved_address_list_2 = gethostbyaddr(address)
+    except Exception as e:
+        # This means given hostname or address is not reachable
+        logger.warning(
+            "Could not resolve hostname:{0}."
+                .format(hostname))
+        return False
+
+    # Resolved address and hostname should have at least one IP address common if they are of same host
+    if not bool(set(resolved_address_list).intersection(resolved_address_list_2)):
+        logger.warning(
+            "Given address:{0} not present in resolved hostname:{1} address list we got:{2}".format(
+                address, hostname, resolved_address_list))
+        return False
+    return True

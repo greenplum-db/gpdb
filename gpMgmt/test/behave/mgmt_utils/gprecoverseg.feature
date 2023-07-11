@@ -1703,3 +1703,164 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And all the segments are running
           And the segments are synchronized
+
+
+
+  @concourse_cluster
+    Scenario: gprecoverseg recovery to new host populates hostname and address from the config file correctly
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And the gprecoverseg input file "recover-config.conf" is cleaned up
+         When user kills a "primary" process with the saved information
+          And user can start transactions
+         Then the saved "primary" segment is marked down in config
+          When a gprecoverseg input file "recover-config.conf" is created with added parameter hostname to recover the failed segment on new host
+          And the user runs "gprecoverseg -i /tmp/recover-config.conf -a -v"
+         Then gprecoverseg should return a return code of 0
+         When check hostname and address updated on segment configuration with the saved information
+          And all the segments are running
+          And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: gprecoverseg recovery to same host (full inplace) populates hostname and address from the config file correctly
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And the gprecoverseg input file "recover-config.conf" is cleaned up
+          When user kills a "primary" process with the saved information
+          And user can start transactions
+          Then the saved "primary" segment is marked down in config
+          When a gprecoverseg input file "recover-config.conf" is created with hostname parameter to recover the failed segment on same host
+          And the user runs "gprecoverseg -i /tmp/recover-config.conf -a -v"
+          Then gprecoverseg should return a return code of 0
+          When check hostname and address updated on segment configuration with the saved information
+          And all the segments are running
+          And the segments are synchronized
+
+
+  @concourse_cluster
+    Scenario: gprecoverseg recovery with invalid format with hostname in config file
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And the gprecoverseg input file "recover-config-invalid.conf" is cleaned up
+          When user kills a "primary" process with the saved information
+          And user can start transactions
+          Then the saved "primary" segment is marked down in config
+          When a gprecoverseg input file "recover-config-invalid.conf" is created with invalid format for inplace full recovery of failed segment
+          And the user runs "gprecoverseg -i /tmp/recover-config-invalid.conf -a -v"
+          Then gprecoverseg should return a return code of 2
+          And gprecoverseg should print "line 1 of file /tmp/recover-config-invalid.conf: expected equal parts, either 3 or 4 on both segment group, obtained 4 on group1 and 3 on group2" to stdout
+          Then the user runs "gprecoverseg -a"
+          Then gprecoverseg should return a return code of 0
+          And the cluster is rebalanced
+
+
+  @concourse_cluster
+    Scenario: gprecoverseg incremental recovery populates hostname and address from the config file correctly
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And the gprecoverseg input file "recover-config.conf" is cleaned up
+          When user kills a "primary" process with the saved information
+          And user can start transactions
+          Then the saved "primary" segment is marked down in config
+          When a gprecoverseg input file "recover-config.conf" is created with hostname parameter matches with segment configuration table for incremental recovery of failed segment
+          And the user runs "gprecoverseg -i /tmp/recover-config.conf -a -v"
+          Then gprecoverseg should return a return code of 0
+          When check hostname and address updated on segment configuration with the saved information
+          And all the segments are running
+          And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: gprecoverseg recovery with and without hostname parameter in config file
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And user stops all primary processes
+          And user can start transactions
+          And the gprecoverseg input file "recover-config.conf" is cleaned up
+          When a gprecoverseg input file "recover-config.conf" is created with and without parameter hostname to recover all the failed segments
+          And the user runs "gprecoverseg -i /tmp/recover-config.conf -a -F -v"
+          Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: gprecoverseg throws warning and skips recovery if provided hostname and address can not be resolved to same host
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And user stops all primary processes
+          And user can start transactions
+          And the gprecoverseg input file "recover-config.conf" is cleaned up
+          When a gprecoverseg input file "recover-config.conf" created with invalid failover hostname for full recovery of failed segment
+          And the user runs "gprecoverseg -i /tmp/recover-config.conf -a -F -v"
+          Then gprecoverseg should return a return code of 0
+          And gprecoverseg should print a "Not able to co-relate hostname:.* with address.*Skipping recovery for segments with contentId" warning
+          Then the user runs "gprecoverseg -a"
+          Then gprecoverseg should return a return code of 0
+          And all the segments are running
+          And the segments are synchronized
+
+    @concourse_cluster
+    Scenario: gprecoverseg incremental recovery with config file and wrong hostname
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And the information of a "primary" segment on a remote host is saved
+          And the gprecoverseg input file "recover-config.conf" is cleaned up
+          When user kills a "primary" process with the saved information
+          And user can start transactions
+          Then the saved "primary" segment is marked down in config
+          When a gprecoverseg input file "recover-config.conf" is created with invalid hostname parameter that does not matches with the segment configuration table hostname
+          And the user runs "gprecoverseg -i /tmp/recover-config.conf -a -v"
+          Then gprecoverseg should return a return code of 2
+          And gprecoverseg should print "A segment to recover was not found in configuration.  This segment is described by hostname|address|port|directory .*'" to stdout
+          Then the user runs "gprecoverseg -a"
+          And gprecoverseg should return a return code of 0
+          And the cluster is rebalanced
+
+  @demo_cluster
+  Scenario: gprecoverseg recovers segment when config file contains hostname on demo cluster
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the hostsname input file to recover segment with content 0 full inplace
+    And update /etc/hosts file with address for the localhost
+    When the user runs gprecoverseg with input file and additional args "-a"
+    And gprecoverseg should return a return code of 0
+    And restore /etc/hosts file and cleanup hostlist file
+    And the cluster configuration has no segments where "content=0 and status='d'"
+    Then the cluster is rebalanced
+
+  @demo_cluster
+  Scenario: gprecoverseg skips recovery when config file contains invalid hostname on demo cluster
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the hostsname input file to recover segment with content 0 with invalid hostname
+    When the user runs gprecoverseg with input file and additional args "-a"
+    And gprecoverseg should print a "Could not resolve hostname:invalid_host" warning
+    And gprecoverseg should print a "Not able to co-relate hostname:invalid_host with address:.*Skipping recovery for segments with contentId" warning
+    And gprecoverseg should print "No segments to recover" to stdout
+    And gprecoverseg should return a return code of 0
+    And the user runs "gprecoverseg -a -v"
+    Then gprecoverseg should return a return code of 0
+    And the cluster is rebalanced

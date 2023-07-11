@@ -817,6 +817,7 @@ def impl(context, command, out_msg):
 @when('{command} should print "{out_msg}" to stdout')
 @then('{command} should print "{out_msg}" to stdout')
 @then('{command} should print a "{out_msg}" warning')
+@when('{command} should print a "{out_msg}" warning')
 def impl(context, command, out_msg):
     check_stdout_msg(context, out_msg)
 
@@ -1539,6 +1540,7 @@ def impl(context, content_ids, expected_status):
 
 
 @given('the cluster configuration has no segments where "{filter}"')
+@when('the cluster configuration has no segments where "{filter}"')
 def impl(context, filter):
     SLEEP_PERIOD = 5
     MAX_DURATION = 300
@@ -4004,7 +4006,8 @@ def impl(context, contentids):
 
     if not no_basebackup:
         raise Exception("pg_basebackup entry was found for contents %s in gp_stat_replication after %d retries" % (contentids, retries))
-    
+
+
 @given('backup /etc/hosts file and update hostname entry for localhost')
 def impl(context):
      # Backup current /etc/hosts file
@@ -4018,6 +4021,18 @@ def impl(context):
      cmd = Command(name='update hostlist with new hostname', cmdStr="sudo sed 's/%s/%s__1 %s/g' </etc/hosts >> /tmp/hosts; sudo cp -f /tmp/hosts /etc/hosts;rm /tmp/hosts"
                                                         %(hostname, hostname, hostname))
      cmd.run(validateAfter=True)
+
+
+@given('update /etc/hosts file with address for the localhost')
+def impt(context):
+    hostname = context.hostname
+    # Backup current /etc/hosts file
+    cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /tmp/hosts_orig')
+    cmd.run(validateAfter=True)
+    # Update the address
+    cmdStr = "echo \"127.0.0.1 {}\" | sudo tee -a /etc/hosts".format(hostname)
+    cmd = Command(name="update /etc/hosts file with hostname entry", cmdStr=cmdStr)
+    cmd.run(validateAfter=True)
 
 @given('update hostlist file with updated host-address')
 def impl(context):
@@ -4074,8 +4089,9 @@ def impl(context):
      cmd.run(validateAfter=True)
 
 @then('restore /etc/hosts file and cleanup hostlist file')
+@when('restore /etc/hosts file and cleanup hostlist file')
 def impl(context):
-    cmd =  "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
+    cmd = "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
     context.execute_steps(u'''Then the user runs command "%s"''' % cmd)
 
 @given('create a gpcheckperf input host file')
