@@ -129,9 +129,10 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 	const CWStringConst *tablename = rel->Mdname().GetMDName();
 	CMDName *table_mdname = GPOS_NEW(mp) CMDName(mp, tablename);
 
-	CDXLTableDescr *table_descr = GPOS_NEW(mp)
-		CDXLTableDescr(mp, mdid, table_mdname, rte->checkAsUser,
-					   rte->rellockmode, assigned_query_id_for_target_rel);
+	INT required_perms = static_cast<INT>(rte->requiredPerms);
+	CDXLTableDescr *table_descr = GPOS_NEW(mp) CDXLTableDescr(
+		mp, mdid, table_mdname, rte->checkAsUser, rte->rellockmode,
+		required_perms, assigned_query_id_for_target_rel);
 
 	const ULONG len = rel->ColumnCount();
 

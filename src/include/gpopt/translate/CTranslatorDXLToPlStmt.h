@@ -441,8 +441,7 @@ private:
 
 	// create range table entry from a table descriptor
 	Index ProcessDXLTblDescr(const CDXLTableDescr *table_descr,
-							 CDXLTranslateContextBaseTable *base_table_context,
-							 AclMode acl_mode);
+							 CDXLTranslateContextBaseTable *base_table_context);
 
 	// translate DXL projection list into a target list
 	List *TranslateDXLProjList(

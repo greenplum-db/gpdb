@@ -37,6 +37,7 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <limits>  // std::numeric_limits
 #include <numeric>
 #include <tuple>
 
@@ -595,8 +596,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
-	Index index =
-		ProcessDXLTblDescr(dxl_table_descr, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(dxl_table_descr, &base_table_context);
 
 	// a table scan node must have 2 children: projection list and filter
 	GPOS_ASSERT(2 == tbl_scan_dxlnode->Arity());
@@ -781,8 +781,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
-	Index index =
-		ProcessDXLTblDescr(dxl_table_descr, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(dxl_table_descr, &base_table_context);
 
 	IndexScan *index_scan = nullptr;
 	index_scan = MakeNode(IndexScan);
@@ -953,8 +952,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(
 		physical_idx_scan_dxlop->GetDXLTableDescr()->MDId());
 
-	Index index =
-		ProcessDXLTblDescr(table_desc, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(table_desc, &base_table_context);
 
 	IndexOnlyScan *index_scan = MakeNode(IndexOnlyScan);
 	index_scan->scan.scanrelid = index;
@@ -3931,7 +3929,7 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 		CDXLTranslateContextBaseTable base_table_context(m_mp);
 
 		(void) ProcessDXLTblDescr(phy_append_dxlop->GetDXLTableDesc(),
-								  &base_table_context, ACL_SELECT);
+								  &base_table_context);
 
 		append->join_prune_paramids = NIL;
 		const ULongPtrArray *selector_ids = phy_append_dxlop->GetSelectorIds();
@@ -4297,7 +4295,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
 	Index index = ProcessDXLTblDescr(dyn_tbl_scan_dxlop->GetDXLTableDescr(),
-									 &base_table_context, ACL_SELECT);
+									 &base_table_context);
 
 	// create dynamic scan node
 	DynamicSeqScan *dyn_seq_scan = MakeNode(DynamicSeqScan);
@@ -4388,8 +4386,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 	const CDXLTableDescr *table_desc = dyn_index_scan_dxlop->GetDXLTableDescr();
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_desc->MDId());
 
-	Index index =
-		ProcessDXLTblDescr(table_desc, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(table_desc, &base_table_context);
 
 	DynamicIndexScan *dyn_idx_scan = MakeNode(DynamicIndexScan);
 
@@ -4537,7 +4534,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynForeignScan(
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
 	Index index = ProcessDXLTblDescr(dyn_foreign_scan_dxlop->GetDXLTableDescr(),
-									 &base_table_context, ACL_SELECT);
+									 &base_table_context);
 	// rte of root dynamic scan
 	RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
 	Oid oid_root = rte->relid;
@@ -4680,7 +4677,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// create ModifyTable node
 	ModifyTable *dml = MakeNode(ModifyTable);
 	Plan *plan = &(dml->plan);
-	AclMode acl_mode = ACL_NO_RIGHTS;
 	BOOL isSplit = phy_dml_dxlop->FSplit();
 
 	switch (phy_dml_dxlop->GetDmlOpType())
@@ -4688,19 +4684,16 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 		case gpdxl::Edxldmldelete:
 		{
 			m_cmd_type = CMD_DELETE;
-			acl_mode = ACL_DELETE;
 			break;
 		}
 		case gpdxl::Edxldmlupdate:
 		{
 			m_cmd_type = CMD_UPDATE;
-			acl_mode = ACL_UPDATE;
 			break;
 		}
 		case gpdxl::Edxldmlinsert:
 		{
 			m_cmd_type = CMD_INSERT;
-			acl_mode = ACL_INSERT;
 			break;
 		}
 		case gpdxl::EdxldmlSentinel:
@@ -4742,8 +4735,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 
 	CDXLTableDescr *table_descr = phy_dml_dxlop->GetDXLTableDescr();
 
-	Index index =
-		ProcessDXLTblDescr(table_descr, &base_table_context, acl_mode);
+	Index index = ProcessDXLTblDescr(table_descr, &base_table_context);
 
 	m_result_rel_list = gpdb::LAppendInt(m_result_rel_list, index);
 
@@ -5183,7 +5175,7 @@ CTranslatorDXLToPlStmt::TranslateDXLAssert(
 Index
 CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	const CDXLTableDescr *table_descr,
-	CDXLTranslateContextBaseTable *base_table_context, AclMode acl_mode)
+	CDXLTranslateContextBaseTable *base_table_context)
 {
 	GPOS_ASSERT(nullptr != table_descr);
 
@@ -5218,13 +5210,18 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 		(void) base_table_context->InsertMapping(dxl_col_descr->Id(), attno);
 	}
 
+	INT acl_mode = table_descr->GetAclMode();
+	GPOS_ASSERT(acl_mode >= 0 &&
+				acl_mode <= std::numeric_limits<AclMode>::max());
+	AclMode required_perms = static_cast<AclMode>(acl_mode);
+
 	// descriptor was already processed, and translated RTE is stored at
 	// context rtable list (only update required perms of this rte is needed)
 	if (rte_was_translated)
 	{
 		RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
 		GPOS_ASSERT(nullptr != rte);
-		rte->requiredPerms |= acl_mode;
+		rte->requiredPerms |= required_perms;
 		return index;
 	}
 
@@ -5233,7 +5230,7 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	rte->rtekind = RTE_RELATION;
 	rte->relid = oid;
 	rte->checkAsUser = table_descr->GetExecuteAsUserId();
-	rte->requiredPerms |= acl_mode;
+	rte->requiredPerms |= required_perms;
 	rte->rellockmode = table_descr->LockMode();
 
 	Alias *alias = MakeNode(Alias);
@@ -5282,10 +5279,16 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 
 	rte->eref = alias;
 
+	// A new RTE is added to the range table entries list if it's not found in the look
+	// up table. However, it is only added to the look up table if it's a result relation
+	// This is because the look up table is our way of merging duplicate result relations
 	m_dxl_to_plstmt_context->AddRTE(rte);
 	GPOS_ASSERT(gpdb::ListLength(
 					m_dxl_to_plstmt_context->GetRTableEntriesList()) == index);
-	m_dxl_to_plstmt_context->InsertUsedRTEIndexes(assigned_query_id, index);
+	if (UNASSIGNED_QUERYID != assigned_query_id)
+	{
+		m_dxl_to_plstmt_context->InsertUsedRTEIndexes(assigned_query_id, index);
+	}
 
 	return index;
 }
@@ -6245,8 +6248,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	GPOS_ASSERT(table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), table_descr->LockMode());
 
-	Index index =
-		ProcessDXLTblDescr(table_descr, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(table_descr, &base_table_context);
 
 	DynamicBitmapHeapScan *dscan;
 	BitmapHeapScan *bitmap_tbl_scan;

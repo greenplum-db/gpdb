@@ -449,6 +449,7 @@ enum Edxltoken
 	EdxltokenVersion,
 	EdxltokenMdid,
 	EdxltokenLockMode,
+	EdxltokenAclMode,
 	EdxltokenMDTypeRequest,
 	EdxltokenTypeInfo,
 	EdxltokenFuncInfo,

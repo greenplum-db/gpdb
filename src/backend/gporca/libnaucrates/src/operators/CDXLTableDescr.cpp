@@ -21,6 +21,7 @@ using namespace gpdxl;
 
 #define GPDXL_DEFAULT_USERID 0
 #define GPDXL_INVALID_LOCKMODE -1
+#define GPDXL_ACL_NO_RIGHTS 0
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -32,12 +33,14 @@ using namespace gpdxl;
 //---------------------------------------------------------------------------
 CDXLTableDescr::CDXLTableDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 							   ULONG ulExecuteAsUser, int lockmode,
+							   INT acl_mode,
 							   ULONG assigned_query_id_for_target_rel)
 	: m_mdid(mdid),
 	  m_mdname(mdname),
 	  m_dxl_column_descr_array(nullptr),
 	  m_execute_as_user_id(ulExecuteAsUser),
 	  m_lockmode(lockmode),
+	  m_acl_mode(acl_mode),
 	  m_assigned_query_id_for_target_rel(assigned_query_id_for_target_rel)
 {
 	GPOS_ASSERT(nullptr != m_mdname);
@@ -123,6 +126,12 @@ INT
 CDXLTableDescr::LockMode() const
 {
 	return m_lockmode;
+}
+
+INT
+CDXLTableDescr::GetAclMode() const
+{
+	return m_acl_mode;
 }
 
 //---------------------------------------------------------------------------
@@ -218,6 +227,12 @@ CDXLTableDescr::SerializeToDXL(CXMLSerializer *xml_serializer) const
 	{
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenLockMode), LockMode());
+	}
+
+	if (GPDXL_ACL_NO_RIGHTS <= GetAclMode())
+	{
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenAclMode), GetAclMode());
 	}
 
 	if (UNASSIGNED_QUERYID != m_assigned_query_id_for_target_rel)
