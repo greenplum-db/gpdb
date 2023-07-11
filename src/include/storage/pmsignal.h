@@ -40,6 +40,7 @@ typedef enum
 	PMSIGNAL_START_AUTOVAC_WORKER,	/* start an autovacuum worker */
 	PMSIGNAL_BACKGROUND_WORKER_CHANGE,	/* background worker state change */
 	PMSIGNAL_START_WALRECEIVER, /* start a walreceiver */
+	PMSIGNAL_WALRCV_STREAMING,    /* walreceiver started streaming */
 	PMSIGNAL_ADVANCE_STATE_MACHINE, /* advance postmaster's state machine */
 
 	PMSIGNAL_WAKEN_FTS,         /* wake up FTS to probe segments */

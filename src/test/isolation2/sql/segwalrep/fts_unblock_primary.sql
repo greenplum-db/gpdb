@@ -63,8 +63,9 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 select gp_inject_fault_infinite('initialize_wal_sender', 'suspend', dbid)
 from gp_segment_configuration where role='p' and content=2;
 
--- bring the mirror back up and see primary s/u and mirror s/u
--1U: select pg_ctl_start((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), (select port from gp_segment_configuration where content = 2 and preferred_role = 'm'));
+-- try to start the mirror, we don't wait for pg_ctl start to complete
+-- since the walreceiver won't start streaming
+-1U: select pg_ctl_start((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), (select port from gp_segment_configuration where content = 2 and preferred_role = 'm'), false);
 select gp_wait_until_triggered_fault('initialize_wal_sender', 1, dbid)
 from gp_segment_configuration where role='p' and content=2;
 -- make sure the walsender on primary is in startup

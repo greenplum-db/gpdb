@@ -208,7 +208,7 @@ Feature: Tests for gpmovemirrors
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And the user waits until mirror on content 0,1 is up
+    And verify that mirror on content 0,1 is up
     And check if mirrors on content 0,1 are moved to new location on input file
     And user can start transactions
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
@@ -232,7 +232,7 @@ Feature: Tests for gpmovemirrors
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And the user waits until mirror on content 0,1,2 is up
+    And verify that mirror on content 0,1,2 is up
     And check if mirrors on content 0,1,2 are moved to new location on input file
     And user can start transactions
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
@@ -270,7 +270,6 @@ Feature: Tests for gpmovemirrors
     And verify that mirror on content 0 is down
     And check if mirrors on content 1,2 are moved to new location on input file
     And check if mirrors on content 0 are in their original configuration
-    And an FTS probe is triggered
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
@@ -294,7 +293,6 @@ Feature: Tests for gpmovemirrors
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
     And the user just waits until recovery_progress.file is created in gpAdminLogs
     And user waits until gp_stat_replication table has no pg_basebackup entries for content 2
-    And an FTS probe is triggered
     And the user waits until mirror on content 2 is up
     And verify that mirror on content 0,1 is down
     And the gprecoverseg lock directory is removed
@@ -311,7 +309,6 @@ Feature: Tests for gpmovemirrors
     And verify that mirror on content 0,1 is down
     And check if mirrors on content 2 are moved to new location on input file
     And check if mirrors on content 0,1 are in their original configuration
-    And an FTS probe is triggered
     And the user reset the walsender on the primary on content 0
     And the user reset the walsender on the primary on content 1
     And the user waits until saved async process is completed
@@ -346,7 +343,6 @@ Feature: Tests for gpmovemirrors
     And gprecoverseg should return a return code of 0
     And gpmovemirrors should return a return code of 0
     And check if mirrors on content 0,1,2 are in their original configuration
-    And an FTS probe is triggered
     And the user reset the walsender on the primary on content 0
     And the user reset the walsender on the primary on content 1
     And the user reset the walsender on the primary on content 2

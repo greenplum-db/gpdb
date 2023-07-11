@@ -372,10 +372,14 @@ WalReceiverMain(void)
 		if (walrcv_startstreaming(wrconn, &options))
 		{
 			if (first_stream)
+			{
 				ereport(LOG,
 						(errmsg("started streaming WAL from primary at %X/%X on timeline %u",
 								(uint32) (startpoint >> 32), (uint32) startpoint,
 								startpointTLI)));
+				/* indicate the postmaster that walreceiver has started streaming */
+				SendPostmasterSignal(PMSIGNAL_WALRCV_STREAMING);
+			}
 			else
 				ereport(LOG,
 						(errmsg("restarted WAL streaming at %X/%X on timeline %u",
