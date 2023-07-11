@@ -115,6 +115,8 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalMaterialize, &CreateMaterializeParseHandler},
 		{EdxltokenPhysicalDynamicTableScan, &CreateDTSParseHandler},
 		{EdxltokenPhysicalDynamicIndexScan, &CreateDynamicIdxScanParseHandler},
+		{EdxltokenPhysicalDynamicIndexOnlyScan,
+		 &CreateDynamicIdxOnlyScanParseHandler},
 		{EdxltokenPhysicalDynamicForeignScan, &CreateDFSParseHandler},
 		{EdxltokenPhysicalPartitionSelector,
 		 &CreatePartitionSelectorParseHandler},
@@ -856,6 +858,16 @@ CParseHandlerFactory::CreateDynamicIdxScanParseHandler(
 {
 	return GPOS_NEW(mp) CParseHandlerDynamicIndexScan(mp, parse_handler_mgr,
 													  parse_handler_root);
+}
+
+// creates a parse handler for parsing a dynamic index scan operator
+CParseHandlerBase *
+CParseHandlerFactory::CreateDynamicIdxOnlyScanParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerDynamicIndexOnlyScan(mp, parse_handler_mgr,
+														  parse_handler_root);
 }
 
 // creates a parse handler for parsing a dynamic table scan operator
