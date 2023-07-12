@@ -175,8 +175,10 @@ get_bdi_of_path(const char *ori_path)
 {
 	int maj;
 	int min;
+	size_t max_match_len = 0;
 	struct mntent *mnt;
 	struct mntent result;
+	struct mntent match_mnt = {};
 	/* default size of glibc */
 	char mntent_buffer[PATH_MAX];
 	char sysfs_path[PATH_MAX];
@@ -194,9 +196,6 @@ get_bdi_of_path(const char *ori_path)
 
 	FILE *fp = setmntent("/proc/self/mounts", "r");
 
-	size_t max_match_len = 0;
-	struct mntent match_mnt;
-
 	/* find mount point of path */
 	while ((mnt = getmntent_r(fp, &result, mntent_buffer, sizeof(mntent_buffer))) != NULL)
 	{
@@ -207,7 +206,8 @@ get_bdi_of_path(const char *ori_path)
 			if (dir_len > max_match_len)
 			{
 				max_match_len = dir_len;
-				match_mnt     = *mnt;
+				match_mnt.mnt_passno = mnt->mnt_passno;
+				match_mnt.mnt_freq = mnt->mnt_freq;
 
 				/* copy string */
 				if (match_mnt.mnt_fsname != NULL)
