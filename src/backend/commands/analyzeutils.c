@@ -1043,6 +1043,7 @@ needs_sample(Relation rel, VacAttrStats **vacattrstats, int attr_cnt)
 	 */
 	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE && IsAutoVacuumWorkerProcess())
 		return false;
+
 	for (i = 0; i < attr_cnt; i++)
 	{
 		Assert(vacattrstats[i] != NULL);

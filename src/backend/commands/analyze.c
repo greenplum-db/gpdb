@@ -990,7 +990,12 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		 * always empty), so we store stats representing the whole tree.
 		 */
 
-		/*  Don't build external stats for partitioned tables during autovacuum */
+		/*
+		 * Don't build external stats for partitioned tables during autovacuum.
+		 * External stats cannot be merged and therefore would require sampling,
+		 * which is much more expensive. Users can instead explicitly run analyze
+		 * on the root partition to trigger sampling.
+		 */
 		if (onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 			build_ext_stats = IsAutoVacuumWorkerProcess() ? false : inh;
 		else

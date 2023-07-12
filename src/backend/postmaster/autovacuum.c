@@ -2038,19 +2038,22 @@ do_autovacuum(void)
 	bool		did_vacuum = false;
 	bool		found_concurrent_worker = false;
 	int			i;
+	HASH_SEQ_STATUS roots_hash_seq;
+	Oid* top_level_root;
 
+	/*
+	 * GPDB: For partitioned tables, since we maintain top-level-root stats in
+	 * the catalog, we have to merge stats whenever a leaf partition(s)
+	 * undergoes auto-analyze. To capture this extra work for the AV worker, we
+	 * maintain a set of top-level partition oids. Using a set guarantees that we
+	 * schedule the top-level root once, even if more than one leaf was analyzed
+	 * in the same hierarchy.
+	 *
+	 * Note: we don't maintain interior roots as we don't currently maintain stats
+	 * for them.
+	 */
 	HTAB		*top_level_partition_roots;
-	HASHCTL		hash_ctl;
-
-	memset(&hash_ctl, 0, sizeof(hash_ctl));
-	hash_ctl.keysize = sizeof(Oid);
-	hash_ctl.entrysize = sizeof(Oid);
-	hash_ctl.hcxt = CurrentMemoryContext;
-	top_level_partition_roots = hash_create("Temporary table of top level partition OIDs",
-					   32,
-					   &hash_ctl,
-					   HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
-
+	HASHCTL		roots_hash_ctl;
 
 	/*
 	 * StartTransactionCommand and CommitTransactionCommand will automatically
@@ -2132,6 +2135,16 @@ do_autovacuum(void)
 								  100,
 								  &ctl,
 								  HASH_ELEM | HASH_BLOBS);
+
+	/* create set for top level partition oids */
+	memset(&roots_hash_ctl, 0, sizeof(roots_hash_ctl));
+	roots_hash_ctl.keysize = sizeof(Oid);
+	roots_hash_ctl.entrysize = sizeof(Oid);
+	roots_hash_ctl.hcxt = CurrentMemoryContext;
+	top_level_partition_roots = hash_create("top level partition oids",
+					   256,
+					   &roots_hash_ctl,
+					   HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 
 	/*
 	 * Scan pg_class to determine which tables to vacuum.
@@ -2218,11 +2231,10 @@ do_autovacuum(void)
 		if (dovacuum || doanalyze)
 			table_oids = lappend_oid(table_oids, relid);
 
-		/* Get oid of partition root and add to separate set */
+		/* Get oid of top level partition root and add to separate set */
 		if (doanalyze && classForm->relispartition)
 		{
-			List *ancestors = get_partition_ancestors(relid);
-			Oid root_parent_relid = llast_oid(ancestors);
+			Oid root_parent_relid = get_top_level_partition_root(relid);
 			(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
 		}
 		/*
@@ -2415,18 +2427,13 @@ do_autovacuum(void)
 										  ALLOCSET_DEFAULT_SIZES);
 
 	/*
-	 * Analyze all top-level partition roots at the end. This ensures that
-	 * we only merge leaf stats once per top-level root partition.
+	 * GPDB: Analyze (merge leaf stats) all top-level partition roots at the end. This
+	 * guarantees that leaf partitions are analyzed first before merging their stats
+	 * for their top-level roots.
 	 */
-	HASH_SEQ_STATUS hash_seq;
-	hash_seq_init(&hash_seq, top_level_partition_roots);
-
-	int k = -1;
-	Oid* entry;
-	while ((entry = (Oid*) hash_seq_search(&hash_seq)) != NULL)
-	{
-		table_oids = lappend_oid(table_oids, *entry);
-	}
+	hash_seq_init(&roots_hash_seq, top_level_partition_roots);
+	while ((top_level_root = (Oid*) hash_seq_search(&roots_hash_seq)) != NULL)
+		table_oids = lappend_oid(table_oids, *top_level_root);
 
 	hash_destroy(top_level_partition_roots);
 	/*
