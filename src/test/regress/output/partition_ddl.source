@@ -2894,7 +2894,7 @@ select c.relname, am.amname, c.reloptions from pg_partition_tree('part_ao') as t
  part_ao_1_prt_p3_new_relopt | ao_row    | {blocksize=65536,compresstype=zstd,compresslevel=3,checksum=true}
 (5 rows)
 
--- Test 2: Parent's reloptions are explicitly specified, and parent's AM is implicitly specified as heap
+-- Test 2: Parent's reloptions are explicitly specified, and parent's AM is explicitly specified as heap
 create table part_heap1(a int, b int) using heap with (fillfactor=70) partition by range(b) (partition p1 start(0) end(10) with(appendonly=true));
 select c.relname, am.amname, c.reloptions from pg_partition_tree('part_heap1') as t join pg_class c on (t.relid::oid = c.oid) left join pg_am am on (c.relam = am.oid);
        relname       | amname |                            reloptions                             
