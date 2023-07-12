@@ -161,6 +161,7 @@
 		"TimeZone",
 		"timezone_abbreviations",
 		"trace_syncscan",
+		"track_io_timing",
 		"vacuum_cleanup_index_scale_factor",
 		"vacuum_cost_delay",
 		"vacuum_cost_page_dirty",
