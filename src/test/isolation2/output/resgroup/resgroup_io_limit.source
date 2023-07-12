@@ -109,24 +109,3 @@ SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-
--- clean
-DROP RESOURCE GROUP rg_test_group1;
-DROP RESOURCE GROUP
-DROP RESOURCE GROUP rg_test_group2;
-DROP RESOURCE GROUP
-DROP RESOURCE GROUP rg_test_group3;
-DROP RESOURCE GROUP
-DROP RESOURCE GROUP rg_test_group4;
-DROP RESOURCE GROUP
-DROP RESOURCE GROUP rg_test_group5;
-DROP RESOURCE GROUP
-
-DROP TABLESPACE rg_io_limit_ts_1;
-DROP TABLESPACE
-
-select rmdir('@testtablespace@/rg_io_limit_ts_1') from gp_dist_random('gp_id') intersect select rmdir('@testtablespace@/rg_io_limit_ts_1') from gp_id;
- rmdir 
--------
- t     
-(1 row)
