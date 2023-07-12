@@ -2870,13 +2870,14 @@ ERROR:  ALTER TABLE / ADD CONSTRAINT USING INDEX is not supported on partitioned
 create unique index on root_part_1_prt_interior_1_2_prt_leaf(a, b);
 alter table root_part_1_prt_interior_1_2_prt_leaf add primary key using index root_part_1_prt_interior_1_2_prt_leaf_a_b_idx2;
 drop table root_part;
--- Allow both parent partitioned table and child partitioned table to specify reloptions in WITH clause.
+-- The following tests verifies reloptions inheritance for partitioned tables.
 -- When parent's reloptions are specified, a child partition's reloptions should be set as below:
 -- 1) If child's reloptions are specified, then the child's reloptions override the parent's reloptions.
 -- 2) If child's reloptions are not specified, and if parent's and child's table access methods are same, then the parent's reloptions are inherited.
 -- 3) If child's reloptions are not specified, and if parent's and child's table access methods are different, then the child's reloptions are set to default.
 -- 4) Note that "appendonly" and "orientation" reloptions are not "real" reloptions and are instead treated as table access method specifications.
 -- So, if child's WITH clause has only "appendonly" and/or "orientation" specified, they are handled as in (2) and (3) above.
+-- Test 1: Parent's reloptions are explicitly specified, and parent's AM is explicitly specified as ao_row
 create table part_ao(a int, b int) with (appendonly=true,compresstype=zlib,compresslevel=5,blocksize=65536)
 	partition by range(b)
 		(partition p1_heap start (0) end (10) with (appendonly=false),
@@ -2893,3 +2894,45 @@ select c.relname, am.amname, c.reloptions from pg_partition_tree('part_ao') as t
  part_ao_1_prt_p3_new_relopt | ao_row    | {blocksize=65536,compresstype=zstd,compresslevel=3,checksum=true}
 (5 rows)
 
+-- Test 2: Parent's reloptions are explicitly specified, and parent's AM is implicitly specified as heap
+create table part_heap1(a int, b int) using heap with (fillfactor=70) partition by range(b) (partition p1 start(0) end(10) with(appendonly=true));
+select c.relname, am.amname, c.reloptions from pg_partition_tree('part_heap1') as t join pg_class c on (t.relid::oid = c.oid) left join pg_am am on (c.relam = am.oid);
+       relname       | amname |                            reloptions                             
+---------------------+--------+-------------------------------------------------------------------
+ part_heap1          | heap   | {fillfactor=70}
+ part_heap1_1_prt_p1 | ao_row | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+(2 rows)
+
+-- Test 3: Parent's reloptions are explicitly specified, and parent's AM is implicitly specified as heap
+create table part_heap2(a int, b int) with (fillfactor=70) partition by range(b) (partition p1 start(0) end(10) with(appendonly=true));
+select c.relname, am.amname, c.reloptions from pg_partition_tree('part_heap2') as t join pg_class c on (t.relid::oid = c.oid) left join pg_am am on (c.relam = am.oid);
+       relname       | amname |                            reloptions                             
+---------------------+--------+-------------------------------------------------------------------
+ part_heap2          | heap   | {fillfactor=70}
+ part_heap2_1_prt_p1 | ao_row | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+(2 rows)
+
+-- Test 4: Parent's reloptions are explicitly specified, and parent's AM is implicitly specified as ao_column
+set default_table_access_method = 'ao_column';
+create table part_aoco(a int, b int) with (compresstype=zlib,compresslevel=5,blocksize=65536)
+	partition by range(b)
+		(partition p1_heap start (0) end (10) with (appendonly=false),
+		 partition p2_ao start (10) end (20) with (appendonly=true, orientation=row),
+		 partition p3_new_relopt start (20) end (30) with (compresstype=zstd, compresslevel=3),
+		 default partition def);
+select c.relname, am.amname, c.reloptions from pg_partition_tree('part_aoco') as t join pg_class c on (t.relid::oid = c.oid) left join pg_am am on (c.relam = am.oid);
+            relname            |  amname   |                            reloptions                             
+-------------------------------+-----------+-------------------------------------------------------------------
+ part_aoco                     | ao_column | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ part_aoco_1_prt_def           | ao_column | {compresstype=zlib,compresslevel=5,blocksize=65536,checksum=true}
+ part_aoco_1_prt_p1_heap       | heap      | 
+ part_aoco_1_prt_p2_ao         | ao_row    | {blocksize=32768,compresslevel=0,compresstype=none,checksum=true}
+ part_aoco_1_prt_p3_new_relopt | ao_column | {blocksize=65536,compresstype=zstd,compresslevel=3,checksum=true}
+(5 rows)
+
+reset default_table_access_method;
+-- cleanup
+drop table part_ao;
+drop table part_heap1;
+drop table part_heap2;
+drop table part_aoco;
