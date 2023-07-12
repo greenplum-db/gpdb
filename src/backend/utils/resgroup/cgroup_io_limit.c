@@ -194,7 +194,7 @@ get_bdi_of_path(const char *ori_path)
 
 	FILE *fp = setmntent("/proc/self/mounts", "r");
 
-	size_t max_match_cnt = 0;
+	size_t max_match_len = 0;
 	struct mntent match_mnt;
 
 	/* find mount point of path */
@@ -204,15 +204,26 @@ get_bdi_of_path(const char *ori_path)
 
 		if (strstr(path, mnt->mnt_dir) != NULL && strncmp(path, mnt->mnt_dir, dir_len) == 0)
 		{
-			if (dir_len > max_match_cnt)
+			if (dir_len > max_match_len)
 			{
-				max_match_cnt = dir_len;
+				max_match_len = dir_len;
 				match_mnt     = *mnt;
 
 				/* copy string */
+				if (match_mnt.mnt_fsname != NULL)
+					pfree(match_mnt.mnt_fsname);
 				match_mnt.mnt_fsname = pstrdup(mnt->mnt_fsname);
+
+				if (match_mnt.mnt_dir != NULL)
+					pfree(match_mnt.mnt_dir);
 				match_mnt.mnt_dir = pstrdup(mnt->mnt_dir);
+
+				if (match_mnt.mnt_type != NULL)
+					pfree(match_mnt.mnt_type);
 				match_mnt.mnt_type = pstrdup(mnt->mnt_type);
+
+				if (match_mnt.mnt_opts != NULL)
+					pfree(match_mnt.mnt_opts);
 				match_mnt.mnt_opts = pstrdup(mnt->mnt_opts);
 			}
 		}
@@ -224,7 +235,8 @@ get_bdi_of_path(const char *ori_path)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_IO_ERROR),
-				 errmsg("cannot find disk of %s, details: %m", path)));
+				 errmsg("cannot find disk of %s, details: %m", path),
+				 errhint("mount point of %s is: %s", path, match_mnt.mnt_fsname)));
 	}
 
 	maj = major(sb.st_rdev);
@@ -240,7 +252,7 @@ get_bdi_of_path(const char *ori_path)
 	realpath(sysfs_path, real_path);
 	dirname(real_path);
 
-	snprintf(real_path, sizeof(real_path), "%s/dev", real_path);
+	snprintf(real_path + strlen(real_path), sizeof(real_path) - strlen(real_path), "/dev");
 
 	FILE *f = fopen(real_path, "r");
 	if (f == NULL)
