@@ -454,10 +454,7 @@ SysLoggerMain(int argc, char *argv[])
 				currentLogDir = pstrdup(Log_directory);
 				rotation_requested = true;
 
-				/*
-				 * Also, create new directory if not present; ignore errors
-				 */
-				(void) MakePGDirectory(Log_directory);
+				pg_mkdir_p(Log_directory, pg_dir_create_mode);
 			}
 			if (strcmp(Log_filename, currentLogFilename) != 0)
 			{
@@ -841,10 +838,7 @@ SysLogger_Start(void)
 	}
 #endif
 
-	/*
-	 * Create log directory if not present; ignore errors
-	 */
-	(void) MakePGDirectory(Log_directory);
+	pg_mkdir_p(Log_directory, pg_dir_create_mode);
 
 	/*
 	 * The initial logfile is created right in the postmaster, to verify that
@@ -2385,7 +2379,6 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 
 	return true;
 }
-
 
 /*
  * construct logfile name using timestamp information

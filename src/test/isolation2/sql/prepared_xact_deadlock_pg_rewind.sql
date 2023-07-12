@@ -7,6 +7,18 @@
 1: alter system set gp_fts_probe_timeout to 5;
 1: select pg_reload_conf();
 
+!\retcode gpconfig -c log_directory -v relative_log;
+-- start_ignore
+!\retcode gpstop -u;
+!\retcode sleep 1;
+-- end_ignore
+!\retcode gpconfig -s log_directory;
+
+select remove_bogus_file(datadir, setting) from pg_settings, gp_segment_configuration c where c.content=0 AND name='log_directory';
+-- write a bogus file to show that we are not syncing the bogus file during recoverseg with pg_rewind
+select write_bogus_file(datadir, setting) from pg_settings, gp_segment_configuration c where c.role='p' and c.content=0 AND name='log_directory';
+select assert_bogus_file_does_not_exist(datadir, setting) from pg_settings, gp_segment_configuration c where c.role='m' and c.content=0 AND name='log_directory';
+
 1: select gp_inject_fault('after_xlog_xact_prepare_flushed', 'suspend', dbid) from gp_segment_configuration where role='p' and content = 0;
 2&: create database db_orphan_prepare;
 1: select gp_wait_until_triggered_fault('after_xlog_xact_prepare_flushed', 1, dbid) from gp_segment_configuration where role='p' and content = 0;
@@ -32,6 +44,16 @@
 select wait_until_all_segments_synchronized();
 !\retcode gprecoverseg -ar;
 select wait_until_all_segments_synchronized();
+select assert_bogus_file_does_not_exist(datadir, setting) from pg_settings, gp_segment_configuration c where c.role='m' and c.content=0 AND name='log_directory';
+
+-- cleanup
+select remove_bogus_file(datadir, setting) from pg_settings, gp_segment_configuration c where c.content=0 AND name='log_directory';
+!\retcode gpconfig -c log_directory -v log;
+-- start_ignore
+!\retcode gpstop -u;
+!\retcode sleep 1;
+-- end_ignore
+!\retcode gpconfig -s log_directory;
 
 -- reset fts GUCs.
 3: alter system reset gp_fts_probe_retries;

@@ -54,6 +54,7 @@ typedef struct extvar_t
 	char* GP_USER;
 	char* GP_SEG_PG_CONF;   /*location of the segments pg_conf file*/
 	char* GP_SEG_DATADIR;   /*location of the segments datadirectory*/
+	char* GP_SEG_LOGDIR;    /*location of the segment's log directory*/
 	char GP_DATE[9];		/* YYYYMMDD */
 	char GP_TIME[7];		/* HHMMSS */
 	char GP_XID[TMGIDSIZE];		/* global transaction id */

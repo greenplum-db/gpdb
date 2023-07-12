@@ -2,6 +2,7 @@
 
 import os
 import signal
+from contextlib import closing
 
 from gppylib.recoveryinfo import RecoveryErrorType
 from gppylib.commands.pg import PgBaseBackup, PgRewind, PgReplicationSlot
@@ -11,6 +12,7 @@ from gppylib.commands.base import Command, LOCAL
 from gppylib.commands.gp import SegmentStart
 from gppylib.gparray import Segment
 from gppylib.commands.gp import ModifyConfSetting
+from gppylib.db import dbconn
 from gppylib.db.catalog import RemoteQueryCommand
 from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
 from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_locations
@@ -166,7 +168,7 @@ class DifferentialRecovery(Command):
             4. In future we will have to add backup_label in rsync_exclude_list if pg_start_backup needs be started in
                non-exclusive mode for differential recovery.
         """
-        rsync_exclude_list = [
+        rsync_exclude_list = {
             "/log",  # logs are segment specific so it can be skipped
             "pgsql_tmp",
             "postgresql.auto.conf.tmp",
@@ -183,7 +185,33 @@ class DifferentialRecovery(Command):
             "backups/*",
             "/db_dumps",  # as we exclude during pg_basebackup
             "/promote",  # Need to check why do we exclude it during pg_basebackup
-        ]
+        }
+
+        log_directory_sql = """
+        SELECT
+            gucs.log_directory
+        FROM (
+            -- split to two separate columns log_directory and data_directory
+            SELECT
+                MAX(setting) FILTER (WHERE name='log_directory') AS log_directory,
+                MAX(setting) FILTER (WHERE name='data_directory') AS data_directory
+            FROM pg_settings WHERE (name='log_directory' AND LEFT(setting,1) NOT LIKE '/') OR name='data_directory'
+        ) AS gucs where gucs.log_directory IS NOT NULL;
+        """
+
+        dburl = dbconn.DbURL(hostname=self.recovery_info.source_hostname,
+                             port=self.recovery_info.source_port,
+                             dbname='template1')
+        with closing(dbconn.connect(dburl, utility=True)) as conn:
+            res = dbconn.query(conn, log_directory_sql)
+            # There should only be a single result.
+            # Only exclude if the log_directory is a relative path,
+            # because absolute path for log_directory will usually be out of the
+            # datadir
+            for row in res.fetchall():
+                rsync_exclude_list.add(f'/{row[0]}')
+                self.logger.debug("adding /%s to the exclude list" % row[0])
+
         """
             Rsync options used:
                 srcFile: source datadir

@@ -1,3 +1,18 @@
+-- start_ignore
+! gpconfig -c plpython3.python_path -v "'$GPHOME/lib/python'" --skipvalidation;
+20230807:17:11:44:067053 gpconfig:tmarbin7MD6R:tmarbin-[INFO]:-completed successfully with parameters '-c plpython3.python_path -v ''"'"'/usr/local/gpdb/lib/python'"'"'' --skipvalidation'
+
+! gpstop -u;
+20230807:17:11:44:067174 gpstop:tmarbin7MD6R:tmarbin-[INFO]:-Starting gpstop with args: -u
+20230807:17:11:44:067174 gpstop:tmarbin7MD6R:tmarbin-[INFO]:-Gathering information and validating the environment...
+20230807:17:11:44:067174 gpstop:tmarbin7MD6R:tmarbin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230807:17:11:44:067174 gpstop:tmarbin7MD6R:tmarbin-[INFO]:-Obtaining Segment details from coordinator...
+20230807:17:11:44:067174 gpstop:tmarbin7MD6R:tmarbin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.5+dev.40.gba435b5c3b9 build dev'
+20230807:17:11:44:067174 gpstop:tmarbin7MD6R:tmarbin-[INFO]:-Signalling all postmaster processes to reload
+
+create or replace language plpython3u;
+CREATE LANGUAGE
+-- end_ignore
 
 -- Helper function, to call either __gp_aoseg, or gp_aocsseg, depending
 -- on whether the table is row- or column-oriented. This allows us to
@@ -168,4 +183,15 @@ CREATE FUNCTION
 
 -- Check if autovacuum is enabled/disabled by inspecting the av launcher.
 CREATE or REPLACE FUNCTION check_autovacuum (enabled boolean) RETURNS bool AS $$ declare retries int; /* in func */ expected_count int; /* in func */ begin retries := 1200; /* in func */ if enabled then /* (1 for each primary and 1 for the coordinator) */ expected_count := 4; /* in func */ else expected_count := 0; /* in func */ end if; /* in func */ loop if (select count(*) = expected_count from gp_stat_activity where backend_type = 'autovacuum launcher') then return true; /* in func */ end if; /* in func */ if retries <= 0 then return false; /* in func */ end if; /* in func */ perform pg_sleep(0.1); /* in func */ retries := retries - 1; /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
+CREATE FUNCTION
+
+CREATE OR REPLACE FUNCTION write_bogus_file(datadir text, log_dir text) RETURNS TEXT AS $$ import subprocess import os bogus_file = os.path.join(datadir, log_dir, 'bogusfile') cmd = "echo 'something' >> %s" % bogus_file 
+proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True) stdout, stderr = proc.communicate() 
+if proc.returncode == 0: return 'OK' else: raise Exception(stdout.decode()+'|'+stderr.decode()) $$ LANGUAGE plpython3u;
+CREATE FUNCTION
+
+CREATE OR REPLACE FUNCTION remove_bogus_file(datadir text, log_dir text) RETURNS TEXT AS $$ import subprocess import os bogus_file = os.path.join(datadir, log_dir, 'bogusfile') try: os.remove(bogus_file) except FileNotFoundError as e: pass $$ LANGUAGE plpython3u;
+CREATE FUNCTION
+
+CREATE OR REPLACE FUNCTION assert_bogus_file_does_not_exist(datadir text, log_dir text) RETURNS TEXT AS $$ import subprocess import os bogus_file = os.path.join(datadir, log_dir, 'bogusfile') if os.path.exists(bogus_file): raise Exception("bogus file: %s should not exist" % bogus_file) return 'OK' $$ LANGUAGE plpython3u;
 CREATE FUNCTION

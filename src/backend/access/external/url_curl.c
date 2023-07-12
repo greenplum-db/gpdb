@@ -1331,6 +1331,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-CSVOPT", ev->GP_CSVOPT);
 		set_httpheader(file, "X-GP_SEG_PG_CONF", ev->GP_SEG_PG_CONF);
 		set_httpheader(file, "X-GP_SEG_DATADIR", ev->GP_SEG_DATADIR);
+		set_httpheader(file, "X-GP_SEG_LOGDIR", ev->GP_SEG_LOGDIR);
 		set_httpheader(file, "X-GP-DATABASE", ev->GP_DATABASE);
 		set_httpheader(file, "X-GP-USER", ev->GP_USER);
 		set_httpheader(file, "X-GP-SEG-PORT", ev->GP_SEG_PORT);

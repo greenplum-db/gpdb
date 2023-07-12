@@ -39,6 +39,9 @@ extern int	targetNentries;
 /* general state */
 extern PGconn *conn;
 
+/* guc collection */
+extern char	   *log_directory;
+
 /* Progress counters */
 extern uint64 fetch_size;
 extern uint64 fetch_done;

@@ -528,3 +528,41 @@ begin
 end; /* in func */
 $$
 language plpgsql;
+
+CREATE OR REPLACE FUNCTION write_bogus_file(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    cmd = "echo 'something' >> %s" % bogus_file
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True)
+    stdout, stderr = proc.communicate()
+
+    if proc.returncode == 0:
+        return 'OK'
+    else:
+        raise Exception(stdout.decode()+'|'+stderr.decode())
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION remove_bogus_file(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    try:
+        os.remove(bogus_file)
+    except FileNotFoundError as e:
+        pass
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION assert_bogus_file_does_not_exist(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    if os.path.exists(bogus_file):
+        raise Exception("bogus file: %s should not exist" % bogus_file)
+    return 'OK'
+$$ LANGUAGE plpython3u;
