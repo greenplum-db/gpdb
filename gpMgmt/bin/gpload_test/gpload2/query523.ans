@@ -7,7 +7,7 @@ CREATE TABLE
 2021-01-07 16:26:05|INFO|setting schema 'public' for table 'mapping_test'
 2021-01-07 16:26:06|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_mapping_01.txt" -t 30
 2021-01-07 16:26:06|INFO|did not find an external table to reuse. creating ext_gpload_reusable_fc7440a4_50c1_11eb_a0a7_7085c2381836
-2021-01-07 16:26:06|ERROR|ERROR:  column "s4" is of type integer but expression is of type text
+2021-01-07 16:26:06|ERROR|column "s4" is of type integer but expression is of type text
 LINE 1: ...blic."mapping_test" ("s2","s3","s4") SELECT c2,c3,c1 FROM ex...
                                                              ^
 HINT:  You will need to rewrite or cast the expression.
