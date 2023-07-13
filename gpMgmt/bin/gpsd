@@ -10,7 +10,6 @@ import pwd
 import sys
 import re
 from contextlib import closing
-from distutils.version import LooseVersion
 from optparse import OptionParser
 import pgdb
 from gppylib.utils import formatInsertValuesList, Escape
