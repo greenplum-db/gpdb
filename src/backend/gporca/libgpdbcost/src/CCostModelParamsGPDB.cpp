@@ -191,6 +191,13 @@ const CDouble CCostModelParamsGPDB::DPenalizeHJSkewUpperLimit(10.0);
 // default scalar func cost
 const CDouble CCostModelParamsGPDB::DScalarFuncCost(1.0e-04);
 
+// Additional cost conversion factor for index & Index only scans.
+// Kept it as '1.0e-04' because using the additional cost factor,
+// primary aim is to differentiate between 'plans' with same cost.
+// Thus, a small value is sufficient to differentiate between them.
+// For eg cost for index idx_ab & idx_ba, will be same without the
+// additional cost component.
+const CDouble CCostModelParamsGPDB::DIndexCostConversionFactor = 1.0e-04;
 #define GPOPT_COSTPARAM_NAME_MAX_LENGTH 80
 
 // parameter names in the same order of param enumeration
@@ -444,6 +451,10 @@ CCostModelParamsGPDB::CCostModelParamsGPDB(CMemoryPool *mp) : m_mp(mp)
 	m_rgpcp[EcpScalarFuncCost] =
 		GPOS_NEW(mp) SCostParam(EcpScalarFuncCost, DScalarFuncCost,
 								DScalarFuncCost - 0.0, DScalarFuncCost + 0.0);
+
+	m_rgpcp[EcpIndexCostConversionFactor] = GPOS_NEW(mp) SCostParam(
+		EcpIndexCostConversionFactor, DIndexCostConversionFactor,
+		DIndexCostConversionFactor - 0.0, DIndexCostConversionFactor + 0.0);
 }
 
 

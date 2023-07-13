@@ -45,6 +45,9 @@ private:
 	// order spec
 	COrderSpec *m_pos;
 
+	// count of number of predicate not applicable on the index
+	ULONG m_ulResidualPredicateSize;
+
 public:
 	CLogicalDynamicIndexGet(const CLogicalDynamicIndexGet &) = delete;
 
@@ -56,7 +59,8 @@ public:
 							const CName *pnameAlias, ULONG ulPartIndex,
 							CColRefArray *pdrgpcrOutput,
 							CColRef2dArray *pdrgpdrgpcrPart,
-							IMdIdArray *partition_mdids);
+							IMdIdArray *partition_mdids,
+							ULONG ulResidualPredicateSize);
 
 	// dtor
 	~CLogicalDynamicIndexGet() override;
@@ -127,6 +131,13 @@ public:
 	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
 										  UlongToColRefMap *colref_mapping,
 										  BOOL must_exist) override;
+
+	// number of predicate not applicable on the index
+	ULONG
+	ResidualPredicateSize() const
+	{
+		return m_ulResidualPredicateSize;
+	}
 
 	//-------------------------------------------------------------------------------------
 	// Required Relational Properties

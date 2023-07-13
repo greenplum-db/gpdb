@@ -201,6 +201,13 @@ private:
 								   ICostModelParams *pcp,
 								   const CCostModelGPDB *pcmgpdb);
 
+
+	// Calculating additional columns weight for mismatch in index columns
+	// wrt predicate columns, for an Index Scan & Index Only Scan.
+	static CDouble ComputeAdditionalMissingIndexWeight(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CColRefArray *pdrgpcrIndexColumns, IStatistics *stats);
+
 public:
 	// ctor
 	CCostModelGPDB(CMemoryPool *mp, ULONG ulSegments,

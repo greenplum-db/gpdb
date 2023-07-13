@@ -2480,6 +2480,7 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 		CUtils::PcrsExtractColumns(mp, pdrgpexprIndex);
 	outer_refs_in_index_get->Intersection(outer_refs);
 
+	ULONG ulResidualPredicateSize = pdrgpexprResidual->Size();
 	// exit early if:
 	// (1) there are no index-able predicates or
 	// (2) there are no outer references in index-able predicates
@@ -2532,14 +2533,13 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 		popLogicalGet = PopDynamicBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
 			GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex, pdrgpcrOutput,
-			pdrgpdrgpcrPart, partition_mdids);
+			pdrgpdrgpcrPart, partition_mdids, ulResidualPredicateSize);
 	}
 	else
 	{
 		popLogicalGet = PopStaticBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
-			indexscanDirection);
+			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput, ulResidualPredicateSize, indexscanDirection);
 	}
 
 	// clean up

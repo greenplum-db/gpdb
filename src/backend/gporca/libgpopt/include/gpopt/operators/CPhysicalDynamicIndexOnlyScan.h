@@ -39,10 +39,11 @@ public:
 		CColRef2dArray *pdrgpdrgpcrPart, COrderSpec *pos,
 		IMdIdArray *partition_mdids,
 		ColRefToUlongMapArray *root_col_mapping_per_part)
-		: CPhysicalDynamicIndexScan(mp, pindexdesc, ptabdesc, ulOriginOpId,
-									pnameAlias, pdrgpcrOutput, scan_id,
-									pdrgpdrgpcrPart, pos, partition_mdids,
-									root_col_mapping_per_part)
+		: CPhysicalDynamicIndexScan(
+			  mp, pindexdesc, ptabdesc, ulOriginOpId, pnameAlias, pdrgpcrOutput,
+			  scan_id, pdrgpdrgpcrPart, pos, partition_mdids,
+			  root_col_mapping_per_part,
+			  0 /* m_ulResidualPredicateSize - No residual predicate possible, if we are making index only scan*/)
 	{
 	}
 
