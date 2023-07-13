@@ -792,7 +792,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '
  Success:        
 (1 row)
 
-1&: insert into multipart select i%20 from generate_series(1, 1000)i;  <waiting ...>
+1&: insert into multipart select i%20 from generate_series(1, 10000)i;  <waiting ...>
 
 -- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
@@ -807,7 +807,7 @@ SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 (1 row)
 
 1<:  <... completed>
-INSERT 0 1000
+INSERT 0 10000
 
 -- Wait until autovacuum is triggered
 SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
@@ -879,7 +879,7 @@ select relpages, reltuples from pg_class where oid = 'part3'::regclass;
 select relpages, reltuples from pg_class where oid = 'p4'::regclass;
  relpages | reltuples 
 ----------+-----------
- 3        | 250       
+ 4        | 2500      
 (1 row)
 
 -- Reset GUCs.

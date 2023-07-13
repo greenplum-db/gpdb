@@ -324,7 +324,7 @@ SELECT gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'p3', 1,
 -- Suspend the autovacuum worker from analyze before
 SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'suspend', '', '', 'p3', 1, -1, 0, 1);
 
-1&: insert into multipart select i%20 from generate_series(1, 1000)i;
+1&: insert into multipart select i%20 from generate_series(1, 10000)i;
 
 -- Wait until report pgstat on coordinator
 SELECT gp_wait_until_triggered_fault('gp_pgstat_report_on_master', 1, 1);
