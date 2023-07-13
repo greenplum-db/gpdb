@@ -2649,9 +2649,7 @@ class gpload:
                 self.db.set_notice_receiver(notice_processor_Notice)
                 self.rowsInserted = self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(e)
-                self.log(self.ERROR, strE + ' encountered while running ' + sql)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
         self.report_errors()
 
     def do_method_insert(self):
@@ -2742,9 +2740,7 @@ class gpload:
             try:
                 self.rowsUpdated = self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(e)
-                self.log(self.ERROR, strE + ' encountered while running ' + sql)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 				
     def get_qualified_tablename(self):
         '''
@@ -2839,8 +2835,7 @@ class gpload:
             try:
                 self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                strE = str(e)
-                self.log(self.ERROR, strE + ' encountered while running ' + sql)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 
         # insert new rows to the target table
 
@@ -2859,9 +2854,7 @@ class gpload:
             try:
                 self.rowsInserted = self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(e)
-                self.log(self.ERROR, strE + ' encountered while running ' + sql)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 
     def do_truncate(self, tblname):
         self.log(self.LOG, "Truncate table %s" %(tblname))
