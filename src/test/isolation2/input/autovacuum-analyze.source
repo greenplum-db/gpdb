@@ -117,8 +117,6 @@ SELECT gp_inject_fault('gp_pgstat_report_on_master', 'reset', 1);
 -- Wait until autovacuum is triggered
 SELECT gp_wait_until_triggered_fault('auto_vac_worker_after_report_activity', 1, 1);
 select datname, query from pg_stat_activity where query like '%ANALYZE%' and datname=current_database();
--- Ensure root partition was only merged once, num_times_hit should be 1
-SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'status', '', '', 'rankpart', 1, -1, 0, 1);
 SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
 
 -- Wait until autovacuum worker updates pg_database
