@@ -1,3 +1,5 @@
+-- Objective of these tests is to ensure if IndexScan is being picked up when order by clause has columns that match
+-- prefix of any existing btree indices. This is for queries with both order by and a limit.
 -- Tests for queries with order by and limit on B-tree indices.
 CREATE TABLE test_index_with_orderby_limit (a int, b int, c float, d int);
 CREATE INDEX index_a on test_index_with_orderby_limit using btree(a);
@@ -226,6 +228,45 @@ explain (costs off) select * from test_index_with_orderby_limit order by a NULLS
                      ->  Seq Scan on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (8 rows)
+
+-- order by as sum of two columns, uses SeqScan with Sort
+explain (costs off) select a, b from test_index_with_orderby_limit order by a+b, c limit 3;
+                            QUERY PLAN
+-------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a + b)), c
+         ->  Limit
+               ->  Sort
+                     Sort Key: ((a + b)), c
+                     ->  Seq Scan on test_index_with_orderby_limit
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain (costs off) select a+b as sum from test_index_with_orderby_limit order by sum limit 3;
+                            QUERY PLAN
+-------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a + b))
+         ->  Limit
+               ->  Sort
+                     Sort Key: ((a + b))
+                     ->  Seq Scan on test_index_with_orderby_limit
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- order by using column number
+explain (costs off) select * from test_index_with_orderby_limit order by 1 limit 3;
+                                 QUERY PLAN
+-----------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Index Scan using index_a on test_index_with_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
 
 -- check if index-only scan is leveraged when required
 -- vacuum table to ensure IndexOnly Scan is picked

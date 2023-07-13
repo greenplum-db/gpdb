@@ -2,6 +2,9 @@
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
 
+          Objective of this test is to ensure if IndexScan is being picked up when order by clause has columns that match
+          prefix of any existing btree indices. This is for queries with both order by and limit.
+
           Test case: Query with multiple columns in ORDER BY clause which are either in prefix or completely match an
           index column.
 

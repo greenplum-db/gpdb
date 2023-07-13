@@ -106,6 +106,7 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	boolConstExpr = CUtils::PexprScalarConstBool(mp, true);
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+	boolConstExpr->AddRef();
 	pdrgpexpr->Append(boolConstExpr);
 
 	popGet->AddRef();

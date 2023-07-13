@@ -1,3 +1,5 @@
+-- Objective of these tests is to ensure if IndexScan is being picked up when order by clause has columns that match
+-- prefix of any existing btree indices. This is for queries with both order by and a limit.
 
 -- Tests for queries with order by and limit on B-tree indices.
 CREATE TABLE test_index_with_orderby_limit (a int, b int, c float, d int);
@@ -38,6 +40,11 @@ explain (costs off) select * from test_index_with_orderby_limit order by c offse
 explain (costs off) select * from test_index_with_orderby_limit order by a desc limit 10;
 -- order by opposite to nulls direction in index
 explain (costs off) select * from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
+-- order by as sum of two columns, uses SeqScan with Sort
+explain (costs off) select a, b from test_index_with_orderby_limit order by a+b, c limit 3;
+explain (costs off) select a+b as sum from test_index_with_orderby_limit order by sum limit 3;
+-- order by using column number
+explain (costs off) select * from test_index_with_orderby_limit order by 1 limit 3;
 -- check if index-only scan is leveraged when required
 -- vacuum table to ensure IndexOnly Scan is picked
 VACUUM test_index_with_orderby_limit;
