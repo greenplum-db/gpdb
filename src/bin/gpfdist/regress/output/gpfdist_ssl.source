@@ -278,6 +278,35 @@ select * from gpfdist_ssl_start;
  21621 gpfdist
 (1 row)
 
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from gpfdist_ssl_start;
+       x       
+---------------
+ 21621 gpfdist
+(1 row)
+
 SET verify_gpfdists_cert=on;
 -- end_ignore
 -- gpfdist_ssl case 7

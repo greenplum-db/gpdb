@@ -197,6 +197,18 @@ SELECT * FROM tbl;
 -- start_ignore
 select * from gpfdist_ssl_stop;
 select * from gpfdist_ssl_start_no_ca_verify;
+\! bash change_cert.bash clear
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash recover
+-- end_ignore
+
+-- start_ignore
+select * from gpfdist_ssl_stop;
+select * from gpfdist_ssl_start_no_ca_verify;
 SET verify_gpfdists_cert=on; 
 \! bash change_cert.bash gpfdist
 -- end_ignore
