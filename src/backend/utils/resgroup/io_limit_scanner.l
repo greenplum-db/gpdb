@@ -9,6 +9,7 @@
 %option noyyalloc noyyfree noyyrealloc
 %option prefix="io_limit_yy"
 %option reentrant bison-bridge
+%option warn never-interactive nodefault
 
 id  [a-zA-Z_][a-zA-Z0-9_]*
 wildcard \*
@@ -17,6 +18,11 @@ wildcard \*
 [wr](b|io)ps {
                 yylval->str = pstrdup(yytext);
                 return IO_KEY;
+             }
+
+max          {
+                yylval->str = pstrdup("max");
+                return VALUE_MAX;
              }
 
 {id}         {
@@ -37,11 +43,6 @@ wildcard \*
 
 {wildcard}   {
                 return STAR;
-             }
-
-max          {
-                yylval->str = pstrdup("max");
-                return VALUE_MAX;
              }
 
 [[:space:]]  ;
@@ -82,7 +83,9 @@ io_limit_yyfree(void * ptr , yyscan_t yyscanner)
 {
 	struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 	(void)yyg;
-	pfree( (char *) ptr );	/* see yyrealloc() for (char *) cast */
+
+        if (ptr != NULL)
+	    pfree( (char *) ptr );	/* see yyrealloc() for (char *) cast */
 }
 
 
