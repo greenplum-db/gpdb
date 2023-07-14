@@ -131,21 +131,22 @@ alter server loopback options(add num_segments '2');
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
                             QUERY PLAN                             
 -------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 2:1  (slice1; segments: 2)
    Output: f1, f2, f3
    ->  Foreign Scan on postgres_fdw_gp.gp_ft1
          Output: f1, f2, f3
          Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: Postgres query optimizer
 (6 rows)
 
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
-             QUERY PLAN              
--------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Insert on gp_ft1
-   ->  Seq Scan on table_dist_rand
+   ->  Redistribute Motion 3:2  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
  Optimizer: Postgres query optimizer
-(3 rows)
+(4 rows)
 
 INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
 SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;

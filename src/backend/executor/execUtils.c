@@ -1125,7 +1125,10 @@ FillSliceGangInfo(ExecSlice *slice, PlanSlice *ps)
 			break;
 		case GANGTYPE_PRIMARY_WRITER:
 		case GANGTYPE_PRIMARY_READER:
-			slice->planNumSegments = numsegments;
+			/* Writer gangs could not have more backends than getgpsegmentCount() */
+			if (slice->gangType == GANGTYPE_PRIMARY_WRITER && numsegments > getgpsegmentCount())
+				numsegments = getgpsegmentCount();
+
 			if (dd->isDirectDispatch)
 			{
 				slice->segments = list_copy(dd->contentIds);

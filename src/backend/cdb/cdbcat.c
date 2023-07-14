@@ -386,6 +386,7 @@ GpPolicyFetch(Oid tbloid)
 
 			if (f->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
 			{
+				ForeignServer *server = GetForeignServer(f->serverid);
 				/*
 				 * Currently, foreign tables do not support a distribution
 				 * policy, as opposed to writable external tables. For now,
@@ -394,7 +395,10 @@ GpPolicyFetch(Oid tbloid)
 				 * to foreign tables from all segments when the mpp_execute
 				 * option is set to 'all segments'
 				 */
-				return createRandomPartitionedPolicy(getgpsegmentCount());
+				if (server)
+					return createRandomPartitionedPolicy(server->num_segments);
+				else
+					return createRandomPartitionedPolicy(getgpsegmentCount());
 			}
 		}
 	}
