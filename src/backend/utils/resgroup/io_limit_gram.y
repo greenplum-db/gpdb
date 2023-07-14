@@ -91,7 +91,7 @@ tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 					  {
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
-							if (context->normal_tablespce_cnt > 0)
+							if (context->normal_tablespce_cnt > 0 || context->star_tablespace_cnt > 0)
 								ereport(ERROR,
 										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 										errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
