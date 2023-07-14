@@ -171,9 +171,9 @@ FROM gp_segment_configuration g1 where role = 'p';
 -- coordinator suspends before running periodical checking of orphaned prepared transactions.
 19: SELECT gp_inject_fault_infinite('before_orphaned_check', 'suspend', dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
-19: SELECT gp_inject_fault_infinite('after_orphaned_check', 'suspend', dbid)
-   from gp_segment_configuration where role = 'p' and content = -1;
 19: SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+19: SELECT gp_inject_fault_infinite('after_orphaned_check', 'suspend', dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
 
 -- let prepare finish else dtx recovery can not abort the prepared transaction.
