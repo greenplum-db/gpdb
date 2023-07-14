@@ -170,7 +170,7 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 	COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
 	const IMDIndex *pmdindex)
 {
-	// IndexScan is only applicable for BTree index
+	// Ordered IndexScan is only applicable for BTree index
 	if (pmdindex->IndexType() != IMDIndex::EmdindBtree)
 	{
 		return false;
@@ -184,8 +184,9 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 	BOOL indexApplicable = true;
 	for (ULONG i = 0; i < totalOrderByCols; i++)
 	{
-		// Index not applicable if order of cols doesn't match or if order by
-		// isn't ascending
+		// Index is not applicable if either
+		// 1. Order By Column do not match with index key OR
+		// 2. NULLs are not Last in the specified Order by Clause.
 		if (pos->Ent(i) != COrderSpec::EntLast ||
 			!CColRef::Equals(pos->Pcr(i), (*pdrgpcrIndexColumns)[i]))
 		{

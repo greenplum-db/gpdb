@@ -102,6 +102,7 @@ OBJS        = CDecorrelator.o \
               CXformLeftSemiJoin2InnerJoin.o \
               CXformLeftSemiJoin2InnerJoinUnderGb.o \
               CXformLeftSemiJoin2NLJoin.o \
+              CXformLimit2IndexGet.o \
               CXformMaxOneRow2Assert.o \
               CXformDynamicForeignGet2DynamicForeignScan.o \
               CXformProject2Apply.o \
@@ -132,8 +133,7 @@ OBJS        = CDecorrelator.o \
               CXformUnnestTVF.o \
               CXformUpdate2DML.o \
               CXformUtils.o \
-              CxformSelect2DynamicBitmapBoolOp.o \
-              CXformLimit2IndexGet.o
+              CxformSelect2DynamicBitmapBoolOp.o
 
 include $(top_srcdir)/src/backend/common.mk
 
