@@ -6,11 +6,12 @@ CREATE TABLE test_index_with_orderby_limit (a int, b int, c float, d int);
 CREATE INDEX index_a on test_index_with_orderby_limit using btree(a);
 CREATE INDEX index_ab on test_index_with_orderby_limit using btree(a, b);
 CREATE INDEX index_bda on test_index_with_orderby_limit using btree(b, d, a);
+CREATE INDEX index_c on test_index_with_orderby_limit using hash(c);
 INSERT INTO test_index_with_orderby_limit select i, i-2, i/3, i+1 from generate_series(1,10000) i;
 ANALYZE test_index_with_orderby_limit;
 -- should use index scan
 explain (costs off) select * from test_index_with_orderby_limit order by a limit 10;
--- should use seq scan
+-- order by using a hash indexed column, should use SeqScan
 explain (costs off) select * from test_index_with_orderby_limit order by c limit 10;
 -- should use index scan
 explain (costs off) select * from test_index_with_orderby_limit order by b limit 10;
@@ -46,9 +47,8 @@ explain (costs off) select a+b as sum from test_index_with_orderby_limit order b
 -- order by using column number
 explain (costs off) select * from test_index_with_orderby_limit order by 1 limit 3;
 -- check if index-only scan is leveraged when required
--- vacuum table to ensure IndexOnly Scan is picked
-VACUUM test_index_with_orderby_limit;
+set optimizer_enable_indexscan to off;
 -- project only columns in the Index
-explain (costs off) select a from test_index_with_orderby_limit order by a limit 10;
+explain (costs off) select b from test_index_with_orderby_limit order by b limit 10;
 
 DROP TABLE test_index_with_orderby_limit;

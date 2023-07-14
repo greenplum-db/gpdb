@@ -45,7 +45,8 @@ private:
 	// and index columns. This function checks if ORDER BY columns are prefix of
 	// the index columns.
 	static BOOL FIndexApplicableForOrderBy(COrderSpec *pos,
-										   CColRefArray *pdrgpcrIndexColumns);
+										   CColRefArray *pdrgpcrIndexColumns,
+										   const IMDIndex *pmdindex);
 
 public:
 	CXformLimit2IndexGet(const CXformLimit2IndexGet &) = delete;

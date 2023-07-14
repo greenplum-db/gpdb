@@ -50,7 +50,7 @@ test: instr_in_shmem
 test: createdb
 # run separately, because checks for reltuples and results vary in-presence of concurrent transactions
 test: cluster_gp
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types gp_index combocid_gp gp_sort gp_prepared_xacts gp_backend_info qp_indexscan_tests
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types gp_index combocid_gp gp_sort gp_prepared_xacts gp_backend_info qp_indexscan
 test: spi_processed64bit
 test: gp_lock
 test: gp_tablespace_with_faults

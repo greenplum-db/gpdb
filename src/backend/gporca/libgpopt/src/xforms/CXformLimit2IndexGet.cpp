@@ -128,7 +128,8 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		// get columns in the index
 		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
 			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
-		if (FIndexApplicableForOrderBy(popLimit->Pos(), pdrgpcrIndexColumns))
+		if (FIndexApplicableForOrderBy(popLimit->Pos(), pdrgpcrIndexColumns,
+									   pmdindex))
 		{
 			// build IndexGet expression
 			CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
@@ -166,8 +167,14 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //---------------------------------------------------------------------------
 BOOL
 CXformLimit2IndexGet::FIndexApplicableForOrderBy(
-	COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns)
+	COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
+	const IMDIndex *pmdindex)
 {
+	// IndexScan is only applicable for BTree index
+	if (pmdindex->IndexType() != IMDIndex::EmdindBtree)
+	{
+		return false;
+	}
 	// get order by columns size
 	ULONG totalOrderByCols = pos->UlSortColumns();
 	if (pdrgpcrIndexColumns->Size() < totalOrderByCols)
@@ -177,7 +184,10 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 	BOOL indexApplicable = true;
 	for (ULONG i = 0; i < totalOrderByCols; i++)
 	{
-		if (!CColRef::Equals(pos->Pcr(i), (*pdrgpcrIndexColumns)[i]))
+		// Index not applicable if order of cols doesn't match or if order by
+		// isn't ascending
+		if (pos->Ent(i) != COrderSpec::EntLast ||
+			!CColRef::Equals(pos->Pcr(i), (*pdrgpcrIndexColumns)[i]))
 		{
 			indexApplicable = false;
 			break;

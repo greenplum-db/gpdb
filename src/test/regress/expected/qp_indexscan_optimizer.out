@@ -5,6 +5,7 @@ CREATE TABLE test_index_with_orderby_limit (a int, b int, c float, d int);
 CREATE INDEX index_a on test_index_with_orderby_limit using btree(a);
 CREATE INDEX index_ab on test_index_with_orderby_limit using btree(a, b);
 CREATE INDEX index_bda on test_index_with_orderby_limit using btree(b, d, a);
+CREATE INDEX index_c on test_index_with_orderby_limit using hash(c);
 INSERT INTO test_index_with_orderby_limit select i, i-2, i/3, i+1 from generate_series(1,10000) i;
 ANALYZE test_index_with_orderby_limit;
 -- should use index scan
@@ -16,10 +17,10 @@ explain (costs off) select * from test_index_with_orderby_limit order by a limit
          Merge Key: a
          ->  Limit
                ->  Index Scan using index_a on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
--- should use seq scan
+-- order by using a hash indexed column, should use SeqScan
 explain (costs off) select * from test_index_with_orderby_limit order by c limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
@@ -30,7 +31,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by c limit
                ->  Sort
                      Sort Key: c
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- should use index scan
@@ -42,7 +43,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by b limit
          Merge Key: b
          ->  Limit
                ->  Index Scan using index_bda on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 -- should use index scan
@@ -54,7 +55,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by a, b li
          Merge Key: a, b
          ->  Limit
                ->  Index Scan using index_ab on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 -- should use index scan
@@ -66,7 +67,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by b, d li
          Merge Key: b, d
          ->  Limit
                ->  Index Scan using index_bda on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 -- should use seq scan
@@ -80,7 +81,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by d, b li
                ->  Sort
                      Sort Key: d, b
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- should use seq scan
@@ -94,7 +95,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by d, a li
                ->  Sort
                      Sort Key: d, a
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- should use seq scan
@@ -108,7 +109,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by a, c li
                ->  Sort
                      Sort Key: a, c
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- should use index scan
@@ -120,7 +121,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by b, d, a
          Merge Key: b, d, a
          ->  Limit
                ->  Index Scan using index_bda on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 -- should use seq scan
@@ -134,7 +135,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by b, d, c
                ->  Sort
                      Sort Key: b, d, c
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- should use seq scan
@@ -148,7 +149,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by c, b, a
                ->  Sort
                      Sort Key: c, b, a
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- with offset and without limit
@@ -159,7 +160,7 @@ explain (costs off) select * from test_index_with_orderby_limit order by a offse
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Index Scan using index_a on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 -- limit value in subquery
@@ -205,15 +206,17 @@ explain (costs off) select * from test_index_with_orderby_limit order by c offse
 
 -- order by opposite to index sort direction
 explain (costs off) select * from test_index_with_orderby_limit order by a desc limit 10;
-                                      QUERY PLAN
---------------------------------------------------------------------------------------
+                            QUERY PLAN
+-------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Index Scan Backward using index_a on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
+               ->  Sort
+                     Sort Key: a DESC
+                     ->  Seq Scan on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 -- order by opposite to nulls direction in index
 explain (costs off) select * from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
@@ -226,22 +229,23 @@ explain (costs off) select * from test_index_with_orderby_limit order by a NULLS
                ->  Sort
                      Sort Key: a NULLS FIRST
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- order by as sum of two columns, uses SeqScan with Sort
 explain (costs off) select a, b from test_index_with_orderby_limit order by a+b, c limit 3;
-                            QUERY PLAN
--------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: ((a + b)), c
-         ->  Limit
-               ->  Sort
-                     Sort Key: ((a + b)), c
-                     ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
-(8 rows)
+                               QUERY PLAN
+-------------------------------------------------------------------------
+ Result
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: ((a + b)), c
+               ->  Limit
+                     ->  Sort
+                           Sort Key: ((a + b)), c
+                           ->  Seq Scan on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 explain (costs off) select a+b as sum from test_index_with_orderby_limit order by sum limit 3;
                             QUERY PLAN
@@ -253,7 +257,7 @@ explain (costs off) select a+b as sum from test_index_with_orderby_limit order b
                ->  Sort
                      Sort Key: ((a + b))
                      ->  Seq Scan on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 -- order by using column number
@@ -265,22 +269,21 @@ explain (costs off) select * from test_index_with_orderby_limit order by 1 limit
          Merge Key: a
          ->  Limit
                ->  Index Scan using index_a on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 -- check if index-only scan is leveraged when required
--- vacuum table to ensure IndexOnly Scan is picked
-VACUUM test_index_with_orderby_limit;
+set optimizer_enable_indexscan to off;
 -- project only columns in the Index
-explain (costs off) select a from test_index_with_orderby_limit order by a limit 10;
-                                    QUERY PLAN
------------------------------------------------------------------------------------
+explain (costs off) select b from test_index_with_orderby_limit order by b limit 10;
+                                     QUERY PLAN
+------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: a
+         Merge Key: b
          ->  Limit
-               ->  Index Only Scan using index_ab on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+               ->  Index Only Scan using index_bda on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 DROP TABLE test_index_with_orderby_limit;
