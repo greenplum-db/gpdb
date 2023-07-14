@@ -1314,6 +1314,8 @@ Specifies a fixed amount of memory, in MB, reserved for all queries in a resourc
 
 While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_query_fixed_mem` overrides that limit at a session level. Thus, you can use this configuration parameter to adjust query memory budget for a particular session, on an ad hoc basis. 
 
+The value of `gp_resgroup_memory_query_fixed_mem` must be lower than `max_statement_mem`.
+
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |0 < integer < INT_MAX| 0 |coordinator, session, user|

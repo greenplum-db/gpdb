@@ -23,8 +23,6 @@
         - [gpkafka](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html)
         - [gpload](./ref/gpload.md)
         - [gplogfilter](./ref/gplogfilter.md)
-        - [gpmapreduce](./ref/gpmapreduce.md)
-        - [gpmapreduce.yaml](./ref/gpmapreduce-yaml.md)
         - [gpmemreport](./ref/gpmemreport.md)
         - [gpmemwatcher](./ref/gpmemwatcher.md)
         - [gpmovemirrors](./ref/gpmovemirrors.md)

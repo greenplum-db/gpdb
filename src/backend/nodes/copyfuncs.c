@@ -1081,8 +1081,6 @@ CopyJoinFields(const Join *from, Join *newnode)
 	CopyPlanFields((const Plan *) from, (Plan *) newnode);
 
     COPY_SCALAR_FIELD(prefetch_inner);
-	COPY_SCALAR_FIELD(prefetch_joinqual);
-	COPY_SCALAR_FIELD(prefetch_qual);
 
 	COPY_SCALAR_FIELD(jointype);
 	COPY_SCALAR_FIELD(inner_unique);

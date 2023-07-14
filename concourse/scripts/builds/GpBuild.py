@@ -13,7 +13,6 @@ class GpBuild:
         self.mode = 'on' if mode == 'orca' else 'off'
         self.configure_options =  [
                                     "--enable-gpcloud",
-                                    "--enable-mapreduce",
                                     "--enable-orafce",
                                     "--enable-tap-tests",
                                     "--with-gssapi",

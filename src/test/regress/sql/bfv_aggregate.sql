@@ -1505,6 +1505,35 @@ explain (costs off) select count(distinct(b)), gp_segment_id from t group by gp_
 select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 
 drop table t;
+
+-- Test defferral keyword on primary/unique key
+-- When the grouping columns include a key, the GbAgg operator can be transformed to a Select,
+-- resulting in the dropping of grouping columns. However, it is important to note that if a primary
+-- or unique key has the deferral keyword, ORCA should not optimize (drop grouping columns) in such cases.
+
+drop table if exists t1, t2, t3, t4, t5, t6;
+create table t1 (a int, b int, c int, primary key(a, b));
+create table t2 (a int, b int, c int, primary key(a, b) deferrable);
+create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
+create table t4 (a int, b int, c int, unique(a, b));
+create table t5 (a int, b int, c int, unique(a, b) deferrable);
+create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
+
+explain (costs off) select * from t1 group by a, b, c;
+explain (costs off) select * from t2 group by a, b, c;
+explain (costs off) select * from t3 group by a, b, c;
+explain (costs off) select * from t4 group by a, b, c;
+explain (costs off) select * from t5 group by a, b, c;
+explain (costs off) select * from t6 group by a, b, c;
+explain (costs off) with cte1 as (select * from t3 group by a, b, c) select * from cte1;
+
+begin;
+insert into t3 values (1, 1, 1), (1, 1, 1), (1, 2, 1), (1, 3, 1), (1, 2, 1);
+select * from t3 group by a, b, c;
+commit;
+
+drop table  t1, t2, t3, t4, t5, t6;
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

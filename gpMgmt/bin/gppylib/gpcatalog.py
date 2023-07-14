@@ -47,6 +47,7 @@ SEGMENT_LOCAL_TABLES = [
 # catalog table
 DEPENDENCY_EXCLUSION = [
     'pg_authid',
+    'pg_collation',
     'pg_compression',
     'pg_conversion',
     'pg_database',
@@ -58,7 +59,9 @@ DEPENDENCY_EXCLUSION = [
     'pg_resourcetype',
     'pg_resqueue',
     'pg_resqueuecapability',
-    'pg_tablespace'
+    'pg_subscription',
+    'pg_tablespace',
+    'pg_transform'
     ]
 
 # ============================================================================

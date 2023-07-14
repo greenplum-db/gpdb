@@ -90,7 +90,7 @@ run_resgroup_icw_test() {
         sed -i '/resource_manager_switch/,/resource_manager_restore/d' src/test/regress/greenplum_schedule
         echo>src/test/isolation2/isolation2_resqueue_schedule
         ./configure --prefix=/usr/local/greenplum-db-devel --disable-orca --enable-gpfdist \
-         --enable-gpcloud --enable-mapreduce --enable-orafce --enable-tap-tests \
+         --enable-gpcloud --enable-orafce --enable-tap-tests \
          --with-gssapi --with-libxml --with-openssl --with-perl --with-python \
          --with-uuid=e2fs --with-llvm --with-zstd PYTHON=python3.9 PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 

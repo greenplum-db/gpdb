@@ -168,7 +168,7 @@ throughout the codebase, but a few larger additions worth noting:
 * __gpcontrib/__
 
   Much like the PostgreSQL contrib/ directory, this directory contains
-  extensions such as gpfdist and gpmapreduce which are Greenplum-specific.
+  extensions such as gpfdist which are Greenplum-specific.
 
 * __doc/__
 

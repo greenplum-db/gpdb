@@ -40,6 +40,8 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
+#include "catalog/pg_stat_last_operation_d.h"
+#include "catalog/pg_stat_last_shoperation_d.h"
 #include "commands/cluster.h"
 #include "commands/defrem.h"
 #include "commands/tablecmds.h"
@@ -74,6 +76,7 @@
 #include "libpq/pqformat.h"
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
+#include "utils/resgroup.h"
 
 /*
  * GUC parameters
@@ -287,6 +290,12 @@ vacuum(List *relations, VacuumParams *params,
 	 */
 	Assert(!((params->options & VACOPT_VACUUM) && (params->options & VACOPT_ROOTONLY)));
 
+	/*
+	 * We force vacuum auxiliary process in system_group, so in vacuum transaction we should
+	 * not assign it to any resource group.
+	 */
+	AssertImply(IsAutoVacuumWorkerProcess(), GetMyResGroupId() == InvalidOid);
+
 	stmttype = (params->options & VACOPT_VACUUM) ? "VACUUM" : "ANALYZE";
 
 	/*
@@ -381,7 +390,42 @@ vacuum(List *relations, VacuumParams *params,
 		relations = newrels;
 	}
 	else
+	{
 		relations = get_all_vacuum_rels(params->options);
+
+		/*
+		 * GPDB: for a database-wide VACUUM FREEZE (relations==NIL), make sure 
+		 * pg_stat_last_operation and pg_stat_last_shoperation are the last tables
+		 * to be frozen, so that all the meta-tracking rows that we are inserting 
+		 * into pg_stat_last_operation/pg_stat_last_shoperation during VACUUM FREEZE
+		 * can be frozen too. In addition, we will skip the meta-tracking of 
+		 * pg_stat_last_operation/pg_stat_last_shoperation itself. All of these will
+		 * make sure that we do not leave any unfrozen row after database-wide VACUUM FREEZE.
+		 */
+		if (params->options & VACOPT_FREEZE)
+		{
+			ListCell 		*lc;
+			ListCell 		*prev = NULL;
+			ListCell 		*original_tail = list_tail(relations);
+
+			/* go through the original table list and move the two tables to the end */
+			for (lc = list_head(relations); lc != original_tail; )
+			{
+				VacuumRelation *vrel = lfirst_node(VacuumRelation, lc);
+				ListCell *next = lnext(lc);
+
+				if (vrel->oid == StatLastOpRelationId || vrel->oid == StatLastShOpRelationId)
+				{
+					relations = list_delete_cell(relations, lc, prev);
+					relations = lappend(relations, vrel);
+					lc = NULL;
+				}
+				if (lc)
+					prev = lc;
+				lc = next;
+			}
+		}
+	}
 
 	/*
 	 * Decide whether we need to start/commit our own transactions.
@@ -2567,26 +2611,34 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		dispatchVacuum(params, relid, &stats_context);
 		vac_update_relstats_from_list(&stats_context);
 
-		/* Also update pg_stat_last_operation */
-		if (IsAutoVacuumWorkerProcess())
-			vsubtype = "AUTO";
-		else
+		/*
+		 * Also update pg_stat_last_operation/pg_stat_last_shoperation. Unless
+		 * we are freezing those two tables themselves, because we do not want
+		 * to create new unfrozen row in them.
+		 */
+		if (!(params->options & VACOPT_FREEZE && 
+					(relid == StatLastOpRelationId || relid == StatLastShOpRelationId)))
 		{
-			if ((params->options & VACOPT_FULL) &&
-				(0 == params->freeze_min_age))
-				vsubtype = "FULL FREEZE";
-			else if ((params->options & VACOPT_FULL))
-				vsubtype = "FULL";
-			else if (0 == params->freeze_min_age)
-				vsubtype = "FREEZE";
+			if (IsAutoVacuumWorkerProcess())
+				vsubtype = "AUTO";
 			else
-				vsubtype = "";
+			{
+				if ((params->options & VACOPT_FULL) &&
+					(0 == params->freeze_min_age))
+					vsubtype = "FULL FREEZE";
+				else if ((params->options & VACOPT_FULL))
+					vsubtype = "FULL";
+				else if (0 == params->freeze_min_age)
+					vsubtype = "FREEZE";
+				else
+					vsubtype = "";
+			}
+			MetaTrackUpdObject(RelationRelationId,
+							   relid,
+							   GetUserId(),
+							   "VACUUM",
+							   vsubtype);
 		}
-		MetaTrackUpdObject(RelationRelationId,
-						   relid,
-						   GetUserId(),
-						   "VACUUM",
-						   vsubtype);
 
 		/* Restore userid and security context */
 		SetUserIdAndSecContext(save_userid, save_sec_context);

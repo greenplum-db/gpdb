@@ -1876,6 +1876,9 @@ evalStandardFunc(CState *st,
 	PgBenchExprLink *l = args;
 	bool		has_null = false;
 
+	/* Some compiler (gcc-12) may raise warning about uninitialized variable */
+	memset(vargs, 0, sizeof(vargs));
+
 	for (nargs = 0; nargs < MAX_FARGS && l != NULL; nargs++, l = l->next)
 	{
 		if (!evaluateExpr(st, l->expr, &vargs[nargs]))

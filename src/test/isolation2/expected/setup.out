@@ -117,7 +117,7 @@ if slotname is not None: cmd += ' --slot %s' % (slotname)
 if force_overwrite: cmd += ' --force-overwrite' 
 if xlog_method == 'stream': cmd += ' --wal-method stream' elif xlog_method == 'fetch': cmd += ' --wal-method fetch' else: plpy.error('invalid xlog method') 
 cmd += ' --no-verify-checksums' 
-try: # Unset PGAPPNAME so that the pg_stat_replication.application_name is not affected if os.getenv('PGAPPNAME') is not None: os.environ.pop('PGAPPNAME') results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace(b'.', b'').decode() except subprocess.CalledProcessError as e: results = str(e) + "\ncommand output: " + e.output 
+try: # Unset PGAPPNAME so that the pg_stat_replication.application_name is not affected if os.getenv('PGAPPNAME') is not None: os.environ.pop('PGAPPNAME') results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace(b'.', b'').decode() except subprocess.CalledProcessError as e: results = str(e) + "\ncommand output: " + (e.output.decode()) 
 return results $$ language plpython3u;
 CREATE FUNCTION
 

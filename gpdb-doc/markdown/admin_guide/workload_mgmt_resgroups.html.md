@@ -293,7 +293,7 @@ When you install Greenplum Database, no resource management policy is enabled by
 
 Once enabled, any transaction submitted by a role is directed to the resource group assigned to the role, and is governed by that resource group's concurrency, memory, and CPU limits. 
 
-Greenplum Database creates three default resource groups for roles named `admin_group`, `default_group`, and `system_group`. When you enable resources groups, any role that was not explicitly assigned a resource group is assigned the default group for the role's capability. `SUPERUSER` roles are assigned the `admin_group`, non-admin roles are assigned the group named `default_group`. The resources of the Greenplum Database system processes are assigned to the `system_group`.
+Greenplum Database creates three default resource groups for roles named `admin_group`, `default_group`, and `system_group`. When you enable resources groups, any role that was not explicitly assigned a resource group is assigned the default group for the role's capability. `SUPERUSER` roles are assigned the `admin_group`, non-admin roles are assigned the group named `default_group`. The resources of the Greenplum Database system processes are assigned to the `system_group`. You cannot manually assign any roles to the `system_group`.
 
 The default resource groups `admin_group`, `default_group`, and `system_group`  are created with the following resource limits:
 

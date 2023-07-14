@@ -255,9 +255,11 @@
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
+#include "common/hashfn.h"
 #include "executor/execExpr.h"
 #include "executor/executor.h"
 #include "executor/nodeAgg.h"
+#include "lib/hyperloglog.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
@@ -312,6 +314,14 @@
 #define HASHAGG_WRITE_BUFFER_SIZE BLCKSZ
 
 /*
+ * HyperLogLog is used for estimating the cardinality of the spilled tuples in
+ * a given partition. 5 bits corresponds to a size of about 32 bytes and a
+ * worst-case error of around 18%. That's effective enough to choose a
+ * reasonable number of partitions when recursing.
+ */
+#define HASHAGG_HLL_BIT_WIDTH 5
+
+/*
  * Estimate chunk overhead as a constant 16 bytes. XXX: should this be
  * improved?
  */
@@ -350,11 +360,12 @@ typedef struct HashTapeInfo
 typedef struct HashAggSpill
 {
 	LogicalTapeSet *tapeset;	/* borrowed reference to tape set */
-	int		 npartitions;		/* number of partitions */
-	int		*partitions;		/* spill partition tape numbers */
-	int64   *ntuples;			/* number of tuples in each partition */
-	uint32   mask;				/* mask to find partition from hash value */
-	int      shift;				/* after masking, shift by this amount */
+	int			npartitions;	/* number of partitions */
+	int		   *partitions;		/* spill partition tape numbers */
+	int64	   *ntuples;		/* number of tuples in each partition */
+	uint32		mask;			/* mask to find partition from hash value */
+	int			shift;			/* after masking, shift by this amount */
+	hyperLogLogState *hll_card;	/* cardinality estimate for contents */
 } HashAggSpill;
 
 /*
@@ -368,12 +379,21 @@ typedef struct HashAggSpill
  */
 typedef struct HashAggBatch
 {
-	int				 setno;			/* grouping set */
-	int				 used_bits;		/* number of bits of hash already used */
-	LogicalTapeSet	*tapeset;		/* borrowed reference to tape set */
-	int				 input_tapenum;	/* input partition tape */
-	int64			 input_tuples;	/* number of tuples in this batch */
+	int			setno;			/* grouping set */
+	int			used_bits;		/* number of bits of hash already used */
+	LogicalTapeSet *tapeset;	/* borrowed reference to tape set */
+	int			input_tapenum;	/* input partition tape */
+	int64		input_tuples;	/* number of tuples in this batch */
+	double		input_card;		/* estimated group cardinality */
 } HashAggBatch;
+
+/* used to find referenced colnos */
+typedef struct FindColsContext
+{
+	bool	   is_aggref;		/* is under an aggref */
+	Bitmapset *aggregated;		/* column references under an aggref */
+	Bitmapset *unaggregated;	/* other column references */
+} FindColsContext;
 
 static void select_current_set(AggState *aggstate, int setno, bool is_hash);
 static void initialize_phase(AggState *aggstate, int newphase);
@@ -399,7 +419,9 @@ static void finalize_partialaggregate(AggState *aggstate,
 									  AggStatePerAgg peragg,
 									  AggStatePerGroup pergroupstate,
 									  Datum *resultVal, bool *resultIsNull);
-static void prepare_hash_slot(AggState *aggstate);
+static inline void prepare_hash_slot(AggStatePerHash perhash,
+									 TupleTableSlot *inputslot,
+									 TupleTableSlot *hashslot);
 static void prepare_projection_slot(AggState *aggstate,
 									TupleTableSlot *slot,
 									int currentSet);
@@ -407,8 +429,9 @@ static void finalize_aggregates(AggState *aggstate,
 								AggStatePerAgg peragg,
 								AggStatePerGroup pergroup);
 static TupleTableSlot *project_aggregates(AggState *aggstate);
-static Bitmapset *find_unaggregated_cols(AggState *aggstate);
-static bool find_unaggregated_cols_walker(Node *node, Bitmapset **colnos);
+static void find_cols(AggState *aggstate, Bitmapset **aggregated,
+					  Bitmapset **unaggregated);
+static bool find_cols_walker(Node *node, FindColsContext *context);
 static void build_hash_tables(AggState *aggstate);
 static void build_hash_table(AggState *aggstate, int setno, long nbuckets);
 static void hashagg_recompile_expressions(AggState *aggstate, bool minslot,
@@ -417,12 +440,13 @@ static long hash_choose_num_buckets(double hashentrysize,
 									long estimated_nbuckets,
 									Size memory);
 static int hash_choose_num_partitions(AggState *aggstate,
-									  uint64 input_groups,
+									  double input_groups,
 									  double hashentrysize,
 									  int used_bits,
 									  int *log2_npartittions);
-static AggStatePerGroup lookup_hash_entry(AggState *aggstate, uint32 hash,
-										  bool *in_hash_table);
+static void initialize_hash_entry(AggState *aggstate,
+								  TupleHashTable hashtable,
+								  TupleHashEntry entry);
 static void lookup_hash_entries(AggState *aggstate);
 static TupleTableSlot *agg_retrieve_direct(AggState *aggstate);
 static void agg_fill_hash_table(AggState *aggstate);
@@ -437,14 +461,15 @@ static void hashagg_finish_initial_spills(AggState *aggstate);
 static void hashagg_reset_spill_state(AggState *aggstate);
 static HashAggBatch *hashagg_batch_new(LogicalTapeSet *tapeset,
 									   int input_tapenum, int setno,
-									   int64 input_tuples, int used_bits);
+									   int64 input_tuples, double input_card,
+									   int used_bits);
 static MinimalTuple hashagg_batch_read(HashAggBatch *batch, uint32 *hashp);
 static void hashagg_spill_init(AggState *aggstate,
 							   HashAggSpill *spill, HashTapeInfo *tapeinfo,
-							   int used_bits, uint64 input_tuples,
+							   int used_bits, double input_groups,
 							   double hashentrysize);
-static Size hashagg_spill_tuple(HashAggSpill *spill, TupleTableSlot *slot,
-								uint32 hash);
+static Size hashagg_spill_tuple(AggState *aggstate, HashAggSpill *spill,
+								TupleTableSlot *slot, uint32 hash);
 static void hashagg_spill_finish(AggState *aggstate, HashAggSpill *spill,
 								 int setno);
 static void hashagg_tapeinfo_init(AggState *aggstate);
@@ -1244,13 +1269,12 @@ finalize_partialaggregate(AggState *aggstate,
  * Extract the attributes that make up the grouping key into the
  * hashslot. This is necessary to compute the hash or perform a lookup.
  */
-static void
-prepare_hash_slot(AggState *aggstate)
+static inline void
+prepare_hash_slot(AggStatePerHash perhash,
+				  TupleTableSlot *inputslot,
+				  TupleTableSlot *hashslot)
 {
-	TupleTableSlot *inputslot = aggstate->tmpcontext->ecxt_outertuple;
-	AggStatePerHash perhash = &aggstate->perhash[aggstate->current_set];
-	TupleTableSlot *hashslot = perhash->hashslot;
-	int				i;
+	int			i;
 
 	/* transfer just the needed columns into hashslot */
 	slot_getsomeattrs(inputslot, perhash->largestGrpColIdx);
@@ -1423,26 +1447,34 @@ project_aggregates(AggState *aggstate)
 }
 
 /*
- * find_unaggregated_cols
- *	  Construct a bitmapset of the column numbers of un-aggregated Vars
- *	  appearing in our targetlist and qual (HAVING clause)
+ * Find input-tuple columns that are needed, dividing them into
+ * aggregated and unaggregated sets.
  */
-static Bitmapset *
-find_unaggregated_cols(AggState *aggstate)
+static void
+find_cols(AggState *aggstate, Bitmapset **aggregated, Bitmapset **unaggregated)
 {
-	Agg		   *node = (Agg *) aggstate->ss.ps.plan;
-	Bitmapset  *colnos;
+	Agg *agg = (Agg *) aggstate->ss.ps.plan;
+	FindColsContext context;
 
-	colnos = NULL;
-	(void) find_unaggregated_cols_walker((Node *) node->plan.targetlist,
-										 &colnos);
-	(void) find_unaggregated_cols_walker((Node *) node->plan.qual,
-										 &colnos);
-	return colnos;
+	context.is_aggref = false;
+	context.aggregated = NULL;
+	context.unaggregated = NULL;
+
+	/* Examine tlist and quals */
+	(void) find_cols_walker((Node *) agg->plan.targetlist, &context);
+	(void) find_cols_walker((Node *) agg->plan.qual, &context);
+
+	/* In some cases, grouping columns will not appear in the tlist */
+	for (int i = 0; i < agg->numCols; i++)
+		context.unaggregated = bms_add_member(context.unaggregated,
+											  agg->grpColIdx[i]);
+
+	*aggregated = context.aggregated;
+	*unaggregated = context.unaggregated;
 }
 
 static bool
-find_unaggregated_cols_walker(Node *node, Bitmapset **colnos)
+find_cols_walker(Node *node, FindColsContext *context)
 {
 	if (node == NULL)
 		return false;
@@ -1453,16 +1485,24 @@ find_unaggregated_cols_walker(Node *node, Bitmapset **colnos)
 		/* setrefs.c should have set the varno to OUTER_VAR */
 		Assert(var->varno == OUTER_VAR);
 		Assert(var->varlevelsup == 0);
-		*colnos = bms_add_member(*colnos, var->varattno);
+		if (context->is_aggref)
+			context->aggregated = bms_add_member(context->aggregated,
+												 var->varattno);
+		else
+			context->unaggregated = bms_add_member(context->unaggregated,
+												   var->varattno);
 		return false;
 	}
-	if (IsA(node, Aggref) || IsA(node, GroupingFunc))
+	if (IsA(node, Aggref))
 	{
-		/* do not descend into aggregate exprs */
+		Assert(!context->is_aggref);
+		context->is_aggref = true;
+		expression_tree_walker(node, find_cols_walker, (void *) context);
+		context->is_aggref = false;
 		return false;
 	}
-	return expression_tree_walker(node, find_unaggregated_cols_walker,
-								  (void *) colnos);
+	return expression_tree_walker(node, find_cols_walker,
+								  (void *) context);
 }
 
 /*
@@ -1580,13 +1620,27 @@ static void
 find_hash_columns(AggState *aggstate)
 {
 	Bitmapset  *base_colnos;
+	Bitmapset  *aggregated_colnos;
+	TupleDesc	scanDesc = aggstate->ss.ss_ScanTupleSlot->tts_tupleDescriptor;
 	List	   *outerTlist = outerPlanState(aggstate)->plan->targetlist;
 	int			numHashes = aggstate->num_hashes;
 	EState	   *estate = aggstate->ss.ps.state;
 	int			j;
 
 	/* Find Vars that will be needed in tlist and qual */
-	base_colnos = find_unaggregated_cols(aggstate);
+	find_cols(aggstate, &aggregated_colnos, &base_colnos);
+	aggstate->colnos_needed = bms_union(base_colnos, aggregated_colnos);
+	aggstate->max_colno_needed = 0;
+	aggstate->all_cols_needed = true;
+
+	for (int i = 0; i < scanDesc->natts; i++)
+	{
+		int colno = i + 1;
+		if (bms_is_member(colno, aggstate->colnos_needed))
+			aggstate->max_colno_needed = colno;
+		else
+			aggstate->all_cols_needed = false;
+	}
 
 	for (j = 0; j < numHashes; ++j)
 	{
@@ -1755,12 +1809,18 @@ hashagg_recompile_expressions(AggState *aggstate, bool minslot, bool nullcheck)
 
 	if (phase->evaltrans_cache[i][j] == NULL)
 	{
-		const TupleTableSlotOps *outerops	= aggstate->ss.ps.outerops;
-		bool					 outerfixed = aggstate->ss.ps.outeropsfixed;
-		bool					 dohash		= true;
-		bool					 dosort;
+		const TupleTableSlotOps *outerops = aggstate->ss.ps.outerops;
+		bool		outerfixed = aggstate->ss.ps.outeropsfixed;
+		bool		dohash = true;
+		bool		dosort = false;
 
-		dosort = aggstate->aggstrategy == AGG_MIXED ? true : false;
+		/*
+		 * If minslot is true, that means we are processing a spilled batch
+		 * (inside agg_refill_hash_table()), and we must not advance the
+		 * sorted grouping sets.
+		 */
+		if (aggstate->aggstrategy == AGG_MIXED && !minslot)
+			dosort = true;
 
 		/* temporarily change the outerops while compiling the expression */
 		if (minslot)
@@ -1790,7 +1850,7 @@ hashagg_recompile_expressions(AggState *aggstate, bool minslot, bool nullcheck)
  * substantially larger than the initial value.
  */
 void
-hash_agg_set_limits(AggState *aggstate, double hashentrysize, uint64 input_groups, int used_bits,
+hash_agg_set_limits(AggState *aggstate, double hashentrysize, double input_groups, int used_bits,
 					Size *mem_limit, uint64 *ngroups_limit,
 					int *num_partitions)
 {
@@ -1859,18 +1919,18 @@ hash_agg_set_limits(AggState *aggstate, double hashentrysize, uint64 input_group
 static void
 hash_agg_check_limits(AggState *aggstate)
 {
-	uint64 ngroups = aggstate->hash_ngroups_current;
-	Size meta_mem = MemoryContextMemAllocated(
-		aggstate->hash_metacxt, true);
-	Size hash_mem = MemoryContextMemAllocated(
-		aggstate->hashcontext->ecxt_per_tuple_memory, true);
+	uint64		ngroups = aggstate->hash_ngroups_current;
+	Size		meta_mem = MemoryContextMemAllocated(aggstate->hash_metacxt,
+													 true);
+	Size		hashkey_mem = MemoryContextMemAllocated(aggstate->hashcontext->ecxt_per_tuple_memory,
+														true);
 
 	/*
 	 * Don't spill unless there's at least one group in the hash table so we
 	 * can be sure to make progress even in edge cases.
 	 */
 	if (aggstate->hash_ngroups_current > 0 &&
-		(meta_mem + hash_mem > aggstate->hash_mem_limit ||
+		(meta_mem + hashkey_mem > aggstate->hash_mem_limit ||
 		 ngroups > aggstate->hash_ngroups_limit))
 	{
 		hash_agg_enter_spill_mode(aggstate);
@@ -1933,10 +1993,10 @@ hash_agg_enter_spill_mode(AggState *aggstate)
 static void
 hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 {
-	Size	meta_mem;
-	Size	hash_mem;
-	Size	buffer_mem;
-	Size	total_mem;
+	Size		meta_mem;
+	Size		hashkey_mem;
+	Size		buffer_mem;
+	Size		total_mem;
 
 	if (aggstate->aggstrategy != AGG_MIXED &&
 		aggstate->aggstrategy != AGG_HASHED)
@@ -1946,8 +2006,7 @@ hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 	meta_mem = MemoryContextMemAllocated(aggstate->hash_metacxt, true);
 
 	/* memory for the group keys and transition states */
-	hash_mem = MemoryContextMemAllocated(
-		aggstate->hashcontext->ecxt_per_tuple_memory, true);
+	hashkey_mem = MemoryContextMemAllocated(aggstate->hashcontext->ecxt_per_tuple_memory, true);
 
 	/* memory for read/write tape buffers, if spilled */
 	buffer_mem = npartitions * HASHAGG_WRITE_BUFFER_SIZE;
@@ -1955,7 +2014,7 @@ hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 		buffer_mem += HASHAGG_READ_BUFFER_SIZE;
 
 	/* update peak mem */
-	total_mem = meta_mem + hash_mem + buffer_mem;
+	total_mem = meta_mem + hashkey_mem + buffer_mem;
 	if (total_mem > aggstate->hash_mem_peak)
 		aggstate->hash_mem_peak = total_mem;
 
@@ -1974,7 +2033,7 @@ hash_agg_update_metrics(AggState *aggstate, bool from_tape, int npartitions)
 	{
 		aggstate->hashentrysize =
 			sizeof(TupleHashEntryData) +
-			(hash_mem / (double)aggstate->hash_ngroups_current);
+			(hashkey_mem / (double) aggstate->hash_ngroups_current);
 	}
 
 	if (aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
@@ -2014,7 +2073,7 @@ hash_choose_num_buckets(double hashentrysize, long ngroups, Size memory)
  * *log2_npartitions to the log2() of the number of partitions.
  */
 static int
-hash_choose_num_partitions(AggState *aggstate, uint64 input_groups, double hashentrysize,
+hash_choose_num_partitions(AggState *aggstate, double input_groups, double hashentrysize,
 						   int used_bits, int *log2_npartitions)
 {
 	Size	mem_wanted;
@@ -2068,83 +2127,39 @@ hash_choose_num_partitions(AggState *aggstate, uint64 input_groups, double hashe
 }
 
 /*
- * Find or create a hashtable entry for the tuple group containing the current
- * tuple (already set in tmpcontext's outertuple slot), in the current grouping
- * set (which the caller must have selected - note that initialize_aggregate
- * depends on this).
- *
- * When called, CurrentMemoryContext should be the per-query context. The
- * already-calculated hash value for the tuple must be specified.
- *
- * If in "spill mode", then only find existing hashtable entries; don't create
- * new ones. If a tuple's group is not already present in the hash table for
- * the current grouping set, assign *in_hash_table=false and the caller will
- * spill it to disk.
+ * Initialize a freshly-created TupleHashEntry.
  */
-static AggStatePerGroup
-lookup_hash_entry(AggState *aggstate, uint32 hash, bool *in_hash_table)
+static void
+initialize_hash_entry(AggState *aggstate, TupleHashTable hashtable,
+					  TupleHashEntry entry)
 {
-	AggStatePerHash perhash = &aggstate->perhash[aggstate->current_set];
-	TupleTableSlot *hashslot = perhash->hashslot;
-	TupleHashEntryData *entry;
-	bool			isnew = false;
-	bool		   *p_isnew;
+	AggStatePerGroup pergroup;
+	int			transno;
 
-	/* if hash table already spilled, don't create new entries */
-	/* or the hash table is filled on the streaming mode */
-	p_isnew = (aggstate->hash_spill_mode || (aggstate->streaming && aggstate->table_filled)) ? NULL : &isnew;
+	aggstate->hash_ngroups_current++;
+	hash_agg_check_limits(aggstate);
 
-	/* find or create the hashtable entry using the filtered tuple */
-	entry = LookupTupleHashEntryHash(perhash->hashtable, hashslot, p_isnew,
-									 hash);
+	/* no need to allocate or initialize per-group state */
+	if (aggstate->numtrans == 0)
+		return;
 
-	if (entry == NULL)
+	pergroup = (AggStatePerGroup)
+		MemoryContextAlloc(hashtable->tablecxt,
+						   sizeof(AggStatePerGroupData) * aggstate->numtrans);
+
+	entry->additional = pergroup;
+
+	/*
+	 * Initialize aggregates for new tuple group, lookup_hash_entries()
+	 * already has selected the relevant grouping set.
+	 */
+	for (transno = 0; transno < aggstate->numtrans; transno++)
 	{
-		*in_hash_table = false;
-		return NULL;
+		AggStatePerTrans pertrans = &aggstate->pertrans[transno];
+		AggStatePerGroup pergroupstate = &pergroup[transno];
+
+		initialize_aggregate(aggstate, pertrans, pergroupstate);
 	}
-	else
-		*in_hash_table = true;
-
-	if (isnew)
-	{
-		AggStatePerGroup	pergroup;
-		int					transno;
-
-		aggstate->hash_ngroups_current++;
-		hash_agg_check_limits(aggstate);
-
-		/* no need to allocate or initialize per-group state */
-		if (aggstate->numtrans == 0)
-			return NULL;
-
-		pergroup = (AggStatePerGroup)
-			MemoryContextAlloc(perhash->hashtable->tablecxt,
-							   sizeof(AggStatePerGroupData) * aggstate->numtrans);
-
-		entry->additional = pergroup;
-
-		/*
-		 * Initialize aggregates for new tuple group, lookup_hash_entries()
-		 * already has selected the relevant grouping set.
-		 */
-		for (transno = 0; transno < aggstate->numtrans; transno++)
-		{
-			AggStatePerTrans pertrans = &aggstate->pertrans[transno];
-			AggStatePerGroup pergroupstate = &pergroup[transno];
-
-			initialize_aggregate(aggstate, pertrans, pergroupstate);
-		}
-	}
-
-#ifdef FAULT_INJECTOR
-	/* Fault inject to force the hash table streaming for testing purpose */
-	if (SIMPLE_FAULT_INJECTOR("force_hashagg_stream_hashtable") == FaultInjectorTypeSkip)
-		if (aggstate->streaming)
-			hash_agg_enter_spill_mode(aggstate);
-#endif
-
-	return entry->additional;
 }
 
 /*
@@ -2169,21 +2184,46 @@ static void
 lookup_hash_entries(AggState *aggstate)
 {
 	AggStatePerGroup *pergroup = aggstate->hash_pergroup;
+	TupleTableSlot *outerslot = aggstate->tmpcontext->ecxt_outertuple;
 	int			setno;
 
 	for (setno = 0; setno < aggstate->num_hashes; setno++)
 	{
-		AggStatePerHash	perhash = &aggstate->perhash[setno];
-		uint32			hash;
-		bool			in_hash_table;
+		AggStatePerHash perhash = &aggstate->perhash[setno];
+		TupleHashTable hashtable = perhash->hashtable;
+		TupleTableSlot *hashslot = perhash->hashslot;
+		TupleHashEntry entry;
+		uint32		hash;
+		bool		isnew = false;
+		bool	   *p_isnew;
+
+		/* if hash table already spilled, don't create new entries */
+		/* or the hash table is filled on the streaming mode */
+		p_isnew = (aggstate->hash_spill_mode || (aggstate->streaming && aggstate->table_filled)) ? NULL : &isnew;
 
 		select_current_set(aggstate, setno, true);
-		prepare_hash_slot(aggstate);
-		hash = TupleHashTableHash(perhash->hashtable, perhash->hashslot);
-		pergroup[setno] = lookup_hash_entry(aggstate, hash, &in_hash_table);
+		prepare_hash_slot(perhash,
+						  outerslot,
+						  hashslot);
 
-		/* check to see if we need to spill the tuple for this grouping set */
-		if (!in_hash_table && !aggstate->streaming)
+		entry = LookupTupleHashEntry(hashtable, hashslot,
+									 p_isnew, &hash);
+
+		if (entry != NULL)
+		{
+			if (isnew)
+				initialize_hash_entry(aggstate, hashtable, entry);
+
+#ifdef FAULT_INJECTOR
+			/* Fault inject to force the hash table streaming for testing purpose */
+			if (SIMPLE_FAULT_INJECTOR("force_hashagg_stream_hashtable") == FaultInjectorTypeSkip)
+				if (aggstate->streaming)
+					hash_agg_enter_spill_mode(aggstate);
+#endif
+
+			pergroup[setno] = entry->additional;
+		}
+		else if (!aggstate->streaming)
 		{
 			HashAggSpill	*spill	 = &aggstate->hash_spills[setno];
 			TupleTableSlot	*slot	 = aggstate->tmpcontext->ecxt_outertuple;
@@ -2193,7 +2233,8 @@ lookup_hash_entries(AggState *aggstate)
 								   perhash->aggnode->numGroups,
 								   aggstate->hashentrysize);
 
-			hashagg_spill_tuple(spill, slot, hash);
+			hashagg_spill_tuple(aggstate, spill, slot, hash);
+			pergroup[setno] = NULL;
 		}
 	}
 }
@@ -2671,11 +2712,11 @@ agg_fill_hash_table(AggState *aggstate)
 static bool
 agg_refill_hash_table(AggState *aggstate)
 {
-	HashAggBatch	*batch;
-	HashAggSpill	 spill;
-	HashTapeInfo	*tapeinfo = aggstate->hash_tapeinfo;
-	uint64			 ngroups_estimate;
-	bool			 spill_initialized = false;
+	HashAggBatch *batch;
+	AggStatePerHash perhash;
+	HashAggSpill spill;
+	HashTapeInfo *tapeinfo = aggstate->hash_tapeinfo;
+	bool		spill_initialized = false;
 
 	if (aggstate->hash_batches == NIL)
 		return false;
@@ -2683,24 +2724,19 @@ agg_refill_hash_table(AggState *aggstate)
 	batch = linitial(aggstate->hash_batches);
 	aggstate->hash_batches = list_delete_first(aggstate->hash_batches);
 
-	/*
-	 * Estimate the number of groups for this batch as the total number of
-	 * tuples in its input file. Although that's a worst case, it's not bad
-	 * here for two reasons: (1) overestimating is better than
-	 * underestimating; and (2) we've already scanned the relation once, so
-	 * it's likely that we've already finalized many of the common values.
-	 */
-	ngroups_estimate = batch->input_tuples;
-
-	hash_agg_set_limits(aggstate, aggstate->hashentrysize, ngroups_estimate,
+	hash_agg_set_limits(aggstate, aggstate->hashentrysize, batch->input_card,
 						batch->used_bits, &aggstate->hash_mem_limit,
 						&aggstate->hash_ngroups_limit, NULL);
 
-	/* there could be residual pergroup pointers; clear them */
-	for (int setoff = 0;
-		 setoff < aggstate->maxsets + aggstate->num_hashes;
-		 setoff++)
-		aggstate->all_pergroups[setoff] = NULL;
+	/*
+	 * Each batch only processes one grouping set; set the rest to NULL so
+	 * that advance_aggregates() knows to ignore them. We don't touch
+	 * pergroups for sorted grouping sets here, because they will be needed if
+	 * we rescan later. The expressions for sorted grouping sets will not be
+	 * evaluated after we recompile anyway.
+	 */
+	MemSet(aggstate->hash_pergroup, 0,
+		   sizeof(AggStatePerGroup) * aggstate->num_hashes);
 
 	/* free memory and reset hash tables */
 	ReScanExprContext(aggstate->hashcontext);
@@ -2723,6 +2759,8 @@ agg_refill_hash_table(AggState *aggstate)
 
 	select_current_set(aggstate, batch->setno, true);
 
+	perhash = &aggstate->perhash[aggstate->current_set];
+
 	/*
 	 * Spilled tuples are always read back as MinimalTuples, which may be
 	 * different from the outer plan, so recompile the aggregate expressions.
@@ -2732,13 +2770,15 @@ agg_refill_hash_table(AggState *aggstate)
 	 */
 	hashagg_recompile_expressions(aggstate, true, true);
 
-	LogicalTapeRewindForRead(tapeinfo->tapeset, batch->input_tapenum,
-							 HASHAGG_READ_BUFFER_SIZE);
-	for (;;) {
-		TupleTableSlot	*slot = aggstate->hash_spill_slot;
-		MinimalTuple	 tuple;
-		uint32			 hash;
-		bool			 in_hash_table;
+	for (;;)
+	{
+		TupleTableSlot *spillslot = aggstate->hash_spill_rslot;
+		TupleTableSlot *hashslot = perhash->hashslot;
+		TupleHashEntry entry;
+		MinimalTuple tuple;
+		uint32		hash;
+		bool		isnew = false;
+		bool	   *p_isnew = aggstate->hash_spill_mode ? NULL : &isnew;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -2746,16 +2786,20 @@ agg_refill_hash_table(AggState *aggstate)
 		if (tuple == NULL)
 			break;
 
-		ExecStoreMinimalTuple(tuple, slot, true);
-		aggstate->tmpcontext->ecxt_outertuple = slot;
+		ExecStoreMinimalTuple(tuple, spillslot, true);
+		aggstate->tmpcontext->ecxt_outertuple = spillslot;
 
-		prepare_hash_slot(aggstate);
-		aggstate->hash_pergroup[batch->setno] = lookup_hash_entry(
-			aggstate, hash, &in_hash_table);
+		prepare_hash_slot(perhash,
+						  aggstate->tmpcontext->ecxt_outertuple,
+						  hashslot);
+		entry = LookupTupleHashEntryHash(
+										 perhash->hashtable, hashslot, p_isnew, hash);
 
-		if (in_hash_table)
+		if (entry != NULL)
 		{
-			/* Advance the aggregates (or combine functions) */
+			if (isnew)
+				initialize_hash_entry(aggstate, perhash->hashtable, entry);
+			aggstate->hash_pergroup[batch->setno] = entry->additional;
 			advance_aggregates(aggstate);
 		}
 		else
@@ -2768,10 +2812,12 @@ agg_refill_hash_table(AggState *aggstate)
 				 */
 				spill_initialized = true;
 				hashagg_spill_init(aggstate, &spill, tapeinfo, batch->used_bits,
-					   ngroups_estimate, aggstate->hashentrysize);
+								   batch->input_card, aggstate->hashentrysize);
 			}
 			/* no memory for a new group, spill */
-			hashagg_spill_tuple(&spill, slot, hash);
+			hashagg_spill_tuple(aggstate, &spill, spillslot, hash);
+
+			aggstate->hash_pergroup[batch->setno] = NULL;
 		}
 
 		/*
@@ -2789,8 +2835,8 @@ agg_refill_hash_table(AggState *aggstate)
 
 	if (spill_initialized)
 	{
-		hash_agg_update_metrics(aggstate, true, spill.npartitions);
 		hashagg_spill_finish(aggstate, &spill, batch->setno);
+		hash_agg_update_metrics(aggstate, true, spill.npartitions);
 	}
 	else
 		hash_agg_update_metrics(aggstate, true, 0);
@@ -3002,7 +3048,7 @@ hashagg_tapeinfo_init(AggState *aggstate)
 	HashTapeInfo	*tapeinfo	= palloc(sizeof(HashTapeInfo));
 	int				 init_tapes = 16;	/* expanded dynamically */
 
-	tapeinfo->tapeset = LogicalTapeSetCreate(init_tapes, NULL, NULL, -1);
+	tapeinfo->tapeset = LogicalTapeSetCreate(init_tapes, true, NULL, NULL, -1);
 	tapeinfo->ntapes = init_tapes;
 	tapeinfo->nfreetapes = init_tapes;
 	tapeinfo->freetapes_alloc = init_tapes;
@@ -3058,6 +3104,7 @@ hashagg_tapeinfo_assign(HashTapeInfo *tapeinfo, int *partitions,
 static void
 hashagg_tapeinfo_release(HashTapeInfo *tapeinfo, int tapenum)
 {
+	/* rewinding frees the buffer while not in use */
 	LogicalTapeRewindForWrite(tapeinfo->tapeset, tapenum);
 	if (tapeinfo->freetapes_alloc == tapeinfo->nfreetapes)
 	{
@@ -3076,7 +3123,7 @@ hashagg_tapeinfo_release(HashTapeInfo *tapeinfo, int tapenum)
  */
 static void
 hashagg_spill_init(AggState *aggstate, HashAggSpill *spill, HashTapeInfo *tapeinfo, int used_bits,
-				   uint64 input_groups, double hashentrysize)
+				   double input_groups, double hashentrysize)
 {
 	int		npartitions;
 	int     partition_bits;
@@ -3086,6 +3133,7 @@ hashagg_spill_init(AggState *aggstate, HashAggSpill *spill, HashTapeInfo *tapein
 
 	spill->partitions = palloc0(sizeof(int) * npartitions);
 	spill->ntuples = palloc0(sizeof(int64) * npartitions);
+	spill->hll_card = palloc0(sizeof(hyperLogLogState) * npartitions);
 
 	hashagg_tapeinfo_assign(tapeinfo, spill->partitions, npartitions);
 
@@ -3093,6 +3141,9 @@ hashagg_spill_init(AggState *aggstate, HashAggSpill *spill, HashTapeInfo *tapein
 	spill->shift = 32 - used_bits - partition_bits;
 	spill->mask = (npartitions - 1) << spill->shift;
 	spill->npartitions = npartitions;
+
+	for (int i = 0; i < npartitions; i++)
+		initHyperLogLog(&spill->hll_card[i], HASHAGG_HLL_BIT_WIDTH);
 }
 
 /*
@@ -3102,22 +3153,51 @@ hashagg_spill_init(AggState *aggstate, HashAggSpill *spill, HashTapeInfo *tapein
  * partition.
  */
 static Size
-hashagg_spill_tuple(HashAggSpill *spill, TupleTableSlot *slot, uint32 hash)
+hashagg_spill_tuple(AggState *aggstate, HashAggSpill *spill,
+					TupleTableSlot *inputslot, uint32 hash)
 {
-	LogicalTapeSet		*tapeset = spill->tapeset;
-	int					 partition;
-	MinimalTuple		 tuple;
-	int					 tapenum;
-	int					 total_written = 0;
-	bool				 shouldFree;
+	LogicalTapeSet *tapeset = spill->tapeset;
+	TupleTableSlot *spillslot;
+	int			partition;
+	MinimalTuple tuple;
+	int			tapenum;
+	int			total_written = 0;
+	bool		shouldFree;
 
 	Assert(spill->partitions != NULL);
 
-	/* XXX: may contain unnecessary attributes, should project */
-	tuple = ExecFetchSlotMinimalTuple(slot, &shouldFree);
+	/* spill only attributes that we actually need */
+	if (!aggstate->all_cols_needed)
+	{
+		spillslot = aggstate->hash_spill_wslot;
+		slot_getsomeattrs(inputslot, aggstate->max_colno_needed);
+		ExecClearTuple(spillslot);
+		for (int i = 0; i < spillslot->tts_tupleDescriptor->natts; i++)
+		{
+			if (bms_is_member(i + 1, aggstate->colnos_needed))
+			{
+				spillslot->tts_values[i] = inputslot->tts_values[i];
+				spillslot->tts_isnull[i] = inputslot->tts_isnull[i];
+			}
+			else
+				spillslot->tts_isnull[i] = true;
+		}
+		ExecStoreVirtualTuple(spillslot);
+	}
+	else
+		spillslot = inputslot;
+
+	tuple = ExecFetchSlotMinimalTuple(spillslot, &shouldFree);
 
 	partition = (hash & spill->mask) >> spill->shift;
 	spill->ntuples[partition]++;
+
+	/*
+	 * All hash values destined for a given partition have some bits in
+	 * common, which causes bad HLL cardinality estimates. Hash the hash to
+	 * get a more uniform distribution.
+	 */
+	addHyperLogLog(&spill->hll_card[partition], hash_bytes_uint32(hash));
 
 	tapenum = spill->partitions[partition];
 
@@ -3141,7 +3221,7 @@ hashagg_spill_tuple(HashAggSpill *spill, TupleTableSlot *slot, uint32 hash)
  */
 static HashAggBatch *
 hashagg_batch_new(LogicalTapeSet *tapeset, int tapenum, int setno,
-				  int64 input_tuples, int used_bits)
+				  int64 input_tuples, double input_card, int used_bits)
 {
 	HashAggBatch *batch = palloc0(sizeof(HashAggBatch));
 
@@ -3150,6 +3230,7 @@ hashagg_batch_new(LogicalTapeSet *tapeset, int tapenum, int setno,
 	batch->tapeset = tapeset;
 	batch->input_tapenum = tapenum;
 	batch->input_tuples = input_tuples;
+	batch->input_card = input_card;
 
 	return batch;
 }
@@ -3252,21 +3333,31 @@ hashagg_spill_finish(AggState *aggstate, HashAggSpill *spill, int setno)
 
 	for (i = 0; i < spill->npartitions; i++)
 	{
+		LogicalTapeSet	*tapeset = aggstate->hash_tapeinfo->tapeset;
 		int				 tapenum = spill->partitions[i];
-		HashAggBatch    *new_batch;
+		HashAggBatch	*new_batch;
+		double			 cardinality;
 
 		/* if the partition is empty, don't create a new batch of work */
 		if (spill->ntuples[i] == 0)
 			continue;
 
-		new_batch = hashagg_batch_new(aggstate->hash_tapeinfo->tapeset,
-									  tapenum, setno, spill->ntuples[i],
+		cardinality = estimateHyperLogLog(&spill->hll_card[i]);
+		freeHyperLogLog(&spill->hll_card[i]);
+
+		/* rewinding frees the buffer while not in use */
+		LogicalTapeRewindForRead(tapeset, tapenum,
+								 HASHAGG_READ_BUFFER_SIZE);
+
+		new_batch = hashagg_batch_new(tapeset, tapenum, setno,
+									  spill->ntuples[i], cardinality,
 									  used_bits);
 		aggstate->hash_batches = lcons(new_batch, aggstate->hash_batches);
 		aggstate->hash_batches_used++;
 	}
 
 	pfree(spill->ntuples);
+	pfree(spill->hll_card);
 	pfree(spill->partitions);
 }
 
@@ -3755,12 +3846,13 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		uint64	totalGroups = 0;
 		int 	i;
 
-		aggstate->hash_metacxt = AllocSetContextCreate(
-			aggstate->ss.ps.state->es_query_cxt,
-			"HashAgg meta context",
-			ALLOCSET_DEFAULT_SIZES);
-		aggstate->hash_spill_slot = ExecInitExtraTupleSlot(
-			estate, scanDesc, &TTSOpsMinimalTuple);
+		aggstate->hash_metacxt = AllocSetContextCreate(aggstate->ss.ps.state->es_query_cxt,
+													   "HashAgg meta context",
+													   ALLOCSET_DEFAULT_SIZES);
+		aggstate->hash_spill_rslot = ExecInitExtraTupleSlot(estate, scanDesc,
+															&TTSOpsMinimalTuple);
+		aggstate->hash_spill_wslot = ExecInitExtraTupleSlot(estate, scanDesc,
+															&TTSOpsVirtual);
 
 		/* this is an array of pointers, not structures */
 		aggstate->hash_pergroup = pergroups;

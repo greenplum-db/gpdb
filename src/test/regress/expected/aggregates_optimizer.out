@@ -1306,16 +1306,17 @@ group by t1.a,t1.b,t1.c,t1.d,t2.x,t2.z;
 (7 rows)
 
 -- Cannot optimize when PK is deferrable
--- start_ignore
--- GPDB_96_MERGE_FIXME: ORCA does it anyway.
--- end_ignore
 explain (costs off) select * from t3 group by a,b,c;
-                      QUERY PLAN                      
-------------------------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on t3
- Optimizer: Pivotal Optimizer (GPORCA) version 3.78.0
-(3 rows)
+   ->  GroupAggregate
+         Group Key: a, b, c
+         ->  Sort
+               Sort Key: a, b, c
+               ->  Seq Scan on t3
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 create temp table t1c () inherits (t1);
 NOTICE:  table has parent, setting distribution columns to match parent table
@@ -3007,6 +3008,7 @@ create aggregate my_half_sum(int4)
    sfunc = sum_transfn,
    finalfunc = halfsum_finalfn
 );
+discard plans;
 -- Agg state should be shared even though my_sum has no finalfn
 select my_sum(one),my_half_sum(one) from (values(1),(2),(3),(4)) t(one);
 INFO:  GPORCA failed to produce a plan, falling back to planner

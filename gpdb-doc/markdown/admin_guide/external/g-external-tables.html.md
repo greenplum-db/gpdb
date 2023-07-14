@@ -31,7 +31,7 @@ The steps for using external tables are:
     To use the `pxf` or `s3` protocol, you must also configure Greenplum Database and enable the protocol. See [pxf:// Protocol](g-pxf-protocol.html) or [s3:// Protocol](g-s3-protocol.html).
 
 2.  Do one of the following:
-    -   Start the Greenplum Database file server\(s\) when using the `gpfdist` or `gpdists` protocols.
+    -   Start the Greenplum Database file server\(s\) when using the `gpfdist` or `gpfdists` protocols.
     -   Verify the configuration for the PXF service and start the service.
     -   Verify the Greenplum Database configuration for the `s3` protocol.
 3.  Place the data files in the correct locations.

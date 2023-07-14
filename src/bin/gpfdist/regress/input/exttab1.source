@@ -464,6 +464,7 @@ drop external table bad_location2;
 -- CREATE (including LIKE, DISTRIBUTED BY)
 --
 -- positive
+set writable_external_table_bufsize = 131072;
 create writable external table wet_pos1(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text';
 \d wet_pos1
 create writable external table wet_pos2(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(b);
@@ -488,6 +489,7 @@ COPY wet_region FROM STDIN DELIMITER '|';
 \.
 INSERT INTO wet_region VALUES(4,'MIDDLE EAST','uickly special');
 -- Check error correctness, if trying to insert too long row
+-- Since the resumable download feature has been added to gpfdist, a too long row will not trigger error.
 INSERT INTO wet_pos1(a)
 SELECT string_agg(md5(random()::text), '') from generate_series(1,1100);
 --

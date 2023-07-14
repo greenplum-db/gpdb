@@ -94,14 +94,29 @@ CREATE FOREIGN TABLE gp_ft1 (
 	f3 text
 ) SERVER loopback OPTIONS (schema_name 'postgres_fdw_gp', table_name 'GP 1', mpp_execute 'all segments');
 
+CREATE FOREIGN TABLE gp_ft2 ( f1 int ) SERVER loopback OPTIONS (num_segments '3');
+
 -- ===================================================================
 -- validate parallel writes (mpp_execute set to all segments)
 -- ===================================================================
 
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
 INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
 SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
 TRUNCATE TABLE postgres_fdw_gp."GP 1";
+
+\c
+set search_path=postgres_fdw_gp;
+alter server loopback options(add num_segments '2');
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+alter server loopback options(drop num_segments);
+\c
+set search_path=postgres_fdw_gp;
 
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
 INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
@@ -293,3 +308,8 @@ insert into part_mixed_dpe select 6,6 from generate_series(1,10);
 analyze part_mixed_dpe;
 explain select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
 select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
+
+-- compare difference plans among when mpp_execute set to 'all segments', 'coordinator' and 'any'
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_all where gp_all.a > 10);
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any where gp_any.a > 10);
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);

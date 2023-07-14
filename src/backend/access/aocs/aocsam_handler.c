@@ -1902,7 +1902,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 		 */
 		bool	*proj;
 		int		relnatts = RelationGetNumberOfAttributes(heapRelation);
-		AppendOnlyBlockDirectoryEntry dirEntry = {0};
+		AppendOnlyBlockDirectoryEntry dirEntry = {{0}};
 
 		/* The range is contained within one seg. */
 		Assert(AOSegmentGet_segno(start_blockno) ==

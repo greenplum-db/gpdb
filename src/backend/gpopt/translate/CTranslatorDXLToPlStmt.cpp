@@ -4296,10 +4296,17 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 
 	List *oids_list = NIL;
 
+	const CDXLTableDescr *dxl_table_descr =
+		dyn_tbl_scan_dxlop->GetDXLTableDescr();
+	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
+
 	for (ULONG ul = 0; ul < parts->Size(); ul++)
 	{
 		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
 		oids_list = gpdb::LAppendOid(oids_list, part);
+		// Since parser locks only root partition, locking the leaf
+		// partitions which we have to scan.
+		gpdb::GPDBLockRelationOid(part, dxl_table_descr->LockMode());
 	}
 
 	dyn_seq_scan->partOids = oids_list;
@@ -4380,10 +4387,15 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 
 	List *oids_list = NIL;
 
+	GPOS_ASSERT(table_desc->LockMode() != -1);
+
 	for (ULONG ul = 0; ul < parts->Size(); ul++)
 	{
 		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
 		oids_list = gpdb::LAppendOid(oids_list, part);
+		// Since parser locks only root partition, locking the leaf
+		// partitions which we have to scan.
+		gpdb::GPDBLockRelationOid(part, table_desc->LockMode());
 	}
 
 	dyn_idx_scan->partOids = oids_list;
@@ -5390,7 +5402,16 @@ List *
 CTranslatorDXLToPlStmt::CreateTargetListWithNullsForDroppedCols(
 	List *target_list, const IMDRelation *md_rel)
 {
-	GPOS_ASSERT(nullptr != target_list);
+	// There are cases where target list can be null
+	// Eg. insert rows with no columns into a table with no columns
+	//
+	// create table foo();
+	// insert into foo default values;
+	if (nullptr == target_list)
+	{
+		return nullptr;
+	}
+
 	GPOS_ASSERT(gpdb::ListLength(target_list) <= md_rel->ColumnCount());
 
 	List *result_list = NIL;

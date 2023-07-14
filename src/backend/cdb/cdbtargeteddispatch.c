@@ -52,8 +52,6 @@
 #define GP_SEGMENTID_TYPCOLL 0
 #define GP_SEGMENTID_OPFAMILY 1977	/* integer_ops */
 
-static char *gp_test_options = "";
-
 /* PRINT_DISPATCH_DECISIONS_STRING; */
 
 /**
@@ -386,55 +384,6 @@ MergeDirectDispatchCalculationInfo(DirectDispatchInfo *to, DirectDispatchInfo *f
 	}
 
 	to->haveProcessedAnyCalculations = true;
-}
-
-/**
- * returns true if we should print test messages.  Note for clients: for multi-slice queries then messages will print in
- *   the order of processing which may not always be deterministic (single joins can be rearranged by the planner,
- *   for example).
- */
-static bool
-ShouldPrintTestMessages()
-{
-	return gp_test_options && strstr(gp_test_options, PRINT_DISPATCH_DECISIONS_STRING) != NULL;
-}
-
-void
-FinalizeDirectDispatchDataForSlice(PlanSlice *slice)
-{
-	DirectDispatchInfo *dd = &slice->directDispatch;
-
-	if (dd->haveProcessedAnyCalculations)
-	{
-		if (dd->isDirectDispatch)
-		{
-			if (dd->contentIds == NULL)
-			{
-				int			random_segno;
-
-				random_segno = cdbhashrandomseg(getgpsegmentCount());
-				dd->contentIds = list_make1_int(random_segno);
-				if (ShouldPrintTestMessages())
-					elog(INFO, "DDCR learned no content dispatch is required");
-			}
-			else
-			{
-				if (ShouldPrintTestMessages())
-					elog(INFO, "DDCR learned dispatch to content %d", linitial_int(dd->contentIds));
-			}
-		}
-		else
-		{
-			if (ShouldPrintTestMessages())
-				elog(INFO, "DDCR learned full dispatch is required");
-		}
-	}
-	else
-	{
-		if (ShouldPrintTestMessages())
-			elog(INFO, "DDCR learned no information: default to full dispatch");
-		dd->isDirectDispatch = false;
-	}
 }
 
 void

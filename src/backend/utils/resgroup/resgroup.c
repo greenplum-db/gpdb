@@ -38,6 +38,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "port/atomics.h"
+#include "postmaster/autovacuum.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/lmgr.h"
@@ -1493,12 +1494,14 @@ ShouldAssignResGroupOnCoordinator(void)
 	 * waiting queue (and its corruption).
 	 *
 	 * Also bypass resource group when it's exiting.
+	 * Also bypass resource group when it's vacuum worker process.
 	 */
 	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
 		Gp_role == GP_ROLE_DISPATCH &&
 		!proc_exit_inprogress &&
-		!procIsWaiting(MyProc);
+		!procIsWaiting(MyProc) &&
+		!IsAutoVacuumWorkerProcess();
 }
 
 /*

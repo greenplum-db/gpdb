@@ -85,8 +85,9 @@ def convert_insert_statement(infile, outfile):
 
 
 def parseargs():
-	parser = argparse.ArgumentParser(description=_help, version='1.0')
+	parser = argparse.ArgumentParser(description=_help)
 
+	parser.add_argument('--version', action='version', version='1.0')
 	parser.add_argument("filepath", help="Path to minirepro file")
 
 	args = parser.parse_args()

@@ -615,12 +615,12 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 		 */
 		if (slotNoNulls(slot))
 		{
-			(void) LookupTupleHashEntry(node->hashtable, slot, &isnew);
+			(void) LookupTupleHashEntry(node->hashtable, slot, &isnew, NULL);
 			node->havehashrows = true;
 		}
 		else if (node->hashnulls)
 		{
-			(void) LookupTupleHashEntry(node->hashnulls, slot, &isnew);
+			(void) LookupTupleHashEntry(node->hashnulls, slot, &isnew, NULL);
 			node->havenullrows = true;
 		}
 
@@ -1630,4 +1630,24 @@ ExecAlternativeSubPlan(AlternativeSubPlanState *node,
 										   node->subplans, node->active);
 
 	return ExecSubPlan(activesp, econtext, isNull);
+}
+
+/*
+ * Greenplum specific code.
+ * Prebuild the hash table of hash subplan to
+ * get rid of interconnect UDP deadlock.
+ */
+void
+PrefetchbuildSubPlanHash(SubPlanState *node)
+{
+	ExprContext *econtext;
+
+	Assert(node->hashtable == NULL &&
+		   node->subplan->useHashTable);
+
+	econtext = CreateExprContext(node->planstate->state);
+	ResetExprContext(econtext);
+	buildSubPlanHash(node, econtext);
+	ResetExprContext(econtext);
+	FreeExprContext(econtext, false);
 }

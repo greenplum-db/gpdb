@@ -665,9 +665,12 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 	if (rel->rd_rel->reltuples > 0)
 		return rel->rd_rel->reltuples;
 
-	inheritors = find_all_inheritors(RelationGetRelid(rel),
-									 AccessShareLock,
-									 NULL);
+	// To avoid blocking concurrent transactions on leaf partitions
+	// throughout the entire transition, we refrain from acquiring locks on
+	// the leaf partitions. Instead, we acquire locks only on the
+	// partitions that need to be scanned when ORCA writes the plan,
+	// although it may lead to less accurate stats.
+	inheritors = find_all_inheritors(RelationGetRelid(rel), NoLock, NULL);
 	totaltuples = 0;
 	foreach(lc, inheritors)
 	{
@@ -676,9 +679,14 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		double		childtuples;
 
 		if (childid != RelationGetRelid(rel))
-			childrel = try_table_open(childid, NoLock, false);
+			childrel = RelationIdGetRelation(childid);
 		else
 			childrel = rel;
+
+		// If childrel is NULL, continue by assuming the child relation
+		// has 0 tuples.
+		if (childrel == NULL)
+			continue;
 
 		childtuples = childrel->rd_rel->reltuples;
 

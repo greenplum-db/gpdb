@@ -81,9 +81,23 @@ CREATE FOREIGN TABLE gp_ft1 (
 	f2 text,
 	f3 text
 ) SERVER loopback OPTIONS (schema_name 'postgres_fdw_gp', table_name 'GP 1', mpp_execute 'all segments');
+CREATE FOREIGN TABLE gp_ft2 ( f1 int ) SERVER loopback OPTIONS (num_segments '3');
+ERROR:  invalid option "num_segments"
+HINT:  Valid options in this context are: schema_name, table_name, use_remote_estimate, updatable, fetch_size
 -- ===================================================================
 -- validate parallel writes (mpp_execute set to all segments)
 -- ===================================================================
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: f1, f2, f3
+   ->  Foreign Scan on postgres_fdw_gp.gp_ft1
+         Output: f1, f2, f3
+         Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+ Optimizer: Postgres query optimizer
+(7 rows)
+
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
              QUERY PLAN              
 -------------------------------------
@@ -111,6 +125,50 @@ SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
 (12 rows)
 
 TRUNCATE TABLE postgres_fdw_gp."GP 1";
+\c
+set search_path=postgres_fdw_gp;
+alter server loopback options(add num_segments '2');
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   Output: f1, f2, f3
+   ->  Foreign Scan on postgres_fdw_gp.gp_ft1
+         Output: f1, f2, f3
+         Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+             QUERY PLAN
+-------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+alter server loopback options(drop num_segments);
+\c
+set search_path=postgres_fdw_gp;
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
                       QUERY PLAN                      
 ------------------------------------------------------
@@ -1194,4 +1252,46 @@ select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
  8 | 8 | 8 | 8
  9 | 9 | 9 | 9
 (2 rows)
+
+-- compare difference plans among when mpp_execute set to 'all segments', 'coordinator' and 'any'
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_all where gp_all.a > 10);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Update on t1
+   ->  Hash Semi Join
+         Hash Cond: (t1.b = gp_all.a)
+         ->  Seq Scan on t1
+               Filter: (b > 10)
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Foreign Scan on gp_all
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any where gp_any.a > 10);
+                QUERY PLAN                
+------------------------------------------
+ Update on t1
+   ->  Hash Semi Join
+         Hash Cond: (t1.b = gp_any.a)
+         ->  Seq Scan on t1
+               Filter: (b > 10)
+         ->  Hash
+               ->  Foreign Scan on gp_any
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);
+                    QUERY PLAN                    
+--------------------------------------------------
+ Update on t1
+   ->  Hash Semi Join
+         Hash Cond: (t1.b = gp_coord.a)
+         ->  Seq Scan on t1
+               Filter: (b > 10)
+         ->  Hash
+               ->  Broadcast Motion 1:3  (slice1)
+                     ->  Foreign Scan on gp_coord
+ Optimizer: Postgres query optimizer
+(9 rows)
 

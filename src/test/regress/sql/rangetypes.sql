@@ -486,9 +486,6 @@ select arrayrange(ARRAY[2,1], ARRAY[1,2]);  -- fail
 select array[1,1] <@ arrayrange(array[1,2], array[2,1]);
 select array[1,3] <@ arrayrange(array[1,2], array[2,1]);
 
--- start_ignore
--- GPDB_94_MERGE_FIXME: orca can not run the test green.
-
 --
 -- Check behavior when subtype lacks a hash function
 --
@@ -500,8 +497,6 @@ set enable_sort = off;  -- try to make it pick a hash setop implementation
 select '(2,5)'::cashrange except select '(5,6)'::cashrange;
 
 reset enable_sort;
-
--- end_ignore
 
 --
 -- Ranges of composites

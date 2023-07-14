@@ -253,13 +253,15 @@ test: appendonly_analyze_progress
 test: aoco_analyze_progress
 test: ao_index_build_progress
 
+# this test contains some fault injection that might get mis-hit by autovacuum process,
+# so it needs to be run with autovacuum being disabled
+test: segwalrep/die_commit_pending_replication
+
 test: enable_autovacuum
 test: idle_gang_cleaner
 # test idle_in_transaction_session_timeout
 
 test: copy_progress
-
-test: segwalrep/die_commit_pending_replication
 
 # Tests for FTS
 test: fts_errors

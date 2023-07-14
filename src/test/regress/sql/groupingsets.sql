@@ -588,6 +588,29 @@ explain (costs off)
 select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
 select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
 
+-- Bug #16784
+CREATE TABLE bug_16784(i INT, j INT);
+ANALYZE bug_16784;
+ALTER TABLE bug_16784 SET (autovacuum_enabled = 'false');
+SET allow_system_table_mods=true;
+UPDATE pg_class SET reltuples = 10 WHERE relname='bug_16784';
+SET allow_system_table_mods=false;
+
+INSERT INTO bug_16784 SELECT g/10, g FROM generate_series(1,40) g;
+
+SET work_mem='64kB';
+
+explain (costs off) select * from
+  (values (1),(2)) v(a),
+  lateral (select v.a, i, j, count(*) from
+             bug_16784 group by cube(i,j)) s
+  order by v.a, i, j;
+select * from
+  (values (1),(2)) v(a),
+  lateral (select a, i, j, count(*) from
+             bug_16784 group by cube(i,j)) s
+  order by v.a, i, j;
+
 --
 -- Compare results between plans using sorting and plans using hash
 -- aggregation. Force spilling in both cases by setting work_mem low

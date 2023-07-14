@@ -519,6 +519,7 @@ Resource groups manage transactions to avoid exhausting system CPU and memory re
 You can use the `gp_resgroup_config` view to check the configuration of each resource group. You can use the `gp_resgroup_status*` views to display the current transaction status and resource usage of each resource group.
 
 -   [gp\_resgroup\_config](#topic27x)
+-   [gp_resgroup_role](#role)
 -   [gp\_resgroup\_status](#topic31x)
 -   [gp\_resgroup\_status\_per\_host](#perhost)
 
@@ -541,6 +542,17 @@ This view is accessible to all users.
 |memory\_spill\_ratio|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|
 |memory\_auditor|The memory auditor for the resource group.|
 |cpuset|The CPU cores reserved for the resource group on the coordinator host and segment hosts, or -1.|
+
+### <a id="role"></a>gp\_resgroup\_role
+
+The `gp_resgroup_role` view allows administrators to see the resource group assigned to every role.
+
+This view is accessible to all users.
+
+|Column|Description|
+|------|-----------|
+|rrrolname|The name of the role|
+|rrrsgname|The name of the resource group|
 
 ### <a id="topic31x"></a>gp\_resgroup\_status 
 

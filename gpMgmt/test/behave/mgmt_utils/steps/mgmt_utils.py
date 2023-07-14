@@ -630,7 +630,6 @@ def impl(context, process_name, secs):
         command = "sleep %d; ps ux | grep %s | awk '{print $2}' | xargs kill" % (int(secs), process_name)
     run_async_command(context, command)
 
-
 @when('the user asynchronously sets up to end {process_name} process when {log_msg} is printed in the logs')
 def impl(context, process_name, log_msg):
     command = "while sleep 0.1; " \
@@ -804,6 +803,7 @@ def impl(context, command, out_msg):
 @when('{command} should print "{out_msg}" to stdout')
 @then('{command} should print "{out_msg}" to stdout')
 @then('{command} should print a "{out_msg}" warning')
+@when('{command} should print a "{out_msg}" warning')
 def impl(context, command, out_msg):
     check_stdout_msg(context, out_msg)
 
@@ -1456,7 +1456,7 @@ def stop_segments_immediate(context, where_clause):
 @when('user can start transactions')
 @then('user can start transactions')
 def impl(context):
-    wait_for_unblocked_transactions(context)
+    wait_for_unblocked_transactions(context, 600)
 
 @given('below sql is executed in "{dbname}" db')
 @when('below sql is executed in "{dbname}" db')
@@ -1559,6 +1559,7 @@ def impl(context, content_ids, expected_status):
 
 
 @given('the cluster configuration has no segments where "{filter}"')
+@when('the cluster configuration has no segments where "{filter}"')
 def impl(context, filter):
     SLEEP_PERIOD = 5
     MAX_DURATION = 300
@@ -1646,6 +1647,9 @@ def impl(context, seg):
         hostname = get_coordinator_hostname()[0][0]
 
     cmd = Command(name="killbg pid", cmdStr='kill -9 %s' % context.bg_pid, remoteHost=hostname, ctxt=REMOTE)
+    cmd.run(validateAfter=True)
+
+    cmd = Command(name="remove pid", cmdStr='rm -rf /tmp/bgpid', remoteHost=hostname, ctxt=REMOTE)
     cmd.run(validateAfter=True)
 
 
@@ -2026,7 +2030,7 @@ def impl(context, type):
         result = curs.fetchall()
         segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
     except Exception as e:
-        raise Exception("Could not retrieve segment information: %s" % e.message)
+        raise Exception("Could not retrieve segment information: %s" % str(e))
     finally:
         conn.close()
 
@@ -2069,7 +2073,7 @@ def impl(context, filename, some, output):
         result = curs.fetchall()
         segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
     except Exception as e:
-        raise Exception("Could not retrieve segment information: %s" % e.message)
+        raise Exception("Could not retrieve segment information: %s" % str(e))
     finally:
         conn.close()
 
@@ -2115,7 +2119,7 @@ def impl(context, filename, contain, output):
         result = curs.fetchall()
         segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
     except Exception as e:
-        raise Exception("Could not retrieve segment information: %s" % e.message)
+        raise Exception("Could not retrieve segment information: %s" % str(e))
     finally:
         conn.close()
 
@@ -2141,7 +2145,7 @@ def impl(context, filename):
             result = curs.fetchall()
             segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
     except Exception as e:
-        raise Exception("Could not retrieve segment information: %s" % e.message)
+        raise Exception("Could not retrieve segment information: %s" % str(e))
 
     for info in segment_info:
         host, datadir = info
@@ -3843,9 +3847,22 @@ def impl(context):
      cmd.run(validateAfter=True)
 
 @then('restore /etc/hosts file and cleanup hostlist file')
+@when('restore /etc/hosts file and cleanup hostlist file')
 def impl(context):
     cmd = "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
     context.execute_steps(u'''Then the user runs command "%s"''' % cmd)
+
+
+@given('update /etc/hosts file with address for the localhost')
+def impt(context):
+    hostname = context.hostname
+    # Backup current /etc/hosts file
+    cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /tmp/hosts_orig')
+    cmd.run(validateAfter=True)
+    # Update the address
+    cmdStr = "echo \"127.0.0.1 {}\" | sudo tee -a /etc/hosts".format(hostname)
+    cmd = Command(name="update /etc/hosts file with hostname entry", cmdStr=cmdStr)
+    cmd.run(validateAfter=True)
 
 @given('update hostlist file with updated host-address')
 def impl(context):

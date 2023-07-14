@@ -1126,6 +1126,7 @@ create aggregate my_half_sum(int4)
    finalfunc = halfsum_finalfn
 );
 
+discard plans;
 -- Agg state should be shared even though my_sum has no finalfn
 select my_sum(one),my_half_sum(one) from (values(1),(2),(3),(4)) t(one);
 

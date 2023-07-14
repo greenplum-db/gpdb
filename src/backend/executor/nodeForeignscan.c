@@ -111,10 +111,32 @@ static TupleTableSlot *
 ExecForeignScan(PlanState *pstate)
 {
 	ForeignScanState *node = castNode(ForeignScanState, pstate);
+	TupleTableSlot *result = NULL;
+	bool err_caught = false;
 
-	return ExecScan(&node->ss,
-					(ExecScanAccessMtd) ForeignNext,
-					(ExecScanRecheckMtd) ForeignRecheck);
+	/* The loop is to ensure that the null result is returned only at the end of the scan 
+	 * To prevent an infinite loop, it is necessary to execute PG_END_TRY in every 
+	 * iteration of the loop when an exception occurs. Therefore, returning the 
+	 * ExecScan immediately and breaking the loop before PG_END_TRY are not possible.
+	 */
+	do 
+	{
+		err_caught = false;
+		PG_TRY();
+		{
+			result = ExecScan(&node->ss,
+							(ExecScanAccessMtd) ForeignNext,
+							(ExecScanRecheckMtd) ForeignRecheck);
+		}
+		PG_CATCH();
+		{
+			err_caught = true;
+			ExecForeignScanError(node);
+		}
+		PG_END_TRY();
+	} while (!result && err_caught);
+
+	return result;
 }
 
 
@@ -396,4 +418,15 @@ ExecShutdownForeignScan(ForeignScanState *node)
 
 	if (fdwroutine->ShutdownForeignScan)
 		fdwroutine->ShutdownForeignScan(node);
+}
+
+void
+ExecForeignScanError(ForeignScanState *node)
+{
+	FdwRoutine *fdwroutine = node->fdwroutine;
+	if (fdwroutine->HandleForeignScanError)
+		fdwroutine->HandleForeignScanError(node);
+	else 
+		PG_RE_THROW();
+	return;
 }

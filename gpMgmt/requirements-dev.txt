@@ -2,4 +2,3 @@ gsutil
 behave~=1.2.6
 coverage~=4.5
 mock<=5.0.0
-paramiko==3.1.0

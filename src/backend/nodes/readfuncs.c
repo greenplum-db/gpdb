@@ -3091,8 +3091,6 @@ ReadCommonJoin(Join *local_node)
 	ReadCommonPlan(&local_node->plan);
 
 	READ_BOOL_FIELD(prefetch_inner);
-	READ_BOOL_FIELD(prefetch_joinqual);
-	READ_BOOL_FIELD(prefetch_qual);
 
 	READ_ENUM_FIELD(jointype, JoinType);
 	READ_BOOL_FIELD(inner_unique);

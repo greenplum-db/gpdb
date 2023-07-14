@@ -36,8 +36,6 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [gpkafka](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html)<sup>4</sup>
 - [gpload](ref/gpload.html)<sup>3</sup>
 - [gplogfilter](ref/gplogfilter.html)
-- [gpmapreduce](ref/gpmapreduce.html)
-- [gpmapreduce.yaml](ref/gpmapreduce-yaml.html)
 - [gpmovemirrors](ref/gpmovemirrors.html)
 - [gpsupport](ref/gpsupport.html)
 - [gppkg](ref/gppkg.html)

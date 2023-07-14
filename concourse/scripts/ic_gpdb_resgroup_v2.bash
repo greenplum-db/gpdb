@@ -27,14 +27,6 @@ enable_cgroup_subtree_control() {
 EOF
 }
 
-install_python_dependency() {
-    local host_alias=$1
-
-    ssh $host_alias bash -ex <<EOF
-        pip3.9 install paramiko==3.1.0
-EOF
-}
-
 run_resgroup_test() {
     local gpdb_master_alias=$1
 
@@ -48,7 +40,7 @@ run_resgroup_test() {
         cd /home/gpadmin/gpdb_src
         PYTHON=python3.9 ./configure --prefix=/usr/local/greenplum-db-devel \
             --without-zlib --without-rt --without-libcurl \
-            --without-libedit-preferred --without-docdir --without-readline \
+            --without-libedit-preferred --without-readline \
             --disable-gpcloud --disable-gpfdist --disable-orca \
             --without-python PKG_CONFIG_PATH="\${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 
@@ -111,9 +103,6 @@ EOF
 
 enable_cgroup_subtree_control ccp-${CLUSTER_NAME}-0
 enable_cgroup_subtree_control ccp-${CLUSTER_NAME}-1
-install_python_dependency ccp-${CLUSTER_NAME}-0
-install_python_dependency ccp-${CLUSTER_NAME}-1
-install_python_dependency cdw
 run_resgroup_test cdw
 
 #
