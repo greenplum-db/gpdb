@@ -136,6 +136,19 @@ jobs:
           CONFIGURE_FLAGS: ((configure_flags))
         timeout: 5h
 
+      - task: icw_gporca_memory_centos7
+        file: gpdb_src/concourse/tasks/ic_gpdb.yml
+        image: gpdb6-centos7-test
+        input_mapping:
+          bin_gpdb: gpdb_artifacts
+        params:
+          MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+          TEST_OS: centos
+          CONFIGURE_FLAGS: ((configure_flags))
+          BLDWRAP_POSTGRES_CONF_ADDONS:
+            - optimizer_use_gpdb_allocators=off
+        timeout: 5h
+
       - task: unit_tests_gporca_centos7
         file: gpdb_src/concourse/tasks/unit_tests_gporca.yml
         image: gpdb6-centos7-build

@@ -229,6 +229,7 @@ groups:
   - icw_planner_icproxy_[[ os_type ]]
   - icw_planner_ictcp_[[ os_type ]]
   - icw_mirrorless_[[ os_type ]]
+  - icw_gporca_memory_[[ os_type ]]
   {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
   - scram-sha-256_abi_test_server_[[ os_type ]]
   - scram-sha-256_abi_test_clients_[[ os_type ]]
@@ -335,6 +336,7 @@ groups:
   - icw_planner_icproxy_[[ os_type ]]
   - icw_planner_ictcp_[[ os_type ]]
   - icw_mirrorless_[[ os_type ]]
+  - icw_gporca_memory_[[ os_type ]]
   {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
   - scram-sha-256_abi_test_server_[[ os_type ]]
   - scram-sha-256_abi_test_clients_[[ os_type ]]
@@ -1456,6 +1458,33 @@ jobs:
         - gp_dispatch_keepalives_interval=10
         - gp_dispatch_keepalives_count=4
 
+- name: icw_gporca_memory_[[ os_type ]]
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        trigger: true
+        passed: [gate_icw_start]
+      - get: bin_gpdb
+        passed: [gate_icw_start]
+      - get: postgres_for_fdw
+        params:
+          unpack: true
+      - get: gpdb6-[[ os_type ]]-test
+  - task: ic_gpdb
+    {% if use_ICW_workers %}
+    tags: [icw-worker]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb6-[[ os_type ]]-test
+    timeout: 24h
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      TEST_OS: [[ test_os ]]
+      CONFIGURE_FLAGS: ((configure_flags))
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - optimizer_use_gpdb_allocators=off
+
 - name: unit_tests_gporca_[[ os_type ]]
   plan:
   - in_parallel:
@@ -1782,6 +1811,7 @@ jobs:
         - icw_planner_icproxy_[[ os_type ]]
         - icw_planner_ictcp_[[ os_type ]]
         - icw_mirrorless_[[ os_type ]]
+        - icw_gporca_memory_[[ os_type ]]
         {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
         - scram-sha-256_abi_test_clients_[[ os_type ]]
         {% endif %}
@@ -1804,6 +1834,7 @@ jobs:
         - icw_planner_icproxy_[[ os_type ]]
         - icw_planner_ictcp_[[ os_type ]]
         - icw_mirrorless_[[ os_type ]]
+        - icw_gporca_memory_[[ os_type ]]
         {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
         - scram-sha-256_abi_test_server_[[ os_type ]]
         - scram-sha-256_abi_test_clients_[[ os_type ]]
