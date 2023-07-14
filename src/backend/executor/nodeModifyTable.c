@@ -2375,7 +2375,21 @@ ExecModifyTable(PlanState *pstate)
 	if (node->mt_done)
 		return NULL;
 
-	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+	/* Preload local variables */
+	resultRelInfo = node->resultRelInfo + node->mt_whichplan;
+	subplanstate = node->mt_plans[node->mt_whichplan];
+	junkfilter = resultRelInfo->ri_junkFilter;
+	action_attno = resultRelInfo->ri_action_attno;
+	segid_attno = resultRelInfo->ri_segid_attno;
+
+	/*
+	 * Check cdbcomponent_allocateIdleQE()
+	 *
+	 * In some cases Greenplum has more than one QE on on segment writing the
+	 * external data via foreign tables.
+	 */
+	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer &&
+		!resultRelInfo->ri_RelationDesc->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 	{
 		/*
 		 * Current Greenplum MPP architecture only support one writer gang, and
@@ -2400,13 +2414,6 @@ ExecModifyTable(PlanState *pstate)
 		fireBSTriggers(node);
 		node->fireBSTriggers = false;
 	}
-
-	/* Preload local variables */
-	resultRelInfo = node->resultRelInfo + node->mt_whichplan;
-	subplanstate = node->mt_plans[node->mt_whichplan];
-	junkfilter = resultRelInfo->ri_junkFilter;
-	action_attno = resultRelInfo->ri_action_attno;
-	segid_attno = resultRelInfo->ri_segid_attno;
 
 	/*
 	 * es_result_relation_info must point to the currently active result

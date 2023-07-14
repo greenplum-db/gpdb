@@ -127,7 +127,47 @@ SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
 TRUNCATE TABLE postgres_fdw_gp."GP 1";
 \c
 set search_path=postgres_fdw_gp;
-alter server loopback options(add num_segments '2');
+alter server loopback options(add num_segments '4');
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 4:1  (slice1; segments: 4)
+   Output: f1, f2, f3
+   ->  Foreign Scan on postgres_fdw_gp.gp_ft1
+         Output: f1, f2, f3
+         Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on gp_ft1
+   ->  Redistribute Motion 3:4  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+alter server loopback options(set num_segments '2');
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
                             QUERY PLAN                             
 -------------------------------------------------------------------

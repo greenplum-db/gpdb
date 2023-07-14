@@ -3100,7 +3100,6 @@ create_motion_plan(PlannerInfo *root, CdbMotionPath *path)
 			break;
 
 		case CdbLocusType_General:
-			/*  */
 			sendSlice->gangType = GANGTYPE_SINGLETON_READER;
 			sendSlice->numsegments = 1;
 			sendSlice->segindex = gp_session_id % getgpsegmentCount();

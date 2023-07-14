@@ -108,7 +108,13 @@ TRUNCATE TABLE postgres_fdw_gp."GP 1";
 
 \c
 set search_path=postgres_fdw_gp;
-alter server loopback options(add num_segments '2');
+alter server loopback options(add num_segments '4');
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+alter server loopback options(set num_segments '2');
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
 INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
