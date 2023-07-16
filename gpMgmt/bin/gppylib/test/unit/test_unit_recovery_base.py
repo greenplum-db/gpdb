@@ -58,11 +58,22 @@ class RecoveryBaseTestCase(GpTestCase):
         self.assertEqual(warn_count, self.mock_logger.warn.call_count)
         self.assertEqual(0, self.mock_logger.exception.call_count)
 
-    def _asserts_for_failing_tests(self, ex, stderr_buf, expected_message, info_count=1):
+    def _asserts_for_failing_tests(self, ex, stderr_buf, possible_expected_messages, info_count=1):
         self.assertEqual(1, ex.exception.code)
-        self.assertEqual(expected_message, stderr_buf.getvalue().strip())
-        self.assertEqual([call(expected_message)], self.mock_logger.error.call_args_list)
         self.assertEqual(info_count, self.mock_logger.info.call_count)
+        if isinstance(possible_expected_messages, list):
+            for expected_message in possible_expected_messages:
+                if expected_message != stderr_buf.getvalue().strip():
+                    continue
+                else:
+                    self.assertEqual(expected_message, stderr_buf.getvalue().strip())
+                    self.assertEqual([call(expected_message)], self.mock_logger.error.call_args_list)
+                    return
+            # No match, raise an exception
+            self.assertTrue(False)
+        else:
+            self.assertEqual(possible_expected_messages, stderr_buf.getvalue().strip())
+            self.assertEqual([call(possible_expected_messages)], self.mock_logger.error.call_args_list)
 
     def _assert_workerpool_calls(self, mock_workerpool):
         self.assertEqual([call(numWorkers=2)], mock_workerpool.call_args_list)
@@ -211,10 +222,16 @@ class RecoveryBaseTestCase(GpTestCase):
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_failing_tests(ex, stderr_buf,
-                                        '[{"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
-                                        ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
-                                        ' {"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
-                                        ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]')
+                                        [
+                                            '[{"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
+                                            ' {"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]',
+                                            '[{"error_type": "default", "error_msg": "/bin/bash: line 1: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
+                                            ' {"error_type": "default", "error_msg": "/bin/bash: line 1: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]',
+                                        ])
 
     #TODO do we need this test where an invalid command fails but with a wrapper error?
     # def test_invalid_cmd_fails_with_wrapper_error(self):
@@ -239,10 +256,16 @@ class RecoveryBaseTestCase(GpTestCase):
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_failing_tests(ex, stderr_buf,
-                                        '[{"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
-                                        ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
-                                        ' {"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
-                                        ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]')
+                                        [
+                                            '[{"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
+                                            ' {"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]',
+                                            '[{"error_type": "default", "error_msg": "/bin/bash: line 1: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
+                                            ' {"error_type": "default", "error_msg": "/bin/bash: line 1: invalid_cmd_str: command not found\\n",'
+                                            ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]',
+                                        ])
 
         self.assertEqual(1, self.mock_enable_verbose_logging.call_count)
         self.assertEqual(1, self.mock_logger.exception.call_count)
