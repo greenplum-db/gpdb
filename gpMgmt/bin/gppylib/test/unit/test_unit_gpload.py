@@ -33,8 +33,11 @@ class GpLoadTestCase(unittest.TestCase):
         print(gpload_param)
         gploader = gpload(gpload_param)
         gploader.read_config()
-        gploader.db = self
-        gploader.db.query = Mock(side_effect=self.mockQuery)
+        gploader.conn = Mock()
+        gploader.conn.cursor.return_value = Mock()
+        gploader.conn.cursor.return_value.__enter__ = Mock(return_value=Mock(spec=['fetchall', 'execute']))
+        gploader.conn.cursor.return_value.__exit__ = Mock(return_value=False)
+        gploader.conn.cursor.return_value.__enter__.return_value.execute = Mock(side_effect=self.mockQuery)
         gploader.do_method_merge = Mock(side_effect=self.mockDoNothing)
         gploader.do_method_update = Mock(side_effect=self.mockDoNothing)
         gploader.do_method_insert = Mock(side_effect=self.mockDoNothing)

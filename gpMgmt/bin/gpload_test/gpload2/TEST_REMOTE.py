@@ -295,7 +295,7 @@ def drop_tables():
                           host='localhost',
                           port=int(PGPORT)) as conn:
         with conn.cursor() as cur:
-            for i in list:
+            for i in table_list:
                 name = i[0]
                 match = re.search('ext_gpload',name)
                 if match:
