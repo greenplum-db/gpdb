@@ -981,13 +981,13 @@ ExecProcNode(PlanState *node)
 	 *
 	 * To get rid of interconnect UDP deadlock involving SubPlan, we
 	 * prefetch them before actually execute the plannode at the first
-	 * time.
+	 * time. Due to 6X stable ABI limit, we cannot add any new fields to
+	 * struct PlanState, because it is the base of many other StateNodes.
+	 * In 6X, we add a new field at the end of SubPlanState to mark if
+	 * the SubPlan has already been prefetched.
 	 */
-	if (!node->prefetch_subplans_done && node->subPlan != NIL)
-	{
+	if (node->subPlan != NIL)
 		prefetch_subplans(node);
-		node->prefetch_subplans_done = true;
-	}
 
 	switch (nodeTag(node))
 	{
@@ -1854,6 +1854,11 @@ prefetch_subplans(PlanState *node)
 	foreach(lc, node->subPlan)
 	{
 		PlanState *ps = ((SubPlanState *) lfirst(lc))->planstate;
+
+		if (((SubPlanState *) lfirst(lc))->prefetch_subplan_done)
+			continue;
+
+		((SubPlanState *) lfirst(lc))->prefetch_subplan_done = true;
 		mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(ps));
 	}
 

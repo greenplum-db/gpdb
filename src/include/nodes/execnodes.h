@@ -1142,6 +1142,7 @@ typedef struct SubPlanState
 	FmgrInfo   *cur_eq_funcs;	/* equality functions for LHS vs. table */
 	void	   *ts_pos;
 	GenericTupStore *ts_state;
+	bool        prefetch_subplan_done; /* Greenplum specific */
 } SubPlanState;
 
 /* ----------------
@@ -1432,8 +1433,6 @@ typedef struct PlanState
 
 	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
 	MemoryAccountIdType memoryAccountId;
-
-	bool		prefetch_subplans_done;
 } PlanState;
 
 /* Gpperfmon helper functions defined in execGpmon.c */
