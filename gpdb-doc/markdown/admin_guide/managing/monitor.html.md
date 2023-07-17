@@ -203,19 +203,13 @@ This occurs when the input to a hash join operator is skewed. It does not preven
 
 Subtransaction overflow arises when a Greenplum Database backend creates more than 64 subtransactions, resulting in a high lookup cost for visibility checks. This slows query performance, but even more so when it occurs in combination with long-running transactions, which result in still more lookups. Terminating suboverflowed backends and/or backends with long-running transactions can help prevent and alleviate performance problems. 
 
-Greenplum Database includes an extension -- `gp_subtransaction_overflow` -- and a view -- `gp_suboverflowed_backend` -- that is run over a user-defined function to help users query for suboverflowed backends. Users can use segment id and process id information reported in the view to terminate the offending backends, thereby preventing degradation of performance.
+Greenplum Database includes a view -- `gp_suboverflowed_backend` -- that is run over a user-defined function to help users query for suboverflowed backends. Users can use segment id and process id information reported in the view to terminate the offending backends, thereby preventing degradation of performance.
 
 ### <a id="check_backends"></a>Steps
 
 Follow these steps below to identify and terminate overflowed backends.
 
-1. Create the extension:
-
-    ```
-    CREATE EXTENSION gp_subtransaction_overflow;
-    ```
-
-2. Select all from the view the extension created:
+1. Select all from the view:
 
     ```
     select * from gp_suboverflowed_backend`;
@@ -233,7 +227,7 @@ Follow these steps below to identify and terminate overflowed backends.
    (4 rows)
     ```
 
-3. Connect to the database in utility mode and query `pg_stat_activity` to return the session id for the process id in the output for a segment. For example: 
+2. Connect to the database in utility mode and query `pg_stat_activity` to return the session id for the process id in the output for a segment. For example: 
 
     ```
     select sess_id from pg_stat_activity where pid=1731513;
@@ -246,13 +240,13 @@ Follow these steps below to identify and terminate overflowed backends.
     (1 row)
     ```
 
-4. Terminate the session, which will terminate all associated backends on all segments:
+3. Terminate the session, which will terminate all associated backends on all segments:
 
     ```
     select pg_terminate_backend(pid) from pg_stat_activity where sess_id=10;
     ``` 
 
-5. Verify that there are no more suboverflowed backends:
+4. Verify that there are no more suboverflowed backends:
 
     ```
     select * from gp_suboverflowed_backend`;
