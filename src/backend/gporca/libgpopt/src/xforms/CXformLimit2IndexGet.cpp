@@ -167,7 +167,7 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //
 //	@doc:
 //		Function to validate if index is applicable, given OrderSpec and index
-// 	    columns. This function checks if ORDER BY columns are prefix of
+//		columns. This function checks if ORDER BY columns are prefix of
 //		the index columns.
 //---------------------------------------------------------------------------
 BOOL
