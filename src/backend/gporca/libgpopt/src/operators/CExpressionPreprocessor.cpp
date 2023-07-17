@@ -1989,9 +1989,13 @@ UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
 		{
 			if (doInsert)
 			{
-				(*pexprFilter)[0]->AddRef();
-				(*pexprFilter)[1]->AddRef();
-				phmExprToConst->Insert((*pexprFilter)[0], (*pexprFilter)[1]);
+				BOOL inserted = phmExprToConst->Insert((*pexprFilter)[0],
+													   (*pexprFilter)[1]);
+				if (inserted)
+				{
+					(*pexprFilter)[0]->AddRef();
+					(*pexprFilter)[1]->AddRef();
+				}
 			}
 			else
 			{
@@ -2004,9 +2008,13 @@ UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
 		{
 			if (doInsert)
 			{
-				(*pexprFilter)[0]->AddRef();
-				(*pexprFilter)[1]->AddRef();
-				phmExprToConst->Insert((*pexprFilter)[1], (*pexprFilter)[0]);
+				BOOL inserted = phmExprToConst->Insert((*pexprFilter)[1],
+													   (*pexprFilter)[0]);
+				if (inserted)
+				{
+					(*pexprFilter)[0]->AddRef();
+					(*pexprFilter)[1]->AddRef();
+				}
 			}
 			else
 			{
