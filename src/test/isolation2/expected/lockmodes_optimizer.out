@@ -1,14 +1,14 @@
 -- table to just store the coordinator's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
-CREATE
+CREATE TABLE
 INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
-INSERT 1
+INSERT 0 1
 
 1: set optimizer = off;
 SET
 
 create or replace view show_locks_lockmodes as select locktype, mode, granted, relation::regclass from pg_locks where gp_segment_id = -1 and locktype = 'relation' and relation::regclass::text like 't_lockmods%';
-CREATE
+CREATE VIEW
 
 show gp_enable_global_deadlock_detector;
  gp_enable_global_deadlock_detector 
@@ -22,25 +22,25 @@ show gp_enable_global_deadlock_detector;
 
 -- 1.1 test for heap tables
 create table t_lockmods (c int) distributed randomly;
-CREATE
+CREATE TABLE
 insert into t_lockmods select * from generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 analyze t_lockmods;
 ANALYZE
 
 create table t_lockmods1 (c int) distributed randomly;
-CREATE
+CREATE TABLE
 
 create table t_lockmods_rep(c int) distributed replicated;
-CREATE
+CREATE TABLE
 
 -- See github issue: https://github.com/greenplum-db/gpdb/issues/9449
 -- upsert may lock tuples on segment, so we should upgrade lock level
 -- on QD if GDD is disabled.
 create table t_lockmods_upsert(a int, b int) distributed by (a);
-CREATE
+CREATE TABLE
 create unique index uidx_t_lockmodes_upsert on t_lockmods_upsert(a, b);
-CREATE
+CREATE INDEX
 -- add analyze to avoid auto vacuum when executing first insert
 analyze t_lockmods_upsert;
 ANALYZE
@@ -71,7 +71,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -98,7 +98,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -125,7 +125,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -152,7 +152,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -180,7 +180,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -208,7 +208,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -236,7 +236,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -264,7 +264,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.1.2 update | delete should hold ExclusiveLock on result relations
 1: begin;
@@ -277,7 +277,7 @@ UPDATE 5
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -289,33 +289,33 @@ DELETE 5
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.1.3 insert should hold RowExclusiveLock on result relations
 1: begin;
 BEGIN
 1: insert into t_lockmods select * from generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.1.4 upsert should hold ExclusiveLock on result relations
 1: begin;
 BEGIN
 1: insert into t_lockmods_upsert values (1, 1) on conflict(a, b) do update set b = 99;
-INSERT 1
+INSERT 0 1
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation          
 ----------+---------------+---------+-------------------
  relation | ExclusiveLock | t       | t_lockmods_upsert 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.1.5 use cached plan should be consistent with no cached plan
 1: prepare select_for_update as select * from t_lockmods for update;
@@ -352,7 +352,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -371,7 +371,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -390,7 +390,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -409,65 +409,65 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute update_tlockmods;
-EXECUTE 5
+UPDATE 5
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute delete_tlockmods;
-EXECUTE 5
+DELETE 5
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation   
 ----------+---------------+---------+------------
  relation | ExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute insert_tlockmods;
-EXECUTE 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute upsert_tlockmods;
-EXECUTE 1
+INSERT 0 1
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation          
 ----------+---------------+---------+-------------------
  relation | ExclusiveLock | t       | t_lockmods_upsert 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.2 test for AO table
 create table t_lockmods_ao (c int) with (appendonly=true) distributed randomly;
-CREATE
+CREATE TABLE
 insert into t_lockmods_ao select * from generate_series(1, 8);
-INSERT 8
+INSERT 0 8
 analyze t_lockmods_ao;
 ANALYZE
 create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
-CREATE
+CREATE TABLE
 
 -- 1.2.1 select for (update|share|key share|no key update) should hold ExclusiveLock on range tables
 1: begin;
@@ -498,7 +498,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -528,7 +528,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -558,7 +558,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -588,7 +588,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -616,7 +616,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -644,7 +644,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -672,7 +672,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -700,7 +700,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.2.2 update | delete should hold ExclusiveLock on result relations
 1: begin;
@@ -713,7 +713,7 @@ UPDATE 8
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -725,20 +725,20 @@ DELETE 8
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.2.3 insert should hold RowExclusiveLock on result relations
 1: begin;
 BEGIN
 1: insert into t_lockmods_ao select * from generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.2.4 use cached plan should be consistent with no cached plan
 1: prepare select_for_update_ao as select * from t_lockmods_ao for update;
@@ -776,7 +776,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -798,7 +798,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -820,7 +820,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -842,43 +842,43 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute update_tlockmods_ao;
-EXECUTE 8
+UPDATE 8
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute delete_tlockmods_ao;
-EXECUTE 8
+DELETE 8
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute insert_tlockmods_ao;
-EXECUTE 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.3 With limit clause, such case should
 -- acquire ExclusiveLock on the whole table and do not generate lockrows node
@@ -908,7 +908,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.4 For replicated table, we should lock the entire table on ExclusiveLock
 1: begin;
@@ -931,7 +931,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_rep 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.5 test order-by's plan
 1: begin;
@@ -962,7 +962,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 1.6 select for update NOWAIT/SKIP LOCKED
 -- NOWAIT/SKIP LOCKED should not affect the table-level lock
@@ -979,7 +979,7 @@ BEGIN
 (5 rows)
 2&: select * from t_lockmods for update nowait;  <waiting ...>
 1: abort;
-ABORT
+ROLLBACK
 2<:  <... completed>
  c 
 ---
@@ -1003,7 +1003,7 @@ BEGIN
 (5 rows)
 2&: select * from t_lockmods for update skip locked;  <waiting ...>
 1: abort;
-ABORT
+ROLLBACK
 2<:  <... completed>
  c 
 ---
@@ -1026,12 +1026,12 @@ ABORT
 -- Details: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/wAPKpJzhbpM
 -- Issue: https://github.com/greenplum-db/gpdb/issues/13652
 1:DROP TABLE IF EXISTS t_lockmods_part_tbl_dml;
-DROP
+DROP TABLE
 
 1:CREATE TABLE t_lockmods_part_tbl_dml (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
-CREATE
+CREATE TABLE
 1:INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 
 --
 1: BEGIN;
@@ -1040,11 +1040,11 @@ BEGIN
 DELETE 10
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
- locktype | mode            | granted | relation                        
-----------+-----------------+---------+---------------------------------
- relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
- relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml         
+ locktype | mode          | granted | relation                        
+----------+---------------+---------+---------------------------------
+ relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml         
+ relation | ExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
 (3 rows)
 1: ROLLBACK;
 ROLLBACK
@@ -1052,7 +1052,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 -- without GDD, it will lock all leaf partitions on QD
 1: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation                        
@@ -1095,10 +1095,10 @@ UPDATE 1
 1: select * from show_locks_lockmodes;
  locktype | mode            | granted | relation                        
 ----------+-----------------+---------+---------------------------------
- relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
- relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
+ relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_2 
  relation | AccessShareLock | t       | t_lockmods_part_tbl_dml         
  relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml         
+ relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_1 
 (4 rows)
 1: ROLLBACK;
 ROLLBACK
@@ -1136,7 +1136,7 @@ ROLLBACK
 
 -- enable gdd
 ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
-ALTER
+ALTER SYSTEM
 -- Use utility session on seg 0 to restart coordinator. This way avoids the
 -- situation where session issuing the restart doesn't disappear
 -- itself.
@@ -1193,7 +1193,7 @@ BEGIN
  relation | RowShareLock    | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1221,7 +1221,7 @@ BEGIN
  relation | RowShareLock    | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1249,7 +1249,7 @@ BEGIN
  relation | RowShareLock    | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1277,7 +1277,7 @@ BEGIN
  relation | RowShareLock    | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1305,7 +1305,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1333,7 +1333,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1361,7 +1361,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1389,7 +1389,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 
 -- 2.1.2 update | delete should hold RowExclusiveLock on result relations
@@ -1403,7 +1403,7 @@ UPDATE 5
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1415,33 +1415,33 @@ DELETE 5
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.1.3 insert should hold RowExclusiveLock on result relations
 1: begin;
 BEGIN
 1: insert into t_lockmods select * from generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.1.4 upsert should hold RowExclusiveLock on result relations
 1: begin;
 BEGIN
 1: insert into t_lockmods_upsert values (1, 1) on conflict(a, b) do update set b = 99;
-INSERT 1
+INSERT 0 1
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation          
 ----------+------------------+---------+-------------------
  relation | RowExclusiveLock | t       | t_lockmods_upsert 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.1.5 use cached plan should be consistent with no cached plan
 1: prepare select_for_update as select * from t_lockmods for update;
@@ -1478,7 +1478,7 @@ BEGIN
  relation | RowShareLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1497,7 +1497,7 @@ BEGIN
  relation | RowShareLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1516,7 +1516,7 @@ BEGIN
  relation | RowShareLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1535,55 +1535,55 @@ BEGIN
  relation | RowShareLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute update_tlockmods;
-EXECUTE 5
+UPDATE 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute delete_tlockmods;
-EXECUTE 5
+DELETE 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute insert_tlockmods;
-EXECUTE 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation   
 ----------+------------------+---------+------------
  relation | RowExclusiveLock | t       | t_lockmods 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute upsert_tlockmods;
-EXECUTE 1
+INSERT 0 1
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation          
 ----------+------------------+---------+-------------------
  relation | RowExclusiveLock | t       | t_lockmods_upsert 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.2 test for AO table
 
@@ -1616,7 +1616,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1646,7 +1646,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1676,7 +1676,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1706,7 +1706,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1734,7 +1734,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1762,7 +1762,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1790,7 +1790,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1818,7 +1818,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_ao  
 (4 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.2.2 update | delete should hold ExclusiveLock on result relations
 1: begin;
@@ -1831,7 +1831,7 @@ UPDATE 8
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1843,20 +1843,20 @@ DELETE 8
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.2.3 insert should hold RowExclusiveLock on result relations
 1: begin;
 BEGIN
 1: insert into t_lockmods_ao select * from generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.2.4 use cached plan should be consistent with no cached plan
 1: prepare select_for_update_ao as select * from t_lockmods_ao for update;
@@ -1894,7 +1894,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1916,7 +1916,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1938,7 +1938,7 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
@@ -1960,43 +1960,43 @@ BEGIN
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute update_tlockmods_ao;
-EXECUTE 8
+UPDATE 8
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute delete_tlockmods_ao;
-EXECUTE 8
+DELETE 8
 2: select * from show_locks_lockmodes;
  locktype | mode          | granted | relation      
 ----------+---------------+---------+---------------
  relation | ExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 1: begin;
 BEGIN
 1: execute insert_tlockmods_ao;
-EXECUTE 5
+INSERT 0 5
 2: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation      
 ----------+------------------+---------+---------------
  relation | RowExclusiveLock | t       | t_lockmods_ao 
 (1 row)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.3 With limit clause, such case should
 -- acquire ExclusiveLock on the whole table and do not generate lockrows node
@@ -2029,7 +2029,7 @@ BEGIN
  relation | RowShareLock    | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.4 For replicated table, we should lock the entire table on ExclusiveLock
 1: begin;
@@ -2052,7 +2052,7 @@ BEGIN
  relation | ExclusiveLock   | t       | t_lockmods_rep 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.5 test order-by's plan
 1: begin;
@@ -2084,7 +2084,7 @@ BEGIN
  relation | RowShareLock    | t       | t_lockmods 
 (2 rows)
 1: abort;
-ABORT
+ROLLBACK
 
 -- 2.6 select for update NOWAIT/SKIP LOCKED
 -- with GDD, select for update could be optimized to not upgrade lock.
@@ -2126,7 +2126,7 @@ BEGIN
 2: select * from t_lockmods for update nowait;
 ERROR:  could not obtain lock on row in relation "t_lockmods"  (seg1 slice1 10.140.0.3:7003 pid=15182)
 1: abort;
-ABORT
+ROLLBACK
 
 1q: ... <quitting>
 2q: ... <quitting>
@@ -2146,8 +2146,8 @@ DELETE 10
 1: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation                        
 ----------+------------------+---------+---------------------------------
- relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_2 
- relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
  relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml         
  relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml         
 (4 rows)
@@ -2163,8 +2163,8 @@ UPDATE 1
 1: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation                        
 ----------+------------------+---------+---------------------------------
- relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_2 
- relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
  relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml         
  relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml         
 (4 rows)
@@ -2205,7 +2205,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 -- With GDD enabled, QD will only hold lock on root for insert
 1: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation                
@@ -2217,14 +2217,34 @@ INSERT 10
 ROLLBACK
 1q: ... <quitting>
 
+1: CREATE TABLE t_lockmods_aopart(i int, t text) USING ao_row PARTITION BY RANGE(i) (START(1) END(5) EVERY(1));
+CREATE TABLE
+1: BEGIN;
+BEGIN
+1: DELETE FROM t_lockmods_aopart WHERE i = 4;
+DELETE 0
+-- With GDD enabled, QD will only hold lock on root for delete
+1: select * from show_locks_lockmodes;
+ locktype | mode            | granted | relation                  
+----------+-----------------+---------+---------------------------
+ relation | ExclusiveLock   | t       | t_lockmods_aopart_1_prt_4 
+ relation | AccessShareLock | t       | t_lockmods_aopart         
+ relation | ExclusiveLock   | t       | t_lockmods_aopart         
+(3 rows)
+1: COMMIT;
+COMMIT
+1: DROP TABLE t_lockmods_aopart;
+DROP TABLE
+1q: ... <quitting>
+
 -- 2.8 Verify behaviors of select with locking clause (i.e. select for update)
 -- when running concurrently with index creation, for Heap tables.
 -- For AO/CO tables, refer to create_index_allows_readonly.source.
 
 1: CREATE TABLE create_index_select_for_update_tbl(a int, b int);
-CREATE
+CREATE TABLE
 1: INSERT INTO create_index_select_for_update_tbl SELECT i,i FROM generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 1: set optimizer = off;
 SET
 
@@ -2250,7 +2270,7 @@ SET
 BEGIN
 -- expect no blocking
 2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
-CREATE
+CREATE INDEX
 2: COMMIT;
 COMMIT
 
@@ -2258,12 +2278,12 @@ COMMIT
 COMMIT
 
 2: DROP INDEX create_index_select_for_update_idx;
-DROP
+DROP INDEX
 
 2: BEGIN;
 BEGIN
 2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
-CREATE
+CREATE INDEX
 
 1: BEGIN;
 BEGIN
@@ -2282,12 +2302,12 @@ COMMIT
 COMMIT
 
 2: DROP INDEX create_index_select_for_update_idx;
-DROP
+DROP INDEX
 
 -- 2.8.2 with GDD disabled, expect blocking
 -- reset gdd
 2: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
-ALTER
+ALTER SYSTEM
 -- close session to avoid renew session failure after restart
 2q: ... <quitting>
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
@@ -2324,17 +2344,17 @@ BEGIN
 COMMIT
 
 2<:  <... completed>
-CREATE
+CREATE INDEX
 2: COMMIT;
 COMMIT
 
 2: DROP INDEX create_index_select_for_update_idx;
-DROP
+DROP INDEX
 
 2: BEGIN;
 BEGIN
 2: CREATE INDEX create_index_select_for_update_idx ON create_index_select_for_update_tbl(a);
-CREATE
+CREATE INDEX
 
 1: BEGIN;
 BEGIN
@@ -2353,7 +2373,7 @@ COMMIT
 COMMIT
 
 1: drop table lockmodes_datadir;
-DROP
+DROP TABLE
 1q: ... <quitting>
 2q: ... <quitting>
 
@@ -2362,13 +2382,13 @@ DROP
 -- require an AccessExclusiveLock.
 -- Case 1. The analyze result is expected when there's concurrent drop on child.
 1:create table analyzedrop(a int) partition by range(a);
-CREATE
+CREATE TABLE
 1:create table analyzedrop_1 partition of analyzedrop for values from (0) to (10);
-CREATE
+CREATE TABLE
 1:create table analyzedrop_2 partition of analyzedrop for values from (10) to (20);
-CREATE
+CREATE TABLE
 1:insert into analyzedrop select * from generate_series(0,19);
-INSERT 20
+INSERT 0 20
 1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
  gp_inject_fault_infinite 
 --------------------------
@@ -2384,7 +2404,7 @@ INSERT 20
 1<:  <... completed>
 ANALYZE
 2<:  <... completed>
-DROP
+DROP TABLE
 3:select * from pg_stats where tablename like 'analyzedrop%';
  schemaname | tablename     | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds                                 | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
 ------------+---------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+--------------------------------------------------+-------------+-------------------+------------------------+----------------------
@@ -2408,9 +2428,9 @@ DROP
 1<:  <... completed>
 ANALYZE
 2<:  <... completed>
-DROP
+DROP TABLE
 3<:  <... completed>
-DROP
+DROP TABLE
 --empty as table is dropped
 4:select * from pg_stats where tablename like 'analyzedrop%';
  schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 

@@ -1,0 +1,18 @@
+-- test for Github Issue 15278
+-- QD should reset InterruptHoldoffCount
+create table t_15278(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t_15278 values (-1,1);
+begin;
+declare c1 cursor for select count(*) from t_15278 group by sqrt(a);
+abort;
+ERROR:  cannot take square root of a negative number  (seg2 slice2 127.0.1.1:7004 pid=489428)
+-- Without fix, the above transaction will lead
+-- QD's global var InterruptHoldoffCount not reset to 0
+-- thus the below SQL will return t. After fixing, now
+-- the below SQL will print an error message, this is
+-- the correct behavior.
+select pg_cancel_backend(pg_backend_pid());
+ERROR:  canceling statement due to user request
+drop table t_15278;

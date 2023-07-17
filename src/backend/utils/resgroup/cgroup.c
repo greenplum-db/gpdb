@@ -27,7 +27,7 @@
 /* cgroup component names. */
 const char *component_names[CGROUP_COMPONENT_COUNT] =
 {
-	"cpu", "cpuacct", "cpuset", "memory"
+	"cpu", "cpuacct", "cpuset", "memory", "io"
 };
 
 /* cgroup component dirs. */

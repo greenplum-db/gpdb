@@ -74,7 +74,7 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno, AOVacuumRelStats
 	int32		fileSegNo;
 	File		fd;
 
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 
 	if (Debug_appendonly_print_compaction)
 		elog(LOG, "Drop segment file: segno %d", segno);
@@ -133,7 +133,7 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 	double		hideRatio;
 	Oid		visimaprelid;
 
-	Assert(RelationIsAppendOptimized(aoRelation));
+	Assert(RelationStorageIsAO(aoRelation));
 	GetAppendOnlyEntryAuxOids(aoRelation,
 					NULL, NULL,
 					&visimaprelid);
@@ -229,7 +229,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel, int segno, int64 segeof, AOVa
 	int32		fileSegNo;
 	char		filenamepath[MAXPGPATH];
 
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 
 	relname = RelationGetRelationName(aorel);
 
@@ -397,7 +397,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	int64		heap_blks_scanned = 0;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 	Assert(insertDesc);
 
 	compact_segno = fsinfo->segno;
@@ -433,7 +433,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	tupDesc = RelationGetDescr(aorel);
 	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
 	slot->tts_tableOid = RelationGetRelid(aorel);
-	mt_bind = create_memtuple_binding(tupDesc);
+	mt_bind = create_memtuple_binding(tupDesc, tupDesc->natts);
 
 	/*
 	 * We need a ResultRelInfo and an EState so we can use the regular
@@ -505,13 +505,9 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	AppendOnlyVisimap_DeleteSegmentFile(&visiMap, compact_segno);
 
 	/* Delete all mini pages of the segment files if block directory exists */
-	if (OidIsValid(blkdirrelid))
-	{
-		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
-												   appendOnlyMetaDataSnapshot,
-												   compact_segno,
-												   0);
-	}
+	AppendOnlyBlockDirectory_DeleteSegmentFiles(blkdirrelid,
+												appendOnlyMetaDataSnapshot,
+												compact_segno);
 
 	if (Debug_appendonly_print_compaction)
 		elog(LOG, "Finished compaction: AO segfile %d, relation %s, moved tuple count " INT64_FORMAT,
@@ -546,7 +542,7 @@ AppendOptimizedCollectDeadSegments(Relation aorel)
 	Oid			segrelid;
 	Bitmapset	*dead_segs = NULL;
 
-	Assert(RelationIsAppendOptimized(aorel));
+	Assert(RelationStorageIsAO(aorel));
 
 	GetAppendOnlyEntryAuxOids(aorel,
 							  &segrelid, NULL, NULL);
@@ -653,6 +649,8 @@ AppendOptimizedCollectDeadSegments(Relation aorel)
 static inline void
 AppendOptimizedDropDeadSegment(Relation aorel, int segno, AOVacuumRelStats *vacrelstats)
 {
+	Assert(RelationStorageIsAO(aorel));
+
 	if (RelationIsAoRows(aorel))
 	{
 		AppendOnlyCompaction_DropSegmentFile(aorel, segno, vacrelstats);
@@ -698,7 +696,7 @@ AppendOptimizedTruncateToEOF(Relation aorel, AOVacuumRelStats *vacrelstats)
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 	Oid			segrelid;
 
-	Assert(RelationIsAppendOptimized(aorel));
+	Assert(RelationStorageIsAO(aorel));
 
 	relname = RelationGetRelationName(aorel);
 
@@ -797,7 +795,7 @@ AppendOnlyCompact(Relation aorel,
 	FileSegInfo *fsinfo;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
-	Assert(RelationIsAoRows(aorel));
+	Assert(RelationStorageIsAoRows(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 
 	relname = RelationGetRelationName(aorel);

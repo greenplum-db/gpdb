@@ -9,7 +9,7 @@
 -- end_ignore
 (exited with code 0)
 CREATE TABLESPACE basebackuptest_space LOCATION '/tmp/basebackup_progress_tablespace';
-CREATE
+CREATE TABLESPACE
 
 -- Inject fault after checkpoint creation in basebackup
 SELECT gp_inject_fault('basebackup_progress_tablespace_streamed', 'suspend', dbid) FROM gp_segment_configuration WHERE content >= -1 and role='p';
@@ -172,7 +172,7 @@ select * from gp_stat_progress_basebackup_summary;
 (0 rows)
 
 drop tablespace basebackuptest_space;
-DROP
+DROP TABLESPACE
 
 -- loop while segments come in sync
 select wait_until_all_segments_synchronized();

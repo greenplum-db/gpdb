@@ -14,7 +14,7 @@
 (exited with code 0)
 
 CREATE TABLESPACE concurrent_tblspace LOCATION '/tmp/concurrent_tblspace';
-CREATE
+CREATE TABLESPACE
 
 -- suspend execution after TablespaceCreateLock is released
 SELECT gp_inject_fault('AfterTablespaceCreateLockRelease', 'suspend', dbid) FROM gp_segment_configuration WHERE content <> -1 and role='p';
@@ -37,9 +37,9 @@ SELECT gp_wait_until_triggered_fault('AfterTablespaceCreateLockRelease', 1, dbid
 
 -- create a table in the same tablespace which is being dropped via a concurrent session
 CREATE TABLE drop_tablespace_tbl(a int, b int) TABLESPACE concurrent_tblspace DISTRIBUTED BY (a);
-CREATE
+CREATE TABLE
 INSERT INTO drop_tablespace_tbl SELECT i, i FROM generate_series(1,100)i;
-INSERT 100
+INSERT 0 100
 -- reset the fault, drop tablespace command will not delete the data files on the tablespace
 SELECT gp_inject_fault('AfterTablespaceCreateLockRelease', 'reset', dbid) FROM gp_segment_configuration WHERE content <> -1 and role='p';
  gp_inject_fault 
@@ -49,7 +49,7 @@ SELECT gp_inject_fault('AfterTablespaceCreateLockRelease', 'reset', dbid) FROM g
  Success:        
 (3 rows)
 1<:  <... completed>
-DROP
+DROP TABLESPACE
 -- check data exists
 SELECT count(*) FROM drop_tablespace_tbl;
  count 
@@ -58,7 +58,7 @@ SELECT count(*) FROM drop_tablespace_tbl;
 (1 row)
 -- move to another tablespace and check the data.
 ALTER TABLE drop_tablespace_tbl SET TABLESPACE pg_default;
-ALTER
+ALTER TABLE
 SELECT count(*) FROM drop_tablespace_tbl;
  count 
 -------

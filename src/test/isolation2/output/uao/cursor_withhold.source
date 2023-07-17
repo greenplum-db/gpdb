@@ -1,14 +1,14 @@
 -- @Description Tests the visibility of an "with hold" cursor w.r.t. deletes.
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT) USING @amname@;
-CREATE
+CREATE TABLE
 insert into ao select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 1: DECLARE cur CURSOR WITH HOLD FOR SELECT a FROM ao ORDER BY a;
-DECLARE
+DECLARE CURSOR
 1: FETCH NEXT IN cur;
  a 
 ---
@@ -41,13 +41,13 @@ COMMIT
  5 
 (1 row)
 1: CLOSE cur;
-CLOSE
+CLOSE CURSOR
 3: DECLARE cur CURSOR WITH HOLD FOR SELECT a FROM ao ORDER BY a;
-DECLARE
+DECLARE CURSOR
 3: FETCH NEXT IN cur;
  a 
 ---
  5 
 (1 row)
 3: CLOSE cur;
-CLOSE
+CLOSE CURSOR

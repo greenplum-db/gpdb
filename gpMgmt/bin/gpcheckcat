@@ -1072,7 +1072,9 @@ def checkOwners():
       left join pg_index i on (c.oid = i.indexrelid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.blkdirrelid or
-                                     i.indrelid = ao.blkdirrelid)
+                                     c.oid = ao.visimaprelid or
+                                     i.indrelid = ao.blkdirrelid or
+                                     i.indrelid = ao.visimaprelid)
       left join pg_class o on (o.oid = ao.relid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)
@@ -1510,6 +1512,82 @@ def checkAOSegVpinfo():
 
     processThread(threads)
 
+class checkAOLastrownumThread(execThread):
+    def __init__(self, cfg, db):
+        execThread.__init__(self, cfg, db, None)
+
+    # pg_attribute_encoding.lastrownums[segno], if exists, should have a corresponding entry in gp_fastsequence with
+    # an objid same as segno. And the value of pg_attribute_encoding.lastrownums[segno] should fall in the range of
+    # [0, {last_sequence}] where {last_sequence} is the current gp_fastsequence value with the corresponding objid.
+    # Note that objmod starts from 0 but the array index starts from 1.
+    def run(self):
+        aolastrownum_query = """
+            SELECT
+                c.relname,
+                ao.relid,
+                ae.attnum,
+                ae.lastrownums,
+                f.objmod,
+                f.last_sequence,
+                ae.lastrownums[f.objmod + 1] AS lastrownum
+            FROM
+                pg_attribute_encoding ae
+                JOIN pg_appendonly ao ON ae.attrelid = ao.relid
+                LEFT JOIN gp_fastsequence f ON ao.segrelid = f.objid
+                JOIN pg_class c ON ao.relid = c.oid
+            WHERE
+                f.last_sequence IS NULL
+                OR f.last_sequence < ae.lastrownums[f.objmod + 1]
+                OR ae.lastrownums[f.objmod + 1] < 0;
+        """
+
+        try:
+            # Execute the query
+            curs = self.db.query(aolastrownum_query)
+            nrows = curs.ntuples()
+
+            if nrows == 0:
+                logger.info('[OK] AO lastrownums check for pg_attribute_encoding')
+            else:
+                GV.checkStatus = False
+                # we could not fix this issue automatically
+                setError(ERROR_NOREPAIR)
+                logger.info('[FAIL] AO lastrownums check for pg_attribute_encoding')
+                for relname, relid, attnum, lastrownums, objmod, last_sequence, last_rownum in curs.getresult():
+                    logger.error("   found inconsistent last_rownum {rownum} with last_sequence {seqnum} of aoseg {segno} for table '{relname}' attribute {attnum} on segment {content}"
+                                 .format(rownum = last_rownum,
+                                         seqnum = last_sequence,
+                                         segno = objmod,
+                                         relname = relname,
+                                         attnum = attnum,
+                                         content = self.cfg['content']))
+
+        except Exception as e:
+            GV.checkStatus = False
+            self.error = e
+
+# for test "ao_lastrownums"
+def checkAOLastrownums():
+    threads = []
+    i = 1
+    # parallelise check
+    for dbid in GV.cfg:
+        cfg = GV.cfg[dbid]
+        db_connection = connect2(cfg)
+        thread = checkAOLastrownumThread(cfg, db_connection)
+        thread.start()
+        logger.debug('launching check thread %s for dbid %i' %
+                     (thread.name, dbid))
+        threads.append(thread)
+
+        if (i % GV.opt['-B']) == 0:
+            processThread(threads)
+            threads = []
+
+        i += 1
+
+    processThread(threads)
+
 # -------------------------------------------------------------------------------
 
 # Exclude these tuples from the catalog table scan
@@ -1616,6 +1694,11 @@ def checkTableInconsistentEntry(cat):
     castcols = list(map(lambda b: b.replace("stxddependencies","stxddependencies::text"), castcols))
     columns = list(map(lambda b: b.replace("stxdmcv","stxdmcv::text"), columns))
     castcols = list(map(lambda b: b.replace("stxdmcv","stxdmcv::text"), castcols))
+
+    # pg_attribute_encoding.lastrownums could have various values on segments, ignore them
+    if catname == 'pg_attribute_encoding':
+        columns.remove('lastrownums')
+        castcols.remove('lastrownums')
 
     if cat.tableHasConsistentOids():
         qry = inconsistentEntryQuery(GV.max_content, catname, ['oid'], columns, castcols)
@@ -2042,6 +2125,14 @@ all_checks = {
             "fn": lambda: checkAOSegVpinfo(),
             "version": 'main',
             "order": 15,
+            "online": False
+        },
+    "ao_lastrownums":
+        {
+            "description": "Check that lastrownums in pg_attribute_encoding is consistent with gp_fastsequence",
+            "fn": lambda: checkAOLastrownums(),
+            "version": 'main',
+            "order": 16,
             "online": False
         }
 }

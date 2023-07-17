@@ -260,7 +260,7 @@ ic_proxy_router_on_write(uv_write_t *req, int status)
 	if (status < 0)
 	{
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
-			   "ic-proxy: router: fail to send %s: %s",
+			   "ic-proxy: router: failed to send %s: %s",
 					 ic_proxy_pkt_to_str(pkt), uv_strerror(status));
 	}
 	else

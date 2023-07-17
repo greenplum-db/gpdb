@@ -590,79 +590,6 @@ CREATE VIEW pg_stat_all_tables AS
     WHERE C.relkind IN ('r', 't', 'm', 'o', 'b', 'M')
     GROUP BY C.oid, N.nspname, C.relname;
 
--- Gather data from segments on user tables, and use data on coordinator on system tables.
-
-CREATE VIEW gp_stat_all_tables_summary AS
-SELECT
-    s.relid,
-    s.schemaname,
-    s.relname,
-    m.seq_scan,
-    m.seq_tup_read,
-    m.idx_scan,
-    m.idx_tup_fetch,
-    m.n_tup_ins,
-    m.n_tup_upd,
-    m.n_tup_del,
-    m.n_tup_hot_upd,
-    m.n_live_tup,
-    m.n_dead_tup,
-    m.n_mod_since_analyze,
-    s.last_vacuum,
-    s.last_autovacuum,
-    s.last_analyze,
-    s.last_autoanalyze,
-    s.vacuum_count,
-    s.autovacuum_count,
-    s.analyze_count,
-    s.autoanalyze_count
-FROM
-    (SELECT
-         allt.relid,
-         allt.schemaname,
-         allt.relname,
-         case when d.policytype = 'r' then (sum(seq_scan)/d.numsegments)::bigint else sum(seq_scan) end seq_scan,
-         case when d.policytype = 'r' then (sum(seq_tup_read)/d.numsegments)::bigint else sum(seq_tup_read) end seq_tup_read,
-         case when d.policytype = 'r' then (sum(idx_scan)/d.numsegments)::bigint else sum(idx_scan) end idx_scan,
-         case when d.policytype = 'r' then (sum(idx_tup_fetch)/d.numsegments)::bigint else sum(idx_tup_fetch) end idx_tup_fetch,
-         case when d.policytype = 'r' then (sum(n_tup_ins)/d.numsegments)::bigint else sum(n_tup_ins) end n_tup_ins,
-         case when d.policytype = 'r' then (sum(n_tup_upd)/d.numsegments)::bigint else sum(n_tup_upd) end n_tup_upd,
-         case when d.policytype = 'r' then (sum(n_tup_del)/d.numsegments)::bigint else sum(n_tup_del) end n_tup_del,
-         case when d.policytype = 'r' then (sum(n_tup_hot_upd)/d.numsegments)::bigint else sum(n_tup_hot_upd) end n_tup_hot_upd,
-         case when d.policytype = 'r' then (sum(n_live_tup)/d.numsegments)::bigint else sum(n_live_tup) end n_live_tup,
-         case when d.policytype = 'r' then (sum(n_dead_tup)/d.numsegments)::bigint else sum(n_dead_tup) end n_dead_tup,
-         case when d.policytype = 'r' then (sum(n_mod_since_analyze)/d.numsegments)::bigint else sum(n_mod_since_analyze) end n_mod_since_analyze,
-         max(last_vacuum) as last_vacuum,
-         max(last_autovacuum) as last_autovacuum,
-         max(last_analyze) as last_analyze,
-         max(last_autoanalyze) as last_autoanalyze,
-         max(vacuum_count) as vacuum_count,
-         max(autovacuum_count) as autovacuum_count,
-         max(analyze_count) as analyze_count,
-         max(autoanalyze_count) as autoanalyze_count
-     FROM
-         gp_dist_random('pg_stat_all_tables') allt
-         inner join pg_class c
-               on allt.relid = c.oid
-         left outer join gp_distribution_policy d
-              on allt.relid = d.localoid
-     WHERE
-        relid >= 16384
-        and (
-            d.localoid is not null
-            or c.relkind in ('o', 'b', 'M')
-            )
-     GROUP BY allt.relid, allt.schemaname, allt.relname, d.policytype, d.numsegments
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_tables
-     WHERE
-             relid < 16384) m, pg_stat_all_tables s
-WHERE m.relid = s.relid;
 
 CREATE VIEW pg_stat_xact_all_tables AS
     SELECT
@@ -696,11 +623,6 @@ CREATE VIEW pg_stat_xact_sys_tables AS
 
 CREATE VIEW pg_stat_user_tables AS
     SELECT * FROM pg_stat_all_tables
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
-          schemaname !~ '^pg_toast';
-
-CREATE VIEW gp_stat_user_tables_summary AS
-    SELECT * FROM gp_stat_all_tables_summary
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
@@ -760,44 +682,6 @@ CREATE VIEW pg_stat_all_indexes AS
             LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
     WHERE C.relkind IN ('r', 't', 'm', 'o', 'b', 'M');
 
--- Gather data from segments on user tables, and use data on coordinator on system tables.
-
-CREATE VIEW gp_stat_all_indexes_summary AS
-SELECT
-    s.relid,
-    s.indexrelid,
-    s.schemaname,
-    s.relname,
-    s.indexrelname,
-    m.idx_scan,
-    m.idx_tup_read,
-    m.idx_tup_fetch
-FROM
-    (SELECT
-         relid,
-         indexrelid,
-         schemaname,
-         relname,
-         indexrelname,
-         sum(idx_scan) as idx_scan,
-         sum(idx_tup_read) as idx_tup_read,
-         sum(idx_tup_fetch) as idx_tup_fetch
-     FROM
-         gp_dist_random('pg_stat_all_indexes')
-     WHERE
-             relid >= 16384
-     GROUP BY relid, indexrelid, schemaname, relname, indexrelname
-
-     UNION ALL
-
-     SELECT
-         *
-     FROM
-         pg_stat_all_indexes
-     WHERE
-             relid < 16384) m, pg_stat_all_indexes s
-WHERE m.relid = s.relid;
-
 CREATE VIEW pg_stat_sys_indexes AS
     SELECT * FROM pg_stat_all_indexes
     WHERE schemaname IN ('pg_catalog', 'information_schema', 'pg_aoseg') OR
@@ -805,11 +689,6 @@ CREATE VIEW pg_stat_sys_indexes AS
 
 CREATE VIEW pg_stat_user_indexes AS
     SELECT * FROM pg_stat_all_indexes
-    WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
-          schemaname !~ '^pg_toast';
-
-CREATE VIEW gp_stat_user_indexes_summary AS
-    SELECT * FROM gp_stat_all_indexes_summary
     WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_aoseg') AND
           schemaname !~ '^pg_toast';
 
@@ -1362,19 +1241,41 @@ CREATE VIEW pg_stat_archiver AS
         s.stats_reset
     FROM pg_stat_get_archiver() s;
 
-CREATE VIEW pg_stat_bgwriter AS
+-- Internal function for pg_stat_bgwriter. It needs to be VOLATILE in order
+-- for pg_stat_bgwriter to work correctly with gp_dist_random.
+CREATE OR REPLACE FUNCTION pg_stat_bgwriter_func()
+RETURNS TABLE (
+    checkpoints_timed BIGINT,
+    checkpoints_req BIGINT,
+    checkpoint_write_time FLOAT,
+    checkpoint_sync_time FLOAT,
+    buffers_checkpoint BIGINT,
+    buffers_clean BIGINT,
+    maxwritten_clean BIGINT,
+    buffers_backend BIGINT,
+    buffers_backend_fsync BIGINT,
+    buffers_alloc BIGINT,
+    stats_reset TIMESTAMPTZ
+)
+AS
+$$
     SELECT
-        pg_stat_get_bgwriter_timed_checkpoints() AS checkpoints_timed,
-        pg_stat_get_bgwriter_requested_checkpoints() AS checkpoints_req,
-        pg_stat_get_checkpoint_write_time() AS checkpoint_write_time,
-        pg_stat_get_checkpoint_sync_time() AS checkpoint_sync_time,
-        pg_stat_get_bgwriter_buf_written_checkpoints() AS buffers_checkpoint,
-        pg_stat_get_bgwriter_buf_written_clean() AS buffers_clean,
-        pg_stat_get_bgwriter_maxwritten_clean() AS maxwritten_clean,
-        pg_stat_get_buf_written_backend() AS buffers_backend,
-        pg_stat_get_buf_fsync_backend() AS buffers_backend_fsync,
-        pg_stat_get_buf_alloc() AS buffers_alloc,
-        pg_stat_get_bgwriter_stat_reset_time() AS stats_reset;
+        pg_stat_get_bgwriter_timed_checkpoints(),
+        pg_stat_get_bgwriter_requested_checkpoints(),
+        pg_stat_get_checkpoint_write_time(),
+        pg_stat_get_checkpoint_sync_time(),
+        pg_stat_get_bgwriter_buf_written_checkpoints(),
+        pg_stat_get_bgwriter_buf_written_clean(),
+        pg_stat_get_bgwriter_maxwritten_clean(),
+        pg_stat_get_buf_written_backend(),
+        pg_stat_get_buf_fsync_backend(),
+        pg_stat_get_buf_alloc(),
+        pg_stat_get_bgwriter_stat_reset_time();
+$$
+LANGUAGE SQL;
+
+CREATE VIEW pg_stat_bgwriter AS
+    SELECT * FROM pg_stat_bgwriter_func();
 
 CREATE VIEW pg_stat_wal AS
     SELECT
@@ -1531,6 +1432,22 @@ CREATE VIEW pg_stat_progress_copy AS
         S.param4 AS tuples_excluded
     FROM pg_stat_get_progress_info('COPY') AS S
         LEFT JOIN pg_database D ON S.datid = D.oid;
+
+CREATE VIEW gp_stat_progress_dtx_recovery AS
+    SELECT
+        CASE S.param1 WHEN 0 THEN 'initializing'
+                      WHEN 1 THEN 'recovering commited distributed transactions'
+                      WHEN 2 THEN 'gathering in-doubt transactions'
+                      WHEN 3 THEN 'aborting in-doubt transactions'
+                      WHEN 4 THEN 'gathering in-doubt orphaned transactions'
+                      WHEN 5 THEN 'managing in-doubt orphaned transactions'
+                      END AS phase,
+        S.param2 AS recover_commited_dtx_total, -- total commited transactions found to recover
+        S.param3 AS recover_commited_dtx_completed, -- recover completed, this is always 0 after startup.
+        S.param4 AS in_doubt_tx_total,  -- total in doubt tx found, used in startup and non-startup phase
+        S.param5 AS in_doubt_tx_in_progress, -- in-progress in-doubt tx, this is always 0 for startup
+        S.param6 AS in_doubt_tx_aborted -- aborted in-doubt tx, this can be >0 for both
+    FROM pg_stat_get_progress_info('DTX RECOVERY') AS S;
 
 CREATE VIEW pg_user_mappings AS
     SELECT
@@ -1918,6 +1835,13 @@ $$
   select sum(n) from brin_summarize_new_values_internal(t) as n;
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
+
+create or replace function brin_desummarize_range(t regclass, block_number int8) returns setof void as
+$$
+  -- brin_desummarize_range_internal is marked as EXECUTE ON ALL SEGMENTS.
+select brin_desummarize_range_internal(t, block_number);
+$$
+LANGUAGE SQL READS SQL DATA EXECUTE ON COORDINATOR;
 
 ------------------------------------------------------------------
 -- GPDB endpoint related views and functions

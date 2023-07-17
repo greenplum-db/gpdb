@@ -1256,7 +1256,7 @@ static struct config_bool ConfigureNamesBool[] =
 			NULL
 		},
 		&wal_compression,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -3060,7 +3060,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&autovacuum_vac_thresh,
-		50, 0, INT_MAX,
+		500, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 	{
@@ -3143,7 +3143,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_UNIT_KB
 		},
 		&autovacuum_work_mem,
-		-1, -1, MAX_KILOBYTES,
+		131072, -1, MAX_KILOBYTES,
 		check_autovacuum_work_mem, NULL, NULL
 	},
 
@@ -3378,6 +3378,7 @@ static struct config_real ConfigureNamesReal[] =
 		DEFAULT_CPU_OPERATOR_COST, 0, DBL_MAX,
 		NULL, NULL, NULL
 	},
+	/* GPDB_96_MERGE_FIXME: figure out the appropriate default values for the two parallel gucs below. */
 	{
 		{"parallel_tuple_cost", PGC_USERSET, QUERY_TUNING_COST,
 			gettext_noop("Sets the planner's estimate of the cost of "
@@ -3516,7 +3517,7 @@ static struct config_real ConfigureNamesReal[] =
 			NULL
 		},
 		&autovacuum_vac_scale,
-		0.2, 0.0, 100.0,
+		0.05, 0.0, 100.0,
 		NULL, NULL, NULL
 	},
 	{

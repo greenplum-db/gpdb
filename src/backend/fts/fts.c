@@ -199,7 +199,7 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 				 IsInSync ? GP_SEGMENT_CONFIGURATION_MODE_INSYNC :
 				 GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC
 			);
-		histvals[Anum_gp_configuration_history_desc-1] =
+		histvals[Anum_gp_configuration_history_description-1] =
 				CStringGetTextDatum(desc);
 		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
 		CatalogTupleInsert(histrel, histtuple);

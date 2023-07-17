@@ -132,11 +132,13 @@ public:
 	static BOOL FPlainEquality(CExpression *pexpr);
 
 	// is the given expression a self comparison on some column
-	static BOOL FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt);
+	static BOOL FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt,
+								CColRefSet *pcrsNotNull);
 
 	// eliminate self comparison if possible
 	static CExpression *PexprEliminateSelfComparison(CMemoryPool *mp,
-													 CExpression *pexpr);
+													 CExpression *pexpr,
+													 CColRefSet *pcrsNotNull);
 
 	// is the given expression in the form (col1 Is NOT DISTINCT FROM col2)
 	static BOOL FINDFScalarIdents(CExpression *pexpr);

@@ -330,7 +330,6 @@ select * from t full join s on t1 = s1;
                 <dxl:TableDescriptor Mdid="6.25359.1.1" TableName="t">
                   <dxl:Columns>
                     <dxl:Column ColId="20" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="29" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="21" Attno="3" ColName="t3" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="22" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                     <dxl:Column ColId="23" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
@@ -426,7 +425,6 @@ select * from t full join s on t1 = s1;
                     <dxl:Columns>
                       <dxl:Column ColId="30" Attno="1" ColName="s1" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="31" Attno="2" ColName="s2" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="39" Attno="3" ColName="s3" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="32" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                       <dxl:Column ColId="33" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                       <dxl:Column ColId="34" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>

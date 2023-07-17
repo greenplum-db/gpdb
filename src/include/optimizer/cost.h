@@ -139,7 +139,6 @@ extern void cost_tup_split(Path *path, PlannerInfo *root,
 						   int numDQAs,
 						   Cost input_startup_cost, Cost input_total_cost,
 						   double input_tuples);
-struct HashAggTableSizes; /* defined in execHHashagg.h */
 extern void cost_agg(Path *path, PlannerInfo *root,
 					 AggStrategy aggstrategy, const AggClauseCosts *aggcosts,
 					 int numGroupCols, double numGroups,

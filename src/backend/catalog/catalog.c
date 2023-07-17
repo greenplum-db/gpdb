@@ -316,15 +316,33 @@ IsAoSegmentNamespace(Oid namespaceId)
  *		system objects only.  As of 8.0, this was only true for
  *		schema and tablespace names.  With 9.6, this is also true
  *		for roles.
- *
- *      As of Greenplum 4.0 we also reserve the prefix gp_
  */
 bool
 IsReservedName(const char *name)
 {
 	/* ugly coding for speed */
-	return ((name[0] == 'p' && name[1] == 'g' && name[2] == '_') ||
-			(name[0] == 'g' && name[1] == 'p' && name[2] == '_'));
+	return name[0] == 'p' && name[1] == 'g' && name[2] == '_';
+}
+
+/*
+ * IsReservedGpName
+ *		True iff name starts with the gp_ prefix.
+ *
+ *		Counterpart of IsReservedName but checks GPDB reserved name(s).
+ * 		As of Greenplum 4.0 we reserve the prefix gp_ for schema and
+ * 		tablespace names. We do not reserve it for role names to avoid 
+ * 		impact to pre-7.0 users and also because the reason to reserve
+ * 		pg_ for role names does not apply to pg_ (see #15259). 
+ *
+ *		As of 7.0 we do not reserve 'gp_toolkit' because it has been made
+ * 		an extension which can be created or dropped by the user.
+ */
+bool
+IsReservedGpName(const char *name)
+{
+	/* ugly coding for speed */
+	return name[0] == 'g' && name[1] == 'p' && name[2] == '_' && 
+								(strlen(name) < 10 || strcmp("gp_toolkit", name) != 0);
 }
 
 /*
@@ -339,7 +357,7 @@ GetReservedPrefix(const char *name)
 {
 	char		*prefix = NULL;
 
-	if (IsReservedName(name))
+	if (IsReservedName(name) || IsReservedGpName(name))
 	{
 		prefix = palloc(4);
 		memcpy(prefix, name, 3);
@@ -712,9 +730,6 @@ GetNewRelFileNode(Oid reltablespace, Relation pg_class, char relpersistence)
 
 		/* Generate the Relfilenode */
 		rnode.node.relNode = GetNewSegRelfilenode();
-
-		if (!IsOidAcceptable(rnode.node.relNode))
-			continue;
 
 		collides = GpCheckRelFileCollision(rnode);
 

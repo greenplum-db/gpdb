@@ -14,7 +14,7 @@ fi
 brew install bash-completion
 brew install cmake # gporca
 brew install xerces-c #gporca
-brew install libyaml # enables `--enable-mapreduce`
+brew install libyaml # gpfdist
 brew install libevent # gpfdist
 brew install apr # gpfdist
 brew install apr-util # gpfdist

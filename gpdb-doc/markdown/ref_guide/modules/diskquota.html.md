@@ -37,7 +37,7 @@ Before you can use the module, you must perform these steps:
     GUC              : shared_preload_libraries
     Coordinator value: auto_explain
     Segment     value: auto_explain
-    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.1'
+    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.2'
     $ gpstop -ar
     ```
 
@@ -459,41 +459,32 @@ When you expand the Greenplum Database cluster, each table consumes more table s
 ```
 
 
-## <a id="upgrade"></a>Upgrading the Module
+## <a id="upgrade"></a>Upgrading the Module to Version 2.x
 
-The `diskquota` 2.1 module is installed when you install or upgrade Greenplum Database. Versions 1.x and 2.0.x of the module will continue to work after you upgrade Greenplum.
+The `diskquota` 2.2 module is installed when you install or upgrade Greenplum Database. Versions 1.x, 2.0.x, and 2.1.x of the module will continue to work after you upgrade Greenplum.
 
 > **Note**
 > `diskquota` will be paused during the upgrade procedure and will be automatically resumed when the upgrade completes.
 
-*If you are upgrading from `diskquota` version 2.0.x*, perform the procedure in [Upgrading from Version 2.0.x](#upgrade_20to21).
+Perform the following procedure to upgrade the `diskquota` module:
 
-*If you are upgrading from `diskquota` version 1.x*, there are two steps in the upgrade procedure:
-
-1. You must first [Upgrade the Module from Version 1.x to Version 2.0.x](#upgrade_1to2).
-1. And then you must [Upgrade the Module from Version 2.0.x](#upgrade_20to21) to version 2.1.
-
-
-### <a id="upgrade_20to21"></a>Upgrading from Version 2.0.x
-
-If you are using version 2.0.x of the module and you want to upgrade to `diskquota` version 2.1, you must perform the following procedure:
-
-1.  Replace the `diskquota-2.0` shared library in the Greenplum Database `shared_preload_libraries` server configuration parameter setting and restart Greenplum Database. Be sure to retain the other libraries. For example:
+1.  Replace the `diskquota-<n>` shared library in the Greenplum Database `shared_preload_libraries` server configuration parameter setting and restart Greenplum Database. Be sure to retain the other libraries. For example:
 
     ```
     $ gpconfig -s shared_preload_libraries
     Values on all segments are consistent
     GUC              : shared_preload_libraries
-    Coordinator value: auto_explain,diskquota-2.0
-    Segment     value: auto_explain,diskquota-2.0
-    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.1'
+    Coordinator value: auto_explain,diskquota-2.1
+    Segment     value: auto_explain,diskquota-2.1
+
+    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.2'
     $ gpstop -ar
     ```
 
 2.  Update the `diskquota` extension in every database in which you registered the module:
 
     ```
-    $ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.1'";
+    $ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.2'";
     ```
 
 4.  Restart Greenplum Database:
@@ -504,41 +495,6 @@ If you are using version 2.0.x of the module and you want to upgrade to `diskquo
 
 After upgrade, your existing disk quota rules continue to be enforced, and you can define new tablespace or per-segment rules. You can also utilize the new pause/resume disk quota enforcement functions.
 
-## <a id="upgrade_1to2"></a>Upgrading From Version 1.x to Version 2.0.x
-
-If you are using version 1.x of the module and you want to upgrade to `diskquota` version 2.x, you must first perform the following procedure to upgrade to version 2.0.x :
-
-1.  Replace the `diskquota` shared library in the Greenplum Database `shared_preload_libraries` server configuration parameter setting and restart Greenplum Database. Be sure to retain the other libraries. For example:
-
-    ```
-    $ gpconfig -s shared_preload_libraries
-    Values on all segments are consistent
-    GUC              : shared_preload_libraries
-    Coordinator value: auto_explain,diskquota
-    Segment     value: auto_explain,diskquota
-    $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.0'
-    $ gpstop -ar
-    ```
-
-2.  Update the `diskquota` extension in every database in which you registered the module:
-
-    ```
-    $ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.0'";
-    ```
-
-3.  Re-initialize `diskquota` table size data:
-
-    ```
-    =# SELECT diskquota.init_table_size_table();
-    ```
-
-4.  Restart Greenplum Database:
-
-    ```
-    $ gpstop -ar
-    ```
-
-After upgrade, your existing disk quota rules continue to be enforced, and you can define new tablespace or per-segment rules. You can also utilize the new pause/resume disk quota enforcement functions.
 
 ## <a id="topic_v2z_jrv_b3b"></a>Examples 
 

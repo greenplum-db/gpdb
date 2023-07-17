@@ -734,6 +734,23 @@ select 1
 union all
 select * from t_github_issue_9874 where a = 1;
 
+--
+-- Test mixing a SegmentGeneral with distributed table
+-- when gp_enable_direct_dispatch is off.
+--
+begin;
+create table rt1(a int, b int) distributed replicated;
+create table t1(a int, b int);
+insert into t1 select i, i+1 from generate_series(6, 9) i;
+insert into rt1 select i, i+1 from generate_series(1, 5) i;
+set local gp_enable_direct_dispatch = on;
+explain(costs off) select * from rt1 union all select * from t1;
+select * from rt1 union all select * from t1;
+set local gp_enable_direct_dispatch = off;
+select * from rt1 union all select * from t1;
+reset gp_enable_direct_dispatch;
+abort;
+
 -- Test mixing a SegmentGeneral with General locus scan.
 explain (costs off)
 select a from t_test_append_rep

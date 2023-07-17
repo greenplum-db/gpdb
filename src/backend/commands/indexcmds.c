@@ -733,7 +733,7 @@ DefineIndex(Oid relationId,
 	 * we can use the same lock as heap tables.
 	 */
 	rel = table_open(relationId, NoLock);
-	if (RelationIsAppendOptimized(rel))
+	if (RelationStorageIsAO(rel))
 	{
 		GetAppendOnlyEntryAuxOids(rel, NULL, &blkdirrelid, NULL);
 

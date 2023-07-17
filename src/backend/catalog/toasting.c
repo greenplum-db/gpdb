@@ -141,8 +141,6 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	Relation	toast_rel;
 	Relation	class_rel;
 	Oid			toast_relid;
-	Oid			toast_idxid;
-	Oid			toast_typid = InvalidOid;
 	Oid			namespaceid;
 	char		toast_relname[NAMEDATALEN];
 	char		toast_idxname[NAMEDATALEN];
@@ -196,23 +194,18 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 		 * should be able to get along without one even if the new version's
 		 * needs_toast_table rules suggest we should have one.  There is a lot
 		 * of daylight between where we will create a TOAST table and where
-		 *		 * one is really necessary to avoid failures, so small cross-version
+		 * one is really necessary to avoid failures, so small cross-version
 		 * differences in the when-to-create heuristic shouldn't be a problem.
 		 * If we tried to create a TOAST table anyway, we would have the
 		 * problem that it might take up an OID that will conflict with some
 		 * old-cluster table we haven't seen yet.
 		 */
-		if (IsBinaryUpgrade)
-		{
-			Assert(toastOid == InvalidOid);
-			toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
-			if (!OidIsValid(toastOid))
-				return false;
-			toast_typid = GetPreassignedOidForType(namespaceid, toast_relname);
-			if (!OidIsValid(toast_typid))
-				return false;
+
+		Assert(toastOid == InvalidOid);
+		toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
+		if (!OidIsValid(toastOid))
+			return false;
 		}
-	}
 
 	/*
 	 * If requested check lockmode is sufficient. This is a cross check in
@@ -249,14 +242,6 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	TupleDescAttr(tupdesc, 1)->attstorage = 'p';
 	TupleDescAttr(tupdesc, 2)->attstorage = 'p';
 
-	/*
-	 * Use binary-upgrade override for pg_type.oid, if supplied.  We might be
-	 * in the post-schema-restore phase where we are doing ALTER TABLE to
-	 * create TOAST tables that didn't exist in the old cluster.
-	 *
-	 * GPDB: already got the OIDs above
-	 */
-
 	/* Toast table is shared if and only if its parent is. */
 	shared_relation = rel->rd_rel->relisshared;
 
@@ -267,7 +252,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 										   namespaceid,
 										   rel->rd_rel->reltablespace,
 										   toastOid,
-										   toast_typid,
+										   InvalidOid,
 										   InvalidOid,
 										   rel->rd_rel->relowner,
 										   RelationIsAoRows(rel) ?
@@ -337,7 +322,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	coloptions[0] = 0;
 	coloptions[1] = 0;
 
-	toast_idxid = index_create(toast_rel, toast_idxname, toastIndexOid, InvalidOid,
+	index_create(toast_rel, toast_idxname, toastIndexOid, InvalidOid,
 				 InvalidOid, InvalidOid,
 				 indexInfo,
 				 list_make2("chunk_id", "chunk_seq"),

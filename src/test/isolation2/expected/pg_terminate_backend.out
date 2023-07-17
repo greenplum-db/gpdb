@@ -1,5 +1,5 @@
 1:create table terminate_backend_t (a int) distributed by (a);
-CREATE
+CREATE TABLE
 
 -- fault on seg1 to block insert command into terminate_backend_t table
 select gp_inject_fault('heap_insert', 'infinite_loop', '', '', 'terminate_backend_t', 1, 1, 0, dbid) from gp_segment_configuration where content = 1 and role = 'p';

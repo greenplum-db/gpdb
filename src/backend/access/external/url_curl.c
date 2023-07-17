@@ -98,7 +98,7 @@ typedef struct
 				eof;			/* error & eof flags */
 	int			gp_proto;
 	
-	int 			zstd;			/* if gpfdist zstd compress is enabled, it equals 1 */
+	int 			zstd;			/* if gpfdist zstd compression is enabled, it equals 1 */
 	int 			lastsize;		/* Recording the compressed data size */
 	
 	char	   		*http_response;
@@ -120,6 +120,10 @@ typedef struct
 #define HOST_NAME_SIZE 100
 #define FDIST_TIMEOUT  408
 #define MAX_TRY_WAIT_TIME 64
+
+#define DEFAULT_TCP_KEEPALIVE_TIME 7200
+#define DEFAULT_TCP_KEEPALIVE_INTVL 75
+#define DEFAULT_TCP_KEEPALIVE_PROBES 9
 /*
  * SSL support GUCs - should be added soon. Until then we will use stubs
  *
@@ -152,9 +156,11 @@ char extssl_key_full[MAXPGPATH] = {0};
 char extssl_cer_full[MAXPGPATH] = {0};
 char extssl_cas_full[MAXPGPATH] = {0};
 
-/* Will hold the last curl error					*/
-/* Currently it is in use only for SSL connection,	*/
-/* but we should consider using it always			*/
+/*
+ * Will hold the last curl error
+ * Currently it is in use only for SSL connection,
+ * but we should consider using it always
+ */ 
 static char curl_Error_Buffer[CURL_ERROR_SIZE];
 
 static void gp_proto0_write_done(URL_CURL_FILE *file);
@@ -240,7 +246,7 @@ destroy_curlhandle(curlhandle_t *h)
 			CURLMcode e = curl_multi_remove_handle(multi_handle, h->handle);
 
 			if (CURLM_OK != e)
-				elog(LOG, "internal error curl_multi_remove_handle (%d - %s)", e, curl_easy_strerror(e));
+				elog(LOG, "internal error curl_multi_remove_handle (%d - %s)", e, curl_multi_strerror(e));
 			h->in_multi_handle = false;
 		}
 
@@ -320,14 +326,19 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 	Assert(size == 1);
 
 	/*
-	 * parse the http response line (code and message) from
+	 * Parse the http response line (code and message) from
 	 * the http header that we get. Basically it's the whole
 	 * first line (e.g: "HTTP/1.0 400 time out"). We do this
 	 * in order to capture any error message that comes from
 	 * gpfdist, and later use it to report the error string in
 	 * check_response() to the database user.
+	 * As we can get multiple header blocks for multiple HTTP
+	 * messages, we need to parse all headers and get the last
+	 * one. First header may contain only successfull status and
+	 * no info about the error.
 	 */
-	if (url->http_response == 0)
+
+	if (len > 5 && *ptr == 'H' && 0 == strncmp("HTTP/", ptr, 5))
 	{
 		int 	n = nmemb;
 		char* 	p;
@@ -342,6 +353,9 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 
 			if (n > 0 && (p[n-1] == '\r' || p[n-1] == '\n'))
 				p[--n] = 0;
+
+			if (url->http_response)
+				pfree(url->http_response);
 
 			url->http_response = p;
 		}
@@ -412,7 +426,7 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 			if (url->for_write && url->zstd)
 			{	
 				url->curl->zstd_cctx = ZSTD_createCCtx();
-				// allocate out.cptr whose size equals to out.ptr
+				/* allocate out.cptr whose size equals to out.ptr */
 				url->out.cptr = (char *) palloc(writable_external_table_bufsize * 1024);
 				url->lastsize = 0;
 			}
@@ -538,18 +552,19 @@ check_response(URL_CURL_FILE *file, int *rc, char **response_string)
 							(oserrno != 0 ? connmsg : ""),
 							(curl_Error_Buffer[0] != '\0' ? curl_Error_Buffer : ""))));
 		}
-		else if (response_code == FDIST_TIMEOUT)	// gpfdist server return timeout code
+		else if (response_code == FDIST_TIMEOUT)	/* gpfdist server return timeout code */
 		{
 			return FDIST_TIMEOUT;
 		}
 		else
 		{
-			/* we need to sleep 1 sec to avoid this condition:
-			   1- seg X gets an error message from gpfdist
-			   2- seg Y gets a 500 error
-			   3- seg Y report error before seg X, and error message
-			   in seg X is thrown away.
-			*/
+			/* 
+			 * we need to sleep 1 sec to avoid this condition:
+			 * 1- seg X gets an error message from gpfdist
+			 * 2- seg Y gets a 500 error
+			 * 3- seg Y report error before seg X, and error message
+			 * in seg X is thrown away.
+			 */
 			pg_usleep(1000000);
 
 			ereport(ERROR,
@@ -563,7 +578,7 @@ check_response(URL_CURL_FILE *file, int *rc, char **response_string)
 	return 0;
 }
 
-// callback for request /gpfdist/status for debugging purpose.
+/* callback for request /gpfdist/status for debugging purpose. */
 static size_t
 log_http_body(char *buffer, size_t size, size_t nitems, void *userp)
 {
@@ -578,7 +593,7 @@ log_http_body(char *buffer, size_t size, size_t nitems, void *userp)
 	return nbytes;
 }
 
-// GET /gpfdist/status to get gpfdist status.
+/* GET /gpfdist/status to get gpfdist status. */
 static void
 get_gpfdist_status(URL_CURL_FILE *file)
 {
@@ -783,9 +798,10 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 	int 	nfds = 0, e = 0;
 	int     timeout_count = 0;
 
-	/* elog(NOTICE, "= still_running %d, bot %d, top %d, want %d",
-	   file->u.curl.still_running, curl->in.bot, curl->in.top, want);
-	*/
+	/* 
+	 * elog(NOTICE, "= still_running %d, bot %d, top %d, want %d",
+	 * file->u.curl.still_running, curl->in.bot, curl->in.top, want);
+	 */
 
 	/* attempt to fill buffer */
 	while (curl->still_running && curl->in.top - curl->in.bot < want)
@@ -813,7 +829,8 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 			curl->still_running = 0;
 			break;
 		}
-		/* When libcurl returns -1 in max_fd, it is because libcurl currently does something
+		/* 
+		 * When libcurl returns -1 in max_fd, it is because libcurl currently does something
 		 * that isn't possible for your application to monitor with a socket and unfortunately
 		 * you can then not know exactly when the current action is completed using select().
 		 * You then need to wait a while before you proceed and call curl_multi_perform anyway
@@ -822,7 +839,7 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 		{
 			elog(DEBUG2, "curl_multi_fdset set maxfd = %d", maxfd);
 			pg_usleep(100000);
-			// to call curl_multi_perform
+			/* to call curl_multi_perform */
 			nfds = 1;
 		}
 		else
@@ -843,7 +860,7 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 		}
 		else if (nfds == 0)
 		{
-			// timeout
+			/* timeout */
 			timeout_count++;
 
 			if (timeout_count % 12 == 0)
@@ -868,9 +885,11 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 		else if (nfds > 0)
 		{
 			/* timeout or readable/writable sockets */
-			/* note we *could* be more efficient and not wait for
+			/* 
+			 * note we *could* be more efficient and not wait for
 			 * CURLM_CALL_MULTI_PERFORM to clear here and check it on re-entry
-			 * but that gets messy */
+			 * but that gets messy 
+			 */
 			while (CURLM_CALL_MULTI_PERFORM ==
 				   (e = curl_multi_perform(multi_handle, &curl->still_running)));
 
@@ -885,9 +904,10 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 			elog(ERROR, "select return unexpected result");
 		}
 
-		/* elog(NOTICE, "- still_running %d, bot %d, top %d, want %d",
-		   file->u.curl.still_running, curl->in.bot, curl->in.top, want);
-		*/
+		/* 
+		 * elog(NOTICE, "- still_running %d, bot %d, top %d, want %d",
+		 * file->u.curl.still_running, curl->in.bot, curl->in.top, want);
+		 */
 	}
 
 	if (curl->still_running == 0)
@@ -1215,8 +1235,10 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 	if (IS_GPFDIST_URI(file->curl_url) || IS_GPFDISTS_URI(file->curl_url))
 	{
-		/* replace gpfdist:// with http:// or gpfdists:// with https://
-		 * by overriding 'dist' with 'http' */
+		/* 
+		 * replace gpfdist:// with http:// or gpfdists:// with https://
+		 * by overriding 'dist' with 'http' 
+		 */
 		unsigned int tmp_len = strlen(file->curl_url) + 1;
 		memmove(file->curl_url, file->curl_url + 3, tmp_len - 3);
 		memcpy(file->curl_url, "http", 4);
@@ -1280,12 +1302,14 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 	if (forwrite)
 	{
-		// TIMEOUT for POST only, GET is single HTTP request,
-		// probablity take long time.
+		/* 
+		 * TIMEOUT for POST only, GET is single HTTP request,
+		 * probablity take long time.
+		 */
 		elog(LOG, "gpfdist_retry_timeout = %d", gpfdist_retry_timeout);
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_TIMEOUT, (long)gpfdist_retry_timeout);
 
-		/*init sequence number*/
+		/* init sequence number */
 		file->seq_number = 1;
 
 		/* write specific headers */
@@ -1311,6 +1335,22 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-USER", ev->GP_USER);
 		set_httpheader(file, "X-GP-SEG-PORT", ev->GP_SEG_PORT);
 		set_httpheader(file, "X-GP-SESSION-ID", ev->GP_SESSION_ID);
+
+		int	libcurl_tcp_keepalives_idle = DEFAULT_TCP_KEEPALIVE_TIME;
+		int	libcurl_tcp_keepalives_interval = DEFAULT_TCP_KEEPALIVE_INTVL;
+		int	libcurl_tcp_keepalives_count = DEFAULT_TCP_KEEPALIVE_PROBES;
+		if (tcp_keepalives_idle != 0)
+			libcurl_tcp_keepalives_idle = tcp_keepalives_idle;
+		if (tcp_keepalives_interval != 0)
+			libcurl_tcp_keepalives_interval = tcp_keepalives_interval;
+		if (tcp_keepalives_count != 0)
+			libcurl_tcp_keepalives_count = tcp_keepalives_count;
+		/* enable TCP keep-alive for this transfer, libcurl_tcp_keepalives_count probes */
+		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPALIVE, (long)libcurl_tcp_keepalives_count);
+		/* keep-alive idle time to libcurl_tcp_keepalives_idle seconds */
+		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPIDLE, (long)libcurl_tcp_keepalives_idle);
+		/* interval time between keep-alive probes: libcurl_tcp_keepalives_interval seconds */
+		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPINTVL, (long)libcurl_tcp_keepalives_interval);
 	}
 		
 	{
@@ -1553,9 +1593,11 @@ gp_proto0_read(char *buf, int bufsz, URL_CURL_FILE *file)
 
 	fill_buffer(file, bufsz);
 
-	/* check if there's data in the buffer - if not fill_buffer()
+	/* 
+	 * check if there's data in the buffer - if not fill_buffer()
 	 * either errored or EOF. For proto0, we cannot distinguish
-	 * between error and EOF. */
+	 * between error and EOF. 
+	 */
 	n = file->in.top - file->in.bot;
 	if (n == 0 && !file->still_running)
 		file->eof = 1;
@@ -1576,10 +1618,11 @@ decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 {
 	
 	size_t ret;
-	/* Ret indicates the number of bytes of next data frame to be decompressed.
-	 * And if an error occur in ZSTD_decompressStream, ret will be a error number.
-	 * If ZSTD_isError is true, the ret is a error number.
-	 * The content of the error can be got by ZSTD_getErrorName..
+	/* 
+	 * The return value ret indicates the number of bytes of next data frame to be decompressed.
+	 * And if an error occurs in ZSTD_decompressStream, ret will be an error number.
+	 * If ZSTD_isError is true, the ret is an error number.
+	 * The content of the error can be got by ZSTD_getErrorName.
 	 */
 	ret = ZSTD_decompressStream(ctx, bout, bin);
 
@@ -1763,25 +1806,39 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 
 	if (file->zstd)
 	{
-		/* 'lastsize' is the number of bytes required for next decompression.
+		/* 
+		 * 'lastsize' is the number of bytes required for next decompression.
 		 * 'left_bytes' is the number of bytes remained in 'file->in.ptr'.
-		 * If left_bytes is less than 'lastsize', the next decompression
+		 * If 'left_bytes' is less than 'lastsize', the next decompression
 		 * can't complete in a decompression operation. Thus, when 
-		 * 'file->lastsize > left_bytes', we need more bytes and fill_buffer is called.
+		 * 'file->lastsize > left_bytes', we need more bytes and fill_buffer() is called.
 		 * 
 		 * When the condition 'file->block.datalen == len' is met, a new
-		 * request just start. In this case lastsize is an init value, and 
-		 * cannot provide the information about how many bytes required
+		 * request just starts. In this case, lastsize is an init value, and 
+		 * can not provide the information about how many bytes required
 		 * to finish the first frame decompression. In this case, enough
-		 * bytes(more than ZSTD_DStreamInSize() returning) should be filled
+		 * bytes (more than ZSTD_DStreamInSize() returning) should be filled
 		 * into 'file->in.ptr' to ensure that the first decompression 
-		 * completing.
+		 * will complete successfully.
 		 */
 		if (file->lastsize > left_bytes || file->block.datalen == len)
 		{
 #ifdef USE_ZSTD
 			int wantsz = ZSTD_DStreamInSize() - left_bytes;
 			fill_buffer(file, wantsz);
+			/* 
+			 * Gpfdist could be aborted unexpectedly. Thus gpdb would recieve the partial data, which 
+			 * is unable to be decompressed correctly. In this case, gpdb will report a decompression
+			 * error. However, the error is not the real cause of the abortion. So we add a judge here,
+			 * to check if gpdb get enough data to decompress. The missing data means the network problem.
+			 */
+			left_bytes = (file->in.top - file->in.bot);
+			if (file->lastsize > left_bytes && file->block.datalen)
+			{
+				ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("connection to gpfdist error: stream ends unexpectedly")));
+			}
 #endif
 		}
 	} 
@@ -1796,7 +1853,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 
 	n = file->in.top - file->in.bot;
 
-	/* if gpfdist closed connection prematurely or died catch it here */
+	/* if gpfdist closed connection prematurely or died, catch it here */
 	if (n == 0 && !file->eof)
 	{
 		file->error = 1;
@@ -1817,11 +1874,12 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	if (file->zstd && file->curl->zstd_dctx && !file->eof)
 	{
 		int ret;
-		/* It is absolutely to put the decompression code in a loop.
+		/* 
+		 * I think it is correct to put the decompression code in a loop.
 		 * Since not every call of decompress_zstd_data will get data into bout.
 		 * However, even thought there is no data in bout, the call of 
 		 * decompress_zstd_data is neccersary for following decompression.
-		 * If a empty buf is returned to gpdb, the error will occur. 
+		 * If an empty buf is returned to gpdb, the error will occur. 
 		 * So the loop ensures that we push forward the decompression until there 
 		 * is data in bout.
 		 */
@@ -1866,7 +1924,8 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 	char*		buf;
 	int		nbytes;
 #ifdef USE_ZSTD
-	if(file->zstd){
+	if (file->zstd)
+	{
 		nbytes = compress_zstd_data(file);
 		buf = file->out.cptr;
 	}

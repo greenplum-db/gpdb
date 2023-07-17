@@ -444,11 +444,7 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 	}
 	else
 	{
-		if (ShouldUnassignResGroup())
-		{
-			bool inFunction = already_under_executor_run() || utility_nested();
-			ShouldBypassQuery(queryDesc->plannedstmt, inFunction);
-		}
+		check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 		queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 		/* call ExecutorStart to prepare the plan for execution */

@@ -6,6 +6,7 @@ set debug_burn_xids=on;
 
 -- Speed up test.
 ALTER SYSTEM SET autovacuum_naptime = 5;
+ALTER SYSTEM SET autovacuum_vacuum_threshold = 50;
 select * from pg_reload_conf();
 
 -- Autovacuum should take care of anti-XID wraparounds of catalog tables.
@@ -61,4 +62,5 @@ END$$;
 
 -- Reset GUCs.
 ALTER SYSTEM RESET autovacuum_naptime;
+ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 select * from pg_reload_conf();

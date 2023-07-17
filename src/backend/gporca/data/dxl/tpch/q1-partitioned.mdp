@@ -28,10 +28,10 @@
         <dxl:Commutator Mdid="0.2375.1.0"/>
         <dxl:InverseOp Mdid="0.2348.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" IsStrict="false">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Stable" IsStrict="false">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDScalarComparison Mdid="4.1082.1.0;1114.1.0;3" Name="&lt;=" ComparisonType="LEq" LeftType="0.1082.1.0" RightType="0.1114.1.0" OperatorMdid="0.2346.1.0"/>
@@ -203,7 +203,7 @@
       <dxl:ColumnStatistics Mdid="1.38557.1.1.3" Name="l_linenumber" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.38557.1.1.2" Name="l_suppkey" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.38557.1.1.10" Name="l_shipdate" Width="8.000000"/>
-      <dxl:GPDBFunc Mdid="0.6086.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.6086.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Stable" IsStrict="false">
         <dxl:ResultType Mdid="0.2249.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.17.1.0" Name="bytea" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">

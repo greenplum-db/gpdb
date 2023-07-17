@@ -5,7 +5,7 @@
 -- subsequent flush of the metapage will lead to an inadvertent
 -- overwrite.
 1:CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
+CREATE EXTENSION
 -- skip FTS probes for this test to avoid segment being marked down on restart
 1:SELECT gp_inject_fault_infinite('fts_probe', 'skip', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
  gp_inject_fault_infinite 
@@ -25,9 +25,9 @@ CREATE
 
 -- test setup
 1:CREATE TABLE bm(a int);
-CREATE
+CREATE TABLE
 1:CREATE INDEX ON bm USING bitmap (a);
-CREATE
+CREATE INDEX
 -- pause checkpoint to make sure CRASH RECOVERY happens for bitmap index replay
 1:SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid) FROM gp_segment_configuration WHERE role='p';
  gp_inject_fault_infinite 
@@ -42,7 +42,7 @@ CHECKPOINT
 
 -- this insert's WAL we wish to replay
 1:insert into bm select generate_series(1, 5000);
-INSERT 5000
+INSERT 0 5000
 1U:select pg_relation_size(oid)/current_setting('block_size')::bigint from pg_class where relname = 'bm_a_idx';
  ?column? 
 ----------
@@ -51,7 +51,7 @@ INSERT 5000
 
 -- set small shared_buffers to make sure META_PAGE of bitmap index evicts out
 1U: ALTER SYSTEM set shared_buffers to 20;
-ALTER
+ALTER SYSTEM
 1:SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 1;
  pg_ctl 
 --------
@@ -78,7 +78,7 @@ SET
 -- teardown cleanup for the test
 1Uq: ... <quitting>
 1U:ALTER SYSTEM reset shared_buffers;
-ALTER
+ALTER SYSTEM
 2:SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 1;
  pg_ctl 
 --------
@@ -98,3 +98,32 @@ ALTER
 -----------------
  Success:        
 (1 row)
+
+-- Test bitmap index replay XLog after crash
+-- More details could be found at https://github.com/greenplum-db/gpdb/issues/13517
+drop table if exists test_bitmap;
+DROP TABLE
+create table test_bitmap( id int, type int ) distributed by (id);
+CREATE TABLE
+insert into test_bitmap (id, type) select 1, g % 1000 from generate_series(1, 3000000) g;
+INSERT 0 3000000
+create index on test_bitmap using bitmap(type);
+CREATE INDEX
+select count(*) from test_bitmap where type = 520;
+ count 
+-------
+ 3000  
+(1 row)
+
+-- start_ignore
+! gpstop -rai;
+-- end_ignore
+
+0: select count(*) from test_bitmap where type = 520;
+ count 
+-------
+ 3000  
+(1 row)
+0: drop table test_bitmap;
+DROP TABLE
+

@@ -782,7 +782,7 @@
       <dxl:ResultType Mdid="0.20.1.0"/>
       <dxl:IntermediateResultType Mdid="0.20.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" IsStrict="false">
       <dxl:ResultType Mdid="0.20.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBAgg Mdid="0.2101.1.0" Name="avg" IsSplittable="true" HashAggCapable="true">

@@ -5,16 +5,16 @@
 -- First, create test functions with different EXECUTE ON options
 
 create function srf_on_coordinator () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON COORDINATOR;
-CREATE
+CREATE FUNCTION
 
 create function srf_on_all_segments () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON ALL SEGMENTS;
-CREATE
+CREATE FUNCTION
 
 create function srf_on_any () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON ANY IMMUTABLE;
-CREATE
+CREATE FUNCTION
 
 create function srf_on_initplan () returns setof text as $$ begin	/* in func */ return next 'foo ' || current_setting('gp_contentid');	/* in func */ return next 'bar ' || current_setting('gp_contentid');	/* in func */ end;	/* in func */ $$ language plpgsql EXECUTE ON INITPLAN;
-CREATE
+CREATE FUNCTION
 
 -- Now try executing them in utility mode, in the coordinator node and on a
 -- segment. The expected behavior is that the function runs on the node
@@ -23,9 +23,9 @@ CREATE
 -- Join with a table, to give the planner something more exciting to do
 -- than just create the FunctionScan plan.
 create table fewrows (t text) distributed by (t);
-CREATE
+CREATE TABLE
 insert into fewrows select g from generate_series(1, 10) g;
-INSERT 10
+INSERT 0 10
 
 -1U: select * from srf_on_coordinator()       as srf (x) left join fewrows on x = t;
  x      | t 

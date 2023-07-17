@@ -1919,6 +1919,60 @@ select * from t_github_issue_9874 where a = 1;
         1
 (1 row)
 
+--
+-- Test mixing a SegmentGeneral with distributed table
+-- when gp_enable_direct_dispatch is off.
+--
+begin;
+create table rt1(a int, b int) distributed replicated;
+create table t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t1 select i, i+1 from generate_series(6, 9) i;
+insert into rt1 select i, i+1 from generate_series(1, 5) i;
+set local gp_enable_direct_dispatch = on;
+explain(costs off) select * from rt1 union all select * from t1;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Append
+         ->  Seq Scan on rt1
+         ->  Broadcast Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on t1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select * from rt1 union all select * from t1;
+ a | b  
+---+----
+ 1 |  2
+ 2 |  3
+ 3 |  4
+ 4 |  5
+ 5 |  6
+ 6 |  7
+ 9 | 10
+ 7 |  8
+ 8 |  9
+(9 rows)
+
+set local gp_enable_direct_dispatch = off;
+select * from rt1 union all select * from t1;
+ a | b  
+---+----
+ 1 |  2
+ 2 |  3
+ 3 |  4
+ 4 |  5
+ 5 |  6
+ 6 |  7
+ 9 | 10
+ 7 |  8
+ 8 |  9
+(9 rows)
+
+reset gp_enable_direct_dispatch;
+abort;
 -- Test mixing a SegmentGeneral with General locus scan.
 explain (costs off)
 select a from t_test_append_rep

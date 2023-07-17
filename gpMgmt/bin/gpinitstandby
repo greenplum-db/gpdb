@@ -394,7 +394,7 @@ def create_standby(options):
             SyncPackages(options.standby_host).run()
         except Exception as e:
             logger.warning('Syncing of Greenplum Database extensions has failed.')
-            logger.warning('Please run gppkg --clean after successful standby initialization.')
+            logger.warning('Please run `gppkg install --force <package>` to re-install gppkg packages after successful standby initialization.')
 
         # Disable Ctrl-C
         signal.signal(signal.SIGINT,signal.SIG_IGN)

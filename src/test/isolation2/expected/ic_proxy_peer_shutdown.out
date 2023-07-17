@@ -1,8 +1,8 @@
 -- Test to ensure that peer shutdown doesn't lead to packet loss.
 CREATE TABLE ic_proxy_peer_shutdown(i int);
-CREATE
+CREATE TABLE
 INSERT INTO ic_proxy_peer_shutdown VALUES (1), (2), (3);
-INSERT 3
+INSERT 0 3
 -- Will ensure that all peer setup is done.
 SELECT * FROM ic_proxy_peer_shutdown;
  i 

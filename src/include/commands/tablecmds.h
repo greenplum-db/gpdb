@@ -122,5 +122,6 @@ extern void GpAlterPartMetaTrackUpdObject(Oid relid, AlterTableType subcmdtype);
 extern void GpRenameChildPartitions(Relation targetrelation,
 									const char *oldparentrelname,
 									const char *newparentrelname);
+Datum get_rel_opts(Relation rel);
 
 #endif							/* TABLECMDS_H */

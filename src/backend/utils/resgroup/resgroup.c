@@ -38,6 +38,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "port/atomics.h"
+#include "postmaster/autovacuum.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/lmgr.h"
@@ -46,6 +47,7 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
+#include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
@@ -57,6 +59,7 @@
 #include "utils/cgroup-ops-v1.h"
 #include "utils/cgroup-ops-dummy.h"
 #include "utils/cgroup-ops-v2.h"
+#include "access/xact.h"
 
 #define InvalidSlotId	(-1)
 #define RESGROUP_MAX_SLOTS	(MaxConnections)
@@ -72,6 +75,7 @@ bool						gp_resgroup_print_operator_memory_limits = false;
 
 bool						gp_resgroup_debug_wait_queue = true;
 int							gp_resource_group_queuing_timeout = 0;
+int							gp_resource_group_move_timeout = 30000;
 
 /*
  * Data structures
@@ -262,13 +266,14 @@ static void resgroupDumpSlots(StringInfo str);
 static void resgroupDumpFreeSlots(StringInfo str);
 
 static void sessionSetSlot(ResGroupSlotData *slot);
-static void sessionResetSlot(void);
+static void sessionResetSlot(ResGroupSlotData *slot);
 static ResGroupSlotData *sessionGetSlot(void);
 
 static void cpusetOperation(char *cpuset1,
 							const char *cpuset2,
 							int len,
 							bool sub);
+
 
 #ifdef USE_ASSERT_CHECKING
 static bool selfHasGroup(void);
@@ -279,6 +284,10 @@ static bool slotIsInUse(const ResGroupSlotData *slot);
 static bool groupIsNotDropped(const ResGroupData *group);
 static bool groupWaitQueueFind(ResGroupData *group, const PGPROC *proc);
 #endif /* USE_ASSERT_CHECKING */
+
+static bool is_pure_catalog_plan(PlannedStmt *stmt);
+static bool can_bypass_based_on_plan_cost(PlannedStmt *stmt);
+static bool can_bypass_direct_dispatch_plan(PlannedStmt *stmt);
 
 /*
  * Estimate size the resource group structures will need in
@@ -366,43 +375,6 @@ error_out:
 	ereport(FATAL,
 			(errcode(ERRCODE_OUT_OF_MEMORY),
 			 errmsg("not enough shared memory for resource group control")));
-}
-
-
-/*
- * Initialize the global CGroupOpsRoutine struct of resource groups.
- */
-void
-CGroupOpsAndInfoInit(void)
-{
-	bool        found;
-	int			size;
-
-	size = sizeof(CGroupOpsRoutine);
-	cgroupOpsRoutine = (CGroupOpsRoutine *)
-		ShmemInitStruct("global cgroup operations routine",
-									   size, &found);
-	if (found)
-		return;
-	if (cgroupOpsRoutine == NULL)
-		goto error_out;
-
-	size = sizeof(CGroupSystemInfo);
-	cgroupSystemInfo = (CGroupSystemInfo *)
-		ShmemInitStruct("global cgroup system info",
-									   size, &found);
-
-	if (found)
-		return;
-	if (cgroupSystemInfo == NULL)
-		goto error_out;
-
-	return;
-
-error_out:
-	ereport(FATAL,
-			(errcode(ERRCODE_OUT_OF_MEMORY),
-					errmsg("not enough shared memory for cgroup operations routine")));
 }
 
 /*
@@ -523,10 +495,13 @@ InitResGroups(void)
 
 		cgroupOpsRoutine->createcgroup(groupId);
 
+		if (caps.io_limit != NULL)
+			cgroupOpsRoutine->setio(groupId, cgroupOpsRoutine->parseio(caps.io_limit));
+
 		if (CpusetIsEmpty(caps.cpuset))
 		{
-			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuHardQuotaLimit);
-			cgroupOpsRoutine->setcpupriority(groupId, caps.cpuSoftPriority);
+			cgroupOpsRoutine->setcpulimit(groupId, caps.cpuMaxPercent);
+			cgroupOpsRoutine->setcpuweight(groupId, caps.cpuWeight);
 		}
 		else
 		{
@@ -549,7 +524,7 @@ InitResGroups(void)
 								 "please refer to the Greenplum Documentations for details")));
 			}
 
-			Assert(caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+			Assert(caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 
 			if (bms_is_empty(bmsMissing))
 			{
@@ -800,7 +775,7 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU)
 		{
 			cgroupOpsRoutine->setcpulimit(callbackCtx->groupid,
-										callbackCtx->caps.cpuHardQuotaLimit);
+										callbackCtx->caps.cpuMaxPercent);
 
 			/* We should set cpuset to the default value */
 			char *cpuset = (char *) palloc(MaxCpuSetLength);
@@ -809,8 +784,8 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPU_SHARES)
 		{
-			cgroupOpsRoutine->setcpupriority(callbackCtx->groupid,
-										  callbackCtx->caps.cpuSoftPriority);
+			cgroupOpsRoutine->setcpuweight(callbackCtx->groupid,
+										   callbackCtx->caps.cpuWeight);
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
@@ -825,6 +800,11 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		{
 			wakeupSlots(group, true);
 		}
+		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_LIMIT)
+		{
+			cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->ioLimit);
+		}
+
 		/* reset default group if cpuset has changed */
 		if (strcmp(callbackCtx->oldCaps.cpuset, callbackCtx->caps.cpuset) &&
 			gp_resource_group_enable_cgroup_cpuset)
@@ -992,6 +972,10 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 
 	group->groupId = groupId;
 	group->caps = *caps;
+
+	/* remove local pointers */
+	group->caps.io_limit = NULL;
+
 	group->nRunning = 0;
 	group->nRunningBypassed = 0;
 	ProcQueueInit(&group->waitProcs);
@@ -1115,13 +1099,12 @@ slotpoolFreeSlot(ResGroupSlotData *slot)
 }
 
 /*
- * Get a slot with memory quota granted.
+ * Get a slot.
  *
- * A slot can be got with this function if there is enough memory quota
- * available and the concurrency limit is not reached.
+ * A slot can be got with this function the concurrency limit is not reached.
  *
- * On success the memory quota is marked as granted, nRunning is increased
- * and the slot's groupId is also set accordingly, the slot id is returned.
+ * On success the nRunning is increased and the slot's groupId is also set
+ * accordingly, the slot id is returned.
  *
  * On failure nothing is changed and InvalidSlotId is returned.
  */
@@ -1155,8 +1138,7 @@ groupGetSlot(ResGroupData *group)
 /*
  * Put back the slot assigned to self.
  *
- * This will release a slot, its memory quota will be freed and
- * nRunning will be decreased.
+ * This will release a slot, its nRunning will be decreased.
  */
 static void
 groupPutSlot(ResGroupData *group, ResGroupSlotData *slot)
@@ -1344,7 +1326,7 @@ groupAcquireSlot(ResGroupInfo *pGroupInfo, bool isMoveQuery)
  *   temporarily released;
  *
  * When grant is true we'll give up once no slot can be get,
- * e.g. due to lack of free slot or enough memory quota.
+ * e.g. due to lack of free slot.
  *
  * When grant is false all the pending procs will be woken up.
  */
@@ -1436,9 +1418,9 @@ SerializeResGroupInfo(StringInfo str)
 
 	itmp = htonl(caps->concurrency);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
-	itmp = htonl(caps->cpuHardQuotaLimit);
+	itmp = htonl(caps->cpuMaxPercent);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
-	itmp = htonl(caps->cpuSoftPriority);
+	itmp = htonl(caps->cpuWeight);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
 	itmp = htonl(caps->memory_limit);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(int32));
@@ -1477,9 +1459,9 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->concurrency = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
-	capsOut->cpuHardQuotaLimit = ntohl(itmp);
+	capsOut->cpuMaxPercent = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
-	capsOut->cpuSoftPriority = ntohl(itmp);
+	capsOut->cpuWeight = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	capsOut->memory_limit = ntohl(itmp);
 	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
@@ -1512,12 +1494,14 @@ ShouldAssignResGroupOnCoordinator(void)
 	 * waiting queue (and its corruption).
 	 *
 	 * Also bypass resource group when it's exiting.
+	 * Also bypass resource group when it's vacuum worker process.
 	 */
 	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
 		Gp_role == GP_ROLE_DISPATCH &&
 		!proc_exit_inprogress &&
-		!procIsWaiting(MyProc);
+		!procIsWaiting(MyProc) &&
+		!IsAutoVacuumWorkerProcess();
 }
 
 /*
@@ -1577,7 +1561,7 @@ AssignResGroupOnCoordinator(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
-									   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   bypassedGroup->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 
 		return;
 	}
@@ -1604,11 +1588,11 @@ AssignResGroupOnCoordinator(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 	}
 	PG_CATCH();
 	{
-		UnassignResGroup(false);
+		UnassignResGroup();
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -1618,10 +1602,10 @@ AssignResGroupOnCoordinator(void)
  * Detach from a resource group at the end of the transaction.
  */
 void
-UnassignResGroup(bool releaseSlot)
+UnassignResGroup(void)
 {
-	ResGroupData		*group = self->group;
-	ResGroupSlotData	*slot = self->slot;
+	ResGroupData		*group;
+	ResGroupSlotData	*slot;
 
 	if (bypassedGroup)
 	{
@@ -1647,24 +1631,22 @@ UnassignResGroup(bool releaseSlot)
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
+	group = self->group;
+	slot = self->slot;
+
 	/* Sub proc memory accounting info from group and slot */
 	selfDetachResGroup(group, slot);
 
 	/* Release the slot if no reference. */
-	if (slot->nProcs == 0 || releaseSlot)
+	if (slot->nProcs == 0)
 	{
-		if (releaseSlot)
-		{
-			slot->nProcs = 0;
-		}
-
 		groupReleaseSlot(group, slot, false);
 
 		/*
 		 * Reset resource group slot for current session. Note MySessionState
 		 * could be reset as NULL in shmem_exit() before.
 		 */
-		sessionResetSlot();
+		sessionResetSlot(slot);
 	}
 
 	LWLockRelease(ResGroupLock);
@@ -1715,16 +1697,27 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	if (newGroupId == InvalidOid)
 	{
-		UnassignResGroup(false);
+		UnassignResGroup();
 		return;
 	}
+
+	/*
+	 * The working case: pg_resgroup_move_query command was interrupted, but
+	 * at the time target (dispatcher) process already got control over slot.
+	 * If we'll wait until the end of current target process command and then
+	 * will dispatch something on segments in the same transaction, then
+	 * newGroupId will not be equal to current segment's one. We want to move
+	 * out of inconsistent state.
+	 */
+	if (newGroupId != self->groupId)
+		UnassignResGroup();
 
 	if (self->groupId != InvalidOid)
 	{
 		/* it's not the first dispatch in the same transaction */
 		Assert(self->groupId == newGroupId);
 		Assert(self->caps.concurrency == caps.concurrency);
-		Assert(self->caps.cpuHardQuotaLimit == caps.cpuHardQuotaLimit);
+		Assert(self->caps.cpuMaxPercent == caps.cpuMaxPercent);
 		Assert(!strcmp(self->caps.cpuset, caps.cpuset));
 		return;
 	}
@@ -1764,7 +1757,7 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	/* Add into cgroup */
 	cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-								   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+								   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 }
 
 /*
@@ -1854,7 +1847,7 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 			pfree(new_status);
 		}
 
-		groupWaitCancel(false);
+		groupWaitCancel(isMoveQuery);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -2044,7 +2037,7 @@ groupWaitCancel(bool isMoveQuery)
 		 * Reset resource group slot for current session. Note MySessionState
 		 * could be reset as NULL in shmem_exit() before.
 		 */
-		sessionResetSlot();
+		sessionResetSlot(slot);
 
 		group->totalExecuted++;
 
@@ -2264,7 +2257,12 @@ slotValidate(const ResGroupSlotData *slot)
 	else
 	{
 		Assert(!slotIsInFreelist(slot));
-		AssertImply(Gp_role == GP_ROLE_EXECUTE, slot == sessionGetSlot());
+		/*
+		 * Entrydb process can have different self and session slots at the
+		 * time of moving to another group.
+		 */
+		AssertImply(Gp_role == GP_ROLE_EXECUTE && !IS_QUERY_DISPATCHER(),
+					slot == sessionGetSlot());
 	}
 }
 
@@ -2749,7 +2747,7 @@ resgroupDumpGroup(StringInfo str, ResGroupData *group)
 
 	resgroupDumpWaitQueue(str, &group->waitProcs);
 	resgroupDumpCaps(str, (ResGroupCap*)(&group->caps));
-	
+
 	appendStringInfo(str, "}");
 }
 
@@ -2848,7 +2846,17 @@ static void
 sessionSetSlot(ResGroupSlotData *slot)
 {
 	Assert(slot != NULL);
-	Assert(MySessionState->resGroupSlot == NULL);
+	/*
+	 * Previously, we had an assertion, that MySessionState->resGroupSlot
+	 * should be NULL here. There is a case, when we want to move processes
+	 * from one group to another. We got assertion error on main process,
+	 * if entrydb process not called UnassignResGroup() yet (and vice versa).
+	 * Next call to UnassignResGroup() (by main or entrydb process) will free
+	 * slot and it's OK, but here we want to set new slot to session, so we
+	 * changed assertion.
+	 */
+	AssertImply((Gp_role == GP_ROLE_EXECUTE && !IS_QUERY_DISPATCHER()),
+		MySessionState->resGroupSlot == NULL);
 
 	/*
 	 * SessionStateLock is required since runaway detector will traverse
@@ -2863,10 +2871,11 @@ sessionSetSlot(ResGroupSlotData *slot)
 }
 
 /*
- * Reset resource group slot for current session to NULL.
+ * Reset resource group slot for current session to NULL, check we resetting
+ * correct slot
  */
 static void
-sessionResetSlot(void)
+sessionResetSlot(ResGroupSlotData *slot)
 {
 	/*
 	 * SessionStateLock is required since runaway detector will traverse
@@ -2877,7 +2886,9 @@ sessionResetSlot(void)
 	{
 		LWLockAcquire(SessionStateLock, LW_EXCLUSIVE);
 
-		MySessionState->resGroupSlot = NULL;
+		/* If the slot is ours, set resGroupSlot to NULL. */
+		if (MySessionState->resGroupSlot == slot)
+			MySessionState->resGroupSlot = NULL;
 
 		LWLockRelease(SessionStateLock);
 	}
@@ -3210,45 +3221,153 @@ HandleMoveResourceGroup(void)
 	ResGroupSlotData *slot;
 	ResGroupData *group;
 	ResGroupData *oldGroup;
+	Oid			groupId;
+	pid_t		callerPid;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE);
 
 	/* transaction has finished */
-	if (!selfIsAssigned())
+	if (!IsTransactionState() || !selfIsAssigned())
+	{
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			SpinLockAcquire(&MyProc->movetoMutex);
+
+			/*
+			 * setting movetoGroupId to InvalidOid alone without setting
+			 * movetoResSlot to NULL means target process tried to handle, but
+			 * can't do anything with a command
+			 */
+			MyProc->movetoGroupId = InvalidOid;
+			callerPid = MyProc->movetoCallerPid;
+			SpinLockRelease(&MyProc->movetoMutex);
+
+			/* notify initiator, current command is irrelevant */
+			if (callerPid != InvalidPid)
+				ResGroupMoveNotifyInitiator(callerPid);
+		}
 		return;
+	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		slot = (ResGroupSlotData *)MyProc->movetoResSlot;
-		group = slot->group;
+		SIMPLE_FAULT_INJECTOR("resource_group_move_handler_before_qd_control");
+
+		SpinLockAcquire(&MyProc->movetoMutex);
+		slot = (ResGroupSlotData *) MyProc->movetoResSlot;
+		groupId = MyProc->movetoGroupId;
+		callerPid = MyProc->movetoCallerPid;
+
+		/* set to NULL to mark we got slot control */
 		MyProc->movetoResSlot = NULL;
+		/* set to InvalidOid to mark we handling the command */
+		MyProc->movetoGroupId = InvalidOid;
+
+		/*
+		 * Don't clean movetoCallerPid. It guards us from another initiators,
+		 * which may overwrite moveto* params.
+		 */
+		SpinLockRelease(&MyProc->movetoMutex);
+
+		if (!slot)
+		{
+			/* moving command is irrelevant */
+			return;
+		}
+
+		/*
+		 * starting from this point, all control over slot should be done
+		 * here, from target process
+		 */
+
+		Assert(groupId != InvalidOid);
+		SIMPLE_FAULT_INJECTOR("resource_group_move_handler_after_qd_control");
+
+		ResGroupMoveNotifyInitiator(callerPid);
 
 		/* unassign the old resource group and release the old slot */
-		UnassignResGroup(true);
+		UnassignResGroup();
 
-		PG_TRY();
-		{
-			sessionSetSlot(slot);
+		sessionSetSlot(slot);
 
-			selfAttachResGroup(group, slot);
+		/* Add proc memory accounting info into group and slot */
+		group = slot->group;
+		selfAttachResGroup(group, slot);
 
-			/* Init self */
-			self->caps = slot->caps;
+		/* Init self */
+		self->caps = slot->caps;
 
-			/* Add into cgroup */
-			cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-										   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
-		}
-		PG_CATCH();
-		{
-			UnassignResGroup(false);
-			PG_RE_THROW();
-		}
-		PG_END_TRY();
+		/*
+		 * You may say it's ugly to notify entrydb process here, but not in
+		 * initiator process, but we want to be sure slot was actually
+		 * assigned to session using sessionSetSlot(). We can't do much inside
+		 * one spinlock. Especially, we can't work with multiple LWLocks
+		 * inside of it. So, to keep the solution simple and plain, we decided
+		 * to signal entrydb process here, inside of target process handler.
+		 */
+		(void) ResGroupMoveSignalTarget(MyProc->mppSessionId,
+										NULL, groupId, true);
+
+		/*
+		 * Add into cgroup. On any exception slot will be freed by the end of
+		 * transaction.
+		 */
+		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
+
 		pgstat_report_resgroup(self->groupId);
 	}
-	else if (Gp_role == GP_ROLE_EXECUTE)
+
+	/*
+	 * Move entrydb process. This is very similar to moving of target process,
+	 * but without setting session level slot, which was already set by
+	 * target.
+	 */
+	else if (Gp_role == GP_ROLE_EXECUTE && IS_QUERY_DISPATCHER())
 	{
-		Oid groupId = MyProc->movetoGroupId;
+		SpinLockAcquire(&MyProc->movetoMutex);
+		groupId = MyProc->movetoGroupId;
 		MyProc->movetoGroupId = InvalidOid;
+		SpinLockRelease(&MyProc->movetoMutex);
+
+		/*
+		 * The right session-level slot was set by the dispatcher's part of
+		 * handler (above).
+		 */
+		slot = sessionGetSlot();
+		Assert(slot != NULL);
+		Assert(slot->groupId == groupId);
+
+		group = slot->group;
+
+		/*
+		 * But before we'll attach new slot to current entrydb process, we
+		 * need to unassign all from 'self'.
+		 */
+		UnassignResGroup();
+		/* And now, attach it and increment all counters we need. */
+		selfAttachResGroup(group, slot);
+
+		self->caps = group->caps;
+
+		/* finally we can say we are in a valid resgroup */
+		Assert(selfIsAssigned());
+
+		/* Add into cgroup */
+		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
+	}
+
+	/*
+	 * Move segment's executor. Use simple manual counters manipulation. We
+	 * can't call same complex designed for coordinator functions like above.
+	 */
+	else if (Gp_role == GP_ROLE_EXECUTE && !IS_QUERY_DISPATCHER())
+	{
+		SpinLockAcquire(&MyProc->movetoMutex);
+		groupId = MyProc->movetoGroupId;
+		MyProc->movetoGroupId = InvalidOid;
+		SpinLockRelease(&MyProc->movetoMutex);
 
 		slot = sessionGetSlot();
 		Assert(slot != NULL);
@@ -3262,25 +3381,25 @@ HandleMoveResourceGroup(void)
 		Assert(group != NULL);
 		Assert(oldGroup != NULL);
 
+		/*
+		 * move the slot memory to the new group, only do it once if there're
+		 * more than once slice.
+		 */
 		if (slot->groupId != groupId)
 		{
 			oldGroup->nRunning--;
 
-			/* reset the slot but don't touch the 'memUsage' */
 			slot->groupId = groupId;
 			slot->group = group;
 			slot->caps = group->caps;
 
 			group->nRunning++;
 		}
-
-		if (IS_QUERY_DISPATCHER())
-			selfAttachResGroup(group, slot);
-
 		LWLockRelease(ResGroupLock);
 
 		selfSetGroup(group);
 		selfSetSlot(slot);
+
 		self->caps = group->caps;
 
 		/* finally we can say we are in a valid resgroup */
@@ -3288,8 +3407,99 @@ HandleMoveResourceGroup(void)
 
 		/* Add into cgroup */
 		cgroupOpsRoutine->attachcgroup(self->groupId, MyProcPid,
-									   self->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
+									   self->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
 	}
+}
+
+/*
+ * Try to give away all slot control to target process.
+ */
+static void
+resGroupGiveSlotAway(int sessionId, ResGroupSlotData ** slot, Oid groupId)
+{
+	long		timeout;
+	int64		curTime;
+	int64		waitStart;
+	int			latchRes;
+	bool		clean = false;
+	bool		res = false;
+
+	SIMPLE_FAULT_INJECTOR("resource_group_give_away_begin");
+
+	if (!ResGroupMoveSignalTarget(sessionId, *slot, groupId, false))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 (errmsg("cannot send signal to process"))));
+
+	waitStart = GetCurrentTimestamp();
+
+	for (;;)
+	{
+		/*
+		 * In an infinite loop, call ResGroupMoveCheckTargetReady() to check whether
+		 * all target processes have received signal of RG move.
+		 * If we have hit gp_resource_group_move_timeout, try to cancel the move
+		 * operation (no matter was target handled signal) and clean remained stuffs.
+		 */
+		curTime = GetCurrentTimestamp();
+		timeout = gp_resource_group_move_timeout - (curTime - waitStart) / 1000;
+		if (timeout > 0)
+		{
+			PG_TRY();
+			{
+				SIMPLE_FAULT_INJECTOR("resource_group_give_away_wait_latch");
+
+				/*
+				 * do check here to clean all target's moveto* params in case
+				 * of interruption or any exception
+				 */
+				CHECK_FOR_INTERRUPTS();
+
+				latchRes = WaitLatch(&MyProc->procLatch,
+				   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+				   timeout,
+				   PG_WAIT_RESOURCE_GROUP);
+
+				if (latchRes & WL_POSTMASTER_DEATH)
+					elog(ERROR,
+					 "got WL_POSTMASTER_DEATH waiting on latch; exiting...");
+			}
+			PG_CATCH();
+			{
+				clean = true;
+				ResGroupMoveCheckTargetReady(sessionId, &clean, &res);
+				if (res)
+				{
+					/*
+					 * clean slot variable, because we don't need to touch it
+					 * in current process as control is on the target side
+					 */
+					*slot = NULL;
+					ereport(WARNING,
+							(errmsg("got exception, but slot control is on the target process side"),
+							 errhint("QEs weren't moved. They'll be moved by the next command dispatched in the target transaction, if any.")));
+				}
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
+		}
+		else
+			latchRes = WL_TIMEOUT;
+
+		SIMPLE_FAULT_INJECTOR("resource_group_give_away_after_latch");
+
+		clean = (latchRes & WL_TIMEOUT);
+		ResGroupMoveCheckTargetReady(sessionId, &clean, &res);
+		if (clean)
+			break;
+
+		ResetLatch(&MyProc->procLatch);
+	}
+
+	if (!res)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 (errmsg("target process failed to move to a new group"))));
 }
 
 void
@@ -3306,14 +3516,13 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 
 	LWLockAcquire(ResGroupLock, LW_SHARED);
 	group = groupHashFind(groupId, false);
+	LWLockRelease(ResGroupLock);
 	if (!group)
 	{
-		LWLockRelease(ResGroupLock);
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 (errmsg("invalid resource group id: %d", groupId))));
 	}
-	LWLockRelease(ResGroupLock);
 
 	groupInfo.group = group;
 	groupInfo.groupId = groupId;
@@ -3325,22 +3534,48 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 
 	PG_TRY();
 	{
-		ResGroupSignalMoveQuery(sessionId, slot, groupId);
+		resGroupGiveSlotAway(sessionId, &slot, groupId);
+	}
+	PG_CATCH();
+	{
+		/*
+		 * There can be exceptional situations, when slot is already on the
+		 * target side. Release slot only if available.
+		 */
+		if (slot)
+		{
+			LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+			groupReleaseSlot(group, slot, true);
+			LWLockRelease(ResGroupLock);
+		}
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 
-		cmd = psprintf("SELECT pg_resgroup_move_query(%d, %s)",
-				sessionId,
-				quote_literal_cstr(groupName));
+	/*
+	 * starting from this point, all slot control should be done from target
+	 * process, so we don't need to release it here if something will go wrong
+	 */
+
+	cmd = psprintf("SELECT pg_resgroup_move_query(%d, %s)",
+				   sessionId,
+				   quote_literal_cstr(groupName));
+
+	PG_TRY();
+	{
 		CdbDispatchCommand(cmd, 0, NULL);
 	}
 	PG_CATCH();
 	{
-		LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-		groupReleaseSlot(group, slot, true);
-		LWLockRelease(ResGroupLock);
-		PG_RE_THROW();
+		/*
+		 * we don't have proper mechanics to cancel group move, so just warn
+		 * about something wrong on dispatching stage
+		 */
+		elog(WARNING, "cannot dispatch group move command");
 	}
 	PG_END_TRY();
 }
+
 /*
  * get resource group id by session id
  */
@@ -3366,95 +3601,6 @@ ResGroupGetGroupIdBySessionId(int sessionId)
 	LWLockRelease(SessionStateLock);
 
 	return groupId;
-}
-
-/*
- * traverse the flattened rangetable entries.
- * It's hard to see whether the query contains UDF, traverse the whole plan
- * is expensive, so it will be ignored even if there can have non-catalog
- * query inside the UDF.
- */
-static bool
-PurecatalogQuery(PlannedStmt* stmt)
-{
-	ListCell *rtable;
-
-	if (stmt->numSlices != 1)
-		return false;
-
-	foreach(rtable, stmt->rtable)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *)lfirst(rtable);
-
-		if (rte->rtekind != RTE_RELATION)
-			continue;
-		else
-		{
-			if (rte->relkind == RELKIND_MATVIEW)
-				return false;
-			else if (rte->relkind == RELKIND_VIEW)
-				continue;
-			else
-			{
-				if(!IsCatalogRelationOid(rte->relid))
-					return false;
-			}
-		}
-	}
-
-	return true;
-}
-
-/*
- * To decide whether we should bypass the query. If it's a pure-catalog query,
- * unassign the query from resource group and bypass the query.
- */
-void
-ShouldBypassQuery(PlannedStmt* stmt, bool inFunc)
-{
-	if (Gp_role != GP_ROLE_DISPATCH || bypassedGroup)
-		return;
-
-	/*
-	 * Don't need to consider the sql commands inside the UDF, they will also
-	 * be bypassed or use the same resgroup as the outer query.
-	 */
-	if (!IsInTransactionBlock(!inFunc))
-	{
-		List *rte_list = stmt->rtable;
-		bool haveRtable = true;
-		ResGroupCaps            *caps = &self->group->caps;
-		double planCost = stmt->planTree->total_cost;
-		int    min_cost = (int)pg_atomic_read_u32((pg_atomic_uint32 *)&caps->min_cost);
-
-		if (list_length(rte_list) == 1 && (lfirst_node(RangeTblEntry, rte_list->head)->rtekind == RTE_RESULT))
-			haveRtable = false;
-
-		/*
-		 * For some special case, like 'select UDF', don't bypass the query.
-		 *
-		 * when gp_resource_group_bypass_catalog_query is on, pure-catalog queries
-		 * will be unassigned from the resource group.
-		 * for quries with cost under the min_cost limit, unassign it from resource
-		 * group too.
-		 */
-		if (haveRtable && (planCost < min_cost || PurecatalogQuery(stmt)))
-		{
-			ResGroupInfo		groupInfo;
-
-			UnassignResGroup(true);
-			do {
-				decideResGroup(&groupInfo);
-			} while (!groupIncBypassedRef(&groupInfo));
-			bypassedGroup = groupInfo.group;
-			bypassedGroup->totalExecuted++;
-			pgstat_report_resgroup(bypassedGroup->groupId);
-			bypassedSlot.group = groupInfo.group;
-			bypassedSlot.groupId = groupInfo.groupId;
-			cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
-									   bypassedGroup->caps.cpuHardQuotaLimit == CPU_HARD_QUOTA_LIMIT_DISABLED);
-		}
-	}
 }
 
 /*
@@ -3498,4 +3644,153 @@ ResourceGroupGetQueryMemoryLimit(void)
 	 * If user requests more than statement_mem, grant that.
 	 */
 	return Max(queryMem, stateMem);
+}
+
+/*
+ * After getting the plan of a query, it must be inside
+ * a transaction which means it must already hold a resgroup
+ * slot. For some cases, we can unassign to save a concurrency
+ * slot and other resources (just like bypass):
+ *   - only happen on QD
+ *   - for explicit transaction block (begin; end), don't do it
+ *     because for following SQLs it will not try to enter resgroup
+ *   - pure catalog query or very simple query (no rangetable and
+ *     no function)
+ *   - if the total cost is smaller than resgroup configured mincost
+ */
+void
+check_and_unassign_from_resgroup(PlannedStmt* stmt)
+{
+	bool         inFunction;
+	ResGroupInfo groupInfo;
+
+	SIMPLE_FAULT_INJECTOR("check_and_unassign_from_resgroup_entry");
+
+	if (Gp_role != GP_ROLE_DISPATCH ||
+		!IsNormalProcessingMode() ||
+		!IsResGroupActivated() ||
+		bypassedGroup != NULL)
+		return;
+
+	/*
+	 * Don't need to consider the sql commands inside the UDF, they will also
+	 * be bypassed or use the same resgroup as the outer query.
+	 */
+	inFunction = already_under_executor_run() || utility_nested();
+	if (IsInTransactionBlock(!inFunction))
+		return;
+
+	/*
+	 * If none of the bypass(unassign) rule satisfy, return directly
+	 */
+	if (!can_bypass_based_on_plan_cost(stmt) &&
+		!(gp_resource_group_bypass_direct_dispatch && can_bypass_direct_dispatch_plan(stmt)) &&
+		!(gp_resource_group_bypass_catalog_query && is_pure_catalog_plan(stmt)))
+		return;
+
+	/* Unassign from resgroup and bypass */
+	UnassignResGroup();
+
+	do {
+		decideResGroup(&groupInfo);
+	} while (!groupIncBypassedRef(&groupInfo));
+
+	bypassedGroup = groupInfo.group;
+	bypassedGroup->totalExecuted++;
+	pgstat_report_resgroup(bypassedGroup->groupId);
+	bypassedSlot.group = groupInfo.group;
+	bypassedSlot.groupId = groupInfo.groupId;
+
+	cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
+								   bypassedGroup->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
+}
+
+/*
+ * Given a planned statement, check if it is pure catalog query or a very simple query.
+ * Return true only when:
+ *   - there must be only one slice
+ *   - there is no FuncExpr in target list
+ *   - range table cannot contain FUNCTION or TABLEFUNC
+ *   - range table must be catalog if it is RTE_RELATION
+ */
+static bool
+is_pure_catalog_plan(PlannedStmt *stmt)
+{
+	ListCell *rtable;
+	List     *func_tag;
+
+	/* For catalog SQL, we only consider SELECT stmt. */
+	if (stmt->commandType != CMD_SELECT)
+		return false;
+
+	if (stmt->numSlices != 1)
+		return false;
+
+	if (stmt->planTree->targetlist != NIL)
+	{
+		int    pos;
+		func_tag = list_make1_int(T_FuncExpr);
+		pos = find_nodes((Node *) (stmt->planTree->targetlist), func_tag);
+		list_free(func_tag);
+		if (pos >= 0)
+			return false;
+	}
+
+	foreach(rtable, stmt->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(rtable);
+
+		if (rte->rtekind == RTE_FUNCTION ||
+			rte->rtekind == RTE_TABLEFUNC ||
+			rte->rtekind == RTE_TABLEFUNCTION)
+			return false;
+
+		if (rte->rtekind != RTE_RELATION)
+			continue;
+
+		if (rte->relkind == RELKIND_MATVIEW)
+			return false;
+
+		if (rte->relkind == RELKIND_VIEW)
+			continue;
+
+		if(!IsCatalogRelationOid(rte->relid))
+			return false;
+	}
+
+	return true;
+}
+
+static bool
+can_bypass_based_on_plan_cost(PlannedStmt *stmt)
+{
+	ResGroupCaps *caps = &self->group->caps;
+	int           min_cost;
+
+	min_cost = (int) pg_atomic_read_u32((pg_atomic_uint32 *) &caps->min_cost);
+	return stmt->planTree->total_cost < min_cost;
+}
+
+/*
+ * Insert|Delete|Update: bypass those with numSlice = 1
+ * and the slice is direct dispatch.
+ *
+ * Select: since there is motion to gather to QD, bypass
+ * those with numSlice = 2, and  the 1st slice in QD and
+ * the 2nd slice is direct dispatch.
+ */
+static bool
+can_bypass_direct_dispatch_plan(PlannedStmt *stmt)
+{
+	if (stmt->commandType == CMD_SELECT)
+	{
+		return (stmt->numSlices == 2 &&
+				stmt->slices[1].directDispatch.isDirectDispatch);
+	}
+	else if (stmt->commandType == CMD_UPDATE ||
+			 stmt->commandType == CMD_INSERT ||
+			 stmt->commandType == CMD_DELETE)
+		return stmt->numSlices == 1 && stmt->slices[0].directDispatch.isDirectDispatch;
+	else
+		return false;
 }

@@ -91,7 +91,7 @@ Scrollable cursors are not currently supported in Greenplum Database. You can on
 
 `DECLARE...FOR UPDATE` is not supported with append-optimized tables.
 
-You can see all available cursors by querying the [pg\_cursors](../system_catalogs/pg_cursors.html) system view.
+You can see all available cursors by querying the [pg\_cursors](../system_catalogs/catalog_ref-views.html#pg_cursors) system view.
 
 ## <a id="section6"></a>Examples 
 

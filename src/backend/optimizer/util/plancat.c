@@ -196,7 +196,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 		 * GPDB supports index-only scan on AO starting from AORelationVersion_GP7.
 		 */
 		bool enable_ios_ao = false;
-		if (RelationAMIsAO(relation) &&
+		if (RelationIsAppendOptimized(relation) &&
 			AORelationVersion_Validate(relation, AORelationVersion_GP7))
 			enable_ios_ao = true;
 
@@ -286,7 +286,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 				info->indexkeys[i] = index->indkey.values[i];
 
 				/* GPDB: This AO table might not have met the requirement for IOScan. */
-				if (RelationAMIsAO(relation) && !enable_ios_ao)
+				if (RelationIsAppendOptimized(relation) && !enable_ios_ao)
 					info->canreturn[i] = false;
 				else
 					info->canreturn[i] = index_can_return(indexRelation, i + 1);
@@ -628,7 +628,7 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	 * pages added since the last VACUUM are most likely not marked
 	 * all-visible.  But costsize.c wants it converted to a fraction.
 	 */
-	if (RelationAMIsAO(rel))
+	if (RelationIsAppendOptimized(rel))
 	{
 		/* see appendonly_estimate_rel_size()/aoco_estimate_rel_size() */
 		*allvisfrac = 1;
@@ -665,9 +665,12 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 	if (rel->rd_rel->reltuples > 0)
 		return rel->rd_rel->reltuples;
 
-	inheritors = find_all_inheritors(RelationGetRelid(rel),
-									 AccessShareLock,
-									 NULL);
+	// To avoid blocking concurrent transactions on leaf partitions
+	// throughout the entire transition, we refrain from acquiring locks on
+	// the leaf partitions. Instead, we acquire locks only on the
+	// partitions that need to be scanned when ORCA writes the plan,
+	// although it may lead to less accurate stats.
+	inheritors = find_all_inheritors(RelationGetRelid(rel), NoLock, NULL);
 	totaltuples = 0;
 	foreach(lc, inheritors)
 	{
@@ -676,9 +679,14 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		double		childtuples;
 
 		if (childid != RelationGetRelid(rel))
-			childrel = try_table_open(childid, NoLock, false);
+			childrel = RelationIdGetRelation(childid);
 		else
 			childrel = rel;
+
+		// If childrel is NULL, continue by assuming the child relation
+		// has 0 tuples.
+		if (childrel == NULL)
+			continue;
 
 		childtuples = childrel->rd_rel->reltuples;
 

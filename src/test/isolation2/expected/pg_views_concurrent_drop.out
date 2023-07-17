@@ -1,7 +1,7 @@
 1:drop view if exists concurrent_drop_view cascade;
-DROP
+DROP VIEW
 1:create view concurrent_drop_view as select * from pg_class;
-CREATE
+CREATE VIEW
 1:select viewname from pg_views where viewname = 'concurrent_drop_view';
  viewname             
 ----------------------
@@ -19,7 +19,7 @@ CREATE
 1:begin;
 BEGIN
 1:drop view concurrent_drop_view;
-DROP
+DROP VIEW
 2&:select viewname, definition from pg_views where viewname = 'concurrent_drop_view';  <waiting ...>
 -- wait till halts for AccessShareLock on QD
 3: SELECT wait_until_waiting_for_required_lock('concurrent_drop_view', 'AccessShareLock', -1);

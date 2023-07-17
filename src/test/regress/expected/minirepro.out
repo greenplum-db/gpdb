@@ -58,7 +58,7 @@ analyze minirepro_foo;
 -- Run minirepro
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
 SET
 SET
@@ -143,7 +143,7 @@ analyze minirepro_foo;
 -- Run minirepro
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
 SET
 SET
@@ -230,7 +230,7 @@ update pg_statistic set stavalues3='{"hello", "''world''"}'::text[] where starel
 -- Run minirepro
 drop table minirepro_foo; -- this should also delete the pg_statistic tuple for minirepro_foo
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
 SET
 SET
@@ -274,7 +274,7 @@ drop table minirepro_foo;
 -- corresponding to pg_tablespace before it re-inserts it, which may lead to
 -- corrupted stats for pg_tablespace. But, that shouldn't matter too much?
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
 SET
 SET
@@ -413,7 +413,7 @@ Please review output file to ensure it is within corporate policy to transport t
 -- Run minirepro
 drop table minirepro_foo; -- this will also delete the tuples from pg_statistic_ext and pg_statistic_ext_data
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 You are now connected to database "regression" as user "hmaddileti".
 SET
 SET
@@ -606,7 +606,7 @@ Please review output file to ensure it is within corporate policy to transport t
 drop table minirepro_foo;
 drop table minirepro_bar;
 -- start_ignore
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 You are now connected to database "regression" as user "hmaddileti".
 SET
 SET

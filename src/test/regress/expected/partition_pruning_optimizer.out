@@ -7,11 +7,6 @@
 -- the planner and the rest of the system, so the expected output can need
 -- updating, as the system improves.
 --
--- GPDB_12_MERGE_FIXME: Many of these queries are no longer able to constraint
--- exclusion, like we used to on GPDB 6. Not sure what we should do about it.
--- See https://github.com/greenplum-db/gpdb/issues/10287.
--- In GPDB6 this case is partition pruned, but the result is wrong,
--- in MAIN branch it is not partition pruned, but has right result.
 -- Create test table with two partitions, for values equal to '1' and values equal to '2'.
 create table parttab (n numeric, t text)
   partition by list (n)(partition one values ('1'), partition two values('2'));
@@ -1357,12 +1352,12 @@ DROP INDEX idx6;
 --
 CREATE INDEX idx1 on pt_lt_tab(col4);
 ALTER TABLE pt_lt_tab DROP column col1;
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
 SELECT * FROM pt_lt_tab WHERE col4 is False ORDER BY col2,col3 LIMIT 5;
  col2 | col3 | col4 
 ------+------+------

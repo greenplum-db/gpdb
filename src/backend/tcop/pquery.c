@@ -206,10 +206,7 @@ ProcessQuery(Portal portal,
 	if (query_info_collect_hook)
 		(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, queryDesc);
 
-	if (ShouldUnassignResGroup())
-	{
-		ShouldBypassQuery(queryDesc->plannedstmt, false);
-	}
+	check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 	queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -686,11 +683,7 @@ PortalStart(Portal portal, ParamListInfo params,
 					queryDesc->ddesc->parallelCursorName = queryDesc->portal_name;
 				}
 
-				if (ShouldUnassignResGroup())
-				{
-					bool inFunction = already_under_executor_run() || utility_nested();
-					ShouldBypassQuery(queryDesc->plannedstmt, inFunction);
-				}
+				check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 				queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 				if (Gp_role == GP_ROLE_DISPATCH)

@@ -84,6 +84,28 @@ typedef struct AOTupleId
  */
 #define AOSegmentGet_startHeapBlock(segno) ((segno) << 25)
 
+/*
+ * Get the start block number of the current aoseg/block sequence from a given
+ * logical heap block number.
+ *
+ * The highest 7 bits of the BlockNumber represents the segment file number. So,
+ * the starting block number in a specific segment (or block sequence) is just
+ * those bits with the lower order bits masked out.
+ */
+#define AOHeapBlockGet_startHeapBlock(heapBlk)	((heapBlk) & 0xFE000000)
+
+/*
+ * Get the theoretical starting row number for a give logical heap block. All
+ * logical heap blocks can consume up to AO_MAX_TUPLES_PER_HEAP_BLOCK row
+ * numbers (either densely/sparsely). The very first block in an aoseg is an
+ * exception: it can consume up to (AO_MAX_TUPLES_PER_HEAP_BLOCK - 1) row
+ * numbers. So, we take a Max with 1 to account for that case.
+ */
+#define AOHeapBlockGet_startRowNum(heapBlk) \
+	Max((((heapBlk) - AOHeapBlockGet_startHeapBlock((heapBlk))) * AO_MAX_TUPLES_PER_HEAP_BLOCK), 1)
+#define AOSegmentGet_blockSequenceNum(heapBlk)	(AOSegmentGet_segno((heapBlk)))
+#define InvalidBlockSequenceNum (-1)
+
 static inline uint64
 AOTupleIdGet_rowNum(AOTupleId *h)
 {

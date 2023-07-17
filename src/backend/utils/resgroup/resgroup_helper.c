@@ -448,6 +448,7 @@ dumpResGroupInfo(StringInfo str)
 	}
 }
 
+
 /*
  * move a query to a resource group
  */
@@ -461,12 +462,12 @@ pg_resgroup_move_query(PG_FUNCTION_ARGS)
 	if (!IsResGroupEnabled())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("resource group is not enabled"))));
+						(errmsg("resource group is not enabled"))));
 
 	if (!superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("must be superuser to move query"))));
+						(errmsg("must be superuser to move query"))));
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -474,18 +475,29 @@ pg_resgroup_move_query(PG_FUNCTION_ARGS)
 		pid_t pid = PG_GETARG_INT32(0);
 		groupName = text_to_cstring(PG_GETARG_TEXT_PP(1));
 
+		if (pid == MyProcPid)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							(errmsg("cannot move myself"))));
+
 		groupId = get_resgroup_oid(groupName, false);
 		sessionId = GetSessionIdByPid(pid);
+
+		if (groupId == SYSTEMRESGROUP_OID)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							(errmsg("cannot move a process to the system_group"))));
+
 		if (sessionId == -1)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 (errmsg("cannot find process: %d", pid))));
+							(errmsg("cannot find process: %d", pid))));
 
 		currentGroupId = ResGroupGetGroupIdBySessionId(sessionId);
 		if (currentGroupId == InvalidOid)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 (errmsg("process %d is in IDLE state", pid))));
+							(errmsg("process %d is in IDLE state", pid))));
 		if (currentGroupId == groupId)
 			PG_RETURN_BOOL(true);
 
@@ -496,7 +508,8 @@ pg_resgroup_move_query(PG_FUNCTION_ARGS)
 		sessionId = PG_GETARG_INT32(0);
 		groupName = text_to_cstring(PG_GETARG_TEXT_PP(1));
 		groupId = get_resgroup_oid(groupName, false);
-		ResGroupSignalMoveQuery(sessionId, NULL, groupId);
+		if (!ResGroupMoveSignalTarget(sessionId, NULL, groupId, true))
+			elog(NOTICE, "cannot send signal to QE; ignoring...");
 	}
 
 	PG_RETURN_BOOL(true);

@@ -370,11 +370,21 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
+#ifdef USE_ORCA
 		result = optimize_query(parse, cursorOptions, boundParams);
+#else
+		/* Make sure this branch is not taken in builds using --disable-orca. */
+		Assert(false);
+		/* Keep compilers quiet in case the build used --disable-orca. */
+		result = NULL;
+#endif
 
 		/* decide jit state */
 		if (result)
 		{
+			/*
+			 * Setting Jit flags for Optimizer
+			 */
 			compute_jit_flags(result);
 		}
 
@@ -845,6 +855,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	Assert(config);
 	root->config = config;
 
+	root->hasPseudoConstantQuals = false;
+	root->hasAlternativeSubPlans = false;
 	root->hasRecursion = hasRecursion;
 	if (hasRecursion)
 		root->wt_param_id = assign_special_exec_param(root);
@@ -1001,9 +1013,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * an empty qual list ... but "HAVING TRUE" is not a semantic no-op.
 	 */
 	root->hasHavingQual = (parse->havingQual != NULL);
-
-	/* Clear this flag; might get set in distribute_qual_to_rels */
-	root->hasPseudoConstantQuals = false;
 
 	/*
 	 * Do expression preprocessing on targetlist and quals, as well as other
@@ -2759,28 +2768,9 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		 * The conflict with UPDATE|DELETE is implemented by locking the entire
 		 * table in ExclusiveMode. More details please refer docs.
 		 */
-		/*
-		 * GPDB_96_MERGE_FIXME: since we now process this in the path
-		 * context, it's much simpler than before, please kindly
-		 * revisit this, I'm not quite sure here.
-		 */
 		if (parse->rowMarks)
 		{
-			ListCell   *lc;
-			List   *newmarks = NIL;
-
 			if (parse->canOptSelectLockingClause)
-			{
-				foreach(lc, root->rowMarks)
-				{
-					PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
-
-					rc->canOptSelectLockingClause = true;
-					newmarks = lappend(newmarks, rc);
-				}
-			}
-
-			if (newmarks)
 			{
 				/*
 				 * Greenplum specific behavior:
@@ -8612,26 +8602,63 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
  * planner and ORCA. Please move any future code added to standard_planner() too.
  *
  * Decide JIT settings for the given plan and record them in PlannedStmt.jitFlags.
+ *
+ * Since the costing model of ORCA and Planner are different
+ * (Planner cost usually higher), setting the JIT flags based on the
+ * common JIT costing GUCs could lead to false triggering of JIT.
+ *
+ * To prevent this situation, separate  costing GUCs are created
+ * for Optimizer and used here for setting the JIT flags.
+ *
  */
 static void compute_jit_flags(PlannedStmt* pstmt)
 {
 	Plan* top_plan = pstmt->planTree;
-
 	pstmt->jitFlags = PGJIT_NONE;
 
-	if (jit_enabled && jit_above_cost >= 0 &&
-		top_plan->total_cost > jit_above_cost)
+	/*
+	 * Common variables to hold values for optimizer or planner
+	 * based on function call.
+	 */
+	double above_cost;
+	double inline_above_cost;
+	double optimize_above_cost;
+
+	if (pstmt->planGen == PLANGEN_OPTIMIZER)
+	{
+
+		/*
+		 * Setting values for ORCA.
+		 */
+		above_cost = optimizer_jit_above_cost;
+		inline_above_cost = optimizer_jit_inline_above_cost;
+		optimize_above_cost = optimizer_jit_optimize_above_cost;
+	}
+	else
+	{
+
+		/*
+		 * Setting values for Planner.
+		 */
+		above_cost = jit_above_cost;
+		inline_above_cost = jit_inline_above_cost;
+		optimize_above_cost = jit_optimize_above_cost;
+
+	}
+
+	if (jit_enabled && above_cost >= 0 &&
+		top_plan->total_cost > above_cost)
 	{
 		pstmt->jitFlags |= PGJIT_PERFORM;
 
 		/*
 		 * Decide how much effort should be put into generating better code.
 		 */
-		if (jit_optimize_above_cost >= 0 &&
-			top_plan->total_cost > jit_optimize_above_cost)
+		if (optimize_above_cost >= 0 &&
+			top_plan->total_cost > optimize_above_cost)
 			pstmt->jitFlags |= PGJIT_OPT3;
-		if (jit_inline_above_cost >= 0 &&
-			top_plan->total_cost > jit_inline_above_cost)
+		if (inline_above_cost >= 0 &&
+			top_plan->total_cost > inline_above_cost)
 			pstmt->jitFlags |= PGJIT_INLINE;
 
 		/*

@@ -1,9 +1,9 @@
 DROP TABLE IF EXISTS part_tbl;
-DROP
+DROP TABLE
 CREATE TABLE part_tbl (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(2) EVERY(1));
-CREATE
+CREATE TABLE
 INSERT INTO part_tbl SELECT i, 1, i FROM generate_series(1,100)i;
-INSERT 100
+INSERT 0 100
 
 -- check gdd is enabled
 show gp_enable_global_deadlock_detector;
@@ -44,4 +44,4 @@ ROLLBACK
 2:ROLLBACK;
 ROLLBACK
 DROP TABLE IF EXISTS part_tbl;
-DROP
+DROP TABLE

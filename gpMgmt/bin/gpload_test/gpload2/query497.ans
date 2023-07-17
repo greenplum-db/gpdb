@@ -5,7 +5,10 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 16:55:52|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
 2021-01-04 16:55:52|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 16:55:52|INFO|did not find an external table to reuse. creating ext_gpload_reusable_a651e6f8_4e6a_11eb_b8a4_7085c2381836
-2021-01-04 16:55:53|ERROR|unexpected error -- backtrace written to log file
+2021-01-04 16:55:52|ERROR|ERROR:  column "non_col" does not exist
+LINE 1: ...ble."s1" and into_table."s2"=from_table."s2" and  non_col = ...
+                                                             ^
+ encountered while running update public."texttable" into_table set "n2"=from_table."n2" from staging_gpload_reusable_4b4814f7db18b678f1605a0caec3c1fe from_table where into_table."n1"=from_table."n1" and into_table."s1"=from_table."s1" and into_table."s2"=from_table."s2" and  non_col = 5
 2021-01-04 16:55:53|INFO|rows Inserted          = 0
 2021-01-04 16:55:53|INFO|rows Updated           = 0
 2021-01-04 16:55:53|INFO|data formatting errors = 0

@@ -30,11 +30,11 @@ SELECT application_name, state FROM pg_stat_replication;
 -- with a command that generates WAL in between the invocations are
 -- suffice to generate new WAL file.
 CREATE TEMP TABLE walfile(fname text) DISTRIBUTED BY (fname);
-CREATE
+CREATE TABLE
 INSERT INTO walfile SELECT pg_walfile_name(pg_switch_wal());
-INSERT 1
+INSERT 0 1
 CREATE TABLE coordinator_wal_dummy();
-CREATE
+CREATE TABLE
 -- This should return false, indicating current WAL segment is
 -- different than what was previously recorded walfile table.
 SELECT fname = pg_walfile_name(pg_switch_wal()) FROM walfile;

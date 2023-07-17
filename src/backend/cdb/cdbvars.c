@@ -255,8 +255,6 @@ uint32		gp_interconnect_id = 0;
 double		gp_motion_cost_per_row = 0;
 int			gp_segments_for_planner = 0;
 
-int			gp_hashagg_default_nbatches = 32;
-
 bool		gp_adjust_selectivity_for_outerjoins = true;
 bool		gp_selectivity_damping_for_scans = false;
 bool		gp_selectivity_damping_for_joins = false;
@@ -264,7 +262,6 @@ double		gp_selectivity_damping_factor = 1;
 bool		gp_selectivity_damping_sigsort = true;
 
 int			gp_hashjoin_tuples_per_bucket = 5;
-int			gp_hashagg_groups_per_bucket = 5;
 
 /* Analyzing aid */
 int			gp_motion_slice_noop = 0;
@@ -575,6 +572,22 @@ gpvars_check_statement_mem(int *newval, void **extra, GucSource source)
 	if (*newval >= max_statement_mem)
 	{
 		GUC_check_errmsg("Invalid input for statement_mem, must be less than max_statement_mem (%d kB)",
+						 max_statement_mem);
+		return false;
+	}
+
+	return true;
+}
+
+/*
+ * gpvars_check_rg_query_fixed_mem
+ */
+bool
+gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source)
+{
+	if (*newval >= max_statement_mem)
+	{
+		GUC_check_errmsg("Invalid input for gp_resgroup_memory_query_fixed_mem, must be less than max_statement_mem (%d kB)",
 						 max_statement_mem);
 		return false;
 	}

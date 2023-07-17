@@ -43,6 +43,7 @@
 #include "utils/datum.h"
 #include "utils/rel.h"
 
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbgang.h"
 #include "nodes/altertablenodes.h"
 
@@ -519,8 +520,6 @@ _outJoinPlanInfo(StringInfo str, const Join *node)
 	_outPlanInfo(str, (const Plan *) node);
 
 	WRITE_BOOL_FIELD(prefetch_inner);
-	WRITE_BOOL_FIELD(prefetch_joinqual);
-	WRITE_BOOL_FIELD(prefetch_qual);
 
 	WRITE_ENUM_FIELD(jointype, JoinType);
 	WRITE_BOOL_FIELD(inner_unique);
@@ -1257,7 +1256,6 @@ _outPlanRowMark(StringInfo str, const PlanRowMark *node)
 	WRITE_ENUM_FIELD(strength, LockClauseStrength);
 	WRITE_ENUM_FIELD(waitPolicy, LockWaitPolicy);
 	WRITE_BOOL_FIELD(isParent);
-	WRITE_BOOL_FIELD(canOptSelectLockingClause);
 }
 
 static void
@@ -2764,6 +2762,7 @@ _outPlannerInfo(StringInfo str, const PlannerInfo *node)
 	WRITE_BOOL_FIELD(hasLateralRTEs);
 	WRITE_BOOL_FIELD(hasHavingQual);
 	WRITE_BOOL_FIELD(hasPseudoConstantQuals);
+	WRITE_BOOL_FIELD(hasAlternativeSubPlans);
 	WRITE_BOOL_FIELD(hasRecursion);
 	WRITE_INT_FIELD(wt_param_id);
 	WRITE_BITMAPSET_FIELD(curOuterRels);
@@ -3535,6 +3534,8 @@ _outNewColumnValue(StringInfo str, const NewColumnValue *node)
 	WRITE_NODE_FIELD(expr);
 	/* can't serialize exprstate */
 	WRITE_BOOL_FIELD(is_generated);
+	WRITE_NODE_FIELD(new_encoding);
+	WRITE_ENUM_FIELD(op, AOCSWriteColumnOperation);
 }
 
 static void

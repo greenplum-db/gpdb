@@ -59,24 +59,4 @@ extern Expr *cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *ta
 
 extern List *cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist);
 
-/*
- * cdbpullup_isExprCoveredByTargetlist
- *
- * Returns true if 'expr' is in 'targetlist', or if 'expr' contains no
- * Var node of the current query level that is not in 'targetlist'.
- *
- * If 'expr' is a List, returns false if the above condition is false for
- * some member of the list.
- *
- * 'targetlist' is a List of TargetEntry.
- *
- * NB:  A Var in the expr is considered as matching a Var in the targetlist
- * without regard for whether or not there is a RelabelType node atop the 
- * targetlist Var.
- *
- * See also: cdbpullup_missing_var_walker
- */
-bool
-cdbpullup_isExprCoveredByTargetlist(Expr *expr, List *targetlist);
-
 #endif   /* CDBPULLUP_H */

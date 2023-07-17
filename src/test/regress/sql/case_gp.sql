@@ -89,7 +89,7 @@ SELECT id,name,price as old_price,
 DROP FUNCTION IF EXISTS blip(int);
 DROP TABLE IF EXISTS calls_to_blip;
 
-CREATE TABLE calls_to_blip (n serial, v int) DISTRIBUTED RANDOMLY;
+CREATE TABLE calls_to_blip (v int) DISTRIBUTED RANDOMLY;
 CREATE OR REPLACE FUNCTION blip(int) RETURNS int
 LANGUAGE plpgsql MODIFIES SQL DATA
 VOLATILE

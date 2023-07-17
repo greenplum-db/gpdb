@@ -1,7 +1,8 @@
 --
 -- Test cases for COPY (INSERT/UPDATE/DELETE) TO
 --
-create table copydml_test (id serial, t text);
+create sequence copydml_test_id_seq cache 1;
+create table copydml_test (id int default nextval('copydml_test_id_seq'), t text);
 insert into copydml_test (t) values ('a');
 insert into copydml_test (t) values ('b');
 insert into copydml_test (t) values ('c');
@@ -114,16 +115,17 @@ create trigger qqqbef before insert or update or delete on copydml_test
 create trigger qqqaf after insert or update or delete on copydml_test
     for each row execute procedure qqq_trig();
 copy (insert into copydml_test (t) values ('f') returning id) to stdout;
-NOTICE:  BEFORE INSERT 8  (seg0 slice2 127.0.0.1:40000 pid=9407)
+NOTICE:  BEFORE INSERT 8  (seg2 slice1 127.0.1.1:7004 pid=1992647)
 8
-NOTICE:  AFTER INSERT 8  (seg0 slice2 127.0.0.1:40000 pid=9407)
+NOTICE:  AFTER INSERT 8  (seg2 slice1 127.0.1.1:7004 pid=1992647)
 copy (update copydml_test set t = 'g' where t = 'f' returning id) to stdout;
-NOTICE:  BEFORE UPDATE 8  (seg0 slice1 127.0.0.1:40000 pid=9407)
+NOTICE:  BEFORE UPDATE 8  (seg2 slice1 127.0.1.1:7004 pid=1992647)
 8
-NOTICE:  AFTER UPDATE 8  (seg0 slice1 127.0.0.1:40000 pid=9407)
+NOTICE:  AFTER UPDATE 8  (seg2 slice1 127.0.1.1:7004 pid=1992647)
 copy (delete from copydml_test where t = 'g' returning id) to stdout;
-NOTICE:  BEFORE DELETE 8  (seg0 slice1 127.0.0.1:40000 pid=9407)
+NOTICE:  BEFORE DELETE 8  (seg2 slice1 127.0.1.1:7004 pid=1992647)
 8
-NOTICE:  AFTER DELETE 8  (seg0 slice1 127.0.0.1:40000 pid=9407)
+NOTICE:  AFTER DELETE 8  (seg2 slice1 127.0.1.1:7004 pid=1992647)
 drop table copydml_test;
 drop function qqq_trig();
+drop sequence copydml_test_id_seq;

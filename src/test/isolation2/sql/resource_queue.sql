@@ -22,7 +22,7 @@
 3:PREPARE fooplan AS SELECT 1;
 3&:EXECUTE fooplan;
 
--- Check pg_stat_activity and pg_locks again.
+-- Check pg_stat_activity and pg_locks.
 0:SELECT wait_event_type, wait_event from pg_stat_activity where query = 'EXECUTE fooplan;';
 0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
 
@@ -33,6 +33,24 @@
 
 3<:
 3:END;
+
+-- Sanity check: Ensure that all locks were released.
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
+
+-- Sanity check: Ensure that the resource queue is now empty.
+0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';
+
+-- Introduce a holdable cursor.
+4:SET role role_concurrency_test;
+4:DECLARE c_hold CURSOR WITH HOLD FOR SELECT 1;
+
+-- Sanity check: The holdable cursor should be accounted for in pg_locks.
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
+
+4:CLOSE c_hold;
+
+-- Sanity check: Ensure that all locks were released.
+0:SELECT granted, locktype, mode FROM pg_locks where locktype = 'resource queue' and pid != pg_backend_pid();
 
 -- Sanity check: Ensure that the resource queue is now empty.
 0: SELECT rsqcountlimit, rsqcountvalue from pg_resqueue_status WHERE rsqname = 'rq_concurrency_test';

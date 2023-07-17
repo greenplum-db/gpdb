@@ -777,7 +777,7 @@ def bytestr(size, precision=1):
         if size >= factor:
             break
 
-    float_string_split = "size/float(factor)".split('.')
+    float_string_split = repr(size/float(factor)).split('.')
     integer_part = float_string_split[0]
     decimal_part = float_string_split[1]
     if int(decimal_part[0:precision]):
@@ -832,87 +832,10 @@ class CatThread(threading.Thread):
         except Exception as e:
             # close fd so that not block the worker thread because of stdout/stderr pipe not finish/closed.
             self.fd.close()
-            sys.stderr.write("\n\nWarning: gpfdist log halt because Log Thread '%s' got an exception: %s \n" % (self.getName(), str(e)))
-            self.gpload.log(self.gpload.WARN, "gpfdist log halt because Log Thread '%s' got an exception: %s" % (self.getName(), str(e)))
+            sys.stderr.write("\n\nWarning: gpfdist log halt because Log Thread '%s' got an exception: %s \n" % (self.name, str(e)))
+            self.gpload.log(self.gpload.WARN, "gpfdist log halt because Log Thread '%s' got an exception: %s" % (self.name, str(e)))
             raise
 
-class Progress(threading.Thread):
-    """
-    Determine our progress from the gpfdist daemon
-    """
-    def __init__(self,gpload,ports):
-        threading.Thread.__init__(self)
-        self.gpload = gpload
-        self.ports = ports
-        self.number = 0
-        self.condition = threading.Condition()
-
-    def get(self,port):
-        """
-        Connect to gpfdist and issue an HTTP query. No need to do this with
-        httplib as the transaction is extremely simple
-        """
-        addrinfo = socket.getaddrinfo('localhost', port)
-        s = socket.socket(addrinfo[0][0],socket.SOCK_STREAM)
-        s.connect(('localhost',port))
-        s.sendall('GET gpfdist/status HTTP/1.0\r\n\r\n')
-        f = s.makefile()
-        read_bytes = -1
-        total_bytes = -1
-        total_sessions = -1
-        for line in f:
-            self.gpload.log(self.gpload.DEBUG, "gpfdist stat: %s" % \
-                        line.strip('\n'))
-            a = line.split(' ')
-            if not a:
-                continue
-            if a[0]=='read_bytes':
-                read_bytes = int(a[1])
-            elif a[0]=='total_bytes':
-                total_bytes = int(a[1])
-            elif a[0]=='total_sessions':
-                total_sessions = int(a[1])
-        s.close()
-        f.close()
-        return read_bytes,total_bytes,total_sessions
-
-    def get1(self):
-        """
-        Parse gpfdist output
-        """
-        read_bytes = 0
-        total_bytes = 0
-        for port in self.ports:
-            a = self.get(port)
-            if a[2]<1:
-                return
-            if a[0]!=-1:
-                read_bytes += a[0]
-            if a[1]!=-1:
-                total_bytes += a[1]
-        self.gpload.log(self.gpload.INFO,'transferred %s of %s' % \
-            (bytestr(read_bytes),bytestr(total_bytes)))
-
-    def run(self):
-        """
-        Thread worker
-        """
-        while 1:
-            try:
-                self.condition.acquire()
-                n = self.number
-                self.condition.release()
-                self.get1()
-                if n:
-                    self.gpload.log(self.gpload.DEBUG, "gpfdist status thread told to stop")
-                    self.condition.acquire()
-                    self.condition.notify()
-                    self.condition.release()
-                    break
-            except socket.error as e:
-                self.gpload.log(self.gpload.DEBUG, "got socket exception: %s" % e)
-                break
-            time.sleep(1)
 def cli_help():
     help_path = os.path.join(sys.path[0], '..', 'docs', 'cli_help', EXECNAME +
                              '_help');
@@ -2719,10 +2642,6 @@ class gpload:
         sql += ' SELECT %s' % ','.join([a[2] for a in cols])
         sql += ' FROM %s' % self.extSchemaTable
 
-        # cktan: progress thread is not reliable. revisit later.
-        #progress = Progress(self,self.ports)
-        #progress.start()
-        #self.threads.append(progress)
         self.log(self.LOG, sql)
         if not self.options.D:
             try:
@@ -2730,14 +2649,7 @@ class gpload:
                 self.db.set_notice_receiver(notice_processor_Notice)
                 self.rowsInserted = self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = e.__str__().encode().decode('unicode-escape')
-                strF = sql.encode().decode('unicode-escape')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
-        #progress.condition.acquire()
-        #progress.number = 1
-        #progress.condition.wait()
-        #progress.condition.release()
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
         self.report_errors()
 
     def do_method_insert(self):
@@ -2828,10 +2740,7 @@ class gpload:
             try:
                 self.rowsUpdated = self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 				
     def get_qualified_tablename(self):
         '''
@@ -2926,9 +2835,7 @@ class gpload:
             try:
                 self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 
         # insert new rows to the target table
 
@@ -2947,10 +2854,7 @@ class gpload:
             try:
                 self.rowsInserted = self.db.query(sql.encode('utf-8'))
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 
     def do_truncate(self, tblname):
         self.log(self.LOG, "Truncate table %s" %(tblname))

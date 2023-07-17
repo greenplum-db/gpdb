@@ -1207,23 +1207,6 @@ ExecInitExprRec(Expr *node, ExprState *state,
 				break;
 			}
 
-		case T_AlternativeSubPlan:
-			{
-				AlternativeSubPlan *asplan = (AlternativeSubPlan *) node;
-				AlternativeSubPlanState *asstate;
-
-				if (!state->parent)
-					elog(ERROR, "AlternativeSubPlan found with no parent plan");
-
-				asstate = ExecInitAlternativeSubPlan(asplan, state->parent);
-
-				scratch.opcode = EEOP_ALTERNATIVE_SUBPLAN;
-				scratch.d.alternative_subplan.asstate = asstate;
-
-				ExprEvalPushStep(state, &scratch);
-				break;
-			}
-
 		case T_FieldSelect:
 			{
 				FieldSelect *fselect = (FieldSelect *) node;
@@ -1309,7 +1292,7 @@ ExecInitExprRec(Expr *node, ExprState *state,
 					 * first, and (2) any such CaseTestExpr is directly the
 					 * arg or refexpr input.  So any read of the caseval will
 					 * occur before there's a chance to overwrite it.  Also,
-					 * if multiple entries in the newvals/fieldnums lists
+					 * if multiple entries in the newcolvals/fieldnums lists
 					 * target the same field, they'll effectively be applied
 					 * left-to-right which is what we want.
 					 */
@@ -2846,7 +2829,7 @@ ExecInitSubscriptingRef(ExprEvalStep *scratch, SubscriptingRef *sbsref,
  * not; the CaseTestExpr, if any, will be directly the arg or refexpr of the
  * top-level node.  Nested-assignment situations give rise to expression
  * trees in which each level of assignment has its own CaseTestExpr, and the
- * recursive structure appears within the newvals or refassgnexpr field.
+ * recursive structure appears within the newcolvals or refassgnexpr field.
  * There is an exception, though: if the array is an array-of-domain, we will
  * have a CoerceToDomain as the refassgnexpr, and we need to be able to look
  * through that.

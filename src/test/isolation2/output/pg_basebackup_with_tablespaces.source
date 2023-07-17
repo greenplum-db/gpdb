@@ -6,31 +6,31 @@
 (exited with code 0)
 
 drop tablespace if exists some_basebackup_tablespace;
-DROP
+DROP TABLESPACE
 create tablespace some_basebackup_tablespace location '@testtablespace@/some_basebackup_tablespace';
-CREATE
+CREATE TABLESPACE
 
 -- And a database using the tablespace
 drop database if exists some_database_with_tablespace;
-DROP
+DROP DATABASE
 create database some_database_with_tablespace tablespace some_basebackup_tablespace;
-CREATE
+CREATE DATABASE
 
 -- And a database without using the tablespace
 drop database if exists some_database_without_tablespace;
-DROP
+DROP DATABASE
 create database some_database_without_tablespace;
-CREATE
+CREATE DATABASE
 
 -- And a table and index, temp table and index using the tablespace
 1:@db_name some_database_without_tablespace: CREATE TABLE test(a INT, b INT) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE TABLE
 1:@db_name some_database_without_tablespace: CREATE INDEX test_index on test(a) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE INDEX
 2:@db_name some_database_without_tablespace: CREATE TEMP TABLE test_tmp(a INT, b INT) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE TABLE
 2:@db_name some_database_without_tablespace: CREATE INDEX test_tmp_index on test_tmp(a) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE INDEX
 
 1q: ... <quitting>
 
@@ -103,7 +103,7 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
                           
 (1 row)
 drop database some_database_with_tablespace;
-DROP
+DROP DATABASE
 -- Need to poll until db drop succeeds since after 2q: happens the PGPROC
 -- on the server side might be still not released when we run database drop.
 -- This makes the test flaky.
@@ -113,7 +113,7 @@ DROP
 -- end_ignore
 (exited with code 0)
 drop tablespace some_basebackup_tablespace;
-DROP
+DROP TABLESPACE
 !\retcode rm -rf @testtablespace@/some_basebackup_datadir/;
 -- start_ignore
 
@@ -143,23 +143,23 @@ DROP
 (exited with code 0)
 
 create tablespace some_basebackup_tablespace LOCATION '@testtablespace@/some_basebackup_tablespace' WITH (content0='@testtablespace@/some_basebackup_tablespace_c0');
-CREATE
+CREATE TABLESPACE
 
 -- And a database without using the tablespace
 drop database if exists some_database_without_tablespace;
-DROP
+DROP DATABASE
 create database some_database_without_tablespace;
-CREATE
+CREATE DATABASE
 
 -- And a table and index, temp table and index using the tablespace
 1:@db_name some_database_without_tablespace: CREATE TABLE test(a INT, b INT) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE TABLE
 1:@db_name some_database_without_tablespace: CREATE INDEX test_index on test(a) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE INDEX
 2:@db_name some_database_without_tablespace: CREATE TEMP TABLE test_tmp(a INT, b INT) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE TABLE
 2:@db_name some_database_without_tablespace: CREATE INDEX test_tmp_index on test_tmp(a) TABLESPACE some_basebackup_tablespace;
-CREATE
+CREATE INDEX
 
 1q: ... <quitting>
 
@@ -208,7 +208,7 @@ select validate_tablespace_symlink('@testtablespace@/some_basebackup_datadir', '
 -- end_ignore
 (exited with code 0)
 drop tablespace some_basebackup_tablespace;
-DROP
+DROP TABLESPACE
 !\retcode rm -rf @testtablespace@/some_basebackup_datadir/;
 -- start_ignore
 

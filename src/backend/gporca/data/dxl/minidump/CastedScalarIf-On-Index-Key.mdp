@@ -254,7 +254,7 @@
       <dxl:ColumnStatistics Mdid="1.49155.1.0.1" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.49155.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
-      <dxl:Index Mdid="0.49221.1.0" Name="pt_idx_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,2" IncludedColumns="0,1,2,3,4,5,6">
+      <dxl:Index Mdid="0.49221.1.0" Name="pt_idx_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
@@ -264,7 +264,7 @@
           <dxl:Partition Mdid="6.49221002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.49238.1.0" Name="pt_idx_1_prt_2" IsClustered="false" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="0,1,2,3,4,5,6">
+      <dxl:Index Mdid="0.49238.1.0" Name="pt_idx_1_prt_2" IsClustered="false" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
@@ -383,10 +383,10 @@
               <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                 <dxl:If TypeMdid="0.1043.1.0">
                   <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                    <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB2FiYw==" LintValue="578839396"/>
                     <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                       <dxl:Ident ColId="2" ColName="c" TypeMdid="0.1043.1.0" TypeModifier="14"/>
                     </dxl:Cast>
+                    <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB2FiYw==" LintValue="578839396"/>
                   </dxl:Comparison>
                   <dxl:Ident ColId="1" ColName="b" TypeMdid="0.1043.1.0" TypeModifier="14"/>
                   <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABmNk" LintValue="538477356"/>

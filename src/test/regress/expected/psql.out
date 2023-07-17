@@ -2652,7 +2652,7 @@ create table psql_serial_tab (id serial);
                Sequence "public.psql_serial_tab_id_seq"
   Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
 ---------+-------+---------+------------+-----------+---------+-------
- integer |     1 |       1 | 2147483647 |         1 | no      |     1
+ integer |     1 |       1 | 2147483647 |         1 | no      |    20
 Owned by: public.psql_serial_tab.id
 
 \pset tuples_only true
@@ -2672,7 +2672,7 @@ Minimum   | 1
 Maximum   | 2147483647
 Increment | 1
 Cycles?   | no
-Cache     | 1
+Cache     | 20
 
 Owned by: public.psql_serial_tab.id
 
@@ -2706,7 +2706,7 @@ select 1 where false;
 \d psql_serial_tab_id_seq
 Sequence "public.psql_serial_tab_id_seq"
 Type|Start|Minimum|Maximum|Increment|Cycles?|Cache
-integer|1|1|2147483647|1|no|1
+integer|1|1|2147483647|1|no|20
 Owned by: public.psql_serial_tab.id
 \pset tuples_only true
 \df exp
@@ -2724,7 +2724,7 @@ Minimum|1
 Maximum|2147483647
 Increment|1
 Cycles?|no
-Cache|1
+Cache|20
 
 Owned by: public.psql_serial_tab.id
 \pset tuples_only true
@@ -2753,7 +2753,7 @@ Type|func
                Sequence "public.psql_serial_tab_id_seq"
   Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
 ---------+-------+---------+------------+-----------+---------+-------
- integer |     1 |       1 | 2147483647 |         1 | no      |     1
+ integer |     1 |       1 | 2147483647 |         1 | no      |    20
 Owned by: public.psql_serial_tab.id
 
 \pset tuples_only true
@@ -2773,7 +2773,7 @@ Minimum   | 1
 Maximum   | 2147483647
 Increment | 1
 Cycles?   | no
-Cache     | 1
+Cache     | 20
 
 Owned by: public.psql_serial_tab.id
 
@@ -2862,7 +2862,7 @@ from generate_series(0,3) n;
 [options="header",cols="<l,>l,>l,>l,>l,<l,>l",frame="none"]
 |====
 ^l|Type ^l|Start ^l|Minimum ^l|Maximum ^l|Increment ^l|Cycles? ^l|Cache
-|integer |1 |1 |2147483647 |1 |no |1
+|integer |1 |1 |2147483647 |1 |no |20
 |====
 
 ....
@@ -2891,7 +2891,7 @@ Owned by: public.psql_serial_tab.id
 <l|Maximum >l|2147483647
 <l|Increment >l|1
 <l|Cycles? <l|no
-<l|Cache >l|1
+<l|Cache >l|20
 |====
 
 ....
@@ -3015,7 +3015,7 @@ deallocate q;
 \pset expanded off
 \d psql_serial_tab_id_seq
 Type,Start,Minimum,Maximum,Increment,Cycles?,Cache
-integer,1,1,2147483647,1,no,1
+integer,1,1,2147483647,1,no,20
 \pset tuples_only true
 \df exp
 pg_catalog,exp,complex,complex,func
@@ -3030,7 +3030,7 @@ Minimum,1
 Maximum,2147483647
 Increment,1
 Cycles?,no
-Cache,1
+Cache,20
 \pset tuples_only true
 \df exp
 Schema,pg_catalog
@@ -3126,7 +3126,7 @@ select '\' as d1, '' as d2;
     <td align="right">2147483647</td>
     <td align="right">1</td>
     <td align="left">no</td>
-    <td align="right">1</td>
+    <td align="right">20</td>
   </tr>
 </table>
 <p>Owned by: public.psql_serial_tab.id<br />
@@ -3190,7 +3190,7 @@ select '\' as d1, '' as d2;
   </tr>
   <tr valign="top">
     <th>Cache</th>
-    <td align="right">1</td>
+    <td align="right">20</td>
   </tr>
 </table>
 <p>Owned by: public.psql_serial_tab.id<br />
@@ -3495,7 +3495,7 @@ Sequence "public.psql\_serial\_tab\_id\_seq"
 \begin{tabular}{l | r | r | r | r | l | r}
 \textit{Type} & \textit{Start} & \textit{Minimum} & \textit{Maximum} & \textit{Increment} & \textit{Cycles?} & \textit{Cache} \\
 \hline
-integer & 1 & 1 & 2147483647 & 1 & no & 1 \\
+integer & 1 & 1 & 2147483647 & 1 & no & 20 \\
 \end{tabular}
 
 \noindent Owned by: public.psql\_serial\_tab.id \\
@@ -3525,7 +3525,7 @@ Minimum & 1 \\
 Maximum & 2147483647 \\
 Increment & 1 \\
 Cycles? & no \\
-Cache & 1 \\
+Cache & 20 \\
 \end{tabular}
 
 \noindent Owned by: public.psql\_serial\_tab.id \\
@@ -3715,7 +3715,7 @@ deallocate q;
 &
 \raggedright{no}
 &
-\raggedright{1} \tabularnewline
+\raggedright{20} \tabularnewline
 \end{longtable}
 \pset tuples_only true
 \df exp
@@ -3764,7 +3764,7 @@ Minimum & 1 \\
 Maximum & 2147483647 \\
 Increment & 1 \\
 Cycles? & no \\
-Cache & 1 \\
+Cache & 20 \\
 \end{tabular}
 
 \noindent Owned by: public.psql\_serial\_tab.id \\
@@ -4055,7 +4055,7 @@ center;
 l | r | r | r | r | l | r.
 \fIType\fP	\fIStart\fP	\fIMinimum\fP	\fIMaximum\fP	\fIIncrement\fP	\fICycles?\fP	\fICache\fP
 _
-integer	1	1	2147483647	1	no	1
+integer	1	1	2147483647	1	no	20
 .TE
 .DS L
 Owned by: public.psql_serial_tab.id
@@ -4093,7 +4093,7 @@ Minimum	1
 Maximum	2147483647
 Increment	1
 Cycles?	no
-Cache	1
+Cache	20
 .TE
 .DS L
 Owned by: public.psql_serial_tab.id

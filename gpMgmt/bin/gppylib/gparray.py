@@ -1413,40 +1413,6 @@ class GpArray:
         return prefix
 
     # --------------------------------------------------------------------
-    # If we've got recovered segments, and we have a matched-pair, we
-    # can update the catalog to "rebalance" back to our original primary.
-    def updateRoleForRecoveredSegs(self, dbURL):
-        """
-        Marks the segment role to match the configured preferred_role.
-        """
-
-        # walk our list of segments, checking to make sure that
-        # both members of the peer-group are in our recovered-list,
-        # save their content-id.
-        recovered_contents = []
-        for segPair in self.segmentPairs:
-            if segPair.primaryDB:
-                if segPair.primaryDB.dbid in self.recoveredSegmentDbids:
-                    if segPair.mirrorDB and segPair.mirrorDB.dbid in self.recoveredSegmentDbids:
-                        recovered_contents.append((segPair.primaryDB.content, segPair.primaryDB.dbid, segPair.mirrorDB.dbid))
-
-        with closing(dbconn.connect(dbURL, True, allowSystemTableMods = True)) as conn:
-            for (content_id, primary_dbid, mirror_dbid) in recovered_contents:
-                sql = "UPDATE gp_segment_configuration SET role=preferred_role where content = %d" % content_id
-                dbconn.executeUpdateOrInsert(conn, sql, 2)
-
-                # NOTE: primary-dbid (right now) is the mirror.
-                sql = "INSERT INTO gp_configuration_history VALUES (now(), %d, 'Reassigned role for content %d to MIRROR')" % (primary_dbid, content_id)
-                dbconn.executeUpdateOrInsert(conn, sql, 1)
-
-                # NOTE: mirror-dbid (right now) is the primary.
-                sql = "INSERT INTO gp_configuration_history VALUES (now(), %d, 'Reassigned role for content %d to PRIMARY')" % (mirror_dbid, content_id)
-                dbconn.executeUpdateOrInsert(conn, sql, 1)
-
-                # We could attempt to update the segments-array.
-                # But the caller will re-read the configuration from the catalog.
-
-    # --------------------------------------------------------------------
     def addExpansionSeg(self, content, preferred_role, dbid, role,
                         hostname, address, port, datadir):
         """

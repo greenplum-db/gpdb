@@ -120,13 +120,14 @@ DEFPORT=5432
 
 ORCA_CONFIG=--enable-orca
 
-rhel6_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
-rhel7_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
-rhel8_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
-rocky8_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
-ol8_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
-ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
-sles12_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+rhel6_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+rhel7_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+rhel8_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+rocky8_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+rocky9_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs
+ol8_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+ubuntu18.04_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
+sles12_x86_64_CONFIGFLAGS=--with-gssapi --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --enable-gpcloud --with-libxml --with-openssl --with-pam --with-ldap --with-pythonsrc-ext --with-uuid=e2fs --with-llvm
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
 CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) $(BLD_DEPLOYMENT_SETTING))
@@ -137,7 +138,7 @@ endif
 
 
 ifneq (false, ${PG_LANG})
-CONFIGFLAGS+= --with-perl --with-python PYTHON=python3
+CONFIGFLAGS+= --with-perl --with-python PYTHON=python3.9
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif
@@ -213,7 +214,7 @@ perl_archlibexp:=$(shell perl -MConfig -e 'print $$Config{archlibexp}')
 # set default build steps
 define BUILD_STEPS
 	@$(MAKE) -C $(BUILDDIR)/src/backend generated-headers
-	cd $(BUILDDIR) && PYGRESQL_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../../lib -Wl,--enable-new-dtags' QUICKLZ_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../lib -Wl,--enable-new-dtags' $(MAKE) $(PARALLEL_MAKE_OPTS) install
+	cd $(BUILDDIR) && PYGRESQL_LDFLAGS='-Wl,-rpath,\$$$$ORIGIN/../../../lib -Wl,--enable-new-dtags' $(MAKE) $(PARALLEL_MAKE_OPTS) install
 	cd $(BUILDDIR)/src/pl/plpython && $(MAKE) clean && echo 'LDFLAGS += -Wl,-rpath,\$$$$ORIGIN/../../ext/python/lib/ -Wl,--enable-new-dtags' >> Makefile && $(MAKE) $(PARALLEL_MAKE_OPTS) install && cd $(BUILDDIR)
 	cd $(BUILDDIR)/src/pl/plperl && $(MAKE) clean && echo "LDFLAGS += -Wl,-rpath,$(perl_archlibexp)/CORE -Wl,--enable-new-dtags" >> GNUmakefile && echo "LDFLAGS_SL += -Wl,-rpath,$(perl_archlibexp)/CORE -Wl,--enable-new-dtags" >> GNUmakefile && $(MAKE) $(PARALLEL_MAKE_OPTS) install && cd $(BUILDDIR)
 	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
@@ -502,7 +503,6 @@ SET_VERSION_SCRIPTS = \
 	lib/python/gppylib/programs/clsHostCacheLookup.py \
 	lib/python/gppylib/programs/clsRecoverSegment.py \
 	lib/python/gppylib/programs/clsSystemState.py \
-	lib/python/gppylib/programs/gppkg.py \
 	lib/python/gppylib/programs/kill.py \
 	lib/python/gppylib/mainUtils.py \
 	$(NULL)

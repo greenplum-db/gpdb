@@ -15,6 +15,7 @@
 #define BRIN_XLOG_H
 
 #include "access/xlogreader.h"
+#include "access/brin_page.h"
 #include "lib/stringinfo.h"
 #include "storage/bufpage.h"
 #include "storage/itemptr.h"
@@ -34,11 +35,8 @@
 #define XLOG_BRIN_SAMEPAGE_UPDATE	0x30
 #define XLOG_BRIN_REVMAP_EXTEND		0x40
 #define XLOG_BRIN_DESUMMARIZE		0x50
-#define XLOG_BRIN_REVMAP_INIT_UPPER_BLK	0x60
-#define XLOG_BRIN_REVMAP_EXTEND_UPPER	0x70
 
 #define XLOG_BRIN_OPMASK			0x70
-
 /*
  * When we insert the first item on a new page, we restore the entire page in
  * redo.
@@ -54,17 +52,9 @@ typedef struct xl_brin_createidx
 {
 	BlockNumber pagesPerRange;
 	uint16		version;
-	bool 		isAo;
+	bool 		isAO;
 } xl_brin_createidx;
-#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, isAo) + sizeof(bool))
-
-
-typedef struct xl_brin_createupperblk
-{
-	BlockNumber targetBlk;
-} xl_brin_createupperblk;
-#define SizeOfBrinCreateUpperBlk (offsetof(xl_brin_createupperblk, targetBlk) \
-								  + sizeof(BlockNumber))
+#define SizeOfBrinCreateIdx (offsetof(xl_brin_createidx, isAO) + sizeof(bool))
 
 /*
  * This is what we need to know about a BRIN tuple insert
@@ -123,6 +113,7 @@ typedef struct xl_brin_samepage_update
  *
  * Backup block 0: metapage
  * Backup block 1: new revmap page
+ * Backup block 2: (AO/CO): last revmap page of current chain (if exists)
  */
 typedef struct xl_brin_revmap_extend
 {
@@ -131,8 +122,13 @@ typedef struct xl_brin_revmap_extend
 	 * backup block 1.
 	 */
 	BlockNumber targetBlk;
+	/* GPDB AO/CO state */
+	bool 			isAO;
+	int         	blockSeq; 		/* block sequence */
+	LogicalPageNum 	targetPageNum; 	/* page number to assign targetBlk */
 } xl_brin_revmap_extend;
-#define SizeOfBrinRevmapExtend	(offsetof(xl_brin_revmap_extend, targetBlk) + \
+
+#define SizeOfBrinRevmapExtend	(offsetof(xl_brin_revmap_extend, targetPageNum) + \
 								 sizeof(BlockNumber))
 
 /*
@@ -152,19 +148,6 @@ typedef struct xl_brin_desummarize
 
 #define SizeOfBrinDesummarize	(offsetof(xl_brin_desummarize, regOffset) + \
 								 sizeof(OffsetNumber))
-
-
-typedef struct xl_brin_revmap_extend_upper
-{
-	BlockNumber heapBlk;
-
-	/* extra information needed to update the revmap */
-	BlockNumber pagesPerRange;
-	BlockNumber revmapBlk;
-} xl_brin_revmap_extend_upper;
-#define SizeOfBrinRevmapExtendUpper	(offsetof(xl_brin_revmap_extend_upper, pagesPerRange) + \
-									 sizeof(BlockNumber))
-
 
 
 extern void brin_redo(XLogReaderState *record);

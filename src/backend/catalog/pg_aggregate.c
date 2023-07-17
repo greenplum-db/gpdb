@@ -641,7 +641,6 @@ AggregateCreate(const char *aggName,
 							 InvalidOid,	/* no prosupport */
 							 1, /* procost */
 							 0, /* prorows */
-							 PRODATAACCESS_NONE,		/* prodataaccess */
 							 PROEXECLOCATION_ANY);		/* proexeclocation */
 	procOid = myself.objectId;
 

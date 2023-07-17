@@ -25,6 +25,8 @@ data/wet_execute.tbl
 data/gpsd-without-hll.sql
 data/gpsd-with-hll.sql
 data/minirepro.sql
+data/copy_no_cols.data
+data/gpsd_db_ext_data.sql
 
 # Note: regreesion.* are only left behind on a failure; that's why they're not ignored
 #/regression.diffs

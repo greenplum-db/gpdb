@@ -64,7 +64,6 @@ These parameters set the limits for system resources consumed by Greenplum Datab
 These parameters control system memory usage.
 
 - [gp_vmem_idle_resource_timeout](guc-list.html#gp_vmem_idle_resource_timeout)
-- [gp_resource_group_memory_limit](guc-list.html#gp_resource_group_memory_limit) \(resource group-based resource management\)
 - [gp_vmem_protect_limit](guc-list.html#gp_vmem_protect_limit) \(resource queue-based resource management\)
 - [gp_vmem_protect_segworker_cache_limit](guc-list.html#gp_vmem_protect_segworker_cache_limit)
 - [gp_workfile_limit_files_per_query](guc-list.html#gp_workfile_limit_files_per_query)
@@ -118,7 +117,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_enable_dml](guc-list.html#optimizer_enable_dml)
 - [optimizer_enable_foreign_table](guc-list.html#optimizer_enable_foreign_table)
 - [optimizer_enable_indexonlyscan](guc-list.html#optimizer_enable_indexonlyscan)
-- [optimizer_enable_master_only_queries](guc-list.html#optimizer_enable_master_only_queries)
+- [optimizer_enable_coordinator_only_queries](guc-list.html#optimizer_enable_coordinator_only_queries)
 - [optimizer_enable_multiple_distinct_aggs](guc-list.html#optimizer_enable_multiple_distinct_aggs)
 - [optimizer_enable_replicated_table](guc-list.html#optimizer_enable_replicated_table)
 - [optimizer_force_agg_skew_avoidance](guc-list.html#optimizer_force_agg_skew_avoidance)
@@ -241,6 +240,9 @@ Control the query plan execution.
 - [jit_profiling_support](guc-list.html#jit_profiling_support)
 - [jit_provider](guc-list.html#jit_provider)
 - [jit_tuple_deforming](guc-list.html#jit_tuple_deforming)
+- [optimizer_jit_above_cost](guc-list.html#optimizer_jit_above_cost)
+- [optimizer_jit_inline_above_cost](guc-list.html#optimizer_jit_inline_above_cost)
+- [optimizer_jit_optimize_above_cost](guc-list.html#optimizer_jit_optimize_above_cost)
 
 ## <a id="topic29"></a>Error Reporting and Logging Parameters 
 
@@ -296,7 +298,11 @@ These configuration parameters control Greenplum Database logging.
 These parameters pertain to auto-vacuuming databases.
 
 - [autovacuum](guc-list.html#autovacuum)
+- [autovacuum_freeze_max_age](guc-list.html#autovacuum_freeze_max_age)
 - [autovacuum_naptime](guc-list.html#autovacuum_naptime)
+- [autovacuum_vacuum_cost_delay](guc-list.html#autovacuum_vacuum_cost_delay)
+- [autovacuum_vacuum_scale_factor](guc-list.html#autovacuum_vacuum_scale_factor)
+- [autovacuum_vacuum_threshold](guc-list.html#autovacuum_vacuum_threshold)
 - [gp_autovacuum_scope](guc-list.html#gp_autovacuum_scope)
 
 ## <a id="query-metrics"></a>Query Metrics Collection Parameters 
@@ -399,13 +405,12 @@ The following configuration parameters configure the Greenplum Database resource
 The following parameters configure the Greenplum Database resource group workload management feature.
 
 - [gp_resgroup_memory_policy](guc-list.html#gp_resgroup_memory_policy)
+- [gp_resgroup_memory_query_fixed_mem](guc-list.html#gp_resgroup_memory_query_fixed_mem)
 - [gp_resource_group_bypass](guc-list.html#gp_resource_group_bypass)
 - [gp_resource_group_bypass_catalog_query](guc-list.html#gp_resource_group_bypass_catalog_query)
-- [gp_resource_group_cpu_ceiling_enforcement](guc-list.html#gp_resource_group_cpu_ceiling_enforcement)
+- [gp_resource_group_bypass_direct_dispatch](guc-list.html#gp_resource_group_bypass_direct_dispatch)
 - [gp_resource_group_cpu_limit](guc-list.html#gp_resource_group_cpu_limit)
 - [gp_resource_group_cpu_priority](guc-list.html#gp_resource_group_cpu_priority)
-- [gp_resource_group_enable_recalculate_query_mem](guc-list.html#gp_resource_group_enable_recalculate_query_mem)
-- [gp_resource_group_memory_limit](guc-list.html#gp_resource_group_memory_limit)
 - [gp_resource_group_queuing_timeout](guc-list.html#gp_resource_group_queuing_timeout)
 - [gp_resource_manager](guc-list.html#gp_resource_manager)
 - [gp_vmem_idle_resource_timeout](guc-list.html#gp_vmem_idle_resource_timeout)
@@ -457,6 +462,7 @@ The following parameters provide compatibility with older PostgreSQL and Greenpl
 - [array_nulls](guc-list.html#array_nulls)
 - [backslash_quote](guc-list.html#backslash_quote)
 - [escape_string_warning](guc-list.html#escape_string_warning)
+- [gp_quicklz_fallback](guc-list.html#gp_quickz_fallback)
 - [quote_all_identifiers](guc-list.html#quote_all_identifiers)
 - [regex_flavor](guc-list.html#regex_flavor)
 - [standard_conforming_strings](guc-list.html#standard_conforming_strings)

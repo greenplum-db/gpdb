@@ -26,13 +26,15 @@ reindexdb -V | --version
 
 ## <a id="section4"></a>Options 
 
+`reindexdb` accepts the following command-line arguments:
+
 -a
 --all
 :   Reindex all databases.
 
 \[-d\] dbname
 \[--dbname=\]dbname
-:   Specifies the name of the database to be reindexed, when `-a` or `--all` is not used. If this is not specified, Greenplum Database reads the database name from the environment variable `PGDATABASE`. If that is not set, the user name specified for the connection is used. The dbname can be a connection string. If so, connection string parameters will override any conflicting command line options.
+:   Specifies the name of the database to be reindexed, when `-a` or `--all` is not used. If this is not specified, Greenplum Database reads the database name from the environment variable `PGDATABASE`. If that is not set, the user name specified for the connection is used. The dbname can be a [connection string](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING). If so, connection string parameters will override any conflicting command line options.
 
 -e
 --echo
@@ -40,7 +42,7 @@ reindexdb -V | --version
 
 -i index
 --index=index
-:   Recreate index only. Multiple indexes can be recreated by writing multiple `-i` switches.
+:   Recreate index only. You can recreate multiple indexes by specifying multiple `-i` switches.
 
 -q
 --quiet
@@ -48,11 +50,15 @@ reindexdb -V | --version
 
 -s
 --system
-:   Reindex the database's system catalogs.
+:   Reindex system catalogs only.
+
+-S schema 
+--schema=schema
+:   Reindex schema only. You can reindex multiple schemas by specifying multiple `-S` switches.
 
 -t table
 --table=table
-:   Reindex table only. Multiple tables can be reindexed by writing multiple `-t` switches.
+:   Reindex table only. You can reindex multiple tables by specifying multiple `-t` switches.
 
 -v
 --verbose
@@ -92,7 +98,7 @@ reindexdb -V | --version
 :   This option is never essential, since `reindexdb` automatically prompts for a password if the server demands password authentication. However, `reindexdb` will waste a connection attempt finding out that the server wants a password. In some cases it is worth typing `-W` to avoid the extra connection attempt.
 
 --maintenance-db=dbname
-:   Specifies the name of the database to connect to discover what other databases should be reindexed, when `-a` or `--all` is used. If not specified, the `postgres` database will be used, and if that does not exist, `template1` will be used. This can be a connection string. If so, connection string parameters will override any conflicting command line options. Also, connection string parameters other than the database name itself will be re-used when connecting to other databases.
+:   Specifies the name of the database to connect to discover what other databases should be reindexed, when `-a` or `--all` is used. If not specified, the `postgres` database will be used, and if that does not exist, `template1` will be used. This can be a [connection](https://www.postgresql.org/docs/12/libpq-connect.html#LIBPQ-CONNSTRING). If so, connection string parameters will override any conflicting command line options. Also, connection string parameters other than the database name itself will be re-used when connecting to other databases.
 
 ## <a id="section6"></a>Notes 
 
@@ -100,9 +106,30 @@ reindexdb -V | --version
 
 `reindexdb` might need to connect several times to the coordinator server, asking for a password each time. It is convenient to have a `~/.pgpass` file in such cases.
 
+## <a id="section6e"></a>Environment
+
+PGDATABASE
+PGHOST
+PGPORT
+PGUSER
+:   Default connection parameters.
+
+PG_COLOR
+:   Specifies whether to use color in diagnostic messages. Possible values are `always`, `auto`, and `never`.
+
+This utility, like most other Greenplum Database utilities, also uses the environment variables supported by `libpq`.
+
+## <a id="section6d"></a>Diagnostics
+
+In case of difficulty, see [REINDEX](../../ref_guide/sql_commands/REINDEX.html) and [psql](psql.html) for discussions of potential problems and error messages. The database server must be running at the targeted host. Also, any default connection settings and environment variables used by the `libpq` front-end library will apply.
+
+## <a id="section6n"></a>Notes
+
+`reindexdb` might need to connect several times to the Greenplum Database server, asking for a password each time. It is convenient to have a `~/.pgpass` file in such cases.
+
 ## <a id="section7"></a>Examples 
 
-To reindex the database `mydb`:
+To reindex the database named `mydb`:
 
 ```
 reindexdb mydb

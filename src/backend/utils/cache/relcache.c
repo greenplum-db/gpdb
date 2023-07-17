@@ -544,9 +544,10 @@ RelationBuildTupleDesc(Relation relation)
 	AttrMissing *attrmiss = NULL;
 	int			ndef = 0;
 
-	/* copy some fields from pg_class row to rd_att */
-	relation->rd_att->tdtypeid = relation->rd_rel->reltype;
-	relation->rd_att->tdtypmod = -1;	/* unnecessary, but... */
+	/* fill rd_att's type ID fields (compare heap.c's AddNewRelationTuple) */
+	relation->rd_att->tdtypeid =
+		relation->rd_rel->reltype ? relation->rd_rel->reltype : RECORDOID;
+	relation->rd_att->tdtypmod = -1;	/* just to be sure */
 
 	constr = (TupleConstr *) MemoryContextAlloc(CacheMemoryContext,
 												sizeof(TupleConstr));
@@ -1294,7 +1295,7 @@ retry:
 	/*
 	 * If it's an append-only table, get information from pg_appendonly.
 	 */
-	if (RelationIsAppendOptimized(relation))
+	if (RelationStorageIsAO(relation))
 		RelationInitAppendOnlyInfo(relation);
 
 	/* extract reloptions if any */
@@ -1901,7 +1902,7 @@ RelationInitTableAccessMethod(Relation relation)
 		 * Greenplum: append-optimized relations should not have a valid
 		 * relfrozenxid.
 		 */
-		Assert (!RelationIsAppendOptimized(relation) ||
+		Assert (!RelationStorageIsAO(relation) ||
 				!TransactionIdIsValid(relation->rd_rel->relfrozenxid));
 	}
 
@@ -2009,7 +2010,7 @@ formrdesc(const char *relationName, Oid relationReltype,
 	relation->rd_att->tdrefcount = 1;	/* mark as refcounted */
 
 	relation->rd_att->tdtypeid = relationReltype;
-	relation->rd_att->tdtypmod = -1;	/* unnecessary, but... */
+	relation->rd_att->tdtypmod = -1;	/* just to be sure */
 
 	/*
 	 * initialize tuple desc info
@@ -3604,9 +3605,6 @@ RelationBuildLocalRelation(const char *relname,
 	 *
 	 * In GPDB, the table's logical OID is allocated in the coordinator, and might
 	 * already be in use as a relfilenode of an existing relation in a segment.
-	 *
-	 * In binary upgrade mode, however, use the OID also as the relfilenode.
-	 * pg_upgrade gets confused if they don't match.
 	 */
 	rel->rd_rel->relisshared = shared_relation;
 
@@ -5810,8 +5808,8 @@ load_relcache_init_file(bool shared)
 		rel->rd_att = CreateTemplateTupleDesc(relform->relnatts);
 		rel->rd_att->tdrefcount = 1;	/* mark as refcounted */
 
-		rel->rd_att->tdtypeid = relform->reltype;
-		rel->rd_att->tdtypmod = -1; /* unnecessary, but... */
+		rel->rd_att->tdtypeid = relform->reltype ? relform->reltype : RECORDOID;
+		rel->rd_att->tdtypmod = -1; /* just to be sure */
 
 		/* next read all the attribute tuple form data entries */
 		has_not_null = false;

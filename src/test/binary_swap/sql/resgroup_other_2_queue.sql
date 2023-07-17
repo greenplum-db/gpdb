@@ -9,14 +9,14 @@ select avg(reslimittype)
 select groupname from gp_toolkit.gp_resgroup_config
   where groupname not like 'rg_dump_test%'
   order by groupid;
-select rsgname from gp_toolkit.gp_resgroup_status
-  where rsgname not like 'rg_dump_test%'
+select groupname from gp_toolkit.gp_resgroup_status
+  where groupname not like 'rg_dump_test%'
   order by groupid;
 
-alter resource group rg1 set cpu_hard_quota_limit 20;
-alter resource group rg1 set cpu_hard_quota_limit 10;
+alter resource group rg1 set cpu_max_percent 20;
+alter resource group rg1 set cpu_max_percent 10;
 drop resource group rg1;
-create resource group rg1 with (cpu_hard_quota_limit=10, memory_limit=10);
+create resource group rg1 with (cpu_max_percent=10, memory_limit=10);
 
-alter resource group rg2 set cpu_hard_quota_limit 20;
-alter resource group rg2 set cpu_hard_quota_limit 10;
+alter resource group rg2 set cpu_max_percent 20;
+alter resource group rg2 set cpu_max_percent 10;

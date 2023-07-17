@@ -65,3 +65,67 @@ ABORT;
 -- try cluster again
 CLUSTER cluster_foo USING cluster_ifoo;
 DROP TABLE cluster_foo;
+
+-- Test that reltuples and relpages are populated on both QE and QD post-CLUSTER.
+-- This test is for heap tables.
+CREATE TABLE cluster_stats_heap(a int, b int);
+CREATE INDEX ON cluster_stats_heap(a);
+INSERT INTO cluster_stats_heap SELECT a, a FROM generate_series(1, 100)a;
+ANALYZE cluster_stats_heap;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats_heap'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats_heap';
+
+DELETE FROM cluster_stats_heap where a % 3 = 1;
+CLUSTER cluster_stats_heap USING cluster_stats_heap_a_idx;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats_heap'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats_heap';
+
+-- This test is for ao_row tables.
+CREATE TABLE cluster_stats_ao_row(a int, b int);
+CREATE INDEX ON cluster_stats_ao_row(a);
+INSERT INTO cluster_stats_ao_row SELECT a, a FROM generate_series(1, 100)a;
+ANALYZE cluster_stats_ao_row;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats_ao_row'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats_ao_row';
+
+DELETE FROM cluster_stats_ao_row where a % 3 = 1;
+CLUSTER cluster_stats_ao_row USING cluster_stats_ao_row_a_idx;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats_ao_row'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats_ao_row';
+
+-- This test is for ao_column tables.
+CREATE TABLE cluster_stats_ao_column(a int, b int);
+CREATE INDEX ON cluster_stats_ao_column(a);
+INSERT INTO cluster_stats_ao_column SELECT a, a FROM generate_series(1, 100)a;
+ANALYZE cluster_stats_ao_column;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats_ao_column'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats_ao_column';
+
+DELETE FROM cluster_stats_ao_column where a % 3 = 1;
+CLUSTER cluster_stats_ao_column USING cluster_stats_ao_column_a_idx;
+
+SELECT gp_segment_id, relpages, reltuples FROM gp_dist_random('pg_class')
+WHERE relname='cluster_stats_ao_column'
+UNION
+SELECT -1, relpages, reltuples FROM pg_class
+WHERE relname='cluster_stats_ao_column';

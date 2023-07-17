@@ -272,7 +272,7 @@ static bool NextCopyFromRawFieldsX(CopyState cstate, char ***fields, int *nfield
 								   int stop_processing_at_field);
 static bool NextCopyFromX(CopyState cstate, ExprContext *econtext,
 						  Datum *values, bool *nulls);
-static void HandleCopyError(CopyState cstate);
+void HandleCopyError(CopyState cstate);
 static void HandleQDErrorFrame(CopyState cstate, char *p, int len);
 
 static void CopyInitDataParser(CopyState cstate);
@@ -5345,7 +5345,7 @@ NextCopyFrom(CopyState cstate, ExprContext *econtext,
  *
  * changing me? take a look at FILEAM_HANDLE_ERROR in fileam.c as well.
  */
-static void
+void
 HandleCopyError(CopyState cstate)
 {
 	if (cstate->errMode == ALL_OR_NOTHING)
@@ -5385,7 +5385,6 @@ HandleCopyError(CopyState cstate)
 		cdbsreh->rawdata->cursor = 0;
 		cdbsreh->rawdata->data = cstate->line_buf.data;
 		cdbsreh->rawdata->len = cstate->line_buf.len;
-
 		cdbsreh->is_server_enc = cstate->line_buf_converted;
 		cdbsreh->linenumber = cstate->cur_lineno;
 		if (cstate->cur_attname)
@@ -5526,8 +5525,14 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 			field_strings = cstate->raw_fields;
 		}
 
-		/* check for overflowing fields */
-		if (attr_count > 0 && fldct > attr_count)
+		/* 
+		 * Check for overflowing fields.
+		 * GPDB: Change below condition compared to upstream to 
+		 * greater than or equal to 0 as in QE, 
+		 * attr_count may be equal to 0, 
+		 * when all fields are processed in the QD.
+		 */
+		if (fldct > attr_count)
 			ereport(ERROR,
 					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 					 errmsg("extra data after last expected column")));

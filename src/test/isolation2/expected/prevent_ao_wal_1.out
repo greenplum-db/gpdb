@@ -23,9 +23,9 @@ GP_IGNORE: defined new match expression
 
 -- Create tables (AO, AOCO)
 -1U: CREATE TABLE ao_foo (n int) WITH (appendonly=true);
-CREATE
+CREATE TABLE
 -1U: CREATE TABLE aoco_foo (n int, m int) WITH (appendonly=true, orientation=column);
-CREATE
+CREATE TABLE
 
 -- Switch WAL file
 -1U: SELECT true FROM pg_switch_wal();
@@ -35,10 +35,10 @@ CREATE
 (1 row)
 -- Insert data (AO)
 -1U: INSERT INTO ao_foo SELECT generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Insert data (AOCO)
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
 DELETE 5
@@ -73,10 +73,10 @@ VACUUM
 (1 row)
 -- Insert data (AO)
 -1U: INSERT INTO ao_foo SELECT generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Insert data (AOCO)
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
 DELETE 5
@@ -93,9 +93,9 @@ VACUUM
 
 
 -1U: DROP TABLE ao_foo;
-DROP
+DROP TABLE
 -1U: DROP TABLE aoco_foo;
-DROP
+DROP TABLE
 
 -- Reset wal_level
 !\retcode gpconfig -r wal_level --coordinatoronly;

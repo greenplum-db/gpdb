@@ -37,6 +37,14 @@ When enabled, Greenplum Database starts up the autovacuum daemon, which operates
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, system, restart|
 
+## <a id="autovacuum_freeze_max_age"></a>autovacuum_freeze_max_age
+
+Specifies the maximum age at which to automatically vacuum a table to prevent transaction ID wraparound. Note that the system will launch autovacuum processes to prevent wraparound even when `autovacuum=off`. The default value is 200 million transactions. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|100000 < integer < 2000000000|200000000|local, system, restart|
+
 ## <a id="autovacuum_naptime"></a>autovacuum\_naptime
 
 When `autovacuum=on` (the default), specifies the minimum delay between autovacuum runs. In each round, the daemon issues `VACUUM` and `ANALYZE` commands as needed for catalog (and possibly auxiliary) tables.
@@ -47,8 +55,33 @@ This parameter may be set only in the `postgresql.conf` file or on the server co
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - INT_MAX/1000 | 60 |coordinator, system, restart|
+|1 < integer < INT_MAX/1000 | 60 |coordinator, system, restart|
 
+## <a id="autovacuum_vacuum_cost_delay"></a>autovacuum_vacuum_cost_delay
+
+Specifies the cost delay value in milliseconds for automatic vacuum operations. If set to -1, the value of this parameter is the set by [`vacuum_cost_delay`](#vacuum_cost_delay).
+
+A value without units is taken to be milliseconds. The default is 2 milliseconds. This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| floating point < 100 | 2 |local, system, reload|
+
+## <a id="autovacuum_vacuum_scale_factor"></a>autovacuum_vacuum_scale_factor
+
+Specifies a fraction of the table size to add to [`autovacuum_vacuum_threshold`](#autovacuum_vacuum_threshold) when deciding whether to trigger a `VACUUM`. The default is 0.2 (20% of table size). This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| floating point (%) | 0.05 |local, system, reload|
+
+## <a id="autovacuum_vacuum_threshold"></a>autovacuum_vacuum_threshold
+
+Specifies the minimum number of updated or deleted tuples needed to trigger a `VACUUM` in any one table. The default is 50 tuples. This parameter can only be set in the postgresql.conf file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| 0 < integer < INT_MAX | 500 |local, system, reload|
 
 ## <a id="backslash_quote"></a>backslash\_quote 
 
@@ -686,11 +719,9 @@ gpconfig -s 'gp_default_storage_options'
 
 |Value Range|Default|Set Classifications<sup>1</sup>|
 |-----------|-------|---------------------|
-|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|coordinator, session, reload|
+|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|coordinator, session, reload|
 
 > **Note** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
-
-> **Note** <sup>2</sup>QuickLZ compression is available only in the commercial release of VMware Greenplum.
 
 ## <a id="gp_dispatch_keepalives_count"></a>gp\_dispatch\_keepalives\_count 
 
@@ -768,7 +799,7 @@ When set to `on`, the Postgres Planner plans single row inserts so that they are
 
 ## <a id="gp_enable_global_deadlock_detector"></a>gp\_enable\_global\_deadlock\_detector 
 
-Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd)in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is deactivated.
+Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd) in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is deactivated.
 
 If the Global Deadlock Detector is deactivated \(the default\), Greenplum Database runs concurrent update and delete operations on a heap table serially.
 
@@ -1019,18 +1050,18 @@ The amount of shared memory, in kilobytes, allocated for query metrics. The defa
 
 ## <a id="gp_interconnect_address_type"></a>gp_interconnect_address_type
 
-Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `wildcard`.
+Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `unicast`.
 
-- When this parameter is set to `unicast`, Greenplum Database  uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. 
+- When this parameter is set to `unicast`, Greenplum Database uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. This is the recommended option.
 
 - When this parameter is set to `wildcard`, Greenplum Database uses a wildcard address for binding, enabling the use of any network interface compliant with routing rules.
 
 > **Note** In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules do not allow for such
-communication. In these cases, you must configure this parameter to use a wildcard address for address binding.
+communication. In these cases, we recommend you use a single subnet for all segment addresses, or fix routing rules to allow communication between subnets. If neither is possible, you will need to configure this parameter to `wildcard` for wildcard address binding.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|wildcard,unicast|wildcard|local, system, reload|
+|wildcard,unicast|unicast|local, system, reload|
 
 ## <a id="gp_interconnect_debug_retry_interval"></a>gp_interconnect_debug_retry_interval 
 
@@ -1223,6 +1254,13 @@ The default value is `false`, Greenplum Database does not display the additional
 |-----------|-------|-------------------|
 |Boolean|false|coordinator, session, reload|
 
+## <a id="gp_quickz_fallback"></a>gp\_quickz\_fallback
+
+Determines how Greenplum Database handles legacy SQL that specifies a compression type of QuickLZ, which is not supported in Greenplum Database 7 and later. When set to `true`, if legacy SQL specifies a compression type of QuickLZ, Greenplum Database will apply a compression type of zstd. When set to `false` -- the default -- specifying a compression type of QuickLZ will result in an error.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_recursive_cte"></a>gp\_recursive\_cte 
 
@@ -1268,18 +1306,29 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 |-----------|-------|-------------------|
 |auto, eager\_free|eager\_free|local, system, superuser, reload|
 
+## <a id="gp_resgroup_memory_query_fixed_mem"></a>gp_resgroup_memory_query_fixed_mem
+
+> **Note** The `gp_resgroup_memory_query_fixed_mem` server configuration parameter is enforced only when resource group-based resource management is active.
+
+Specifies a fixed amount of memory, in MB, reserved for all queries in a resource group **for the scope of a session**. When this parameter is set to `0`, the default, the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
+
+While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_query_fixed_mem` overrides that limit at a session level. Thus, you can use this configuration parameter to adjust query memory budget for a particular session, on an ad hoc basis. 
+
+The value of `gp_resgroup_memory_query_fixed_mem` must be lower than `max_statement_mem`.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 < integer < INT_MAX| 0 |coordinator, session, user|
+
 ## <a id="gp_resource_group_bypass"></a>gp\_resource\_group\_bypass 
 
 > **Note** The `gp_resource_group_bypass` server configuration parameter is enforced only when resource group-based resource management is active.
 
- Activates or deactivates  the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries and external components such as PL/Container.
+This parameter can only be changed by a superuser.
 
-You can set this parameter to `true` to bypass resource group concurrent transaction limitations so that a query can run immediately. For example, you can set the parameter to `true` for a session to run a system catalog query or a similar query that requires a minimal amount of resources.
+ Activates or deactivates  the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries.
 
-When you set this parameter to `true` and a run a query, the query runs in this environment:
-
--   The query runs inside a resource group. The resource group assignment for the query does not change.
--   The query memory quota is approximately 10 MB per query. The memory is allocated from resource group shared memory or global shared memory. The query fails if there is not enough shared memory available to fulfill the memory allocation request.
+You can set this parameter to `true` to bypass resource group concurrent transaction limitations so that a query can run immediately. If you set this parameter to true, the query no longer enforces the CPU or memory limits assigned to its resource group. Instead, the memory quota assigned to this query is `statement_mem` per query. If there is not enough memory to satisfy the memory allocation request, the query will fail.
 
 This parameter can be set for a session. The parameter cannot be set within a transaction or a function.
 
@@ -1289,8 +1338,7 @@ This parameter can be set for a session. The parameter cannot be set within a tr
 
 ## <a id="gp_resource_group_bypass_catalog_query"></a>gp_resource_group_bypass_catalog_query
 
-> **Note** 
->The `gp_resource_group_bypass_catalog_query` server configuration parameter is enforced only when resource group-based resource management is active.
+> **Note** The `gp_resource_group_bypass_catalog_query` server configuration parameter is enforced only when resource group-based resource management is active.
 
 When set to `true` -- the default -- Greenplum Database's resource group scheduler bypasses all queries that fulfill both of the following criteria:
 
@@ -1306,13 +1354,16 @@ When this configuration parameter is set to `false` and the database has reached
 |-----------|-------|-------------------|
 |Boolean|true|local, session, reload|
 
-## <a id="gp_resource_group_cpu_ceiling_enforcement"></a>gp\_resource\_group\_cpu\_ceiling\_enforcement 
+## <a id="gp_resource_group_bypass_direct_dispatch"></a>gp_resource_group_bypass_direct_dispatch
 
-Enables the Ceiling Enforcement mode when assigning CPU resources by Percentage. When deactivated, the Elastic mode will be used.
+> **Note** 
+>The `gp_resource_group_bypass_direct_dispatch` server configuration parameter is enforced only when resource group-based resource management is active.
+
+When set to `true` (the default) Greenplum Database's resource group scheduler bypasses the resource group's limits for a direct dispatch query so it can run immediately. A direct dispatch query is a special type of query that only requires a single segment to participate in the execution. In order to improve efficiency, Greenplum optimizes this type of query, called Direct Dispatch optimization. The system sends the query plan to the execution of a single segment that needs to execute the plan, instead of sending it to all segments for execution. The query uses resources outside the resource groups to allocate memory. If there is not enough memory to satisfy the memory allocation request, the query will fail. You may only set this parameter for a single session, not within a transaction or a function.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|local, system, restart|
+|Boolean|true|local, session, reload|
 
 ## <a id="gp_resource_group_cpu_limit"></a>gp\_resource\_group\_cpu\_limit 
 
@@ -1336,37 +1387,6 @@ Sets the CPU priority for Greenplum processes relative to non-Greenplum processe
 |-----------|-------|-------------------|
 |1 - 50|10|local, system, restart|
 
-## <a id="gp_resource_group_enable_recalculate_query_mem"></a>gp\_resource\_group\_enable\_recalculate\_query\_mem
-
-> **Note** The `gp_resource_group_enable_recalculate_query_mem` server configuration parameter is enforced only when resource group-based resource management is active.
-
-Specifies whether or not Greenplum Database recalculates the maximum amount of memory to allocate per query running in a resource group. The default value is `true`, Greenplum Database recalculates the maximum per-query memory based on the memory configuration and the number of primary segments on the segment host. When set to `false`, Greenplum database calculates the maximum per-query memory based on the memory configuration and the number of primary segments on the coordinator host.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|true|coordinator, session, reload|
-
-## <a id="gp_resource_group_memory_limit"></a>gp\_resource\_group\_memory\_limit 
-
-> **Note** The `gp_resource_group_memory_limit` server configuration parameter is enforced only when resource group-based resource management is active.
-
-Identifies the maximum percentage of system memory resources to allocate to resource groups on each Greenplum Database segment node.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|0.1 - 1.0|0.7|local, system, restart|
-
-> **Note** When resource group-based resource management is active, the memory allotted to a segment host is equally shared by active primary segments. Greenplum Database assigns memory to primary segments when the segment takes the primary role. The initial memory allotment to a primary segment does not change, even in a failover situation. This may result in a segment host utilizing more memory than the `gp_resource_group_memory_limit` setting permits.
-
-For example, suppose your Greenplum Database cluster is utilizing the default `gp_resource_group_memory_limit` of `0.7` and a segment host named `seghost1` has 4 primary segments and 4 mirror segments. Greenplum Database assigns each primary segment on `seghost1` `(0.7 / 4 = 0.175)` of overall system memory. If failover occurs and two mirrors on `seghost1` fail over to become primary segments, each of the original 4 primaries retain their memory allotment of `0.175`, and the two new primary segments are each allotted `(0.7 / 6 = 0.116)` of system memory. `seghost1`'s overall memory allocation in this scenario is
-
-```
-
-0.7 + (0.116 * 2) = 0.932
-```
-
-which is above the percentage configured in the `gp_resource_group_memory_limit` setting.
-
 ## <a id="gp_resource_group_queuing_timeout"></a>gp\_resource\_group\_queuing\_timeout 
 
 > **Note** The `gp_resource_group_queuing_timeout` server configuration parameter is enforced only when resource group-based resource management is active.
@@ -1379,11 +1399,19 @@ Cancel a transaction queued in a resource group that waits longer than the speci
 
 ## <a id="gp_resource_manager"></a>gp\_resource\_manager 
 
-Identifies the resource management scheme currently enabled in the Greenplum Database cluster. The default scheme is to use resource queues. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
+Identifies the resource management scheme currently enabled in the Greenplum Database cluster. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
+
+- `none` - configures Greenplum Database to not use any resource manager. This is the default.
+
+- `group` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v1 version of Linux cgroup functionality. 
+
+- `group-v2` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v2 version of Linux cgroup functionality. 
+
+- `queue` - configures Greenplum Database to use resource queues. 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|group, queue|queue|local, system, restart|
+|none, group, group-v2, queue|none|local, system, restart|
 
 ## <a id="gp_resqueue_memory_policy"></a>gp\_resqueue\_memory\_policy 
 
@@ -1549,9 +1577,7 @@ If a database session is idle for longer than the time specified, the session wi
 
 ## <a id="gp_vmem_protect_limit"></a>gp\_vmem\_protect\_limit 
 
-> **Note** The `gp_vmem_protect_limit` server configuration parameter is enforced only when resource queue-based resource management is active.
-
-Sets the amount of memory \(in number of MBs\) that all `postgres` processes of an active segment instance can consume. If a query causes this limit to be exceeded, memory will not be allocated and the query will fail. Note that this is a local parameter and must be set for every segment in the system \(primary and mirrors\). When setting the parameter value, specify only the numeric value. For example, to specify 4096MB, use the value `4096`. Do not add the units `MB` to the value.
+When resource queue-based or resource-group based resource management is active, the parameter sets the amount of memory \(in number of MBs\) that all `postgres` processes of an active segment instance can consume. If a query causes this limit to be exceeded, memory will not be allocated and the query will fail. Note that this is a local parameter and must be set for every segment in the system \(primary and mirrors\). When setting the parameter value, specify only the numeric value. For example, to specify 4096MB, use the value `4096`. Do not add the units `MB` to the value.
 
 To prevent over-allocation of memory, these calculations can estimate a safe `gp_vmem_protect_limit` value.
 
@@ -1568,7 +1594,6 @@ First calculate the value of `gp_vmem`. This is the Greenplum Database memory av
     ```
     gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.17
     ```
-
 
 where SWAP is the host swap space and RAM is the RAM on the host in GB.
 
@@ -1593,7 +1618,6 @@ For scenarios where a large number of workfiles are generated, this is the calcu
     ```
     <gp_vmem> = ((<SWAP> + <RAM>) – (7.5GB + 0.05 * <RAM> - (300KB * <total_#_workfiles>))) / 1.17
     ```
-
 
 For information about monitoring and managing workfile usage, see the *Greenplum Database Administrator Guide*.
 
@@ -1701,7 +1725,7 @@ The value *iso\_8601* will produce output matching the time interval *format wit
 
 ## <a id="jit"></a>jit
 
-Determines whether JIT compilation may be used by Greenplum Database.
+Determines whether JIT compilation may be used by Greenplum Database. It enables or disables JIT for both GPORCA and Postgres Planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1709,7 +1733,7 @@ Determines whether JIT compilation may be used by Greenplum Database.
 
 ## <a id="jit_above_cost"></a>jit\_above\_cost
 
-Sets the query cost above which JIT compilation is activated when JIT is enabled. Performing JIT compilation costs planning time but can accelerate query execution. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables JIT compilation.
+When using Postgres Planner, sets the query cost above which JIT compilation is activated when JIT is enabled. Performing JIT compilation costs planning time but can accelerate query execution. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables JIT compilation.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1741,7 +1765,7 @@ Allows JIT compilation of expressions, when JIT compilation is activated.
 
 ## <a id="jit_inline_above_cost"></a>jit_inline_above_cost
 
-Sets the query cost above which JIT compilation attempts to inline functions and operators. Inlining adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables inlining.
+When using Postgres Planner, sets the query cost above which JIT compilation attempts to inline functions and operators. Inlining adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables inlining.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1749,7 +1773,7 @@ Sets the query cost above which JIT compilation attempts to inline functions and
 
 ## <a id="jit_optimize_above_cost"></a>jit_optimize_above_cost
 
-Sets the query cost above which JIT compilation applies expensive optimizations. Such optimization adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`, and it is unlikely to be beneficial to set it to more than `jit_inline_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables expensive optimizations.
+When using Postgres Planner, sets the query cost above which JIT compilation applies expensive optimizations. Such optimization adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`, and it is unlikely to be beneficial to set it to more than `jit_inline_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables expensive optimizations.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2324,7 +2348,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|true|coordinator, session, reload|
 
-## <a id="optimizer_enable_master_only_queries"></a>optimizer\_enable\_master\_only\_queries 
+## <a id="optimizer_enable_coordinator_only_queries"></a>optimizer\_enable\_coordinator\_only\_queries 
 
 When GPORCA is enabled \(the default\), this parameter allows GPORCA to run catalog queries that run only on the Greenplum Database coordinator. For the default value `off`, only the Postgres Planner can run catalog queries that run only on the Greenplum Database coordinator.
 
@@ -2405,6 +2429,30 @@ The parameter can be set for a database system, an individual database, or a ses
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|true|coordinator, session, reload|
+
+## <a id="optimizer_jit_above_cost"></a>optimizer_jit_above_cost
+
+When using GPORCA, sets the query cost above which JIT compilation is activated when JIT is enabled. Performing JIT compilation costs planning time but can accelerate query execution. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables JIT compilation.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|7500|coordinator, session, reload|
+
+## <a id="optimizer_jit_inline_above_cost"></a>optimizer_jit_inline_above_cost
+
+When using GPORCA, sets the query cost above which JIT compilation attempts to inline functions and operators. Inlining adds planning time, but can improve execution speed. It is not meaningful to set this to less than jit_above_cost. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables inlining.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|37500|coordinator, session, reload|
+
+## <a id="optimizer_jit_optimize_above_cost"></a>optimizer_jit_optimize_above_cost
+
+When using GPORCA, sets the query cost above which JIT compilation applies expensive optimizations. Such optimization adds planning time, but can improve execution speed. It is not meaningful to set this to less than `optimizer_jit_above_cost`, and it is unlikely to be beneficial to set it to more than `optimizer_jit_inline_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables expensive optimizations.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|37500|coordinator, session, reload|
 
 ## <a id="optimizer_join_arity_for_associativity_commutativity"></a>optimizer\_join\_arity\_for\_associativity\_commutativity 
 
@@ -2783,23 +2831,13 @@ For queries that are managed by resource queues or resource groups, this paramet
 
 Either the resource queue or the resource group management scheme can be active in Greenplum Database; both schemes cannot be active at the same time. The server configuration parameter [gp\_resource\_manager](#gp_resource_manager) controls which scheme is active.
 
-**When resource queues are enabled -** This parameter sets the percent of utilized Greenplum Database vmem memory that triggers the termination of queries. If the percentage of vmem memory that is utilized for a Greenplum Database segment exceeds the specified value, Greenplum Database terminates queries managed by resource queues based on memory usage, starting with the query consuming the largest amount of memory. Queries are terminated until the percentage of utilized vmem is below the specified percentage.
+This parameter sets the percent of utilized Greenplum Database virtual memory that triggers the termination of queries. If the percentage of virtual memory that is utilized for a Greenplum Database segment exceeds the specified value, Greenplum Database terminates queries managed by resource queues based on memory usage, starting with the query consuming the largest amount of memory. Queries are terminated until the percentage of utilized virtual memory is below the specified percentage.
 
-Specify the maximum vmem value for active Greenplum Database segment instances with the server configuration parameter [gp\_vmem\_protect\_limit](#gp_vmem_protect_limit).
+Specify the maximum virtual memory value for active Greenplum Database segment instances with the server configuration parameter [gp\_vmem\_protect\_limit](#gp_vmem_protect_limit).
 
-For example, if vmem memory is set to 10GB, and this parameter is 90 \(90%\), Greenplum Database starts terminating queries when the utilized vmem memory exceeds 9 GB.
+For example, if `gp_vmem_protect_limit` is set to 10GB, and `runaway_detector_activation_percent` is 90 \(90%\), Greenplum Database starts terminating queries when the utilized virtual memory exceeds 9 GB.
 
-For information about resource queues, see [Using Resource Queues](../../admin_guide/workload_mgmt.html).
-
-**When resource groups are enabled -** This parameter sets the percent of utilized resource group global shared memory that triggers the termination of queries that are managed by resource groups that are configured to use the `vmtracker` memory auditor, such as `admin_group` and `default_group`. For information about memory auditors, see [Memory Auditor](../../admin_guide/workload_mgmt_resgroups.html#topic8339777).
-
-Resource groups have a global shared memory pool when the sum of the `MEMORY_LIMIT` attribute values configured for all resource groups is less than 100. For example, if you have 3 resource groups configured with `memory_limit` values of 10 , 20, and 30, then global shared memory is 40% = 100% - \(10% + 20% + 30%\). See [Global Shared Memory](../../admin_guide/workload_mgmt_resgroups.html#topic833glob).
-
-If the percentage of utilized global shared memory exceeds the specified value, Greenplum Database terminates queries based on memory usage, selecting from queries managed by the resource groups that are configured to use the `vmtracker` memory auditor. Greenplum Database starts with the query consuming the largest amount of memory. Queries are terminated until the percentage of utilized global shared memory is below the specified percentage.
-
-For example, if global shared memory is 10GB, and this parameter is 90 \(90%\), Greenplum Database starts terminating queries when the utilized global shared memory exceeds 9 GB.
-
-For information about resource groups, see [Using Resource Groups](../../admin_guide/workload_mgmt_resgroups.html).
+For information about resource groups and resource queues, see [Managing Resources]((../../admin_guide/wlmgmt.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2919,32 +2957,24 @@ Determines whether ordinary string literals \('...'\) treat backslashes literall
 
 Allocates segment host memory per query. The amount of memory allocated with this parameter cannot exceed [max\_statement\_mem](#max_statement_mem) or the memory limit on the resource queue or resource group through which the query was submitted. If additional memory is required for a query, temporary spill files on disk are used.
 
+You can use the following calculation to estimate a reasonable `statement_mem` value for a wide variety of situations:
+
+```
+( <gp_vmem_protect_limit>GB * .9 ) / <max_expected_concurrent_queries>
+```
+
 *If you are using resource groups to control resource allocation in your Greenplum Database cluster*:
 
--   Greenplum Database uses `statement_mem` to control query memory usage when the resource group `MEMORY_SPILL_RATIO` is set to 0.
--   You can use the following calculation to estimate a reasonable `statement_mem` value:
-
-    ```
-    rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments
-    statement_mem = rg_perseg_mem / max_expected_concurrent_queries
-    ```
-
+- If the server configuration parameter [gp_resgroup_memory_query_fixed_mem](#gp_resgroup_memory_query_fixed_mem) is set to 0, and the resource group parameter `MEMORY_LIMIT` is set to -1, `statement_mem` sets the amount of memory allocated for a query.
+- If you set the configuration parameters [gp_resource_group_bypass](#gp_resource_group_bypass) or [gp_resource_group_bypass_catalog_query](#gp_resource_group_bypass_catalog_query) to bypass the resource group limits, `statement_mem` sets the amount of memory allocated for the query.
+- `statement_mem` also sets the amount of memory allocated for a query if its value is greater than `MEMORY_LIMIT` / `CONCURRENCY`.
+- Queries whose plan cost is less than the limit `MIN_COST` use `statement_mem` as their memory quota.
 
 *If you are using resource queues to control resource allocation in your Greenplum Database cluster*:
 
--   When [gp\_resqueue\_memory\_policy](#gp_resqueue_memory_policy) =auto, `statement_mem` and resource queue memory limits control query memory usage.
--   You can use the following calculation to estimate a reasonable `statement_mem` value for a wide variety of situations:
+- When [gp\_resqueue\_memory\_policy](#gp_resqueue_memory_policy) is set to "auto", `statement_mem` and resource queue memory limits control query memory usage.
 
-    ```
-    ( <gp_vmem_protect_limit>GB * .9 ) / <max_expected_concurrent_queries>
-    ```
-
-    For example, with a `gp_vmem_protect_limit` set to 8192MB \(8GB\) and assuming a maximum of 40 concurrent queries with a 10% buffer, you would use the following calculation to determine the `statement_mem` value:
-
-    ```
-    (8GB * .9) / 40 = .18GB = 184MB
-    ```
-
+For information about resource groups and resource queues, see [Managing Resources]((../../admin_guide/wlmgmt.html).
 
 When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` must be changed first, or listed first in the postgresql.conf file.
 
@@ -3085,7 +3115,7 @@ Collects information about executing commands. Enables the collection of informa
 
 ## <a id="track_wal_io_timing"></a>track_wal_io_timing
 
-Enables timing of WAL I/O calls. This parameter is disabled by default, as it repeatedly queries the operating system for the current time, which may cause significant overhead on some platforms. The view [pg_stat_wal](../system_catalogs/pg_stat_wal.html) displays WAL I/O timing information. Only superusers and users with the appropriate `SET` privilege can change this setting.
+Enables timing of WAL I/O calls. This parameter is disabled by default, as it repeatedly queries the operating system for the current time, which may cause significant overhead on some platforms. The view [pg_stat_wal](../system_catalogs/catalog_ref-views.html#pg_stat_wal) displays WAL I/O timing information. Only superusers and users with the appropriate `SET` privilege can change this setting.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

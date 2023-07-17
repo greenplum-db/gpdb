@@ -231,9 +231,6 @@ bool IsFuncNDVPreserving(Oid funcid);
 // stability property of given function
 char FuncStability(Oid funcid);
 
-// data access property of given function
-char FuncDataAccess(Oid funcid);
-
 // exec location property of given function
 char FuncExecLocation(Oid funcid);
 
@@ -647,6 +644,26 @@ List *GetRelChildIndexes(Oid reloid);
 Oid GetForeignServerId(Oid reloid);
 
 void GPDBLockRelationOid(Oid reloid, int lockmode);
+
+char *GetRelFdwName(Oid reloid);
+
+PathTarget *MakePathtargetFromTlist(List *tlist);
+
+void SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
+						   PathTarget *input_target, List **targets,
+						   List **targets_contain_srfs);
+
+List *MakeTlistFromPathtarget(PathTarget *target);
+
+Node *Expression_tree_mutator(Node *node, Node *(*mutator)(), void *context);
+
+TargetEntry *TlistMember(Expr *node, List *targetlist);
+
+Var *MakeVarFromTargetEntry(Index varno, TargetEntry *tle);
+
+TargetEntry *FlatCopyTargetEntry(TargetEntry *src_tle);
+
+bool IsTypeRange(Oid typid);
 
 }  //namespace gpdb
 

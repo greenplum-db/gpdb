@@ -622,34 +622,6 @@ inner join lateral
  from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
 on true;
 
--- test prefetch join qual
--- we do not handle this correct
--- the only case we need to prefetch join qual is:
---   1. outer plan contains motion
---   2. the join qual contains subplan that contains motion
-reset client_min_messages;
-set Test_print_prefetch_joinqual = true;
--- prefetch join qual is only set correct for planner
-set optimizer = off;
-
-create table t1_test_pretch_join_qual(a int, b int, c int);
-create table t2_test_pretch_join_qual(a int, b int, c int);
-
--- the following plan contains redistribute motion in both inner and outer plan
--- the join qual is t1.c > t2.c, it contains no motion, should not prefetch
-explain (costs off) select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
-on t1.b = t2.b and t1.c > t2.c;
-
-create table t3_test_pretch_join_qual(a int, b int, c int);
-
--- the following plan contains motion in both outer plan and join qual,
--- so we should prefetch join qual
-explain (costs off) select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
-on t1.b = t2.b and t1.a > any (select sum(b) from t3_test_pretch_join_qual t3 where c > t2.a);
-
-reset Test_print_prefetch_joinqual;
-reset optimizer;
-
 -- Github Issue: https://github.com/greenplum-db/gpdb/issues/9733
 -- Previously in the function bring_to_outer_query and
 -- bring_to_singleQE it depends on the path->param_info field
@@ -966,3 +938,56 @@ drop table if exists bar_PT2;
 drop table if exists bar_PT3;
 drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
+
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
+
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+
+-- check motion is added when performing a NL Left Outer Join between relations
+-- when the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+-- check motion is added when performing a NL Inner Join between relations when
+-- the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
+
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;

@@ -58,7 +58,7 @@ AOCSCompaction_DropSegmentFile(Relation aorel, int segno, AOVacuumRelStats *vacr
 {
 	int			col;
 
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 
 	for (col = 0; col < RelationGetNumberOfAttributes(aorel); col++)
 	{
@@ -110,7 +110,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, AOCSVPInfo *vpinfo, AOVa
 	const char *relname = RelationGetRelationName(aorel);
 	int			j;
 
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 
 	for (j = 0; j < vpinfo->nEntry; ++j)
 	{
@@ -234,7 +234,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	int64		prev_heap_blks_scanned = 0;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 	Assert(insertDesc);
 
 	compact_segno = fsinfo->segno;
@@ -255,7 +255,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 
 	scanDesc = aocs_beginrangescan(aorel,
 								   snapshot, snapshot,
-								   &compact_segno, 1);
+								   &compact_segno, 1, NULL);
 
 	tupDesc = RelationGetDescr(aorel);
 	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
@@ -309,7 +309,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		/*
 		 * Report that we are now scanning and compacting segment files.
 		 */
-		curr_num_dead_tuples = scanDesc->cur_seg_row + 1 - moved_tupleCount;
+		curr_num_dead_tuples = scanDesc->segrowsprocessed + 1 - moved_tupleCount;
 		if (curr_num_dead_tuples > prev_num_dead_tuples)
 		{
 			pgstat_progress_update_param(PROGRESS_VACUUM_NUM_DEAD_TUPLES,
@@ -326,7 +326,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		}
 	}
 	/* Accumulate total number dead tuples */
-	vacrelstats->num_dead_tuples += scanDesc->cur_seg_row - moved_tupleCount;
+	vacrelstats->num_dead_tuples += scanDesc->segrowsprocessed - moved_tupleCount;
 
 	MarkAOCSFileSegInfoAwaitingDrop(aorel, compact_segno);
 
@@ -334,13 +334,9 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 										compact_segno);
 
 	/* Delete all mini pages of the segment files if block directory exists */
-	if (OidIsValid(insertDesc->blkdirrelid))
-	{
-		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
-												   snapshot,
-												   compact_segno,
-												   0);
-	}
+	AppendOnlyBlockDirectory_DeleteSegmentFiles(insertDesc->blkdirrelid,
+												snapshot,
+												compact_segno);
 
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Finished compaction: "
@@ -385,7 +381,7 @@ AOCSCompact(Relation aorel,
 	AOCSFileSegInfo *fsinfo;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
-	Assert(RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAoCols(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 
 	relname = RelationGetRelationName(aorel);

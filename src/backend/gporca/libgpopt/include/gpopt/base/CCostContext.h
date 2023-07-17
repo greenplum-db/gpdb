@@ -261,6 +261,12 @@ public:
 	// is this cost context of a three stage scalar DQA created by CXformSplitDQA
 	static BOOL IsThreeStageScalarDQACostCtxt(const CCostContext *pcc);
 
+	// is this cost context of a multistage agg
+	static BOOL IsMultiStageAggCostCtxt(const CCostContext *pcc);
+
+	// is this cost context of a single stage agg
+	static BOOL IsSingleStageAggCostCtxt(const CCostContext *pcc);
+
 	// equality function
 	static BOOL
 	Equals(const CCostContext &ccLeft, const CCostContext &ccRight)

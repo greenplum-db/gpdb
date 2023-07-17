@@ -215,11 +215,11 @@ These steps ensure that the environment variables are set for the `gpadmin` user
     $ vi ~/.bashrc
     ```
 
-2.  Add lines to this file to source the `greenplum_path.sh` file and set the `MASTER_DATA_DIRECTORY` environment variable. For example:
+2.  Add lines to this file to source the `greenplum_path.sh` file and set the `COORDINATOR_DATA_DIRECTORY` environment variable. For example:
 
     ```
     source /usr/local/greenplum-db/greenplum_path.sh
-    export MASTER_DATA_DIRECTORY=/data/coordinator/gpseg-1
+    export COORDINATOR_DATA_DIRECTORY=/data/coordinator/gpseg-1
     ```
 
 3.  \(Optional\) You may also want to set some client session environment variables such as `PGPORT`, `PGUSER` and `PGDATABASE` for convenience. For example:

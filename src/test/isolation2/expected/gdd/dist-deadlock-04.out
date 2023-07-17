@@ -1,12 +1,12 @@
 DROP TABLE IF EXISTS t04a;
-DROP
+DROP TABLE
 CREATE TABLE t04a (id int, val int);
-CREATE
+CREATE TABLE
 INSERT INTO t04a (id, val) SELECT i, i FROM generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 
 DROP TABLE IF EXISTS t04b;
-DROP
+DROP TABLE
 
 -- gang creation order is important, reset any guc to force the creation
 10: RESET optimizer;
@@ -22,7 +22,7 @@ BEGIN
 10: UPDATE t04a SET val=val WHERE id=segid(0,1);
 UPDATE 1
 10: CREATE TABLE t04b (id int);
-CREATE
+CREATE TABLE
 
 20: UPDATE t04a SET val=val WHERE id=segid(1,1);
 UPDATE 1

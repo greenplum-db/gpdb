@@ -209,7 +209,7 @@ max_prepared_transactions = 250		# can be 0 or more
 					#   fsync_writethrough
 					#   open_sync
 #full_page_writes = on			# recover from partial page writes
-#wal_compression = off			# enable compression of full-page writes
+#wal_compression = on			# enable compression of full-page writes
 #wal_log_hints = off			# also do full page writes of non-critical updates
 					# (change requires restart)
 #wal_init_zero = on			# zero-fill new WAL files
@@ -377,6 +377,17 @@ max_prepared_transactions = 250		# can be 0 or more
 
 #gp_enable_sort_limit = on
 
+# - JIT GUCs for Optimizer(ORCA) -
+
+#optimizer_jit_above_cost = 7500	# perform JIT compilation if available
+					# and query more expensive than this;
+					# -1 disables
+#optimizer_jit_inline_above_cost = 37500	# inline small functions if query is
+						# more expensive than this; -1 disables
+#optimizer_jit_optimize_above_cost = 37500	# use expensive JIT optimizations if
+						# query is more expensive than this;
+						# -1 disables
+
 # - Planner Cost Constants -
 
 #seq_page_cost = 1.0			# measured on an arbitrary scale
@@ -385,7 +396,6 @@ max_prepared_transactions = 250		# can be 0 or more
 #cpu_tuple_cost = 0.01			# same scale as above
 #cpu_index_tuple_cost = 0.005		# same scale as above
 #cpu_operator_cost = 0.0025		# same scale as above
-# GPDB_96_MERGE_FIXME: figure out the appropriate values for the parallel gucs
 #parallel_tuple_cost = 0.1		# same scale as above
 #parallel_setup_cost = 1000.0	# same scale as above
 

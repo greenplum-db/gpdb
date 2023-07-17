@@ -659,9 +659,6 @@ typedef struct DynamicIndexScan
  * contain such Vars.  Also, for the convenience of setrefs.c, TLEs in
  * indextlist are marked as resjunk if they correspond to columns that
  * the index AM cannot reconstruct.
- * 
- * GPDB: We need indexqualorig to determine direct dispatch, however there
- * is no need to dispatch it.
  * ----------------
  */
 typedef struct IndexOnlyScan
@@ -1059,8 +1056,6 @@ typedef struct Join
 	List	   *joinqual;		/* JOIN quals (in addition to plan.qual) */
 
 	bool		prefetch_inner; /* to avoid deadlock in MPP */
-	bool		prefetch_joinqual; /* to avoid deadlock in MPP */
-	bool		prefetch_qual; /* to avoid deadlock in MPP */
 } Join;
 
 /* ----------------
@@ -1623,7 +1618,6 @@ typedef struct PlanRowMark
 	LockClauseStrength strength;	/* LockingClause's strength, or LCS_NONE */
 	LockWaitPolicy waitPolicy;	/* NOWAIT and SKIP LOCKED options */
 	bool		isParent;		/* true if this is a "dummy" parent entry */
-	bool        canOptSelectLockingClause; /* Whether can do some optimization on select with locking clause */
 } PlanRowMark;
 
 

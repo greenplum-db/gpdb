@@ -639,3 +639,20 @@ select * from foo;
 
 drop table foo;
 drop table bar;
+-- This test is to verify ORCA can generate plans with empty
+-- target lists. This can happen when inserting rows with no
+-- columns into a table with no columns
+create table test();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+explain (analyze, costs off, timing off, summary off) insert into test default values;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Insert on test (actual rows=0 loops=1)
+   ->  Result (actual rows=1 loops=1)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
+               ->  Result (actual rows=1 loops=1)
+                     One-Time Filter: (gp_execution_segment() = 2)
+                     ->  Result (actual rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+

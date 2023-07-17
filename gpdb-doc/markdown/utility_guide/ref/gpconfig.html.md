@@ -5,8 +5,8 @@ Sets server configuration parameters on all segments within a Greenplum Database
 ## <a id="section2"></a>Synopsis 
 
 ```
-gpconfig -c <param_name> -v <value> [-m <coordinator_value> | --masteronly]
-       | -r <param_name> [--masteronly]
+gpconfig -c <param_name> -v <value> [-m <coordinator_value> | --coordinatoronly]
+       | -r <param_name> [--coordinatoronly]
        | -l
        [--skipvalidation] [--verbose] [--debug]
 
@@ -17,7 +17,7 @@ gpconfig --help
 
 ## <a id="section3"></a>Description 
 
-The `gpconfig` utility allows you to set, unset, or view configuration parameters from the `postgresql.conf` files of all instances \(coordinator, segments, and mirrors\) in your Greenplum Database system. When setting a parameter, you can also specify a different value for the coordinator if necessary. For example, parameters such as `max_connections` require a different setting on the coordinator than what is used for the segments. If you want to set or unset a global or coordinator only parameter, use the `--masteronly` option.
+The `gpconfig` utility allows you to set, unset, or view configuration parameters from the `postgresql.conf` files of all instances \(coordinator, segments, and mirrors\) in your Greenplum Database system. When setting a parameter, you can also specify a different value for the coordinator if necessary. For example, parameters such as `max_connections` require a different setting on the coordinator than what is used for the segments. If you want to set or unset a global or coordinator only parameter, use the `--coordinatoronly` option.
 
 > **Note** For configuration parameters of vartype `string`, you may not pass values enclosed in single quotes to `gpconfig -c`.
 
@@ -51,10 +51,10 @@ To show the currently set values for a parameter across the system, use the `-s`
 
 :   To set the value to an empty string, enter empty single quotes \(`''`\).
 
--m \| --mastervalue coordinator\_value
+-m \| --coordinatorvalue coordinator\_value
 :   The coordinator value to use for the configuration parameter you specified with the `-c` option. If specified, this value only applies to the coordinator and standby coordinator. This option can only be used with `-v`.
 
---masteronly
+--coordinatoronly
 :   When specified, `gpconfig` will only edit the coordinator `postgresql.conf` file.
 
 -r \| --remove param\_name

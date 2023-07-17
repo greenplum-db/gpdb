@@ -576,7 +576,7 @@ class AnalyzeDb(Operation):
             tablenames = parse_tables_from_file(self.conn, self.config_file)
             canonical_tables = validate_tables(self.conn, tablenames)
             all_root_partitions = run_sql(self.conn, GET_ALL_ROOT_PARTITION_TABLES_SQL)
-            cfg_file = open(self.config_file, 'rU')
+            cfg_file = open(self.config_file, 'r')
             for line in cfg_file:
                 # XXX: The file format does not allow listing tables with spaces in the name,
                 # even when quoted
@@ -1196,7 +1196,7 @@ def validate_dir(path):
 
 # Parse a list of tables from the config file.
 def parse_tables_from_file(conn, include_file):
-    in_file = open(include_file, 'rU')
+    in_file = open(include_file, 'r')
     line_no = 1
     tables = []
     for line in in_file:

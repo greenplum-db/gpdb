@@ -36,7 +36,7 @@ SELECT pg_get_serial_sequence('itest1', 'a');
                     Sequence "public.itest1_a_seq"
   Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
 ---------+-------+---------+------------+-----------+---------+-------
- integer |     1 |       1 | 2147483647 |         1 | no      |     1
+ integer |     1 |       1 | 2147483647 |         1 | no      |    20
 Sequence for identity column: public.itest1.a
 
 CREATE TABLE itest4 (a int, b text);
@@ -108,13 +108,13 @@ SELECT * FROM itest4;
 INSERT INTO itest3 VALUES (DEFAULT, 'a');
 INSERT INTO itest3 VALUES (DEFAULT, 'b'), (DEFAULT, 'c');
 SELECT * FROM itest3;
- a  | b 
-----+---
-  7 | 
- 12 | 
- 17 | a
- 22 | b
- 27 | c
+  a  | b 
+-----+---
+   7 | 
+  12 | 
+  17 | a
+ 107 | b
+ 112 | c
 (5 rows)
 
 -- OVERRIDING tests
@@ -145,27 +145,10 @@ SELECT * FROM itest2;
 -- UPDATE tests
 UPDATE itest1 SET a = 101 WHERE a = 1;
 UPDATE itest1 SET a = DEFAULT WHERE a = 2;
-SELECT * FROM itest1;
-  a  |  b  
------+-----
-  10 | xyz
-   3 | xyz
- 101 | 
-   4 | 
-(4 rows)
-
 UPDATE itest2 SET a = 101 WHERE a = 1;
 ERROR:  column "a" can only be updated to DEFAULT
 DETAIL:  Column "a" is an identity column defined as GENERATED ALWAYS.
 UPDATE itest2 SET a = DEFAULT WHERE a = 2;
-SELECT * FROM itest2;
- a  |  b  
-----+-----
-  1 | 
- 10 | xyz
-  3 | 
-(3 rows)
-
 -- COPY tests
 CREATE TABLE itest9 (a int GENERATED ALWAYS AS IDENTITY, b text, c bigint);
 COPY itest9 FROM stdin;
@@ -176,7 +159,7 @@ SELECT * FROM itest9 ORDER BY c;
  100 | foo  | 200
  101 | bar  | 201
    1 | foo2 | 202
-   2 | bar2 | 203
+  21 | bar2 | 203
 (4 rows)
 
 -- DROP IDENTITY tests

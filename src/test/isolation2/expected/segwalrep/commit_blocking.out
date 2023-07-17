@@ -23,9 +23,9 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 
 -- create table and show commits are not blocked
 create table segwalrep_commit_blocking (a int) distributed by (a);
-CREATE
+CREATE TABLE
 insert into segwalrep_commit_blocking values (5);
-INSERT 1
+INSERT 0 1
 
 -- skip FTS probes always
 select gp_inject_fault('fts_probe', 'reset', 1);
@@ -87,20 +87,20 @@ server closed the connection unexpectedly
 3: begin;
 BEGIN
 3: insert into segwalrep_commit_blocking values (4);
-INSERT 1
+INSERT 0 1
 3&: commit;  <waiting ...>
 
 -- this should not block due to direct dispatch to primary with active synced mirror
 4: insert into segwalrep_commit_blocking values (6);
-INSERT 1
+INSERT 0 1
 
 -- bring the mirror back up
 -1U: select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'm' and content = 0;
  pg_ctl_start                                     
 --------------------------------------------------
- 
  waiting for server to start done
 server started
+ 
 (1 row)
 
 -- should unblock and commit now that mirror is back up and in-sync
@@ -116,7 +116,7 @@ select gp_inject_fault('fts_probe', 'reset', 1);
 
 -- everything should be back to normal
 4: insert into segwalrep_commit_blocking select i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 4: select * from segwalrep_commit_blocking order by a;
  a  
 ----

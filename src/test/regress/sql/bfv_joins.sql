@@ -9,10 +9,11 @@ insert into x values (generate_series(1,10), generate_series(1,10), generate_ser
 create table y (a int, b int, c int);
 insert into y (select * from x);
 
-CREATE TABLE t1 (a int, b int);
+CREATE TABLE t1 (a int, b int, c int not null);
 CREATE TABLE t2 (a int, b int);
+CREATE TABLE t3 (a int not null, b int, c int);
 
-INSERT INTO t1 VALUES (1,1),(2,1),(3,NULL);
+INSERT INTO t1 VALUES (1,1,1),(2,1,2),(3,NULL,3);
 INSERT INTO t2 VALUES (2,3);
 
 CREATE FUNCTION func_x(x int) RETURNS int AS $$
@@ -68,6 +69,48 @@ SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t2.b IS DISTINCT FROM N
 SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t2.b IS NOT DISTINCT FROM NULL;
 
 SELECT * FROM t1 LEFT OUTER JOIN t2 ON t1.a = t2.a WHERE t1.b IS NOT DISTINCT FROM NULL;
+
+--- Tests for LOJ with single predicate uses columns of outer child only
+explain select t1.* from t1 left outer join t3 on t1.b=1;
+select t1.* from t1 left outer join t3 on t1.b=1;
+
+explain select t1.* from t1 left outer join t3 on t1.c=1;
+select t1.* from t1 left outer join t3 on t1.c=1;
+
+--- Tests for LOJ with null-filtering on self check conditions.
+--- make sure that we dont optimize the equality checks of inner table of LOJ.
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL;
+SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t1.c = t1.c IS NULL;
+SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t1.c = t1.c IS NULL;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL and t3.b=2;
+SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL and t3.a=2;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL and t1.b=1;
+SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL and t1.b=1;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL or t3.a is NULL;
+SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL or t3.a is NULL;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL or t3.b=2;
+SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL or t3.b=2;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL or t1.a=1;
+SELECT t1.c FROM t1 LEFT OUTER JOIN t3 ON t3.b > t3.a WHERE t3.a = t3.a IS NULL or t1.a=1;
+
+explain SELECT t.c FROM (select t1.*, t1.a+t1.b as cc from t1)t LEFT OUTER JOIN t3 ON t.cc = t.cc IS NULL;
+SELECT t.c FROM (select t1.*, t1.a+t1.b as cc from t1)t LEFT OUTER JOIN t3 ON t.cc = t.cc IS NULL;
+
+explain SELECT t.c FROM (select t1.*, t1.a+t1.b as cc from t1)t LEFT OUTER JOIN t3 ON t3.a > t3.b where t.cc = t.cc IS NULL;
+SELECT t.c FROM (select t1.*, t1.a+t1.b as cc from t1)t LEFT OUTER JOIN t3 ON t3.a > t3.b where t.cc = t.cc IS NULL;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN (select t3.*, t3.a+t3.b as cc from t3)t ON t.cc = t.cc IS NULL;
+SELECT t1.c FROM t1 LEFT OUTER JOIN (select t3.*, t3.a+t3.b as cc from t3)t ON t.cc = t.cc IS NULL;
+
+explain SELECT t1.c FROM t1 LEFT OUTER JOIN (select t3.*, t3.a+t3.b as cc from t3)t ON t.b > t.a WHERE t.cc = t.cc IS NULL;
+SELECT t1.c FROM t1 LEFT OUTER JOIN (select t3.*, t3.a+t3.b as cc from t3)t ON t.b > t.a WHERE t.cc = t.cc IS NULL;
 
 -- Test for unexpected NLJ qual
 --
@@ -453,6 +496,43 @@ explain select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
 join baz on varchar_3=text_any;
 select varchar_3, char_3, text_any from foo join bar on varchar_3=char_3
 join baz on varchar_3=text_any;
+
+--
+-- Test case for Hash Join rescan after squelched without hashtable built
+-- See https://github.com/greenplum-db/gpdb/pull/15590
+--
+--- Lateral Join
+set from_collapse_limit = 1;
+set join_collapse_limit = 1;
+select 1 from pg_namespace  join lateral
+    (select * from aclexplode(nspacl) x join pg_authid  on x.grantee = pg_authid.oid where rolname = current_user) z on true limit 1;
+reset from_collapse_limit;
+reset join_collapse_limit;
+
+--- NestLoop index join
+create table l_table (a int,  b int) distributed replicated;
+create index l_table_idx on l_table(a);
+create table r_table1 (ra1 int,  rb1 int) distributed replicated;
+create table r_table2 (ra2 int,  rb2 int) distributed replicated;
+insert into l_table select i % 10 , i from generate_series(1, 10000) i;
+insert into r_table1 select i, i from generate_series(1, 1000) i;
+insert into r_table2 values(11, 11), (1, 1) ;
+analyze l_table;
+analyze r_table1;
+analyze r_table2;
+
+set optimizer to off;
+set enable_nestloop to on;
+set enable_bitmapscan to off;
+explain select * from r_table2 where ra2 in ( select a from l_table join r_table1 on b = rb1);
+select * from r_table2 where ra2 in ( select a from l_table join r_table1 on b = rb1);
+
+reset optimizer;
+reset enable_nestloop;
+reset enable_bitmapscan;
+drop table l_table;
+drop table r_table1;
+drop table r_table2;
 
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;

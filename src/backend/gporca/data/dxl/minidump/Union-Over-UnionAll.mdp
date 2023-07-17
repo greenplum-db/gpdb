@@ -301,7 +301,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
         </dxl:LogicalProject>
       </dxl:Union>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="16">
+    <dxl:Plan Id="0" SpaceSize="696">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.001535" Rows="11.000000" Width="4"/>

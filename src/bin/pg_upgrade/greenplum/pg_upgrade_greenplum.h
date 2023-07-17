@@ -35,20 +35,23 @@ typedef enum {
 	GREENPLUM_MODE_OPTION = 10,
 	GREENPLUM_PROGRESS_OPTION = 11,
 	GREENPLUM_CONTINUE_CHECK_ON_FATAL = 12,
-	GREENPLUM_SKIP_TARGET_CHECK = 13
+	GREENPLUM_SKIP_TARGET_CHECK = 13,
+	GREENPLUM_SKIP_CHECKS = 14
 } greenplumOption;
 
 #define GREENPLUM_OPTIONS \
 	{"mode", required_argument, NULL, GREENPLUM_MODE_OPTION}, \
 	{"progress", no_argument, NULL, GREENPLUM_PROGRESS_OPTION}, \
 	{"continue-check-on-fatal", no_argument, NULL, GREENPLUM_CONTINUE_CHECK_ON_FATAL}, \
-	{"skip-target-check", no_argument, NULL, GREENPLUM_SKIP_TARGET_CHECK},
+	{"skip-target-check", no_argument, NULL, GREENPLUM_SKIP_TARGET_CHECK}, \
+	{"skip-checks", no_argument, NULL, GREENPLUM_SKIP_CHECKS},
 
 #define GREENPLUM_USAGE "\
       --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
       --progress                enable progress reporting\n\
       --continue-check-on-fatal continue to run through all pg_upgrade checks without upgrade. Stops on major issues\n\
       --skip-target-check       skip all checks on new/target cluster\n\
+      --skip-checks             skip all checks\n\
 "
 
 /* option_gp.c */
@@ -60,6 +63,7 @@ bool is_continue_check_on_fatal(void);
 void set_check_fatal_occured(void);
 bool get_check_fatal_occurred(void);
 bool is_skip_target_check(void);
+bool skip_checks(void);
 
 /* pg_upgrade_greenplum.c */
 void freeze_master_data(void);

@@ -2,9 +2,9 @@
 --              left over by a previous vacuum
 --
 CREATE TABLE aoco_vacuum_after_vacuum_skip_drop (a INT, b INT) WITH (appendonly=true, orientation=column);
-CREATE
+CREATE TABLE
 INSERT INTO aoco_vacuum_after_vacuum_skip_drop SELECT i as a, i as b FROM generate_series(1, 10) AS i;
-INSERT 10
+INSERT 0 10
 
 DELETE FROM aoco_vacuum_after_vacuum_skip_drop;
 DELETE 10
@@ -28,7 +28,7 @@ BEGIN
 2: VACUUM aoco_vacuum_after_vacuum_skip_drop;
 VACUUM
 1: END;
-END
+COMMIT
 
 -- We should see an aocsseg in state 2 (AOSEG_STATE_AWAITING_DROP)
 0U: SELECT segno, column_num, state FROM gp_toolkit.__gp_aocsseg('aoco_vacuum_after_vacuum_skip_drop');
@@ -54,7 +54,7 @@ VACUUM
 
 -- Check if insert goes into segno 1 instead of segno 2
 1: INSERT INTO aoco_vacuum_after_vacuum_skip_drop SELECT i as a, i as b FROM generate_series(1, 100) AS i;
-INSERT 100
+INSERT 0 100
 0U: SELECT segno, tupcount > 0, state FROM gp_toolkit.__gp_aocsseg('aoco_vacuum_after_vacuum_skip_drop');
  segno | ?column? | state 
 -------+----------+-------

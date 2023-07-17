@@ -166,7 +166,7 @@ from (select regexp_split_to_table(a, ',') as c, b from t) dumb(c, b);
       <dxl:ColumnStatistics Mdid="1.5761553.1.1.8" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="3.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.5761553.1.1.1" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.5761553.1.1.0" Name="a" Width="12.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
-      <dxl:GPDBFunc Mdid="0.2765.1.0" Name="regexp_split_to_table" ReturnsSet="true" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.2765.1.0" Name="regexp_split_to_table" ReturnsSet="true" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.5761553.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>

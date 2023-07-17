@@ -18,12 +18,14 @@ Consider the following points when you create indexes.
 -   Compressed Tables. Indexes can improve performance on compressed append-optimized tables for queries that return a targeted set of rows. For compressed data, an index access method means only the necessary rows are uncompressed.
 -   **Avoid indexes on frequently updated columns.** Creating an index on a column that is frequently updated increases the number of writes required when the column is updated.
 -   **Create selective B-tree indexes.** Index selectivity is a ratio of the number of distinct values a column has divided by the number of rows in a table. For example, if a table has 1000 rows and a column has 800 distinct values, the selectivity of the index is 0.8, which is considered good. Unique indexes always have a selectivity ratio of 1.0, which is the best possible. Greenplum Database allows unique indexes only on distribution key columns.
--   **Use Bitmap indexes for low selectivity columns.**The Greenplum Database Bitmap index type is not available in regular PostgreSQL. See [About Bitmap Indexes](#topic93).
+-   **Use Bitmap indexes for low selectivity columns.** The Greenplum Database Bitmap index type is not available in regular PostgreSQL. See [About Bitmap Indexes](#topic93).
 -   **Index columns used in joins.** An index on a column used for frequent joins \(such as a foreign key column\) can improve join performance by enabling more join methods for the query optimizer to use.
 -   **Index columns frequently used in predicates.** Columns that are frequently referenced in `WHERE` clauses are good candidates for indexes.
 -   **Avoid overlapping indexes.** Indexes that have the same leading column are redundant.
 -   **Drop indexes for bulk loads.** For mass loads of data into a table, consider dropping the indexes and re-creating them after the load completes. This is often faster than updating the indexes.
 -   **Consider a clustered index.** Clustering an index means that the records are physically ordered on disk according to the index. If the records you need are distributed randomly on disk, the database has to seek across the disk to fetch the records requested. If the records are stored close together, the fetching operation is more efficient. For example, a clustered index on a date column where the data is ordered sequentially by date. A query against a specific date range results in an ordered fetch from the disk, which leverages fast sequential access.
+
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="im151772"></a>To cluster an index in Greenplum Database 
 
@@ -36,11 +38,7 @@ DROP old_table;
 ALTER TABLE new_table RENAME TO old_table;
 CREATE INDEX myixcolumn_ix ON old_table;
 VACUUM ANALYZE old_table;
-
 ```
-
-**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
-
 ## <a id="topic92"></a>Index Types 
 
 Greenplum Database supports the Postgres index types B-tree, hash, GiST, SP-GiST, GIN, and BRIN. Each index type uses a different algorithm that is best suited to different types of queries. B-tree indexes fit the most common situations and are the default index type. See [Index Types](https://www.postgresql.org/docs/12/indexes-types.html) in the PostgreSQL documentation for a description of these types.
@@ -77,14 +75,12 @@ The `CREATE INDEX` command defines an index on a table. A B-tree index is the de
 
 ```
 CREATE INDEX gender_idx ON employee (gender);
-
 ```
 
 To create a bitmap index on the column *title* in the table *films*:
 
 ```
 CREATE INDEX title_bmp_idx ON films USING bitmap (title);
-
 ```
 
 ### <a id="topic_tfz_3vz_4fb"></a>Indexes on Expressions 
@@ -147,12 +143,10 @@ Use the `REINDEX` command to rebuild a poorly-performing index. `REINDEX` rebuil
 
 ```
 REINDEX my_table;
-
 ```
 
 ```
 REINDEX my_index;
-
 ```
 
 ## <a id="topic99"></a>Dropping an Index 
@@ -161,8 +155,260 @@ The `DROP INDEX` command removes an index. For example:
 
 ```
 DROP INDEX title_idx;
-
 ```
 
 When loading data, it can be faster to drop all indexes, load, then recreate the indexes.
+
+
+## <a id="scan_cover"></a>About Indexes on Expressions
+
+An index column need not be just a column of the underlying table, but can be a function or scalar expression computed from one or more columns of the table. This is useful to obtain fast access to a table based on the results of computations.
+
+For example, a common way to do case-insensitive comparisons is to use the `lower()` function:
+
+```
+SELECT * FROM test1 WHERE lower(col1) = 'value';
+```
+
+This query can use an index if one has been defined on the result of the `lower(col1)` function:
+
+```
+CREATE INDEX test1_lower_col1_idx ON test1 (lower(col1));
+```
+
+If you declare this index `UNIQUE`, it prevents creation of rows whose `col1` values differ only in case, as well as rows whose `col1` values are actually identical. So, you can use indexes on expressions to enforce constraints that are not definable as simple unique constraints.
+
+As another example, if you often invoke queries like:
+
+```
+SELECT * FROM people WHERE (first_name || ' ' || last_name) = 'John Smith';
+```
+
+then it might be worth creating an index like this:
+
+```
+CREATE INDEX people_names ON people ((first_name || ' ' || last_name));
+```
+
+The syntax of the `CREATE INDEX` command normally requires writing parentheses around index expressions, as shown in the second example. You can omit the parentheses when the expression is just a function call, as in the first example.
+
+Index expressions are relatively expensive to maintain, because Greenplum Database must compute the derived expression(s) for each row insertion and non-HOT update. However, Greenplum does not recompute the index expressions during an indexed search, since they are already stored in the index. In both examples above, Greenplum views the query as just `WHERE indexedcolumn = 'constant'` and so the speed of the search is equivalent to any other simple index query. Indexes on expressions are useful when retrieval speed is more important than insertion and update speed.
+
+## <a id="partial_index"></a>About Partial Indexes
+
+A *partial index* is an index built over a subset of a table; the subset is defined by a conditional expression (called the predicate of the partial index). The index contains entries only for those table rows that satisfy the predicate. There are several situations in which a partial index is particularly useful.
+
+One common reason for using a partial index is to avoid indexing common values. Since a query searching for a common value (one that accounts for more than a few percent of all the table rows) will not use the index anyway, there is no point in keeping those rows in the index at all. This reduces the size of the index, which will speed up those queries that do use the index. It will also speed up many table update operations because the index does not need to be updated in all cases.
+
+### <a id="partial_index_ex1"></a>Example: Setting up a Partial Index to Exclude Common Values
+
+Suppose you are storing web server access logs in a database. Most accesses originate from the IP address range of your organization but some are from elsewhere (say, employees on dial-up connections). If your searches by IP are primarily for outside accesses, you probably do not need to index the IP range that corresponds to your organization's subnet.
+
+Assume a table defined as such:
+
+```
+CREATE TABLE access_log (
+    url varchar,
+    client_ip inet,
+    ...
+);
+```
+
+To create a partial index that suits the example scenario, use the following command:
+
+```
+CREATE INDEX access_log_client_ip_ix ON access_log (client_ip)
+WHERE NOT (client_ip > inet '192.168.100.0' AND
+           client_ip < inet '192.168.100.255');
+```
+
+A typical query that can use this index follows:
+
+```
+SELECT *
+FROM access_log
+WHERE url = '/index.html' AND client_ip = inet '212.78.10.32';
+```
+
+Here the query's IP address is covered by the partial index. The following query cannot use the partial index, as it uses an IP address that is excluded from the index:
+
+```
+SELECT *
+FROM access_log
+WHERE url = '/index.html' AND client_ip = inet '192.168.100.23';
+```
+
+Observe that this kind of partial index requires that the common values be predetermined, so such partial indexes are best used for data distributions that do not change. Such indexes can be recreated occasionally to adjust for new data distributions, adding to the maintenance effort.
+
+### <a id="partial_index_ex2"></a>Example: Setting up a Partial Index to Exclude Uninteresting Values
+
+Another use for a partial index is to exclude values from the index that the typical query workload is not interested in. This results in the same advantages as listed above, but it prevents the "uninteresting" values from being accessed via that index, even if an index scan might be profitable in that case. Setting up partial indexes for this kind of scenario requires a lot of care and experimentation.
+
+If you have a table that contains both billed and unbilled orders, where the unbilled orders take up a small fraction of the total table and yet those are the most-accessed rows, you can improve performance by creating an index on just the unbilled rows. The following command creates the index:
+
+```
+CREATE INDEX orders_unbilled_index ON orders (order_nr)
+    WHERE billed is not true;
+```
+
+A query to use this index follows:
+
+```
+SELECT * FROM orders WHERE billed is not true AND order_nr < 10000;
+```
+
+However, you can also use the index in a query that does not involve `order_nr` at all, for example:
+
+```
+SELECT * FROM orders WHERE billed is not true AND amount > 5000.00;
+```
+
+This is not as efficient as a partial index on the `amount` column, since Greenplum must scan the entire index. Yet, if there are relatively few unbilled orders, using this partial index just to find the unbilled orders could be a win.
+
+Note that the following query cannot use this index:
+
+```
+SELECT * FROM orders WHERE order_nr = 3501;
+```
+
+The order `3501` might be among the billed or unbilled orders.
+
+This example also illustrates that the indexed column and the column used in the predicate do not need to match. Greenplum Database supports partial indexes with arbitrary predicates, so long as only columns of the table being indexed are involved. Keep in mind that the predicate must match the conditions used in the queries that are supposed to benefit from the index. To be precise, you can use a partial index in a query only if Greenplum can recognize that the `WHERE` condition of the query mathematically implies the predicate of the index. Greenplum cannot recognize mathematically equivalent expressions that are written in different forms. Greenplum can recognize simple inequality implications, for example "x < 1" implies "x < 2"; otherwise the predicate condition must exactly match part of the query's `WHERE` condition or the index will not be recognized as usable. Matching takes place at query planning time, not at run time. As a result, parameterized query clauses do not work with a partial index. For example a prepared query with a parameter might specify "x < ?" which will never imply "x < 2" for all possible values of the parameter.
+
+### <a id="partial_index_ex3"></a>Example: Setting up a Partial Unique Index
+
+A third possible use for partial indexes does not require the index to be used in queries at all. The idea here is to create a unique index over a subset of a table. This enforces uniqueness among the rows that satisfy the index predicate, without constraining those that do not.
+
+Suppose that you have a table describing test outcomes. You want to ensure that there is only one "successful" entry for a given subject and target combination, but there might be any number of "unsuccessful" entries. Here is one way to satisfy those conditions:
+
+```
+CREATE TABLE tests (
+    subject text,
+    target text,
+    success boolean,
+    ...
+);
+
+CREATE UNIQUE INDEX tests_success_constraint ON tests (subject, target)
+    WHERE success;
+```
+
+This is a particularly efficient approach when there are few successful tests and many unsuccessful ones. It is also possible to allow only one null in a column by creating a unique partial index with an `IS NULL` restriction.
+
+Finally, a partial index can also be used to override Greenplum's query plan choices. Also, data sets with peculiar distributions might cause the system to use an index when it really should not. In that case the index can be set up so that it is not available for the offending query. Normally, Greenplum makes reasonable choices about index usage (it avoids them when retrieving common values, so the earlier example really only saves index size, it is not required to avoid index usage), and grossly incorrect plan choices are cause for a bug report.
+
+### <a id="partial_index_ex4"></a>Example: Do Not Use Partial Indexes as a Substitute for Partitioning
+
+Keep in mind that setting up a partial index indicates that you know at least as much as the query planner knows, in particular you know when an index might be profitable. Forming this knowledge requires experience and understanding of how indexes in Greenplum Database work. In most cases, the advantage of a partial index over a regular index will be minimal. There are cases where they are quite counterproductive.
+
+Suppose you create a large set of non-overlapping partial indexes, for example:
+
+```
+CREATE INDEX mytable_cat_1 ON mytable (data) WHERE category = 1;
+CREATE INDEX mytable_cat_2 ON mytable (data) WHERE category = 2;
+CREATE INDEX mytable_cat_3 ON mytable (data) WHERE category = 3;
+...
+CREATE INDEX mytable_cat_N ON mytable (data) WHERE category = N;
+```
+
+This is a bad idea! Almost certainly, you are better off with a single non-partial index, declared like:
+
+```
+CREATE INDEX mytable_cat_data ON mytable (category, data);
+```
+
+While a search in this larger index might have to descend through a couple more tree levels than a search in a smaller index, that's almost certainly going to be cheaper than the planner effort needed to select the appropriate one of the partial indexes. The core of the problem is that Greenplum does not understand the relationship among the partial indexes, and tests each one to see if it is applicable to the current query.
+
+If your table is large enough that a single index really is a bad idea, you should look into using partitioning instead. With that mechanism, Greenplum Database does understand that the tables and indexes are non-overlapping, so far better performance is possible.
+
+## <a id="scan_cover"></a>Understanding Index-Only Scans and Covering Indexes
+
+All indexes in Greenplum Database are secondary indexes, meaning that each index is stored separately from the table's main data area (which is called the table's heap). In an ordinary index scan, each row retrieval requires fetching data from both the index and the heap. While the index entries that match a given indexable `WHERE` condition are often close together in the index, the table rows they reference might reside anywhere in the heap. The heap-access portion of an index scan can involve a lot of random access into the heap, which can be slow, particularly on traditional rotating media. Bitmap scans try to alleviate this cost by doing the heap accesses in sorted order, but that only goes so far.
+
+Greenplum Database supports index-only scans to address the performance issue. Index-only scans can answer queries from an index alone without any heap access. Greenplum returns values directly out of each index entry instead of consulting the associated heap entry. There are two fundamental restrictions on when Greenplum can use this method:
+
+1. The index type must support index-only scans. B-tree indexes always do. GiST and SP-GiST indexes support index-only scans for some operator classes but not others. Other index types have no support. The underlying requirement is that the index must physically store, or else be able to reconstruct, the original data value for each index entry. As a counterexample, GIN indexes cannot support index-only scans because each index entry typically holds only part of the original data value.
+
+1. The query must reference only columns stored in the index. For example, given an index on columns `x` and `y` of a table that also has a column `z`, these queries could use index-only scans:
+
+    ```
+    SELECT x, y FROM tab WHERE x = 'key';
+    SELECT x FROM tab WHERE x = 'key' AND y < 42;
+    ```
+
+    but these queries could not:
+
+    ```
+    SELECT x, z FROM tab WHERE x = 'key';
+    SELECT x FROM tab WHERE x = 'key' AND z < 42;
+    ```
+
+    (Expression indexes and partial indexes complicate this rule, as discussed below.)
+
+If these two fundamental requirements are met, then all the data values required by the query are available from the index, so an index-only scan is physically possible. But there is an additional requirement for any table scan in Greenplum Database: it must verify that each retrieved row be "visible" to the query's MVCC snapshot. Because visibility information is not stored in index entries, only in heap entries, it might seem that every row retrieval would require a heap access anyway. And this is indeed the case, if the table row has been modified recently. However, for seldom-changing data there is a way around this problem. Greenplum tracks, for each page in a table's heap, whether all rows stored in that page are old enough to be visible to all current and future transactions. This information is stored in a bit in the table's visibility map. An index-only scan, after finding a candidate index entry, checks the visibility map bit for the corresponding heap page. If it is set, the row is known visible and so Greenplum can return the data with no further work. If it is not set, Greenplum must visit the heap entry to find out whether it is visible, so no performance advantage is gained over a standard index scan. Even in the successful case, this approach trades visibility map accesses for heap accesses; but since the visibility map is four orders of magnitude smaller than the heap it describes, far less physical I/O is required to access it. In most situations the visibility map remains cached in memory all the time.
+
+To summarize, while an index-only scan is possible given the two fundamental requirements, it will be a win only if a significant fraction of the table's heap pages have their all-visible map bits set. Because tables in which a large fraction of the rows are unchanging are common enough, this type of scan is very useful in practice.
+
+To make effective use of the index-only scan feature, you may choose to create a covering index, which is an index specifically designed to include the columns required by a particular type of query that you run frequently. Since queries typically need to retrieve more columns than just the ones they search on, Greenplum Database allows you to create an index in which some columns are just "payload" and are not part of the search key. You signal this by adding an `INCLUDE` clause that lists the extra columns. For example, if you commonly run queries like:
+
+```
+SELECT y FROM tab WHERE x = 'key';
+```
+
+the traditional approach to speeding up such queries would be to create an index on `x` only. However, an index defined as:
+
+```
+CREATE INDEX tab_x_y ON tab(x) INCLUDE (y);
+```
+
+could handle these queries as index-only scans, because `y` can be obtained from the index without visiting the heap.
+
+Because column `y` is not part of the index's search key, it does not have to be of a data type that the index can handle; it is merely stored in the index and is not interpreted by the index machinery. Also, if the index is a unique index, that is:
+
+```
+CREATE UNIQUE INDEX tab_x_y ON tab(x) INCLUDE (y);
+```
+
+the uniqueness condition applies to just column `x`, not to the combination of `x` and `y`. (An `INCLUDE` clause can also be written in `UNIQUE` and `PRIMARY KEY` constraints, providing alternative syntax for setting up an index like this.)
+
+Be conservative about adding non-key payload columns to an index, especially wide columns. If an index tuple exceeds the maximum size allowed for the index type, data insertion fails. Because non-key columns duplicate data from the index's table and bloat the size of the index, they can potentially slow searches. And remember that there is little point in including payload columns in an index unless the table changes slowly enough that an index-only scan is likely to not need to access the heap. If the heap tuple must be visited anyway, it costs nothing more to get the column's value from there. Other restrictions are that expressions are not currently supported as included columns, and that only B-tree and GiST indexes currently support included columns.
+
+Before Greenplum Database supported the INCLUDE feature, covering indexes were created by including the payload columns as ordinary index columns, for example: 
+
+```
+CREATE INDEX tab_x_y ON tab(x, y);
+```
+
+even though they had no intention of ever using `y` as part of a `WHERE` clause. This works fine as long as the extra columns are trailing columns. However, this method doesn't support the case where you want the index to enforce uniqueness on the key column(s).
+
+Suffix truncation always removes non-key columns from upper B-Tree levels. As payload columns, they are never used to guide index scans. The truncation process also removes one or more trailing key column(s) when the remaining prefix of key column(s) happens to be sufficient to describe tuples on the lowest B-Tree level. In practice, covering indexes without an `INCLUDE` clause often avoid storing columns that are effectively payload in the upper levels. However, explicitly defining payload columns as non-key columns reliably keeps the tuples in upper levels small.
+
+In principle, index-only scans can be used with expression indexes. For example, given an index on `f(x)` where `x` is a table column, it should be possible to execute
+
+```
+SELECT f(x) FROM tab WHERE f(x) < 1;
+```
+
+as an index-only scan; and this is very attractive if `f()` is an expensive-to-compute function. However, Greenplum Database's planner is currently not very smart about such cases. It considers a query to be potentially executable by index-only scan only when all columns required by the query are available from the index. In this example, `x` is not needed except in the context `f(x)`, but the planner does not notice that and concludes that an index-only scan is not possible. If an index-only scan seems sufficiently worthwhile, you can work around this by adding `x` as an included column, for example:
+
+```
+CREATE INDEX tab_f_x ON tab (f(x)) INCLUDE (x);
+```
+
+An additional caveat, if the goal is to avoid recalculating `f(x)`, is that the planner won't necessarily match uses of `f(x)` that aren't in indexable `WHERE` clauses to the index column. It will usually get this right in simple queries such as shown above, but not in queries that involve joins.
+
+Partial indexes also have interesting interactions with index-only scans. Consider the following partial index:
+
+```
+CREATE UNIQUE INDEX tests_success_constraint ON tests (subject, target)
+    WHERE success;
+```
+
+In principle, Greenplum could perform an index-only scan on this index to satisfy a query like:
+
+```
+SELECT target FROM tests WHERE subject = 'some-subject' AND success;
+```
+
+But there is a problem: the `WHERE` clause refers to success which is not available as a result column of the index. Nonetheless, an index-only scan is possible because the plan does not need to recheck that part of the `WHERE` clause at run time: all entries found in the index necessarily have `success = true` so this need not be explicitly checked in the plan. Greenplum version 7 recognizes such cases and generates index-only scans, but older versions do not.
 

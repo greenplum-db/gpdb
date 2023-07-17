@@ -73,7 +73,7 @@ matrix:
           dist: bionic
           compiler: gcc
           env:
-              - T=debug C="--without-zlib --without-libbz2 --without-zstd --without-quicklz"
+              - T=debug C="--without-zlib --without-libbz2 --without-zstd"
               - LC_CTYPE="en_US.utf8" LC_ALL="en_US.utf8" # see NOTE above
         # ARM64, Ubuntu Bionic, gcc 7, unit tests
         # For arm64, disable orca to avoid job timeouts
@@ -228,7 +228,6 @@ script:
             --with-ldap \
             --with-libcurl \
             --with-libxml \
-            --enable-mapreduce \
             --enable-orafce \
             --enable-ic-proxy \
             $C
@@ -263,7 +262,6 @@ script:
             --with-ldap \
             --with-libcurl \
             --with-libxml \
-            --enable-mapreduce \
             --enable-orafce \
             --enable-ic-proxy \
             $C

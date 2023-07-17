@@ -45,7 +45,7 @@ AlterTableCreateAoBlkdirTable(Oid relOid)
 	 * Check if this is an appendoptimized table, without acquiring any lock.
 	 */
 	rel = table_open(relOid, NoLock);
-	isAO = RelationIsAppendOptimized(rel);
+	isAO = RelationStorageIsAO(rel);
 	table_close(rel, NoLock);
 	if (!isAO)
 		return;

@@ -99,7 +99,7 @@ typedef struct AppendOnlyStorageAttributes
 			 * The level can be equally important on
 			 * decompression since it may specify which
 			 * sub-library to use for decompress
-			 * (e.g. QuickLZ).
+			 * (e.g. ZSTD).
 			 */
 	int					overflowSize;
 			/*

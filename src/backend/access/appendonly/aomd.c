@@ -622,7 +622,7 @@ ao_rel_get_physical_size(Relation aorel)
 	Oid			segrelid;
 	uint64 		total_physical_size = 0;
 
-	Assert(RelationIsAppendOptimized(aorel));
+	Assert(RelationStorageIsAO(aorel));
 
 	GetAppendOnlyEntryAuxOids(aorel,
 							  &segrelid, NULL, NULL);
@@ -636,7 +636,7 @@ ao_rel_get_physical_size(Relation aorel)
 		int			segno;
 		bool		isNull;
 
-		if (RelationIsAoRows(aorel))
+		if (RelationStorageIsAoRows(aorel))
 		{
 			segno = DatumGetInt32(fastgetattr(tuple,
 											  Anum_pg_aoseg_segno,
@@ -649,7 +649,7 @@ ao_rel_get_physical_size(Relation aorel)
 			AOCSVPInfo *vpinfo;
 			int			col;
 
-			Assert(RelationIsAoCols(aorel));
+			Assert(RelationStorageIsAoCols(aorel));
 
 			segno = DatumGetInt32(fastgetattr(tuple,
 											  Anum_pg_aocs_segno,

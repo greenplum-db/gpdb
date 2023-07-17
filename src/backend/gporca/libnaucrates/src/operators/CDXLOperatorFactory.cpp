@@ -3547,6 +3547,12 @@ CDXLOperatorFactory::ParseRelationDistPolicy(const XMLCh *xml_val)
 	{
 		rel_distr_policy = IMDRelation::EreldistrReplicated;
 	}
+	else if (0 ==
+			 XMLString::compareString(
+				 xml_val, CDXLTokens::XmlstrToken(EdxltokenRelDistrUniversal)))
+	{
+		rel_distr_policy = IMDRelation::EreldistrUniversal;
+	}
 
 	return rel_distr_policy;
 }

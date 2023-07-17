@@ -592,7 +592,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	// Lock any table we are to scan, since it may not have been properly locked
 	// by the parser (e.g in case of generated scans for partitioned tables)
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(md_rel->MDId());
-	GPOS_RTL_ASSERT(dxl_table_descr->LockMode() != -1);
+	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
 	Index index =
@@ -778,7 +778,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	// Lock any table we are to scan, since it may not have been properly locked
 	// by the parser (e.g in case of generated scans for partitioned tables)
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(md_rel->MDId());
-	GPOS_RTL_ASSERT(dxl_table_descr->LockMode() != -1);
+	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
 	Index index =
@@ -860,6 +860,7 @@ TranslateDXLIndexTList(const IMDRelation *md_rel, const IMDIndex *md_index,
 
 	index_context->SetRelIndex(INDEX_VAR);
 
+	// Translate KEY columns
 	for (ULONG ul = 0; ul < md_index->Keys(); ul++)
 	{
 		ULONG key = md_index->KeyAt(ul);
@@ -887,6 +888,38 @@ TranslateDXLIndexTList(const IMDRelation *md_rel, const IMDIndex *md_index,
 			{
 				(void) index_context->InsertMapping(dxl_col_descr->Id(),
 													ul + 1);
+				break;
+			}
+		}
+
+		target_list = gpdb::LAppend(target_list, target_entry);
+	}
+
+	// Translate INCLUDED columns
+	for (ULONG ul = 0; ul < md_index->IncludedCols(); ul++)
+	{
+		ULONG includecol = md_index->IncludedColAt(ul);
+
+		const IMDColumn *col = md_rel->GetMdCol(includecol);
+
+		TargetEntry *target_entry = MakeNode(TargetEntry);
+		// KEY columns preceed INCLUDE columns
+		target_entry->resno = (AttrNumber) ul + 1 + md_index->Keys();
+
+		Expr *indexvar = (Expr *) gpdb::MakeVar(
+			new_varno, col->AttrNum(),
+			CMDIdGPDB::CastMdid(col->MdidType())->Oid(),
+			col->TypeModifier() /*vartypmod*/, 0 /*varlevelsup*/);
+		target_entry->expr = indexvar;
+
+		for (ULONG j = 0; j < table_descr->Arity(); j++)
+		{
+			const CDXLColDescr *dxl_col_descr =
+				table_descr->GetColumnDescrAt(j);
+			if (dxl_col_descr->AttrNum() == ((Var *) indexvar)->varattno)
+			{
+				(void) index_context->InsertMapping(dxl_col_descr->Id(),
+													target_entry->resno);
 				break;
 			}
 		}
@@ -976,7 +1009,6 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 		&index_strategy_list, &index_subtype_list);
 
 	index_scan->indexqual = index_cond;
-	// index_scan->indexqualorig = index_orig_cond;
 	SetParamIds(plan);
 
 	return (Plan *) index_scan;
@@ -3260,9 +3292,57 @@ CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
 	return (Plan *) subquery_scan;
 }
 
-static bool
-ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
-							 CMDAccessor *md_accessor)
+//------------------------------------------------------------------------------
+// If the top level is not a function returning set then we need to check if the
+// project element contains any SRF's deep down the tree. If we found any SRF's
+// at lower levels then we will require a result node on top of ProjectSet node.
+// Eg.
+// <dxl:ProjElem ColId="1" Alias="abs">
+//  <dxl:FuncExpr FuncId="0.1397.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+//   <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+//    ...
+//   </dxl:FuncExpr>
+//  </dxl:FuncExpr>
+// Here we have SRF present at a lower level. So we will require a result node
+// on top.
+//------------------------------------------------------------------------------
+static BOOL
+ContainsLowLevelSetReturningFunc(const CDXLNode *scalar_expr_dxlnode)
+{
+	const ULONG arity = scalar_expr_dxlnode->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CDXLNode *expr_dxlnode = (*scalar_expr_dxlnode)[ul];
+		CDXLOperator *op = expr_dxlnode->GetOperator();
+		Edxlopid dxlopid = op->GetDXLOperator();
+
+		if ((EdxlopScalarFuncExpr == dxlopid &&
+			 CDXLScalarFuncExpr::Cast(op)->ReturnsSet()) ||
+			ContainsLowLevelSetReturningFunc(expr_dxlnode))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+//------------------------------------------------------------------------------
+// This method is required to check if we need a result node on top of
+// ProjectSet node. If the project element contains SRF on top then we don't
+// require a result node. Eg
+//  <dxl:ProjElem ColId="1" Alias="generate_series">
+//   <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+//    ...
+//    <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+//     ...
+//    </dxl:FuncExpr>
+//     ...
+//   </dxl:FuncExpr>
+// Here we have a FuncExpr which returns a set on top. So we don't require a
+// result node on top of ProjectSet node.
+//------------------------------------------------------------------------------
+static BOOL
+RequiresResultNode(const CDXLNode *project_list_dxlnode)
 {
 	const ULONG arity = project_list_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ++ul)
@@ -3271,82 +3351,44 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		GPOS_ASSERT(EdxlopScalarProjectElem ==
 					proj_elem_dxlnode->GetOperator()->GetDXLOperator());
 		GPOS_ASSERT(1 == proj_elem_dxlnode->Arity());
-
-		// translate proj element expression
 		CDXLNode *expr_dxlnode = (*proj_elem_dxlnode)[0];
-
 		CDXLOperator *op = expr_dxlnode->GetOperator();
-		switch (op->GetDXLOperator())
+		Edxlopid dxlopid = op->GetDXLOperator();
+		if (EdxlopScalarFuncExpr == dxlopid)
 		{
-			case EdxlopScalarFuncExpr:
-				if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet())
-				{
-					return true;
-				}
-				break;
-			case EdxlopScalarOpExpr:
+			if (!(CDXLScalarFuncExpr::Cast(op)->ReturnsSet()) &&
+				ContainsLowLevelSetReturningFunc(expr_dxlnode))
 			{
-				const IMDScalarOp *md_sclar_op = md_accessor->RetrieveScOp(
-					CDXLScalarOpExpr::Cast(op)->MDId());
-				const IMDFunction *md_func =
-					md_accessor->RetrieveFunc(md_sclar_op->FuncMdId());
-				if (md_func->ReturnsSet())
-				{
-					return true;
-				}
-				break;
+				return true;
 			}
-			default:
-				break;
+		}
+		else
+		{
+			if (ContainsLowLevelSetReturningFunc(expr_dxlnode))
+			{
+				return true;
+			}
 		}
 	}
 	return false;
 }
 
-static bool
-SanityCheckProjectSetTargetList(List *targetlist)
-{
-	ListCell *lc;
-	ForEach(lc, targetlist)
-	{
-		TargetEntry *te = (TargetEntry *) lfirst(lc);
-		Expr *expr = te->expr;
-		List *args;
-		if ((IsA(expr, FuncExpr) && ((FuncExpr *) expr)->funcretset) ||
-			(IsA(expr, OpExpr) && ((OpExpr *) expr)->opretset))
-		{
-			if (IsA(expr, FuncExpr))
-			{
-				args = ((FuncExpr *) expr)->args;
-			}
-			else
-			{
-				args = ((OpExpr *) expr)->args;
-			}
-			if (gpdb::ExpressionReturnsSet((Node *) args))
-			{
-				return false;
-			}
-			continue;
-		}
-
-		if (gpdb::ExpressionReturnsSet((Node *) expr))
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-// XXX: this is a copy-pasta of TranslateDXLResult
-// Is there a way to reduce the duplication?
+//------------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::TranslateDXLProjectSet
+//
+//	@doc:
+//		Translate DXL result node into project set node if SRF's are present
+//
+//------------------------------------------------------------------------------
 Plan *
-CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
-	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
-	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
+CTranslatorDXLToPlStmt::TranslateDXLProjectSet(const CDXLNode *result_dxlnode)
 {
-	// GPDB_12_MERGE_FIXME: had we generated a DXLProjectSet in ORCA we wouldn't
-	// have needed to be defensive here...
+	// ORCA_FEATURE_NOT_SUPPORTED: The Project Set nodes don't support a qual in
+	// the planned statement. Just being defensive here for the case when the
+	// result dxl node has a set returning function in the project list and also
+	// a qual. In that case will not create a ProjectSet node and will fall back
+	// to planner.
 	if ((*result_dxlnode)[EdxlresultIndexFilter]->Arity() > 0)
 	{
 		GPOS_RAISE(
@@ -3354,7 +3396,7 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 			GPOS_WSZ_LIT("Unsupported one-time filter in ProjectSet node"));
 	}
 
-	// create project set (nee result) plan node
+	// create project set plan node
 	ProjectSet *project_set = MakeNode(ProjectSet);
 
 	Plan *plan = &(project_set->plan);
@@ -3363,85 +3405,265 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	// translate operator costs
 	TranslatePlanCosts(result_dxlnode, plan);
 
-	CDXLNode *child_dxlnode = nullptr;
-	CDXLTranslateContext child_context(m_mp, false,
-									   output_context->GetColIdToParamIdMap());
-
-	if (result_dxlnode->Arity() - 1 == EdxlresultIndexChild)
-	{
-		// translate child plan
-		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
-
-		Plan *child_plan = TranslateDXLOperatorToPlan(
-			child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-
-		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
-
-		project_set->plan.lefttree = child_plan;
-	}
-
-	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
-	CDXLNode *filter_dxlnode = (*result_dxlnode)[EdxlresultIndexFilter];
-
-	List *quals_list = nullptr;
-
-	CDXLTranslationContextArray *child_contexts =
-		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
-	child_contexts->Append(&child_context);
-
-	// translate proj list and filter
-	TranslateProjListAndFilter(project_list_dxlnode, filter_dxlnode,
-							   nullptr,	 // translate context for the base table
-							   child_contexts, &plan->targetlist, &quals_list,
-							   output_context);
-
-
-	plan->qual = quals_list;
-
 	SetParamIds(plan);
-
-	// cleanup
-	child_contexts->Release();
-
-	// double check the targetlist is kosher
-	// we are only doing this because ORCA didn't do it...
-	if (!SanityCheckProjectSetTargetList(plan->targetlist))
-	{
-		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
-	}
 
 	return (Plan *) project_set;
 }
 
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::CreateProjectSetNodeTree
+//
+//	@doc:
+//		Creates a tree of project set plan nodes to contain the SRF's
+//
+//------------------------------------------------------------------------------
+Plan *
+CTranslatorDXLToPlStmt::CreateProjectSetNodeTree(const CDXLNode *result_dxlnode,
+												 Plan *result_node_plan,
+												 Plan *child_plan,
+												 Plan *&project_set_child_plan,
+												 BOOL &will_require_result_node)
+{
+	// Method split_pathtarget_at_srfs will split the given PathTarget into
+	// multiple levels to position SRFs safely. This list will hold the splited
+	// PathTarget created by split_pathtarget_at_srfs method.
+	List *targets_with_srf = NIL;
+
+	// List of bool flags indicating whether the corresponding PathTarget
+	// contains any evaluatable SRFs
+	List *targets_with_srf_bool = NIL;
+
+	// Pointer to the top level ProjectSet node. If a result node is required
+	// then this will be attached to the lefttree of the result node.
+	Plan *project_set_parent_plan = nullptr;
+
+	// Create Pathtarget object from Result node's targetlist which is required
+	// by SplitPathtargetAtSrfs method
+	PathTarget *complete_result_pathtarget =
+		gpdb::MakePathtargetFromTlist(result_node_plan->targetlist);
+
+	// Split given PathTarget into multiple levels to position SRFs safely
+	gpdb::SplitPathtargetAtSrfs(nullptr, complete_result_pathtarget, nullptr,
+								&targets_with_srf, &targets_with_srf_bool);
+
+	// If the PathTarget created from Result node's targetlist does not contain
+	// any set returning functions then split_pathtarget_at_srfs method will
+	// return the same PathTarget back. In this case a ProjectSet node is not
+	// required.
+	if (1 == gpdb::ListLength(targets_with_srf))
+	{
+		return nullptr;
+	}
+
+	// Do we require a result node to be attached on top of ProjectSet node?
+	will_require_result_node =
+		RequiresResultNode((*result_dxlnode)[EdxlresultIndexProjList]);
+
+	ListCell *lc;
+	ULONG list_cell_pos = 1;
+	ULONG targets_with_srf_list_length = gpdb::ListLength(targets_with_srf);
+
+	ForEach(lc, targets_with_srf)
+	{
+		// The first element of the PathTarget list created by
+		// split_pathtarget_at_srfs method will not contain any
+		// SRF's. So skipping it.
+		if (list_cell_pos == 1)
+		{
+			list_cell_pos++;
+			continue;
+		}
+
+		// If a Result node is required on top of a ProjectSet node then the
+		// last element of PathTarget list created by split_pathtarget_at_srfs
+		// method will contain the PathTarget of the result node. Since result
+		// node is already created before, breaking out from the loop. If a
+		// result node is not required on top of a ProjectSet node, continue to
+		// create a ProjectSet node.
+		if (will_require_result_node &&
+			targets_with_srf_list_length == list_cell_pos)
+		{
+			break;
+		}
+
+		list_cell_pos++;
+
+		List *target_list_entry =
+			gpdb::MakeTlistFromPathtarget((PathTarget *) lfirst(lc));
+
+		Plan *temp_plan_project_set = TranslateDXLProjectSet(result_dxlnode);
+
+		temp_plan_project_set->targetlist = target_list_entry;
+
+		// Creating the links between all the nested ProjectSet nodes
+		if (nullptr == project_set_parent_plan)
+		{
+			project_set_parent_plan = temp_plan_project_set;
+			project_set_child_plan = temp_plan_project_set;
+		}
+		else
+		{
+			temp_plan_project_set->lefttree = project_set_parent_plan;
+			project_set_parent_plan = temp_plan_project_set;
+		}
+	}
+
+	return project_set_parent_plan;
+}
+
+//------------------------------------------------------------------------------
+// If a result plan node is not required on top of a project set node then the
+// alias parameter needs to be set for all the project set nodes else not
+// required as that information will already be present in the result node
+// created
+//------------------------------------------------------------------------------
+void
+SetupAliasParameter(const BOOL will_require_result_node,
+					const CDXLNode *project_list_dxlnode,
+					Plan *project_set_parent_plan)
+{
+	if (!will_require_result_node)
+	{
+		// Setting up the alias value (te->resname)
+		ULONG ul = 0;
+		ListCell *listcell_project_targetentry;
+
+		ForEach(listcell_project_targetentry,
+				project_set_parent_plan->targetlist)
+		{
+			TargetEntry *te =
+				(TargetEntry *) lfirst(listcell_project_targetentry);
+
+			CDXLNode *proj_elem_dxlnode = (*project_list_dxlnode)[ul];
+
+			GPOS_ASSERT(EdxlopScalarProjectElem ==
+						proj_elem_dxlnode->GetOperator()->GetDXLOperator());
+
+			CDXLScalarProjElem *sc_proj_elem_dxlop =
+				CDXLScalarProjElem::Cast(proj_elem_dxlnode->GetOperator());
+
+			GPOS_ASSERT(1 == proj_elem_dxlnode->Arity());
+
+			te->resname =
+				CTranslatorUtils::CreateMultiByteCharStringFromWCString(
+					sc_proj_elem_dxlop->GetMdNameAlias()
+						->GetMDName()
+						->GetBuffer());
+			ul++;
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// This method is used to convert the FUNCEXPR present in upper level
+// Result/ProjectSet nodes targetlist to VAR nodes which reference the FUNCEXPR
+// present in the leftree plan targetlist.
+//------------------------------------------------------------------------------
+void
+CTranslatorDXLToPlStmt::MutateFuncExprToVarProjectSet(Plan *final_plan)
+{
+	Plan *it_set_upper_ref = final_plan;
+	while (it_set_upper_ref->lefttree != nullptr)
+	{
+		Plan *subplan = it_set_upper_ref->lefttree;
+		List *output_targetlist;
+		ListCell *l;
+		output_targetlist = NIL;
+
+		foreach (l, it_set_upper_ref->targetlist)
+		{
+			TargetEntry *tle = (TargetEntry *) lfirst(l);
+			Node *newexpr;
+
+			newexpr = FixUpperExprMutatorProjectSet((Node *) tle->expr,
+													subplan->targetlist);
+			tle = gpdb::FlatCopyTargetEntry(tle);
+			tle->expr = (Expr *) newexpr;
+			output_targetlist = lappend(output_targetlist, tle);
+		}
+		it_set_upper_ref->targetlist = output_targetlist;
+		it_set_upper_ref = it_set_upper_ref->lefttree;
+	}
+}
+
+Var *
+SearchTlistForNonVarProjectset(Expr *node, List *itlist, Index newvarno)
+{
+	TargetEntry *tle;
+
+	if (IsA(node, Const))
+	{
+		return nullptr;
+	}
+
+	tle = gpdb::TlistMember(node, itlist);
+	if (nullptr != tle)
+	{
+		/* Found a matching subplan output expression */
+		Var *newvar;
+
+		newvar = gpdb::MakeVarFromTargetEntry(newvarno, tle);
+		newvar->varnoold = 0;
+		newvar->varoattno = 0;
+		return newvar;
+	}
+	return nullptr; /* no match */
+}
+
+Node *
+CTranslatorDXLToPlStmt::FixUpperExprMutatorProjectSet(Node *node, List *context)
+{
+	Var *newvar;
+
+	if (node == nullptr)
+	{
+		return nullptr;
+	}
+
+	newvar = SearchTlistForNonVarProjectset((Expr *) node, context, OUTER_VAR);
+	if (nullptr != newvar)
+	{
+		return (Node *) newvar;
+	}
+
+	return gpdb::Expression_tree_mutator(
+		node,
+		(Node * (*) ()) CTranslatorDXLToPlStmt::FixUpperExprMutatorProjectSet,
+		(void *) context);
+}
+
+//------------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLResult
 //
 //	@doc:
-//		Translate DXL result node into GPDB result plan node
-//
-//---------------------------------------------------------------------------
+//		Translate DXL result node into GPDB result plan node and create Project
+//		Set plan node if SRV are present. The current approach is to create a
+//		Project Set plan node from a result dxl node as it already contains the
+//		info to create a project set node from it. But it's not the best
+//		approach. The better approach will be to actually create a new Clogical
+//		node to handle the set returning functions and then creating CPhysical,
+//		dxl and plan nodes.
+//------------------------------------------------------------------------------
 Plan *
 CTranslatorDXLToPlStmt::TranslateDXLResult(
 	const CDXLNode *result_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	// GPDB_12_MERGE_FIXME: this *really* should be done inside ORCA
-	// at the latest during CTranslatorExprToDXL, to create a DXLProjectSet
-	// that way we don't have to "frisk" the DXLResult to distinguish it from an
-	// actual result node
-	if (ContainsSetReturningFuncOrOp((*result_dxlnode)[EdxlresultIndexProjList],
-									 m_md_accessor))
-	{
-		return TranslateDXLProjectSet(result_dxlnode, output_context,
-									  ctxt_translation_prev_siblings);
-	}
+	// Pointer to the child plan of result node
+	Plan *child_plan = nullptr;
+
+	// Pointer to the lowest level ProjectSet node. If multiple ProjectSet nodes
+	// are required then the child plan of result dxl node will be attched to
+	// its lefttree.
+	Plan *project_set_child_plan = nullptr;
+
+	// Do we require a result node to be attached on top of ProjectSet node?
+	BOOL will_require_result_node = false;
 
 	// create result plan node
 	Result *result = MakeNode(Result);
-
 	Plan *plan = &(result->plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
 
@@ -3456,20 +3678,15 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	{
 		// translate child plan
 		child_dxlnode = (*result_dxlnode)[EdxlresultIndexChild];
-
-		Plan *child_plan = TranslateDXLOperatorToPlan(
-			child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-
+		child_plan = TranslateDXLOperatorToPlan(child_dxlnode, &child_context,
+												ctxt_translation_prev_siblings);
 		GPOS_ASSERT(nullptr != child_plan && "child plan cannot be NULL");
-
-		result->plan.lefttree = child_plan;
 	}
 
 	CDXLNode *project_list_dxlnode = (*result_dxlnode)[EdxlresultIndexProjList];
 	CDXLNode *filter_dxlnode = (*result_dxlnode)[EdxlresultIndexFilter];
 	CDXLNode *one_time_filter_dxlnode =
 		(*result_dxlnode)[EdxlresultIndexOneTimeFilter];
-
 	List *quals_list = nullptr;
 
 	CDXLTranslationContextArray *child_contexts =
@@ -3489,24 +3706,46 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 								 child_contexts, output_context);
 
 	plan->qual = quals_list;
-
 	result->resconstantqual = (Node *) one_time_quals_list;
-
 	SetParamIds(plan);
+
+	// Creating project set nodes plan tree
+	Plan *project_set_parent_plan = CreateProjectSetNodeTree(
+		result_dxlnode, plan, child_plan, project_set_child_plan,
+		will_require_result_node);
+
+	// If Project Set plan nodes are not required return the result plan node
+	// created
+	if (nullptr == project_set_parent_plan)
+	{
+		result->plan.lefttree = child_plan;
+		child_contexts->Release();
+		return (Plan *) result;
+	}
+
+	SetupAliasParameter(will_require_result_node, project_list_dxlnode,
+						project_set_parent_plan);
+
+	Plan *final_plan = nullptr;
+
+	if (will_require_result_node)
+	{
+		result->plan.lefttree = project_set_parent_plan;
+		final_plan = &(result->plan);
+	}
+	else
+	{
+		final_plan = project_set_parent_plan;
+	}
+
+	MutateFuncExprToVarProjectSet(final_plan);
+
+	// Attaching the child plan
+	project_set_child_plan->lefttree = child_plan;
 
 	// cleanup
 	child_contexts->Release();
-
-	// double check the targetlist is kosher
-	// we are only doing this because ORCA didn't do it...
-	if (!SanityCheckProjectSetTargetList(plan->targetlist))
-	{
-		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
-	}
-
-	return (Plan *) result;
+	return final_plan;
 }
 
 //---------------------------------------------------------------------------
@@ -4057,10 +4296,17 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 
 	List *oids_list = NIL;
 
+	const CDXLTableDescr *dxl_table_descr =
+		dyn_tbl_scan_dxlop->GetDXLTableDescr();
+	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
+
 	for (ULONG ul = 0; ul < parts->Size(); ul++)
 	{
 		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
 		oids_list = gpdb::LAppendOid(oids_list, part);
+		// Since parser locks only root partition, locking the leaf
+		// partitions which we have to scan.
+		gpdb::GPDBLockRelationOid(part, dxl_table_descr->LockMode());
 	}
 
 	dyn_seq_scan->partOids = oids_list;
@@ -4141,10 +4387,15 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 
 	List *oids_list = NIL;
 
+	GPOS_ASSERT(table_desc->LockMode() != -1);
+
 	for (ULONG ul = 0; ul < parts->Size(); ul++)
 	{
 		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
 		oids_list = gpdb::LAppendOid(oids_list, part);
+		// Since parser locks only root partition, locking the leaf
+		// partitions which we have to scan.
+		gpdb::GPDBLockRelationOid(part, table_desc->LockMode());
 	}
 
 	dyn_idx_scan->partOids = oids_list;
@@ -5151,7 +5402,16 @@ List *
 CTranslatorDXLToPlStmt::CreateTargetListWithNullsForDroppedCols(
 	List *target_list, const IMDRelation *md_rel)
 {
-	GPOS_ASSERT(nullptr != target_list);
+	// There are cases where target list can be null
+	// Eg. insert rows with no columns into a table with no columns
+	//
+	// create table foo();
+	// insert into foo default values;
+	if (nullptr == target_list)
+	{
+		return nullptr;
+	}
+
 	GPOS_ASSERT(gpdb::ListLength(target_list) <= md_rel->ColumnCount());
 
 	List *result_list = NIL;
@@ -5965,7 +6225,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	// Lock any table we are to scan, since it may not have been properly locked
 	// by the parser (e.g in case of generated scans for partitioned tables)
 	CMDIdGPDB *mdid = CMDIdGPDB::CastMdid(md_rel->MDId());
-	GPOS_RTL_ASSERT(table_descr->LockMode() != -1);
+	GPOS_ASSERT(table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), table_descr->LockMode());
 
 	Index index =

@@ -50,7 +50,7 @@ CATALOG(gp_configuration_history,5106,GpConfigHistoryRelationId) BKI_SHARED_RELA
 {
 	timestamptz	time;	
 	int16		dbid;	
-	text		desc;	
+	text		description;
 } FormData_gp_configuration_history;
 
 /* no foreign keys */

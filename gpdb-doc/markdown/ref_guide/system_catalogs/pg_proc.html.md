@@ -34,7 +34,6 @@ For compiled functions, both built-in and dynamically loaded, `prosrc` contains 
 |`probin`|text| |Additional information about how to invoke the function. Again, the interpretation is language-specific.|
 |`proconfig`|text\[\]| |Function's local settings for run-time configuration variables.|
 |`proacl`|aclitem\[\]| |Access privileges for the function as given by `GRANT`/`REVOKE`.|
-|`prodataaccess`|char| |Provides a hint regarding the type SQL statements that are included in the function: `n` - does not contain SQL, `c` - contains SQL, `r` - contains SQL that reads data, `m` - contains SQL that modifies data.|
 |`proexeclocation`|char| |Where the function runs when it is invoked: `m` - coordinator only, `a` - any segment instance, `s` - all segment instances, `i` - initplan.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)

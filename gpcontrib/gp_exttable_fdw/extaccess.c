@@ -927,6 +927,7 @@ externalgettup_custom(FileScanDesc scan)
 		while (formatter->fmt_databuf.len > 0)
 		{
 			bool		error_caught = false;
+			int			line_begin = formatter->fmt_databuf.cursor;
 
 			/*
 			 * Invoke the custom formatter function.
@@ -966,10 +967,12 @@ externalgettup_custom(FileScanDesc scan)
 				if (formatter->fmt_badrow_len > 0)
 				{
 					if (formatter->fmt_badrow_data)
-						appendBinaryStringInfo(&pstate->line_buf,
-								formatter->fmt_badrow_data,
-								formatter->fmt_badrow_len);
-
+					{
+						appendBinaryStringInfo(&pstate->line_buf, 
+									formatter->fmt_badrow_data, 
+									formatter->fmt_badrow_len);
+					}
+					
 					formatter->fmt_databuf.cursor += formatter->fmt_badrow_len;
 					if (formatter->fmt_databuf.cursor > formatter->fmt_databuf.len ||
 							formatter->fmt_databuf.cursor < 0)
@@ -984,6 +987,19 @@ externalgettup_custom(FileScanDesc scan)
 				MemoryContextSwitchTo(oldctxt);
 			}
 			PG_END_TRY();
+			
+			/* 
+			 * In order to handle errors, we aim to record the raw data 
+			 * of the line where an unexpected error occurs. However, determining the 
+			 * start and end of the current line can be challenging, as there is no 
+			 * reliable variable to use for this purpose. The cursor is typically used 
+			 * to track the progress of the current processing, which can indicate the 
+			 * start and end positions of a line. Unfortunately, cursor operations may 
+			 * not be reliable across all formatters. If the cursor remains unchanged, 
+			 * GPDB will not write any data into error log.
+			 */
+
+			int line_len = formatter->fmt_databuf.cursor - line_begin;
 
 			/*
 			 * Examine the function results. If an error was caught we
@@ -995,13 +1011,20 @@ externalgettup_custom(FileScanDesc scan)
 				switch (formatter->fmt_notification)
 				{
 					case FMT_NONE:
-
 						/* got a tuple back */
-
 						tuple = formatter->fmt_tuple;
-
 						if (pstate->cdbsreh)
+						{
 							pstate->cdbsreh->processed++;
+							resetStringInfo(&pstate->line_buf);
+							/* 
+							 * Copy the data into pstate->line_buf in case that the error
+							 * occurs during the following phases.
+							 */
+							appendBinaryStringInfo(&pstate->line_buf, 
+													formatter->fmt_databuf.data + line_begin, 
+													line_len);
+						}
 
 						MemoryContextReset(formatter->fmt_perrow_ctx);
 

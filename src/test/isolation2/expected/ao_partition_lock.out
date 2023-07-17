@@ -5,25 +5,25 @@
 -- lock is not acquired.
 
 create table test_ao_partition_lock ( field_dk integer ,field_part integer) with (appendonly=true) DISTRIBUTED BY (field_dk) PARTITION BY LIST(field_part) ( partition val1 values(1), partition val2 values(2), partition val3 values(3) );
-CREATE
+CREATE TABLE
 
 1: begin;
 BEGIN
 1: insert into test_ao_partition_lock_1_prt_val1 values(1,1);
-INSERT 1
+INSERT 0 1
 
 2: begin;
 BEGIN
 2: alter table test_ao_partition_lock truncate partition for (2);
-ALTER
+ALTER TABLE
 2: end;
-END
+COMMIT
 
 1: end;
-END
+COMMIT
 
 1q: ... <quitting>
 2q: ... <quitting>
 
 drop table test_ao_partition_lock;
-DROP
+DROP TABLE

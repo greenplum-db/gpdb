@@ -13,7 +13,7 @@
 -- the WAL record responsible for updating it to frozen.
 -- After crash recovery, the insert will follow regular MVCC and not be seen.
 1: create table tab_fi(a int) with (appendoptimized=true) distributed replicated;
-CREATE
+CREATE TABLE
 
 -- switch WAL on seg0 to reduce flakiness
 1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
@@ -100,12 +100,12 @@ RESET
 RESET
 
 1: drop table tab_fi;
-DROP
+DROP TABLE
 
 -- Case 2. crash after we have flushed the WAL that updates the row to be frozen.
 -- After crash recovery, the insert should be seen.
 1: create table tab_fi(a int) with (appendoptimized=true) distributed replicated;
-CREATE
+CREATE TABLE
 
 -- switch WAL on seg0 to reduce flakiness
 1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
@@ -200,26 +200,26 @@ RESET
 RESET
 
 1: drop table tab_fi;
-DROP
+DROP TABLE
 
 
 -- Same set of tests for bitmap LOV insert.
 create extension if not exists pageinspect;
-CREATE
+CREATE EXTENSION
 
 -- Function to check the bitmap lov content regarding the column 'b'
 -- which is the table column that we will have bitmap created on.
 -- Basically, we want to see if "SELECT b FROM pg_bitmapindex.pg_bm_xxx"
 -- returns the same result in seqscan and indexscan.
 CREATE OR REPLACE FUNCTION insert_bm_lov_res() RETURNS void AS $$ DECLARE lov_table text; /* in func */ sql text; /* in func */ BEGIN /* in func */ drop table if exists bm_lov_res; /* in func */ create temp table bm_lov_res(b int); /* in func */ SELECT c.relname INTO lov_table /* in func */ FROM bm_metap('tab_fi_idx') b /* in func */ JOIN pg_class c ON b.auxrelid = c.oid; /* in func */ sql := format('INSERT INTO bm_lov_res SELECT b FROM pg_bitmapindex.%I', lov_table); /* in func */ EXECUTE sql; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
-CREATE
+CREATE FUNCTION
 
 1: create table tab_fi(a int, b int) with (appendoptimized=true) distributed replicated;
-CREATE
+CREATE TABLE
 1: create index tab_fi_idx on tab_fi using bitmap(b);
-CREATE
+CREATE INDEX
 1: insert into tab_fi values(1, 1);
-INSERT 1
+INSERT 0 1
 -- switch WAL on seg0 to reduce flakiness
 1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
  gp_segment_id | ?column? 
@@ -306,16 +306,16 @@ SET
 (1 row)
 0Uq: ... <quitting>
 1: drop table tab_fi;
-DROP
+DROP TABLE
 
 -- case 2: suspend and flush WAL after freezing the tuple
 
 1: create table tab_fi(a int, b int) with (appendoptimized=true) distributed replicated;
-CREATE
+CREATE TABLE
 1: create index tab_fi_idx on tab_fi using bitmap(b);
-CREATE
+CREATE INDEX
 1: insert into tab_fi values(1, 1);
-INSERT 1
+INSERT 0 1
 -- switch WAL on seg0 to reduce flakiness
 1: select gp_segment_id, pg_switch_wal() is not null from gp_dist_random('gp_id') where gp_segment_id = 0;
  gp_segment_id | ?column? 
@@ -403,12 +403,12 @@ SET
 (2 rows)
 
 1: drop extension pageinspect;
-DROP
+DROP EXTENSION
 
 -- Test for aoseg: suspend the insert into aoseg table before we mark the row frozen.
 -- Another session should still be able to choose a different segno.
 1: create table tab_aoseg(a int) using ao_row;
-CREATE
+CREATE TABLE
 1: select gp_inject_fault('insert_aoseg_before_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
  gp_inject_fault 
 -----------------
@@ -432,13 +432,13 @@ BEGIN
  Success:        
 (1 row)
 1<:  <... completed>
-INSERT 10
+INSERT 0 10
 2<:  <... completed>
-INSERT 10
+INSERT 0 10
 1: end;
-END
+COMMIT
 2: end;
-END
+COMMIT
 3: select segment_id, segno, eof from gp_toolkit.__gp_aoseg('tab_aoseg') where segment_id = 0;
  segment_id | segno | eof 
 ------------+-------+-----

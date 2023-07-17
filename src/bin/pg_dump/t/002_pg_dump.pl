@@ -1674,7 +1674,7 @@ my %tests = (
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.pltestlang_call_handler() \E
 			\QRETURNS language_handler\E
-			\n\s+\QLANGUAGE c NO SQL\E
+			\n\s+\QLANGUAGE c\E
 			\n\s+AS\ \'\$
 			\Qlibdir\/plpgsql', 'plpgsql_call_handler';\E
 			/xm,
@@ -1694,7 +1694,7 @@ my %tests = (
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.write_to_file_stable() \E
 			\QRETURNS integer\E
-			\n\s+\QLANGUAGE c STABLE NO SQL\E
+			\n\s+\QLANGUAGE c STABLE\E
 			\n\s+AS\ \'\$
 			\Qlibdir\/gpextprotocol.so', 'demoprot_export';\E
 			/xm,
@@ -1714,7 +1714,7 @@ my %tests = (
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.read_from_file_stable() \E
 			\QRETURNS integer\E
-			\n\s+\QLANGUAGE c STABLE NO SQL\E
+			\n\s+\QLANGUAGE c STABLE\E
 			\n\s+AS\ \'\$
 			\Qlibdir\/gpextprotocol.so', 'demoprot_export';\E
 			/xm,
@@ -1777,7 +1777,7 @@ my %tests = (
 					   AS $$ BEGIN RETURN NULL; END;$$;',
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.trigger_func() RETURNS trigger\E
-			\n\s+\QLANGUAGE plpgsql NO SQL\E
+			\n\s+\QLANGUAGE plpgsql\E
 			\n\s+AS\ \$\$
 			\Q BEGIN RETURN NULL; END;\E
 			\$\$;/xm,
@@ -1796,7 +1796,7 @@ my %tests = (
 					   AS $$ BEGIN RETURN; END;$$;',
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.event_trigger_func() RETURNS event_trigger\E
-			\n\s+\QLANGUAGE plpgsql NO SQL\E
+			\n\s+\QLANGUAGE plpgsql\E
 			\n\s+AS\ \$\$
 			\Q BEGIN RETURN; END;\E
 			\$\$;/xm,
@@ -2142,7 +2142,7 @@ my %tests = (
 					   LANGUAGE internal STRICT IMMUTABLE;',
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.int42_in(cstring) RETURNS dump_test.int42\E
-			\n\s+\QLANGUAGE internal IMMUTABLE STRICT NO SQL\E
+			\n\s+\QLANGUAGE internal IMMUTABLE STRICT\E
 			\n\s+AS\ \$\$int4in\$\$;
 			/xm,
 		like =>
@@ -2160,7 +2160,7 @@ my %tests = (
 					   LANGUAGE internal STRICT IMMUTABLE;',
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.int42_out(dump_test.int42) RETURNS cstring\E
-			\n\s+\QLANGUAGE internal IMMUTABLE STRICT NO SQL\E
+			\n\s+\QLANGUAGE internal IMMUTABLE STRICT\E
 			\n\s+AS\ \$\$int4out\$\$;
 			/xm,
 		like =>
@@ -2177,7 +2177,7 @@ my %tests = (
 		  'CREATE FUNCTION dump_test.func_with_support() RETURNS int LANGUAGE sql AS $$ SELECT 1 $$ SUPPORT varchar_support;',
 		regexp => qr/^
 			\QCREATE FUNCTION dump_test.func_with_support() RETURNS integer\E
-			\n\s+\QLANGUAGE sql SUPPORT varchar_support CONTAINS SQL\E
+			\n\s+\QLANGUAGE sql SUPPORT varchar_support\E
 			\n\s+AS\ \$\$\Q SELECT 1 \E\$\$;
 			/xm,
 		like =>
@@ -2194,7 +2194,7 @@ my %tests = (
 					   LANGUAGE SQL AS $$ INSERT INTO dump_test.test_table (col1) VALUES (a) $$;',
 		regexp => qr/^
 			\QCREATE PROCEDURE dump_test.ptest1(a integer)\E
-			\n\s+\QLANGUAGE sql CONTAINS SQL\E
+			\n\s+\QLANGUAGE sql\E
 			\n\s+AS\ \$\$\Q INSERT INTO dump_test.test_table (col1) VALUES (a) \E\$\$;
 			/xm,
 		like =>
@@ -2977,7 +2977,7 @@ my %tests = (
 			\s+\QINCREMENT BY 1\E\n
 			\s+\QNO MINVALUE\E\n
 			\s+\QNO MAXVALUE\E\n
-			\s+\QCACHE 1\E\n
+			\s+\QCACHE 20\E\n
 			\);
 			/xms,
 		like =>
@@ -3163,7 +3163,7 @@ my %tests = (
 			\n\s+\QINCREMENT BY 1\E
 			\n\s+\QNO MINVALUE\E
 			\n\s+\QNO MAXVALUE\E
-			\n\s+\QCACHE 1;\E
+			\n\s+\QCACHE 20;\E
 			/xm,
 		like => {
 			%full_runs,

@@ -7,7 +7,6 @@
 -- hostname       #is_transformed_to# @hostname@
 -- curusername #is_transformed_to# @curusername@
 -- gp_syslocale      #is_transformed_to# @gp_syslocale@
--- gpwhich_gpmapreduce  #is_transformed_to# @gpwhich_gpmapreduce@
 --
 -- 
 -- end

@@ -583,6 +583,13 @@ if test "$GCC" = yes -a "$ICC" = no; then
   if test -n "$NOT_THE_CFLAGS"; then
     CFLAGS="$CFLAGS -Wno-compound-token-split-by-macro"
   fi
+  # Similarly remove clang 15+'s deprecated-non-prototype, as it warns about
+  # tree-walking APIs that we can't reasonably change in the back branches.
+  NOT_THE_CFLAGS=""
+  PGAC_PROG_CC_VAR_OPT(NOT_THE_CFLAGS, [-Wdeprecated-non-prototype])
+  if test -n "$NOT_THE_CFLAGS"; then
+    CFLAGS="$CFLAGS -Wno-deprecated-non-prototype"
+  fi
   # Similarly disable useless truncation warnings from gcc 8+
   NOT_THE_CFLAGS=""
   PGAC_PROG_CC_VAR_OPT(NOT_THE_CFLAGS, [-Wformat-truncation])
@@ -633,6 +640,9 @@ if test "$with_llvm" = yes ; then
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, BITCODE_CFLAGS, [-fexcess-precision=standard])
   PGAC_PROG_VARCXX_VARFLAGS_OPT(CLANGXX, BITCODE_CXXFLAGS, [-fexcess-precision=standard])
 
+  PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, BITCODE_CFLAGS, [-Xclang -no-opaque-pointers])
+  PGAC_PROG_VARCXX_VARFLAGS_OPT(CLANGXX, BITCODE_CXXFLAGS, [-Xclang -no-opaque-pointers])
+
   NOT_THE_CFLAGS=""
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wunused-command-line-argument])
   if test -n "$NOT_THE_CFLAGS"; then
@@ -642,6 +652,11 @@ if test "$with_llvm" = yes ; then
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wcompound-token-split-by-macro])
   if test -n "$NOT_THE_CFLAGS"; then
     BITCODE_CFLAGS="$BITCODE_CFLAGS -Wno-compound-token-split-by-macro"
+  fi
+  NOT_THE_CFLAGS=""
+  PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wdeprecated-non-prototype])
+  if test -n "$NOT_THE_CFLAGS"; then
+    BITCODE_CFLAGS="$BITCODE_CFLAGS -Wno-deprecated-non-prototype"
   fi
   NOT_THE_CFLAGS=""
   PGAC_PROG_VARCC_VARFLAGS_OPT(CLANG, NOT_THE_CFLAGS, [-Wformat-truncation])
@@ -796,15 +811,6 @@ if test "$PORTNAME" = darwin; then
 	    [Define to 1 to build ORCA for MacOS (GPOS_Darwin=1)])
 fi
 
-
-#
-# --enable-mapreduce enables GPMapreduce support
-#
-PGAC_ARG_BOOL(enable, mapreduce, no, [enable Greenplum Mapreduce support],
-              [AC_DEFINE([USE_MAPREDUCE], 1,
-			             [Define to 1 to build with Mapreduce capabilities (--enable-mapreduce)])])
-AC_MSG_RESULT([checking whether to build with Greenplum Mapreduce... $enable_mapreduce])
-AC_SUBST(enable_mapreduce)
 
 #
 # gpcloud, enabled by default
@@ -1157,15 +1163,8 @@ AC_SUBST(with_zstd)
 
 if test "$with_zstd" = yes; then
   dnl zstd_errors.h was renamed from error_public.h in v1.1.1
-  PKG_CHECK_MODULES([ZSTD], [libzstd >= 1.1.1])
+  PKG_CHECK_MODULES([ZSTD], [libzstd >= 1.4.0])
 fi
-
-#
-# quicklz
-#
-PGAC_ARG_BOOL(with, quicklz, no,
-              [build with QuickLZ support (requires quicklz library)])
-AC_SUBST(with_quicklz)
 
 #
 # Realtime library
@@ -1414,11 +1413,6 @@ failure.  It is possible the compiler isn't looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
 fi
 
-if test "$with_quicklz" = yes; then
-  AC_CHECK_LIB(quicklz, qlz_compress, [],
-               [AC_MSG_ERROR([quicklz library not found.])])
-fi
-
 if test "$enable_ic_proxy" = yes; then
   AC_CHECK_LIB(uv, uv_default_loop, [],
                [AC_MSG_ERROR([libuv library not found, it is required by --enable-ic-proxy.])])
@@ -1466,15 +1460,7 @@ if test "$enable_gpfdist" = yes ; then
   EVENT_LIBS=" -levent"
   AC_SUBST(EVENT_LIBS)
 
-  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes; YAML_LIBS=" -lyaml"], [AC_MSG_WARN([libyaml is not found. disabling transformations for gpfdist.])])
-  AC_SUBST(YAML_LIBS)
-  AC_SUBST(have_yaml)
-  LIBS="$_LIBS"
-fi
-
-if test "$enable_mapreduce" = yes ; then
-  _LIBS="$LIBS"
-  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes; YAML_LIBS=" -lyaml"], [AC_MSG_ERROR([libyaml is required for Greenplum Mapreduce])])
+  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes; YAML_LIBS=" -lyaml"], [AC_MSG_ERROR([libyaml is required for transformations for gpfdist.])])
   AC_SUBST(YAML_LIBS)
   AC_SUBST(have_yaml)
   LIBS="$_LIBS"
@@ -1724,7 +1710,7 @@ if test "$enable_gpfdist" = yes; then
     AC_CHECK_HEADERS([winsock2.h])
   fi
 
-  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_WARN([header file <yaml.h> is not found. disabling transformations for gpfdist.])])
+  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([header file <yaml.h> is required for transformations for gpfdist.])])
   AC_CHECK_HEADERS(event.h, [], [AC_MSG_ERROR([header file <event.h> is required for gpfdist])])
 
   ac_save_CPPFLAGS=$CPPFLAGS
@@ -1743,11 +1729,6 @@ fi
 # Check for bzlib.h
 if test "$with_libbz2" = yes ; then
   AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
-fi
-
-# Check for quicklz.h
-if test "$with_quicklz" = yes; then
-  AC_CHECK_HEADER(quicklz.h, [], [AC_MSG_ERROR([header file <quicklz.h> is required for QuickLZ support])])
 fi
 
 if test "$with_gssapi" = yes ; then
@@ -1873,13 +1854,6 @@ esac
 if test "$with_rt" = yes; then
 	AC_CHECK_HEADERS([time.h], [],
 			 [AC_MSG_ERROR([header file <time.h> is required for realtime library support])])
-fi
-
-if test "$enable_mapreduce" = yes; then
-  if test "$with_perl" = no; then
-    AC_MSG_ERROR([Greenplum Mapreduce requires Perl, reconfigure with --with-perl])
-  fi
-  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([header file <yaml.h> is required for Greenplum Mapreduce])])
 fi
 
 if test "$PORTNAME" = "win32" ; then

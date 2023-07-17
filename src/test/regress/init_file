@@ -12,6 +12,10 @@ m/^NOTICE:  extension "gp_inject_fault" already exists, skipping/
 # of the test. Ignore the NOTICE if it exists already.
 m/NOTICE:  extension "gp_debug_numsegments" already exists, skipping/
 
+# Some tests use the postgres_fdw extension, and create it at the beginning
+# of the test. Ignore the NOTICE if it exists already.
+m/NOTICE:  extension "postgres_fdw" already exists, skipping/
+
 m/^ Optimizer status:.*/
 m/^ Optimizer: Pivotal Optimizer \(GPORCA\).*/
 m/^ Optimizer: Postgres query optimizer/
@@ -91,6 +95,9 @@ m/^DEBUG:  probing availability of JIT provider/
 m/^DEBUG:  LLVMJIT detected CPU/
 m/^DEBUG:  time to inline:/
 
+# Ignore data access indicator notice.
+m/NOTICE:  specifying ".*" acts as no operation./
+
 -- end_matchignore
 
 -- start_matchsubs
@@ -125,6 +132,8 @@ m/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/
 s/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode (openssl.c:XXX)/
 m/ERROR:  requested functionality not allowed in FIPS mode .*/
 s/ERROR:  requested functionality not allowed in FIPS mode .*/ERROR:  requested functionality not allowed in FIPS mode (openssl.c:XXX)/
+m/ERROR:  could not devise a plan.*/
+s/ERROR:  could not devise a plan.*/ERROR:  could not devise a plan (cdbpath.c:XXX)/
 
 # Mask out OpenSSL behavior change in different version
 m/ERROR:  Cannot use "md5": No such hash algorithm/

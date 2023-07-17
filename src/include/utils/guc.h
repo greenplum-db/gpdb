@@ -504,7 +504,6 @@ extern bool optimizer_expand_fulljoin;
 extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;
 extern bool optimizer_enable_mergejoin;
-extern bool optimizer_prune_unused_columns;
 extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
 extern bool optimizer_force_comprehensive_join_implementation;
 extern bool optimizer_enable_replicated_table;
@@ -515,6 +514,11 @@ extern bool optimizer_enumerate_plans;
 extern bool optimizer_sample_plans;
 extern int	optimizer_plan_id;
 extern int	optimizer_samples_number;
+
+/* Optimizer Just In Time (JIT) compilation related GUCs*/
+extern  double  optimizer_jit_above_cost;
+extern  double  optimizer_jit_inline_above_cost;
+extern  double  optimizer_jit_optimize_above_cost;
 
 /* Cardinality estimation related GUCs used by the Optimizer */
 extern bool optimizer_extract_dxl_stats;
@@ -560,6 +564,7 @@ extern bool optimizer_cte_inlining;
 extern bool optimizer_enable_space_pruning;
 extern bool optimizer_enable_associativity;
 extern bool optimizer_enable_range_predicate_dpe;
+extern bool optimizer_enable_push_join_below_union_all;
 
 /* Analyze related GUCs for Optimizer */
 extern bool optimizer_analyze_root_partition;
@@ -588,6 +593,8 @@ extern bool	optimizer_partition_selection_log;
 extern char  *gp_auth_time_override_str;
 
 extern char  *gp_default_storage_options;
+
+extern bool gp_quicklz_fallback;
 
 /* copy GUC */
 extern bool gp_enable_segment_copy_checking;
@@ -798,6 +805,7 @@ extern const char *gpvars_show_gp_resource_manager_policy(void);
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source);
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
+extern bool gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source);
 extern int guc_name_compare(const char *namea, const char *nameb);
 extern void DispatchSyncPGVariable(struct config_generic * gconfig);
 

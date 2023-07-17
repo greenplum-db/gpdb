@@ -7,6 +7,7 @@ CREATE EXTENSION gp_inject_fault;
 
 -- speed up test
 ALTER SYSTEM SET autovacuum_naptime = 5;
+ALTER SYSTEM SET autovacuum_vacuum_threshold = 50;
 ALTER SYSTEM SET gp_autovacuum_scope = catalog_ao_aux;
 -- start_ignore
 \! gpstop -u;
@@ -54,6 +55,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', dbid)
 from tableNameCTE, gp_segment_configuration where role = 'p' and content != -1;
 
 ALTER SYSTEM RESET autovacuum_naptime;
+ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 ALTER SYSTEM RESET gp_autovacuum_scope;
 -- start_ignore
 \! gpstop -u;

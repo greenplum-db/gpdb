@@ -226,7 +226,6 @@ enable_orca		= @enable_orca@
 enable_gpfdist		= @enable_gpfdist@
 enable_debug_extensions = @enable_debug_extensions@
 enable_orafce		= @enable_orafce@
-enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@
 enable_ic_proxy     = @enable_ic_proxy@
 
@@ -265,7 +264,6 @@ YAML_LIBS		= @YAML_LIBS@
 with_zstd 		= @with_zstd@
 ZSTD_CFLAGS		= @ZSTD_CFLAGS@
 ZSTD_LIBS		= @ZSTD_LIBS@
-with_quicklz		= @with_quicklz@
 EVENT_LIBS		= @EVENT_LIBS@
 
 ##########################################################################

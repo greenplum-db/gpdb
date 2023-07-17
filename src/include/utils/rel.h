@@ -437,6 +437,10 @@ typedef struct ViewOptions
 #define RelationIsAoRows(relation) \
 	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID)
 
+#define RelationStorageIsAoRows(relation) \
+	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
  * index AM interfaces provide.  Use of this macro is discouraged.  If
@@ -449,6 +453,10 @@ typedef struct ViewOptions
 #define RelationIsAoCols(relation) \
 	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID)
 
+#define RelationStorageIsAoCols(relation) \
+	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
  * index AM interfaces provide.  Use of this macro is discouraged.  If
@@ -459,17 +467,11 @@ typedef struct ViewOptions
  * 		True iff relation has append only storage (can be row or column orientation)
  */
 #define RelationIsAppendOptimized(relation) \
-	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
-		relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
 
-/*
- * Convenient macro for checking AO AMs
- *
- * RelationAMIsAO
- * 		True iff relam is ao_row or or ao_column.
- */
-#define RelationAMIsAO(relation) \
-	IsAccessMethodAO((relation)->rd_rel->relam)
+#define RelationStorageIsAO(relation) \
+	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 
 /*
  * RelationIsBitmapIndex
@@ -564,7 +566,7 @@ typedef struct ViewOptions
 			smgrsetowner(&((relation)->rd_smgr), \
 						 smgropen((relation)->rd_node, \
 								  (relation)->rd_backend, \
-								  RelationIsAppendOptimized(relation)?SMGR_AO:SMGR_MD)); \
+								  RelationStorageIsAO(relation)?SMGR_AO:SMGR_MD)); \
 	} while (0)
 
 /*

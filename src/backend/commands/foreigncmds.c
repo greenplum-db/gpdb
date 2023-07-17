@@ -196,6 +196,11 @@ transformGenericOptions(Oid catalogId,
 		SeparateOutMppExecute(&resultOptions);
 	}
 
+	if (catalogId == ForeignServerRelationId)
+	{
+		SeparateOutNumSegments(&resultOptions);
+	}
+	
 	if (OidIsValid(fdwvalidator))
 	{
 		Datum valarg = optionListToArray(resultOptions);

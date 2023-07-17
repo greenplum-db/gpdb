@@ -171,6 +171,9 @@ static int64 getcpuusage_v1(Oid group);
 static void getcpuset_v1(Oid group, char *cpuset, int len);
 static void setcpuset_v1(Oid group, const char *cpuset);
 static float convertcpuusage_v1(int64 usage, int64 duration);
+static List *parseio_v1(const char *io_limit);
+static void setio_v1(Oid group, List *limit_list);
+static void freeio_v1(List *limit_list);
 
 /*
  * Detect gpdb cgroup component dirs.
@@ -961,7 +964,7 @@ unlockcgroup_v1(int fd)
 /*
  * Set the cpu hard limit for the OS group.
  *
- * cpu_hard_quota_limit should be within [-1, 100].
+ * cpu_max_percent should be within [-1, 100].
  */
 static void
 setcpulimit_v1(Oid group, int cpu_hard_limit)
@@ -970,9 +973,8 @@ setcpulimit_v1(Oid group, int cpu_hard_limit)
 
 	if (cpu_hard_limit > 0)
 	{
-		int64 periods = get_cfs_period_us_v1(component);
 		writeInt64(group, BASEDIR_GPDB, component, "cpu.cfs_quota_us",
-				   periods * cgroupSystemInfoV1.ncores * cpu_hard_limit / 100);
+				   system_cfs_quota_us * cpu_hard_limit * gp_resource_group_cpu_limit / 100);
 	}
 	else
 	{
@@ -981,13 +983,13 @@ setcpulimit_v1(Oid group, int cpu_hard_limit)
 }
 
 /*
- * Set the cpu soft priority for the OS group.
+ * Set the cpu weight for the OS group.
  *
  * For version 1, the default value of cpu.shares is 1024, corresponding to
- * our cpu_soft_priority, which default value is 100, so we need to adjust it.
+ * our cpu_weight, which default value is 100, so we need to adjust it.
  */
 static void
-setcpupriority_v1(Oid group, int shares)
+setcpuweight_v1(Oid group, int shares)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
 	writeInt64(group, BASEDIR_GPDB, component,
@@ -1105,6 +1107,31 @@ getmemoryusage_v1(Oid group)
 	return readInt64(group, BASEDIR_GPDB, component, "memory.usage_in_bytes");
 }
 
+static List *
+parseio_v1(const char *io_limit)
+{
+	ereport(WARNING,
+			(errcode(ERRCODE_SYSTEM_ERROR),
+			 errmsg("resource group io limit only can be used in cgroup v2.")));
+	return NULL;
+}
+
+static void
+setio_v1(Oid group, List *limit_list)
+{
+	ereport(WARNING,
+			(errcode(ERRCODE_SYSTEM_ERROR),
+			 errmsg("resource group io limit only can be used in cgroup v2.")));
+}
+
+static void
+freeio_v1(List *limit_list)
+{
+	ereport(WARNING,
+			(errcode(ERRCODE_SYSTEM_ERROR),
+			 errmsg("resource group io limit only can be used in cgroup v2.")));
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.getcgroupname = getcgroupname_v1,
 		.probecgroup = probecgroup_v1,
@@ -1122,13 +1149,17 @@ static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 
 		.setcpulimit = setcpulimit_v1,
 		.getcpuusage = getcpuusage_v1,
-		.setcpupriority = setcpupriority_v1,
+		.setcpuweight = setcpuweight_v1,
 		.getcpuset = getcpuset_v1,
 		.setcpuset = setcpuset_v1,
 
 		.convertcpuusage = convertcpuusage_v1,
 
 		.getmemoryusage = getmemoryusage_v1,
+
+		.parseio = parseio_v1,
+		.setio = setio_v1,
+		.freeio = freeio_v1,
 };
 
 CGroupOpsRoutine *get_group_routine_v1(void)

@@ -1,0 +1,53 @@
+---------------------------------------------------
+-- ALTER TABLE concurrency tests
+---------------------------------------------------
+
+--
+-- ADD COLUMN
+--
+create table t_addcol_@amname@(a int) using @amname@ distributed replicated;
+insert into t_addcol_@amname@ values(1);
+
+alter table t_addcol_@amname@ add column b int default 99;
+1: begin;
+2: begin;
+-- both trx should not read what the other is inserting
+1: insert into t_addcol_@amname@ values(101);
+2: insert into t_addcol_@amname@ values(201);
+1: select * from t_addcol_@amname@;
+2: select * from t_addcol_@amname@;
+-- now insert non-default values, should read correctly
+1: insert into t_addcol_@amname@ values(102, 0);
+2: insert into t_addcol_@amname@ values(202, 0);
+1: insert into t_addcol_@amname@ values(103, NULL);
+2: insert into t_addcol_@amname@ values(203, NULL);
+1: select * from t_addcol_@amname@;
+2: select * from t_addcol_@amname@;
+1: end;
+2: end;
+-- both trx should read the same data now
+1: select * from t_addcol_@amname@;
+2: select * from t_addcol_@amname@;
+
+-- add column should be blocked while another trx is doing the same
+1: begin;
+1: alter table t_addcol_@amname@ add column c1 text default 'trx1';
+2: begin;
+2>: alter table t_addcol_@amname@ add column c2 text default 'trx2';
+1: end;
+2<:
+2: end;
+select * from t_addcol_@amname@;
+
+delete from t_addcol_@amname@;
+select count(*) from t_addcol_@amname@;
+
+-- only one trx commits but another one aborts
+1: begin;
+2: begin;
+1: insert into t_addcol_@amname@ select * from generate_series(1,10000);
+2: insert into t_addcol_@amname@ select * from generate_series(1,10000);
+1: abort;
+2: end;
+select count(*) from t_addcol_@amname@;
+select sum(b) = count(*) * 99 as expected from t_addcol_@amname@;

@@ -37,9 +37,14 @@
 #define DefaultCpuset "-1"
 
 /*
- * Default value of cpu soft priority
+ * Default value of io_limit
  */
-#define DefaultCPUSoftPriority 100
+#define DefaultIOLimit "-1"
+
+/*
+ * Default value of cpu weight
+ */
+#define DefaultCPUWeight 100
 
 /*
  * Resource group capability.
@@ -67,10 +72,17 @@ typedef struct ResGroupCaps
 {
 	ResGroupCap		__unknown;			/* placeholder, do not use it */
 	ResGroupCap		concurrency;
-	ResGroupCap		cpuHardQuotaLimit;
-	ResGroupCap		cpuSoftPriority;
+	ResGroupCap		cpuMaxPercent;
+	ResGroupCap		cpuWeight;
 	ResGroupCap		memory_limit;
 	volatile ResGroupCap	min_cost;
+
+	/*
+	 * io_limit are local pointers,
+	 * do not use it for cross MemoryContext.
+	 */
+	char			*io_limit;
+
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -95,6 +107,8 @@ extern double gp_resource_group_cpu_limit;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;
 extern bool gp_resource_group_bypass_catalog_query;
+extern int gp_resource_group_move_timeout;
+extern bool gp_resource_group_bypass_direct_dispatch;
 
 /*
  * Non-GUC global variables.
@@ -133,6 +147,8 @@ typedef struct
 	ResGroupCaps		caps;
 	ResGroupCaps		oldCaps;	/* last config value, alter operation need to
  										* check last config for recycling */
+
+	List				*ioLimit;
 } ResourceGroupCallbackContext;
 
 /* Shared memory and semaphores */
@@ -155,7 +171,7 @@ extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 extern bool ShouldAssignResGroupOnCoordinator(void);
 extern bool ShouldUnassignResGroup(void);
 extern void AssignResGroupOnCoordinator(void);
-extern void UnassignResGroup(bool releaseSlot);
+extern void UnassignResGroup(void);
 extern void SwitchResGroupOnSegment(const char *buf, int len);
 
 extern bool ResGroupIsAssigned(void);
@@ -168,7 +184,7 @@ extern void ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 extern void ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
-extern void ShouldBypassQuery(PlannedStmt* stmt, bool inFunc);
+extern void check_and_unassign_from_resgroup(PlannedStmt* stmt);
 extern uint64 ResourceGroupGetQueryMemoryLimit(void);
 
 /*

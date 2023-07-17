@@ -113,6 +113,8 @@ CRange::CRange(const IComparator *pcomp, IMDType::ECmpType cmp_type,
 		}
 
 		default:
+			// we don't assign datum here, so we need to release it to prevent a memory leak
+			CRefCount::SafeRelease(datum);
 			// for anything else, create a (-inf, inf) range
 			break;
 	}

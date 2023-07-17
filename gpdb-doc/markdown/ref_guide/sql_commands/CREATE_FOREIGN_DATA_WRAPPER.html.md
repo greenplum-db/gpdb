@@ -8,7 +8,7 @@ Defines a new foreign-data wrapper.
 CREATE FOREIGN DATA WRAPPER <name>
     [ HANDLER <handler_function> | NO HANDLER ]
     [ VALIDATOR <validator_function> | NO VALIDATOR ]
-    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <option> '<value>' [, ... ] ) ]
+    [ OPTIONS ( [ mpp_execute { 'coordinator' | 'any' | 'all segments' } [, ] ] <option> '<value>' [, ... ] ) ]
 ```
 
 ## <a id="section3"></a>Description 
@@ -36,10 +36,10 @@ VALIDATOR validator\_function
 OPTIONS \( option 'value' \[, ... \] \)
 :   The options for the new foreign-data wrapper. Option names must be unique. The option names and values are foreign-data wrapper-specific and are validated using the foreign-data wrappers' validator\_function.
 
-mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
+mpp\_execute \{ 'coordinator' \| 'any' \| 'all segments' \}
 :   A Greenplum Database-specific option that identifies the host from which the foreign-data wrapper reads or writes data:
 
-    -   `master` \(the default\)—Read or write data from the coordinator host.
+    -   `coordinator` \(the default\)—Read or write data from the coordinator host.
     -   `any`—Read data from either the coordinator host or any one segment, depending on which path costs less.
     -   `all segments`—Read or write data from all segments. To support this option value, the foreign-data wrapper must have a policy that matches the segments to data.
 

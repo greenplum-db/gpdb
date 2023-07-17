@@ -205,8 +205,7 @@ public:
 	GetUsage(BOOL check_system_col = false,
 			 BOOL check_distribution_col = false) const
 	{
-		if (GPOS_FTRACE(EopttraceTranslateUnusedColrefs) ||
-			(!check_system_col && IsSystemCol()) ||
+		if ((!check_system_col && IsSystemCol()) ||
 			(!check_distribution_col && IsDistCol()))
 		{
 			return EUsed;

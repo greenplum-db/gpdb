@@ -38,7 +38,7 @@ If the primary coordinator fails, the log replication process stops, and the sta
 
 Since the coordinator does not contain any user data, only the system catalog tables need to be synchronized between the primary and backup copies. When these tables are updated, changes are automatically copied over to the standby coordinator to ensure synchronization with the primary coordinator.
 
-![Coordinator Mirroring in Greenplum Database](../graphics/standby_master.jpg "Coordinator Mirroring in Greenplum Database")
+![Coordinator Mirroring in Greenplum Database](../graphics/standby_coordinator.jpg "Coordinator Mirroring in Greenplum Database")
 
 ## <a id="interconnect_redundancy"></a>About Interconnect Redundancy 
 

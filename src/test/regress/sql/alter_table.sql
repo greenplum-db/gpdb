@@ -1344,8 +1344,9 @@ select f3,max(f1) from foo group by f3;
 alter table foo alter f1 TYPE integer; -- fails
 alter table foo alter f1 TYPE varchar(10);
 
-create table anothertab (atcol1 serial8, atcol2 boolean,
-	constraint anothertab_chk check (atcol1 <= 3))
+create sequence anothertab_atcol1_seq cache 1;
+create table anothertab (atcol1 int8 default nextval('anothertab_atcol1_seq'), atcol2 boolean,
+	constraint anothertab_chk check (atcol1 <= 50))
 	distributed randomly;
 
 insert into anothertab (atcol1, atcol2) values (default, true);
@@ -1358,7 +1359,7 @@ alter table anothertab alter column atcol1 type integer;
 
 select * from anothertab;
 
-insert into anothertab (atcol1, atcol2) values (45, null); -- fails
+insert into anothertab (atcol1, atcol2) values (55, null); -- fails
 insert into anothertab (atcol1, atcol2) values (default, null);
 
 select * from anothertab;
@@ -1697,8 +1698,7 @@ INSERT INTO rewrite_test_ao VALUES (NULL);
 INSERT INTO rewrite_test_co VALUES ('something');
 INSERT INTO rewrite_test_co VALUES (NULL);
 
--- Testing all three AMs. But note that, the comments are for the heap table ('rewrite_test')
--- For AO table, always rewrite table in ADD COLUMN (see the FIXME in ATExecAddColumn())
+-- Testing all three AMs.
 -- For AOCO table, never table rewrite (just need to write new column)
 
 -- empty[12] don't need rewrite, but notempty[12]_rewrite will force one
@@ -1821,9 +1821,9 @@ $$);
 
 -- check the tables to make sure the data is expected
 -- note that serial order is undetermined for each column
-SELECT empty1, notempty1_rewrite in (1,2), notempty2_rewrite in (1,2), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,2), notempty5_rewrite in (1,2), empty6, notempty6_norewrite FROM rewrite_test;
-SELECT empty1, notempty1_rewrite in (1,2), notempty2_rewrite in (1,2), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,2), notempty5_rewrite in (1,2), empty6, notempty6_norewrite FROM rewrite_test_ao;
-SELECT empty1, notempty1_rewrite in (1,2), notempty2_rewrite in (1,2), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,2), notempty5_rewrite in (1,2), empty6, notempty6_norewrite FROM rewrite_test_co;
+SELECT empty1, notempty1_rewrite in (1,21), notempty2_rewrite in (1,21), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,21), notempty6_rewrite in (1,21), empty6, notempty6_norewrite FROM rewrite_test;
+SELECT empty1, notempty1_rewrite in (1,21), notempty2_rewrite in (1,21), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,21), notempty6_rewrite in (1,21), empty6, notempty6_norewrite FROM rewrite_test_ao;
+SELECT empty1, notempty1_rewrite in (1,21), notempty2_rewrite in (1,21), empty2, empty3, notempty3_norewrite, notempty4_norewrite, empty4, empty5, notempty5_norewrite, notempty5_rewrite in (1,21), notempty6_rewrite in (1,21), empty6, notempty6_norewrite FROM rewrite_test_co;
 
 -- cleanup
 DROP FUNCTION check_ddl_rewrite(text, text);
@@ -3153,3 +3153,10 @@ drop table atown_part;
 reset role;
 drop role atown_r1;
 drop role atown_r2;
+
+CREATE TABLE IF NOT EXISTS table_issue_15494(c0 boolean NULL);
+ALTER TABLE table_issue_15494 ALTER c0 SET DEFAULT (6>5) IS NULL;
+DROP TABLE table_issue_15494;
+CREATE TABLE IF NOT EXISTS table_issue_15494(c0 boolean);
+ALTER TABLE table_issue_15494 ALTER c0 SET DEFAULT ((1.5::FLOAT) NOTNULL);
+DROP TABLE table_issue_15494;

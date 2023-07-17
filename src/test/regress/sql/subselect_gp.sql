@@ -673,9 +673,6 @@ SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz_s WHERE
 
 -- Same as above, but with another subquery, so it must use a SubPlan. There
 -- are two references to the same SubPlan in the plan, on different slices.
--- GPDB_96_MERGE_FIXME: this EXPLAIN output should become nicer-looking once we
--- merge upstream commit 4d042999f9, to suppress the SubPlans from being
--- printed twice.
 explain SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz_s WHERE bar_s.c = 9) AND foo_s.b = (select bar_s.d::int4);
 SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz_s WHERE bar_s.c = 9) AND foo_s.b = (select bar_s.d::int4);
 
@@ -782,10 +779,8 @@ EXPLAIN select count(distinct ss.ten) from
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
 
 --
--- In case of simple exists query, planner can generate alternative
--- subplans and choose one of them during execution based on the cost.
--- The below test check that we are generating alternative subplans,
--- we should see 2 subplans in the explain
+-- Commit 41efb83 remove unused subplans in planner stage, it
+-- will shows only the subplan actually be used.
 --
 EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
 

@@ -595,18 +595,6 @@ gpdb::FuncStability(Oid funcid)
 }
 
 char
-gpdb::FuncDataAccess(Oid funcid)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_proc */
-		return func_data_access(funcid);
-	}
-	GP_WRAP_END;
-	return '\0';
-}
-
-char
 gpdb::FuncExecLocation(Oid funcid)
 {
 	GP_WRAP_START;
@@ -1807,6 +1795,17 @@ gpdb::GetDistributionPolicy(Relation rel)
 {
 	GP_WRAP_START;
 	{
+		// external tables are a special case, and we need to manually build
+		// the GpPolicy struct which contains the external table's distribution
+		if (rel_is_external_table(rel->rd_id))
+		{
+			return GpPolicyFetch(rel->rd_id);
+		}
+		// we determine the distribution at a later point for foreign tables
+		else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+		{
+			return nullptr;
+		}
 		/* catalog tables: pg_class */
 		return relation_policy(rel);
 	}
@@ -2571,6 +2570,112 @@ gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
 		LockRelationOid(reloid, lockmode);
 	}
 	GP_WRAP_END;
+}
+
+char *
+gpdb::GetRelFdwName(Oid reloid)
+{
+	GP_WRAP_START;
+	{
+		Oid fs_id = GetForeignServerIdByRelId(reloid);
+		ForeignServer *fs = GetForeignServer(fs_id);
+		ForeignDataWrapper *fdw = GetForeignDataWrapper(fs->fdwid);
+		return fdw->fdwname;
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+PathTarget *
+gpdb::MakePathtargetFromTlist(List *tlist)
+{
+	GP_WRAP_START;
+	{
+		return make_pathtarget_from_tlist(tlist);
+	}
+	GP_WRAP_END;
+}
+
+void
+gpdb::SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
+							PathTarget *input_target, List **targets,
+							List **targets_contain_srfs)
+{
+	GP_WRAP_START;
+	{
+		split_pathtarget_at_srfs(root, target, input_target, targets,
+								 targets_contain_srfs);
+	}
+	GP_WRAP_END;
+}
+
+List *
+gpdb::MakeTlistFromPathtarget(PathTarget *target)
+{
+	GP_WRAP_START;
+	{
+		return make_tlist_from_pathtarget(target);
+	}
+	GP_WRAP_END;
+	return NIL;
+}
+
+Node *
+gpdb::Expression_tree_mutator(Node *node, Node *(*mutator)(), void *context)
+{
+	GP_WRAP_START;
+	{
+		return expression_tree_mutator(node, mutator, context);
+	}
+	GP_WRAP_END;
+
+	return nullptr;
+}
+
+TargetEntry *
+gpdb::TlistMember(Expr *node, List *targetlist)
+{
+	GP_WRAP_START;
+	{
+		return tlist_member(node, targetlist);
+	}
+	GP_WRAP_END;
+
+	return nullptr;
+}
+
+Var *
+gpdb::MakeVarFromTargetEntry(Index varno, TargetEntry *tle)
+{
+	GP_WRAP_START;
+	{
+		return makeVarFromTargetEntry(varno, tle);
+	}
+	GP_WRAP_END;
+}
+
+TargetEntry *
+gpdb::FlatCopyTargetEntry(TargetEntry *src_tle)
+{
+	GP_WRAP_START;
+	{
+		return flatCopyTargetEntry(src_tle);
+	}
+	GP_WRAP_END;
+}
+
+
+// Returns true if type is a RANGE
+// pg_type (typtype = 'r')
+bool
+gpdb::IsTypeRange(Oid typid)
+{
+	GP_WRAP_START;
+	{
+		return type_is_range(typid);
+	}
+	GP_WRAP_END;
+	return false;
 }
 
 // EOF

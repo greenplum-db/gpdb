@@ -24,10 +24,10 @@ After upgrading the Greenplum PostGIS package, you can remove the PostGIS 2.1.5 
 2.  Install the PostGIS 2.5.4 package into the Greenplum Database system with the `gppkg` utility.
 
     ```
-    gppkg -i postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
+    gppkg install postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
     ```
 
-    Run the `gppkg -q --all` command to verify the updated package version is installed in the Greenplum Database system.
+    Run the `gppkg query` command to verify the updated package version is installed in the Greenplum Database system.
 
 3.  For all databases with PostGIS enabled, run the PostGIS 2.5.4 `postgis_manager.sh` script in the directory `$GPHOME/share/postgresql/contrib/postgis-2.5` to upgrade PostGIS in that database. This command upgrades PostGIS that is enabled in the database `mytest` in the Greenplum Database system.
 
@@ -50,10 +50,10 @@ After you have completed the upgrade to PostGIS 2.5.4 `pivotal.3` for the Greenp
 After upgrading the databases in the Greenplum Database system, you can remove the PostGIS 2.1.5 package from the system. This command removes the `postgis-2.1.5+pivotal.2` package from a Greenplum Database system.
 
 ```
-gppkg -r postgis-2.1.5+pivotal.2
+gppkg remove postgis-2.1.5+pivotal.2
 ```
 
-Run the `gppkg -q --all` command to list the installed Greenplum packages.
+Run the `gppkg query` command to list the installed Greenplum packages.
 
 ## <a id="topic_k4x_dp3_kmb"></a>Upgrade a PostGIS 2.5.4 Package from pivotal.1 or pivotal.2 to pivotal.3 
 
@@ -62,13 +62,13 @@ You can upgrade the installed PostGIS 2.5.4 package from `pivotal.1` or `pivotal
 The `pivotal.3` minor release supports using the `CREATE EXTENSION` command and the `DROP EXTENSION` command to enable and remove PostGIS support in a database. See [Notes](#topic_hm5_3zk_jmb).
 
 1.  Confirm you have a PostGIS 2.5.4 package `postgis-2.5.4+**pivotal.1**` or `postgis-2.5.4+**pivotal.2**` installed in a Greenplum Database system. See [Checking the PostGIS Version](#topic_yzz_l3h_kmb).
-2.  Upgrade the PostGIS package in the Greenplum Database system using the `gppkg` option `-u`. The command updates the package to the `postgis-2.5.4+pivotal.3.build.1` package.
+2.  Upgrade the PostGIS package in the Greenplum Database system using the `gppkg` option `install` with the new package name. The command updates the package to the `postgis-2.5.4+pivotal.3.build.1` package.
 
     ```
-    gppkg -u postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
+    gppkg install postgis-2.5.4+pivotal.3.build.1-gp7-rhel8-x86_64.gppkg
     ```
 
-3.  Run the `gppkg -q --all` command to verify the updated package version is installed in the Greenplum Database system.
+3.  Run the `gppkg query` command to verify the updated package version is installed in the Greenplum Database system.
 4.  For all databases with PostGIS enabled, upgrade PostGIS with the PostGIS 2.5.4 `postgis_manager.sh` script that is in the directory `$GPHOME/share/postgresql/contrib/postgis-2.5` to upgrade PostGIS in that database. This command upgrades PostGIS that is enabled in the database `mytest` in the Greenplum Database system.
 
     ```
@@ -85,7 +85,7 @@ When upgrading PostGIS you must check the version of the Greenplum PostGIS packa
 -   Check the installed PostGIS package version with the `gppkg` utility. This command lists all installed Greenplum packages.
 
     ```
-    gppkg -q --all
+    gppkg query
     ```
 
 -   Check the enabled PostGIS version in a database with the `postgis_version()` function. This `psql` command displays the version PostGIS that is enabled for the database `testdb`.
@@ -96,7 +96,7 @@ When upgrading PostGIS you must check the version of the Greenplum PostGIS packa
 
     If PostGIS is not enabled for the database, Greenplum returns a `function does not exist` error.
 
--   For the Geenplum PostGIS package `postgis-2.5.4+pivotal.2` and later, you can display the PostGIS extension version and state in a database with this query.
+-   For the Greenplum PostGIS package `postgis-2.5.4+pivotal.2` and later, you can display the PostGIS extension version and state in a database with this query.
 
     ```
     # SELECT * FROM pg_available_extensions WHERE name = 'postgis' ;

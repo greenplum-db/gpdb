@@ -1,9 +1,9 @@
 -- Adding `2` as first column as the distribution column.
 -- `2` should be on the first segment. let's double check here.
 create table store_session_id(a int, sess_id int);
-CREATE
+CREATE TABLE
 1: insert into store_session_id select 2, sess_id from pg_stat_activity where pid = pg_backend_pid();
-INSERT 1
+INSERT 0 1
 1: select gp_segment_id, a from store_session_id;
  gp_segment_id | a 
 ---------------+---
@@ -11,7 +11,7 @@ INSERT 1
 (1 row)
 
 1: create table die_commit_pending_replication(a int, b int);
-CREATE
+CREATE TABLE
 
 -- Suspend to hit commit-prepared point on segment (as we are
 -- interested in testing Commit here and not really Prepare)
@@ -90,7 +90,7 @@ select gp_inject_fault('sync_rep_query_die', 'reset', dbid) from gp_segment_conf
 (1 row)
 
 1<:  <... completed>
-INSERT 2
+INSERT 0 2
 
 -- check if the insert fails or not.
 select gp_segment_id, * from die_commit_pending_replication;
@@ -110,9 +110,9 @@ select gp_segment_id, * from die_commit_pending_replication;
 --
 
 2: create temp table die_commit_pending_replication2(a int);
-CREATE
+CREATE TABLE
 2: insert into die_commit_pending_replication2 values(2),(1);
-INSERT 2
+INSERT 0 2
 
 -- Insert fault before the "notification" code on QE and susped there.
 select gp_inject_fault_infinite('start_performDtxProtocolCommitOnePhase', 'error', dbid) from gp_segment_configuration where role='p' and content = 0;
@@ -134,6 +134,6 @@ select gp_inject_fault_infinite('start_performDtxProtocolCommitOnePhase', 'reset
 
 -- cleanup
 drop table die_commit_pending_replication;
-DROP
+DROP TABLE
 drop table store_session_id;
-DROP
+DROP TABLE

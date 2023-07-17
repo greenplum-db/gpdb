@@ -4,9 +4,9 @@
 #
 
 from gppylib.commands.base import CommandResult
-from mock import patch
+from mock import patch, mock_open
 
-from gppylib.commands.gp import is_pid_postmaster, get_postmaster_pid_locally, get_postgres_segment_processes
+from gppylib.commands.gp import is_pid_postmaster, get_postmaster_pid_locally, get_postgres_segment_processes, is_gprecoverseg_running
 from test.unit.gp_unittest import GpTestCase, run_tests
 
 
@@ -183,6 +183,22 @@ class GpCommandTestCase(GpTestCase):
     def test_get_postgres_segment_processes_when_pgrep_fails(self, mock1, mock2, mock3):
         result = get_postgres_segment_processes('/data/primary/gpseg0', 'sdw1')
         self.assertEqual(result, [1234])
+
+    @patch('gppylib.commands.gp.check_pid', return_value=True)
+    @patch('gppylib.commands.gp.get_coordinatordatadir')
+    @patch("builtins.open", new_callable=mock_open, read_data="123")
+    def test_is_gprecoverseg_running_succeeds(self, mock_file, mock1, mock2):
+        result = is_gprecoverseg_running()
+        mock2.assert_called_once_with('123')
+        self.assertTrue(result)
+
+    @patch('gppylib.commands.gp.check_pid')
+    @patch('gppylib.commands.gp.get_coordinatordatadir', return_value='/invalid/path/')
+    def test_is_gprecoverseg_running_when_pidfile_does_not_exists(self, mock1, mock2):
+        result = is_gprecoverseg_running()
+        self.assertFalse(result)
+        self.assertFalse(mock2.called)
+
 
 if __name__ == '__main__':
     run_tests()

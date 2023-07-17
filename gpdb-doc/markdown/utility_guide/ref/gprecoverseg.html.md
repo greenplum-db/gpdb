@@ -5,9 +5,10 @@ Recovers a primary or mirror segment instance that has been marked as down \(if 
 ## <a id="section2"></a>Synopsis 
 
 ```
-gprecoverseg [[-p <new_recover_host>[,...]] | -i <recover_config_file>] [-d <master_data_directory>] 
-             [-b <segment_batch_size>] [-B <batch_size>] [-F [-s]] [-a] [-q] 
-	      [--hba-hostnames <boolean>] 
+
+gprecoverseg [[-p <new_recover_host>[,...]] | -i <recover_config_file>] [-d <coordinator_data_directory>] 
+             [-b <segment_batch_size>] [-B <batch_size>] [-F [-s]] [-a] [-q] [--differential]
+	           [--hba-hostnames <boolean>] 
              [--no-progress] [-l <logfile_directory>]
 
 gprecoverseg -r 
@@ -38,17 +39,16 @@ Segment recovery using `gprecoverseg` requires that you have an active mirror to
 gpstop -r
 ```
 
-By default, a failed segment is recovered in place, meaning that the system brings the segment back online on the same host and data directory location on which it was originally configured. In this case, use the following format for the recovery configuration file \(using `-i`\).
+By default, a failed segment is recovered in place, meaning that the system brings the segment back online on the same host and data directory location on which it was originally configured. In this case, use the following format for the recovery configuration file \(using `-i`\). Note that `failed_host_name` is an optional parameter.
 
 ```
-<failed_host_address>|<port>|<data_directory> 
+<failed_host_name>|<failed_host_address>|<port>|<data_directory> 
 ```
 
-In some cases, this may not be possible \(for example, if a host was physically damaged and cannot be recovered\). In this situation, `gprecoverseg` allows you to recover failed segments to a completely new host \(using `-p`\), on an alternative data directory location on your remaining live segment hosts \(using `-s`\), or by supplying a recovery configuration file \(using `-i`\) in the following format. The word <SPACE\> indicates the location of a required space. Do not add additional spaces.
+In some cases, this may not be possible \(for example, if a host was physically damaged and cannot be recovered\). In this situation, `gprecoverseg` allows you to recover failed segments to a completely new host \(using `-p`\), on an alternative data directory location on your remaining live segment hosts \(using `-s`\), or by supplying a recovery configuration file \(using `-i`\) in the following format. The word <SPACE\> indicates the location of a required space. Do not add additional spaces. The parameter `failed_host_name` is optional.
 
 ```
-<failed_host_address>|<port>|<data_directory><SPACE>
-<recovery_host_address>|<port>|<data_directory>
+<failed_host_name>|<failed_host_address>|<port>|<data_directory><SPACE><recovery_host_name>|<recovery_host_address>|<port>|<data_directory>
 
 ```
 
@@ -80,14 +80,21 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 -d coordinator\_data\_directory
 :   Optional. The coordinator host data directory. If not specified, the value set for `$COORDINATOR_DATA_DIRECTORY` will be used.
 
--F \(full recovery\)
-:   Optional. Perform a full copy of the active segment instance in order to recover the failed segment. The default is to only copy over the incremental changes that occurred while the segment was down.
+-F (full recovery)
+:   Optional. Perform a full copy of the active segment instance in order to recover the failed segment, rather than the 
+    default behavior of copying only the changes that occurred while the segment was down.
 
-    > **Caution** A full recovery deletes the data directory of the down segment instance before copying the data from the active \(current primary\) segment instance. Before performing a full recovery, ensure that the segment failure did not cause data corruption and that any host segment disk issues have been fixed.
+    >**Caution** 
+    >A full recovery deletes the data directory of the down segment instance before copying the data from the active (current primary) segment instance. Before performing a full recovery, ensure that the segment failure did not cause data corruption and that any host segment disk issues have been fixed.
 
-    Also, for a full recovery, the utility does not restore custom files that are stored in the segment instance data directory even if the custom files are also in the active segment instance. You must restore the custom files manually. For example, when using the `gpfdists` protocol \(`gpfdist` with SSL encryption\) to manage external data, client certificate files are required in the segment instance `$PGDATA/gpfdists` directory. These files are not restored. For information about configuring `gpfdists`, see [Encrypting gpfdist Connections](../../security-guide/topics/Encryption.html).
+    Also, for a full recovery, the utility does not restore custom files that are stored in the segment instance data directory even if the custom files are also in the active segment instance. You must restore the custom files manually. For example, when using the `gpfdists` protocol (`gpfdist` with SSL encryption) to manage external data, client certificate files are required in the segment instance `$PGDATA/gpfdists` directory. These files are not restored. For information about configuring `gpfdists`, see [Encrypting gpfdist Connections](../../security-guide/topics/Encryption.html).
 
-    Use the `-s` option to output a new line once per second for each segment. Alternatively, use the `--no-progress` option to completely deactivate progress reports.
+    Use the `-s` option to output a new line once per second for each segment. Alternatively, use the `--no-progress` option to completely deactivate progress reports. To avoid copying the entire contents of the data directory during a full recovery after a previous full recovery failed, use `gprecoverseg`s 
+    
+    speed up the amount of time full recovery takes, use the `--differential` option to skip recovery of files and directories that have not changed since the last time `gprecoverseg` ran.
+
+--differential \(Differential recovery\)
+:   Optional. Perform a differential copy of the active segment instance in order to recover the failed segment. The default is to only copy over the incremental changes that occurred while the segment was down.
 
 --hba-hostnames boolean
 :   Optional. Controls whether this utility uses IP addresses or host names in the `pg_hba.conf` file when updating this file with addresses that can connect to Greenplum Database. When set to 0 -- the default value -- this utility uses IP addresses when updating this file. When set to 1, this utility uses host names when updating this file. For consistency, use the same value that was specified for `HBA_HOSTNAMES` when the Greenplum Database system was initialized. For information about how Greenplum Database resolves host names in the `pg_hba.conf` file, see [Configuring Client Authentication](../../admin_guide/client_auth.html).
@@ -101,11 +108,22 @@ The recovery process marks the segment as up again in the Greenplum Database sys
     failedAddress|failedPort|failedDataDirectory
     ```
 
+    or
+
+    ```
+    failedHostname|failedAddress|failedPort|failedDataDirectory
+    ``` 
+
     For recovery to a new location, enter two groups of fields separated by a space in the line. The required space is indicated by <SPACE\>. Do not add additional spaces.
 
     ```
-    failedAddress|failedPort|failedDataDirectory<SPACE>newAddress|
-    newPort|newDataDirectory
+    failedAddress|failedPort|failedDataDirectory<SPACE>newAddress|newPort|newDataDirectory
+    ```
+
+    or
+
+    ```
+    failedHostname|failedAddress|failedPort|failedDataDirectory<SPACE>newHostname|newAddress|newPort|newDataDirectory
     ```
 
     > **Note** Lines beginning with `#` are treated as comments and ignored.
@@ -155,7 +173,13 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 :   Show `pg_basebackup` or `pg_rewind` progress sequentially instead of in-place. Useful when writing to a file, or if a tty does not support escape sequences. The default is to show progress in-place.
 
 --no-progress
-:   Suppresses progress reports from the `pg_basebackup` or `pg_rewind` utility. The default is to display progress.
+:   Suppresses progress reports from the `pg_basebackup`, `pg_rewind`, or `rsync` utility. The default is to display progress.
+
+--differential
+:   Optional. During a full recovery, copy from the primary segment to the mirror segment only the files and directories that changed since the segment failed. You may use the `--differential` option for in-place full recovery only. See [Recovery Scenarios](../../admin_guide/highavail/topics/g-recovering-from-segment-failures.html) for more information on in-place recovery versus recovery to a different host.
+
+    >**Note**
+    >The `--differential` option cannot be combined with any of the following `gprecoverseg` options: `-i`, `-o`, `-F`, or `-p`.
 
 -v \| --verbose
 :   Sets logging output to verbose.

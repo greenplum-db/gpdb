@@ -20,7 +20,6 @@ There are changes to Greenplum Database behavior with the GPORCA optimizer enabl
 There are limitations in Greenplum Database when using the default GPORCA optimizer. GPORCA and the Postgres Planner currently coexist in Greenplum Database because GPORCA does not support all Greenplum Database features.
 -   **[Determining the Query Optimizer that is Used](../../query/topics/query-piv-opt-fallback.html)**  
  When GPORCA is enabled \(the default\), you can determine if Greenplum Database is using GPORCA or is falling back to the Postgres Planner.
--   **[About Uniform Multi-level Partitioned Tables](../../query/topics/query-piv-uniform-part-tbl.html)**  
 
 
 **Parent topic:** [Querying Data](../../query/topics/query.html)
