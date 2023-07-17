@@ -11,6 +11,7 @@ test: lockmodes
 test: pg_rewind_fail_missing_xlog
 test: prepared_xact_deadlock_pg_rewind
 test: ao_partition_lock
+test: concurrent_partition_table_operations_should_not_deadlock
 
 test: select_dropped_table
 test: update_hash_col_utilitymode execute_on_utilitymode
