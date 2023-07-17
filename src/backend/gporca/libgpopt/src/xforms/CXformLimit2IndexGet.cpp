@@ -128,8 +128,8 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		// get columns in the index
 		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
 			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
-		if (FIndexApplicableForOrderBy(popLimit->Pos(), pdrgpcrIndexColumns,
-									   pmdindex))
+		COrderSpec *pos = popLimit->Pos();
+		if (FIndexApplicableForOrderBy(pos, pdrgpcrIndexColumns, pmdindex))
 		{
 			// build IndexGet expression
 			CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
@@ -138,15 +138,20 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 			if (pexprIndexGet != nullptr)
 			{
-				// build Limit expression
-				CExpression *pexprNewLimit =
-					PexprLimit(mp, pexprIndexGet, pexprScalarOffset,
-							   pexprScalarRows, popLimit->Pos(),
-							   popLimit->FGlobal(),	 // fGlobal
-							   popLimit->FHasCount(),
-							   popLimit->IsTopLimitUnderDMLorCTAS());
+				pexprScalarOffset->AddRef();
+				pexprScalarRows->AddRef();
+				pos->AddRef();
 
-				pxfres->Add(pexprNewLimit);
+				// build Limit expression
+				CExpression *pexprLimit = GPOS_NEW(mp) CExpression(
+					mp,
+					GPOS_NEW(mp)
+						CLogicalLimit(mp, pos, popLimit->FGlobal(),	 // fGlobal
+									  popLimit->FHasCount(),
+									  popLimit->IsTopLimitUnderDMLorCTAS()),
+					pexprIndexGet, pexprScalarOffset, pexprScalarRows);
+
+				pxfres->Add(pexprLimit);
 			}
 		}
 		pdrgpcrIndexColumns->Release();
@@ -195,34 +200,6 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 		}
 	}
 	return indexApplicable;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformLimit2IndexGet::PexprLimit
-//
-//	@doc:
-//		Generate a limit operator
-//
-//---------------------------------------------------------------------------
-CExpression *
-CXformLimit2IndexGet::PexprLimit(CMemoryPool *mp, CExpression *pexprRelational,
-								 CExpression *pexprScalarStart,
-								 CExpression *pexprScalarRows, COrderSpec *pos,
-								 BOOL fGlobal, BOOL fHasCount,
-								 BOOL fTopLimitUnderDML)
-{
-	pexprScalarStart->AddRef();
-	pexprScalarRows->AddRef();
-	pos->AddRef();
-
-	CExpression *pexprLimit = GPOS_NEW(mp) CExpression(
-		mp,
-		GPOS_NEW(mp)
-			CLogicalLimit(mp, pos, fGlobal, fHasCount, fTopLimitUnderDML),
-		pexprRelational, pexprScalarStart, pexprScalarRows);
-
-	return pexprLimit;
 }
 
 // EOF

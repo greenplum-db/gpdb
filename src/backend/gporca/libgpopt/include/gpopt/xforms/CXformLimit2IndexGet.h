@@ -30,17 +30,6 @@ using namespace gpos;
 class CXformLimit2IndexGet : public CXformExploration
 {
 private:
-	// helper function for creating a limit expression
-	static CExpression *PexprLimit(
-		CMemoryPool *mp,				// memory pool
-		CExpression *pexprRelational,	// relational child
-		CExpression *pexprScalarStart,	// limit offset
-		CExpression *pexprScalarRows,	// limit count
-		COrderSpec *pos,				// ordering specification
-		BOOL fGlobal,					// is it a local or global limit
-		BOOL fHasCount,					// does limit specify a number of rows
-		BOOL fTopLimitUnderDML);
-
 	// helper function to validate if index is applicable, given OrderSpec
 	// and index columns. This function checks if ORDER BY columns are prefix of
 	// the index columns.
