@@ -24,9 +24,7 @@ Binary cursors should be used carefully. Many applications, including `psql`, ar
 
 > **Note** When the client application uses the 'extended query' protocol to issue a `FETCH` command, the Bind protocol message specifies whether data is to be retrieved in text or binary format. This choice overrides the way that the cursor is defined. The concept of a binary cursor as such is thus obsolete when using extended query protocol — any cursor can be treated as either text or binary.
 
-XXX
-A cursor can be specified in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) statement to update or delete table data. The `UPDATE` or `DELETE` statement can only be run on the server, for example in an interactive `psql` session or a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
-XXX
+A cursor can be specified in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) statement to update or delete table data. The `UPDATE` or `DELETE` statement can only be run on the server, for example in an interactive `psql` session or a script.
 
 **Parallel Retrieve Cursors**
 
@@ -64,12 +62,11 @@ WITHOUT HOLD
 query
 :   A [SELECT](SELECT.html) or [VALUES](VALUES.html) command which will provide the rows to be returned by the cursor.
 
-:   XXX
-    If the cursor is used in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) command, the `SELECT` command must satisfy the following conditions:
+:   If the cursor is used in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) command, the `SELECT` command must satisfy the following conditions:
 
     -   Cannot reference a view or external table.
     -   References only one table.
-        <br/><br/>The table must be updatable. For example, the following are not updatable: table functions, set-returning functions, append-only tables, columnar tables.
+        <br/><br/>The table must be a heap table, and it must not be replicated-distributed (must not be a view, external table, or append-optimized column-oriented table).
 
     -   Cannot contain any of the following:
         -   A grouping clause
@@ -79,8 +76,6 @@ query
         -   A join or a self-join
         <br/><br/>Specifying the `FOR UPDATE` clause in the `SELECT` command prevents other sessions from changing the rows between the time they are fetched and the time they are updated. Without the `FOR UPDATE` clause, a subsequent use of the `UPDATE` or `DELETE` command with the `WHERE CURRENT OF` clause has no effect if the row was changed since the cursor was created.
         <br/><br/>> **Note** Specifying the `FOR UPDATE` clause in the `SELECT` command locks the entire table, not just the selected rows.
-
-:   XXX
 
 The key words `BINARY`, `INSENSITIVE`, and `NO SCROLL` can appear in any order.
 
