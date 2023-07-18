@@ -111,8 +111,8 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	pdrgpcrOutput->AddRef();
 
-	CColRefSet *matched_cols =
-		CXformUtils::PcrsIndexKeys(mp, pdrgpcrOutput, pmdindex, pmdrel);
+	CColRefSet *matched_cols = CXformUtils::PcrsIndexKeysAndIncludes(
+		mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CColRefSet *output_cols = GPOS_NEW(mp) CColRefSet(mp);
 
 	// An index only scan is allowed iff each used output column reference also
@@ -128,6 +128,11 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 		// columns gp_segment_id and ctid. We also treat distribution columns
 		// as used, since they appear in the CDistributionSpecHashed of
 		// physical properties and therefore might be used in the plan.
+		//
+		// NB: Because 'pexpr' is not a scalar expression, we cannot derive
+		// scalar properties (e.g. PcrsUsed/DeriveUsedColumns). So instead, we
+		// check the used columns via GetUsage. DeriveOutputColumns could also
+		// work, but would need a flag to include system/distribution columns.
 		if (col->GetUsage(true /*check_system_cols*/,
 						  true /*check_distribution_col*/) == CColRef::EUsed)
 		{

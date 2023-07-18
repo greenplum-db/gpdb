@@ -3,12 +3,12 @@
 
 --------- Test1: test for PARALLEL RETRIEVE CURSOR on select transient record types
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 CREATE TABLE t1 AS SELECT generate_series(1, 10) AS x DISTRIBUTED by (x);
-CREATE 10
+SELECT 10
 
 CREATE OR REPLACE FUNCTION make_record(n int) RETURNS RECORD LANGUAGE plpgsql AS ' BEGIN RETURN CASE n WHEN 1 THEN ROW(1) WHEN 2 THEN ROW(1, 2) WHEN 3 THEN ROW(1, 2, 3) WHEN 4 THEN ROW(1, 2, 3, 4) ELSE ROW(1, 2, 3, 4, 5) END; END; ';
-CREATE
+CREATE FUNCTION
 
 SELECT make_record(x) FROM t1;
  make_record 
@@ -28,7 +28,7 @@ SELECT make_record(x) FROM t1;
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record(x) FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
@@ -93,7 +93,180 @@ DECLARE
  t        
 (1 row)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
+
+--------- Test1.1: test for PARALLEL RETRIEVE CURSOR on select transient record types and multi-retrieve
+1: BEGIN;
+BEGIN
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record(x) FROM t1;
+DECLARE PARALLEL RETRIEVE CURSOR
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+ finished 
+----------
+ f        
+(1 row)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+ state 
+-------
+(0 rows)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record 
+-------------
+ (1,2)       
+(1 row)
+
+ make_record 
+-------------
+ (1)         
+(1 row)
+
+ make_record 
+-------------
+ (1,2,3,4,5) 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record 
+-------------
+ (1,2,3)     
+(1 row)
+
+ make_record 
+-------------
+(0 rows)
+
+ make_record 
+-------------
+ (1,2,3,4,5) 
+(1 row)
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record 
+-------------
+ (1,2,3,4)   
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+(3 rows)
+
+ make_record 
+-------------
+(0 rows)
+
+ make_record 
+-------------
+ (1,2,3,4,5) 
+ (1,2,3,4,5) 
+(2 rows)
+
+1<:  <... completed>
+ finished 
+----------
+ t        
+(1 row)
+1: CLOSE c1;
+CLOSE CURSOR
+
+1: CREATE OR REPLACE FUNCTION make_record2(n int) RETURNS RECORD LANGUAGE plpgsql AS ' BEGIN RETURN CASE n WHEN 1 THEN ROW(1,2,3) WHEN 2 THEN ROW(1,2,3,4) WHEN 3 THEN ROW(1,2,3,4,5) WHEN 4 THEN ROW(1,2,3,4,5,6) ELSE ROW(1,2,3,4,5,6,7) END; END; ';
+CREATE FUNCTION
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record2(x) FROM t1;
+DECLARE PARALLEL RETRIEVE CURSOR
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+ endpoint_id1 | token_id | host_id | port_id | READY
+(3 rows)
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+ finished 
+----------
+ f        
+(1 row)
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+ state 
+-------
+(0 rows)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+
+ state 
+-------
+ READY 
+(1 row)
+-- *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+-- *R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 1 FROM ENDPOINT "@ENDPOINT1";
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+#-1retrieve> FATAL:  retrieve auth token is invalid
+
+
+ make_record2    
+-----------------
+ (1,2,3,4)       
+ (1,2,3,4,5)     
+ (1,2,3,4,5,6)   
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+(5 rows)
+
+ make_record2 
+--------------
+ (1,2,3)      
+(1 row)
+
+ make_record2    
+-----------------
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+ (1,2,3,4,5,6,7) 
+(4 rows)
+
+1<:  <... completed>
+ finished 
+----------
+ t        
+(1 row)
+1: CLOSE c1;
+CLOSE CURSOR
 
 --------- Test2: test for PARALLEL RETRIEVE CURSOR on select with join statement.
 -- there was a hang issue when declaring PARALLEL RETRIEVE CURSOR with join clause.
@@ -122,12 +295,12 @@ CLOSE
 (exited with code 0)
 
 DROP TABLE IF EXISTS t2;
-DROP
+DROP TABLE
 CREATE TABLE t2 (a BIGINT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 
 insert into t2 select generate_series(1,2000);
-INSERT 2000
+INSERT 0 2000
 
 SET gp_interconnect_snd_queue_depth=1;
 SET
@@ -143,7 +316,7 @@ BEGIN
  512                
 (1 row)
 2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
  state 
 -------
@@ -152,13 +325,13 @@ DECLARE
  READY 
 (3 rows)
 2: CLOSE c2;
-CLOSE
+CLOSE CURSOR
 2: END;
-END
+COMMIT
 
 -- cleanup
 DROP TABLE t2;
-DROP
+DROP TABLE
 !\retcode gpconfig -r gp_max_packet_size;
 -- start_ignore
 20210729:16:23:43:000489 gpconfig:lhlgpdb7:gpadmin-[INFO]:-completed successfully with parameters '-r gp_max_packet_size'

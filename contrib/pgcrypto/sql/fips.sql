@@ -34,7 +34,4 @@ select pgp_sym_decrypt(pgp_sym_encrypt('santa clause', 'mypass', 'cipher-algo=bf
 SELECT 'Test raw encrypt : EXPECTED PASS' as comment;
 SELECT encrypt('santa claus', 'mypass', 'aes') as raw_aes;
 
-SELECT 'Test raw encrypt : EXPECTED FAIL FIPS' as comment;
-SELECT encrypt('santa claus', 'mypass', 'bf') as raw_blowfish;
-
 DROP TABLE fipstest;

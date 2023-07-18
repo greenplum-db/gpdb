@@ -28,7 +28,11 @@
 #include "parser/parsetree.h"
 #include "tcop/pquery.h"
 
-ResManagerMemoryPolicy		gp_resmanager_memory_policy_default = RESMANAGER_MEMORY_POLICY_NONE;
+/**
+ * When resource manager is none, we use statement_mem as the memory of a query,
+ * use RESMANAGER_MEMORY_POLICY_EAGER_FREE as default memory policy
+ */
+ResManagerMemoryPolicy		gp_resmanager_memory_policy_default = RESMANAGER_MEMORY_POLICY_EAGER_FREE;
 bool						gp_log_resmanager_memory_default = false;
 int							gp_resmanager_memory_policy_auto_fixed_mem_default = 100;
 bool						gp_resmanager_print_operator_memory_limits_default = false;
@@ -53,7 +57,6 @@ typedef struct PolicyAutoContext
 /**
  * Forward declarations.
  */
-static void autoIncOpMemForResGroup(uint64 *opMemKB, int numOps);
 static bool PolicyAutoPrelimWalker(Node *node, PolicyAutoContext *context);
 static bool	PolicyAutoAssignWalker(Node *node, PolicyAutoContext *context);
 static bool IsAggMemoryIntensive(Agg *agg);
@@ -129,60 +132,9 @@ contain_ordered_aggs_walker(Node *node, void *context)
 	return expression_tree_walker(node, contain_ordered_aggs_walker, context);
 }
 
-/*
- * Automatically increase operator memory buffer in resource group mode.
- *
- * In resource group if the operator memory buffer is too small for the
- * operators we still allow the query to execute by temporarily increasing the
- * buffer size, each operator will be assigned 100KB memory no matter it is
- * memory intensive or not.  The query can execute as long as there is enough
- * resource group shared memory, the performance might not be best as 100KB is
- * rather small for memory intensive operators.  If there is no enought shared
- * memory it will run into OOM error on operators.
- *
- * @param opMemKB the original operator memory buffer size, will be in-place
- *        updated if not large enough
- * @param numOps the number of operators, both memory intensive and
- *        non-intensive
- */
-static void
-autoIncOpMemForResGroup(uint64 *opMemKB, int numOps)
-{
-	uint64		perOpMemKB;		/* per-operator buffer size */
-	uint64		minOpMemKB;		/* minimal buffer size for all the operators */
-
-	/* Only adjust operator memory buffer for resource group */
-	if (!IsResGroupEnabled())
-		return;
-
-	/*
-	 * The buffer reserved for a memory intensive operator is the same as
-	 * non-intensive ones, by default it is 100KB
-	 */
-	perOpMemKB = *gp_resmanager_memory_policy_auto_fixed_mem;
-	minOpMemKB = perOpMemKB * numOps;
-
-	/* No need to change operator memory buffer if already large enough */
-	if (*opMemKB >= minOpMemKB)
-		return;
-
-	ereport(DEBUG2,
-			(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-			 errmsg("No enough operator memory for current query."),
-			 errdetail("Current query contains %d operators, "
-					   "the minimal operator memory requirement is " INT64_FORMAT " KB, "
-					   "however there is only " INT64_FORMAT " KB reserved.  "
-					   "Temporarily increased the operator memory to execute the query.",
-					   numOps, minOpMemKB, *opMemKB),
-			 errhint("Consider increase memory_spill_ratio for better performance.")));
-
-	/* Adjust the buffer */
-	*opMemKB = minOpMemKB;
-}
-
 /**
  * Is an agg operator memory intensive? The following cases mean it is:
- * 1. If agg strategy is hashed
+ * 1. If agg strategy is hashed or mixed (assuming that MIXED must contains hash agg)
  * 2. If targetlist or qual contains a DQA
  * 3. If there is an ordered aggregated.
  */
@@ -190,7 +142,7 @@ static bool
 IsAggMemoryIntensive(Agg *agg)
 {
 	/* Case 1 */
-	if (agg->aggstrategy == AGG_HASHED)
+	if (agg->aggstrategy == AGG_HASHED || agg->aggstrategy == AGG_MIXED)
 		return true;
 
 	/* Cases 2 & 3 */
@@ -425,13 +377,6 @@ void PolicyAutoAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memAvailableByte
 
 	Assert(!result);
 	Assert(ctx.numMemIntensiveOperators + ctx.numNonMemIntensiveOperators > 0);
-
-	/*
-	 * Make sure there is enough operator memory in resource group mode.
-	 */
-	autoIncOpMemForResGroup(&ctx.queryMemKB,
-							ctx.numNonMemIntensiveOperators +
-							ctx.numMemIntensiveOperators);
 
 	if (ctx.queryMemKB <= ctx.numNonMemIntensiveOperators * (*gp_resmanager_memory_policy_auto_fixed_mem))
 	{
@@ -927,15 +872,6 @@ PolicyEagerFreeAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memAvailableByte
 	ctx.nextGroupId = 0;
 
 	/*
-	 * Make sure there is enough operator memory in resource group mode.
-	 */
-	autoIncOpMemForResGroup(&ctx.groupTree->groupMemKB,
-							Max(ctx.groupTree->numNonMemIntenseOps,
-								ctx.groupTree->maxNumConcNonMemIntenseOps) +
-							Max(ctx.groupTree->numMemIntenseOps,
-								ctx.groupTree->maxNumConcMemIntenseOps));
-
-	/*
 	 * Check if memory exceeds the limit in the root group
 	 */
 	const uint64 nonMemIntenseOpMemKB = (uint64)(*gp_resmanager_memory_policy_auto_fixed_mem);
@@ -960,7 +896,6 @@ PolicyEagerFreeAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memAvailableByte
 int64
 ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 {
-	/* Returns QD's query_mem if we are on the QE, for re-calculating QE's query_mem */
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return stmt->query_mem;
 
@@ -973,8 +908,13 @@ ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 
 	if (IsResQueueEnabled())
 		return ResourceQueueGetQueryMemoryLimit(stmt, ActivePortal->queueId);
-	if (IsResGroupActivated())
+	else if (IsResGroupEnabled())
 		return ResourceGroupGetQueryMemoryLimit();
 
-	return 0;
+	/*
+	 * we also use statment_mem to control memory if do not use any resource manager,
+	 * otherwise plan->operatorMemKB will be set to 0 and use work_mem to control memory in
+	 * agg operation, hash operation and so on.
+	 */
+	return (uint64) statement_mem * 1024L;
 }

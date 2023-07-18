@@ -23,6 +23,11 @@
 -- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
 -- s/Found.+//
 --
+-- # remove some details in "not-exist-host\" error message (platform specific)
+--
+-- m/WARNING\:\s+could not translate host name \"not-exist-host\".*/
+-- s/WARNING\:\s+could not translate host name \"not-exist-host\".*/could not translate host name \"not-exist-host\"/
+--
 -- end_matchsubs
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 
@@ -3625,6 +3630,9 @@ ALTER TABLE ext_w_dist SET DISTRIBUTED BY (b);
 SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'ext_w_dist'::regclass;
 ALTER TABLE ext_w_dist SET DISTRIBUTED RANDOMLY;
 SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'ext_w_dist'::regclass;
+CREATE EXTERNAL WEB TABLE ext_r_dist(a int) EXECUTE 'printf ${GP_SEGMENT_ID}' FORMAT 'TEXT' DISTRIBUTED BY (a);
+CREATE EXTERNAL WEB TABLE ext_r_dist(a int) EXECUTE 'printf ${GP_SEGMENT_ID}' FORMAT 'TEXT';
+ALTER TABLE ext_r_dist SET DISTRIBUTED BY (a); -- should error out altering readable external tables' distribution policy
 
 -- Testing external table as the partition child.
 CREATE TABLE part_root(a int) PARTITION BY RANGE(a);
@@ -3664,3 +3672,82 @@ DROP EXTERNAL TABLE ext_false;
 DROP EXTERNAL TABLE ext_true;
 DROP EXTERNAL TABLE ext_persistently;
 
+-- test error handling for external table
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://@hostname@@abs_srcdir@/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
+
+SELECT 6/(c-2) FROM ext_divzero;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_divzero') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_divzero;
+
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://@hostname@@abs_srcdir@/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT 6/(c-2) FROM ext_divzero;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_divzero') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_divzero;
+
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 3;
+
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_jsonerror') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_jsonerror;
+
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_jsonerror') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_jsonerror;
+
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT (a->>'9') FROM ext_badjson;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_badjson') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_badjson;
+
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT (a->>'9') FROM ext_badjson;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_badjson') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_badjson;
+
+CREATE EXTERNAL TABLE ext_fixed_width_table (
+    id INTEGER,
+    name TEXT,
+    value FLOAT
+)
+LOCATION ('file://@hostname@@abs_srcdir@/data/eh_fixed_width.dat')
+FORMAT 'CUSTOM' (formatter=fixedwidth_in, id='3', name='12', value='7')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT * FROM ext_fixed_width_table;
+
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+
+select name::json from ext_fixed_width_table;
+
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_fixed_width_table;

@@ -348,3 +348,234 @@ RESET enable_bitmapscan;
 RESET optimizer_enable_tablescan;
 RESET optimizer_enable_indexscan;
 RESET optimizer_enable_indexonlyscan;
+
+--
+-- Test Hash indexes
+--
+
+CREATE TABLE hash_tbl (a int, b int) DISTRIBUTED BY(a);
+INSERT INTO hash_tbl select i,i FROM generate_series(1, 100)i;
+ANALYZE hash_tbl;
+CREATE INDEX hash_idx1 ON hash_tbl USING hash(b);
+
+-- Now check the results by turning on indexscan
+SET enable_seqscan = ON;
+SET enable_indexscan = ON;
+SET enable_bitmapscan = OFF;
+
+SET optimizer_enable_tablescan =ON;
+SET optimizer_enable_indexscan = ON;
+SET optimizer_enable_bitmapscan = OFF;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3;
+SELECT * FROM hash_tbl WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+
+-- Now check the results by turning on bitmapscan
+SET enable_seqscan = OFF;
+SET enable_indexscan = OFF;
+SET enable_bitmapscan = ON;
+
+SET optimizer_enable_tablescan =OFF;
+SET optimizer_enable_indexscan = OFF;
+SET optimizer_enable_bitmapscan = ON;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3;
+SELECT * FROM hash_tbl WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+SELECT * FROM hash_tbl WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+SELECT * FROM hash_tbl WHERE b=3 or b=5;
+
+DROP INDEX hash_idx1;
+DROP TABLE hash_tbl;
+
+RESET enable_seqscan;
+RESET enable_indexscan;
+RESET enable_bitmapscan;
+RESET optimizer_enable_tablescan;
+RESET optimizer_enable_indexscan;
+RESET optimizer_enable_bitmapscan;
+
+-- Test Hash indexes with AO tables
+CREATE TABLE hash_tbl_ao (a int, b int) WITH (appendonly = true) DISTRIBUTED BY(a);
+INSERT INTO hash_tbl_ao select i,i FROM generate_series(1, 100)i;
+ANALYZE hash_tbl_ao;
+CREATE INDEX hash_idx2 ON hash_tbl_ao USING hash(b);
+
+-- get results for comparison purposes
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3;
+SELECT * FROM hash_tbl_ao WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 and a=3;
+SELECT * FROM hash_tbl_ao WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 or b=5;
+SELECT * FROM hash_tbl_ao WHERE b=3 or b=5;
+
+-- Now check the results by turning off seqscan/tablescan
+SET enable_seqscan = OFF;
+SET optimizer_enable_tablescan =OFF;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 and a=3;
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_tbl_ao WHERE b=3 or b=5;
+
+DROP INDEX hash_idx2;
+DROP TABLE hash_tbl_ao;
+RESET enable_seqscan;
+RESET optimizer_enable_tablescan;
+-- Test hash indexes with partition table
+
+CREATE TABLE hash_prt_tbl (a int, b int) DISTRIBUTED BY(a) PARTITION BY RANGE(a)
+(PARTITION p1 START (1) END (500) INCLUSIVE,
+PARTITION p2 START(501) END (1000) INCLUSIVE);
+INSERT INTO hash_prt_tbl select i,i FROM generate_series(1, 1000)i;
+ANALYZE hash_prt_tbl;
+CREATE INDEX hash_idx3 ON hash_prt_tbl USING hash(b);
+
+-- Now check the results by turning off dynamictablescan/seqscan
+SET enable_seqscan = OFF;
+SET optimizer_enable_dynamictablescan =OFF;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_prt_tbl WHERE b=3;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_prt_tbl WHERE b=3 and a=3;
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM hash_prt_tbl WHERE b=3 or b=5;
+
+DROP INDEX hash_idx3;
+DROP TABLE hash_prt_tbl;
+
+RESET enable_seqscan;
+RESET optimizer_enable_dynamictablescan;
+
+--
+-- Test ORCA generates BitmapIndexScan alternative for ScalarArrayOpExpr ANY only
+--
+
+CREATE TABLE bitmap_alt (id int, bitmap_idx_col int, btree_idx_col int, hash_idx_col int);
+CREATE INDEX bitmap_alt_idx1 on bitmap_alt using bitmap(bitmap_idx_col);
+CREATE INDEX bitmap_alt_idx2 on bitmap_alt using btree(btree_idx_col);
+CREATE INDEX bitmap_alt_idx3 on bitmap_alt using hash(hash_idx_col);
+INSERT INTO bitmap_alt SELECT i, i, i, i from generate_series(1,10)i;
+ANALYZE bitmap_alt;
+
+-- ORCA should generate bitmap index scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+
+-- ORCA should generate seq scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+
+--
+-- Enable the index only scan in append only table.
+-- Note: expect ORCA to use seq scan rather than index only scan like planner,
+-- because ORCA hasn't yet implemented index only scan for AO/CO tables.
+--
+CREATE TABLE bfv_index_only_ao(a int, b int) WITH (appendonly =true);
+CREATE INDEX bfv_index_only_ao_a_b on bfv_index_only_ao(a) include (b);
+
+insert into bfv_index_only_ao select i,i from generate_series(1, 10000) i;
+
+explain select count(*) from bfv_index_only_ao where a < 100;
+select count(*) from bfv_index_only_ao where a < 100;
+explain select count(*) from bfv_index_only_ao where a < 1000;
+select count(*) from bfv_index_only_ao where a < 1000;
+
+CREATE TABLE bfv_index_only_aocs(a int, b int) WITH (appendonly =true, orientation=column);
+CREATE INDEX bfv_index_only_aocs_a_b on bfv_index_only_aocs(a) include (b);
+
+insert into bfv_index_only_aocs select i,i from generate_series(1, 10000) i;
+
+explain select count(*) from bfv_index_only_aocs where a < 100;
+select count(*) from bfv_index_only_aocs where a < 100;
+explain select count(*) from bfv_index_only_aocs where a < 1000;
+select count(*) from bfv_index_only_aocs where a < 1000;
+
+-- The following tests are to verify a fix that allows ORCA to
+-- choose the bitmap index scan alternative when the predicate
+-- is in the form of `value operator cast(column)`. The fix
+-- converts the scalar comparison expression to the more common 
+-- form of `cast(column) operator value` in the preprocessor.
+
+-- Each test includes two queries. One query's predicate has 
+-- the column on the left side, and the other has the column
+-- on the right side. We expect the two queries to generate
+-- identical plans with bitmap index scan.
+
+-- Index only scan will probably be selected once index only
+-- scan in enabled for AO tables in ORCA. To prevent retain
+-- the bitmap scan alternative, turn off index only scan.
+set optimizer_enable_indexonlyscan=off;
+-- Test AO table
+-- Index scan is disabled in AO table, so bitmap scan is the
+-- most performant
+create table ao_tbl (
+    path_hash character varying(10)
+) with (appendonly='true');
+create index ao_idx on ao_tbl using btree (path_hash);
+insert into ao_tbl select 'abc' from generate_series(1,20) i;
+analyze ao_tbl;
+-- identical plans
+explain select * from ao_tbl where path_hash = 'ABC'; 
+explain select * from ao_tbl where 'ABC' = path_hash;
+
+-- Test AO partition table
+-- Dynamic index scan is disabled in AO table, so dynamic bitmap
+-- scan is the most performant
+create table part_tbl (
+    path_hash character varying(10)
+) partition by list(path_hash) 
+          (partition pics values('a') , 
+          default partition other with (appendonly='true'));
+create index part_idx on part_tbl using btree (path_hash);
+insert into part_tbl select 'abc' from generate_series(1,20) i;
+analyze part_tbl;
+-- identical plans
+explain select * from part_tbl where path_hash = 'ABC'; 
+explain select * from part_tbl where 'ABC' = path_hash; 
+
+-- Test table indexed on two columns
+-- Two indices allow ORCA to generate the bitmap scan alternative
+create table two_idx_tbl (x varchar(10), y varchar(10));
+create index x_idx on two_idx_tbl using btree (x);
+create index y_idx on two_idx_tbl using btree (y);
+insert into two_idx_tbl select 'aa', 'bb' from generate_series(1,10000) i;
+analyze two_idx_tbl;
+-- encourage bitmap scan by discouraging index scan
+set optimizer_enable_indexscan=off;
+-- identical plans
+explain select * from two_idx_tbl where x = 'cc' or y = 'dd';
+explain select * from two_idx_tbl where 'cc' = x or 'dd' = y;

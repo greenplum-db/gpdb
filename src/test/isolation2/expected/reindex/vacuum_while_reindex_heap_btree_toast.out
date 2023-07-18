@@ -1,14 +1,14 @@
 DROP TABLE IF EXISTS reindex_toast_heap;
-DROP
+DROP TABLE
 
 CREATE TABLE reindex_toast_heap (a text, b int);
-CREATE
+CREATE TABLE
 alter table reindex_toast_heap alter column a set storage external;
-ALTER
+ALTER TABLE
 insert into reindex_toast_heap select repeat('123456789',10000), i from generate_series(1,100) i;
-INSERT 100
+INSERT 0 100
 create index idx_btree_reindex_toast_heap on reindex_toast_heap(b);
-CREATE
+CREATE INDEX
 -- @Description Ensures that a vacuum during reindex operations is ok
 --
 
@@ -16,10 +16,10 @@ DELETE FROM reindex_toast_heap WHERE b % 4 = 0 ;
 DELETE 25
 1: BEGIN;
 BEGIN
--- Remember index relfilenodes from master and segments before
+-- Remember index relfilenodes from coordinator and segments before
 -- reindex.
 1: create temp table old_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname = 'idx_btree_reindex_toast_heap' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname = 'idx_btree_reindex_toast_heap');
-CREATE 4
+SELECT 4
 1: REINDEX index idx_btree_reindex_toast_heap;
 REINDEX
 2&: VACUUM reindex_toast_heap;  <waiting ...>
@@ -27,7 +27,7 @@ REINDEX
 COMMIT
 2<:  <... completed>
 VACUUM
--- Validate that reindex changed all index relfilenodes on master as well as
+-- Validate that reindex changed all index relfilenodes on coordinator as well as
 -- segments.  The following query should return 0 tuples.
 1: select oldrels.* from old_relfilenodes oldrels join (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class') where relname = 'idx_btree_reindex_toast_heap' union all select gp_segment_id as dbid, relfilenode, relname from pg_class where relname = 'idx_btree_reindex_toast_heap') newrels on oldrels.relfilenode = newrels.relfilenode and oldrels.dbid = newrels.dbid and oldrels.relname = newrels.relname;
  dbid | relfilenode | oid | relname 
@@ -41,4 +41,4 @@ COMMIT
  0     
 (1 row)
 3: INSERT INTO reindex_toast_heap VALUES (0);
-INSERT 1
+INSERT 0 1

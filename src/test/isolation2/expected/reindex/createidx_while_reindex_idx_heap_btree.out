@@ -1,14 +1,14 @@
 DROP TABLE IF EXISTS reindex_crtab_heap_btree;
-DROP
+DROP TABLE
 
 CREATE TABLE reindex_crtab_heap_btree (a INT);
-CREATE
+CREATE TABLE
 insert into reindex_crtab_heap_btree select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into reindex_crtab_heap_btree select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 create index idx_reindex_crtab_heap_btree on reindex_crtab_heap_btree(a);
-CREATE
+CREATE INDEX
 select 1 as oid_same_on_all_segs from gp_dist_random('pg_class')   where relname = 'idx_reindex_crtab_heap_btree' group by oid having count(*) = (select count(*) from gp_segment_configuration where role='p' and content > -1);
  oid_same_on_all_segs 
 ----------------------
@@ -27,7 +27,7 @@ BEGIN
 1: REINDEX index idx_reindex_crtab_heap_btree;
 REINDEX
 2: create index idx_reindex_crtab_heap_btree2 on reindex_crtab_heap_btree(a);
-CREATE
+CREATE INDEX
 1: COMMIT;
 COMMIT
 2: COMMIT;

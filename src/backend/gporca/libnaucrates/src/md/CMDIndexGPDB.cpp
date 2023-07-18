@@ -18,7 +18,6 @@
 #include "naucrates/dxl/xml/CXMLSerializer.h"
 #include "naucrates/exception.h"
 #include "naucrates/md/CMDRelationGPDB.h"
-#include "naucrates/md/IMDPartConstraint.h"
 #include "naucrates/md/IMDScalarOp.h"
 
 using namespace gpdxl;
@@ -38,7 +37,6 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 						   ULongPtrArray *index_key_cols_array,
 						   ULongPtrArray *included_cols_array,
 						   IMdIdArray *mdid_opfamilies_array,
-						   IMDPartConstraint *mdpart_constraint,
 						   IMdIdArray *child_index_oids)
 	: m_mp(mp),
 	  m_mdid(mdid),
@@ -50,7 +48,6 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	  m_index_key_cols_array(index_key_cols_array),
 	  m_included_cols_array(included_cols_array),
 	  m_mdid_opfamilies_array(mdid_opfamilies_array),
-	  m_mdpart_constraint(mdpart_constraint),
 	  m_child_index_oids(child_index_oids)
 {
 	GPOS_ASSERT(mdid->IsValid());
@@ -63,13 +60,11 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 						IMDIndex::EmdindBtree == index_type ||
 						IMDIndex::EmdindGist == index_type ||
 						IMDIndex::EmdindGin == index_type ||
-						IMDIndex::EmdindBrin == index_type);
+						IMDIndex::EmdindBrin == index_type ||
+						IMDIndex::EmdindHash == index_type);
 	GPOS_ASSERT_IMP(IMDIndex::EmdindBitmap == index_type,
 					nullptr != mdid_item_type && mdid_item_type->IsValid());
 	GPOS_ASSERT(nullptr != mdid_opfamilies_array);
-
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -83,16 +78,28 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 CMDIndexGPDB::~CMDIndexGPDB()
 {
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_mdid->Release();
 	CRefCount::SafeRelease(m_mdid_item_type);
 	m_index_key_cols_array->Release();
 	m_included_cols_array->Release();
 	m_mdid_opfamilies_array->Release();
-	CRefCount::SafeRelease(m_mdpart_constraint);
 	CRefCount::SafeRelease(m_child_index_oids);
 }
 
+const CWStringDynamic *
+CMDIndexGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDIndexGPDB::MDId
@@ -269,19 +276,6 @@ CMDIndexGPDB::GetIncludedColPos(ULONG column) const
 	return gpos::ulong_max;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDIndexGPDB::MDPartConstraint
-//
-//	@doc:
-//		Return the part constraint
-//
-//---------------------------------------------------------------------------
-IMDPartConstraint *
-CMDIndexGPDB::MDPartConstraint() const
-{
-	return m_mdpart_constraint;
-}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -331,11 +325,6 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	SerializeMDIdList(xml_serializer, m_mdid_opfamilies_array,
 					  CDXLTokens::GetDXLTokenStr(EdxltokenOpfamilies),
 					  CDXLTokens::GetDXLTokenStr(EdxltokenOpfamily));
-
-	if (nullptr != m_mdpart_constraint)
-	{
-		m_mdpart_constraint->Serialize(xml_serializer);
-	}
 
 	if (IsPartitioned())
 	{
@@ -422,7 +411,13 @@ BOOL
 CMDIndexGPDB::IsCompatible(const IMDScalarOp *md_scalar_op, ULONG key_pos) const
 {
 	GPOS_ASSERT(nullptr != md_scalar_op);
-	GPOS_ASSERT(key_pos < m_mdid_opfamilies_array->Size());
+
+	// In cover indexes the non-key "payload" should not be considered
+	// compatible with a predicate
+	if (key_pos >= m_mdid_opfamilies_array->Size())
+	{
+		return false;
+	}
 
 	// check if the index opfamily for the key at the given position is one of
 	// the families the scalar comparison belongs to

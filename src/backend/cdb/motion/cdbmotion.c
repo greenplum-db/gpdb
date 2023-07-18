@@ -224,7 +224,7 @@ createMotionLayerState(int maxMotNodeID)
 
 		/*
 		 * we'll just set this to 0.  later, ml_ipc will call
-		 * setExpectedReceivers() to set this if we are a "Receiving" motion node.
+		 * UpdateMotionExpectedReceivers() to set this if we are a "Receiving" motion node.
 		 */
 		pEntry->num_senders = 0;
 	}
@@ -519,12 +519,6 @@ SendTuple(MotionLayerState *mlStates,
 	clearTCList(&pMNEntry->ser_tup_info.chunkCache, &tcList);
 
 	return rc;
-}
-
-TupleChunkListItem
-get_eos_tuplechunklist(void)
-{
-	return s_eos_chunk_data;
 }
 
 /*
@@ -1244,7 +1238,7 @@ statRecvTuple(MotionNodeEntry *pMNEntry, ChunkSorterEntry *pCSEntry)
 }
 
 /*
- * Return true if the record cache should be sent to master
+ * Return true if the record cache should be sent to coordinator
  */
 static bool
 ShouldSendRecordCache(MotionConn *conn, SerTupInfo *pSerInfo)

@@ -1,28 +1,28 @@
 -- create a resource group when gp_resource_manager is queue
 DROP ROLE IF EXISTS role_concurrency_test;
-DROP
+DROP ROLE
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 ERROR:  resource group "rg_concurrency_test" does not exist
 -- end_ignore
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
-CREATE
+CREATE RESOURCE GROUP rg_concurrency_test WITH(concurrency=1, cpu_max_percent=20);
+CREATE RESOURCE GROUP
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
-CREATE
+CREATE ROLE
 
 -- After a 'q' command the client connection is disconnected but the
 -- QD may still be alive, if we then query pg_stat_activity quick enough
 -- we might still see this session with query '<IDLE>'.
 -- A filter is put to filter out this kind of quitted sessions.
 CREATE OR REPLACE VIEW rg_activity_status AS SELECT rsgname, wait_event_type, state, query FROM pg_stat_activity WHERE rsgname='rg_concurrency_test' AND query <> '<IDLE>';
-CREATE
+CREATE VIEW
 
 --
 -- 1. increase concurrency after pending queries
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 
 11:SET ROLE role_concurrency_test;
 SET
@@ -37,18 +37,10 @@ SET
 22&:BEGIN;  <waiting ...>
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-ALTER
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
+ALTER RESOURCE GROUP
 
 11:END;
-END
+COMMIT
 11q: ... <quitting>
 21<:  <... completed>
 BEGIN
@@ -63,9 +55,9 @@ SELECT * FROM rg_activity_status;
 (2 rows)
 
 21:END;
-END
+COMMIT
 22:END;
-END
+COMMIT
 21q: ... <quitting>
 22q: ... <quitting>
 
@@ -79,7 +71,7 @@ SELECT * FROM rg_activity_status;
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 
 11:SET ROLE role_concurrency_test;
 SET
@@ -87,139 +79,7 @@ SET
 BEGIN
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-ALTER
-
-21:SET ROLE role_concurrency_test;
-SET
-22:SET ROLE role_concurrency_test;
-SET
-21&:BEGIN;  <waiting ...>
-22&:BEGIN;  <waiting ...>
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
-11:END;
-END
-11q: ... <quitting>
-21<:  <... completed>
-BEGIN
-22<:  <... completed>
-BEGIN
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
-(2 rows)
-
-21:END;
-END
-22:END;
-END
-21q: ... <quitting>
-22q: ... <quitting>
-
-SELECT * FROM rg_activity_status;
- rsgname | wait_event_type | state | query 
----------+-----------------+-------+-------
-(0 rows)
-
---
--- 3. increase both concurrency & memory_shared_quota after pending queries
---
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 60;
-ALTER
-
-11:SET ROLE role_concurrency_test;
-SET
-11:BEGIN;
-BEGIN
-
-21:SET ROLE role_concurrency_test;
-SET
-22:SET ROLE role_concurrency_test;
-SET
-21&:BEGIN;  <waiting ...>
-22&:BEGIN;  <waiting ...>
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-ALTER
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 20;
-ALTER
-
-21<:  <... completed>
-BEGIN
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
-11:END;
-END
-11q: ... <quitting>
-22<:  <... completed>
-BEGIN
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
-(2 rows)
-
-21:END;
-END
-22:END;
-END
-21q: ... <quitting>
-22q: ... <quitting>
-
-SELECT * FROM rg_activity_status;
- rsgname | wait_event_type | state | query 
----------+-----------------+-------+-------
-(0 rows)
-
---
--- 4. increase both concurrency & memory_shared_quota before pending queries
---
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 60;
-ALTER
-
-11:SET ROLE role_concurrency_test;
-SET
-11:BEGIN;
-BEGIN
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 20;
-ALTER
+ALTER RESOURCE GROUP
 
 21:SET ROLE role_concurrency_test;
 SET
@@ -238,7 +98,7 @@ SELECT * FROM rg_activity_status;
 (3 rows)
 
 11:END;
-END
+COMMIT
 11q: ... <quitting>
 22<:  <... completed>
 BEGIN
@@ -251,9 +111,9 @@ SELECT * FROM rg_activity_status;
 (2 rows)
 
 21:END;
-END
+COMMIT
 22:END;
-END
+COMMIT
 21q: ... <quitting>
 22q: ... <quitting>
 
@@ -263,183 +123,10 @@ SELECT * FROM rg_activity_status;
 (0 rows)
 
 --
--- 5. increase both concurrency & memory_limit after pending queries
+-- 3. decrease concurrency
 --
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 0;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 30;
-ALTER
-
--- proc 11 gets a quota of 30/1=30
-11:SET ROLE role_concurrency_test;
-SET
-11:BEGIN;
-BEGIN
-
-21:SET ROLE role_concurrency_test;
-SET
-22:SET ROLE role_concurrency_test;
-SET
-21&:BEGIN;  <waiting ...>
-22&:BEGIN;  <waiting ...>
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-ALTER
--- now a new query needs a quota of 30/2=15 to run,
--- there is no free quota at the moment, so 21 & 22 are still pending
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 50;
-ALTER
--- now a new query needs a quota of 50/2=25 to run,
--- but there is only 50-30=20 free quota, so 21 & 22 are still pending
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
-ALTER
--- now a new query needs a quota of 60/2=30 to run,
--- and there is 60-30=30 free quota, so 21 gets executed and 22 is still pending
-
-21<:  <... completed>
-BEGIN
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
-11:END;
-END
--- 11 releases its quota, so there is now 30 free quota,
--- so 22 gets executed
-11q: ... <quitting>
-22<:  <... completed>
-BEGIN
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
-(2 rows)
-
-21:END;
-END
-22:END;
-END
-21q: ... <quitting>
-22q: ... <quitting>
-
-SELECT * FROM rg_activity_status;
- rsgname | wait_event_type | state | query 
----------+-----------------+-------+-------
-(0 rows)
-
---
--- 6. increase both concurrency & memory_limit before pending queries
---
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 0;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 30;
-ALTER
-
--- proc 11 gets a quota of 30/1=30
-11:SET ROLE role_concurrency_test;
-SET
-11:BEGIN;
-BEGIN
-
-ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
-ALTER
--- now a new query needs a quota of 30/2=15 to run,
--- there is no free quota at the moment
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
-(1 row)
-
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
-ALTER
--- now a new query needs a quota of 60/2=30 to run,
--- and there is 60-30=30 free quota,
--- so one new query can get executed immediately
-
-21:SET ROLE role_concurrency_test;
-SET
-22:SET ROLE role_concurrency_test;
-SET
-21:BEGIN;
-BEGIN
--- proc 21 gets executed, there is no free quota now,
--- so proc 22 is pending
-22&:BEGIN;  <waiting ...>
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | ResourceGroup   | active              | BEGIN; 
-(3 rows)
-
-11:END;
-END
--- 11 releases its quota, so there is now 30 free quota,
--- so 22 gets executed
-11q: ... <quitting>
-22<:  <... completed>
-BEGIN
-
-SELECT * FROM rg_activity_status;
- rsgname             | wait_event_type | state               | query  
----------------------+-----------------+---------------------+--------
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
- rg_concurrency_test | Client          | idle in transaction | BEGIN; 
-(2 rows)
-
-21:END;
-END
-22:END;
-END
-21q: ... <quitting>
-22q: ... <quitting>
-
-SELECT * FROM rg_activity_status;
- rsgname | wait_event_type | state | query 
----------+-----------------+-------+-------
-(0 rows)
-
---
--- 7. decrease concurrency
---
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 50;
-ALTER
-ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 0;
-ALTER
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 10;
-ALTER
+ALTER RESOURCE GROUP
 11:SET ROLE role_concurrency_test;
 SET
 11:BEGIN;
@@ -466,7 +153,7 @@ SET
 BEGIN
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 
 11q: ... <quitting>
 12q: ... <quitting>
@@ -484,16 +171,16 @@ SELECT pg_sleep(1);
 -- end_ignore
 
 --
--- 8. increase concurrency from 0
+-- 4. increase concurrency from 0
 --
 DROP ROLE role_concurrency_test;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_concurrency_test;
-DROP
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
-CREATE
+DROP RESOURCE GROUP
+CREATE RESOURCE GROUP rg_concurrency_test WITH(concurrency=0, cpu_max_percent=20);
+CREATE RESOURCE GROUP
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
-CREATE
+CREATE ROLE
 
 11:SET ROLE role_concurrency_test;
 SET
@@ -505,7 +192,7 @@ SELECT * FROM rg_activity_status;
 (1 row)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 
 11<:  <... completed>
 BEGIN
@@ -516,37 +203,37 @@ SELECT * FROM rg_activity_status;
 (1 row)
 
 11:END;
-END
+COMMIT
 11q: ... <quitting>
 
 --
--- 9.1 decrease concurrency to 0,
+-- 5.1 decrease concurrency to 0,
 -- without running queries,
 -- without pending queries.
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_activity_status;
  rsgname | wait_event_type | state | query 
 ---------+-----------------+-------+-------
 (0 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_activity_status;
  rsgname | wait_event_type | state | query 
 ---------+-----------------+-------+-------
 (0 rows)
 
 --
--- 9.2 decrease concurrency to 0,
+-- 5.2 decrease concurrency to 0,
 -- with running queries,
 -- without pending queries.
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_activity_status;
  rsgname | wait_event_type | state | query 
 ---------+-----------------+-------+-------
@@ -563,7 +250,7 @@ SELECT * FROM rg_activity_status;
 (1 row)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
@@ -571,17 +258,17 @@ SELECT * FROM rg_activity_status;
 (1 row)
 
 11:END;
-END
+COMMIT
 11q: ... <quitting>
 
 --
--- 9.3 decrease concurrency to 0,
+-- 5.3 decrease concurrency to 0,
 -- with running queries,
 -- with pending queries.
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_activity_status;
  rsgname | wait_event_type | state | query 
 ---------+-----------------+-------+-------
@@ -602,7 +289,7 @@ SELECT * FROM rg_activity_status;
 (2 rows)
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 0;
-ALTER
+ALTER RESOURCE GROUP
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state               | query  
 ---------------------+-----------------+---------------------+--------
@@ -611,7 +298,7 @@ SELECT * FROM rg_activity_status;
 (2 rows)
 
 11:END;
-END
+COMMIT
 11q: ... <quitting>
 SELECT * FROM rg_activity_status;
  rsgname             | wait_event_type | state  | query  
@@ -632,53 +319,53 @@ SELECT * FROM rg_activity_status;
 ---------+-----------------+-------+-------
 (0 rows)
 
--- 10: drop a resgroup with concurrency=0 and pending queries
+-- 6: drop a resgroup with concurrency=0 and pending queries
 DROP ROLE IF EXISTS role_concurrency_test;
-DROP
+DROP ROLE
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
-DROP
+DROP RESOURCE GROUP
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
-CREATE
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_max_percent=20);
+CREATE RESOURCE GROUP
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
-CREATE
+CREATE ROLE
 61:SET ROLE role_concurrency_test;
 SET
 61&:BEGIN;  <waiting ...>
 
 ALTER ROLE role_concurrency_test RESOURCE GROUP none;
-ALTER
+ALTER ROLE
 DROP RESOURCE GROUP rg_concurrency_test;
-DROP
+DROP RESOURCE GROUP
 
 61<:  <... completed>
 BEGIN
 61:END;
-END
+COMMIT
 61q: ... <quitting>
 
--- 11: drop a role with concurrency=0 and pending queries
+-- 7: drop a role with concurrency=0 and pending queries
 DROP ROLE IF EXISTS role_concurrency_test;
-DROP
+DROP ROLE
 -- start_ignore
 DROP RESOURCE GROUP rg_concurrency_test;
 ERROR:  resource group "rg_concurrency_test" does not exist
 -- end_ignore
 
-CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
-CREATE
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_max_percent=20);
+CREATE RESOURCE GROUP
 CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
-CREATE
+CREATE ROLE
 61:SET ROLE role_concurrency_test;
 SET
 61&:BEGIN;  <waiting ...>
 
 DROP ROLE role_concurrency_test;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_concurrency_test;
-DROP
+DROP RESOURCE GROUP
 
 61<:  <... completed>
 ERROR:  role with Oid 213301 was dropped
@@ -688,9 +375,10 @@ DETAIL:  Cannot execute commands anymore, please terminate this session.
 -- cleanup
 -- start_ignore
 DROP VIEW rg_activity_status;
-DROP
+DROP VIEW
 DROP ROLE role_concurrency_test;
 DROP
 DROP RESOURCE GROUP rg_concurrency_test;
 ERROR:  resource group "rg_concurrency_test" does not exist
 -- end_ignore
+

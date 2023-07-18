@@ -1,4 +1,10 @@
 -- SQL coverage of RESOURCE QUEUE
+-- start_ignore
+create extension if not exists gp_inject_fault;
+-- end_ignore
+
+-- check we have correct initial state of the default resource queue
+SELECT rqc.* FROM pg_resqueuecapability rqc JOIN pg_resqueue rq ON rqc.resqueueid = rq.oid WHERE rq.rsqname = 'pg_default';
 
 CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1;
 SELECT rsqname, rsqcountlimit, rsqcostlimit, rsqovercommit, rsqignorecostlimit FROM pg_resqueue WHERE rsqname='regressq';
@@ -212,7 +218,7 @@ DROP RESOURCE QUEUE reg_activeq;
 DROP RESOURCE QUEUE reg_costq;
 
 -- catalog tests
-set optimizer_enable_master_only_queries = on;
+set optimizer_enable_coordinator_only_queries = on;
 select count(*)/1000 from
 (select
 (select ressetting from pg_resqueue_attributes b
@@ -241,7 +247,7 @@ where x.oid=y.rolresqueue and a.rsqname=x.rsqname) as "RQAssignedUsers"
 from ( select distinct rsqname from pg_resqueue_attributes ) a)
 as foo;
 
-reset optimizer_enable_master_only_queries;
+reset optimizer_enable_coordinator_only_queries;
 
 -- Followup additional tests.
 -- MPP-7474
@@ -409,3 +415,23 @@ SELECT * FROM rq_test_oosm_table;
 DROP TABLE rq_test_oosm_table;
 RESET ROLE;
 DROP ROLE rq_test_oosm_role;
+-- test for extended queries
+-- create a role that only use in this test will drop it later
+-- later we will use username to identify the backend process
+create role extend_protocol_requeue_role with login;
+
+-- start_matchsubs
+--
+-- m/NOTICE:  query requested \d+/
+-- s/NOTICE:  query requested \d+/NOTICE:  query requested XXX/g
+--
+-- m/NOTICE:  SPI memory reservation \d+/
+-- s/NOTICE:  SPI memory reservation \d+/NOTICE:  SPI memory reservation /g
+--
+-- end_matchsubs
+
+-- run query using non_superuser role so that it can be
+-- controled by resource queue
+\! ./extended_protocol_resqueue dbname=regression extend_protocol_requeue_role;
+
+drop role extend_protocol_requeue_role;

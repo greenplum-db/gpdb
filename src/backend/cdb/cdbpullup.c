@@ -95,7 +95,7 @@ pullUpExpr_mutator(Node *node, void *context)
 		/* Is targetlist a List of TargetEntry?  (Plan nodes use this format) */
 		if (IsA(linitial(ctx->targetlist), TargetEntry))
 		{
-			tle = tlist_member((Expr *) var, ctx->targetlist);
+			tle = tlist_member_ignore_relabel((Expr *) var, ctx->targetlist);
 
 			/* Fail if P's result does not include this column. */
 			if (!tle)
@@ -350,52 +350,6 @@ cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist)
 }
 
 /*
- * cdbpullup_isExprCoveredByTargetlist
- *
- * Returns true if 'expr' is in 'targetlist', or if 'expr' contains no
- * Var node of the current query level that is not in 'targetlist'.
- *
- * If 'expr' is a List, returns false if the above condition is false for
- * some member of the list.
- *
- * 'targetlist' is a List of TargetEntry.
- *
- * NB:  A Var in the expr is considered as matching a Var in the targetlist
- * without regard for whether or not there is a RelabelType node atop the
- * targetlist Var.
- *
- * See also: cdbpullup_missing_var_walker
- */
-bool
-cdbpullup_isExprCoveredByTargetlist(Expr *expr, List *targetlist)
-{
-	ListCell   *cell;
-
-	/* List of Expr?  Verify that all items are covered. */
-	if (IsA(expr, List))
-	{
-		foreach(cell, (List *) expr)
-		{
-			Expr	   *item = (Expr *) lfirst(cell);
-
-			/* The whole expr or all of its Vars must be in targetlist. */
-			if (!tlist_member_ignore_relabel(item, targetlist) &&
-				cdbpullup_missingVarWalker(item, targetlist))
-				return false;
-		}
-	}
-
-	/* The whole expr or all of its Vars must be in targetlist. */
-	else if (!tlist_member_ignore_relabel(expr, targetlist) &&
-			 cdbpullup_missingVarWalker(expr, targetlist))
-		return false;
-
-	/* expr is evaluable on rows projected thru targetlist */
-	return true;
-}								/* cdbpullup_isExprCoveredByTlist */
-
-
-/*
  * cdbpullup_make_var
  *
  * Returns a new Var node with given 'varno' and 'varattno', and varlevelsup=0.
@@ -469,7 +423,6 @@ cdbpullup_make_expr(Index varno, AttrNumber varattno, Expr *oldexpr, bool modify
  * without regard for whether or not there is a RelabelType node atop the
  * targetlist Var.
  *
- * See also: cdbpullup_isExprCoveredByTargetlist
  */
 static bool
 cdbpullup_missingVarWalker(Expr *node, void *targetlist)

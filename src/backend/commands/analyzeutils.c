@@ -22,6 +22,7 @@
 #include "lib/binaryheap.h"
 #include "miscadmin.h"
 #include "parser/parse_oper.h"
+#include "postmaster/autovacuum.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/fmgroids.h"
@@ -1034,6 +1035,14 @@ needs_sample(Relation rel, VacAttrStats **vacattrstats, int attr_cnt)
 	Assert(vacattrstats != NULL);
 	List *statext_oids;
 	int			i;
+
+	/*
+	 * Do not sample partitioned tables during autovacuum for any reason.
+	 * It can take a long time and is IO intensive, and we'd only hit this case
+	 * for collecting extended stats
+	 */
+	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE && IsAutoVacuumWorkerProcess())
+		return false;
 
 	for (i = 0; i < attr_cnt; i++)
 	{

@@ -34,12 +34,14 @@
 #include "rewrite/rewriteHandler.h"
 #include "storage/bufmgr.h"
 #include "tcop/tcopprot.h"
+#include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/guc_tables.h"
 #include "utils/json.h"
 #include "utils/lsyscache.h"
 #include "utils/metrics_utils.h"
 #include "utils/rel.h"
+#include "utils/resgroup.h"
 #include "utils/ruleutils.h"
 #include "utils/snapmgr.h"
 #include "utils/tuplesort.h"
@@ -47,8 +49,11 @@
 #include "utils/xml.h"
 
 #include "cdb/cdbgang.h"
+#include "cdb/cdbvars.h"
+#include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
 #include "optimizer/optimizer.h"
+#include "optimizer/orca.h"
 
 #ifdef USE_ORCA
 extern char *SerializeDXLPlan(Query *parse);
@@ -142,8 +147,9 @@ static void ExplainModifyTarget(ModifyTable *plan, ExplainState *es);
 static void ExplainTargetRel(Plan *plan, Index rti, ExplainState *es);
 static void show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 								  ExplainState *es);
-static void ExplainMemberNodes(PlanState **planstates, int nsubnodes,
-							   int nplans, List *ancestors, ExplainState *es);
+static void ExplainMemberNodes(PlanState **planstates, int nplans,
+							   List *ancestors, ExplainState *es);
+static void ExplainMissingMembers(int nplans, int nchildren, ExplainState *es);
 static void ExplainSubPlans(List *plans, List *ancestors,
 							const char *relationship, ExplainState *es, SliceTable *sliceTable);
 static void ExplainCustomChildren(CustomScanState *css,
@@ -382,6 +388,9 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	MemoryContext oldcxt = CurrentMemoryContext;
 	bool		save_enumerate;
 	char	   *dxl = NULL;
+	PlannerInfo		*root;
+	PlannerGlobal	*glob;
+	Query			*pqueryCopy;
 
 	save_enumerate = optimizer_enumerate_plans;
 
@@ -390,8 +399,53 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	/* enable plan enumeration before calling optimizer */
 	optimizer_enumerate_plans = true;
 
+	/*
+	 * Initialize a dummy PlannerGlobal struct. ORCA doesn't use it, but the
+	 * pre- and post-processing steps do.
+	 */
+	glob = makeNode(PlannerGlobal);
+	glob->subplans = NIL;
+	glob->subroots = NIL;
+	glob->rewindPlanIDs = NULL;
+	glob->transientPlan = false;
+	glob->oneoffPlan = false;
+	glob->share.shared_inputs = NULL;
+	glob->share.shared_input_count = 0;
+	glob->share.motStack = NIL;
+	glob->share.qdShares = NULL;
+	/* these will be filled in below, in the pre- and post-processing steps */
+	glob->finalrtable = NIL;
+	glob->relationOids = NIL;
+	glob->invalItems = NIL;
+
+	root = makeNode(PlannerInfo);
+	root->parse = query;
+	root->glob = glob;
+	root->query_level = 1;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+
+	/* create a local copy to hand to the optimizer */
+	pqueryCopy = (Query *) copyObject(query);
+
+	/*
+	 * Pre-process the Query tree before calling optimizer.
+	 *
+	 * Constant folding will add dependencies to functions or relations in
+	 * glob->invalItems, for any functions that are inlined or eliminated
+	 * away. (We will find dependencies to other objects later, after planning).
+	 */
+	pqueryCopy = fold_constants(root, pqueryCopy, params, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
+
+	/*
+	 * If any Query in the tree mixes window functions and aggregates, we need to
+	 * transform it such that the grouped query appears as a subquery
+	 */
+	pqueryCopy = (Query *) transformGroupedWindows((Node *) pqueryCopy, NULL);
+
+
 	/* optimize query using optimizer and get generated plan in DXL format */
-	dxl = SerializeDXLPlan(query);
+	dxl = SerializeDXLPlan(pqueryCopy);
 
 	/* restore old value of enumerate plans GUC */
 	optimizer_enumerate_plans = save_enumerate;
@@ -623,8 +677,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
         queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
 															   starttime);
     }
-	else
-		queryDesc->showstatctx = NULL;
 
 	/* Select execution options */
 	if (es->analyze)
@@ -634,6 +686,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	if (into)
 		eflags |= GetIntoRelEFlags(into);
 
+	check_and_unassign_from_resgroup(queryDesc->plannedstmt);
 	queryDesc->plannedstmt->query_mem =
 		ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
@@ -668,7 +721,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 			if (qeError)
 			{
 				FlushErrorState();
-				ReThrowError(qeError);
+				ThrowErrorData(qeError);
 			}
 		}
 
@@ -715,8 +768,13 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	 * depending on build options.  Might want to separate that out from COSTS
 	 * at a later stage.
 	 */
-	if (es->costs)
-		ExplainPrintJITSummary(es, queryDesc);
+	if (gp_explain_jit && es->costs)
+	{
+		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
+			cdbexplain_printJITSummary(es, queryDesc);
+		else
+			ExplainPrintJITSummary(es,queryDesc);
+	}
 
 	/*
 	 * Close down the query and free resources.  Include time for this in the
@@ -811,17 +869,11 @@ ExplainPrintSettings(ExplainState *es)
 		}
 	}
 
-	/* also bail out of there are no options */
-	if (!num)
-		return;
-
 	if (es->format != EXPLAIN_FORMAT_TEXT)
 	{
-		int			i;
-
 		ExplainOpenGroup("Settings", "Settings", true, es);
 
-		for (i = 0; i < num; i++)
+		for (int i = 0; i < num; i++)
 		{
 			char	   *setting;
 			struct config_generic *conf = gucs[i];
@@ -835,12 +887,15 @@ ExplainPrintSettings(ExplainState *es)
 	}
 	else
 	{
-		int			i;
 		StringInfoData str;
+
+		/* In TEXT mode, print nothing if there are no options */
+		if (num <= 0)
+			return;
 
 		initStringInfo(&str);
 
-		for (i = 0; i < num; i++)
+		for (int i = 0; i < num; i++)
 		{
 			char	   *setting;
 			struct config_generic *conf = gucs[i];
@@ -856,8 +911,7 @@ ExplainPrintSettings(ExplainState *es)
 				appendStringInfo(&str, "%s = NULL", conf->name);
 		}
 
-		if (num > 0)
-			ExplainPropertyText("Settings", str.data, es);
+		ExplainPropertyText("Settings", str.data, es);
 	}
 }
 
@@ -1096,6 +1150,9 @@ ExplainPrintJIT(ExplainState *es, int jit_flags,
 
 	/* don't print information if no JITing happened */
 	if (!ji || ji->created_functions == 0)
+		return;
+
+	if (!gp_explain_jit)
 		return;
 
 	/* calculate total time */
@@ -1376,6 +1433,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 										((Scan *) plan)->scanrelid);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 			*rels_used = bms_add_members(*rels_used,
 										 ((ForeignScan *) plan)->fs_relids);
 			break;
@@ -1610,6 +1668,31 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					break;
 				case CMD_DELETE:
 					pname = "Foreign Delete";
+					operation = "Delete";
+					break;
+				default:
+					pname = "???";
+					break;
+			}
+			break;
+		case T_DynamicForeignScan:
+			sname = "Dynamic Foreign Scan";
+			switch (((ForeignScan *)((DynamicForeignScan *) plan))->operation)
+			{
+				case CMD_SELECT:
+					pname = "Dynamic Foreign Scan";
+					operation = "Select";
+					break;
+				case CMD_INSERT:
+					pname = "Dynamic Foreign Insert";
+					operation = "Insert";
+					break;
+				case CMD_UPDATE:
+					pname = "Dynamic Foreign Update";
+					operation = "Update";
+					break;
+				case CMD_DELETE:
+					pname = "Dynamic Foreign Delete";
 					operation = "Delete";
 					break;
 				default:
@@ -1856,6 +1939,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			ExplainScanTarget((Scan *) plan, es);
 			break;
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 			if (((Scan *) plan)->scanrelid > 0)
 				ExplainScanTarget((Scan *) plan, es);
@@ -1887,7 +1971,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				explain_get_index_name(bitmapindexscan->indexid);
 
 				if (es->format == EXPLAIN_FORMAT_TEXT)
-					appendStringInfo(es->str, " on %s", indexname);
+					appendStringInfo(es->str, " on %s",
+									 quote_identifier(indexname));
 				else
 					ExplainPropertyText("Index Name", indexname, es);
 			}
@@ -2181,7 +2266,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_IndexOnlyScan:
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
 						   "Index Cond", planstate, ancestors, es);
-			if (((IndexOnlyScan *) plan)->indexqual)
+			if (((IndexOnlyScan *) plan)->recheckqual)
 				show_instrumentation_count("Rows Removed by Index Recheck", 2,
 										   planstate, es);
 			show_scan_qual(((IndexOnlyScan *) plan)->indexorderby,
@@ -2385,12 +2470,29 @@ ExplainNode(PlanState *planstate, List *ancestors,
 											   planstate, es);
 			}
 			break;
+		case T_DynamicForeignScan:
 		case T_ForeignScan:
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
 										   planstate, es);
-			show_foreignscan_info((ForeignScanState *) planstate, es);
+			if (IsA(plan, DynamicForeignScan))
+			{
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicForeignScan *)plan)
+							->foreignscan.scan.scanrelid,
+							es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
+				ExplainPropertyInteger(
+					"Number of partitions to scan", buf,
+					list_length(((DynamicForeignScan *)plan)->partOids),es);
+				// TODO: Maybe add show_foreignscan_info here? We'd need to populate the planstate
+			}
+			else
+			{
+				show_foreignscan_info((ForeignScanState *) planstate, es);
+			}
 			break;
 		case T_CustomScan:
 			{
@@ -2619,6 +2721,30 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			ExplainCloseGroup("Workers", "Workers", false, es);
 	}
 
+	/*
+	 * If partition pruning was done during executor initialization, the
+	 * number of child plans we'll display below will be less than the number
+	 * of subplans that was specified in the plan.  To make this a bit less
+	 * mysterious, emit an indication that this happened.  Note that this
+	 * field is emitted now because we want it to be a property of the parent
+	 * node; it *cannot* be emitted within the Plans sub-node we'll open next.
+	 */
+	switch (nodeTag(plan))
+	{
+		case T_Append:
+			ExplainMissingMembers(((AppendState *) planstate)->as_nplans,
+								  list_length(((Append *) plan)->appendplans),
+								  es);
+			break;
+		case T_MergeAppend:
+			ExplainMissingMembers(((MergeAppendState *) planstate)->ms_nplans,
+								  list_length(((MergeAppend *) plan)->mergeplans),
+								  es);
+			break;
+		default:
+			break;
+	}
+
 	/* Get ready to display the child plans */
 	haschildren = planstate->initPlan ||
 		outerPlanState(planstate) ||
@@ -2669,37 +2795,31 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_ModifyTable:
 			ExplainMemberNodes(((ModifyTableState *) planstate)->mt_plans,
 							   ((ModifyTableState *) planstate)->mt_nplans,
-							   list_length(((ModifyTable *) plan)->plans),
 							   ancestors, es);
 			break;
 		case T_Append:
 			ExplainMemberNodes(((AppendState *) planstate)->appendplans,
 							   ((AppendState *) planstate)->as_nplans,
-							   list_length(((Append *) plan)->appendplans),
 							   ancestors, es);
 			break;
 		case T_MergeAppend:
 			ExplainMemberNodes(((MergeAppendState *) planstate)->mergeplans,
 							   ((MergeAppendState *) planstate)->ms_nplans,
-							   list_length(((MergeAppend *) plan)->mergeplans),
 							   ancestors, es);
 			break;
 		case T_Sequence:
 			ExplainMemberNodes(((SequenceState *) planstate)->subplans,
 							   ((SequenceState *) planstate)->numSubplans,
-							   list_length(((Sequence *) plan)->subplans),
 										   ancestors, es);
 			break;
 		case T_BitmapAnd:
 			ExplainMemberNodes(((BitmapAndState *) planstate)->bitmapplans,
 							   ((BitmapAndState *) planstate)->nplans,
-							   list_length(((BitmapAnd *) plan)->bitmapplans),
 							   ancestors, es);
 			break;
 		case T_BitmapOr:
 			ExplainMemberNodes(((BitmapOrState *) planstate)->bitmapplans,
 							   ((BitmapOrState *) planstate)->nplans,
-							   list_length(((BitmapOr *) plan)->bitmapplans),
 							   ancestors, es);
 			break;
 		case T_SubqueryScan:
@@ -3311,123 +3431,72 @@ show_tablesample(TableSampleClause *tsc, PlanState *planstate,
 
 /*
  * If it's EXPLAIN ANALYZE, show tuplesort stats for a sort node
- *
- * GPDB_90_MERGE_FIXME: The sort statistics are stored quite differently from
- * upstream, it would be nice to rewrite this to avoid looping over all the
- * sort methods and instead have a _get_stats() function as in upstream.
  */
 static void
 show_sort_info(SortState *sortstate, ExplainState *es)
 {
-	CdbExplain_NodeSummary *ns;
-	int			i;
-
 	if (!es->analyze)
 		return;
 
-	ns = ((PlanState *) sortstate)->instrument->cdbNodeSummary;
-	if (!ns)
-		return;
+	/*
+	 * Gather QEs' sort statistics
+	 *
+	 * shared_info stores workers' info, but Greenplum stores QEs'
+	 */
+	int64 peakSpaceUsed = 0;
+	int64 totalSpaceUsed = 0;
+	int64 avgSpaceUsed = 0;
+	const char *sortMethod = NULL;
+	const char *spaceType = NULL;
 
-	for (i = 0; i < NUM_SORT_METHOD; i++)
+	if (sortstate->shared_info != NULL)
 	{
-		CdbExplain_Agg	*agg;
-		const char *sortMethod;
-		const char *spaceType;
-		int			j;
-
-		/*
-		 * Memory and disk usage statistics are saved separately in GPDB so
-		 * need to pull out the one in question first
-		 */
-		for (j = 0; j < NUM_SORT_SPACE_TYPE; j++)
+		int n;
+		TuplesortInstrumentation *sinstrument;
+		for (n = 0; n < sortstate->shared_info->num_workers; n++)
 		{
-			agg = &ns->sortSpaceUsed[j][i];
-
-			if (agg->vcnt > 0)
-				break;
+			sinstrument = &sortstate->shared_info->sinstrument[n];
+			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
+				continue;		/* ignore any unfilled slots */
+			if (!sortMethod)
+				sortMethod = tuplesort_method_name(sinstrument->sortMethod);
+			if (!spaceType)
+				spaceType = tuplesort_space_type_name(sinstrument->spaceType);
+			peakSpaceUsed = Max(peakSpaceUsed, sinstrument->spaceUsed);
+			totalSpaceUsed += sinstrument->spaceUsed;
 		}
-		/*
-		 * If the current sort method in question hasn't been used, skip to
-		 * next one
-		 */
-		if (j >= NUM_SORT_SPACE_TYPE)
-			continue;
 
-		sortMethod = tuplesort_method_name(i);
-		spaceType = tuplesort_space_type_name(j);
+		avgSpaceUsed = sortstate->shared_info->num_workers > 0 ?
+			totalSpaceUsed / sortstate->shared_info->num_workers : 0;
+	}
 
+	{
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfo(es->str, "Sort Method:  %s  %s: %ldkB",
-				sortMethod, spaceType, (long) agg->vsum);
+							 sortMethod, spaceType, totalSpaceUsed);
 			if (es->verbose)
 			{
 				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
-								 (long) agg->vmax,
-								 (long) (agg->vsum / agg->vcnt),
-								 agg->vcnt);
+								 peakSpaceUsed,
+								 avgSpaceUsed,
+								 sortstate->shared_info->num_workers);
 			}
 			appendStringInfo(es->str, "\n");
 		}
 		else
 		{
 			ExplainPropertyText("Sort Method", sortMethod, es);
-			ExplainPropertyInteger("Sort Space Used", "kB", agg->vsum, es);
+			ExplainPropertyInteger("Sort Space Used", "kB", totalSpaceUsed, es);
 			ExplainPropertyText("Sort Space Type", spaceType, es);
 			if (es->verbose)
 			{
-				ExplainPropertyInteger("Sort Max Segment Memory", "kB", agg->vmax, es);
-				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", (agg->vsum / agg->vcnt), es);
-				ExplainPropertyInteger("Sort Segments", NULL, agg->vcnt, es);
+				ExplainPropertyInteger("Sort Max Segment Memory", "kB", peakSpaceUsed, es);
+				ExplainPropertyInteger("Sort Avg Segment Memory", "kB", avgSpaceUsed, es);
+				ExplainPropertyInteger("Sort Segments", NULL, sortstate->shared_info->num_workers, es);
 			}
 		}
-	}
-
-	if (sortstate->shared_info != NULL)
-	{
-		int			n;
-		bool		opened_group = false;
-
-		for (n = 0; n < sortstate->shared_info->num_workers; n++)
-		{
-			TuplesortInstrumentation *sinstrument;
-			const char *sortMethod;
-			const char *spaceType;
-			long		spaceUsed;
-
-			sinstrument = &sortstate->shared_info->sinstrument[n];
-			if (sinstrument->sortMethod == SORT_TYPE_STILL_IN_PROGRESS)
-				continue;		/* ignore any unfilled slots */
-			sortMethod = tuplesort_method_name(sinstrument->sortMethod);
-			spaceType = tuplesort_space_type_name(sinstrument->spaceType);
-			spaceUsed = sinstrument->spaceUsed;
-
-			if (es->format == EXPLAIN_FORMAT_TEXT)
-			{
-				appendStringInfoSpaces(es->str, es->indent * 2);
-				appendStringInfo(es->str,
-								 "Worker %d:  Sort Method: %s  %s: %ldkB\n",
-								 n, sortMethod, spaceType, spaceUsed);
-			}
-			else
-			{
-				if (!opened_group)
-				{
-					ExplainOpenGroup("Workers", "Workers", false, es);
-					opened_group = true;
-				}
-				ExplainOpenGroup("Worker", NULL, true, es);
-				ExplainPropertyInteger("Worker Number", NULL, n, es);
-				ExplainPropertyText("Sort Method", sortMethod, es);
-				ExplainPropertyInteger("Sort Space Used", "kB", spaceUsed, es);
-				ExplainPropertyText("Sort Space Type", spaceType, es);
-				ExplainCloseGroup("Worker", NULL, true, es);
-			}
-		}
-		if (opened_group)
-			ExplainCloseGroup("Workers", "Workers", false, es);
 	}
 }
 
@@ -3698,6 +3767,10 @@ show_join_pruning_info(List *join_prune_ids, ExplainState *es)
  *
  * We allow plugins to get control here so that plans involving hypothetical
  * indexes can be explained.
+ *
+ * Note: names returned by this function should be "raw"; the caller will
+ * apply quoting if needed.  Formerly the convention was to do quoting here,
+ * but we don't want that in non-text output formats.
  */
 static const char *
 explain_get_index_name(Oid indexId)
@@ -3710,11 +3783,10 @@ explain_get_index_name(Oid indexId)
 		result = NULL;
 	if (result == NULL)
 	{
-		/* default behavior: look in the catalogs and quote it */
+		/* default behavior: look it up in the catalogs */
 		result = get_rel_name(indexId);
 		if (result == NULL)
 			elog(ERROR, "cache lookup failed for index %u", indexId);
-		result = quote_identifier(result);
 	}
 	return result;
 }
@@ -3856,7 +3928,7 @@ ExplainIndexScanDetails(Oid indexid, ScanDirection indexorderdir,
 	{
 		if (ScanDirectionIsBackward(indexorderdir))
 			appendStringInfoString(es->str, " Backward");
-		appendStringInfo(es->str, " using %s", indexname);
+		appendStringInfo(es->str, " using %s", quote_identifier(indexname));
 	}
 	else
 	{
@@ -3934,6 +4006,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_ForeignScan:
+		case T_DynamicForeignScan:
 		case T_CustomScan:
 		case T_ModifyTable:
 			/* Assert it's on a real relation */
@@ -4107,7 +4180,7 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
 	/* Should we explicitly label target relations? */
 	labeltargets = (mtstate->mt_nplans > 1 ||
 					(mtstate->mt_nplans == 1 &&
-					 mtstate->resultRelInfo->ri_RangeTableIndex != node->nominalRelation));
+					 mtstate->resultRelInfo[0].ri_RangeTableIndex != node->nominalRelation));
 
 	if (labeltargets)
 		ExplainOpenGroup("Target Tables", "Target Tables", false, es);
@@ -4231,30 +4304,31 @@ show_modifytable_info(ModifyTableState *mtstate, List *ancestors,
  *
  * The ancestors list should already contain the immediate parent of these
  * plans.
-*
-* nsubnodes indicates the number of items in the planstates array.
-* nplans indicates the original number of subnodes in the Plan, some of these
-* may have been pruned by the run-time pruning code.
  */
 static void
-ExplainMemberNodes(PlanState **planstates, int nsubnodes, int nplans,
+ExplainMemberNodes(PlanState **planstates, int nplans,
 				   List *ancestors, ExplainState *es)
 {
 	int			j;
 
-	/*
-	 * The number of subnodes being lower than the number of subplans that was
-	 * specified in the plan means that some subnodes have been ignored per
-	 * instruction for the partition pruning code during the executor
-	 * initialization.  To make this a bit less mysterious, we'll indicate
-	 * here that this has happened.
-	 */
-	if (nsubnodes < nplans)
-		ExplainPropertyInteger("Subplans Removed", NULL, nplans - nsubnodes, es);
-
-	for (j = 0; j < nsubnodes; j++)
+	for (j = 0; j < nplans; j++)
 		ExplainNode(planstates[j], ancestors,
 					"Member", NULL, es);
+}
+
+/*
+ * Report about any pruned subnodes of an Append or MergeAppend node.
+ *
+ * nplans indicates the number of live subplans.
+ * nchildren indicates the original number of subnodes in the Plan;
+ * some of these may have been pruned by the run-time pruning code.
+ */
+static void
+ExplainMissingMembers(int nplans, int nchildren, ExplainState *es)
+{
+	if (nplans < nchildren || es->format != EXPLAIN_FORMAT_TEXT)
+		ExplainPropertyInteger("Subplans Removed", NULL,
+							   nchildren - nplans, es);
 }
 
 /*

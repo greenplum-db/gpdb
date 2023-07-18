@@ -165,9 +165,9 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformSubqNAryJoin2Apply(m_mp));
 	SkipUnused(2);
 	Add(GPOS_NEW(m_mp) CXformInnerApplyWithOuterKey2InnerJoin(m_mp));
-	Add(GPOS_NEW(m_mp) CXformInnerJoin2NLJoin(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformImplementIndexApply(m_mp));
-	Add(GPOS_NEW(m_mp) CXformInnerJoin2HashJoin(m_mp));
+	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformInnerApply2InnerJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformInnerApply2InnerJoinNoCorrelations(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementInnerCorrelatedApply(m_mp));
@@ -256,7 +256,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformImplementCTEProducer(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementCTEConsumer(m_mp));
 	Add(GPOS_NEW(m_mp) CXformExpandFullOuterJoin(m_mp));
-	Add(GPOS_NEW(m_mp) CXformExternalGet2ExternalScan(m_mp));
+	Add(GPOS_NEW(m_mp) CXformForeignGet2ForeignScan(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2BitmapBoolOp(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2DynamicBitmapBoolOp(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementBitmapTableGet(m_mp));
@@ -290,6 +290,10 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformLeftJoin2RightJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformRightOuterJoin2HashJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementInnerJoin(m_mp));
+	Add(GPOS_NEW(m_mp) CXformDynamicForeignGet2DynamicForeignScan(m_mp));
+	Add(GPOS_NEW(m_mp) CXformExpandDynamicGetWithForeignPartitions(m_mp));
+	Add(GPOS_NEW(m_mp) CXformPushJoinBelowLeftUnionAll(m_mp));
+	Add(GPOS_NEW(m_mp) CXformPushJoinBelowRightUnionAll(m_mp));
 
 	GPOS_ASSERT(nullptr != m_rgpxf[CXform::ExfSentinel - 1] &&
 				"Not all xforms have been instantiated");

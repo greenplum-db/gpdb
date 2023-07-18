@@ -157,7 +157,7 @@ typedef struct Query
 	bool		hasTargetSRFs;	/* has set-returning functions in tlist */
 	bool		hasSubLinks;	/* has subquery SubLink */
 	bool        hasDynamicFunctions; /* has functions with unstable return types */
-	bool		hasFuncsWithExecRestrictions; /* has functions with EXECUTE ON MASTER or ALL SEGMENTS */
+	bool		hasFuncsWithExecRestrictions; /* has functions with EXECUTE ON COORDINATOR or ALL SEGMENTS */
 	bool		hasDistinctOn;	/* distinctClause is from DISTINCT ON */
 	bool		hasRecursive;	/* WITH RECURSIVE was specified */
 	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH */
@@ -733,6 +733,7 @@ typedef struct TableLikeClause
 	NodeTag		type;
 	RangeVar   *relation;
 	bits32		options;		/* OR of TableLikeOption flags */
+	Oid			relationOid;	/* If table has been looked up, its OID */
 } TableLikeClause;
 
 typedef enum TableLikeOption
@@ -745,6 +746,9 @@ typedef enum TableLikeOption
 	CREATE_TABLE_LIKE_INDEXES = 1 << 5,
 	CREATE_TABLE_LIKE_STATISTICS = 1 << 6,
 	CREATE_TABLE_LIKE_STORAGE = 1 << 7,
+	CREATE_TABLE_LIKE_ENCODING = 1 << 8,
+	CREATE_TABLE_LIKE_RELOPT = 1 << 9,
+	CREATE_TABLE_LIKE_AM = 1 << 10,
 	CREATE_TABLE_LIKE_ALL = PG_INT32_MAX
 } TableLikeOption;
 
@@ -999,10 +1003,10 @@ typedef struct PartitionCmd
  *	  inFromCl marks those range variables that are listed in the FROM clause.
  *	  It's false for RTEs that are added to a query behind the scenes, such
  *	  as the NEW and OLD variables for a rule, or the subqueries of a UNION.
- *	  This flag is not used anymore during parsing, since the parser now uses
- *	  a separate "namespace" data structure to control visibility, but it is
- *	  needed by ruleutils.c to determine whether RTEs should be shown in
- *	  decompiled queries.
+ *	  This flag is not used during parsing (except in transformLockingClause,
+ *	  q.v.); the parser now uses a separate "namespace" data structure to
+ *	  control visibility.  But it is needed by ruleutils.c to determine
+ *	  whether RTEs should be shown in decompiled queries.
  *
  *	  requiredPerms and checkAsUser specify run-time access permissions
  *	  checks to be performed at query startup.  The user must have *all*
@@ -1024,12 +1028,16 @@ typedef struct PartitionCmd
  *
  *	  updatedCols is also used in some other places, for example, to determine
  *	  which triggers to fire and in FDWs to know which changed columns they
- *	  need to ship off.  Generated columns that are caused to be updated by an
- *	  update to a base column are collected in extraUpdatedCols.  This is not
- *	  considered for permission checking, but it is useful in those places
- *	  that want to know the full set of columns being updated as opposed to
- *	  only the ones the user explicitly mentioned in the query.  (There is
- *	  currently no need for an extraInsertedCols, but it could exist.)
+ *	  need to ship off.
+ *
+ *	  Generated columns that are caused to be updated by an update to a base
+ *	  column are listed in extraUpdatedCols.  This is not considered for
+ *	  permission checking, but it is useful in those places that want to know
+ *	  the full set of columns being updated as opposed to only the ones the
+ *	  user explicitly mentioned in the query.  (There is currently no need for
+ *	  an extraInsertedCols, but it could exist.)  Note that extraUpdatedCols
+ *	  is populated during query rewrite, NOT in the parser, since generated
+ *	  columns could be added after a rule has been parsed and stored.
  *
  *	  securityQuals is a list of security barrier quals (boolean expressions),
  *	  to be tested in the listed order before returning a row from the
@@ -1994,6 +2002,7 @@ typedef enum AlterTableType
 	AT_AddIdentity,				/* ADD IDENTITY */
 	AT_SetIdentity,				/* SET identity column options */
 	AT_DropIdentity,			/* DROP IDENTITY */
+	AT_CookedColumnDefault,		/* add a pre-cooked column default */
 
 	AT_SetDistributedBy,		/* SET DISTRIBUTED BY */
 	AT_ExpandTable,          /* EXPAND DISTRIBUTED */
@@ -2031,6 +2040,7 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	Node	   *transform;		/* transformation expr for ALTER TYPE */
 	DropBehavior behavior;		/* RESTRICT or CASCADE for DROP cases */
 	bool		missing_ok;		/* skip error if missing? */
+	bool		recurse;		/* exec-time recursion */
 
 	/*
 	 * Extra information dispatched from QD to QEs in AT_SetDistributedBy and
@@ -2042,7 +2052,6 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	const char *queryString;
 
 	GpPolicy   *policy;
-
 } AlterTableCmd;
 
 typedef enum GpAlterPartitionIdType
@@ -3794,7 +3803,7 @@ typedef struct LockStmt
 	List	   *relations;		/* relations to lock */
 	int			mode;			/* lock mode */
 	bool		nowait;			/* no wait mode */
-	bool		coordinatoronly;		/* GPDB: lock only on master */
+	bool		coordinatoronly;		/* GPDB: lock only on coordinator */
 } LockStmt;
 
 /* ----------------------
@@ -3814,7 +3823,8 @@ typedef struct ConstraintsSetStmt
  */
 
 /* Reindex options */
-#define REINDEXOPT_VERBOSE 1 << 0	/* print progress info */
+#define REINDEXOPT_VERBOSE (1 << 0)	/* print progress info */
+#define REINDEXOPT_REPORT_PROGRESS (1 << 1)	/* report pgstat progress */
 
 typedef enum ReindexObjectType
 {

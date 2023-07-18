@@ -1,8 +1,8 @@
 -- Tests FTS can handle DNS error.
 -- to make test deterministic and fast
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --coordinatoronly;
 -- start_ignore
-20180815:04:37:38:022354 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --masteronly'
+20180815:04:37:38:022354 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_fts_probe_retries -v 2 --coordinatoronly'
 
 -- end_ignore
 (exited with code 0)
@@ -11,15 +11,15 @@
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
 -- case segment is in recovery. Approximately we want to wait 30 seconds.
-!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --coordinatoronly;
 -- start_ignore
-20180815:04:37:38:022446 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly'
+20180815:04:37:38:022446 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_count -v 127 --skipvalidation --coordinatoronly'
 
 -- end_ignore
 (exited with code 0)
-!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --coordinatoronly;
 -- start_ignore
-20180815:04:37:39:022532 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly'
+20180815:04:37:39:022532 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-c gp_gang_creation_retry_timer -v 250 --skipvalidation --coordinatoronly'
 
 -- end_ignore
 (exited with code 0)
@@ -27,8 +27,8 @@
 -- start_ignore
 20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Starting gpstop with args: -u
 20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Gathering information and validating the environment...
-20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
 20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
 20180815:04:37:39:022618 gpstop:gpdbvm:gpadmin-[INFO]:-Signalling all postmaster processes to reload
 . 
@@ -81,9 +81,9 @@ select count(*) from gp_segment_configuration where status = 'd';
 -- start_ignore
 20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting gprecoverseg with args: -aF
 20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
-20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
-20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
-20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
+20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
 20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Greenplum instance recovery parameters
 20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
 20180815:04:37:43:022680 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery type              = Standard
@@ -135,8 +135,8 @@ DO
 -- start_ignore
 20180815:04:37:51:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting gprecoverseg with args: -ar
 20180815:04:37:51:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
-20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
-20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
+20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
 20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Greenplum instance recovery parameters
 20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
 20180815:04:37:52:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery type              = Rebalance
@@ -166,9 +166,9 @@ DO
 20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Starting segment synchronization
 20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-=============================START ANOTHER RECOVER=========================================
 20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
-20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
-20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
-20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Heap checksum setting is consistent between master and the segments that are candidates for recoverseg
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-coordinator Greenplum Version: 'PostgreSQL 9.1beta2 (Greenplum Database 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss) on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-16), 64-bit compiled on Aug 15 2018 00:06:20 (with assert checking)'
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
+20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Heap checksum setting is consistent between coordinator and the segments that are candidates for recoverseg
 20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Greenplum instance recovery parameters
 20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:----------------------------------------------------------
 20180815:04:37:55:023173 gprecoverseg:gpdbvm:gpadmin-[INFO]:-Recovery type              = Standard
@@ -226,21 +226,21 @@ select count(*) from gp_segment_configuration where status = 'd';
  0     
 (1 row)
 
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+!\retcode gpconfig -r gp_fts_probe_retries --coordinatoronly;
 -- start_ignore
-20180815:04:38:01:023620 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_fts_probe_retries --masteronly'
+20180815:04:38:01:023620 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_fts_probe_retries --coordinatoronly'
 
 -- end_ignore
 (exited with code 0)
-!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --coordinatoronly;
 -- start_ignore
-20180815:04:38:02:023710 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_count --skipvalidation --masteronly'
+20180815:04:38:02:023710 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_count --skipvalidation --coordinatoronly'
 
 -- end_ignore
 (exited with code 0)
-!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --coordinatoronly;
 -- start_ignore
-20180815:04:38:03:023794 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_timer --skipvalidation --masteronly'
+20180815:04:38:03:023794 gpconfig:gpdbvm:gpadmin-[INFO]:-completed successfully with parameters '-r gp_gang_creation_retry_timer --skipvalidation --coordinatoronly'
 
 -- end_ignore
 (exited with code 0)
@@ -248,8 +248,8 @@ select count(*) from gp_segment_configuration where status = 'd';
 -- start_ignore
 20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Starting gpstop with args: -u
 20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Gathering information and validating the environment...
-20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
-20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from master...
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
 20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.7526.g2508fd0 build dev-oss'
 20180815:04:38:03:023878 gpstop:gpdbvm:gpadmin-[INFO]:-Signalling all postmaster processes to reload
 . 

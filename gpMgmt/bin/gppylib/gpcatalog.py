@@ -25,15 +25,13 @@ class GPCatalogException(Exception):
 COORDINATOR_ONLY_TABLES = [
     'gp_configuration_history',
     'gp_segment_configuration',
-    'pg_auth_time_constraint',
-    'pg_description',
-    'pg_shdescription',
     'pg_stat_last_operation',
     'pg_stat_last_shoperation',
     'pg_statistic',
     'pg_statistic_ext',
     'pg_statistic_ext_data',
     'gp_partition_template',
+	'pg_event_trigger'
     ]
 
 # Hard coded tables that have different values on every segment
@@ -49,6 +47,7 @@ SEGMENT_LOCAL_TABLES = [
 # catalog table
 DEPENDENCY_EXCLUSION = [
     'pg_authid',
+    'pg_collation',
     'pg_compression',
     'pg_conversion',
     'pg_database',
@@ -60,7 +59,9 @@ DEPENDENCY_EXCLUSION = [
     'pg_resourcetype',
     'pg_resqueue',
     'pg_resqueuecapability',
-    'pg_tablespace'
+    'pg_subscription',
+    'pg_tablespace',
+    'pg_transform'
     ]
 
 # ============================================================================

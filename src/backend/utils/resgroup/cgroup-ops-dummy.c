@@ -165,60 +165,11 @@ setcpulimit_dummy(Oid group, int cpu_rate_limit)
 }
 
 /*
- * Set the memory limit for the OS group by value.
- *
- * memory_limit is the limit value in chunks
- *
- * If cgroup supports memory swap, we will write the same limit to
- * memory.memsw.limit and memory.limit.
- */
-static void
-setmemorylimitbychunks_dummy(Oid group, int32 memory_limit_chunks)
-{
-	unsupported_system();
-}
-
-/*
- * Set the memory limit for the OS group by rate.
- *
- * memory_limit should be within [0, 100].
- */
-static void
-setmemorylimit_dummy(Oid group, int memory_limit)
-{
-	unsupported_system();
-}
-
-/*
  * Get the cpu usage of the OS group, that is the total cpu time obtained
  * by this OS group, in nano seconds.
  */
 static int64
 getcpuusage_dummy(Oid group)
-{
-	unsupported_system();
-	return 0;
-}
-
-/*
- * Get the memory usage of the OS group
- *
- * memory usage is returned in chunks
- */
-static int32
-getmemoryusage_dummy(Oid group)
-{
-	unsupported_system();
-	return 0;
-}
-
-/*
- * Get the memory limit of the OS group
- *
- * memory limit is returned in chunks
- */
-static int32
-getmemorylimitchunks_dummy(Oid group)
 {
 	unsupported_system();
 	return 0;
@@ -265,11 +216,24 @@ convertcpuusage_dummy(int64 usage, int64 duration)
 	return 0.0;
 }
 
-static int32
-gettotalmemory_dummy(void)
+
+static List *
+parseio_dummy(const char *io_limit)
 {
 	unsupported_system();
-	return 0.0;
+	return NULL;
+}
+
+static void
+setio_dummy(Oid group, List *limit_list)
+{
+	unsupported_system();
+}
+
+static void
+freeio_dummy(List *limit_list)
+{
+	unsupported_system();
 }
 
 static CGroupOpsRoutine cGroupOpsRoutineDummy = {
@@ -291,16 +255,14 @@ static CGroupOpsRoutine cGroupOpsRoutineDummy = {
 		.setcpulimit = setcpulimit_dummy,
 		.getcpuusage = getcpuusage_dummy,
 
-		.gettotalmemory = gettotalmemory_dummy,
-		.getmemoryusage = getmemoryusage_dummy,
-		.setmemorylimit = setmemorylimit_dummy,
-		.getmemorylimitchunks = getmemorylimitchunks_dummy,
-		.setmemorylimitbychunks = setmemorylimitbychunks_dummy,
-
 		.getcpuset = getcpuset_dummy,
 		.setcpuset = setcpuset_dummy,
 
 		.convertcpuusage = convertcpuusage_dummy,
+
+		.parseio = parseio_dummy,
+		.setio = setio_dummy,
+		.freeio = freeio_dummy,
 };
 
 CGroupOpsRoutine *get_cgroup_routine_dummy(void)

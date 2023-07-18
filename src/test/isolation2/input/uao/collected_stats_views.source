@@ -1,0 +1,79 @@
+-- @Description Tests collected statistics reporting for append-optimized tables
+
+-- Helper function that ensures stats collector receives stat from the latest operation.
+create or replace function wait_until_heap_blks_read_change_to(table_name text, stat_val_expected bigint)
+    returns text as $$
+declare
+    stat_val int; /* in func */
+    i int; /* in func */
+begin
+    i := 0; /* in func */
+    while i < 1200 loop
+        select heap_blks_read into stat_val from pg_statio_all_tables where relname = table_name; /* in func */
+        if stat_val = stat_val_expected then /* in func */
+            return 'OK'; /* in func */
+        end if; /* in func */
+        perform pg_sleep(0.1); /* in func */
+        perform pg_stat_clear_snapshot(); /* in func */
+        i := i + 1; /* in func */
+    end loop; /* in func */
+    return 'Fail'; /* in func */
+end; /* in func */
+$$ language plpgsql;
+
+-- Test collected heap_blks_* I/O stats for append-optimized tables
+-- Setup test table
+CREATE TABLE statio_@amname@(a int, b int) USING @amname@;
+-- heap_blks_read should be zero to begin with
+1U: SELECT heap_blks_read, heap_blks_hit FROM pg_statio_all_tables WHERE relname = 'statio_@amname@';
+
+INSERT INTO statio_@amname@ SELECT 0, i FROM generate_series(1, 100000)i;
+-- heap_blks_read should remain zero after INSERT
+SELECT heap_blks_read, heap_blks_hit FROM gp_statio_all_tables WHERE gp_segment_id = 1 AND relname = 'statio_@amname@';
+
+-- Perform seq scan and wait until the stats collector receives the stats update
+1U&: SELECT wait_until_heap_blks_read_change_to('statio_@amname@', (pg_relation_size('statio_@amname@') + (current_setting('block_size')::int - 1)) / current_setting('block_size')::int);
+SELECT sum(a+b) FROM statio_@amname@;
+1U<:
+
+-- cleanup
+DROP TABLE statio_@amname@;
+DROP FUNCTION wait_until_heap_blks_read_change_to(table_name text, stat_val_expected bigint);
+-- stats should be gone after table is dropped
+1U: SELECT heap_blks_read, heap_blks_hit FROM pg_statio_all_tables WHERE relname = 'statio_@amname@';
+1Uq:
+
+-- Test collected I/O timing stats for append-optimized tables
+1U: SET track_io_timing = on;
+
+-- Setup test table
+1U: CREATE TEMP TABLE stat_io_timing(a int, b int) USING @amname@;
+1U: INSERT INTO stat_io_timing SELECT 0, i FROM generate_series(1, 100000)i;
+
+-- Sleep for 1s just for once to ensure blk_read_time and blk_write_time in
+-- pg_stat_database get updated. The number is selected to be larger than the
+-- 1-ms granularity of these two fields.
+SELECT gp_inject_fault('ao_storage_read_after_fileread', 'sleep', '', '', '', 1, 1, 1, dbid)
+FROM gp_segment_configuration where role = 'p' AND content = 1;
+SELECT gp_inject_fault('ao_storage_write_after_filewrite', 'sleep', '', '', '', 1, 1, 1, dbid)
+FROM gp_segment_configuration where role = 'p' AND content = 1;
+
+-- start_matchsubs
+-- m{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}{I/O Timings: read=##.### write=##.###}
+-- m{I/O Timings: read=\d*\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+.*}{I/O Timings: read=##.###.*}
+-- m/Buffers: shared hit=\d+ read=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+\s+/Buffers: shared hit=### read=###/
+-- end_matchsubs
+-- "I/O Timings" should be available for Append-optimized table, and "Buffers" should also be available due to auxiliary table lookups
+1U: EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF, SUMMARY OFF) INSERT INTO stat_io_timing SELECT * FROM stat_io_timing;
+
+-- blk_read_time and blk_write_time should be non-zero
+1U: SELECT datname, blk_read_time > 0 AS has_blk_read_time, blk_write_time > 0 AS has_blk_write_time from pg_stat_database WHERE datname = 'isolation2test';
+
+-- cleanup
+SELECT gp_inject_fault('all', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+1U: DROP TABLE stat_io_timing;
+1U: RESET track_io_timing;
+1Uq:

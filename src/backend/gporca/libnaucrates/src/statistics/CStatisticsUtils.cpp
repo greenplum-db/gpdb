@@ -39,6 +39,7 @@
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/md/IMDTypeInt8.h"
 #include "naucrates/md/IMDTypeOid.h"
+#include "naucrates/statistics/CExtendedStatsProcessor.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
 #include "naucrates/statistics/CHistogram.h"
 #include "naucrates/statistics/CJoinStatsProcessor.h"
@@ -1070,10 +1071,11 @@ CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp,
 
 	GPOS_ASSERT(pps_reqd->SelectorIds(scan_id)->Size() > 0);
 
+	// GPDB_12_MERGE_FEATURE_NOT_SUPPORTED:
 	// each Dynamic Scan may have multiple associated PartitionSelectors;
 	// for now just use the first one in the list (similar to 6X, which used
-	// the PartitionSelector on the top-most Join node)
-	// GPDB_12_MERGE_FIXME: combine stats from all associated PartitionSelectors
+	// the PartitionSelector on the top-most Join node). Ideally, we would
+	// combine partition selectors here to get a more accurate stats estimate
 	const SPartSelectorInfoEntry *part_selector_info = nullptr;
 	{
 		CBitSetIter it(*selector_ids);
@@ -1507,8 +1509,37 @@ CStatisticsUtils::MaxNumGroupsForGivenSrcGprCols(
 	CColRef *first_colref = col_factory->LookupColRef(*(*src_grouping_cols)[0]);
 	CDouble upper_bound_ndvs = input_stats->GetColUpperBoundNDVs(first_colref);
 
+	DOUBLE mvndistinct;
+	ULongPtrArray *updated_src_grouping_cols = GPOS_NEW(mp) ULongPtrArray(mp);
+	for (ULONG ul = 0; ul < src_grouping_cols->Size(); ul++)
+	{
+		updated_src_grouping_cols->Append(GPOS_NEW(mp)
+											  ULONG(*(*src_grouping_cols)[ul]));
+	}
+
 	CDoubleArray *ndvs = GPOS_NEW(mp) CDoubleArray(mp);
-	AddNdvForAllGrpCols(mp, input_stats, src_grouping_cols, ndvs);
+
+	// Use all applicable multivariate n-distinct correlated stats
+	while (true)
+	{
+		if (CExtendedStatsProcessor::ApplyCorrelatedStatsToNDistinctCalculation(
+				mp, input_stats->GetExtStatsInfo(),
+				input_stats->GetColidToAttnoMapping(),
+				updated_src_grouping_cols, &mvndistinct))
+		{
+			ndvs->Append(GPOS_NEW(mp) CDouble(mvndistinct));
+		}
+		else
+		{
+			// No more relevant multivariate n-distinct stats
+			break;
+		}
+	}
+
+	// add any remaining columns not covered by multivariate n-distinct
+	// correlated stats
+	AddNdvForAllGrpCols(mp, input_stats, updated_src_grouping_cols, ndvs);
+	updated_src_grouping_cols->Release();
 
 	// take the minimum of (a) the estimated number of groups from the columns of this source,
 	// (b) input rows, and (c) cardinality upper bound for the given source in the

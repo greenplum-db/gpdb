@@ -3,7 +3,7 @@
 
 -- create a temp table
 1: CREATE TEMP TABLE test_temp_table_cleanup(a int);
-CREATE
+CREATE TABLE
 
 -- panic on segment 0
 1: SELECT gp_inject_fault('before_exec_scan', 'panic', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;

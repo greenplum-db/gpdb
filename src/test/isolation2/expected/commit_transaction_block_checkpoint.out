@@ -13,7 +13,7 @@ CHECKPOINT
 2: begin;
 BEGIN
 2: create table t_commit_transaction_block_checkpoint (c int) distributed by (c);
-CREATE
+CREATE TABLE
 2&: commit;  <waiting ...>
 
 -- wait for the fault to trigger since following checkpoint could be faster
@@ -37,7 +37,7 @@ COMMIT
 1U<:  <... completed>
 CHECKPOINT
 
--- TEST 2: block checkpoint on master
+-- TEST 2: block checkpoint on coordinator
 
 -- pause the CommitTransaction right before persistent table cleanup after
 -- notifyCommittedDtxTransaction()
@@ -53,7 +53,7 @@ CHECKPOINT
 2: begin;
 BEGIN
 2: drop table t_commit_transaction_block_checkpoint;
-DROP
+DROP TABLE
 2&: commit;  <waiting ...>
 
 -- wait for the fault to trigger since following checkpoint could be faster
@@ -63,7 +63,7 @@ select gp_wait_until_triggered_fault('onephase_transaction_commit', 1, 1);
  Success:                      
 (1 row)
 
--- do checkpoint on master in utility mode, and it should block
+-- do checkpoint on coordinator in utility mode, and it should block
 -1U&: checkpoint;  <waiting ...>
 
 -- resume the 2PC

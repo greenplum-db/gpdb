@@ -78,7 +78,7 @@ typedef struct PgFdwRelationInfo
 	bool		use_remote_estimate;
 	Cost		fdw_startup_cost;
 	Cost		fdw_tuple_cost;
-	List	   *shippable_extensions;	/* OIDs of whitelisted extensions */
+	List	   *shippable_extensions;	/* OIDs of shippable extensions */
 
 	/* Cached catalog information. */
 	ForeignTable *table;
@@ -155,6 +155,9 @@ extern bool is_foreign_expr(PlannerInfo *root,
 extern bool is_foreign_param(PlannerInfo *root,
 							 RelOptInfo *baserel,
 							 Expr *expr);
+extern bool is_foreign_pathkey(PlannerInfo *root,
+							   RelOptInfo *baserel,
+							   PathKey *pathkey);
 extern void deparseInsertSql(StringInfo buf, RangeTblEntry *rte,
 							 Index rtindex, Relation rel,
 							 List *targetAttrs, bool doNothing,
@@ -189,10 +192,12 @@ extern void deparseAnalyzeSizeSql(StringInfo buf, Relation rel);
 extern void deparseAnalyzeSql(StringInfo buf, Relation rel,
 							  List **retrieved_attrs);
 extern void deparseStringLiteral(StringInfo buf, const char *val);
-extern Expr *find_em_expr_for_rel(EquivalenceClass *ec, RelOptInfo *rel);
-extern Expr *find_em_expr_for_input_target(PlannerInfo *root,
-										   EquivalenceClass *ec,
-										   PathTarget *target);
+extern EquivalenceMember *find_em_for_rel(PlannerInfo *root,
+										  EquivalenceClass *ec,
+										  RelOptInfo *rel);
+extern EquivalenceMember *find_em_for_rel_target(PlannerInfo *root,
+												 EquivalenceClass *ec,
+												 RelOptInfo *rel);
 extern List *build_tlist_to_deparse(RelOptInfo *foreignrel);
 extern void deparseSelectStmtForRel(StringInfo buf, PlannerInfo *root,
 									RelOptInfo *foreignrel, List *tlist,

@@ -131,10 +131,10 @@
         <dxl:Commutator Mdid="0.412.1.0"/>
         <dxl:InverseOp Mdid="0.414.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" IsStrict="false">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDCast Mdid="3.23.1.0;20.1.0" Name="int8" BinaryCoercible="false" SourceTypeId="0.23.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.481.1.0"/>
@@ -329,12 +329,12 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.2690.1.0" Name="pg_proc_oid_index" IsClustered="false" KeyColumns="24" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30">
+      <dxl:Index Mdid="0.2690.1.0" Name="pg_proc_oid_index" IsClustered="false" KeyColumns="24" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2684.1.0" Name="pg_namespace_nspname_index" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.2684.1.0" Name="pg_namespace_nspname_index" IsClustered="false" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
@@ -507,14 +507,14 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.2691.1.0" Name="pg_proc_proname_args_nsp_index" IsClustered="false" KeyColumns="0,12,1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30">
+      <dxl:Index Mdid="0.2691.1.0" Name="pg_proc_proname_args_nsp_index" IsClustered="false" KeyColumns="0,12,1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
           <dxl:Opfamily Mdid="0.1991.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2685.1.0" Name="pg_namespace_oid_index" IsClustered="false" KeyColumns="4" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.2685.1.0" Name="pg_namespace_oid_index" IsClustered="false" KeyColumns="4" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1089.1.0"/>
         </dxl:Opfamilies>
@@ -583,7 +583,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1255.1.1" Name="pg_proc" Rows="3009.000000"/>
-      <dxl:Relation Mdid="6.1255.1.1" Name="pg_proc" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="30,23">
+      <dxl:Relation Mdid="6.1255.1.1" Name="pg_proc" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="30,23">
         <dxl:Columns>
           <dxl:Column Name="proname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -686,7 +686,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2615.1.1" Name="pg_namespace" Rows="7.000000"/>
-      <dxl:Relation Mdid="6.2615.1.1" Name="pg_namespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="10,3">
+      <dxl:Relation Mdid="6.2615.1.1" Name="pg_namespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="10,3">
         <dxl:Columns>
           <dxl:Column Name="nspname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -887,7 +887,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="16660">
+    <dxl:Plan Id="0" SpaceSize="17364">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="891.087839" Rows="3009.000000" Width="64"/>

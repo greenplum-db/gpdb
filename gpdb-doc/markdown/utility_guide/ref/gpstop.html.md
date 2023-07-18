@@ -53,7 +53,7 @@ With the `-u` option, the utility uploads changes made to the coordinator `pg_hb
 
 :   This option cannot be specified with the `-m`, `-r`, `-u`, or `-y` options.
 
-    **Note:** The `gprecoverseg` utility restores segment instances. Run `gprecoverseg` commands to start the segments as mirrors and then to return the segments to their preferred role \(primary segments\).
+    > **Note** The `gprecoverseg` utility restores segment instances. Run `gprecoverseg` commands to start the segments as mirrors and then to return the segments to their preferred role \(primary segments\).
 
 -l logfile\_directory
 :   The directory to write the log file. Defaults to `~/gpAdminLogs`.

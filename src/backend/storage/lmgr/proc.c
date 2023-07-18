@@ -470,7 +470,7 @@ InitProcess(void)
 	MyProc->roleId = InvalidOid;
 	MyProc->tempNamespaceId = InvalidOid;
 	MyProc->isBackgroundWorker = IsBackgroundWorker;
-	MyPgXact->delayChkpt = false;
+	MyPgXact->delayChkpt = 0;
 	MyPgXact->vacuumFlags = 0;
 	/* NB -- autovac launcher intentionally does not set IS_AUTOVACUUM */
 	if (IsAutoVacuumWorkerProcess())
@@ -480,8 +480,10 @@ InitProcess(void)
 	MyProc->waitLock = NULL;
 	MyProc->waitProcLock = NULL;
 	MyProc->resSlot = NULL;
+	SpinLockInit(&MyProc->movetoMutex);
 	MyProc->movetoResSlot = NULL;
 	MyProc->movetoGroupId = InvalidOid;
+	MyProc->movetoCallerPid = InvalidPid;
 
     /* 
      * mppLocalProcessSerial uniquely identifies this backend process among
@@ -504,10 +506,10 @@ InitProcess(void)
 	 * determination of conflicts.  See LockCheckConflicts().
 	 *
 	 * It is ok to assign a valid session ID to a utility mode connection on
-	 * master, because session IDs are generated only on master by atomically
+	 * coordinator, because session IDs are generated only on coordinator by atomically
 	 * incrementing a counter.  Therefore, it is not possible for a utility
 	 * mode connection to be assigned the same session ID as a normal mode
-	 * connection on master.
+	 * connection on coordinator.
      */
 	if (IS_QUERY_DISPATCHER() &&
 		Gp_role == GP_ROLE_DISPATCH &&
@@ -719,7 +721,7 @@ InitAuxiliaryProcess(void)
     MyProc->mppIsWriter = false;
 	MyProc->tempNamespaceId = InvalidOid;
 	MyProc->isBackgroundWorker = IsBackgroundWorker;
-	MyPgXact->delayChkpt = false;
+	MyPgXact->delayChkpt = 0;
 	MyPgXact->vacuumFlags = 0;
 	MyProc->lwWaiting = false;
 	MyProc->lwWaitMode = 0;
@@ -1583,7 +1585,7 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
 			else
 				LWLockRelease(ProcArrayLock);
 
-			/* prevent signal from being resent more than once */
+			/* prevent signal from being sent again more than once */
 			allow_autovacuum_cancel = false;
 		}
 
@@ -2036,6 +2038,9 @@ CheckDeadLockAlert(void)
 	 * Have to set the latch again, even if handle_sig_alarm already did. Back
 	 * then got_deadlock_timeout wasn't yet set... It's unlikely that this
 	 * ever would be a problem, but setting a set latch again is cheap.
+	 *
+	 * Note that, when this function runs inside procsignal_sigusr1_handler(),
+	 * the handler function sets the latch again after the latch is set here.
 	 */
 	SetLatch(MyLatch);
 	errno = save_errno;
@@ -2096,7 +2101,7 @@ ProcSendSignal(int pid)
  * ResProcSleep -- put a process to sleep (that is waiting for a resource lock).
  *
  * Notes:
- * 	Locktable's masterLock must be held at entry, and will be held
+ * 	Locktable's mainLock must be held at entry, and will be held
  * 	at exit.
  *
  *	This is merely a version of ProcSleep modified for resource locks.
@@ -2469,7 +2474,7 @@ void ProcNewMppSessionId(int *newSessionId)
      */
     if (NULL != MySessionState)
     {
-    	/* This should not happen outside of dispatcher on the master */
+    	/* This should not happen outside of dispatcher on the coordinator */
     	Assert(IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_DISPATCH);
 
     	ereport(gp_sessionstate_loglevel, (errmsg("ProcNewMppSessionId: changing session id (old: %d, new: %d), pinCount: %d, activeProcessCount: %d",

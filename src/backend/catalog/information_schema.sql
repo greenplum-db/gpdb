@@ -1493,7 +1493,6 @@ CREATE VIEW routines AS
 
            CAST('GENERAL' AS character_data) AS parameter_style,
            CAST(CASE WHEN p.provolatile = 'i' THEN 'YES' ELSE 'NO' END AS yes_or_no) AS is_deterministic,
-           CAST('MODIFIES' AS character_data) AS sql_data_access,
            CAST(CASE WHEN p.prokind <> 'p' THEN
              CASE WHEN p.proisstrict THEN 'YES' ELSE 'NO' END END AS yes_or_no) AS is_null_call,
            CAST(null AS character_data) AS sql_path,
@@ -2119,8 +2118,15 @@ CREATE VIEW triggers AS
            CAST(
              -- To determine action order, partition by schema, table,
              -- event_manipulation (INSERT/DELETE/UPDATE), ROW/STATEMENT (1),
-             -- BEFORE/AFTER (66), then order by trigger name
-             rank() OVER (PARTITION BY n.oid, c.oid, em.num, t.tgtype & 1, t.tgtype & 66 ORDER BY t.tgname)
+             -- BEFORE/AFTER (66), then order by trigger name.  It's preferable
+             -- to partition by view output columns, so that query constraints
+             -- can be pushed down below the window function.
+             rank() OVER (PARTITION BY CAST(n.nspname AS sql_identifier),
+                                       CAST(c.relname AS sql_identifier),
+                                       em.num,
+                                       t.tgtype & 1,
+                                       t.tgtype & 66
+                                       ORDER BY t.tgname)
              AS cardinal_number) AS action_order,
            CAST(
              CASE WHEN pg_has_role(c.relowner, 'USAGE')

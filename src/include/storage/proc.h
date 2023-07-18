@@ -84,6 +84,13 @@ struct XidCache
 #define INVALID_PGPROCNO		PG_INT32_MAX
 
 /*
+ * Flags used only for type of internal functions
+ * GetVirtualXIDsDelayingChkptGuts and HaveVirtualXIDsDelayingChkptGuts.
+ */
+#define DELAY_CHKPT_START		(1<<0)
+#define DELAY_CHKPT_COMPLETE	(1<<1)
+
+/*
  * Each backend has a PGPROC struct in shared memory.  There is also a list of
  * currently-unused PGPROC structs that will be reallocated to new backends.
  *
@@ -171,6 +178,12 @@ struct PGPROC
 	 */
 	XLogRecPtr	waitLSN;		/* waiting for this LSN or higher */
 	int			syncRepState;	/* wait state for sync rep */
+	bool		delayChkptEnd;	/* true if this proc delays checkpoint end;
+								 * this doesn't have anything to do with
+								 * sync rep but we don't want to change
+								 * the size of PGPROC in released branches
+								 * and thus must fit this new field into
+								 * existing padding space  */
 	SHM_QUEUE	syncRepLinks;	/* list link if process is in syncrep queue */
 
 	/*
@@ -211,8 +224,18 @@ struct PGPROC
 	void		*resSlot;	/* the resource group slot granted.
 							 * NULL indicates the resource group is
 							 * locked for drop. */
-	void		*movetoResSlot; /* the resource group slot move to, valid only on QD */
-	Oid			movetoGroupId;  /* the resource group id move to */
+	slock_t		movetoMutex; /* spinlock to protect moveto* fields below */
+	void		*movetoResSlot; /* the resource group slot move to, valid only
+								 * on QD; when slot become NULL, it means
+								 * target process got the control over it */
+	Oid 		movetoGroupId;  /* the resource group id move to; valid on
+								 * both QE and QD; when id become InvalidOid
+								 * on QD, it means target process attempted to
+								 * move process to this group and the result
+								 * of attemption is in movetoResSlot */
+	pid_t		movetoCallerPid; /* pid of moving initiator; valid only on QD;
+								  * guards current moving command from another
+								  * commands */
 
 	/* Support for group XID clearing. */
 	/* true, if member of ProcArray group waiting for XID clear */
@@ -291,8 +314,7 @@ typedef struct PGXACT
 
 	uint8		vacuumFlags;	/* vacuum-related flags, see above */
 	bool		overflowed;
-	bool		delayChkpt;		/* true if this proc delays checkpoint start;
-								 * previously called InCommit */
+	bool		delayChkpt;		/* true if this proc delays checkpoint start */
 
 	uint8		nxids;
 } PGXACT;
@@ -357,10 +379,10 @@ extern PGPROC *PreparedXactProcs;
 
 /* configurable options */
 extern PGDLLIMPORT int DeadlockTimeout;
-extern int	StatementTimeout;
-extern int	LockTimeout;
-extern int	IdleInTransactionSessionTimeout;
-extern int	IdleSessionGangTimeout;
+extern PGDLLIMPORT int StatementTimeout;
+extern PGDLLIMPORT int LockTimeout;
+extern PGDLLIMPORT int IdleInTransactionSessionTimeout;
+extern PGDLLIMPORT int IdleSessionGangTimeout;
 extern bool log_lock_waits;
 
 

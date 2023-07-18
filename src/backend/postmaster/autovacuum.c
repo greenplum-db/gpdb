@@ -122,6 +122,7 @@
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/namespace.h"
+#include "catalog/partition.h"
 #include "catalog/pg_database.h"
 #include "commands/dbcommands.h"
 #include "commands/vacuum.h"
@@ -176,6 +177,7 @@ double		autovacuum_vac_cost_delay;
 int			autovacuum_vac_cost_limit;
 
 int			Log_autovacuum_min_duration = 0;
+int			gp_autovacuum_scope;
 
 /* how long to keep pgstat data in the launcher, in milliseconds */
 #define STATS_READ_DELAY 1000
@@ -1636,6 +1638,9 @@ AutoVacWorkerMain(int argc, char *argv[])
 	 */
 	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
 	{
+		/* since not using PG_TRY, must reset error stack by hand */
+		error_context_stack = NULL;
+
 		/* Prevents interrupts while cleaning up */
 		HOLD_INTERRUPTS();
 
@@ -1761,7 +1766,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 		InitPostgres(NULL, dbid, NULL, InvalidOid, dbname, false);
 		SetProcessingMode(NormalProcessing);
 		set_ps_display(dbname, false);
-		ereport(LOG,
+		ereport(DEBUG1,
 				(errmsg("autovacuum: processing database \"%s\"", dbname)));
 
 #ifdef FAULT_INJECTOR
@@ -2033,6 +2038,22 @@ do_autovacuum(void)
 	bool		did_vacuum = false;
 	bool		found_concurrent_worker = false;
 	int			i;
+	HASH_SEQ_STATUS roots_hash_seq;
+	Oid* top_level_root;
+
+	/*
+	 * GPDB: For partitioned tables, since we maintain top-level-root stats in
+	 * the catalog, we have to merge stats whenever a leaf partition(s)
+	 * undergoes auto-analyze. To capture this extra work for the AV worker, we
+	 * maintain a set of top-level partition oids. Using a set guarantees that we
+	 * schedule the top-level root once, even if more than one leaf was analyzed
+	 * in the same hierarchy.
+	 *
+	 * Note: we don't maintain interior roots as we don't currently maintain stats
+	 * for them.
+	 */
+	HTAB		*top_level_partition_roots;
+	HASHCTL		roots_hash_ctl;
 
 	/*
 	 * StartTransactionCommand and CommitTransactionCommand will automatically
@@ -2115,6 +2136,16 @@ do_autovacuum(void)
 								  &ctl,
 								  HASH_ELEM | HASH_BLOBS);
 
+	/* create set for top level partition oids */
+	memset(&roots_hash_ctl, 0, sizeof(roots_hash_ctl));
+	roots_hash_ctl.keysize = sizeof(Oid);
+	roots_hash_ctl.entrysize = sizeof(Oid);
+	roots_hash_ctl.hcxt = CurrentMemoryContext;
+	top_level_partition_roots = hash_create("top level partition oids",
+					   256,
+					   &roots_hash_ctl,
+					   HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
+
 	/*
 	 * Scan pg_class to determine which tables to vacuum.
 	 *
@@ -2169,9 +2200,10 @@ do_autovacuum(void)
 
 			/*
 			 * We just ignore it if the owning backend is still active and
-			 * using the temporary schema.
+			 * using the temporary schema.  Also, for safety, ignore it if the
+			 * namespace doesn't exist or isn't a temp namespace after all.
 			 */
-			if (!isTempNamespaceInUse(classForm->relnamespace))
+			if (checkTempNamespaceStatus(classForm->relnamespace) == TEMP_NAMESPACE_IDLE)
 			{
 				/*
 				 * The table seems to be orphaned -- although it might be that
@@ -2199,6 +2231,12 @@ do_autovacuum(void)
 		if (dovacuum || doanalyze)
 			table_oids = lappend_oid(table_oids, relid);
 
+		/* Get oid of top level partition root and add to separate set */
+		if (doanalyze && classForm->relispartition)
+		{
+			Oid root_parent_relid = get_top_level_partition_root(relid);
+			(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
+		}
 		/*
 		 * Remember TOAST associations for the second pass.  Note: we must do
 		 * this whether or not the table is going to be vacuumed, because we
@@ -2341,7 +2379,7 @@ do_autovacuum(void)
 			continue;
 		}
 
-		if (isTempNamespaceInUse(classForm->relnamespace))
+		if (checkTempNamespaceStatus(classForm->relnamespace) != TEMP_NAMESPACE_IDLE)
 		{
 			UnlockRelationOid(relid, AccessExclusiveLock);
 			continue;
@@ -2388,6 +2426,16 @@ do_autovacuum(void)
 										  "Autovacuum Portal",
 										  ALLOCSET_DEFAULT_SIZES);
 
+	/*
+	 * GPDB: Analyze (merge leaf stats) all top-level partition roots at the end. This
+	 * guarantees that leaf partitions are analyzed first before merging their stats
+	 * for their top-level roots.
+	 */
+	hash_seq_init(&roots_hash_seq, top_level_partition_roots);
+	while ((top_level_root = (Oid*) hash_seq_search(&roots_hash_seq)) != NULL)
+		table_oids = lappend_oid(table_oids, *top_level_root);
+
+	hash_destroy(top_level_partition_roots);
 	/*
 	 * Perform operations on collected tables.
 	 */
@@ -2827,7 +2875,8 @@ extract_autovac_opts(HeapTuple tup, TupleDesc pg_class_desc)
 		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_TOASTVALUE ||
 		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_AOSEGMENTS ||
 		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_AOBLOCKDIR ||
-		   ((Form_pg_class) GETSTRUCT(tup))->relkind ==  RELKIND_AOVISIMAP);
+		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_AOVISIMAP ||
+		   ((Form_pg_class) GETSTRUCT(tup))->relkind == RELKIND_PARTITIONED_TABLE);
 
 
 	relopts = extractRelOptions(tup, pg_class_desc, NULL);
@@ -3139,6 +3188,15 @@ relation_needs_vacanalyze(Oid relid,
 	xidForceLimit = recentXid - freeze_max_age;
 	if (xidForceLimit < FirstNormalTransactionId)
 		xidForceLimit -= FirstNormalTransactionId;
+	/*
+	 * GPDB: Append-optimized tables don't have any transaction IDs and don't
+	 * need to be considered for anti-wraparound vacuums. They are implicitly
+	 * excluded from anti-wraparound vacuums below since their relfrozenxid is
+	 * always InvalidTransactionId.
+	 */
+	AssertImply(IsAccessMethodAO(classForm->relam),
+				!TransactionIdIsValid(classForm->relfrozenxid));
+
 	force_vacuum = (TransactionIdIsNormal(classForm->relfrozenxid) &&
 					TransactionIdPrecedes(classForm->relfrozenxid,
 										  xidForceLimit));
@@ -3204,27 +3262,29 @@ relation_needs_vacanalyze(Oid relid,
 	if (relid == StatisticRelationId)
 		*doanalyze = false;
 
+	/*
+	 * Always analyze (merge stats) for partitioned tables, since we
+	 * aren't tracking tuples modified in the root, only the leaves
+	 */
+	if (get_rel_relkind(relid) == RELKIND_PARTITIONED_TABLE)
+		*doanalyze = true;
+
 	/* Only wish to trigger auto-analyze from coordinator */
 	if (Gp_role != GP_ROLE_DISPATCH)
 		*doanalyze = false;
 
-	/*
-	 * There are a lot of things to do to enable auto-ANALYZE for partition tables,
-	 * see PR10515 for details.
-	 * Currently, we just disable auto-ANALYZE for partition tables.
-	 */
-	if (*doanalyze)
+	if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG)
 	{
-		if (get_rel_relkind(relid) == RELKIND_PARTITIONED_TABLE)
-			*doanalyze = false;
+		/* GPDB: autovacuum on pg_catalog relations */
+		if (!IsCatalogRelationOid(relid))
+			*dovacuum = false;
 	}
-
-	/*
-	 * GPDB: Autovacuum VACUUM is only enabled for catalog tables. (But ignore
-	 * if at risk of wrap around and proceed to vacuum)
-	 */
-	if (!IsSystemClass(relid, classForm) && !force_vacuum)
-		*dovacuum = false;
+	else if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG_AO_AUX)
+	{
+		/* GPDB: autovacuum only pg_catalog, pg_toast, and pg_aoseg relations */
+		if (!IsSystemClass(relid, classForm))
+			*dovacuum = false;
+	}
 }
 
 /*

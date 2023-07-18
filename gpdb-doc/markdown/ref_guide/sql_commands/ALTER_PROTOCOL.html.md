@@ -14,7 +14,7 @@ ALTER PROTOCOL <name> OWNER TO <newowner>
 
 `ALTER PROTOCOL` changes the definition of a protocol. Only the protocol name or owner can be altered.
 
-You must own the protocol to use `ALTER PROTOCOL`. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have `CREATE` privilege on schema of the conversion.
+You must own the protocol to use `ALTER PROTOCOL`. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have `CREATE` privilege on schema of the protocol.
 
 These restrictions are in place to ensure that altering the owner only makes changes that could by made by dropping and recreating the protocol. Note that a superuser can alter ownership of any protocol.
 
@@ -31,13 +31,13 @@ newowner
 
 ## <a id="section5"></a>Examples 
 
-To rename the conversion `GPDBauth` to `GPDB_authentication`:
+To rename the protocol `GPDBauth` to `GPDB_authentication`:
 
 ```
 ALTER PROTOCOL GPDBauth RENAME TO GPDB_authentication;
 ```
 
-To change the owner of the conversion `GPDB_authentication` to `joe`:
+To change the owner of the `GPDB_authentication` protocol to `joe`:
 
 ```
 ALTER PROTOCOL GPDB_authentication OWNER TO joe;

@@ -725,14 +725,14 @@
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.65.1.0" Name="int4eq" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.65.1.0" Name="int4eq" ReturnsSet="false" Stability="Immutable" IsStrict="true">
 	    <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBAgg Mdid="0.2803.1.0" Name="count" IsSplittable="true" HashAggCapable="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:GPDBFunc Mdid="0.9255091.1.0" Name="fct_unnest" ReturnsSet="true" Stability="Immutable" DataAccess="ContainsSQL" IsStrict="false">
+      <dxl:GPDBFunc Mdid="0.9255091.1.0" Name="fct_unnest" ReturnsSet="true" Stability="Immutable" IsStrict="false">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.9255103.1.1" Name="test_fct_unnest" Rows="3000000.000000" EmptyRelation="false"/>
@@ -1177,7 +1177,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="324625">
+    <dxl:Plan Id="0" SpaceSize="163431">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="9309.074116" Rows="3000000.000000" Width="32"/>

@@ -377,8 +377,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 							  damping_factor_groupby, MAX_STATS_BUCKETS),
 		GPOS_NEW(mp) CCTEConfig(cte_inlining_cutoff), cost_model,
 		GPOS_NEW(mp)
-			CHint(gpos::int_max /* optimizer_parts_to_force_sort_on_insert */,
-				  join_arity_for_associativity_commutativity,
+			CHint(join_arity_for_associativity_commutativity,
 				  array_expansion_threshold, join_order_threshold,
 				  broadcast_threshold,
 				  false, /* don't create Assert nodes for constraints, we'll
@@ -515,7 +514,7 @@ COptTasks::OptimizeTask(void *ptr)
 
 		// set up relcache MD provider
 		CMDProviderRelcache *relcache_provider =
-			GPOS_NEW(mp) CMDProviderRelcache(mp);
+			GPOS_NEW(mp) CMDProviderRelcache();
 
 		{
 			// scope for MD accessor
@@ -548,15 +547,15 @@ COptTasks::OptimizeTask(void *ptr)
 				query_to_dxl_translator->GetCTEs();
 			GPOS_ASSERT(nullptr != query_output_dxlnode_array);
 
-			BOOL is_master_only =
+			BOOL is_coordinator_only =
 				!optimizer_enable_motions ||
-				(!optimizer_enable_motions_masteronly_queries &&
+				(!optimizer_enable_motions_coordinatoronly_queries &&
 				 !query_to_dxl_translator->HasDistributedTables());
 			// See NoteDistributionPolicyOpclasses() in src/backend/gpopt/translate/CTranslatorQueryToDXL.cpp
 			BOOL use_legacy_opfamilies =
 				(query_to_dxl_translator->GetDistributionHashOpsKind() ==
 				 DistrUseLegacyHashOps);
-			CAutoTraceFlag atf1(EopttraceDisableMotions, is_master_only);
+			CAutoTraceFlag atf1(EopttraceDisableMotions, is_coordinator_only);
 			CAutoTraceFlag atf2(EopttraceUseLegacyOpfamilies,
 								use_legacy_opfamilies);
 
@@ -673,7 +672,7 @@ COptTasks::PrintMissingStatsWarning(CMemoryPool *mp, CMDAccessor *md_accessor,
 		const ULONG pos = mdid_col_stats->Position();
 		const IMDRelation *rel = md_accessor->RetrieveRel(rel_mdid);
 
-		if (IMDRelation::ErelstorageExternal != rel->RetrieveRelStorageType())
+		if (IMDRelation::ErelstorageForeign != rel->RetrieveRelStorageType())
 		{
 			if (!rel_stats->Contains(rel_mdid))
 			{

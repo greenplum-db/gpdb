@@ -23,7 +23,6 @@ GPORCA also includes these optimization enhancements:
 GPORCA includes these enhancements for queries against partitioned tables:
 
 -   Partition elimination is improved.
--   Uniform multi-level partitioned tables are supported. For information about uniform multi-level partitioned tables, see [About Uniform Multi-level Partitioned Tables](query-piv-uniform-part-tbl.html)
 -   Query plan can contain the Partition selector operator.
 -   Partitions are not enumerated in EXPLAIN plans.
 
@@ -128,7 +127,7 @@ GPORCA generates more efficient plans for the following types of subqueries:
     );
     ```
 
-    **Note:** Nested CSQ with skip level correlations are not supported by the Postgres Planner.
+    > **Note** Nested CSQ with skip level correlations are not supported by the Postgres Planner.
 
 -   CSQ with aggregate and inequality. This example contains a CSQ with an inequality.
 

@@ -23,7 +23,7 @@
  */
 #define GpSegmentConfigRelationName		"gp_segment_configuration"
 
-#define MASTER_CONTENT_ID (-1)
+#define COORDINATOR_CONTENT_ID (-1)
 
 #define GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY 'p'
 #define GP_SEGMENT_CONFIGURATION_ROLE_MIRROR 'm'

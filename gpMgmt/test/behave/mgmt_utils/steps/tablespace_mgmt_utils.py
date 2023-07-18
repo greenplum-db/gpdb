@@ -1,5 +1,6 @@
 import pipes
 import tempfile
+import time
 
 from behave import given, then
 
@@ -7,7 +8,8 @@ from contextlib import closing
 
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
-from test.behave_utils.utils import run_cmd
+from test.behave_utils.utils import run_cmd,wait_for_database_dropped
+from gppylib.commands.base import Command, REMOTE
 
 class Tablespace:
     def __init__(self, name):
@@ -35,17 +37,18 @@ class Tablespace:
         conn.close()
 
     def cleanup(self):
-        conn = dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False)
-        dbconn.execSQL(conn, "DROP DATABASE IF EXISTS %s" % self.dbname)
-        dbconn.execSQL(conn, "DROP TABLESPACE IF EXISTS %s" % self.name)
+        with closing(dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False)) as conn:
+            dbconn.execSQL(conn, "DROP DATABASE IF EXISTS %s" % self.dbname)
+            wait_for_database_dropped(self.dbname)
 
-        # Without synchronous_commit = 'remote_apply' introduced in 9.6, there
-        # is no guarantee that the mirrors have removed their tablespace
-        # directories by the time the DROP TABLESPACE command returns.
-        # We need those directories to no longer be in use by the mirrors
-        # before removing them below.
-        _checkpoint_and_wait_for_replication_replay(conn)
-        conn.close()
+            dbconn.execSQL(conn, "DROP TABLESPACE IF EXISTS %s" % self.name)
+
+            # Without synchronous_commit = 'remote_apply' introduced in 9.6, there
+            # is no guarantee that the mirrors have removed their tablespace
+            # directories by the time the DROP TABLESPACE command returns.
+            # We need those directories to no longer be in use by the mirrors
+            # before removing them below.
+            _checkpoint_and_wait_for_replication_replay(conn)
 
         gparray = GpArray.initFromCatalog(dbconn.DbURL())
         for host in gparray.getHostList():
@@ -196,7 +199,6 @@ def impl(context):
 @then('the other tablespace is valid')
 def impl(context):
     context.tablespaces["myspace"].verify()
-
 
 @then('the tablespace is valid after gpexpand')
 def impl(context):

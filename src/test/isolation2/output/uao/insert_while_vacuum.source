@@ -1,51 +1,51 @@
 -- @Description Ensures that an insert during a vacuum operation is ok
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT) USING @amname@;
-CREATE
+CREATE TABLE
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into ao select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 
 DELETE FROM ao WHERE a < 128;
 DELETE 2667
@@ -53,7 +53,7 @@ DELETE 2667
 4: BEGIN;
 BEGIN
 4: insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);insert into ao select generate_series(1001,2000);COMMIT;
-INSERT
+COMMIT
 2<:  <... completed>
 VACUUM
 3: SELECT COUNT(*) FROM ao WHERE a = 1500;
@@ -62,4 +62,4 @@ VACUUM
  20    
 (1 row)
 4: INSERT INTO ao VALUES (0);
-INSERT 1
+INSERT 0 1

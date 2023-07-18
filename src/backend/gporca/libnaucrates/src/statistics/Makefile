@@ -12,6 +12,7 @@ include $(top_srcdir)/src/backend/gporca/gporca.mk
 
 OBJS        = CBucket.o \
               CFilterStatsProcessor.o \
+              CExtendedStatsProcessor.o \
               CGroupByStatsProcessor.o \
               CHistogram.o \
               CInnerJoinStatsProcessor.o \

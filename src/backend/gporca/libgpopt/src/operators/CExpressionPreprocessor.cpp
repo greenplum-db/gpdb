@@ -16,6 +16,7 @@
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CAutoTimer.h"
 
+#include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
@@ -25,6 +26,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpressionFactorizer.h"
 #include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CLeftJoinPruningPreprocessor.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
 #include "gpopt/operators/CLogicalCTEProducer.h"
@@ -45,7 +47,6 @@
 #include "gpopt/operators/COrderedAggPreprocessor.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarCmp.h"
-#include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarNAryJoinPredList.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
@@ -64,13 +65,21 @@
 
 using namespace gpopt;
 
+static void UpdateExprToConstantPredicateMapping(
+	CMemoryPool *mp, CExpression *pexprFilter,
+	ExprToConstantMap *phmExprToConst, BOOL doInsert);
+
+static CExpression *SubstituteConstantIdentifier(
+	CMemoryPool *mp, CExpression *pexpr, ExprToConstantMap *phmExprToConst);
+
 // maximum number of equality predicates to be derived from existing equalities
 #define GPOPT_MAX_DERIVED_PREDS 50
 
 // eliminate self comparisons in the given expression
 CExpression *
 CExpressionPreprocessor::PexprEliminateSelfComparison(CMemoryPool *mp,
-													  CExpression *pexpr)
+													  CExpression *pexpr,
+													  CColRefSet *pcrsNotNull)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
@@ -79,7 +88,8 @@ CExpressionPreprocessor::PexprEliminateSelfComparison(CMemoryPool *mp,
 
 	if (CUtils::FScalarCmp(pexpr))
 	{
-		return CPredicateUtils::PexprEliminateSelfComparison(mp, pexpr);
+		return CPredicateUtils::PexprEliminateSelfComparison(mp, pexpr,
+															 pcrsNotNull);
 	}
 
 	// recursively process children
@@ -88,7 +98,7 @@ CExpressionPreprocessor::PexprEliminateSelfComparison(CMemoryPool *mp,
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CExpression *pexprChild =
-			PexprEliminateSelfComparison(mp, (*pexpr)[ul]);
+			PexprEliminateSelfComparison(mp, (*pexpr)[ul], pcrsNotNull);
 		pdrgpexprChildren->Append(pexprChild);
 	}
 
@@ -1959,6 +1969,214 @@ CExpressionPreprocessor::PexprRemoveUnusedCTEs(CMemoryPool *mp,
 	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
 }
 
+// Create an identifier to constant map
+//
+// Given a select filter expression, map all conjunctive equality between an
+// identifier and a constant value.
+//
+// NB: This function either inserts or deletes mapped values. Parameter
+//     'doInsert' is used to indicate which of the two to perform.
+static void
+UpdateExprToConstantPredicateMapping(CMemoryPool *mp, CExpression *pexprFilter,
+									 ExprToConstantMap *phmExprToConst,
+									 BOOL doInsert)
+{
+	if (CPredicateUtils::IsEqualityOp(pexprFilter))
+	{
+		// the following section handles predicates of the kind (a = 10)
+		if (!CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[0]) &&
+			CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[1]))
+		{
+			if (doInsert)
+			{
+				(*pexprFilter)[0]->AddRef();
+				(*pexprFilter)[1]->AddRef();
+				phmExprToConst->Insert((*pexprFilter)[0], (*pexprFilter)[1]);
+			}
+			else
+			{
+				phmExprToConst->Delete((*pexprFilter)[0]);
+			}
+		}
+		// the following section handles predicates of the kind (10 = a)
+		else if (CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[0]) &&
+				 !CUtils::FScalarConstOrBinaryCoercible((*pexprFilter)[1]))
+		{
+			if (doInsert)
+			{
+				(*pexprFilter)[0]->AddRef();
+				(*pexprFilter)[1]->AddRef();
+				phmExprToConst->Insert((*pexprFilter)[1], (*pexprFilter)[0]);
+			}
+			else
+			{
+				phmExprToConst->Delete((*pexprFilter)[1]);
+			}
+		}
+	}
+	else if (CPredicateUtils::FAnd(pexprFilter))
+	{
+		const ULONG ulChildren = pexprFilter->Arity();
+		for (ULONG ul = 0; ul < ulChildren; ul++)
+		{
+			UpdateExprToConstantPredicateMapping(mp, (*pexprFilter)[ul],
+												 phmExprToConst, doInsert);
+		}
+	}
+}
+
+// Create a new expression from an exression and map of ident to const
+static CExpression *
+SubstituteConstantIdentifier(CMemoryPool *mp, CExpression *pexpr,
+							 ExprToConstantMap *phmExprToConst)
+{
+	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+
+	const ULONG ulChildren = pexpr->Arity();
+	for (ULONG ul = 0; ul < ulChildren; ul++)
+	{
+		CExpression *pexprChild = nullptr;
+		if (COperator::EopScalarConst != (*pexpr)[ul]->Pop()->Eopid() &&
+			phmExprToConst->Find((*pexpr)[ul]) != nullptr &&
+			// make sure the types match
+			CScalar::PopConvert(phmExprToConst->Find((*pexpr)[ul])->Pop())
+				->MdidType()
+				->Equals(CScalar::PopConvert((*pexpr)[ul]->Pop())->MdidType()))
+		{
+			// substitute with constant
+			pexprChild = phmExprToConst->Find((*pexpr)[ul]);
+			pexprChild->AddRef();
+		}
+		else
+		{
+			pexprChild =
+				SubstituteConstantIdentifier(mp, (*pexpr)[ul], phmExprToConst);
+		}
+		pdrgpexpr->Append(pexprChild);
+	}
+
+	COperator *pop = pexpr->Pop();
+	pop->AddRef();
+	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
+}
+
+// Apply filter that replaces constants used in join predicate
+//
+// This preprocessing step enables additional opportunities for predicate push
+// down based on synergetic join conditions and select filters.  For example,
+// let's use query:
+//
+//     SELECT count(*) FROM t2 INNER JOIN t1 ON t2.c BETWEEN t1.a AND t1.b WHERE t2.c = 2;
+//
+// Input:
+// +--CLogicalSelect
+//    |--CLogicalNAryJoin
+//    |  |--CLogicalGet "t2" ("t2"), Columns: ["c" (0), "d" (1),...
+//    |  |--CLogicalGet "t1" ("t1"), Columns: ["a" (9), "b" (10),...
+//    |  +--CScalarBoolOp (EboolopAnd)
+//    |     |--CScalarCmp (>=)
+//    |     |  |--CScalarIdent "c" (0)
+//    |     |  +--CScalarIdent "a" (9)
+//    |     +--CScalarCmp (<=)
+//    |        |--CScalarIdent "c" (0)
+//    |        +--CScalarIdent "b" (10)
+//    +--CScalarCmp (=)
+//       |--CScalarIdent "c" (0)
+//       +--CScalarConst (2)
+//
+// Notice that the join predicate references columns (a, b, and c) coming from
+// both sides of the join. Typically this means the predicate cannot be pushed
+// down.  However, the select filter above the join predicate filters on c=2.
+// We can utilize that in conjunction with the join condition to filter out
+// more rows. We do that outputing:
+//
+// Output:
+// +--CLogicalSelect
+//    +--CLogicalSelect
+//    |  |--CLogicalNAryJoin
+//    |  |  |--CLogicalGet "t2" ("t2"), Columns: ["c" (0), "d" (1),...
+//    |  |  |--CLogicalGet "t1" ("t1"), Columns: ["a" (9), "b" (10),...
+//    |  |  +--CScalarBoolOp (EboolopAnd)
+//    |  |     |--CScalarCmp (>=)
+//    |  |     |  |--CScalarIdent "c" (0)
+//    |  |     |  +--CScalarIdent "a" (9)
+//    |  |     +--CScalarCmp (<=)
+//    |  |        |--CScalarIdent "c" (0)
+//    |  |        +--CScalarIdent "b" (10)
+//    |  +--CScalarBoolOp (EboolopAnd)
+//    |     |--CScalarCmp (>=)
+//    |     |  +--CScalarConst (2)
+//    |     |  +--CScalarIdent "a" (9)
+//    |     +--CScalarCmp (<=)
+//    |     |  +--CScalarConst (2)
+//    |        +--CScalarIdent "b" (10)
+//    +--CScalarCmp (=)
+//       |--CScalarIdent "c" (0)
+//       +--CScalarConst (2)
+CExpression *
+CExpressionPreprocessor::PexprReplaceColWithConst(
+	CMemoryPool *mp, CExpression *pexpr, ExprToConstantMap *phmExprToConst,
+	BOOL checkFilterForConstants)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	COperator *pop = pexpr->Pop();
+	// Here we check for following pattern:
+	//
+	//     Select
+	//       |-- NaryJoin/LeftOuterJoin
+	//       |-- ...
+	//       +-- Filter
+	//
+	// Notice that Select is processed twice with different values of
+	// checkFilterForConstants. First time is to create the constant mapping.
+	// The second time is to use the const mapping to process the node and
+	// children to add additional select filters.
+	if (checkFilterForConstants &&
+		COperator::EopLogicalSelect == pexpr->Pop()->Eopid() &&
+		(COperator::EopLogicalLeftOuterJoin == ((*pexpr)[0])->Pop()->Eopid() ||
+		 COperator::EopLogicalNAryJoin == ((*pexpr)[0])->Pop()->Eopid()))
+	{
+		UpdateExprToConstantPredicateMapping(mp, (*pexpr)[pexpr->Arity() - 1],
+											 phmExprToConst, true);
+
+		CExpression *pexprNew =
+			PexprReplaceColWithConst(mp, pexpr, phmExprToConst, false);
+
+		// erase values from map...
+		UpdateExprToConstantPredicateMapping(mp, (*pexpr)[pexpr->Arity() - 1],
+											 phmExprToConst, false);
+
+		return pexprNew;
+	}
+
+	// process children
+	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+
+	const ULONG ulChildren = pexpr->Arity();
+	for (ULONG ul = 0; ul < ulChildren; ul++)
+	{
+		CExpression *pexprChild =
+			PexprReplaceColWithConst(mp, (*pexpr)[ul], phmExprToConst, true);
+		pdrgpexpr->Append(pexprChild);
+	}
+
+	if (COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid() &&
+		phmExprToConst->Size() > 0)
+	{
+		CExpression *pexprFilter = SubstituteConstantIdentifier(
+			mp, (*pexpr)[pexpr->Arity() - 1], phmExprToConst);
+
+		pop->AddRef();
+		return GPOS_NEW(mp) CExpression(
+			mp, GPOS_NEW(mp) CLogicalSelect(mp),
+			GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr), pexprFilter);
+	}
+
+	pop->AddRef();
+	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
+}
+
 // for all consumers of the same CTE, collect all selection predicates
 // on top of these consumers, if any, and store them in hash map
 void
@@ -2356,7 +2574,8 @@ CExpressionPreprocessor::PexprPruneProjListProjectOrGbAgg(
 	return pexprResult;
 }
 
-// reorder the child for scalar comparision to ensure that left child is a scalar ident and right child is a scalar const if not
+// reorder the child for scalar comparision to ensure that left child is a scalar ident
+// or cast(ident) and right child is a scalar const
 CExpression *
 CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 													   CExpression *pexpr)
@@ -2371,7 +2590,11 @@ CExpressionPreprocessor::PexprReorderScalarCmpChildren(CMemoryPool *mp,
 		CExpression *pexprLeft = (*pexpr)[0];
 		CExpression *pexprRight = (*pexpr)[1];
 
-		if (CUtils::FScalarConst(pexprLeft) && CUtils::FScalarIdent(pexprRight))
+		// left side is const
+		// right side is either ident, or, cast of ident
+		if (CUtils::FScalarConst(pexprLeft) &&
+			(CUtils::FScalarIdent(pexprRight) ||
+			 CCastUtils::FScalarCastIdent(pexprRight)))
 		{
 			CScalarCmp *popScalarCmpCommuted =
 				(dynamic_cast<CScalarCmp *>(pop))->PopCommutedOp(mp);
@@ -2592,16 +2815,18 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			CLogicalDynamicGet::PopConvert((*expr)[0]->Pop());
 
 		CColRefSetArray *pdrgpcrsChild = nullptr;
-		CConstraint *pred_cnstr =
-			CConstraint::PcnstrFromScalarExpr(mp, filter_pred, &pdrgpcrsChild);
+		// As of now, partition's default opfamily is btree
+		// ORCA doesn't support hash partition yet
+		CConstraint *pred_cnstr = CConstraint::PcnstrFromScalarExpr(
+			mp, filter_pred, &pdrgpcrsChild, false /* infer_nulls_as*/,
+			IMDIndex::EmdindBtree);
 		CRefCount::SafeRelease(pdrgpcrsChild);
-
-		// GPDB_12_MERGE_FIXME: skip all this if pred_cnstr = NULL
 
 		IMdIdArray *selected_partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
 		CConstraintArray *selected_partition_cnstrs =
 			GPOS_NEW(mp) CConstraintArray(mp);
 
+		IMdIdArray *foreign_server_mdids = GPOS_NEW(mp) IMdIdArray(mp);
 		IMdIdArray *all_partition_mdids = dyn_get->GetPartitionMdids();
 		for (ULONG ul = 0; ul < all_partition_mdids->Size(); ++ul)
 		{
@@ -2631,6 +2856,10 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			// undefined (e.g only has default partition)
 			if (nullptr == pcnstr || !pcnstr->FContradiction())
 			{
+				IMDId *foreign_server_mdid =
+					(*dyn_get->ForeignServerMdIds())[ul];
+				foreign_server_mdid->AddRef();
+				foreign_server_mdids->Append(foreign_server_mdid);
 				part_mdid->AddRef();
 				selected_partition_mdids->Append(part_mdid);
 				rel_cnstr = PcnstrFromChildPartition(
@@ -2650,6 +2879,7 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			// Return const false if there are no partitions left to scan
 			selected_partition_mdids->Release();
 			selected_partition_cnstrs->Release();
+			foreign_server_mdids->Release();
 			CColRefArray *colref_array =
 				expr->DeriveOutputColumns()->Pdrgpcr(mp);
 
@@ -2670,7 +2900,8 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 		CLogicalDynamicGet *new_dyn_get = GPOS_NEW(mp) CLogicalDynamicGet(
 			mp, new_alias, dyn_get->Ptabdesc(), dyn_get->ScanId(),
 			dyn_get->PdrgpcrOutput(), dyn_get->PdrgpdrgpcrPart(),
-			selected_partition_mdids, selected_part_cnstr_disj, true);
+			selected_partition_mdids, selected_part_cnstr_disj, true,
+			foreign_server_mdids);
 
 		CExpressionArray *select_children = GPOS_NEW(mp) CExpressionArray(mp);
 		select_children->Append(GPOS_NEW(mp) CExpression(mp, new_dyn_get));
@@ -2738,9 +2969,12 @@ CExpressionPreprocessor::PcnstrFromChildPartition(
 	GPOS_ASSERT(CUtils::FPredicate(part_constraint_expr));
 
 	CColRefSetArray *pdrgpcrsChild = nullptr;
-	CConstraint *cnstr = CConstraint::PcnstrFromScalarExpr(
-		mp, part_constraint_expr, &pdrgpcrsChild, true /* infer_nulls_as */);
-
+	CConstraint *cnstr;
+	// As of now, partition's default opfamily is btree
+	// ORCA doesn't support hash partition yet
+	cnstr = CConstraint::PcnstrFromScalarExpr(
+		mp, part_constraint_expr, &pdrgpcrsChild, true /* infer_nulls_as */,
+		IMDIndex::EmdindBtree);
 	CRefCount::SafeRelease(part_constraint_expr);
 	CRefCount::SafeRelease(pdrgpcrsChild);
 	GPOS_ASSERT(cnstr);
@@ -3095,19 +3329,38 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprOuterRefsEleminated->Release();
 
-	// (7) simplify quantified subqueries
-	CExpression *pexprSubqSimplified =
-		PexprSimplifyQuantifiedSubqueries(mp, pexprTrimmed2);
+	// (7.a) substitute constant predicates
+	ExprToConstantMap *phmExprToConst = GPOS_NEW(mp) ExprToConstantMap(mp);
+	CExpression *pexprPredWithConstReplaced =
+		PexprReplaceColWithConst(mp, pexprTrimmed2, phmExprToConst, true);
 	GPOS_CHECK_ABORT;
+	phmExprToConst->Release();
 	pexprTrimmed2->Release();
 
-	// (8) do preliminary unnesting of scalar subqueries
+	// (7.b) reorder the children of scalar cmp operator to ensure that left
+	// child is scalar ident and right child is scalar const
+	//
+	// Must happen after 7.a which can insert scalar cmp children with inversed
+	// format (CONST op IDENT) *and* before any step that relies on reorder
+	// format (e.g. "infer predicate form constraints")
+	CExpression *pexprReorderedScalarCmpChildren =
+		PexprReorderScalarCmpChildren(mp, pexprPredWithConstReplaced);
+	GPOS_CHECK_ABORT;
+	pexprPredWithConstReplaced->Release();
+
+	// (8) simplify quantified subqueries
+	CExpression *pexprSubqSimplified =
+		PexprSimplifyQuantifiedSubqueries(mp, pexprReorderedScalarCmpChildren);
+	GPOS_CHECK_ABORT;
+	pexprReorderedScalarCmpChildren->Release();
+
+	// (9) do preliminary unnesting of scalar subqueries
 	CExpression *pexprSubqUnnested =
 		PexprUnnestScalarSubqueries(mp, pexprSubqSimplified);
 	GPOS_CHECK_ABORT;
 	pexprSubqSimplified->Release();
 
-	// (9) unnest AND/OR/NOT predicates
+	// (10) unnest AND/OR/NOT predicates
 	CExpression *pexprUnnested =
 		CExpressionUtils::PexprUnnest(mp, pexprSubqUnnested);
 	GPOS_CHECK_ABORT;
@@ -3115,114 +3368,115 @@ CExpressionPreprocessor::PexprPreprocess(
 
 	CExpression *pexprConvert2In = pexprUnnested;
 
-	// GPDB_12_MERGE_FIXME: Although we've enabled EopttraceArrayConstraints,
-	// the following conversion is causing problems; and might be very
-	// inefficient! Disable for noe.
+	// ORCA_FEATURE_NOT_SUPPORTED: Unsupported for now as on enabling it,in some cases
+	// providing promising results but its also inefficient in some cases and
+	// generating wrong outputs
 	if (GPOS_FTRACE(EopttraceArrayConstraints) && false)
 	{
-		// (9.5) ensure predicates are array IN or NOT IN where applicable
+		// (10.5) ensure predicates are array IN or NOT IN where applicable
 		pexprConvert2In = PexprConvert2In(mp, pexprUnnested);
 		GPOS_CHECK_ABORT;
 		pexprUnnested->Release();
 	}
 
-	// (10) infer predicates from constraints
-	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprConvert2In);
+	// (11.a) Left Outer Join Pruning
+	CExpression *pexprJoinPruned =
+		CLeftJoinPruningPreprocessor::PexprPreprocess(mp, pexprConvert2In,
+													  pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
 	pexprConvert2In->Release();
 
-	// (11) eliminate self comparisons
-	CExpression *pexprSelfCompEliminated =
-		PexprEliminateSelfComparison(mp, pexprInferredPreds);
+	// (11.b) infer predicates from constraints
+	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprJoinPruned);
+	GPOS_CHECK_ABORT;
+	pexprJoinPruned->Release();
+
+	// (12) eliminate self comparisons
+	CExpression *pexprSelfCompEliminated = PexprEliminateSelfComparison(
+		mp, pexprInferredPreds, pexprInferredPreds->DeriveNotNullColumns());
 	GPOS_CHECK_ABORT;
 	pexprInferredPreds->Release();
 
-	// (12) remove duplicate AND/OR children
+	// (13) remove duplicate AND/OR children
 	CExpression *pexprDeduped =
 		CExpressionUtils::PexprDedupChildren(mp, pexprSelfCompEliminated);
 	GPOS_CHECK_ABORT;
 	pexprSelfCompEliminated->Release();
 
-	// (13) factorize common expressions
+	// (14) factorize common expressions
 	CExpression *pexprFactorized =
 		CExpressionFactorizer::PexprFactorize(mp, pexprDeduped);
 	GPOS_CHECK_ABORT;
 	pexprDeduped->Release();
 
-	// (14) infer filters out of components of disjunctive filters
+	// (15) infer filters out of components of disjunctive filters
 	CExpression *pexprPrefiltersExtracted =
 		CExpressionFactorizer::PexprExtractInferredFilters(mp, pexprFactorized);
 	GPOS_CHECK_ABORT;
 	pexprFactorized->Release();
 
-	// (15) pre-process ordered agg functions
+	// (16) pre-process ordered agg functions
 	CExpression *pexprOrderedAggPreprocessed =
 		COrderedAggPreprocessor::PexprPreprocess(mp, pexprPrefiltersExtracted);
 	GPOS_CHECK_ABORT;
 	pexprPrefiltersExtracted->Release();
 
-	// (16) pre-process window functions
+	// (17) pre-process window functions
 	CExpression *pexprWindowPreprocessed =
 		CWindowPreprocessor::PexprPreprocess(mp, pexprOrderedAggPreprocessed);
 	GPOS_CHECK_ABORT;
 	pexprOrderedAggPreprocessed->Release();
 
-	// (17) eliminate unused computed columns
+	// (18) eliminate unused computed columns
 	CExpression *pexprNoUnusedPrEl = PexprPruneUnusedComputedCols(
 		mp, pexprWindowPreprocessed, pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
 	pexprWindowPreprocessed->Release();
 
-	// (18) normalize expression
+	// (19) normalize expression
 	CExpression *pexprNormalized1 =
 		CNormalizer::PexprNormalize(mp, pexprNoUnusedPrEl);
 	GPOS_CHECK_ABORT;
 	pexprNoUnusedPrEl->Release();
 
-	// (19) transform outer join into inner join whenever possible
+	// (20) transform outer join into inner join whenever possible
 	CExpression *pexprLOJToIJ = PexprOuterJoinToInnerJoin(mp, pexprNormalized1);
 	GPOS_CHECK_ABORT;
 	pexprNormalized1->Release();
 
-	// (20) collapse cascaded inner and left outer joins
+	// (21) collapse cascaded inner and left outer joins
 	CExpression *pexprCollapsed = PexprCollapseJoins(mp, pexprLOJToIJ);
 	GPOS_CHECK_ABORT;
 	pexprLOJToIJ->Release();
 
-	// (21) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
+	// (22) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
 	CExpression *pexprWithPreds =
 		PexprAddPredicatesFromConstraints(mp, pexprCollapsed);
 	GPOS_CHECK_ABORT;
 	pexprCollapsed->Release();
 
-	// (22) eliminate empty subtrees
+	// (23) eliminate empty subtrees
 	CExpression *pexprPruned = PexprPruneEmptySubtrees(mp, pexprWithPreds);
 	GPOS_CHECK_ABORT;
 	pexprWithPreds->Release();
 
-	// (23) collapse cascade of projects
+	// (24) collapse cascade of projects
 	CExpression *pexprCollapsedProjects =
 		PexprCollapseProjects(mp, pexprPruned);
 	GPOS_CHECK_ABORT;
 	pexprPruned->Release();
 
-	// (24) insert dummy project when the scalar subquery is under a project and returns an outer reference
+	// (25) insert dummy project when the scalar subquery is under a project and returns an outer reference
 	CExpression *pexprSubquery = PexprProjBelowSubquery(
 		mp, pexprCollapsedProjects, false /* fUnderPrList */);
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (25) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
-	CExpression *pexrReorderedScalarCmpChildren =
-		PexprReorderScalarCmpChildren(mp, pexprSubquery);
-	GPOS_CHECK_ABORT;
-	pexprSubquery->Release();
-
 	// (26) rewrite IN subquery to EXIST subquery with a predicate
 	CExpression *pexprExistWithPredFromINSubq =
-		PexprExistWithPredFromINSubq(mp, pexrReorderedScalarCmpChildren);
+		PexprExistWithPredFromINSubq(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
-	pexrReorderedScalarCmpChildren->Release();
+	pexprSubquery->Release();
 
 	// (27) prune partitions
 	CExpression *pexprPrunedPartitions =

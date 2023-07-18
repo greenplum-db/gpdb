@@ -2,21 +2,21 @@
 -- Test quitting retrieve sessions interfering with multiple endpoints when calling
 -- gp_wait_parallel_retrieve_cursor.
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t1 select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 --------- Test1: test for quit retrieve will cancel all unfinished QE backend
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
@@ -191,7 +191,7 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 (0 rows)
 
 1: END;
-END
+ROLLBACK
 
 2: SELECT cursorname, state FROM gp_get_endpoints();
  cursorname | state 

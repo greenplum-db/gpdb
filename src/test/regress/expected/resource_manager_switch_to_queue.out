@@ -1,0 +1,32 @@
+-- start_ignore
+\! gpconfig -c gp_resource_manager -v queue
+20230109:22:58:10:221578 gpconfig:ubuntu:gpadmin-[INFO]:-completed successfully with parameters '-c gp_resource_manager -v queue'
+-- end_ignore
+\! echo $?
+0
+-- start_ignore
+\! gpstop -rai
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Gathering information and validating the environment...
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.16117.g367b82d8d9 build dev'
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Commencing Coordinator instance shutdown with mode='immediate'
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Coordinator segment instance directory=/home/gpadmin/zxj/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Attempting forceful termination of any leftover coordinator process
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/zxj/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-No standby coordinator host configured
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Targeting dbid [2, 3, 4] for shutdown
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-Commencing parallel segment instance shutdown, please wait...
+20230109:22:58:10:221895 gpstop:ubuntu:gpadmin-[INFO]:-0.00% of jobs completed
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-100.00% of jobs completed
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-----------------------------------------------------
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-   Segments stopped successfully      = 3
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-----------------------------------------------------
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-Successfully shutdown 3 of 3 segment instances 
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20230109:22:58:11:221895 gpstop:ubuntu:gpadmin-[INFO]:-Restarting System...
+-- end_ignore
+\! echo $?
+0

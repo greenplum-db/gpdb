@@ -186,8 +186,10 @@ NOTICE:  table "co_crtb_with_strg_dir_and_col_ref_1_uncompr" does not exist, ski
 --
 -- Create table
 --
+CREATE SEQUENCE co_crtb_with_strg_dir_and_col_ref_1_id_seq MAXVALUE 2147483647 CACHE 1;
 CREATE TABLE co_crtb_with_strg_dir_and_col_ref_1 ( 
- id SERIAL,a1 int ENCODING (compresstype=zlib,compresslevel=1,blocksize=1048576),
+ id int NOT NULL DEFAULT nextval('co_crtb_with_strg_dir_and_col_ref_1_id_seq'),
+a1 int ENCODING (compresstype=zlib,compresslevel=1,blocksize=1048576),
 a2 char(5) ENCODING (compresstype=zlib,compresslevel=1,blocksize=32768),
 a3 numeric ENCODING (compresstype=rle_type,compresslevel=1,blocksize=65536),
 a4 boolean DEFAULT false  ENCODING (compresstype=zlib,compresslevel=1,blocksize=1048576),
@@ -338,20 +340,20 @@ INSERT INTO co_crtb_with_strg_dir_and_col_ref_1_uncompr select * from co_crtb_wi
  a40    | bit varying(5)              |           |          |                                                                 | extended |              | zlib             | 1                 | 1048576    | 
  a41    | smallint                    |           |          |                                                                 | plain    |              | zlib             | 1                 | 1048576    | 
  a42    | integer                     |           |          |                                                                 | plain    |              | zlib             | 1                 | 32768      | 
-Checksum: t
 Indexes:
     "co_crtb_with_strg_dir_and_col_ref_1_idx_bitmap" bitmap (a1)
     "co_crtb_with_strg_dir_and_col_ref_1_idx_btree" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 --Select from pg_attribute_encoding to see the table entry 
-select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3; 
-               relname               | attnum |                      attoptions                       
--------------------------------------+--------+-------------------------------------------------------
- co_crtb_with_strg_dir_and_col_ref_1 |      1 | {compresstype=zlib,blocksize=8192,compresslevel=1}
- co_crtb_with_strg_dir_and_col_ref_1 |      2 | {compresstype=zlib,compresslevel=1,blocksize=1048576}
- co_crtb_with_strg_dir_and_col_ref_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+select attrelid::regclass as relname, attnum, filenum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'co_crtb_with_strg_dir_and_col_ref_1' and c.oid=e.attrelid  order by relname, attnum limit 3;
+               relname               | attnum | filenum |                      attoptions                       
+-------------------------------------+--------+---------+-------------------------------------------------------
+ co_crtb_with_strg_dir_and_col_ref_1 |      1 |       1 | {compresstype=zlib,blocksize=8192,compresslevel=1}
+ co_crtb_with_strg_dir_and_col_ref_1 |      2 |       2 | {compresstype=zlib,compresslevel=1,blocksize=1048576}
+ co_crtb_with_strg_dir_and_col_ref_1 |      3 |       3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
 (3 rows)
 
 --
@@ -406,7 +408,7 @@ Select count(*) as count_join from co_crtb_with_strg_dir_and_col_ref_1 t1 full o
 --Alter table alter type of a column 
 Alter table co_crtb_with_strg_dir_and_col_ref_1 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =10;
+Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =1;
 Select count(*) from co_crtb_with_strg_dir_and_col_ref_1; 
  count 
 -------
@@ -415,7 +417,7 @@ Select count(*) from co_crtb_with_strg_dir_and_col_ref_1;
 
 --Alter table drop a column 
 Alter table co_crtb_with_strg_dir_and_col_ref_1 Drop column a12; 
-Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =10;
+Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =1;
 Select count(*) from co_crtb_with_strg_dir_and_col_ref_1; 
  count 
 -------
@@ -425,7 +427,7 @@ Select count(*) from co_crtb_with_strg_dir_and_col_ref_1;
 --Alter table rename a column 
 Alter table co_crtb_with_strg_dir_and_col_ref_1 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =10;
+Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =1;
 Select count(*) from co_crtb_with_strg_dir_and_col_ref_1; 
  count 
 -------
@@ -435,7 +437,7 @@ Select count(*) from co_crtb_with_strg_dir_and_col_ref_1;
 --Alter table add a column 
 Alter table co_crtb_with_strg_dir_and_col_ref_1 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =10;
+Insert into co_crtb_with_strg_dir_and_col_ref_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_crtb_with_strg_dir_and_col_ref_1 where id =1;
 Select count(*) from co_crtb_with_strg_dir_and_col_ref_1; 
  count 
 -------
@@ -541,12 +543,12 @@ INSERT INTO co_cr_sub_partzlib8192_1_uncompr(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,
  a42    | integer                     |           |          |                                                      | plain    |              | zlib             | 1                 | 8192       | 
 Partition of: co_cr_sub_partzlib8192_1_1_prt_1 FOR VALUES IN ('F    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001) AND (a2 IS NOT NULL) AND (a2 = 'F    '::character(5)))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_1_prt_1_2_prt_sp2_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_1_prt_1_2_prt_sp2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 --
 -- Compare data with uncompressed table
@@ -651,12 +653,12 @@ alter table co_cr_sub_partzlib8192_1 add partition new_p start(5050) end (6051) 
  a42    | integer                     |           |          |                                                      | plain    |              | zlib             | 1                 | 8192       | 
 Partition of: co_cr_sub_partzlib8192_1_1_prt_new_p FOR VALUES IN ('M    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 5050) AND (a1 < 6051) AND (a2 IS NOT NULL) AND (a2 = 'M    '::character(5)))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 alter table co_cr_sub_partzlib8192_1 add default partition df_p with (appendonly=true, orientation=column);
 --Validation with psql utility 
@@ -709,12 +711,12 @@ alter table co_cr_sub_partzlib8192_1 add default partition df_p with (appendonly
  a42    | integer                     |           |          |                                                      | plain    |              | zlib             | 1                 | 8192       | 
 Partition of: co_cr_sub_partzlib8192_1_1_prt_df_p FOR VALUES IN ('F    ')
 Partition constraint: ((NOT ((a1 IS NOT NULL) AND (((a1 >= 1) AND (a1 < 1001)) OR ((a1 >= 1001) AND (a1 < 2001)) OR ((a1 >= 2001) AND (a1 < 3001)) OR ((a1 >= 3001) AND (a1 < 4001)) OR ((a1 >= 4001) AND (a1 < 5000)) OR ((a1 >= 5050) AND (a1 < 6051))))) AND (a2 IS NOT NULL) AND (a2 = 'F    '::character(5)))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 -- Insert data 
 Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,5000),'C',2011,'t','a','dfjjjjjj','2001-12-24 02:26:11','hghgh',333,'2011-10-11','Tddd','sss','1234.56',323453,4454,7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','dfdf','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','ggg','1','0',12,23) ; 
@@ -782,13 +784,12 @@ Alter table co_cr_sub_partzlib8192_1 alter partition FOR (1) exchange partition 
  a42    | integer                     |           |          |                                                           | plain    |              | zlib             | 1                 | 32768      | 
 Partition of: co_cr_sub_partzlib8192_1_1_prt_1 FOR VALUES IN ('M    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001) AND (a2 IS NOT NULL) AND (a2 = 'M    '::character(5)))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_exch_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_exch_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 Select count(*) from co_cr_sub_partzlib8192_1; 
  count 
@@ -803,7 +804,7 @@ alter table co_cr_sub_partzlib8192_1 drop default partition;
 --Alter table alter type of a column 
 Alter table co_cr_sub_partzlib8192_1 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =10;
+Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1; 
  count 
 -------
@@ -812,7 +813,7 @@ Select count(*) from co_cr_sub_partzlib8192_1;
 
 --Alter table drop a column 
 Alter table co_cr_sub_partzlib8192_1 Drop column a12; 
-Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =10;
+Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1; 
  count 
 -------
@@ -822,7 +823,7 @@ Select count(*) from co_cr_sub_partzlib8192_1;
 --Alter table rename a column 
 Alter table co_cr_sub_partzlib8192_1 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =10;
+Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1; 
  count 
 -------
@@ -832,7 +833,7 @@ Select count(*) from co_cr_sub_partzlib8192_1;
 --Alter table add a column 
 Alter table co_cr_sub_partzlib8192_1 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =10;
+Insert into co_cr_sub_partzlib8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1; 
  count 
 -------
@@ -931,12 +932,12 @@ INSERT INTO co_cr_sub_partzlib8192_1_2_uncompr(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a1
  a42    | integer                     |           |          |                                                        | plain    |              | zlib             | 1                 | 8192       | 
 Partition of: co_cr_sub_partzlib8192_1_2_1_prt_p1 FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'F    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_2_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 --
 -- Compare data with uncompressed table
@@ -1041,12 +1042,12 @@ alter table co_cr_sub_partzlib8192_1_2 add partition new_p values('C') with (app
  a42    | integer                     |           |          |                                                        | plain    |              | zlib             | 1                 | 8192       | 
 Partition of: co_cr_sub_partzlib8192_1_2_1_prt_new_p FOR VALUES FROM (1001) TO (2001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'C    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1001) AND (a1 < 2001))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 alter table co_cr_sub_partzlib8192_1_2 add default partition df_p with (appendonly=true, orientation=column);
 --Validation with psql utility 
@@ -1099,12 +1100,12 @@ alter table co_cr_sub_partzlib8192_1_2 add default partition df_p with (appendon
  a42    | integer                     |           |          |                                                        | plain    |              | zlib             | 1                 | 8192       | 
 Partition of: co_cr_sub_partzlib8192_1_2_1_prt_df_p FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((NOT ((a2 IS NOT NULL) AND (a2 = ANY (ARRAY['C    '::character(5), 'F    '::character(5), 'M    '::character(5)])))) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 -- Insert data 
 Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,5000),'C',2011,'t','a','dfjjjjjj','2001-12-24 02:26:11','hghgh',333,'2011-10-11','Tddd','sss','1234.56',323453,4454,7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','dfdf','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','ggg','1','0',12,23) ; 
@@ -1172,13 +1173,12 @@ Alter table co_cr_sub_partzlib8192_1_2 alter partition p2 exchange partition FOR
  a42    | integer                     |           |          |                                                             | plain    |              | zlib             | 1                 | 32768      | 
 Partition of: co_cr_sub_partzlib8192_1_2_1_prt_p2 FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'M    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_2_exch_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_2_exch_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 --Alter table Split Partition 
  Alter table co_cr_sub_partzlib8192_1_2 alter partition p1 split partition FOR (3001) at(4000) into (partition splita,partition splitb) ;
@@ -1231,12 +1231,12 @@ Options: compresstype=zlib
  a42    | integer                     |           |          |                                                        | plain    |              | zlib             | 1                 | 8192       | 
 Partition of: co_cr_sub_partzlib8192_1_2_1_prt_p1 FOR VALUES FROM (3001) TO (4000)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'F    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 3001) AND (a1 < 4000))
-Checksum: t
 Indexes:
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_a1_idx" bitmap (a1)
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 Select count(*) from co_cr_sub_partzlib8192_1_2; 
  count 
@@ -1251,7 +1251,7 @@ alter table co_cr_sub_partzlib8192_1_2 drop default partition;
 --Alter table alter type of a column 
 Alter table co_cr_sub_partzlib8192_1_2 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =10;
+Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1_2; 
  count 
 -------
@@ -1260,7 +1260,7 @@ Select count(*) from co_cr_sub_partzlib8192_1_2;
 
 --Alter table drop a column 
 Alter table co_cr_sub_partzlib8192_1_2 Drop column a12; 
-Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =10;
+Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1_2; 
  count 
 -------
@@ -1270,7 +1270,7 @@ Select count(*) from co_cr_sub_partzlib8192_1_2;
 --Alter table rename a column 
 Alter table co_cr_sub_partzlib8192_1_2 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =10;
+Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1_2; 
  count 
 -------
@@ -1280,7 +1280,7 @@ Select count(*) from co_cr_sub_partzlib8192_1_2;
 --Alter table add a column 
 Alter table co_cr_sub_partzlib8192_1_2 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =10;
+Insert into co_cr_sub_partzlib8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_cr_sub_partzlib8192_1_2 where id =1;
 Select count(*) from co_cr_sub_partzlib8192_1_2; 
  count 
 -------
@@ -1383,13 +1383,12 @@ INSERT INTO co_wt_sub_partrle_type8192_1_uncompr(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,
  a42    | integer                     |           |          |                                                          | plain    |              | rle_type         | 1                 | 8192       | 
 Partition of: co_wt_sub_partrle_type8192_1_1_prt_1 FOR VALUES IN ('F    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001) AND (a2 IS NOT NULL) AND (a2 = 'F    '::character(5)))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_1_prt_1_2_prt_sp2_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_1_prt_1_2_prt_sp2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=1, blocksize=8192
+Options: compresstype=rle_type, compresslevel=1, blocksize=8192, checksum=true
 
 --
 -- Compare data with uncompressed table
@@ -1494,13 +1493,12 @@ alter table co_wt_sub_partrle_type8192_1 add partition new_p start(5050) end (60
  a42    | integer                     |           |          |                                                          | plain    |              | zlib             | 1                 | 32768      | 
 Partition of: co_wt_sub_partrle_type8192_1_1_prt_new_p FOR VALUES IN ('M    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 5050) AND (a1 < 6051) AND (a2 IS NOT NULL) AND (a2 = 'M    '::character(5)))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=zlib, compresslevel=1
+Options: compresstype=zlib, compresslevel=1, blocksize=32768, checksum=true
 
 alter table co_wt_sub_partrle_type8192_1 add default partition df_p ;
 --Validation with psql utility 
@@ -1553,13 +1551,12 @@ alter table co_wt_sub_partrle_type8192_1 add default partition df_p ;
  a42    | integer                     |           |          |                                                          | plain    |              | rle_type         | 1                 | 8192       | 
 Partition of: co_wt_sub_partrle_type8192_1_1_prt_df_p FOR VALUES IN ('F    ')
 Partition constraint: ((NOT ((a1 IS NOT NULL) AND (((a1 >= 1) AND (a1 < 1001)) OR ((a1 >= 1001) AND (a1 < 2001)) OR ((a1 >= 2001) AND (a1 < 3001)) OR ((a1 >= 3001) AND (a1 < 4001)) OR ((a1 >= 4001) AND (a1 < 5000)) OR ((a1 >= 5050) AND (a1 < 6051))))) AND (a2 IS NOT NULL) AND (a2 = 'F    '::character(5)))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=1, blocksize=8192
+Options: compresstype=rle_type, compresslevel=1, blocksize=8192, checksum=true
 
 -- Insert data 
 Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,5000),'C',2011,'t','a','dfjjjjjj','2001-12-24 02:26:11','hghgh',333,'2011-10-11','Tddd','sss','1234.56',323453,4454,7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','dfdf','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','ggg','1','0',12,23) ; 
@@ -1627,13 +1624,12 @@ Alter table co_wt_sub_partrle_type8192_1 alter partition FOR (1) exchange partit
  a42    | integer                     |           |          |                                                               | plain    |              | zlib             | 1                 | 32768      | 
 Partition of: co_wt_sub_partrle_type8192_1_1_prt_1 FOR VALUES IN ('M    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001) AND (a2 IS NOT NULL) AND (a2 = 'M    '::character(5)))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_exch_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_exch_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 Select count(*) from co_wt_sub_partrle_type8192_1; 
  count 
@@ -1648,7 +1644,7 @@ alter table co_wt_sub_partrle_type8192_1 drop default partition;
 --Alter table alter type of a column 
 Alter table co_wt_sub_partrle_type8192_1 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =10;
+Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1; 
  count 
 -------
@@ -1657,7 +1653,7 @@ Select count(*) from co_wt_sub_partrle_type8192_1;
 
 --Alter table drop a column 
 Alter table co_wt_sub_partrle_type8192_1 Drop column a12; 
-Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =10;
+Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1; 
  count 
 -------
@@ -1667,7 +1663,7 @@ Select count(*) from co_wt_sub_partrle_type8192_1;
 --Alter table rename a column 
 Alter table co_wt_sub_partrle_type8192_1 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =10;
+Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1; 
  count 
 -------
@@ -1677,7 +1673,7 @@ Select count(*) from co_wt_sub_partrle_type8192_1;
 --Alter table add a column 
 Alter table co_wt_sub_partrle_type8192_1 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =10;
+Insert into co_wt_sub_partrle_type8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1; 
  count 
 -------
@@ -1773,13 +1769,12 @@ INSERT INTO co_wt_sub_partrle_type8192_1_2_uncompr(a1,a2,a3,a4,a5,a6,a7,a8,a9,a1
  a42    | integer                     |           |          |                                                            | plain    |              | rle_type         | 1                 | 8192       | 
 Partition of: co_wt_sub_partrle_type8192_1_2_1_prt_p1 FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'M    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_2_prt_2_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_2_prt_2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=1, blocksize=8192
+Options: compresstype=rle_type, compresslevel=1, blocksize=8192, checksum=true
 
 --
 -- Compare data with uncompressed table
@@ -1884,13 +1879,12 @@ alter table co_wt_sub_partrle_type8192_1_2 add partition new_p values('C')  WITH
  a42    | integer                     |           |          |                                                            | plain    |              | zlib             | 1                 | 32768      | 
 Partition of: co_wt_sub_partrle_type8192_1_2_1_prt_new_p FOR VALUES FROM (1001) TO (2001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'C    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1001) AND (a1 < 2001))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=1, blocksize=8192
+Options: compresstype=rle_type, compresslevel=1, blocksize=8192, checksum=true
 
 alter table co_wt_sub_partrle_type8192_1_2 add default partition df_p ;
 --Validation with psql utility 
@@ -1943,13 +1937,12 @@ alter table co_wt_sub_partrle_type8192_1_2 add default partition df_p ;
  a42    | integer                     |           |          |                                                            | plain    |              | rle_type         | 1                 | 8192       | 
 Partition of: co_wt_sub_partrle_type8192_1_2_1_prt_df_p FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((NOT ((a2 IS NOT NULL) AND (a2 = ANY (ARRAY['C    '::character(5), 'F    '::character(5), 'M    '::character(5)])))) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=1, blocksize=8192
+Options: compresstype=rle_type, compresslevel=1, blocksize=8192, checksum=true
 
 -- Insert data 
 Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,5000),'C',2011,'t','a','dfjjjjjj','2001-12-24 02:26:11','hghgh',333,'2011-10-11','Tddd','sss','1234.56',323453,4454,7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','dfdf','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','ggg','1','0',12,23) ; 
@@ -2017,13 +2010,12 @@ Alter table co_wt_sub_partrle_type8192_1_2 alter partition p1 exchange partition
  a42    | integer                     |           |          |                                                                 | plain    |              | zlib             | 1                 | 32768      | 
 Partition of: co_wt_sub_partrle_type8192_1_2_1_prt_p1 FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'M    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_2_exch_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_2_exch_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 --Alter table Split Partition 
  Alter table co_wt_sub_partrle_type8192_1_2 alter partition p2 split partition FOR (3001) at(4000) into (partition splita,partition splitb) ;
@@ -2076,13 +2068,12 @@ Options: compresstype=zlib
  a42    | integer                     |           |          |                                                            | plain    |              | rle_type         | 1                 | 8192       | 
 Partition of: co_wt_sub_partrle_type8192_1_2_1_prt_p2 FOR VALUES FROM (3001) TO (4000)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'F    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 3001) AND (a1 < 4000))
-Checksum: t
 Indexes:
     "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_a1_idx" bitmap (a1)
     "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=rle_type, compresslevel=1, blocksize=8192
+Options: compresstype=rle_type, compresslevel=1, blocksize=8192, checksum=true
 
 Select count(*) from co_wt_sub_partrle_type8192_1_2; 
  count 
@@ -2097,7 +2088,7 @@ alter table co_wt_sub_partrle_type8192_1_2 drop default partition;
 --Alter table alter type of a column 
 Alter table co_wt_sub_partrle_type8192_1_2 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =10;
+Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1_2; 
  count 
 -------
@@ -2106,7 +2097,7 @@ Select count(*) from co_wt_sub_partrle_type8192_1_2;
 
 --Alter table drop a column 
 Alter table co_wt_sub_partrle_type8192_1_2 Drop column a12; 
-Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =10;
+Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1_2; 
  count 
 -------
@@ -2116,7 +2107,7 @@ Select count(*) from co_wt_sub_partrle_type8192_1_2;
 --Alter table rename a column 
 Alter table co_wt_sub_partrle_type8192_1_2 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =10;
+Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1_2; 
  count 
 -------
@@ -2126,7 +2117,7 @@ Select count(*) from co_wt_sub_partrle_type8192_1_2;
 --Alter table add a column 
 Alter table co_wt_sub_partrle_type8192_1_2 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =10;
+Insert into co_wt_sub_partrle_type8192_1_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from co_wt_sub_partrle_type8192_1_2 where id =1;
 Select count(*) from co_wt_sub_partrle_type8192_1_2; 
  count 
 -------
@@ -2143,8 +2134,9 @@ NOTICE:  table "ao_wt_sub_partzlib8192_5_uncompr" does not exist, skipping
 --
 -- Create table
 --
+CREATE SEQUENCE ao_wt_sub_partzlib8192_5_id_seq MAXVALUE 2147483647 CACHE 1;
 CREATE TABLE ao_wt_sub_partzlib8192_5 
-	(id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int )
+	(id int NOT NULL DEFAULT nextval('ao_wt_sub_partzlib8192_5_id_seq'),a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int )
  WITH (appendonly=true, orientation=row) distributed randomly  Partition by range(a1) Subpartition by list(a2) subpartition template ( default subpartition df_sp, subpartition sp1 values('M') , subpartition sp2 values('F')  
  WITH (appendonly=true, orientation=row,compresstype=zlib,compresslevel=5,blocksize=8192)) (start(1)  end(5000) every(1000) );
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ao_wt_sub_partzlib8192_5'::regclass;
@@ -2223,16 +2215,12 @@ INSERT INTO ao_wt_sub_partzlib8192_5_uncompr(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,
  a42    | integer                     |           |          |                                                      | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_1_prt_1 FOR VALUES IN ('F    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001) AND (a2 IS NOT NULL) AND (a2 = 'F    '::character(5)))
-Compression Type: zlib
-Compression Level: 5
-Block Size: 8192
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_1_prt_1_2_prt_sp2_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_1_prt_1_2_prt_sp2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib, compresslevel=5, blocksize=8192
+Options: compresstype=zlib, compresslevel=5, blocksize=8192, checksum=true
 
 --
 -- Compare data with uncompressed table
@@ -2337,13 +2325,12 @@ alter table ao_wt_sub_partzlib8192_5 add partition new_p start(5050) end (6051) 
  a42    | integer                     |           |          |                                                      | plain    |              | zlib             | 1                 | 32768      | 
 Partition of: ao_wt_sub_partzlib8192_5_1_prt_new_p FOR VALUES IN ('M    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 5050) AND (a1 < 6051) AND (a2 IS NOT NULL) AND (a2 = 'M    '::character(5)))
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_column
-Options: compresstype=zlib, compresslevel=1
+Options: compresstype=zlib, compresslevel=1, blocksize=32768, checksum=true
 
 alter table ao_wt_sub_partzlib8192_5 add default partition df_p ;
 --Validation with psql utility 
@@ -2396,16 +2383,12 @@ alter table ao_wt_sub_partzlib8192_5 add default partition df_p ;
  a42    | integer                     |           |          |                                                      | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_1_prt_df_p FOR VALUES IN ('F    ')
 Partition constraint: ((NOT ((a1 IS NOT NULL) AND (((a1 >= 1) AND (a1 < 1001)) OR ((a1 >= 1001) AND (a1 < 2001)) OR ((a1 >= 2001) AND (a1 < 3001)) OR ((a1 >= 3001) AND (a1 < 4001)) OR ((a1 >= 4001) AND (a1 < 5000)) OR ((a1 >= 5050) AND (a1 < 6051))))) AND (a2 IS NOT NULL) AND (a2 = 'F    '::character(5)))
-Compression Type: zlib
-Compression Level: 5
-Block Size: 8192
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib, compresslevel=5, blocksize=8192
+Options: compresstype=zlib, compresslevel=5, blocksize=8192, checksum=true
 
 -- Insert data 
 Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,5000),'C',2011,'t','a','dfjjjjjj','2001-12-24 02:26:11','hghgh',333,'2011-10-11','Tddd','sss','1234.56',323453,4454,7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','dfdf','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','ggg','1','0',12,23) ; 
@@ -2473,16 +2456,12 @@ Alter table ao_wt_sub_partzlib8192_5 alter partition FOR (1) exchange partition 
  a42    | integer                     |           |          |                                                           | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_1_prt_1 FOR VALUES IN ('M    ')
 Partition constraint: ((a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001) AND (a2 IS NOT NULL) AND (a2 = 'M    '::character(5)))
-Compression Type: zlib
-Compression Level: 1
-Block Size: 32768
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_exch_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_exch_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 Select count(*) from ao_wt_sub_partzlib8192_5; 
  count 
@@ -2497,7 +2476,7 @@ alter table ao_wt_sub_partzlib8192_5 drop default partition;
 --Alter table alter type of a column 
 Alter table ao_wt_sub_partzlib8192_5 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =10;
+Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5; 
  count 
 -------
@@ -2506,7 +2485,7 @@ Select count(*) from ao_wt_sub_partzlib8192_5;
 
 --Alter table drop a column 
 Alter table ao_wt_sub_partzlib8192_5 Drop column a12; 
-Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =10;
+Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5; 
  count 
 -------
@@ -2516,7 +2495,7 @@ Select count(*) from ao_wt_sub_partzlib8192_5;
 --Alter table rename a column 
 Alter table ao_wt_sub_partzlib8192_5 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =10;
+Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5; 
  count 
 -------
@@ -2526,7 +2505,7 @@ Select count(*) from ao_wt_sub_partzlib8192_5;
 --Alter table add a column 
 Alter table ao_wt_sub_partzlib8192_5 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =10;
+Insert into ao_wt_sub_partzlib8192_5(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5; 
  count 
 -------
@@ -2622,16 +2601,12 @@ INSERT INTO ao_wt_sub_partzlib8192_5_2_uncompr(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a1
  a42    | integer                     |           |          |                                                        | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_2_1_prt_p1 FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'M    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Compression Type: zlib
-Compression Level: 5
-Block Size: 8192
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_2_prt_2_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_2_prt_2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib, compresslevel=5, blocksize=8192
+Options: compresstype=zlib, compresslevel=5, blocksize=8192, checksum=true
 
 --
 -- Compare data with uncompressed table
@@ -2736,16 +2711,12 @@ alter table ao_wt_sub_partzlib8192_5_2 add partition new_p values('C')  WITH (ap
  a42    | integer                     |           |          |                                                        | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_2_1_prt_new_p FOR VALUES FROM (1001) TO (2001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'C    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1001) AND (a1 < 2001))
-Compression Type: zlib
-Compression Level: 5
-Block Size: 8192
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib, compresslevel=5, blocksize=8192
+Options: compresstype=zlib, compresslevel=5, blocksize=8192, checksum=true
 
 alter table ao_wt_sub_partzlib8192_5_2 add default partition df_p ;
 --Validation with psql utility 
@@ -2798,16 +2769,12 @@ alter table ao_wt_sub_partzlib8192_5_2 add default partition df_p ;
  a42    | integer                     |           |          |                                                        | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_2_1_prt_df_p FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((NOT ((a2 IS NOT NULL) AND (a2 = ANY (ARRAY['C    '::character(5), 'F    '::character(5), 'M    '::character(5)])))) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Compression Type: zlib
-Compression Level: 5
-Block Size: 8192
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib, compresslevel=5, blocksize=8192
+Options: compresstype=zlib, compresslevel=5, blocksize=8192, checksum=true
 
 -- Insert data 
 Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,5000),'C',2011,'t','a','dfjjjjjj','2001-12-24 02:26:11','hghgh',333,'2011-10-11','Tddd','sss','1234.56',323453,4454,7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','dfdf','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','ggg','1','0',12,23) ; 
@@ -2875,16 +2842,12 @@ Alter table ao_wt_sub_partzlib8192_5_2 alter partition p1 exchange partition FOR
  a42    | integer                     |           |          |                                                             | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_2_1_prt_p1 FOR VALUES FROM (1) TO (1001)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'M    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 1) AND (a1 < 1001))
-Compression Type: zlib
-Compression Level: 1
-Block Size: 32768
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_2_exch_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_2_exch_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib
+Options: compresstype=zlib, blocksize=32768, compresslevel=1, checksum=true
 
 --Alter table Split Partition 
  Alter table ao_wt_sub_partzlib8192_5_2 alter partition p2 split partition FOR (3001) at(4000) into (partition splita,partition splitb) ;
@@ -2937,16 +2900,12 @@ Options: compresstype=zlib
  a42    | integer                     |           |          |                                                        | plain    |              | 
 Partition of: ao_wt_sub_partzlib8192_5_2_1_prt_p2 FOR VALUES FROM (3001) TO (4000)
 Partition constraint: ((a2 IS NOT NULL) AND (a2 = 'F    '::character(5)) AND (a1 IS NOT NULL) AND (a1 >= 3001) AND (a1 < 4000))
-Compression Type: zlib
-Compression Level: 5
-Block Size: 8192
-Checksum: t
 Indexes:
     "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_a1_idx" bitmap (a1)
     "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_a9_idx" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib, compresslevel=5, blocksize=8192
+Options: compresstype=zlib, compresslevel=5, blocksize=8192, checksum=true
 
 Select count(*) from ao_wt_sub_partzlib8192_5_2; 
  count 
@@ -2961,7 +2920,7 @@ alter table ao_wt_sub_partzlib8192_5_2 drop default partition;
 --Alter table alter type of a column 
 Alter table ao_wt_sub_partzlib8192_5_2 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =10;
+Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5_2; 
  count 
 -------
@@ -2970,7 +2929,7 @@ Select count(*) from ao_wt_sub_partzlib8192_5_2;
 
 --Alter table drop a column 
 Alter table ao_wt_sub_partzlib8192_5_2 Drop column a12; 
-Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =10;
+Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5_2; 
  count 
 -------
@@ -2980,7 +2939,7 @@ Select count(*) from ao_wt_sub_partzlib8192_5_2;
 --Alter table rename a column 
 Alter table ao_wt_sub_partzlib8192_5_2 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =10;
+Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5_2; 
  count 
 -------
@@ -2990,7 +2949,7 @@ Select count(*) from ao_wt_sub_partzlib8192_5_2;
 --Alter table add a column 
 Alter table ao_wt_sub_partzlib8192_5_2 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =10;
+Insert into ao_wt_sub_partzlib8192_5_2(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_wt_sub_partzlib8192_5_2 where id =1;
 Select count(*) from ao_wt_sub_partzlib8192_5_2; 
  count 
 -------
@@ -3076,16 +3035,12 @@ INSERT INTO ao_crtb_with_row_zlib_8192_1_uncompr select * from ao_crtb_with_row_
  a40    | bit varying(5)              |           |          |                                                          | extended |              | 
  a41    | smallint                    |           |          |                                                          | plain    |              | 
  a42    | integer                     |           |          |                                                          | plain    |              | 
-Compression Type: zlib
-Compression Level: 1
-Block Size: 8192
-Checksum: t
 Indexes:
     "ao_crtb_with_row_zlib_8192_1_idx_bitmap" bitmap (a1)
     "ao_crtb_with_row_zlib_8192_1_idx_btree" btree (a9)
 Distributed randomly
 Access method: ao_row
-Options: compresstype=zlib, compresslevel=1, blocksize=8192
+Options: compresstype=zlib, compresslevel=1, blocksize=8192, checksum=true
 
 --
 -- Compare data with uncompressed table
@@ -3138,7 +3093,7 @@ Select count(*) as count_join from ao_crtb_with_row_zlib_8192_1 t1 full outer jo
 --Alter table alter type of a column 
 Alter table ao_crtb_with_row_zlib_8192_1 Alter column a3 TYPE int4; 
 --Insert data to the table, select count(*)
-Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =10;
+Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =1;
 Select count(*) from ao_crtb_with_row_zlib_8192_1; 
  count 
 -------
@@ -3147,7 +3102,7 @@ Select count(*) from ao_crtb_with_row_zlib_8192_1;
 
 --Alter table drop a column 
 Alter table ao_crtb_with_row_zlib_8192_1 Drop column a12; 
-Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =10;
+Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =1;
 Select count(*) from ao_crtb_with_row_zlib_8192_1; 
  count 
 -------
@@ -3157,7 +3112,7 @@ Select count(*) from ao_crtb_with_row_zlib_8192_1;
 --Alter table rename a column 
 Alter table ao_crtb_with_row_zlib_8192_1 Rename column a13 TO after_rename_a13; 
 --Insert data to the table, select count(*)
-Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =10;
+Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =1;
 Select count(*) from ao_crtb_with_row_zlib_8192_1; 
  count 
 -------
@@ -3167,7 +3122,7 @@ Select count(*) from ao_crtb_with_row_zlib_8192_1;
 --Alter table add a column 
 Alter table ao_crtb_with_row_zlib_8192_1 Add column a12 text default 'new column'; 
 --Insert data to the table, select count(*)
-Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =10;
+Insert into ao_crtb_with_row_zlib_8192_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) select a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,after_rename_a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42 from ao_crtb_with_row_zlib_8192_1 where id =1;
 Select count(*) from ao_crtb_with_row_zlib_8192_1; 
  count 
 -------
@@ -3521,9 +3476,9 @@ CREATE TABLE co_create_type_rle_type_8192_4
  a4     | date_rle_type      |           |          |                                                            | plain   |              | rle_type         | 4                 | 8192       | 
  a5     | varchar_rle_type   |           |          |                                                            | plain   |              | rle_type         | 4                 | 8192       | 
  a6     | timestamp_rle_type |           |          |                                                            | plain   |              | rle_type         | 4                 | 8192       | 
-Checksum: t
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 INSERT into co_create_type_rle_type_8192_4 DEFAULT VALUES ; 
 --Select * from co_create_type_rle_type_8192_4;
@@ -3575,9 +3530,9 @@ Alter type int_rle_type set default encoding (compresstype=zlib,compresslevel=1)
  a5              | varchar_rle_type   |           |          |                                                            | plain   |              | rle_type         | 4                 | 8192       | 
  a6              | timestamp_rle_type |           |          |                                                            | plain   |              | rle_type         | 4                 | 8192       | 
  new_cl          | int_rle_type       |           |          | '5'::int_rle_type                                          | plain   |              | zlib             | 1                 | 32768      | 
-Checksum: t
 Distributed randomly
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 Insert into co_create_type_rle_type_8192_4(a1,after_rename_a3,a4,a5,a6)  select a1,after_rename_a3,a4,a5,a6 from co_create_type_rle_type_8192_4 ;
 Select count(*) from co_create_type_rle_type_8192_4; 
@@ -3613,9 +3568,9 @@ get_ao_compression_ratio('mpp17012_compress_test2');
  col2   | integer           |           |          |         | plain    |              | zlib             | 5                 | 32768      | 
  col3   | character varying |           |          |         | extended |              | zlib             | 5                 | 32768      | 
  col4   | character(44)     |           |          |         | extended |              | zlib             | 5                 | 32768      | 
-Checksum: t
 Distributed by: (col1)
 Access method: ao_column
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 -- When I insert data
 insert into mpp17012_compress_test2 values('a',generate_series(1,250),'ksjdhfksdhfksdhfksjhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
@@ -3670,3 +3625,35 @@ SELECT * FROM pg_compression WHERE compname='rle_type';
  rle_type | gp_rle_type_constructor | gp_rle_type_destructor | gp_rle_type_compress | gp_rle_type_decompress | gp_rle_type_validator |        10
 (1 row)
 
+-- Check ALTER TYPE SET DEFAULT ENCODING propagates to the dependent array type
+DROP type if exists mood_encoded cascade;
+CREATE TYPE mood_encoded AS ENUM ('sad', 'ok', 'happy');
+ALTER TYPE public.mood_encoded SET DEFAULT ENCODING (compresstype=zlib, blocksize=65536, compresslevel=4);
+SELECT t.typname, te.typoptions
+FROM pg_type t
+LEFT JOIN pg_type_encoding te ON (t.oid=te.typid)
+WHERE t.typname in ('mood_encoded', '_mood_encoded');
+    typname    |                     typoptions                      
+---------------+-----------------------------------------------------
+ _mood_encoded | {compresstype=zlib,blocksize=65536,compresslevel=4}
+ mood_encoded  | {compresstype=zlib,blocksize=65536,compresslevel=4}
+(2 rows)
+
+-- get_ao_compression_ratio when the relation is a partitioned table with ao table children.
+-- please refer to https://github.com/greenplum-db/gpdb/issues/14876
+CREATE TABLE public.partitioned_table_14876
+(id SERIAL, value TEXT, sales_date date)
+WITH (appendoptimized=true, orientation=column, compresstype=zlib, compresslevel=5)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (sales_date)
+(
+  -- monthly
+  START (date '2020-12-01') INCLUSIVE END (date '2021-01-01') EXCLUSIVE  EVERY (INTERVAL '1 month')
+);
+SELECT get_ao_compression_ratio('public.partitioned_table_14876');
+ get_ao_compression_ratio 
+--------------------------
+                       -1
+(1 row)
+
+DROP TABLE public.partitioned_table_14876;

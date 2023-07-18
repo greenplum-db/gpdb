@@ -33,7 +33,7 @@ static void AddValue(PossibleValueSet *pvs, Const *valueToCopy);
 static void RemoveValue(PossibleValueSet *pvs, Const *value);
 static bool ContainsValue(PossibleValueSet *pvs, Const *value);
 
-static bool TryProcessOpExprForPossibleValues(OpExpr *expr, Node *variable, PossibleValueSet *resultOut);
+static bool TryProcessOpExprForPossibleValues(OpExpr *expr, Node *variable, Oid opfamily, PossibleValueSet *resultOut);
 static bool TryProcessNullTestForPossibleValues(NullTest *expr, Node *variable, PossibleValueSet *resultOut);
 
 typedef struct ConstHashValue
@@ -308,11 +308,11 @@ RemoveUnmatchingValues(PossibleValueSet *pvs, PossibleValueSet *toCheck)
  * @param resultOut will be updated with the modified values
  */
 bool
-TryProcessExprForPossibleValues(Node *expr, Node *variable, PossibleValueSet *resultOut)
+TryProcessExprForPossibleValues(Node *expr, Node *variable, Oid opfamily, PossibleValueSet *resultOut)
 {
 	if (IsA(expr, OpExpr))
 	{
-		return TryProcessOpExprForPossibleValues((OpExpr *) expr, variable, resultOut);
+		return TryProcessOpExprForPossibleValues((OpExpr *) expr, variable, opfamily, resultOut);
 	}
 	else if (IsA(expr, NullTest))
 	{
@@ -323,7 +323,7 @@ TryProcessExprForPossibleValues(Node *expr, Node *variable, PossibleValueSet *re
 }
 
 static bool
-TryProcessOpExprForPossibleValues(OpExpr *expr, Node *variable, PossibleValueSet *resultOut)
+TryProcessOpExprForPossibleValues(OpExpr *expr, Node *variable, Oid opfamily, PossibleValueSet *resultOut)
 {
 	Node	   *leftop,
 			   *rightop,
@@ -377,6 +377,16 @@ TryProcessOpExprForPossibleValues(OpExpr *expr, Node *variable, PossibleValueSet
 		/**
 		 * Not talking about our variable?  Learned nothing
 		 */
+		return false;
+	}
+
+	/*
+	 * if expr->opno does not belong to opfamily of distributed key,
+	 * do not use direct dispatch to avoid wrong results.
+	 * more details please refer to https://github.com/greenplum-db/gpdb/issues/14887
+	 */
+	if (!op_in_opfamily(expr->opno, opfamily))
+	{
 		return false;
 	}
 

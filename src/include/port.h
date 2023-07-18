@@ -439,6 +439,10 @@ extern size_t strnlen(const char *str, size_t maxlen);
 extern long random(void);
 #endif
 
+#ifndef HAVE_SETENV
+extern int setenv(const char *name, const char *value, int overwrite);
+#endif
+
 #ifndef HAVE_UNSETENV
 extern void unsetenv(const char *name);
 #endif
@@ -526,11 +530,6 @@ extern int	pg_mkdir_p(char *path, int omode);
 /* port/pqsignal.c */
 typedef void (*pqsigfunc) (int signo);
 extern pqsigfunc pqsignal(int signo, pqsigfunc func);
-#ifndef WIN32
-extern pqsigfunc pqsignal_no_restart(int signo, pqsigfunc func);
-#else
-#define pqsignal_no_restart(signo, func) pqsignal(signo, func)
-#endif
 
 /* port/quotes.c */
 extern char *escape_single_quotes_ascii(const char *src);

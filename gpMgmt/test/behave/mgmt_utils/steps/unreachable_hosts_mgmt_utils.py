@@ -37,10 +37,10 @@ def impl(context, reconnected, spare):
 # We simulate a physical cutting of the ethernet cable by adding a blackhole
 # route from each other node to it.
 # For multiple disconnected hosts, we must disconnect them from each other first,
-# since otherwise mdw will not be able to reach them to do so.
+# since otherwise cdw will not be able to reach them to do so.
 #           hosts                          disconnected_hosts      spare_hosts
-# ['mdw', 'sdw1', 'sdw2', 'sdw3', 'sdw4'], ['sdw1', 'sdw3'], ['sdw5', 'sdw6'] (disconnect)
-# ['mdw', 'sdw2', 'sdw4', 'sdw5', 'sdw6'], ['sdw1', 'sdw3'], [])              (reconnect)
+# ['cdw', 'sdw1', 'sdw2', 'sdw3', 'sdw4'], ['sdw1', 'sdw3'], ['sdw5', 'sdw6'] (disconnect)
+# ['cdw', 'sdw2', 'sdw4', 'sdw5', 'sdw6'], ['sdw1', 'sdw3'], [])              (reconnect)
 def add_or_remove_blackhole_route(disconnected_hosts, spare_hosts, disconnect=False):
     hosts = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
     hosts.extend(spare_hosts)
@@ -55,11 +55,11 @@ def add_or_remove_blackhole_route(disconnected_hosts, spare_hosts, disconnect=Fa
             if hosts.count(host):
                 hosts.remove(host)
 
-        # mdw, sdw2, sdw4, sdw5, sdw6 -x- (sdw1, sdw3)
+        # cdw, sdw2, sdw4, sdw5, sdw6 -x- (sdw1, sdw3)
         for host in disconnected_hosts:
             _blackhole_route_helper(host, hosts, disconnect=True)
     else:
-        # mdw, sdw2, sdw4, sdw5, sdw6 --- (sdw1, sdw3)
+        # cdw, sdw2, sdw4, sdw5, sdw6 --- (sdw1, sdw3)
         for host in disconnected_hosts:
             _blackhole_route_helper(host, hosts)
 
@@ -99,6 +99,23 @@ def impl(context, disconnected):
     for host in disconnected_hosts:
         for cmd in cmds:
             subprocess.check_output(["ssh", host, cmd])
+
+
+@given('An entry to {action} {env} env var is added on all hosts of cluster')
+@when('An entry to {action} {env} env var is added on all hosts of cluster')
+def impl(context, action, env):
+    if action == "send":
+        cmdstr = "echo '{} {}' | sudo tee -a /etc/ssh/ssh_config".format("SendEnv", env)
+    else:
+        cmdstr = "echo '{} {}' | sudo tee -a /etc/ssh/sshd_config".format("AcceptEnv", env)
+
+    cmds = [cmdstr, "sudo systemctl restart sshd.service"]
+
+    hosts = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
+    for host in hosts:
+        for cmd in cmds:
+            subprocess.check_output(["ssh", host, cmd])
+
 
 # This step is very specific to the CCP CI cluster.
 @given('the original cluster state is recreated for "{test_case}"')

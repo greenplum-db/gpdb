@@ -1,12 +1,12 @@
 MODULE_big = gp_exttable_fdw
-OBJS = gp_exttable_fdw.o extaccess.o
+OBJS = gp_exttable_fdw.o extaccess.o option.o
 
 #SHLIB_LINK += -lcurl
 
 EXTENSION = gp_exttable_fdw
 DATA = gp_exttable_fdw--1.0.sql
 
-REGRESS =
+REGRESS = gp_exttable_fdw
 
 HEADERS = extaccess.h
 

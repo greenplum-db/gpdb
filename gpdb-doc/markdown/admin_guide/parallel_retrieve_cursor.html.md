@@ -22,13 +22,12 @@ You can use the following functions and views to examine and manage parallel ret
 
 |Function, View Name|Description|
 |-------------------|-----------|
-|gp\_get\_endpoints\(\)<br/><br/>[gp\_endpoints](../ref_guide/system_catalogs/gp_endpoints.html#topic1)|List the endpoints associated with all active parallel retrieve cursors declared by the current session user in the current database. When the Greenplum Database superuser invokes this function, it returns a list of all endpoints for all parallel retrieve cursors declared by all users in the current database.|
-|gp\_get\_session\_endpoints\(\)<br/><br/>[gp\_session\_endpoints](../ref_guide/system_catalogs/gp_session_endpoints.html#topic1)|List the endpoints associated with all parallel retrieve cursors declared in the current session for the current session user.|
-|gp\_get\_segment\_endpoints\(\)<br/><br/>[gp\_segment\_endpoints](../ref_guide/system_catalogs/gp_segment_endpoints.html#topic1)|List the endpoints created in the QE for all active parallel retrieve cursors declared by the current session user. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints on the QE created for all parallel retrieve cursors declared by all users.|
+|gp\_get\_endpoints\(\)<br/><br/>[gp\_endpoints](../ref_guide/system_catalogs/catalog_ref-views.html#gp_endpoints)|List the endpoints associated with all active parallel retrieve cursors declared by the current session user in the current database. When the Greenplum Database superuser invokes this function, it returns a list of all endpoints for all parallel retrieve cursors declared by all users in the current database.|
+|gp\_get\_session\_endpoints\(\)<br/><br/>[gp\_session\_endpoints](../ref_guide/system_catalogs/catalog_ref-views.html#gp_session_endpoints)|List the endpoints associated with all parallel retrieve cursors declared in the current session for the current session user.|
+|gp\_get\_segment\_endpoints\(\)<br/><br/>[gp\_segment\_endpoints](../ref_guide/system_catalogs/catalog_ref-views.html#gp_segment_endpoints)|List the endpoints created in the QE for all active parallel retrieve cursors declared by the current session user. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints on the QE created for all parallel retrieve cursors declared by all users.|
 |gp\_wait\_parallel\_retrieve\_cursor\(cursorname text, timeout\_sec int4 \)|Return cursor status or block and wait for results to be retrieved from all endpoints associated with the specified parallel retrieve cursor.|
 
 <div class="note">Each of these functions and views is located in the <code>pg_catalog</code> schema, and each <code>RETURNS TABLE</code>.</div>
-
 
 ## <a id="topic_using"></a>Using a Parallel Retrieve Cursor
 
@@ -106,7 +105,7 @@ These commands return the list of endpoints in a table with the following column
 |state|The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |endpointname|The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
-Refer to the [gp_endpoints](../ref_guide/system_catalogs/gp_endpoints.html#topic1) view reference page for more information about the endpoint attributes returned by these commands.
+Refer to the [gp_endpoints](../ref_guide/system_catalogs/catalog_ref-views.html#gp_endpoints) view reference page for more information about the endpoint attributes returned by these commands.
 
 You can similarly invoke the `gp_get_session_endpoints()` function or examine the `gp_session_endpoints` view to list the endpoints created for the parallel retrieve cursors declared in the current session and by the current user.
 
@@ -206,7 +205,7 @@ On closing, Greenplum Database frees all resources associated with the parallel 
 
 ### <a id="list_all_prc"></a>Listing All Parallel Retrieve Cursors
 
-The [pg_cursors](../ref_guide/system_catalogs/pg_cursors.html#topic1) view lists all declared cursors that are currently available in the system. You can obtain information about all parallel retrieve cursors by running the following command:
+The [pg_cursors](../ref_guide/system_catalogs/catalog_ref-views.html#pg_cursors) view lists all declared cursors that are currently available in the system. You can obtain information about all parallel retrieve cursors by running the following command:
 
 ``` sql
 SELECT * FROM pg_cursors WHERE is_parallel = true;
@@ -260,14 +259,19 @@ The commands return endpoint and retrieve session information in a table with th
 |endpointname|The endpoint identifier.|
 |cursorname|The name of the parallel retrieve cursor.|
 
-Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/gp_segment_endpoints.html#topic1) view reference page for more information about the endpoint attributes returned by these commands.
+Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/catalog_ref-views.html#gp_segment_endpoints) view reference page for more information about the endpoint attributes returned by these commands.
+
+
+## <a id="topic_cfg"></a>Limiting the Number of Concurrently Open Cursors
+
+By default, Greenplum Database does not limit the number of parallel retrieve cursors that are active in the cluster \(up to the maximum value of 1024\). The Greenplum Database superuser can set the [gp\_max\_parallel\_cursors](../ref_guide/config_params/guc-list.html#gp_max_parallel_cursors) server configuration parameter to limit the number of open cursors.
 
 
 ## <a id="topic_limits"></a>Known Issues and Limitations
 
 The parallel retrieve cursor implementation has the following limitations:
 
-- The Tanzu Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
+- The VMware Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
 - Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 - Parallel retrieve cursors cannot be declared `WITH HOLD`.
 - Parallel retrieve cursors do not support the `FETCH` and `MOVE` cursor operations.
@@ -276,7 +280,7 @@ The parallel retrieve cursor implementation has the following limitations:
 
 ## <a id="topic_addtldocs"></a>Additional Documentation
 
-Refer to the [README](https://github.com/greenplum-db/gpdb/tree/master/src/backend/cdb/endpoint/README) in the Greenplum Database `github` repository for additional information about the parallel retrieve cursor implementation.  You can also find parallel retrieve cursor [programming examples](https://github.com/greenplum-db/gpdb/tree/master/src/test/examples/) in the repository.
+Refer to the [README](https://github.com/greenplum-db/gpdb/tree/main/src/backend/cdb/endpoint/README) in the Greenplum Database `github` repository for additional information about the parallel retrieve cursor implementation.  You can also find parallel retrieve cursor [programming examples](https://github.com/greenplum-db/gpdb/tree/main/src/test/examples/) in the repository.
 
 
 ## <a id="topic_examples"></a>Example

@@ -18,7 +18,7 @@ The steps you follow within these scenarios can vary, depending on:
 -   whether you want to recover all segments or just a subset of segments
 
 
-**Note:** Incremental recovery is only possible when recovering segments to the current host \(in-place recovery\).
+> **Note** Incremental recovery is only possible when recovering segments to the current host \(in-place recovery\).
 
 This topic is divided into the following sections:
 
@@ -32,7 +32,7 @@ This topic is divided into the following sections:
 
 -   Mirroring is enabled for all segments.
 -   You've already identified which segments have failed. If necessary, see the topic [Checking for Failed Segments](g-checking-for-failed-segments.html).
--   The master host can connect to the segment host.
+-   The coordinator host can connect to the segment host.
 -   All networking or hardware issues that caused the segment to fail have been resolved.
 
 ## <a id="recovery_scenarios"></a>Recovery Scenarios 
@@ -42,12 +42,13 @@ This section documents the steps for the 3 distinct segment recovery scenarios. 
 -   [Recover In-Place to Current Host](#same_host)
     -   [Incremental Recovery](#incremental)
     -   [Full Recovery](#full)
+    -   [Differential Recovery](#differential)
 -   [Recover to A Different Host within the Cluster](#different_host)
 -   [Recover to A New Host, Outside of the Cluster](#new_host)
 
 ### <a id="same_host"></a>Recover In-Place to Current Host 
 
-When recovering in-place to the current host, you may choose between incremental recovery \(the default\) and full recovery.
+When recovering in-place to the current host, you may choose between incremental recovery (the default), full recovery, and differential recovery.
 
 #### <a id="incremental"></a>Incremental Recovery 
 
@@ -60,15 +61,24 @@ Follow these steps for incremental recovery:
     ```
 
 2.  To recover a subset of segments:
-    1.  Manually create a `recover_config_file` file in a location of your choice, where each segment to recover has its own line with format `failedAddress|failedPort|failedDataDirectory`
+    1.  Manually create a `recover_config_file` file in a location of your choice, where each segment to recover has its own line with format `failedAddress|failedPort|failedDataDirectory` or `failedHostname|failedAddress|failedPort|failedDataDirectory`
 
-        For multiple segments, create a new line for each segment you want to recover, specifying the address, port number and data directory for each down segment. For example:
+        For multiple segments, create a new line for each segment you want to recover, specifying the hostname (optional), the address, port number and data directory for each down segment. For example:
 
         ```
         failedAddress1|failedPort1|failedDataDirectory1
         failedAddress2|failedPort2|failedDataDirectory2
         failedAddress3|failedPort3|failedDataDirectory3
         ```
+       
+        or
+
+        ```
+        failedHostname1|failedAddress1|failedPort1|failedDataDirectory1
+        failedHostname2|failedAddress2|failedPort2|failedDataDirectory2
+        failedHostname3|failedAddress3|failedPort3|failedDataDirectory3
+        ```
+
 
     2.  Alternatively, generate a sample recovery file using the following command; you may edit the resulting file if necessary:
 
@@ -99,6 +109,12 @@ Follow these steps for incremental recovery:
         failedAddress1|failedPort1|failedDataDirectory1<SPACE>failedAddress2|failedPort2|failedDataDirectory2
         ```
 
+        or
+
+        ```
+        failedHostname1|failedAddress1|failedPort1|failedDataDirectory1<SPACE>failedHostname2|failedAddress2|failedPort2|failedDataDirectory2
+        ```
+
         Note the literal **SPACE** separating the lines.
 
     2.  Alternatively, generate a sample recovery file using the following command and edit the resulting file to match your desired recovery configuration:
@@ -115,9 +131,16 @@ Follow these steps for incremental recovery:
 
 3.  Perform the post-recovery tasks summarized in the section [Post-Recovery Tasks](#post_recovery).
 
+#### <a id="differential"></a>Differential Recovery 
+
+Follow these steps for differential recovery: 
+
+1. Run `gprecoverseg --differential`
+
+
 ### <a id="different_host"></a>Recover to A Different Host within the Cluster 
 
-**Note:** Only full recovery is possible when recovering to a different host in the cluster.
+> **Note** Only full recovery is possible when recovering to a different host in the cluster.
 
 Follow these steps to recover all segments or just a subset of segments to a different host in the cluster:
 
@@ -125,6 +148,12 @@ Follow these steps to recover all segments or just a subset of segments to a dif
 
     ```
     failedAddress|failedPort|failedDataDirectory<SPACE>newAddress|newPort|newDataDirectory
+    ```
+
+    or
+
+    ```
+    failedHostname|failedAddress|failedPort|failedDataDirectory<SPACE>newHostname|newAddress|newPort|newDataDirectory
     ```
 
     Note the literal **SPACE** separating the details of the down segment from the details of where the segment will be recovered to.
@@ -147,7 +176,7 @@ Follow these steps to recover all segments or just a subset of segments to a dif
 
 Follow these steps if you are planning to do a hardware refresh on the host the segments are running on.
 
-**Note:** Only full recovery is possible when recovering to a new host.
+> **Note** Only full recovery is possible when recovering to a new host.
 
 #### <a id="new_host_requirements"></a>Requirements for New Host 
 
@@ -159,10 +188,10 @@ The new host must:
 
 -   have sufficient disk space to accommodate the segments
 
--   be able to connect password-less with all other existing segments and Greenplum master.
+-   be able to connect password-less with all other existing segments and Greenplum coordinator.
 
 
-#### <a id="topic_yyj_4gb_yqb"></a>Steps to Recover to a New Host 
+#### <a id="recover_to_new_host"></a>Steps to Recover to a New Host 
 
 1.  Bring up the new host
 2.  Run the following command to recover all segments to the new host:
@@ -177,7 +206,7 @@ The new host must:
     gprecoverseg -p <new_host_name1>,<new_host_name2>
     ```
 
-    **Note:** In the case of multiple failed segment hosts, you can specify the hosts to recover to with a comma-separated list. However, it is strongly recommended to recover to one host at a time. If you must recover to more than one host at a time, then it is critical to ensure that a double fault scenario does not occur, in which both the segment primary and corresponding mirror are offline.
+    > **Note** In the case of multiple failed segment hosts, you can specify the hosts to recover to with a comma-separated list. However, it is strongly recommended to recover to one host at a time. If you must recover to more than one host at a time, then it is critical to ensure that a double fault scenario does not occur, in which both the segment primary and corresponding mirror are offline.
 
 3.  Perform the post-recovery tasks summarized in the section [Post-Recovery Tasks](#post_recovery).
 

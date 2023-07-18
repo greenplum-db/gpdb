@@ -84,8 +84,6 @@ CMDRelationCtasGPDB::CMDRelationCtasGPDB(
 
 		m_col_width_array->Append(GPOS_NEW(mp) CDouble(mdcol->Length()));
 	}
-	m_dxl_str = CDXLUtils::SerializeMDObj(
-		m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
 }
 
 //---------------------------------------------------------------------------
@@ -100,7 +98,10 @@ CMDRelationCtasGPDB::~CMDRelationCtasGPDB()
 {
 	GPOS_DELETE(m_mdname_schema);
 	GPOS_DELETE(m_mdname);
-	GPOS_DELETE(m_dxl_str);
+	if (nullptr != m_dxl_str)
+	{
+		GPOS_DELETE(m_dxl_str);
+	}
 	m_mdid->Release();
 	m_md_col_array->Release();
 	m_keyset_array->Release();
@@ -112,6 +113,17 @@ CMDRelationCtasGPDB::~CMDRelationCtasGPDB()
 	m_vartypemod_array->Release();
 	m_distr_opfamilies->Release();
 	m_distr_opclasses->Release();
+}
+
+const CWStringDynamic *
+CMDRelationCtasGPDB::GetStrRepr()
+{
+	if (nullptr == m_dxl_str)
+	{
+		m_dxl_str = CDXLUtils::SerializeMDObj(
+			m_mp, this, false /*fSerializeHeader*/, false /*indentation*/);
+	}
+	return m_dxl_str;
 }
 
 //---------------------------------------------------------------------------

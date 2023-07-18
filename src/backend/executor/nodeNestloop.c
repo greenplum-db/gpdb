@@ -31,7 +31,6 @@
 #include "miscadmin.h"
 #include "utils/memutils.h"
 
-extern bool Test_print_prefetch_joinqual;
 
 static void splitJoinQualExpr(List *joinqual, List **inner_join_keys_p, List **outer_join_keys_p);
 static void extractFuncExprArgs(Expr *clause, List **lclauses, List **rclauses);
@@ -167,23 +166,6 @@ ExecNestLoop_guts(PlanState *pstate)
 
 		node->prefetch_inner = false;
 		node->reset_inner = false;
-	}
-
-	/*
-	 * Prefetch JoinQual or NonJoinQual to prevent motion hazard.
-	 *
-	 * See ExecPrefetchQual() for details.
-	 */
-	if (node->prefetch_joinqual)
-	{
-		ExecPrefetchQual(&node->js, true);
-		node->prefetch_joinqual = false;
-	}
-
-	if (node->prefetch_qual)
-	{
-		ExecPrefetchQual(&node->js, false);
-		node->prefetch_qual = false;
 	}
 
 	/*
@@ -425,22 +407,6 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 	nlstate->shared_outer = node->shared_outer;
 
 	nlstate->prefetch_inner = node->join.prefetch_inner;
-	nlstate->prefetch_joinqual = node->join.prefetch_joinqual;
-	nlstate->prefetch_qual = node->join.prefetch_qual;
-
-	if (Test_print_prefetch_joinqual && nlstate->prefetch_joinqual)
-		elog(NOTICE,
-			 "prefetch join qual in slice %d of plannode %d",
-			 currentSliceId, ((Plan *) node)->plan_node_id);
-
-	/*
-	 * reuse GUC Test_print_prefetch_joinqual to output debug information for
-	 * prefetching non join qual
-	 */
-	if (Test_print_prefetch_joinqual && nlstate->prefetch_qual)
-		elog(NOTICE,
-			 "prefetch non join qual in slice %d of plannode %d",
-			 currentSliceId, ((Plan *) node)->plan_node_id);
 
 	/*CDB-OLAP*/
 	nlstate->reset_inner = false;

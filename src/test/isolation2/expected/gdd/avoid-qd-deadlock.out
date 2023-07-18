@@ -1,14 +1,14 @@
 DROP TABLE IF EXISTS tsudf;
-DROP
+DROP TABLE
 
 CREATE TABLE tsudf (c int, d int);
-CREATE
+CREATE TABLE
 
 CREATE OR REPLACE FUNCTION func1(int) RETURNS int AS $$ BEGIN UPDATE tsudf SET d = d+1 WHERE c = $1; /* in func */ RETURN $1; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
-CREATE
+CREATE FUNCTION
 
 INSERT INTO tsudf select i, i+1 from generate_series(1,10) i;
-INSERT 10
+INSERT 0 10
 
 SELECT gp_inject_fault('upgrade_row_lock', 'reset', 1);
  gp_inject_fault 

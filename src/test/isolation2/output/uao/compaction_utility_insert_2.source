@@ -1,30 +1,30 @@
 -- @Description Tests the compaction of data inserted in utility mode
 -- 
 DROP TABLE IF EXISTS foo;
-DROP
+DROP TABLE
 CREATE TABLE foo (a INT, b INT, c CHAR(128)) USING @amname@;
-CREATE
+CREATE TABLE
 CREATE INDEX foo_index ON foo(b);
-CREATE
+CREATE INDEX
 
 INSERT INTO foo VALUES (1, 1, 'c');
-INSERT 1
+INSERT 0 1
 SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
  segno | tupcount | state 
 -------+----------+-------
  1     | 1        | 1     
 (1 row)
 2U: INSERT INTO foo VALUES (2, 2, 'c');
-INSERT 1
+INSERT 0 1
 2U: INSERT INTO foo VALUES (3, 3, 'c');
-INSERT 1
+INSERT 0 1
 2U: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
  segno | tupcount | state 
 -------+----------+-------
  0     | 2        | 1     
  1     | 1        | 1     
 (2 rows)
--- We know that the master does update its tupcount yet
+-- We know that the coordinator does update its tupcount yet
 SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
  segno | tupcount | state 
 -------+----------+-------

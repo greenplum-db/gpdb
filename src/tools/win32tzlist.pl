@@ -74,14 +74,14 @@ $pgtz = $1;
 
 # Extract each individual record from the struct
 while ($pgtz =~
-	m/{\s+"([^"]+)",\s+"([^"]+)",\s+"([^"]+)",?\s+},\s+\/\*(.+?)\*\//gs)
+	m/{\s+\/\*(.+?)\*\/\s+"([^"]+)",\s+"([^"]+)",\s+"([^"]+)",?\s+},/gs)
 {
 	push @file_zones,
 	  {
-		'std'     => $1,
-		'dlt'     => $2,
-		'match'   => $3,
-		'display' => clean_displayname($4),
+		'display' => clean_displayname($1),
+		'std'     => $2,
+		'dlt'     => $3,
+		'match'   => $4,
 	  };
 }
 
@@ -123,7 +123,7 @@ if (@add)
 	for my $z (@add)
 	{
 		print
-		  "\t{\n\t\t\"$z->{std}\", \"$z->{dlt}\",\n\t\t\"FIXME\"\n\t},\t\t\t\t\t\t\t/* $z->{display} */\n";
+		  "\t{\n\t\t/* $z->{display} */\n\t\t\"$z->{std}\", \"$z->{dlt}\",\n\t\t\"FIXME\"\n\t},\n";
 	}
 }
 
@@ -131,8 +131,8 @@ sub clean_displayname
 {
 	my $dn = shift;
 
-	$dn =~ s/\s+/ /gs;
 	$dn =~ s/\*//gs;
+	$dn =~ s/\s+/ /gs;
 	$dn =~ s/^\s+//gs;
 	$dn =~ s/\s+$//gs;
 	return $dn;

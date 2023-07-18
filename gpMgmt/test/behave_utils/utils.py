@@ -258,17 +258,12 @@ def getRow(dbname, exec_sql):
 
 
 def check_db_exists(dbname, host=None, port=0, user=None):
-    LIST_DATABASE_SQL = 'SELECT datname FROM pg_database'
-
-    results = []
     with closing(dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname='template1'), unsetSearchPath=False)) as conn:
-        curs = dbconn.query(conn, LIST_DATABASE_SQL)
-        results = curs.fetchall()
-    for result in results:
-        if result[0] == dbname:
-            return True
+        count = dbconn.querySingleton(conn, "SELECT count(*) FROM pg_database WHERE datname=\'{}\';".format(dbname))
+        if count == 0:
+            return False
 
-    return False
+    return True
 
 
 def create_database_if_not_exists(context, dbname, host=None, port=0, user=None):
@@ -808,7 +803,7 @@ def wait_for_desired_query_result(dburl, query, desired_result, utility=False):
     Raises an Exception after failing <num_retries> times.
     """
     attempt = 0
-    num_retries = 150
+    num_retries = 600
     actual_result = None
     while (attempt < num_retries) and (actual_result != desired_result):
         attempt += 1
@@ -823,3 +818,18 @@ def wait_for_desired_query_result(dburl, query, desired_result, utility=False):
 
     if attempt == num_retries:
         raise Exception('Timed out after %s retries' % num_retries)
+
+
+
+def wait_for_database_dropped(dbname, remaining_attempt = 3000):
+    """
+    Tries once a decisecond to check for the database exist.
+    Raises an Exception after failing <remaining_attempt> times.
+    """
+    while remaining_attempt:
+        if not check_db_exists(dbname):
+            break
+        remaining_attempt -= 1
+        if remaining_attempt == 0:
+            raise Exception('Unable to drop the database {} !!!').format(dbname)
+        time.sleep(0.1)

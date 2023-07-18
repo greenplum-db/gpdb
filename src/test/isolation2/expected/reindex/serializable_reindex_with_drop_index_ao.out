@@ -1,30 +1,30 @@
 DROP TABLE IF EXISTS reindex_serialize_tab_ao;
-DROP
+DROP TABLE
 
 CREATE TABLE reindex_serialize_tab_ao (a INT, b text, c date, d numeric, e bigint, f char(10), g float) with (appendonly=True) distributed by (a);
-CREATE
+CREATE TABLE
 insert into reindex_serialize_tab_ao select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
-INSERT 1000
+INSERT 0 1000
 insert into reindex_serialize_tab_ao select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
-INSERT 1000
+INSERT 0 1000
 insert into reindex_serialize_tab_ao select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
-INSERT 1000
+INSERT 0 1000
 insert into reindex_serialize_tab_ao select 1, 'abc'||i, now(),i*100.43, i*-187, 'a'|| i*-1, i*2.23 from generate_series(1,1000) i;
-INSERT 1000
+INSERT 0 1000
 create index idxa_reindex_serialize_tab_ao on reindex_serialize_tab_ao(a);
-CREATE
+CREATE INDEX
 create index idxb_reindex_serialize_tab_ao on reindex_serialize_tab_ao(b);
-CREATE
+CREATE INDEX
 create index idxc_reindex_serialize_tab_ao on reindex_serialize_tab_ao(c);
-CREATE
+CREATE INDEX
 create index idxd_reindex_serialize_tab_ao on reindex_serialize_tab_ao(d);
-CREATE
+CREATE INDEX
 create index idxe_reindex_serialize_tab_ao on reindex_serialize_tab_ao(e);
-CREATE
+CREATE INDEX
 create index idxf_reindex_serialize_tab_ao on reindex_serialize_tab_ao(f);
-CREATE
+CREATE INDEX
 create index idxg_reindex_serialize_tab_ao on reindex_serialize_tab_ao(g);
-CREATE
+CREATE INDEX
 -- start_ignore
 SET gp_create_table_random_default_distribution=off;
 SET
@@ -41,18 +41,18 @@ SET
  dummy select to establish snapshot 
 (1 row)
 1: drop index idxg_reindex_serialize_tab_ao;
-DROP
+DROP INDEX
 1: COMMIT;
 COMMIT
--- Remember index relfilenodes from master and segments before
+-- Remember index relfilenodes from coordinator and segments before
 -- reindex.
 2: create table old_ao_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_serialize_tab_ao' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname like 'idx%_reindex_serialize_tab_ao');
-CREATE 28
+SELECT 28
 2: reindex table reindex_serialize_tab_ao;
 REINDEX
 2: COMMIT;
 COMMIT
--- Validate that reindex changed all index relfilenodes on master as well as
+-- Validate that reindex changed all index relfilenodes on coordinator as well as
 -- segments.  The following query should return 0 tuples.
 2: select oldrels.* from old_ao_relfilenodes oldrels join (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_serialize_tab_ao' union all select gp_segment_id as dbid, relfilenode, relname from pg_class where relname like 'idx%_reindex_serialize_tab_ao') newrels on oldrels.relfilenode = newrels.relfilenode and oldrels.dbid = newrels.dbid and oldrels.relname = newrels.relname;
  dbid | relfilenode | oid | relname 

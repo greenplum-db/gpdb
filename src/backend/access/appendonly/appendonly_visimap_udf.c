@@ -39,7 +39,6 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 	Datum		result;
 
     Oid visimaprelid;
-    Oid visimapidxid;
 	typedef struct Context
 	{
 		Relation	aorel;
@@ -82,20 +81,19 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 		context = (Context *) palloc0(sizeof(Context));
 
 		context->aorel = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAppendOptimized(context->aorel))
+		if (!RelationStorageIsAO(context->aorel))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
 
 		Snapshot sst = GetLatestSnapshot();
 
-        GetAppendOnlyEntryAuxOids(context->aorel->rd_id, sst,
-                                  NULL, NULL, NULL,
-                                  &visimaprelid, &visimapidxid);
+		GetAppendOnlyEntryAuxOids(context->aorel,
+							NULL, NULL,
+							&visimaprelid);
 
 		AppendOnlyVisimapScan_Init(&context->visiMapScan,
 								   visimaprelid,
-								   visimapidxid,
 								   AccessShareLock,
 								   sst);
 
@@ -147,7 +145,6 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 	HeapTuple	tuple;
 	Datum		result;
     Oid         visimaprelid;
-    Oid         visimapidxid;
 
 	typedef struct Context
 	{
@@ -170,6 +167,7 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
 		Snapshot	snapshot;
+		Oid 		segrelid;
 
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -197,20 +195,18 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		context = (Context *) palloc0(sizeof(Context));
 
 		context->parentRelation = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAppendOptimized(context->parentRelation))
+		if (!RelationStorageIsAO(context->parentRelation))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
 
-        Oid segrelid;
 		snapshot = GetLatestSnapshot();
-        GetAppendOnlyEntryAuxOids(context->parentRelation->rd_id, snapshot,
-                                  &segrelid, NULL, NULL,
-                                  &visimaprelid, &visimapidxid);
+		GetAppendOnlyEntryAuxOids(context->parentRelation,
+								&segrelid, NULL,
+								&visimaprelid);
 
 		AppendOnlyVisimap_Init(&context->visiMap,
 							   visimaprelid,
-							   visimapidxid,
 							   AccessShareLock,
 							   snapshot);
 
@@ -328,7 +324,6 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 	HeapTuple	tuple;
 	Datum		result;
     Oid         visimaprelid;
-    Oid         visimapidxid;
 
 	typedef struct Context
 	{
@@ -377,20 +372,19 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 		context = (Context *) palloc0(sizeof(Context));
 
 		context->parentRelation = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAppendOptimized(context->parentRelation))
+		if (!RelationStorageIsAO(context->parentRelation))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("function not supported on relation")));
 
-        Snapshot sst = GetLatestSnapshot();
+		Snapshot sst = GetLatestSnapshot();
 
-        GetAppendOnlyEntryAuxOids(context->parentRelation->rd_id, sst,
-                                  NULL, NULL, NULL,
-                                  &visimaprelid, &visimapidxid);
+		GetAppendOnlyEntryAuxOids(context->parentRelation,
+								NULL, NULL,
+								&visimaprelid);
 
 		AppendOnlyVisimap_Init(&context->visiMap,
 							   visimaprelid,
-							   visimapidxid,
 							   AccessShareLock,
 							   sst);
 

@@ -28,6 +28,7 @@
 /external_table.out
 /filespace.out
 /gpcopy.out
+/gp_check_files.out
 /gp_dispatch_keepalives.out
 /gp_tablespace.out
 /gp_tablespace_path_too_long.out
@@ -37,6 +38,8 @@
 /guc_env_var.out
 /hooktest.out
 /oid_wraparound.out
+/part_external_table.out
+/part_external_table_optimizer.out
 /partition_ddl.out
 /pgstat_qd_tabstat.out
 /qp_gist_indexes2_optimizer.out
@@ -58,3 +61,5 @@
 /external_table_persistent_error_log.out
 /external_table_union_all.out
 /external_table_union_all_optimizer.out
+/external_table_optimizer.out
+/external_table_persistent_error_log_optimizer.out

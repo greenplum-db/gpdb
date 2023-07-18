@@ -20,7 +20,7 @@ select gp_inject_fault('before_xlog_xact_commit_prepared', 'reset', 3);
 2<:
 1U<:
 
--- TEST 2: block checkpoint on master
+-- TEST 2: block checkpoint on coordinator
 
 -- pause the CommitTransaction right before persistent table cleanup after
 -- notifyCommittedDtxTransaction()
@@ -35,7 +35,7 @@ select gp_inject_fault_infinite('onephase_transaction_commit', 'suspend', 1);
 -- wait for the fault to trigger since following checkpoint could be faster
 select gp_wait_until_triggered_fault('onephase_transaction_commit', 1, 1);
 
--- do checkpoint on master in utility mode, and it should block
+-- do checkpoint on coordinator in utility mode, and it should block
 -1U&: checkpoint;
 
 -- resume the 2PC

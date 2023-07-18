@@ -2,9 +2,9 @@
 -- teardown on the motion sender side, for the final response from the motion
 -- receiver(s).
 CREATE TABLE tcp_ic_teardown(i int);
-CREATE
+CREATE TABLE
 INSERT INTO tcp_ic_teardown SELECT generate_series(1, 5);
-INSERT 5
+INSERT 0 5
 
 SELECT gp_inject_fault('waitOnOutbound', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
  gp_inject_fault 

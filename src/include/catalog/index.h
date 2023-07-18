@@ -112,6 +112,8 @@ extern void index_drop(Oid indexId, bool concurrent, bool concurrent_lock_mode);
 
 extern IndexInfo *BuildIndexInfo(Relation index);
 
+extern IndexInfo *BuildDummyIndexInfo(Relation index);
+
 extern bool CompareIndexInfo(IndexInfo *info1, IndexInfo *info2,
 							 Oid *collations1, Oid *collations2,
 							 Oid *opfamilies1, Oid *opfamilies2,
@@ -136,6 +138,8 @@ extern void validate_index(Oid heapId, Oid indexId, Snapshot snapshot);
 
 extern void index_set_state_flags(Oid indexId, IndexStateFlagsAction action);
 
+extern Oid	IndexGetRelation(Oid indexId, bool missing_ok);
+
 extern void reindex_index(Oid indexId, bool skip_constraint_checks,
 						  char relpersistence, int options);
 
@@ -153,8 +157,8 @@ extern bool reindex_relation(Oid relid, int flags, int options);
 
 extern bool ReindexIsProcessingHeap(Oid heapOid);
 extern bool ReindexIsProcessingIndex(Oid indexOid);
-extern Oid	IndexGetRelation(Oid indexId, bool missing_ok);
 
+extern void ResetReindexState(int nestLevel);
 extern Size EstimateReindexStateSpace(void);
 extern void SerializeReindexState(Size maxsize, char *start_address);
 extern void RestoreReindexState(void *reindexstate);

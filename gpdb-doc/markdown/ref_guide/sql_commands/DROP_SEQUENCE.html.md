@@ -10,18 +10,18 @@ DROP SEQUENCE [IF EXISTS] <name> [, ...] [CASCADE | RESTRICT]
 
 ## <a id="section3"></a>Description 
 
-`DROP SEQUENCE` removes a sequence generator table. You must own the sequence to drop it \(or be a superuser\).
+`DROP SEQUENCE` removes sequence number generators. You must own the sequence to drop it \(or be a superuser\).
 
 ## <a id="section4"></a>Parameters 
 
 IF EXISTS
-:   Do not throw an error if the sequence does not exist. A notice is issued in this case.
+:   Do not throw an error if the sequence does not exist. Greenplum Database issues a notice in this case.
 
 name
 :   The name \(optionally schema-qualified\) of the sequence to remove.
 
 CASCADE
-:   Automatically drop objects that depend on the sequence.
+:   Automatically drop objects that depend on the sequence, and in turn all objects that depend on those objects.
 
 RESTRICT
 :   Refuse to drop the sequence if any objects depend on it. This is the default.
@@ -36,7 +36,7 @@ DROP SEQUENCE myserial;
 
 ## <a id="section6"></a>Compatibility 
 
-`DROP SEQUENCE` is fully conforming with the SQL standard, except that the standard only allows one sequence to be dropped per command. Also, the `IF EXISTS` option is a Greenplum Database extension.
+`DROP SEQUENCE` conforms to the SQL standard, except that the standard allows only one sequence to be dropped per command. Also, the `IF EXISTS` option is a Greenplum Database extension.
 
 ## <a id="section7"></a>See Also 
 

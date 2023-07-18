@@ -32,6 +32,20 @@ typedef void (*ExecEvalSubroutine) (ExprState *state,
 									struct ExprEvalStep *op,
 									ExprContext *econtext);
 
+/* ExprEvalSteps that cache a composite type's tupdesc need one of these */
+/* (it fits in-line in some step types, otherwise allocate out-of-line) */
+typedef struct ExprEvalRowtypeCache
+{
+	/*
+	 * cacheptr points to composite type's TypeCacheEntry if tupdesc_id is not
+	 * 0; or for an anonymous RECORD type, it points directly at the cached
+	 * tupdesc for the type, and tupdesc_id is 0.  (We'd use separate fields
+	 * if space were not at a premium.)  Initial state is cacheptr == NULL.
+	 */
+	void	   *cacheptr;
+	uint64		tupdesc_id;		/* last-seen tupdesc identifier, or 0 */
+} ExprEvalRowtypeCache;
+
 /*
  * Discriminator for ExprEvalSteps.
  *
@@ -224,7 +238,6 @@ typedef enum ExprEvalOp
 	EEOP_ROWIDEXPR,
 	EEOP_WINDOW_FUNC,
 	EEOP_SUBPLAN,
-	EEOP_ALTERNATIVE_SUBPLAN,
 
 	/* aggregation related nodes */
 	EEOP_AGG_STRICT_DESERIALIZE,
@@ -353,8 +366,8 @@ typedef struct ExprEvalStep
 		/* for EEOP_NULLTEST_ROWIS[NOT]NULL */
 		struct
 		{
-			/* cached tupdesc pointer - filled at runtime */
-			TupleDesc	argdesc;
+			/* cached descriptor for composite type - filled at runtime */
+			ExprEvalRowtypeCache rowcache;
 		}			nulltest_row;
 
 		/* for EEOP_PARAM_EXEC/EXTERN */
@@ -486,8 +499,8 @@ typedef struct ExprEvalStep
 		{
 			AttrNumber	fieldnum;	/* field number to extract */
 			Oid			resulttype; /* field's type */
-			/* cached tupdesc pointer - filled at runtime */
-			TupleDesc	argdesc;
+			/* cached descriptor for composite type - filled at runtime */
+			ExprEvalRowtypeCache rowcache;
 		}			fieldselect;
 
 		/* for EEOP_FIELDSTORE_DEFORM / FIELDSTORE_FORM */
@@ -496,9 +509,9 @@ typedef struct ExprEvalStep
 			/* original expression node */
 			FieldStore *fstore;
 
-			/* cached tupdesc pointer - filled at runtime */
-			/* note that a DEFORM and FORM pair share the same tupdesc */
-			TupleDesc  *argdesc;
+			/* cached descriptor for composite type - filled at runtime */
+			/* note that a DEFORM and FORM pair share the same cache */
+			ExprEvalRowtypeCache *rowcache;
 
 			/* workspace for column values */
 			Datum	   *values;
@@ -538,12 +551,12 @@ typedef struct ExprEvalStep
 		/* for EEOP_CONVERT_ROWTYPE */
 		struct
 		{
-			ConvertRowtypeExpr *convert;	/* original expression */
+			Oid			inputtype;	/* input composite type */
+			Oid			outputtype; /* output composite type */
 			/* these three fields are filled at runtime: */
-			TupleDesc	indesc; /* tupdesc for input type */
-			TupleDesc	outdesc;	/* tupdesc for output type */
+			ExprEvalRowtypeCache *incache;	/* cache for input type */
+			ExprEvalRowtypeCache *outcache; /* cache for output type */
 			TupleConversionMap *map;	/* column mapping */
-			bool		initialized;	/* initialized for current types? */
 		}			convert_rowtype;
 
 		/* for EEOP_SCALARARRAYOP */
@@ -638,13 +651,6 @@ typedef struct ExprEvalStep
 			/* out-of-line state, created by nodeSubplan.c */
 			SubPlanState *sstate;
 		}			subplan;
-
-		/* for EEOP_ALTERNATIVE_SUBPLAN */
-		struct
-		{
-			/* out-of-line state, created by nodeSubplan.c */
-			AlternativeSubPlanState *asstate;
-		}			alternative_subplan;
 
 		/* for EEOP_AGG_*DESERIALIZE */
 		struct
@@ -810,8 +816,6 @@ extern void ExecEvalXmlExpr(ExprState *state, ExprEvalStep *op);
 extern void ExecEvalGroupingFunc(ExprState *state, ExprEvalStep *op);
 extern void ExecEvalSubPlan(ExprState *state, ExprEvalStep *op,
 							ExprContext *econtext);
-extern void ExecEvalAlternativeSubPlan(ExprState *state, ExprEvalStep *op,
-									   ExprContext *econtext);
 extern void ExecEvalWholeRowVar(ExprState *state, ExprEvalStep *op,
 								ExprContext *econtext);
 extern void ExecEvalSysVar(ExprState *state, ExprEvalStep *op,

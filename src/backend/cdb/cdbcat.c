@@ -337,7 +337,7 @@ GpPolicyFetch(Oid tbloid)
 		/*
 		 * Writeable external tables have gp_distribution_policy entries, like
 		 * regular tables. Readable external tables are implicitly randomly
-		 * distributed, except for "EXECUTE ... ON MASTER" ones.
+		 * distributed, except for "EXECUTE ... ON COORDINATOR" ones.
 		 */
 		if (e)
 		{
@@ -356,7 +356,7 @@ GpPolicyFetch(Oid tbloid)
 				ListCell   *cell;
 				Assert(e->urilocations != NIL);
 
-				/* set policy for writable s3 on master external table */
+				/* set policy for writable s3 on primary external table */
 				foreach(cell, e->urilocations)
 				{
 					const char *uri_str = (char *) strVal(lfirst(cell));
@@ -851,7 +851,6 @@ index_check_policy_compatible(GpPolicy *policy,
 		Oid			policy_typeid;
 		Oid			policy_eqop;
 		bool		found;
-		bool		found_col;
 		Oid			found_col_indclass;
 
 		/* Look up the equality operator for the distribution key opclass */
@@ -866,7 +865,6 @@ index_check_policy_compatible(GpPolicy *policy,
 		 * key.
 		 */
 		found = false;
-		found_col = false;
 		found_col_indclass = InvalidOid;
 		for (j = 0; j < nidxatts; j++)
 		{
@@ -876,7 +874,6 @@ index_check_policy_compatible(GpPolicy *policy,
 
 			if (indattr[j] != policy_attr)
 				continue;
-			found_col = true;
 
 			/*
 			 * Is the index's operator class is compatible with the

@@ -17,6 +17,18 @@ FROM
 ORDER BY
 	statime;  
 
+CREATE VIEW
+	pg_stat_last_operation_testview_schema AS
+SELECT lo.staactionname,
+       lo.stasubtype,
+       ns.nspname
+FROM   pg_stat_last_operation lo
+       join pg_class c
+         ON lo.classid = c.oid
+       join pg_namespace ns
+         ON c.relname = 'pg_namespace'
+            AND lo.objid = ns.oid;
+
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'CREATE';
  
 -- CREATE TABLE
@@ -112,6 +124,13 @@ INSERT INTO pg_stat_last_operation_test SELECT generate_series(1, 5);
 TRUNCATE pg_stat_last_operation_test;
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'TRUNCATE';
 
+-- CREATE INDEX
+CREATE INDEX idx_mt ON mdt_all_types (a);
+REINDEX INDEX idx_mt;
+SELECT * FROM pg_stat_last_operation_testview WHERE objname = 'idx_mt';
+-- QEs shouldn't do meta tracking stuff
+SELECT gp_execution_dbid(), * FROM gp_dist_random('pg_stat_last_operation_testview') WHERE objname = 'idx_mt';
+
 -- DROP TABLE
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'DROP';
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
@@ -119,3 +138,9 @@ DROP TABLE mdt_all_types;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
 DROP TABLE mdt_test_part1;
 SELECT * FROM pg_stat_last_operation_testview WHERE objname like ('mdt_%');
+
+-- SCHEMA
+CREATE SCHEMA mdt_schema;
+SELECT * FROM pg_stat_last_operation_testview_schema WHERE nspname LIKE 'mdt_%';
+DROP SCHEMA mdt_schema;
+SELECT * FROM pg_stat_last_operation_testview_schema WHERE nspname LIKE 'mdt_%';

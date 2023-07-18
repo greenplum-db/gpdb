@@ -33,7 +33,7 @@ The next topic includes documentation for Greenplum-added `pageinspect` function
 When using this module with Greenplum Database, consider the following:
 
 -   The Greenplum Database version of the `pageinspect` does not allow inspection of pages belonging to append-optimized or external relations.
--   For `pageinspect` functions that read data from a database, the function reads data only from the segment instance where the function is run. For example, the `get_raw_page()` function returns a `block number out of range` error when you try to read data from a user-defined table on the Greenplum Database master because there is no data in the table on the master segment. The function will read data from a system catalog table on the master segment.
+-   For `pageinspect` functions that read data from a database, the function reads data only from the segment instance where the function is run. For example, the `get_raw_page()` function returns a `block number out of range` error when you try to read data from a user-defined table on the Greenplum Database coordinator because there is no data in the table on the coordinator segment. The function will read data from a system catalog table on the coordinator segment.
 
 ### <a id="gp_funcs"></a>Greenplum-Added Functions 
 

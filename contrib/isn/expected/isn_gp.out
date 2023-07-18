@@ -1,0 +1,76 @@
+--
+-- Test ISN extension on GPDB
+--
+CREATE EXTENSION isn;
+--
+-- test partition table
+--
+CREATE TABLE pt(id ISBN) PARTITION BY RANGE (id);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE pt_1 PARTITION of pt for VALUES FROM ('0-11-000533-3!') TO ('0-14-121930-0!');
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE pt_2 PARTITION of pt for VALUES FROM ('0-14-121930-0!') TO ('0-393-04002-X');
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE pt_3 PARTITION of pt for VALUES FROM ('0-393-04002-X') TO ('2-205-00876-5!');
+NOTICE:  table has parent, setting distribution columns to match parent table
+INSERT INTO pt VALUES ('0-11-000533-3!'), ('0-14-121930-0!'), ('0-393-04002-X');
+SELECT * FROM pt ORDER BY id;
+       id       
+----------------
+ 0-11-000533-3!
+ 0-14-121930-0!
+ 0-393-04002-X
+(3 rows)
+
+\d+ pt
+                             Partitioned table "public.pt"
+ Column | Type | Collation | Nullable | Default | Storage | Stats target | Description 
+--------+------+-----------+----------+---------+---------+--------------+-------------
+ id     | isbn |           |          |         | plain   |              | 
+Partition key: RANGE (id)
+Partitions: pt_1 FOR VALUES FROM ('0-11-000533-3!') TO ('0-14-121930-0!'),
+            pt_2 FOR VALUES FROM ('0-14-121930-0!') TO ('0-393-04002-X'),
+            pt_3 FOR VALUES FROM ('0-393-04002-X') TO ('2-205-00876-5!')
+Distributed by: (id)
+
+explain (verbose) SELECT * FROM pt WHERE id >= '0-11-000533-3!'::ISBN AND id <= '0-14-121930-0!'::ISBN ORDER BY id;
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=958.17..982.57 rows=1722 width=8)
+   Output: pt_1.id
+   Merge Key: pt_1.id
+   ->  Sort  (cost=958.17..959.61 rows=574 width=8)
+         Output: pt_1.id
+         Sort Key: pt_1.id
+         ->  Append  (cost=0.00..931.87 rows=574 width=8)
+               ->  Seq Scan on public.pt_1  (cost=0.00..464.50 rows=287 width=8)
+                     Output: pt_1.id
+                     Filter: ((pt_1.id >= '0-11-000533-3!'::isbn) AND (pt_1.id <= '0-14-121930-0!'::isbn))
+               ->  Seq Scan on public.pt_2  (cost=0.00..464.50 rows=287 width=8)
+                     Output: pt_2.id
+                     Filter: ((pt_2.id >= '0-11-000533-3!'::isbn) AND (pt_2.id <= '0-14-121930-0!'::isbn))
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(15 rows)
+
+DROP TABLE pt;
+--
+-- test distributed by
+--
+CREATE TABLE dt(id ISBN) DISTRIBUTED BY (id);
+INSERT INTO dt VALUES ('0-11-000533-3!'), ('0-14-121930-0!'), ('0-393-04002-X'), ('2-205-00876-5!');
+SELECT * FROM dt ORDER BY id;
+       id       
+----------------
+ 0-11-000533-3!
+ 0-14-121930-0!
+ 0-393-04002-X
+ 2-205-00876-5!
+(4 rows)
+
+DROP TABLE dt;
+--
+-- cleanup
+--
+DROP EXTENSION isn;

@@ -260,7 +260,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         return seg
 
     def __getConfigurationHistorySQL(self, dbid):
-        sql = ";\nINSERT INTO gp_configuration_history (time, dbid, \"desc\") VALUES(\n\tnow(),\n\t%s,\n\t%s\n)" \
+        sql = ";\nINSERT INTO gp_configuration_history (time, dbid, \"description\") VALUES(\n\tnow(),\n\t%s,\n\t%s\n)" \
             % (
                 self.__toSqlIntValue(dbid),
                 "'gprecoverseg: segment config for backout: inserted segment configuration for full recovery or original dbid %d'" % dbid,
@@ -433,7 +433,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
     def __insertConfigHistory(self, conn, dbId, msg ):
         # now update change history
-        sql = "INSERT INTO gp_configuration_history (time, dbid, \"desc\") VALUES(\n" \
+        sql = "INSERT INTO gp_configuration_history (time, dbid, \"description\") VALUES(\n" \
                     "now(),\n  " + \
                     self.__toSqlIntValue(dbId) + ",\n  " + \
                     self.__toSqlCharValue(msg) + "\n)"

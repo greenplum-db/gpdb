@@ -92,14 +92,14 @@ gp_aoblkdir(PG_FUNCTION_ARGS)
 		/* initialize Context for SRF */
 		context = (Context *) palloc0(sizeof(Context));
 		context->aorel = table_open(aoRelOid, AccessShareLock);
-		if (!RelationIsAppendOptimized(context->aorel))
+		if (!RelationStorageIsAO(context->aorel))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						errmsg("function not supported on non append-optimized relation")));
 		sst = GetLatestSnapshot();
-		GetAppendOnlyEntryAuxOids(aoRelOid, sst,
-								  NULL, &blkdirrelid, NULL,
-								  NULL, NULL);
+		GetAppendOnlyEntryAuxOids(context->aorel,
+								  NULL, &blkdirrelid,
+								  NULL);
 		sst = gp_select_invisible ? SnapshotAny : GetLatestSnapshot();
 		if (blkdirrelid == InvalidOid)
 			ereport(ERROR,

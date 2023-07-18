@@ -301,3 +301,66 @@ insert into t1 select i from generate_series(1, 100000) i;
 analyze t1;
 select count(*) from pg_backend_pid() b(a) where b.a % 100000 in (select a from t1);
 drop table t1;
+
+-- Test filter of RESULT node with a LIMIT parent
+-- Historically, when ORCA generates a RESULT node with a LIMIT parent, 
+-- the parent node's tuple bound is pushed down to the RESULT node's
+-- child node. This could cause the query to return a subset of the 
+-- actual result, if the RESULT node has a filter. This is because the
+-- tuple bound was applied before the filter. 
+-- Now, we allow tuple bound push down only if the RESULT node DOES NOT
+-- have a filter.
+
+-- start_ignore
+drop table if exists with_test1;
+drop table if exists with_test2;
+create table with_test1 (i int, value int) distributed by (i);
+insert into with_test1 select i%10, i%30 from generate_series(0, 99) i;
+create table with_test2 (i int, value int);
+insert into with_test2 select i%100, i%300 from generate_series(0, 999) i;
+-- end_ignore
+
+with my_group_sum(i, total) as (select i, sum(value) from with_test1 group by i)
+select with_test2.* from with_test2
+where value < all (select total from my_group_sum where my_group_sum.i = with_test2.i)
+order by 1,2
+limit 15;
+
+-- Test case for Issue 15794, 15767 and 15793
+create table t_15767 (c0 int, c1 int);
+insert into t_15767 values(1,0),(2,1);
+
+select max(c0) from t_15767
+union all
+select max(c0) from t_15767
+group by 1*t_15767.c0;
+
+drop table t_15767;
+
+create table t2_15794(
+  id integer,
+  x double precision,
+  y double precision,
+  position double precision[]
+);
+
+insert into t2_15794 values (1,1,1,array[1,1]);
+insert into t2_15794 values (2,2,2,array[2,2]);
+
+select array_agg(length) from (
+select (
+array_upper( position, 1)
+- array_lower( position, 1) + 1
+) as length,
+array_lower( position, 1) as lower
+from t2_15794
+group by length, lower) t;
+
+drop table t2_15794;
+
+create table t1_15793 (c0 int);
+create table t2_15793 (c0 int);
+select * from t1_15793 cross join t2_15793 where not ((t1_15793.c0)+(t1_15793.c0)!=(t2_15793.c0));
+
+drop table t1_15793;
+drop table t2_15793;

@@ -10,7 +10,7 @@
  * Endpoints may exist on the coordinator or segments, depending on the query
  * of the PARALLEL RETRIEVE CURSOR:
  * (1) An endpoint is on QD only if the query of the parallel cursor needs to
- *     be finally gathered by the master. e.g.:
+ *     be finally gathered by the coordinator. e.g.:
  *     > DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM T1 ORDER BY C1;
  * (2) The endpoints are on specific segments node if the direct dispatch happens.
  *	   e.g.:
@@ -446,7 +446,7 @@ static Endpoint
 				sharedEndpoints[i].mqDsmHandle = DSM_HANDLE_INVALID;
 				sharedEndpoints[i].sessionDsmHandle = DSM_HANDLE_INVALID;
 				sharedEndpoints[i].sessionID = gp_session_id;
-				sharedEndpoints[i].userID = GetSessionUserId();
+				sharedEndpoints[i].userID = GetUserId();
 				sharedEndpoints[i].senderPid = InvalidPid;
 				sharedEndpoints[i].receiverPid = InvalidPid;
 				sharedEndpoints[i].empty = false;
@@ -486,7 +486,7 @@ static Endpoint
 	StrNCpy(sharedEndpoints[i].cursorName, cursorName, NAMEDATALEN);
 	sharedEndpoints[i].databaseID = MyDatabaseId;
 	sharedEndpoints[i].sessionID = gp_session_id;
-	sharedEndpoints[i].userID = GetSessionUserId();
+	sharedEndpoints[i].userID = GetUserId();
 	sharedEndpoints[i].senderPid = MyProcPid;
 	sharedEndpoints[i].receiverPid = InvalidPid;
 	sharedEndpoints[i].state = ENDPOINTSTATE_READY;
@@ -577,7 +577,7 @@ setup_endpoint_token_entry()
 	const int8 *token = NULL;
 
 	tag.sessionID = gp_session_id;
-	tag.userID = GetSessionUserId();
+	tag.userID = GetUserId();
 
 	LWLockAcquire(ParallelCursorEndpointLock, LW_EXCLUSIVE);
 	infoEntry = (EndpointTokenEntry *) hash_search(EndpointTokenHash, &tag, HASH_ENTER, &found);

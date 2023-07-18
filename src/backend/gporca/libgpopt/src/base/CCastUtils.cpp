@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarIdent.h"
 #include "naucrates/md/CMDArrayCoerceCastGPDB.h"
 #include "naucrates/md/IMDCast.h"
+#include "naucrates/md/IMDIndex.h"
 
 using namespace gpopt;
 using namespace gpmd;
@@ -130,15 +131,18 @@ CCastUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor,
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+
 		pexpr = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarArrayCoerceExpr(
-				mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			CUtils::PexprScalarIdent(mp, colref));
+			CUtils::PexprScalarIdent(mp, colref),
+			CUtils::PexprFuncElemExpr(mp, md_accessor, mdid_func,
+									  parrayCoerceCast->GetSrcElemTypeMdId(),
+									  parrayCoerceCast->TypeModifier()));
 	}
 	else
 	{
@@ -169,6 +173,14 @@ CCastUtils::FScalarCast(CExpression *pexpr)
 	COperator *pop = pexpr->Pop();
 
 	return COperator::EopScalarCast == pop->Eopid();
+}
+
+BOOL
+CCastUtils::FScalarCastIdent(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	return FScalarCast(pexpr) && CUtils::FScalarIdent((*pexpr)[0]);
 }
 
 // return the given expression without any binary coercible casts
@@ -263,6 +275,23 @@ CCastUtils::PexprAddCast(CMemoryPool *mp, CExpression *pexprPred)
 		return pexprNewPred;
 	}
 
+	// To perform explicit cast on the hash join condition,
+	// operator has to belong to the left column's hash (distribution)
+	// opfamily, and the right column's hash (distribution) opfamily.
+	if (CUtils::FScalarIdent(pexprLeft) && CUtils::FScalarIdent(pexprRight))
+	{
+		if (GPOS_FTRACE(EopttraceConsiderOpfamiliesForDistribution))
+		{
+			if (!CPredicateUtils::FOpInOpfamily(pexprLeft, pexprChild,
+												IMDIndex::EmdindHash) ||
+				!CPredicateUtils::FOpInOpfamily(pexprRight, pexprChild,
+												IMDIndex::EmdindHash))
+			{
+				return pexprNewPred;
+			}
+		}
+	}
+
 	pexprLeft->AddRef();
 	pexprRight->AddRef();
 
@@ -277,7 +306,6 @@ CCastUtils::PexprAddCast(CMemoryPool *mp, CExpression *pexprPred)
 	{
 		GPOS_ASSERT(fCastRtoL);
 		pexprNewRight = PexprCast(mp, md_accessor, pexprRight, mdid_type_left);
-		;
 	}
 
 	GPOS_ASSERT(nullptr != pexprNewLeft && nullptr != pexprNewRight);
@@ -314,9 +342,7 @@ CCastUtils::PexprCast(CMemoryPool *mp, CMDAccessor *md_accessor,
 		pexprCast = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp) CScalarArrayCoerceExpr(
-				mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
 			pexpr);

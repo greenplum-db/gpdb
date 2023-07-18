@@ -1,0 +1,322 @@
+-- Test the Greenplum 'gp_%' system views
+-- Select the 'pg_%' system views that do not have a 'gp_%' counterpart.
+-- This serves as a boundary-checking test for any missing 'pg_%' system view
+-- that we are not aware of. If you find any view that fails this check, please
+-- examine if we need to add it to the src/backend/catalog/system_views_gp.in
+-- and also add a test case in this file.
+SELECT table_name FROM information_schema.views 
+WHERE table_schema = 'pg_catalog' 
+AND table_name LIKE 'pg\_%' 
+AND REPLACE(table_name, 'pg_', 'gp_') NOT IN
+(
+  SELECT table_name FROM information_schema.views 
+  WHERE table_schema = 'pg_catalog'
+);
+           table_name            
+------------
+ pg_available_extension_versions
+ pg_available_extensions
+ pg_exttable
+ pg_group
+ pg_hba_file_rules
+ pg_indexes
+ pg_locks
+ pg_matviews
+ pg_max_external_files
+ pg_policies
+ pg_prepared_statements
+ pg_prepared_xacts
+ pg_publication_tables
+ pg_resqueue_attributes
+ pg_resqueue_status
+ pg_roles
+ pg_rules
+ pg_seclabels
+ pg_sequences
+ pg_shadow
+ pg_stat_resqueues
+ pg_tables
+ pg_timezone_abbrevs
+ pg_timezone_names
+ pg_user
+ pg_user_mappings
+ pg_views
+(27 rows)
+
+-- check each gp_ view created in system_views_gp.sql
+-- that it returns either no result (e.g. no user table for gp_stat_user_tables) 
+-- or a complete list of views from all segments (with just a few exceptions).
+-- total segment count including coordinator
+select count(*) + 1 as segcount from gp_dist_random('gp_id') \gset
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_config;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_cursors;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_file_settings;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_replication_origin_status;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- coordinator doesn't seem have a replication slot
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount -1 from gp_replication_slots;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_settings;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_activity;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_all_indexes;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_all_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_archiver;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_bgwriter;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_database;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_database_conflicts;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_gssapi;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_progress_analyze;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_progress_basebackup;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_progress_cluster;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_progress_copy;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_progress_create_index;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_progress_vacuum;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_slru;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_ssl;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_subscription;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_sys_indexes;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_sys_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_user_functions;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_user_indexes;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_user_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_wal;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_wal_receiver;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_xact_all_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_xact_sys_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_xact_user_functions;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stat_xact_user_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_all_indexes;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_all_sequences;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_all_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_sys_indexes;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_sys_sequences;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_sys_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_user_indexes;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_user_sequences;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_statio_user_tables;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count(*) = 0 or count(distinct gp_segment_id) = :segcount from gp_stats;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- only coordinator could have any pg_stats_ext data
+select count(*) = 0 or count(distinct gp_segment_id) = 1 from gp_stats_ext;
+ ?column? 
+----------
+ t
+(1 row)
+

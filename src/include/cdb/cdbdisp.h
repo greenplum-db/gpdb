@@ -19,7 +19,7 @@
 #include "cdb/cdbtm.h"
 #include "utils/resowner.h"
 
-#define CDB_MOTION_LOST_CONTACT_STRING "Interconnect error master lost contact with segment."
+#define CDB_MOTION_LOST_CONTACT_STRING "Interconnect error coordinator lost contact with segment."
 
 struct CdbDispatchResults; /* #include "cdb/cdbdispatchresult.h" */
 struct CdbPgResults;

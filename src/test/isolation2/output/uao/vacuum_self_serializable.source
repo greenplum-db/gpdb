@@ -1,11 +1,11 @@
 -- @Description Ensures that a vacuum with serializable works ok
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT, b INT) USING @amname@;
-CREATE
+CREATE TABLE
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
-INSERT 100
+INSERT 0 100
 
 DELETE FROM ao WHERE a <= 30;
 DELETE 30
@@ -19,9 +19,9 @@ SELECT COUNT(*) FROM ao;
 SELECT *, segno, tupcount FROM gp_ao_or_aocs_seg('ao');
  segment_id | segno | tupcount | modcount | formatversion | state | segno | tupcount 
 ------------+-------+----------+----------+---------------+-------+-------+----------
- 0          | 1     | 38       | 2        | 4             | 1     | 1     | 38       
- 1          | 1     | 37       | 2        | 4             | 1     | 1     | 37       
- 2          | 1     | 25       | 2        | 4             | 1     | 1     | 25       
+ 0          | 1     | 38       | 2        | 3             | 1     | 1     | 38       
+ 1          | 1     | 37       | 2        | 3             | 1     | 1     | 37       
+ 2          | 1     | 25       | 2        | 3             | 1     | 1     | 25       
 (3 rows)
 VACUUM ao;
 VACUUM
@@ -29,9 +29,9 @@ VACUUM
 SELECT *, segno, tupcount FROM gp_ao_or_aocs_seg('ao') where state = 1 and tupcount > 0;
  segment_id | segno | tupcount | modcount | formatversion | state | segno | tupcount 
 ------------+-------+----------+----------+---------------+-------+-------+----------
- 0          | 2     | 26       | 0        | 4             | 1     | 2     | 26       
- 1          | 2     | 30       | 0        | 4             | 1     | 2     | 30       
- 2          | 2     | 14       | 0        | 4             | 1     | 2     | 14       
+ 0          | 2     | 26       | 0        | 3             | 1     | 2     | 26       
+ 1          | 2     | 30       | 0        | 3             | 1     | 2     | 30       
+ 2          | 2     | 14       | 0        | 3             | 1     | 2     | 14       
 (3 rows)
 SELECT COUNT(*) FROM ao;
  count 

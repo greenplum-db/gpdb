@@ -5,7 +5,7 @@
  *    Interconnect Proxy Peer
  *
  * A peer lives in the proxy bgworker and connects to a proxy on an other
- * segment.  When there are N segments, including the master, a proxy bgworker
+ * segment.  When there are N segments, including the coordinator, a proxy bgworker
  * needs to connect to all the other (N - 1) segments, the same amount of peers
  * are needed, too.
  *
@@ -154,14 +154,17 @@ ic_proxy_peer_update_name(ICProxyPeer *peer)
 static void
 ic_proxy_peer_unregister(ICProxyPeer *peer)
 {
-	Assert(peer->dbid > 0);
+	/* invalid peer */
+	if (peer->dbid == IC_PROXY_INVALID_DBID ||
+		peer->content == IC_PROXY_INVALID_CONTENT)
+		return;
 
 	if (ic_proxy_peers[peer->dbid] == peer)
 	{
 		/* keep the peer as a placeholder */
 
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-			   "ic-proxy %s: unregistered", peer->name);
+			   "ic-proxy: %s: unregistered", peer->name);
 
 		/* reset the state */
 		peer->state = 0;
@@ -290,6 +293,15 @@ ic_proxy_peer_on_data_pkt(void *opaque, const void *data, uint16 size)
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
 		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
 
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					peer->name, ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	if (!(peer->state & IC_PROXY_PEER_STATE_READY_FOR_DATA))
 	{
 		elog(WARNING, "ic-proxy: %s: not ready to receive DATA yet: %s",
@@ -311,7 +323,7 @@ ic_proxy_peer_on_data(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "ic-proxy: %s: fail to receive DATA: %s",
+			elog(WARNING, "ic-proxy: %s: failed to receive DATA: %s",
 						 peer->name, uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -409,7 +421,7 @@ ic_proxy_peer_on_close(uv_handle_t *handle)
 	ICProxyPeer *peer = CONTAINER_OF((void *) handle, ICProxyPeer, tcp);
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-		   "%s: closed", peer->name);
+		   "ic-proxy: %s: closed", peer->name);
 
 	/* reset the state */
 	peer->state = 0;
@@ -450,7 +462,7 @@ ic_proxy_peer_on_shutdown(uv_shutdown_t *req, int status)
 	ic_proxy_free(req);
 
 	if (status < 0)
-		elog(WARNING, "ic-proxy: %s: fail to shutdown: %s",
+		elog(WARNING, "ic-proxy: %s: failed to shutdown: %s",
 					 peer->name, uv_strerror(status));
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -532,6 +544,15 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	/* we only expect one hello message */
 	uv_read_stop((uv_stream_t *) &peer->tcp);
 
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					peer->name, ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	ic_proxy_key_from_p2c_pkt(&key, pkt);
 
 	/* TODO: verify that old dbid and content are both set or invalid */
@@ -578,7 +599,7 @@ ic_proxy_peer_on_hello_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "ic-proxy: %s: fail to receive HELLO: %s",
+			elog(WARNING, "ic-proxy: %s: failed to receive HELLO: %s",
 						 peer->name, uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -615,7 +636,7 @@ ic_proxy_peer_read_hello(ICProxyPeer *peer)
 		return;
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: waiting for HELLO", peer->name);
+		   "ic-proxy: %s: waiting for HELLO", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_RECEIVING_HELLO;
 
@@ -653,6 +674,18 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 		return;
 	}
 
+	/* we only expect one hello ack message */
+	uv_read_stop((uv_stream_t *) &peer->tcp);
+
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					peer->name, ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	if (!ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_PEER_HELLO_ACK))
 		elog(ERROR, "ic-proxy: %s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
@@ -660,9 +693,6 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	if (pkt->dstDbid != peer->dbid)
 		elog(ERROR, "ic-proxy: %s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
-
-	/* we only expect one hello ack message */
-	uv_read_stop((uv_stream_t *) &peer->tcp);
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
 		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
@@ -698,7 +728,7 @@ ic_proxy_peer_on_hello_ack_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "%s: fail to recv HELLO ACK: %s",
+			elog(WARNING, "ic-proxy: %s: failed to recv HELLO ACK: %s",
 						 peer->name, uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -767,7 +797,7 @@ ic_proxy_peer_on_connected(uv_connect_t *conn, int status)
 	{
 		/* the peer might just not get ready yet, retry later */
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-			   "ic-proxy: %s: fail to connect: %s",
+			   "ic-proxy: %s: failed to connect: %s",
 					 peer->name, uv_strerror(status));
 		ic_proxy_peer_close(peer);
 		return;
@@ -821,7 +851,7 @@ ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
 
 	uv_ip4_name(dest, name, sizeof(name));
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: connecting to %s:%d",
+		   "ic-proxy: %s: connecting to %s:%d",
 				 peer->name, name, ntohs(dest->sin_port));
 
 	/* reinit the tcp handle */
@@ -852,7 +882,7 @@ ic_proxy_peer_disconnect(ICProxyPeer *peer)
 		return;
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: disconnecting", peer->name);
+		   "ic-proxy: %s: disconnecting", peer->name);
 	ic_proxy_peer_shutdown(peer);
 }
 
@@ -940,7 +970,7 @@ ic_proxy_peer_handle_out_cache(ICProxyPeer *peer)
 	}
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: consumed %d cached pkts",
+		   "ic-proxy: %s: consumed %d cached pkts",
 				 peer->name, list_length(reqs) - list_length(peer->reqs));
 
 	/*

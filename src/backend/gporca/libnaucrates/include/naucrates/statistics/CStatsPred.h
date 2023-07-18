@@ -64,6 +64,10 @@ protected:
 	// column id
 	ULONG m_colid;
 
+	// CStatsPred is recursively traversed to compute cardinality estimates for
+	// extended stat. This prevents infinite loop or double count in recursion.
+	BOOL m_is_estimated{false};
+
 public:
 	CStatsPred &operator=(CStatsPred &) = delete;
 
@@ -82,6 +86,18 @@ public:
 	GetColId() const
 	{
 		return m_colid;
+	}
+
+	BOOL
+	IsAlreadyUsedInScaleFactorEstimation() const
+	{
+		return m_is_estimated;
+	}
+
+	void
+	SetEstimated()
+	{
+		m_is_estimated = true;
 	}
 
 	// type id

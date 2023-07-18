@@ -4,6 +4,7 @@
 #
 
 import unittest
+from mock import call, Mock, patch, ANY
 from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME, LocalExecutionContext
 
 
@@ -53,3 +54,11 @@ class WorkerPoolTestCase(unittest.TestCase):
         self.subject.execute(cmd)
         self.assertEqual("bar=1 && foo=1 && ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 localhost "
                           "\". gphome/greenplum_path.sh; bar=1 && foo=1 && ls /tmp\"", cmd.cmdStr)
+
+    @patch('gppylib.commands.base.Command.get_stderr',
+           return_value="ssh_exchange_identification: Connection closed by remote host")
+    def test_RemoteExecutionContext_failed_and_retry(self,mock):
+        self.subject = RemoteExecutionContext('localhost',None,'gphome' )
+        cmd = Command('test', cmdStr='ls /tmp')
+        self.subject.execute(cmd)
+        self.assertEqual(Command.get_stderr.call_count, 11)

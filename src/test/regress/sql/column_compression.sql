@@ -10,7 +10,7 @@ create database column_compression;
 
 prepare ccddlcheck as
 select e.attrelid::regclass as relname,
-a.attname, e.attoptions from pg_class c, pg_attribute_encoding e, pg_attribute a
+a.attname, e.filenum, e.attoptions from pg_class c, pg_attribute_encoding e, pg_attribute a
 where c.relname like 'ccddl%' and c.oid=e.attrelid and e.attrelid=a.attrelid and e.attnum = a.attnum
 order by relname, e.attnum;
 
@@ -643,14 +643,14 @@ drop table ccddl;
 create table ccddl (i int42) with(appendonly = true, orientation=row);
 alter type int42 set default encoding (compresstype=RLE_TYPE);
 alter table ccddl add column j int42 default '1'::int42;
--- No results are returned from the attribute encoding check, as compression with rle is not supported for row tables
+-- No attoptions are shown from the attribute encoding check, as compression with rle is not supported for row tables
 execute ccddlcheck;
 drop table ccddl;
 
 create table ccddl (i int42) with(appendonly = true);
 alter type int42 set default encoding (compresstype=RLE_TYPE);
 alter table ccddl add column j int42 default '1'::int42;
--- No results are returned from the attribute encoding check, as compression with rle is not supported for heap tables
+-- No attoptions are shown from the attribute encoding check, as compression with rle is not supported for row tables
 execute ccddlcheck;
 drop table ccddl;
 

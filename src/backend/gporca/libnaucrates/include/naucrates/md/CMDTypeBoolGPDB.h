@@ -23,6 +23,7 @@
 #define GPDB_BOOL_OID OID(16)
 #define GPDB_BOOL_OPFAMILY OID(2222)
 #define GPDB_BOOL_LEGACY_OPFAMILY OID(7124)
+#define GPDB_BOOL_PART_OPFAMILY OID(424)
 #define GPDB_BOOL_LENGTH 1
 #define GPDB_BOOL_EQ_OP OID(91)
 #define GPDB_BOOL_NEQ_OP OID(85)
@@ -70,6 +71,7 @@ private:
 	IMDId *m_mdid;
 	IMDId *m_distr_opfamily;
 	IMDId *m_legacy_distr_opfamily;
+	IMDId *m_part_opfamily;
 
 	// mdids of different operators
 	IMDId *m_mdid_op_eq;
@@ -97,7 +99,7 @@ private:
 	IMDId *m_mdid_count;
 
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// type name and id
 	static CWStringConst m_str;
@@ -116,16 +118,14 @@ public:
 	~CMDTypeBoolGPDB() override;
 
 	// accessors
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// type id
 	IMDId *MDId() const override;
 
 	IMDId *GetDistrOpfamilyMdid() const override;
+
+	IMDId *GetPartOpfamilyMdid() const override;
 
 	// type name
 	CMDName Mdname() const override;

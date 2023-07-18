@@ -30,6 +30,7 @@ typedef struct CdbCopy
 {
 	int			total_segs;		/* total number of segments in cdb */
 	bool		copy_in;		/* direction: true for COPY FROM false for COPY TO */
+	bool		is_replicated;	/* true for relicated table, false for plain table */
 
 	StringInfoData	copy_out_buf;/* holds a chunk of data from the database */
 

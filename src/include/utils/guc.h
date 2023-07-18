@@ -244,8 +244,8 @@ typedef enum
 
 /* GPDB speific */
 #define GUC_DISALLOW_USER_SET  0x00200000 /* Do not allow this GUC to be set by the user */
-#define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between master and primary */
-#define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between master and primary */
+#define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between coordinator and primary */
+#define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between coordinator and primary */
 
 /* GUC lists for gp_guc_list_init().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
@@ -346,7 +346,6 @@ extern PGDLLIMPORT int log_min_messages;
 extern PGDLLIMPORT int client_min_messages;
 extern int	log_min_duration_statement;
 extern int	log_temp_files;
-extern double log_statement_sample_rate;
 extern double log_xact_sample_rate;
 
 extern int	temp_file_limit;
@@ -470,7 +469,7 @@ extern char *optimizer_search_strategy_path;
 /* GUCs to tell Optimizer to enable a physical operator */
 extern bool optimizer_enable_nljoin;
 extern bool optimizer_enable_indexjoin;
-extern bool optimizer_enable_motions_masteronly_queries;
+extern bool optimizer_enable_motions_coordinatoronly_queries;
 extern bool optimizer_enable_motions;
 extern bool optimizer_enable_motion_broadcast;
 extern bool optimizer_enable_motion_gather;
@@ -483,6 +482,7 @@ extern bool optimizer_enable_outerjoin_rewrite;
 extern bool optimizer_enable_multiple_distinct_aggs;
 extern bool optimizer_enable_hashjoin_redistribute_broadcast_children;
 extern bool optimizer_enable_broadcast_nestloop_outer_child;
+extern bool optimizer_discard_redistribute_hashjoin;
 extern bool optimizer_enable_streaming_material;
 extern bool optimizer_enable_gather_on_segment_for_dml;
 extern bool optimizer_enable_assert_maxonerow;
@@ -493,7 +493,7 @@ extern bool optimizer_enable_ctas;
 extern bool optimizer_enable_dml;
 extern bool	optimizer_enable_dml_constraints;
 extern bool optimizer_enable_direct_dispatch;
-extern bool optimizer_enable_master_only_queries;
+extern bool optimizer_enable_coordinator_only_queries;
 extern bool optimizer_enable_hashjoin;
 extern bool optimizer_enable_dynamictablescan;
 extern bool optimizer_enable_indexscan;
@@ -504,16 +504,21 @@ extern bool optimizer_expand_fulljoin;
 extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;
 extern bool optimizer_enable_mergejoin;
-extern bool optimizer_prune_unused_columns;
 extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
 extern bool optimizer_force_comprehensive_join_implementation;
 extern bool optimizer_enable_replicated_table;
+extern bool optimizer_enable_foreign_table;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;
 extern bool optimizer_sample_plans;
 extern int	optimizer_plan_id;
 extern int	optimizer_samples_number;
+
+/* Optimizer Just In Time (JIT) compilation related GUCs*/
+extern  double  optimizer_jit_above_cost;
+extern  double  optimizer_jit_inline_above_cost;
+extern  double  optimizer_jit_optimize_above_cost;
 
 /* Cardinality estimation related GUCs used by the Optimizer */
 extern bool optimizer_extract_dxl_stats;
@@ -559,6 +564,7 @@ extern bool optimizer_cte_inlining;
 extern bool optimizer_enable_space_pruning;
 extern bool optimizer_enable_associativity;
 extern bool optimizer_enable_range_predicate_dpe;
+extern bool optimizer_enable_push_join_below_union_all;
 
 /* Analyze related GUCs for Optimizer */
 extern bool optimizer_analyze_root_partition;
@@ -587,6 +593,8 @@ extern bool	optimizer_partition_selection_log;
 extern char  *gp_auth_time_override_str;
 
 extern char  *gp_default_storage_options;
+
+extern bool gp_quicklz_fallback;
 
 /* copy GUC */
 extern bool gp_enable_segment_copy_checking;
@@ -626,8 +634,7 @@ extern IndexCheckType gp_indexcheck_insert;
 extern void SetConfigOption(const char *name, const char *value,
 							GucContext context, GucSource source);
 
-extern void DefineCustomBoolVariable(
-									 const char *name,
+extern void DefineCustomBoolVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 bool *valueAddr,
@@ -638,8 +645,7 @@ extern void DefineCustomBoolVariable(
 									 GucBoolAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomIntVariable(
-									const char *name,
+extern void DefineCustomIntVariable(const char *name,
 									const char *short_desc,
 									const char *long_desc,
 									int *valueAddr,
@@ -652,8 +658,7 @@ extern void DefineCustomIntVariable(
 									GucIntAssignHook assign_hook,
 									GucShowHook show_hook);
 
-extern void DefineCustomRealVariable(
-									 const char *name,
+extern void DefineCustomRealVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 double *valueAddr,
@@ -666,8 +671,7 @@ extern void DefineCustomRealVariable(
 									 GucRealAssignHook assign_hook,
 									 GucShowHook show_hook);
 
-extern void DefineCustomStringVariable(
-									   const char *name,
+extern void DefineCustomStringVariable(const char *name,
 									   const char *short_desc,
 									   const char *long_desc,
 									   char **valueAddr,
@@ -678,8 +682,7 @@ extern void DefineCustomStringVariable(
 									   GucStringAssignHook assign_hook,
 									   GucShowHook show_hook);
 
-extern void DefineCustomEnumVariable(
-									 const char *name,
+extern void DefineCustomEnumVariable(const char *name,
 									 const char *short_desc,
 									 const char *long_desc,
 									 int *valueAddr,
@@ -802,6 +805,7 @@ extern const char *gpvars_show_gp_resource_manager_policy(void);
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source);
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
+extern bool gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source);
 extern int guc_name_compare(const char *namea, const char *nameb);
 extern void DispatchSyncPGVariable(struct config_generic * gconfig);
 

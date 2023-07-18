@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarConst.h"
 #include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/md/IMDIndex.h"
 #include "naucrates/traceflags/traceflags.h"
 
 namespace gpopt
@@ -83,7 +84,8 @@ private:
 	// create interval from scalar comparison expression
 	static CConstraintInterval *PciIntervalFromScalarCmp(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref,
-		BOOL infer_nulls_as = false);
+		BOOL infer_nulls_as = false,
+		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
 
 	static CConstraintInterval *PciIntervalFromScalarIDF(CMemoryPool *mp,
 														 CExpression *pexpr,
@@ -92,21 +94,33 @@ private:
 	// create interval from scalar bool operator
 	static CConstraintInterval *PciIntervalFromScalarBoolOp(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref,
-		BOOL infer_nulls_as = false);
+		BOOL infer_nulls_as = false,
+		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
 
 	// create interval from scalar bool AND
 	static CConstraintInterval *PciIntervalFromScalarBoolAnd(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref,
-		BOOL infer_nulls_as = false);
+		BOOL infer_nulls_as = false,
+		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
 
 	// create interval from scalar bool OR
 	static CConstraintInterval *PciIntervalFromScalarBoolOr(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref,
-		BOOL infer_nulls_as = false);
+		BOOL infer_nulls_as = false,
+		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
 
 	// create interval from scalar null test
 	static CConstraintInterval *PciIntervalFromScalarNullTest(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref);
+
+	// create interval from scalar boolean test
+	static CConstraintInterval *PciIntervalFromScalarBooleanTest(
+		CMemoryPool *mp, CExpression *pexpr, CColRef *colref);
+
+	// create interval from bool scalar ident
+	static CConstraintInterval *PciIntervalFromScalarIdent(CMemoryPool *mp,
+														   CColRef *colref,
+														   BOOL infer_nulls_as);
 
 	// creates a range like [x,x] where x is a constant
 	static CRangeArray *PciRangeFromColConstCmp(CMemoryPool *mp,
@@ -243,7 +257,8 @@ public:
 	// create interval from scalar expression
 	static CConstraintInterval *PciIntervalFromScalarExpr(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref,
-		BOOL infer_nulls_as = false);
+		BOOL infer_nulls_as = false,
+		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
 
 	// create interval from any general constraint that references
 	// only one column

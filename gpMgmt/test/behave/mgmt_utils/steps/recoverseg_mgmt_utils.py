@@ -10,6 +10,7 @@ from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from test.behave_utils.utils import *
 import platform, shutil
 from behave import given, when, then
+from gppylib.utils import writeLinesToFile
 
 #TODO remove duplication of these functions
 def _get_gpAdminLogs_directory():
@@ -43,11 +44,11 @@ def impl(context, contents):
                                                "preferred_role = '%s'" % (content, preferred_role))
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             num_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND "
-                                                     "gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
+                                                     "description LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
         context.original_config_history_info[key] = num_tuples
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             context.original_config_history_backout_count = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE "
-                                                     "gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';")
+                                                     "description LIKE 'gprecoverseg: segment config for backout%%';")
 
 
 
@@ -84,6 +85,8 @@ def impl(context, seg):
         context.remote_pair_primary_segcid = primary_segs[0].getSegmentContentId()
         context.remote_pair_primary_host = primary_segs[0].getSegmentHostName()
         context.remote_pair_primary_datadir = primary_segs[0].getSegmentDataDirectory()
+        context.remote_pair_primary_port = primary_segs[0].getSegmentPort()
+        context.remote_pair_primary_address = primary_segs[0].getSegmentAddress()
     elif seg == "mirror":
         mirror_segs = [seg for seg in gparray.getDbList()
                        if seg.isSegmentMirror() and seg.getSegmentHostName() != platform.node()]
@@ -217,7 +220,7 @@ def impl(context, utility, output, segment_type):
 def impl(context, utility, recovery_type, content_ids):
     if content_ids == "None":
         return
-    if recovery_type not in ("incremental", "full", "start"):
+    if recovery_type not in ("incremental", "full", "differential","start"):
         raise Exception("Expected recovery_type to be 'incremental', 'full' or 'start, but found '%s'." % recovery_type)
     content_list = [int(c) for c in content_ids.split(',')]
 
@@ -230,6 +233,9 @@ def impl(context, utility, recovery_type, content_ids):
             expected = r'hostname: {}; port: {}; logfile: {}/gpAdminLogs/pg_{}.\d{{8}}_\d{{6}}.dbid{}.out; recoverytype: {}'.format(
                 segment.getSegmentHostName(), segment.getSegmentPort(), os.path.expanduser("~"),
                 'rewind' if recovery_type == 'incremental' else 'basebackup', segment.getSegmentDbId(), recovery_type)
+        if recovery_type == 'differential':
+            expected = r'hostname: {}; port: {}; logfile: {}/gpAdminLogs/rsync.\d{{8}}_\d{{6}}.dbid{}.out; recoverytype: {}'.format(
+                segment.getSegmentHostName(), segment.getSegmentPort(), os.path.expanduser("~"),segment.getSegmentDbId(), recovery_type)
         elif recovery_type == 'start':
             expected = r'hostname: {}; port: {}; datadir: {}'.format(segment.getSegmentHostName(), segment.getSegmentPort(),
                                                                      segment.getSegmentDataDirectory())
@@ -294,8 +300,11 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
     elif recovery_type == 'full':
         print_msg = 'pg_basebackup: error: could not access directory' #TODO also assert for the directory location here
         logfile_name = 'pg_basebackup*'
+    elif recovery_type == 'differential':
+        print_msg = 'rsync error:'
+        logfile_name = 'rsync*'
     else:
-        raise Exception("Expected recovery_type to be 'incremental', 'full' but found '%s'." % recovery_type)
+        raise Exception("Expected recovery_type to be 'incremental', 'full', 'differential' but found '%s'." % recovery_type)
     context.execute_steps('''
     Then gprecoverseg should return a return code of {return_code}
     And user can start transactions
@@ -305,10 +314,17 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
     And gprecoverseg should print "{recovery_type}" errors to stdout for content {content_ids}
     And gpAdminLogs directory has "{logfile_name}" files on respective hosts only for content {content_ids}
     And verify that mirror on content {content_ids} is down
-    And gprecoverseg should print "gprecoverseg failed. Please check the output" to stdout
     And gprecoverseg should not print "Segments successfully recovered" to stdout
     '''.format(return_code=return_code, print_msg=print_msg, content_ids=content_ids, recovery_type=recovery_type,
                logfile_name=logfile_name))
+
+    if recovery_type == 'differential':
+        context.execute_steps('''Then gprecoverseg should print "gprecoverseg differential recovery failed. Please check the gpsegrecovery.py log file and rsync log file for more details." to stdout
+        ''')
+
+    else:
+        context.execute_steps('''
+                    Then gprecoverseg should print "gprecoverseg failed. Please check the output" to stdout''')
 
 
 @when('check if start failed for contents {content_ids} during full recovery for {utility}')
@@ -411,7 +427,7 @@ def impl(context, before, after):
 # This test explicitly compares the actual before and after gparrays with what we
 # expect.  While such a test is not extensible, it is easy to debug and does exactly
 # what we need to right now.  Besides, the calling Scenario requires a specific cluster
-# setup.  Note the before cluster is a standard CCP 5-host cluster(mdw/sdw1-4) and the
+# setup.  Note the before cluster is a standard CCP 5-host cluster(cdw/sdw1-4) and the
 # after cluster is a result of a call to `gprecoverseg -p` after hosts have been shutdown.
 # This causes the shutdown primaries to fail over to the mirrors, at which point there are 4
 # contents in the cluster with no mirrors.  The `gprecoverseg -p` call creates those 4
@@ -425,7 +441,7 @@ def impl(context, before, after):
     expected = {}
 
     # this is the expected configuration coming into the Scenario(e.g. the original CCP cluster)
-    expected["before"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+    expected["before"] = '''1|-1|p|p|n|u|cdw|mdw|5432|/data/gpdata/coordinator/gpseg-1
 2|0|p|p|s|u|sdw1|sdw1|20000|/data/gpdata/primary/gpseg0
 3|1|p|p|s|u|sdw1|sdw1|20001|/data/gpdata/primary/gpseg1
 16|6|m|m|s|u|sdw1|sdw1|21000|/data/gpdata/mirror/gpseg6
@@ -446,7 +462,7 @@ def impl(context, before, after):
     expected["after_recreation"] = expected["before"]
 
     # this is the expected configuration after "gprecoverseg -p sdw5" after "sdw1" goes down
-    expected["one_host_down"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+    expected["one_host_down"] = '''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/coordinator/gpseg-1
 10|0|p|m|s|u|sdw2|sdw2|21000|/data/gpdata/mirror/gpseg0
 11|1|p|m|s|u|sdw2|sdw2|21001|/data/gpdata/mirror/gpseg1
 4|2|p|p|s|u|sdw2|sdw2|20000|/data/gpdata/primary/gpseg2
@@ -466,7 +482,7 @@ def impl(context, before, after):
 '''
 
     # this is the expected configuration after "gprecoverseg -p sdw5,sdw6" after "sdw1,sdw3" go down
-    expected["two_hosts_down"] ='''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/master/gpseg-1
+    expected["two_hosts_down"] ='''1|-1|p|p|n|u|mdw|mdw|5432|/data/gpdata/coordinator/gpseg-1
 10|0|p|m|s|u|sdw2|sdw2|21000|/data/gpdata/mirror/gpseg0
 11|1|p|m|s|u|sdw2|sdw2|21001|/data/gpdata/mirror/gpseg1
 4|2|p|p|s|u|sdw2|sdw2|20000|/data/gpdata/primary/gpseg2
@@ -593,7 +609,7 @@ def impl(context, seg, contents):
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
             dbid = dbconn.querySingleton(conn, "SELECT dbid FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, role))
         with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
-            actual_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND gp_configuration_history.desc LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
+            actual_tuples = dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE dbid = %d AND description LIKE 'gprecoverseg: segment config for backout%%';" % dbid)
 
         original_tuples = context.original_config_history_info["{}_{}".format(content, role)]
         if actual_tuples != original_tuples + 1: # Running the backout script should have inserted exactly 1 entry
@@ -605,9 +621,138 @@ def impl(context, seg, contents):
 def impl(context, expected_additional_entries):
     with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
         actual_backout_entries = int(dbconn.querySingleton(conn, "SELECT count(*) FROM gp_configuration_history WHERE "
-                                                             "gp_configuration_history.desc LIKE "
+                                                             "description LIKE "
                                                              "'gprecoverseg: segment config for backout%%';"))
     expected_total_entries = int(context.original_config_history_backout_count) + int(expected_additional_entries)
     if actual_backout_entries != expected_total_entries:
         raise Exception("Expected configuration history table to have {} backout entries, found {}".format(
             context.original_config_history_backout_count + expected_additional_entries, actual_backout_entries))
+
+
+@when('a gprecoverseg input file "{filename}" is created with added parameter hostname to recover the failed segment on new host')
+def impl(context, filename):
+    with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
+        failed_port, failed_hostname, failed_datadir, failed_address = context.remote_pair_primary_port, \
+            context.remote_pair_primary_host, context.remote_pair_primary_datadir, context.remote_pair_primary_address
+        result = dbconn.query(conn,"SELECT hostname FROM gp_segment_configuration WHERE preferred_role='p' and status = 'u' and content != -1;").fetchall()
+        failover_port, failover_hostname, failover_datadir = 23000, result[0][0], failed_datadir
+
+        failover_host_address = get_host_address(failover_hostname)
+        context.recovery_host_address = failover_host_address
+        context.recovery_host_name = failover_hostname
+
+        line = "{0}|{1}|{2}|{3} {4}|{5}|{6}|{7}" .format(failed_hostname, failed_address, failed_port, failed_datadir,
+                                            failover_hostname, failover_host_address, failover_port, failover_datadir)
+
+    with open("/tmp/%s" % filename, "w") as fd:
+        fd.write("%s\n" % line)
+
+
+@when('check hostname and address updated on segment configuration with the saved information')
+def impl(context):
+    with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
+        result = dbconn.queryRow(conn, "SELECT content, hostname, address FROM gp_segment_configuration WHERE dbid = {};" .format(context.remote_pair_primary_segdbId))
+        content, hostname, address = result[0], result[1], result[2]
+
+        if address != context.recovery_host_address or hostname != context.recovery_host_name:
+            raise Exception(
+                'Host name and address could not updated on segment configuration for dbId {0}'.format(context.remote_pair_primary_segdbId))
+
+
+@when('a gprecoverseg input file "{filename}" is created with hostname parameter to recover the failed segment on same host')
+def impl(context, filename):
+    port, hostname, datadir, address = context.remote_pair_primary_port, context.remote_pair_primary_host,\
+                              context.remote_pair_primary_datadir, context.remote_pair_primary_address
+
+    host_address = get_host_address(hostname)
+    context.recovery_host_address = host_address
+    context.recovery_host_name = hostname
+
+    line = "{0}|{1}|{2}|{3} {4}|{5}|{6}|/tmp/newdir" .format(hostname, address, port, datadir, hostname,
+                                                             host_address, port)
+
+    with open("/tmp/%s" % filename, "w") as fd:
+        fd.write("%s\n" % line)
+
+
+@when('a gprecoverseg input file "{filename}" is created with hostname parameter matches with segment configuration table for incremental recovery of failed segment')
+def impl(context, filename):
+    port, hostname, datadir, address = context.remote_pair_primary_port, context.remote_pair_primary_host, \
+        context.remote_pair_primary_datadir, context.remote_pair_primary_address
+    context.recovery_host_address = address
+    context.recovery_host_name = hostname
+
+    line = "{0}|{1}|{2}|{3}" .format(hostname, address, port, datadir)
+
+    with open("/tmp/%s" % filename, "w") as fd:
+        fd.write("%s\n" % line)
+
+
+@when('a gprecoverseg input file "{filename}" is created with invalid format for inplace full recovery of failed segment')
+def impl(context, filename):
+    port, hostname, datadir, address = context.remote_pair_primary_port, context.remote_pair_primary_host,\
+                              context.remote_pair_primary_datadir, context.remote_pair_primary_address
+
+    host_address = get_host_address(hostname)
+
+    line = "{0}|{1}|{2}|{3} {4}|{5}|/tmp/newdir" .format(hostname, address, port, datadir, host_address, port)
+
+    with open("/tmp/%s" % filename, "w") as fd:
+        fd.write("%s\n" % line)
+
+
+@when('a gprecoverseg input file "{filename}" created with invalid failover hostname for full recovery of failed segment')
+def impl(context, filename):
+    port, hostname, datadir, address = context.remote_pair_primary_port, context.remote_pair_primary_host,\
+                              context.remote_pair_primary_datadir, context.remote_pair_primary_address
+
+    host_address = get_host_address(hostname)
+
+    line = "{0}|{1}|{2}|{3} {4}_1|{5}|{6}|/tmp/newdir" .format(hostname, address, port, datadir, hostname, host_address, port)
+
+    with open("/tmp/%s" % filename, "w") as fd:
+        fd.write("%s\n" % line)
+
+
+@when('a gprecoverseg input file "{filename}" is created with and without parameter hostname to recover all the failed segments')
+def impl(context, filename):
+    lines = []
+    with closing(dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False)) as conn:
+        rows = dbconn.query(conn,"SELECT port, hostname, datadir, content, address FROM gp_segment_configuration WHERE  status = 'd' and content != -1;").fetchall()
+    for i, row in enumerate(rows):
+        output_str = ""
+        hostname = row[1]
+        host_address = get_host_address(hostname)
+        port = row[0]
+        address = row[4]
+        datadir = row[2]
+        content = row[3]
+
+        if content == 0:
+            output_str += "{0}|{1}|{2}".format(address, port, datadir)
+        elif content == 1:
+            output_str += "{0}|{1}|{2} {3}|{4}|/tmp/newdir{5}".format(address, port, datadir, address, port, i)
+        else:
+            output_str += "{0}|{1}|{2}|{3} {4}|{5}|{6}|/tmp/newdir{7}".format(hostname, address, port, datadir,
+                                                                              hostname, host_address, port, i)
+
+        lines.append(output_str)
+    writeLinesToFile("/tmp/%s" % filename, lines)
+
+@when('a gprecoverseg input file "{filename}" is created with invalid hostname parameter that does not matches with the segment configuration table hostname')
+def impl(context, filename):
+    port, hostname, datadir, address = context.remote_pair_primary_port, context.remote_pair_primary_host, \
+        context.remote_pair_primary_datadir, context.remote_pair_primary_address
+
+    line = "{0}|{1}|{2}|{3}" .format("invalid_hostname", address, port, datadir)
+
+    with open("/tmp/%s" % filename, "w") as fd:
+        fd.write("%s\n" % line)
+
+def get_host_address(hostname):
+    cmd = Command("get the address of the host", cmdStr="hostname -I", ctxt=REMOTE, remoteHost=hostname)
+    cmd.run(validateAfter=True)
+    host_address = cmd.get_stdout().strip().split(' ')
+    return host_address[0]
+
+

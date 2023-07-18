@@ -433,7 +433,8 @@ tuple_lock_retry:
 							 errmsg("tuple to be locked was already moved to another partition or segment due to concurrent update")));
 
 				tuple->t_self = *tid;
-				if (heap_fetch(relation, &SnapshotDirty, tuple, &buffer))
+				if (heap_fetch_extended(relation, &SnapshotDirty, tuple,
+										&buffer, true))
 				{
 					/*
 					 * If xmin isn't what we're expecting, the slot must have
@@ -454,7 +455,13 @@ tuple_lock_retry:
 
 					/* otherwise xmin should not be dirty... */
 					if (TransactionIdIsValid(SnapshotDirty.xmin))
-						elog(ERROR, "t_xmin is uncommitted in tuple to be updated");
+						ereport(ERROR,
+								(errcode(ERRCODE_DATA_CORRUPTED),
+								 errmsg_internal("t_xmin %u is uncommitted in tuple (%u,%u) to be updated in table \"%s\"",
+												 SnapshotDirty.xmin,
+												 ItemPointerGetBlockNumber(&tuple->t_self),
+												 ItemPointerGetOffsetNumber(&tuple->t_self),
+												 RelationGetRelationName(relation))));
 
 					/*
 					 * If tuple is being updated by other transaction then we
@@ -526,6 +533,7 @@ tuple_lock_retry:
 				 */
 				if (tuple->t_data == NULL)
 				{
+					Assert(!BufferIsValid(buffer));
 					return TM_Deleted;
 				}
 
@@ -535,8 +543,7 @@ tuple_lock_retry:
 				if (!TransactionIdEquals(HeapTupleHeaderGetXmin(tuple->t_data),
 										 priorXmax))
 				{
-					if (BufferIsValid(buffer))
-						ReleaseBuffer(buffer);
+					ReleaseBuffer(buffer);
 					return TM_Deleted;
 				}
 
@@ -552,13 +559,12 @@ tuple_lock_retry:
 				 *
 				 * As above, it should be safe to examine xmax and t_ctid
 				 * without the buffer content lock, because they can't be
-				 * changing.
+				 * changing.  We'd better hold a buffer pin though.
 				 */
 				if (ItemPointerEquals(&tuple->t_self, &tuple->t_data->t_ctid))
 				{
 					/* deleted, so forget about it */
-					if (BufferIsValid(buffer))
-						ReleaseBuffer(buffer);
+					ReleaseBuffer(buffer);
 					return TM_Deleted;
 				}
 
@@ -566,8 +572,7 @@ tuple_lock_retry:
 				*tid = tuple->t_data->t_ctid;
 				/* updated row should have xmin matching this xmax */
 				priorXmax = HeapTupleHeaderGetUpdateXid(tuple->t_data);
-				if (BufferIsValid(buffer))
-					ReleaseBuffer(buffer);
+				ReleaseBuffer(buffer);
 				/* loop back to fetch next in chain */
 			}
 		}
@@ -720,6 +725,18 @@ heapam_relation_copy_data(Relation rel, const RelFileNode *newrnode)
 }
 
 static void
+heapam_relation_add_columns(Relation rel, List *newvals, List *constraints, TupleDesc oldDesc)
+{
+	elog(ERROR, "add columns-only not implemented for HEAP tables");
+}
+
+static void
+heapam_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
+{
+	elog(ERROR, "rewrite columns-only not implemented for HEAP tables");
+}
+
+static void
 heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 								 Relation OldIndex, bool use_sort,
 								 TransactionId OldestXmin,
@@ -743,6 +760,7 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	Datum	   *values;
 	bool	   *isnull;
 	BufferHeapTupleTableSlot *hslot;
+	BlockNumber prev_cblock = InvalidBlockNumber;
 
 	/* Remember if it's a system catalog */
 	is_system_catalog = IsSystemRelation(OldHeap);
@@ -803,7 +821,18 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		pgstat_progress_update_param(PROGRESS_CLUSTER_PHASE,
 									 PROGRESS_CLUSTER_PHASE_SEQ_SCAN_HEAP);
 
-		tableScan = table_beginscan(OldHeap, SnapshotAny, 0, (ScanKey) NULL);
+		/*
+		 * For Catalog tables avoid syncscan, so that scan always starts from
+		 * block 0 during rewrite and helps retain bootstrap tuples in initial
+		 * pages only. If using syncscan, then bootstrap tuples may move to
+		 * higher blocks, which will lead to degraded performance for relcache
+		 * initialization during connection starts.
+		*/
+		if (IsCatalogRelation(OldHeap))
+			tableScan = table_beginscan_strat(OldHeap,
+											  SnapshotAny, 0, (ScanKey) NULL, true, false);
+		else
+			tableScan = table_beginscan(OldHeap, SnapshotAny, 0, (ScanKey) NULL);
 		heapScan = (HeapScanDesc) tableScan;
 		indexScan = NULL;
 
@@ -841,14 +870,38 @@ heapam_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 		else
 		{
 			if (!table_scan_getnextslot(tableScan, ForwardScanDirection, slot))
+			{
+				/*
+				 * If the last pages of the scan were empty, we would go to
+				 * the next phase while heap_blks_scanned != heap_blks_total.
+				 * Instead, to ensure that heap_blks_scanned is equivalent to
+				 * total_heap_blks after the table scan phase, this parameter
+				 * is manually updated to the correct value when the table
+				 * scan finishes.
+				 */
+				pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_BLKS_SCANNED,
+											 heapScan->rs_nblocks);
 				break;
+			}
 
 			/*
 			 * In scan-and-sort mode and also VACUUM FULL, set heap blocks
 			 * scanned
+			 *
+			 * Note that heapScan may start at an offset and wrap around, i.e.
+			 * rs_startblock may be >0, and rs_cblock may end with a number
+			 * below rs_startblock. To prevent showing this wraparound to the
+			 * user, we offset rs_cblock by rs_startblock (modulo rs_nblocks).
 			 */
-			pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_BLKS_SCANNED,
-										 heapScan->rs_cblock + 1);
+			if (prev_cblock != heapScan->rs_cblock)
+			{
+				pgstat_progress_update_param(PROGRESS_CLUSTER_HEAP_BLKS_SCANNED,
+											 (heapScan->rs_cblock +
+											  heapScan->rs_nblocks -
+											  heapScan->rs_startblock
+											  ) % heapScan->rs_nblocks + 1);
+				prev_cblock = heapScan->rs_cblock;
+			}
 		}
 
 		tuple = ExecFetchSlotHeapTuple(slot, false, NULL);
@@ -1373,6 +1426,12 @@ heapam_index_build_range_scan(Relation heapRelation,
 		 * buffer continuously while visiting the page, so no pruning
 		 * operation can occur either.
 		 *
+		 * In cases with only ShareUpdateExclusiveLock on the table, it's
+		 * possible for some HOT tuples to appear that we didn't know about
+		 * when we first read the page.  To handle that case, we re-obtain the
+		 * list of root offsets when a HOT tuple points to a root item that we
+		 * don't know about.
+		 *
 		 * Also, although our opinions about tuple liveness could change while
 		 * we scan the page (due to concurrent transaction commits/aborts),
 		 * the chain root locations won't, so this info doesn't need to be
@@ -1675,6 +1734,20 @@ heapam_index_build_range_scan(Relation heapRelation,
 
 			rootTuple = *heapTuple;
 			offnum = ItemPointerGetOffsetNumber(&heapTuple->t_self);
+
+			/*
+			 * If a HOT tuple points to a root that we don't know
+			 * about, obtain root items afresh.  If that still fails,
+			 * report it as corruption.
+			 */
+			if (root_offsets[offnum - 1] == InvalidOffsetNumber)
+			{
+				Page	page = BufferGetPage(hscan->rs_cbuf);
+
+				LockBuffer(hscan->rs_cbuf, BUFFER_LOCK_SHARE);
+				heap_get_root_tuples(page, root_offsets);
+				LockBuffer(hscan->rs_cbuf, BUFFER_LOCK_UNLOCK);
+			}
 
 			if (!OffsetNumberIsValid(root_offsets[offnum - 1]))
 				ereport(ERROR,
@@ -2042,6 +2115,35 @@ heapam_relation_size(Relation rel, ForkNumber forkNumber)
 		nblocks = smgrnblocks(rel->rd_smgr, forkNumber);
 
 	return nblocks * BLCKSZ;
+}
+
+/*
+ * GPDB: Heap tables only have 1 block sequence as they don't have segments like
+ * append-optimized tables. This sequence extends from block 0 to the number of
+ * blocks in the table.
+ */
+static void
+heap_relation_get_block_sequence(Relation rel,
+								 BlockNumber heapBlk,
+								 BlockSequence *sequence)
+{
+	sequence->startblknum = 0;
+	sequence->nblocks = RelationGetNumberOfBlocks(rel);
+}
+
+static BlockSequence *
+heap_relation_get_block_sequences(Relation rel,
+								  int *numSequences)
+{
+	BlockSequence *blockSequence;
+
+	Assert(numSequences);
+	*numSequences = 1;
+
+	blockSequence = palloc(sizeof(BlockSequence) * 1);
+
+	heap_relation_get_block_sequence(rel, InvalidBlockNumber, blockSequence);
+	return blockSequence;
 }
 
 /*
@@ -2674,6 +2776,8 @@ static const TableAmRoutine heapam_methods = {
 	.relation_nontransactional_truncate = heapam_relation_nontransactional_truncate,
 	.relation_copy_data = heapam_relation_copy_data,
 	.relation_copy_for_cluster = heapam_relation_copy_for_cluster,
+	.relation_add_columns = heapam_relation_add_columns,
+	.relation_rewrite_columns = heapam_relation_rewrite_columns,
 	.relation_vacuum = lazy_vacuum_rel_heap,
 	.scan_analyze_next_block = heapam_scan_analyze_next_block,
 	.scan_analyze_next_tuple = heapam_scan_analyze_next_tuple,
@@ -2681,6 +2785,8 @@ static const TableAmRoutine heapam_methods = {
 	.index_validate_scan = heapam_index_validate_scan,
 
 	.relation_size = heapam_relation_size,
+	.relation_get_block_sequences = heap_relation_get_block_sequences,
+	.relation_get_block_sequence = heap_relation_get_block_sequence,
 	.relation_needs_toast_table = heapam_relation_needs_toast_table,
 
 	.relation_estimate_size = heapam_estimate_rel_size,

@@ -66,7 +66,7 @@ select * from P,X where P.a=X.a  and X.a  in (1,2);
           <dxl:Partition Mdid="6.36394823003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.36394823001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36394823001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -114,7 +114,7 @@ select * from P,X where P.a=X.a  and X.a  in (1,2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.36394823002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36394823002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -162,7 +162,7 @@ select * from P,X where P.a=X.a  and X.a  in (1,2);
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.36394823003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.36394823003.1.1" Name="p_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

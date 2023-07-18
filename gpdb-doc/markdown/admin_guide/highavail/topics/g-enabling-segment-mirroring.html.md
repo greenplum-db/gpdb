@@ -4,7 +4,7 @@ title: Enabling Segment Mirroring
 
 Mirror segments allow database queries to fail over to a backup segment if the primary segment is unavailable. By default, mirrors are configured on the same array of hosts as the primary segments. You may choose a completely different set of hosts for your mirror segments so they do not share machines with any of your primary segments.
 
-**Important:** During the online data replication process, Greenplum Database should be in a quiescent state, workloads and other queries should not be running.
+> **Important** During the online data replication process, Greenplum Database should be in a quiescent state, workloads and other queries should not be running.
 
 ## <a id="ki169450"></a>To add segment mirrors to an existing system \(same hosts as primaries\) 
 

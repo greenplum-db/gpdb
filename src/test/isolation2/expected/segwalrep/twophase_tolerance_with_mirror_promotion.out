@@ -6,7 +6,7 @@
 --   2) if the transaction is already prepared, then it should complete commit
 --      on the mirror
 --   3) if the transaction has committed on the primary, but not acknowledged
---      to the master then it should complete the commit on the mirror
+--      to the coordinator then it should complete the commit on the mirror
 
 -- Test setup: This test needs a minimum of 3 primary/mirror pairs. In order to
 -- minimize test time, each scenario is created on a different segment. Each
@@ -22,7 +22,7 @@
 --
 -- end_matchsubs
 
-!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --coordinatoronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
@@ -30,11 +30,11 @@
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
 -- case segment is in recovery. Approximately we want to wait 30 seconds.
-!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --coordinatoronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
-!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --coordinatoronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
@@ -143,7 +143,7 @@ LINE 1: INSERT INTO tolerance_test_table VALUES(42);
  Success:        
 (1 row)
 1<:  <... completed>
-CREATE
+CREATE TABLE
 
 1:SELECT gp_inject_fault('transaction_abort_after_distributed_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
  gp_inject_fault 
@@ -162,9 +162,9 @@ CREATE
  p    | m              
 (2 rows)
 1:INSERT INTO tolerance_test_table VALUES(42);
-INSERT 1
+INSERT 0 1
 
--- Scenario 3: Commit-Prepare received on primary but not acknowledged to master
+-- Scenario 3: Commit-Prepare received on primary but not acknowledged to coordinator
 -- NOTICE: Don't use session 2 again because it's cached gang is invalid
 1:SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'infinite_loop', dbid) FROM gp_segment_configuration WHERE content = 2 AND role = 'p';
  gp_inject_fault_infinite 
@@ -194,11 +194,11 @@ INSERT 1
  t                         
 (1 row)
 1<:  <... completed>
-DROP
+DROP TABLE
 
--- Use new connection session. This helps is to make sure master is up and
+-- Use new connection session. This helps is to make sure coordinator is up and
 -- running, even if in worst case the above Drop command commit-prepared retries
--- are exhausted and PANICs the master.
+-- are exhausted and PANICs the coordinator.
 5:SELECT role, preferred_role FROM gp_segment_configuration WHERE content = 2;
  role | preferred_role 
 ------+----------------
@@ -216,15 +216,15 @@ DROP
 -- end_ignore
 (exited with code 0)
 
-!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+!\retcode gpconfig -r gp_fts_probe_retries --coordinatoronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
-!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --masteronly;
+!\retcode gpconfig -r gp_gang_creation_retry_count --skipvalidation --coordinatoronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)
-!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --masteronly;
+!\retcode gpconfig -r gp_gang_creation_retry_timer --skipvalidation --coordinatoronly;
 -- start_ignore
 -- end_ignore
 (exited with code 0)

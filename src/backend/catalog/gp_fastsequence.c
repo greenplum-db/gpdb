@@ -17,12 +17,15 @@
 #include "access/appendonlywriter.h"
 #include "access/htup_details.h"
 #include "catalog/gp_fastsequence.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/indexing.h"
 #include "utils/relcache.h"
 #include "utils/fmgroids.h"
 #include "access/genam.h"
 #include "access/htup.h"
 #include "access/heapam.h"
+#include "access/xact.h"
+#include "utils/faultinjector.h"
 #include "utils/syscache.h"
 
 static void insert_or_update_fastsequence(
@@ -116,7 +119,27 @@ insert_or_update_fastsequence(Relation gp_fastsequence_rel,
 
 		newTuple = heaptuple_form_to(tupleDesc, values, nulls, NULL, NULL);
 
-		CatalogTupleInsertFrozen(gp_fastsequence_rel, newTuple);
+		/* insert the tuple */
+		CatalogTupleInsert(gp_fastsequence_rel, newTuple);
+
+#ifdef FAULT_INJECTOR
+		FaultInjector_InjectFaultIfSet(
+								"insert_fastsequence_before_freeze",
+								DDLNotSpecified,
+								"", //databaseName
+								RelationGetRelationName(gp_fastsequence_rel));
+#endif
+
+		/* freeze the tuple */
+		heap_freeze_tuple_wal_logged(gp_fastsequence_rel, newTuple);
+
+#ifdef FAULT_INJECTOR
+		FaultInjector_InjectFaultIfSet(
+								"insert_fastsequence_after_freeze",
+								DDLNotSpecified,
+								"", //databaseName
+								RelationGetRelationName(gp_fastsequence_rel));
+#endif
 
 		elogif(Debug_appendonly_print_insert_tuple, LOG,
 			   "Frozen insert to gp_fastsequence (rel, segno, last_sequence): (%u, %ld, %ld)",
@@ -245,13 +268,13 @@ int64 GetFastSequences(Oid objid, int64 objmod, int64 numSequences)
 	/*
 	 * gp_fastsequence table locking for AO inserts uses bottom up approach
 	 * meaning the locks are first acquired on the segments and later on the
-	 * master.
+	 * coordinator.
 	 * Hence, it is essential that we release the lock here to avoid
-	 * any form of master-segment resource deadlock. E.g. A transaction
+	 * any form of coordinator-segment resource deadlock. E.g. A transaction
 	 * trying to reindex gp_fastsequence has acquired a lock on it on the
-	 * master but is blocked on the segment as another transaction which
+	 * coordinator but is blocked on the segment as another transaction which
 	 * is an insert operation has acquired a lock first on segment and is
-	 * trying to acquire a lock on the Master. Deadlock!
+	 * trying to acquire a lock on the Coordinator. Deadlock!
 	 */
 	table_close(gp_fastsequence_rel, RowExclusiveLock);
 
@@ -316,24 +339,48 @@ int64 ReadLastSequence(Oid objid, int64 objmod)
 	/*
 	 * gp_fastsequence table locking for AO inserts uses bottom up approach
 	 * meaning the locks are first acquired on the segments and later on the
-	 * master.
+	 * coordinator.
 	 * Hence, it is essential that we release the lock here to avoid
-	 * any form of master-segment resource deadlock. E.g. A transaction
+	 * any form of coordinator-segment resource deadlock. E.g. A transaction
 	 * trying to reindex gp_fastsequence has acquired a lock on it on the
-	 * master but is blocked on the segment as another transaction which
+	 * coordinator but is blocked on the segment as another transaction which
 	 * is an insert operation has acquired a lock first on segment and is
-	 * trying to acquire a lock on the Master. Deadlock!
+	 * trying to acquire a lock on the Coordinator. Deadlock!
 	 */
 	heap_close(gp_fastsequence_rel, AccessShareLock);
 
 	return lastSequence;
 }
 
+/*
+ * ReadAllLastSequences
+ *
+ * Convenient function to read lastsequence of every objmod.
+ * Record the sequence numbers in the passed-in array.
+ * All the returned numbers should be non-negative.
+ */
+void ReadAllLastSequences(Oid objid, int64 *seqs)
+{
+	Assert(seqs);
+
+	for (int objmod = 0; objmod < MAX_AOREL_CONCURRENCY; objmod++)
+	{
+		seqs[objmod] = ReadLastSequence(objid, objmod);
+ 		/* 
+		 * ReadLastSequence() is expected to return 0 if the seg doesn't 
+		 * exist. Otherwise, it should return a positive number.
+		 */
+		Assert(seqs[objmod] >= 0);
+	}
+}
 
 /*
  * RemoveFastSequenceEntry
  *
  * Remove all entries associated with the given object id.
+ * And, since gp_fastsequence is cleared, the existing 
+ * pg_attribute_encoding.lastrownum does not make sense anymore.
+ * Clear them too based on the AO relation OID.
  *
  * If the given objid is an invalid OID, this function simply
  * returns.
@@ -342,7 +389,7 @@ int64 ReadLastSequence(Oid objid, int64 objmod)
  * gp_fastsequence.
  */
 void
-RemoveFastSequenceEntry(Oid objid)
+RemoveFastSequenceEntry(Oid relid, Oid objid)
 {
 	Relation	rel;
 	ScanKeyData scankey;
@@ -369,4 +416,14 @@ RemoveFastSequenceEntry(Oid objid)
 
 	systable_endscan(sscan);
 	table_close(rel, RowExclusiveLock);
+
+	rel = table_open(relid, NoLock);
+	/*
+	 * Currently lastrownums are only used by ao_row tables. Once ao_column
+	 * tables need them (i.e. when the same ADD COLUMN optimization for 
+	 * ao_column), we can change this check to RelationStorageIsAO.
+	 */
+	if (RelationStorageIsAoRows(rel))
+		ClearAttributeEncodingLastrownums(relid);
+	table_close(rel, NoLock);
 }

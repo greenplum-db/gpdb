@@ -6,13 +6,17 @@ step s1setguc: SET test_AppendOnlyHash_eviction_vs_just_marking_not_inuse=1;
 step s1insert: INSERT INTO appendonly_eof SELECT * FROM generate_series(1, 1000);
 step s2begin: BEGIN ISOLATION LEVEL SERIALIZABLE;
 step s2select: SELECT count(*) from appendonly_eof;
-count          
+count
+-----
+  100
+(1 row)
 
-100            
 step s1commit: COMMIT;
 step s2insert: INSERT INTO appendonly_eof SELECT * FROM generate_series(1, 10);
 step s2commit: COMMIT;
 step s2select: SELECT count(*) from appendonly_eof;
-count          
+count
+-----
+ 1110
+(1 row)
 
-1110           

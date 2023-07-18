@@ -38,28 +38,16 @@ using namespace gpos;
 class CScalarArrayCoerceExpr : public CScalarCoerceBase
 {
 private:
-	// catalog MDId of the element function
-	IMDId *m_pmdidElementFunc;
-
-	// conversion semantics flag to pass to func
-	BOOL m_is_explicit;
-
 public:
 	CScalarArrayCoerceExpr(const CScalarArrayCoerceExpr &) = delete;
 
 	// ctor
-	CScalarArrayCoerceExpr(CMemoryPool *mp, IMDId *element_func,
-						   IMDId *result_type_mdid, INT type_modifier,
-						   BOOL is_explicit, ECoercionForm dxl_coerce_format,
+	CScalarArrayCoerceExpr(CMemoryPool *mp, IMDId *result_type_mdid,
+						   INT type_modifier, ECoercionForm dxl_coerce_format,
 						   INT location);
 
 	// dtor
-	~CScalarArrayCoerceExpr() override;
-
-	// return metadata id of element coerce function
-	IMDId *PmdidElementFunc() const;
-
-	BOOL IsExplicit() const;
+	~CScalarArrayCoerceExpr() override = default;
 
 	EOperatorId Eopid() const override;
 

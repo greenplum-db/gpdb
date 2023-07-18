@@ -334,6 +334,27 @@ UPDATE ro_view20 SET b=upper(b);
 ERROR:  cannot update view "ro_view20"
 DETAIL:  Views that return set-returning functions are not automatically updatable.
 HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
+-- A view with a conditional INSTEAD rule but no unconditional INSTEAD rules
+-- or INSTEAD OF triggers should be non-updatable and generate useful error
+-- messages with appropriate detail
+CREATE RULE rw_view16_ins_rule AS ON INSERT TO rw_view16
+  WHERE NEW.a > 0 DO INSTEAD INSERT INTO base_tbl VALUES (NEW.a, NEW.b);
+CREATE RULE rw_view16_upd_rule AS ON UPDATE TO rw_view16
+  WHERE OLD.a > 0 DO INSTEAD UPDATE base_tbl SET b=NEW.b WHERE a=OLD.a;
+CREATE RULE rw_view16_del_rule AS ON DELETE TO rw_view16
+  WHERE OLD.a > 0 DO INSTEAD DELETE FROM base_tbl WHERE a=OLD.a;
+INSERT INTO rw_view16 (a, b) VALUES (3, 'Row 3'); -- should fail
+ERROR:  cannot insert into view "rw_view16"
+DETAIL:  Views with conditional DO INSTEAD rules are not automatically updatable.
+HINT:  To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.
+UPDATE rw_view16 SET b='ROW 2' WHERE a=2; -- should fail
+ERROR:  cannot update view "rw_view16"
+DETAIL:  Views with conditional DO INSTEAD rules are not automatically updatable.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
+DELETE FROM rw_view16 WHERE a=2; -- should fail
+ERROR:  cannot delete from view "rw_view16"
+DETAIL:  Views with conditional DO INSTEAD rules are not automatically updatable.
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 DROP TABLE base_tbl CASCADE;
 NOTICE:  drop cascades to 16 other objects
 DETAIL:  drop cascades to view ro_view1
@@ -409,9 +430,9 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: base_tbl_1.a
+                     Hash Key: a
                      ->  Split
-                           ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                           ->  Index Scan using base_tbl_pkey on base_tbl
                                  Index Cond: ((a = 5) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (10 rows)
@@ -420,13 +441,35 @@ EXPLAIN (costs off) DELETE FROM rw_view1 WHERE a=5;
                          QUERY PLAN                          
 -------------------------------------------------------------
  Delete on base_tbl
-   ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+   ->  Index Scan using base_tbl_pkey on base_tbl
          Index Cond: ((a = 5) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (4 rows)
 
+-- it's still updatable if we add a DO ALSO rule
+CREATE TABLE base_tbl_hist(ts timestamptz default now(), a int, b text);
+CREATE RULE base_tbl_log AS ON INSERT TO rw_view1 DO ALSO
+  INSERT INTO base_tbl_hist(a,b) VALUES(new.a, new.b);
+SELECT table_name, is_updatable, is_insertable_into
+  FROM information_schema.views
+ WHERE table_name = 'rw_view1';
+ table_name | is_updatable | is_insertable_into 
+------------+--------------+--------------------
+ rw_view1   | YES          | YES
+(1 row)
+
+-- Check behavior with DEFAULTs (bug #17633)
+INSERT INTO rw_view1 VALUES (9, DEFAULT), (10, DEFAULT);
+SELECT a, b FROM base_tbl_hist;
+ a  | b 
+----+---
+  9 | 
+ 10 | 
+(2 rows)
+
 DROP TABLE base_tbl CASCADE;
 NOTICE:  drop cascades to view rw_view1
+DROP TABLE base_tbl_hist;
 -- view on top of view
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
@@ -488,9 +531,9 @@ EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: base_tbl_1.a
+                     Hash Key: a
                      ->  Split
-                           ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                           ->  Index Scan using base_tbl_pkey on base_tbl
                                  Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (10 rows)
@@ -499,7 +542,7 @@ EXPLAIN (costs off) DELETE FROM rw_view2 WHERE aaa=4;
                          QUERY PLAN                          
 -------------------------------------------------------------
  Delete on base_tbl
-   ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+   ->  Index Scan using base_tbl_pkey on base_tbl
          Index Cond: ((a = 4) AND (a < 10) AND (a > 0))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (4 rows)
@@ -686,13 +729,13 @@ EXPLAIN (costs off) UPDATE rw_view2 SET a=3 WHERE a=2;
 -------------------------------------------------------------------------------
  Update on base_tbl
    ->  Hash Join
-         Hash Cond: (base_tbl_1.a = base_tbl_2.a)
-         ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+         Hash Cond: (base_tbl.a = base_tbl_1.a)
+         ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: (a = 2)
          ->  Hash
                ->  Result
-                     Filter: ((base_tbl_2.a = 2) AND (base_tbl_2.a < 10))
-                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
+                     Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
+                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                            Index Cond: (a > 0)
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
@@ -702,13 +745,13 @@ EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
 -------------------------------------------------------------------------------
  Delete on base_tbl
    ->  Hash Join
-         Hash Cond: (base_tbl_1.a = base_tbl_2.a)
-         ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+         Hash Cond: (base_tbl.a = base_tbl_1.a)
+         ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: (a = 2)
          ->  Hash
                ->  Result
-                     Filter: ((base_tbl_2.a = 2) AND (base_tbl_2.a < 10))
-                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
+                     Filter: ((base_tbl_1.a = 2) AND (base_tbl_1.a < 10))
+                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                            Index Cond: (a > 0)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (11 rows)
@@ -1205,13 +1248,13 @@ ALTER VIEW rw_view1 ALTER COLUMN bb SET DEFAULT 'View default';
 INSERT INTO rw_view1 VALUES (4, 'Row 4');
 INSERT INTO rw_view1 (aa) VALUES (5);
 SELECT * FROM base_tbl;
- a |      b       | c 
----+--------------+---
- 1 | Row 1        | 1
- 2 | Row 2        | 2
- 3 | Unspecified  | 3
- 4 | Row 4        | 4
- 5 | View default | 5
+ a |      b       | c  
+---+--------------+----
+ 1 | Row 1        |  1
+ 2 | Row 2        |  2
+ 3 | Unspecified  |  3
+ 4 | Row 4        | 21
+ 5 | View default | 22
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;
@@ -1462,6 +1505,43 @@ NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to view rw_view1
 drop cascades to view rw_view2
 drop cascades to view rw_view3
+-- view on table with GENERATED columns
+CREATE TABLE base_tbl (id int, idplus1 int GENERATED ALWAYS AS (id + 1) STORED);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl;
+INSERT INTO base_tbl (id) VALUES (1);
+INSERT INTO rw_view1 (id) VALUES (2);
+INSERT INTO base_tbl (id, idplus1) VALUES (3, DEFAULT);
+INSERT INTO rw_view1 (id, idplus1) VALUES (4, DEFAULT);
+INSERT INTO base_tbl (id, idplus1) VALUES (5, 6);  -- error
+ERROR:  cannot insert into column "idplus1"
+DETAIL:  Column "idplus1" is a generated column.
+INSERT INTO rw_view1 (id, idplus1) VALUES (6, 7);  -- error
+ERROR:  cannot insert into column "idplus1"
+DETAIL:  Column "idplus1" is a generated column.
+SELECT * FROM base_tbl;
+ id | idplus1 
+----+---------
+  2 |       3
+  3 |       4
+  4 |       5
+  1 |       2
+(4 rows)
+
+UPDATE base_tbl SET id = 2000 WHERE id = 2;
+UPDATE rw_view1 SET id = 3000 WHERE id = 3;
+SELECT * FROM base_tbl;
+  id  | idplus1 
+------+---------
+    4 |       5
+ 2000 |    2001
+    1 |       2
+ 3000 |    3001
+(4 rows)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to view rw_view1
 -- inheritance tests
 CREATE TABLE base_tbl_parent (a int);
 CREATE TABLE base_tbl_child (CHECK (a > 0)) INHERITS (base_tbl_parent);
@@ -1874,11 +1954,8 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
            ->  Materialize
                  ->  Broadcast Motion 3:1  (slice1; segments: 3)
                        ->  Seq Scan on ref_tbl r
-   SubPlan 2
-     ->  Broadcast Motion 3:1  (slice2; segments: 3)
-           ->  Seq Scan on ref_tbl r_1
  Optimizer: Postgres query optimizer
-(12 rows)
+(9 rows)
 
 ANALYZE base_tbl;
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
@@ -1897,11 +1974,8 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
            ->  Materialize
                  ->  Broadcast Motion 3:3  (slice2; segments: 3)
                        ->  Seq Scan on ref_tbl r_1
-   SubPlan 2
-     ->  Broadcast Motion 3:3  (slice3; segments: 3)
-           ->  Seq Scan on ref_tbl r_2
  Optimizer: Postgres query optimizer
-(18 rows)
+(14 rows)
 
 DROP TABLE base_tbl, ref_tbl CASCADE;
 NOTICE:  drop cascades to view rw_view1
@@ -2289,7 +2363,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
  Update on base_tbl
    ->  Nested Loop Semi Join
          Join Filter: true
-         ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
+         ->  Index Scan using base_tbl_pkey on base_tbl
                Index Cond: (id = 2)
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
@@ -2368,7 +2442,7 @@ UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a < 7 AND a != 6;
                Output: 100, t1.b, t1.c, t1.ctid, t1.gp_segment_id, DMLAction
                ->  Seq Scan on public.t1
                      Output: 100, t1.b, t1.c, t1.ctid, t1.gp_segment_id
-                     Filter: ((t1.a > 5) AND (t1.a < 7) AND (t1.a <> 6) AND (alternatives: SubPlan 1 (copy 11) or hashed SubPlan 2 (copy 12)) AND snoop(t1.a) AND leakproof(t1.a))
+                     Filter: ((t1.a > 5) AND (t1.a < 7) AND (t1.a <> 6) AND (SubPlan 1 (copy 11)) AND snoop(t1.a) AND leakproof(t1.a))
                      SubPlan 1 (copy 11)
                        ->  Result
                              Filter: (t12_1.a = t1.a)
@@ -2381,98 +2455,66 @@ UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a < 7 AND a != 6;
                                                      Output: t12_1.a
                                                ->  Seq Scan on public.t111 t111_1
                                                      Output: t111_1.a
-                     SubPlan 2 (copy 12)
-                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                             Output: t12_2.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_2
-                                         Output: t12_2.a
-                                   ->  Seq Scan on public.t111 t111_2
-                                         Output: t111_2.a
-   ->  Explicit Redistribute Motion 3:3  (slice4; segments: 3)
+   ->  Explicit Redistribute Motion 3:3  (slice3; segments: 3)
          Output: 100, t11.b, t11.c, t11.d, t11.ctid, t11.gp_segment_id, (DMLAction)
          ->  Split
                Output: 100, t11.b, t11.c, t11.d, t11.ctid, t11.gp_segment_id, DMLAction
                ->  Seq Scan on public.t11
                      Output: 100, t11.b, t11.c, t11.d, t11.ctid, t11.gp_segment_id
-                     Filter: ((t11.a > 5) AND (t11.a < 7) AND (t11.a <> 6) AND (alternatives: SubPlan 1 (copy 13) or hashed SubPlan 2 (copy 14)) AND snoop(t11.a) AND leakproof(t11.a))
+                     Filter: ((t11.a > 5) AND (t11.a < 7) AND (t11.a <> 6) AND (SubPlan 1 (copy 13)) AND snoop(t11.a) AND leakproof(t11.a))
                      SubPlan 1 (copy 13)
                        ->  Result
-                             Filter: (t12_3.a = t11.a)
+                             Filter: (t12_2.a = t11.a)
+                             ->  Materialize
+                                   Output: t12_2.a
+                                   ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                         Output: t12_2.a
+                                         ->  Append
+                                               ->  Seq Scan on public.t12 t12_2
+                                                     Output: t12_2.a
+                                               ->  Seq Scan on public.t111 t111_2
+                                                     Output: t111_2.a
+   ->  Explicit Redistribute Motion 3:3  (slice5; segments: 3)
+         Output: 100, t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, (DMLAction)
+         ->  Split
+               Output: 100, t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, DMLAction
+               ->  Seq Scan on public.t12
+                     Output: 100, t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id
+                     Filter: ((t12.a > 5) AND (t12.a < 7) AND (t12.a <> 6) AND (SubPlan 1 (copy 15)) AND snoop(t12.a) AND leakproof(t12.a))
+                     SubPlan 1 (copy 15)
+                       ->  Result
+                             Filter: (t12_3.a = t12.a)
                              ->  Materialize
                                    Output: t12_3.a
-                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                   ->  Broadcast Motion 3:3  (slice6; segments: 3)
                                          Output: t12_3.a
                                          ->  Append
                                                ->  Seq Scan on public.t12 t12_3
                                                      Output: t12_3.a
                                                ->  Seq Scan on public.t111 t111_3
                                                      Output: t111_3.a
-                     SubPlan 2 (copy 14)
-                       ->  Broadcast Motion 3:3  (slice6; segments: 3)
-                             Output: t12_4.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_4
-                                         Output: t12_4.a
-                                   ->  Seq Scan on public.t111 t111_4
-                                         Output: t111_4.a
    ->  Explicit Redistribute Motion 3:3  (slice7; segments: 3)
-         Output: 100, t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, (DMLAction)
-         ->  Split
-               Output: 100, t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, DMLAction
-               ->  Seq Scan on public.t12
-                     Output: 100, t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id
-                     Filter: ((t12.a > 5) AND (t12.a < 7) AND (t12.a <> 6) AND (alternatives: SubPlan 1 (copy 15) or hashed SubPlan 2 (copy 16)) AND snoop(t12.a) AND leakproof(t12.a))
-                     SubPlan 1 (copy 15)
-                       ->  Result
-                             Filter: (t12_5.a = t12.a)
-                             ->  Materialize
-                                   Output: t12_5.a
-                                   ->  Broadcast Motion 3:3  (slice8; segments: 3)
-                                         Output: t12_5.a
-                                         ->  Append
-                                               ->  Seq Scan on public.t12 t12_5
-                                                     Output: t12_5.a
-                                               ->  Seq Scan on public.t111 t111_5
-                                                     Output: t111_5.a
-                     SubPlan 2 (copy 16)
-                       ->  Broadcast Motion 3:3  (slice9; segments: 3)
-                             Output: t12_6.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_6
-                                         Output: t12_6.a
-                                   ->  Seq Scan on public.t111 t111_6
-                                         Output: t111_6.a
-   ->  Explicit Redistribute Motion 3:3  (slice10; segments: 3)
          Output: 100, t111.b, t111.c, t111.d, t111.e, t111.ctid, t111.gp_segment_id, (DMLAction)
          ->  Split
                Output: 100, t111.b, t111.c, t111.d, t111.e, t111.ctid, t111.gp_segment_id, DMLAction
                ->  Seq Scan on public.t111
                      Output: 100, t111.b, t111.c, t111.d, t111.e, t111.ctid, t111.gp_segment_id
-                     Filter: ((t111.a > 5) AND (t111.a < 7) AND (t111.a <> 6) AND (alternatives: SubPlan 1 (copy 17) or hashed SubPlan 2 (copy 18)) AND snoop(t111.a) AND leakproof(t111.a))
+                     Filter: ((t111.a > 5) AND (t111.a < 7) AND (t111.a <> 6) AND (SubPlan 1 (copy 17)) AND snoop(t111.a) AND leakproof(t111.a))
                      SubPlan 1 (copy 17)
                        ->  Result
-                             Filter: (t12_7.a = t111.a)
+                             Filter: (t12_4.a = t111.a)
                              ->  Materialize
-                                   Output: t12_7.a
-                                   ->  Broadcast Motion 3:3  (slice11; segments: 3)
-                                         Output: t12_7.a
+                                   Output: t12_4.a
+                                   ->  Broadcast Motion 3:3  (slice8; segments: 3)
+                                         Output: t12_4.a
                                          ->  Append
-                                               ->  Seq Scan on public.t12 t12_7
-                                                     Output: t12_7.a
-                                               ->  Seq Scan on public.t111 t111_7
-                                                     Output: t111_7.a
-                     SubPlan 2 (copy 18)
-                       ->  Broadcast Motion 3:3  (slice12; segments: 3)
-                             Output: t12_8.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_8
-                                         Output: t12_8.a
-                                   ->  Seq Scan on public.t111 t111_8
-                                         Output: t111_8.a
+                                               ->  Seq Scan on public.t12 t12_4
+                                                     Output: t12_4.a
+                                               ->  Seq Scan on public.t111 t111_4
+                                                     Output: t111_4.a
  Optimizer: Postgres query optimizer
  Settings: enable_mergejoin=on, enable_nestloop=on, optimizer=off
-(127 rows)
+(83 rows)
 
 UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a < 7 AND a != 6;
 SELECT * FROM v1 WHERE a=100; -- Nothing should have been changed to 100
@@ -2487,8 +2529,8 @@ SELECT * FROM t1 WHERE a=100; -- Nothing should have been changed to 100
 
 EXPLAIN (VERBOSE, COSTS OFF)
 UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
-                                                               QUERY PLAN                                                                
------------------------------------------------------------------------------------------------------------------------------------------
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
  Update on public.t1
    Update on public.t1
    Update on public.t11
@@ -2500,7 +2542,7 @@ UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
                Output: ((t1.a + 1)), t1.b, t1.c, t1.ctid, t1.gp_segment_id, DMLAction
                ->  Seq Scan on public.t1
                      Output: (t1.a + 1), t1.b, t1.c, t1.ctid, t1.gp_segment_id
-                     Filter: ((t1.a > 5) AND (t1.a = 8) AND (alternatives: SubPlan 1 (copy 11) or hashed SubPlan 2 (copy 12)) AND snoop(t1.a) AND leakproof(t1.a))
+                     Filter: ((t1.a > 5) AND (t1.a = 8) AND (SubPlan 1 (copy 11)) AND snoop(t1.a) AND leakproof(t1.a))
                      SubPlan 1 (copy 11)
                        ->  Result
                              Filter: (t12_1.a = t1.a)
@@ -2513,98 +2555,66 @@ UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
                                                      Output: t12_1.a
                                                ->  Seq Scan on public.t111 t111_1
                                                      Output: t111_1.a
-                     SubPlan 2 (copy 12)
-                       ->  Broadcast Motion 3:1  (slice3; segments: 3)
-                             Output: t12_2.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_2
-                                         Output: t12_2.a
-                                   ->  Seq Scan on public.t111 t111_2
-                                         Output: t111_2.a
-   ->  Explicit Redistribute Motion 1:3  (slice4; segments: 1)
+   ->  Explicit Redistribute Motion 1:3  (slice3; segments: 1)
          Output: ((t11.a + 1)), t11.b, t11.c, t11.d, t11.ctid, t11.gp_segment_id, (DMLAction)
          ->  Split
                Output: ((t11.a + 1)), t11.b, t11.c, t11.d, t11.ctid, t11.gp_segment_id, DMLAction
                ->  Seq Scan on public.t11
                      Output: (t11.a + 1), t11.b, t11.c, t11.d, t11.ctid, t11.gp_segment_id
-                     Filter: ((t11.a > 5) AND (t11.a = 8) AND (alternatives: SubPlan 1 (copy 13) or hashed SubPlan 2 (copy 14)) AND snoop(t11.a) AND leakproof(t11.a))
+                     Filter: ((t11.a > 5) AND (t11.a = 8) AND (SubPlan 1 (copy 13)) AND snoop(t11.a) AND leakproof(t11.a))
                      SubPlan 1 (copy 13)
                        ->  Result
-                             Filter: (t12_3.a = t11.a)
+                             Filter: (t12_2.a = t11.a)
+                             ->  Materialize
+                                   Output: t12_2.a
+                                   ->  Broadcast Motion 3:1  (slice4; segments: 3)
+                                         Output: t12_2.a
+                                         ->  Append
+                                               ->  Seq Scan on public.t12 t12_2
+                                                     Output: t12_2.a
+                                               ->  Seq Scan on public.t111 t111_2
+                                                     Output: t111_2.a
+   ->  Explicit Redistribute Motion 1:3  (slice5; segments: 1)
+         Output: ((t12.a + 1)), t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, (DMLAction)
+         ->  Split
+               Output: ((t12.a + 1)), t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, DMLAction
+               ->  Seq Scan on public.t12
+                     Output: (t12.a + 1), t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id
+                     Filter: ((t12.a > 5) AND (t12.a = 8) AND (SubPlan 1 (copy 15)) AND snoop(t12.a) AND leakproof(t12.a))
+                     SubPlan 1 (copy 15)
+                       ->  Result
+                             Filter: (t12_3.a = t12.a)
                              ->  Materialize
                                    Output: t12_3.a
-                                   ->  Broadcast Motion 3:1  (slice5; segments: 3)
+                                   ->  Broadcast Motion 3:1  (slice6; segments: 3)
                                          Output: t12_3.a
                                          ->  Append
                                                ->  Seq Scan on public.t12 t12_3
                                                      Output: t12_3.a
                                                ->  Seq Scan on public.t111 t111_3
                                                      Output: t111_3.a
-                     SubPlan 2 (copy 14)
-                       ->  Broadcast Motion 3:1  (slice6; segments: 3)
-                             Output: t12_4.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_4
-                                         Output: t12_4.a
-                                   ->  Seq Scan on public.t111 t111_4
-                                         Output: t111_4.a
    ->  Explicit Redistribute Motion 1:3  (slice7; segments: 1)
-         Output: ((t12.a + 1)), t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, (DMLAction)
-         ->  Split
-               Output: ((t12.a + 1)), t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id, DMLAction
-               ->  Seq Scan on public.t12
-                     Output: (t12.a + 1), t12.b, t12.c, t12.e, t12.ctid, t12.gp_segment_id
-                     Filter: ((t12.a > 5) AND (t12.a = 8) AND (alternatives: SubPlan 1 (copy 15) or hashed SubPlan 2 (copy 16)) AND snoop(t12.a) AND leakproof(t12.a))
-                     SubPlan 1 (copy 15)
-                       ->  Result
-                             Filter: (t12_5.a = t12.a)
-                             ->  Materialize
-                                   Output: t12_5.a
-                                   ->  Broadcast Motion 3:1  (slice8; segments: 3)
-                                         Output: t12_5.a
-                                         ->  Append
-                                               ->  Seq Scan on public.t12 t12_5
-                                                     Output: t12_5.a
-                                               ->  Seq Scan on public.t111 t111_5
-                                                     Output: t111_5.a
-                     SubPlan 2 (copy 16)
-                       ->  Broadcast Motion 3:1  (slice9; segments: 3)
-                             Output: t12_6.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_6
-                                         Output: t12_6.a
-                                   ->  Seq Scan on public.t111 t111_6
-                                         Output: t111_6.a
-   ->  Explicit Redistribute Motion 1:3  (slice10; segments: 1)
          Output: ((t111.a + 1)), t111.b, t111.c, t111.d, t111.e, t111.ctid, t111.gp_segment_id, (DMLAction)
          ->  Split
                Output: ((t111.a + 1)), t111.b, t111.c, t111.d, t111.e, t111.ctid, t111.gp_segment_id, DMLAction
                ->  Seq Scan on public.t111
                      Output: (t111.a + 1), t111.b, t111.c, t111.d, t111.e, t111.ctid, t111.gp_segment_id
-                     Filter: ((t111.a > 5) AND (t111.a = 8) AND (alternatives: SubPlan 1 (copy 17) or hashed SubPlan 2 (copy 18)) AND snoop(t111.a) AND leakproof(t111.a))
+                     Filter: ((t111.a > 5) AND (t111.a = 8) AND (SubPlan 1 (copy 17)) AND snoop(t111.a) AND leakproof(t111.a))
                      SubPlan 1 (copy 17)
                        ->  Result
-                             Filter: (t12_7.a = t111.a)
+                             Filter: (t12_4.a = t111.a)
                              ->  Materialize
-                                   Output: t12_7.a
-                                   ->  Broadcast Motion 3:1  (slice11; segments: 3)
-                                         Output: t12_7.a
+                                   Output: t12_4.a
+                                   ->  Broadcast Motion 3:1  (slice8; segments: 3)
+                                         Output: t12_4.a
                                          ->  Append
-                                               ->  Seq Scan on public.t12 t12_7
-                                                     Output: t12_7.a
-                                               ->  Seq Scan on public.t111 t111_7
-                                                     Output: t111_7.a
-                     SubPlan 2 (copy 18)
-                       ->  Broadcast Motion 3:1  (slice12; segments: 3)
-                             Output: t12_8.a
-                             ->  Append
-                                   ->  Seq Scan on public.t12 t12_8
-                                         Output: t12_8.a
-                                   ->  Seq Scan on public.t111 t111_8
-                                         Output: t111_8.a
+                                               ->  Seq Scan on public.t12 t12_4
+                                                     Output: t12_4.a
+                                               ->  Seq Scan on public.t111 t111_4
+                                                     Output: t111_4.a
  Optimizer: Postgres query optimizer
  Settings: enable_mergejoin=on, enable_nestloop=on, optimizer=off
-(119 rows)
+(83 rows)
 
 UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
 NOTICE:  snooped value: 8  (seg0 slice4 127.0.0.1:40000 pid=26920)
@@ -3259,6 +3269,25 @@ select * from base_tab_def order by a, c NULLS LAST;
     | View default  | Table default | View default | 
     | View default  |               | View default | 
 (22 rows)
+
+-- Test a DO ALSO INSERT ... SELECT rule
+drop rule base_tab_def_view_ins_rule on base_tab_def_view;
+create rule base_tab_def_view_ins_rule as on insert to base_tab_def_view
+  do also insert into base_tab_def (a, b, e) select new.a, new.b, 'xxx';
+truncate base_tab_def;
+insert into base_tab_def_view values (1, default, default, default, default);
+insert into base_tab_def_view values (2, default, default, default, default),
+                                     (3, default, default, default, default);
+select * from base_tab_def order by a, e nulls first;
+ a |      b       |       c       |      d       |  e  
+---+--------------+---------------+--------------+-----
+ 1 | View default | Table default | View default | 
+ 1 | View default | Table default |              | xxx
+ 2 | View default | Table default | View default | 
+ 2 | View default | Table default |              | xxx
+ 3 | View default | Table default | View default | 
+ 3 | View default | Table default |              | xxx
+(6 rows)
 
 drop view base_tab_def_view;
 drop table base_tab_def;

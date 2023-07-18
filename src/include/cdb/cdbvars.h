@@ -20,7 +20,7 @@
 #define CDBVARS_H
 
 #include "access/xlogdefs.h"  /*XLogRecPtr*/
-#include "catalog/gp_segment_configuration.h" /* MASTER_CONTENT_ID */
+#include "catalog/gp_segment_configuration.h" /* COORDINATOR_CONTENT_ID */
 
 /*
  * ----- Declarations of Greenplum-specific global variables ------
@@ -203,21 +203,6 @@ extern bool verify_gpfdists_cert;
  * increments for each command received from the client.
  */
 extern int gp_command_count;
-
-/*
- * gp_safefswritesize
- *
- * should only be set to <N bytes> on file systems that the so called
- * 'torn-write' problem may occur. This guc should be set for the minimum
- * write size that is always safe on this particular file system. The side
- * effect of increasing this value for torn write protection is that single row
- * INSERTs into append only tables will use <N bytes> of space and therefore
- * also slow down SELECTs and become strongly discouraged.
- *
- * On mature file systems where torn write may not occur this GUC should be
- * set to 0 (the default).
- */
-extern int gp_safefswritesize;
 
 /*
  * Gp_write_shared_snapshot
@@ -539,7 +524,6 @@ extern bool gp_adjust_selectivity_for_outerjoins;
  * Target density for hash-node (HJ).
  */
 extern int gp_hashjoin_tuples_per_bucket;
-extern int gp_hashagg_groups_per_bucket;
 
 /*
  * Damping of selectivities of clauses which pertain to the same base
@@ -638,11 +622,6 @@ extern int gp_segworker_relative_priority;
 /*  Max size of dispatched plans; 0 if no limit */
 extern int gp_max_plan_size;
 
-/* The default number of batches to use when the hybrid hashed aggregation
- * algorithm (re-)spills in-memory groups to disk.
- */
-extern int gp_hashagg_default_nbatches;
-
 /* Get statistics for partitioned parent from a child */
 extern bool 	gp_statistics_pullup_from_child_partition;
 
@@ -651,6 +630,9 @@ extern bool		gp_statistics_use_fkeys;
 
 /* Allow user to force tow stage agg */
 extern bool     gp_eager_two_phase_agg;
+
+/* Force redistribution of insert into randomly-distributed table */
+extern bool     gp_force_random_redistribution;
 
 /* Analyze tools */
 extern int gp_motion_slice_noop;
@@ -673,12 +655,6 @@ extern int gp_workfile_bytes_to_checksum;
 
 extern bool coredump_on_memerror;
 
-/* Greenplum resource group query_mem re-calculate on QE */
-extern bool gp_resource_group_enable_recalculate_query_mem;
-
-/* Greenplum linux cgroup version, is enable version 2 */
-extern bool gp_resource_group_enable_cgroup_version_two;
-
 /*
  * Autostats feature, whether or not to to automatically run ANALYZE after 
  * insert/delete/update/ctas or after ctas/copy/insert in case the target
@@ -698,6 +674,8 @@ extern int	gp_autostats_mode_in_functions;
 extern int	gp_autostats_on_change_threshold;
 extern bool	gp_autostats_allow_nonowner;
 extern bool	log_autostats;
+
+extern bool	gp_explain_jit;
 
 
 /* --------------------------------------------------------------------------------------------------
@@ -746,7 +724,7 @@ extern GpId GpIdentity;
 #define MAX_DBID_STRING_LENGTH  11
 
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
-#define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
+#define IS_QUERY_DISPATCHER() (GpIdentity.segindex == COORDINATOR_CONTENT_ID)
 
 #define IS_QUERY_EXECUTOR_BACKEND() (Gp_role == GP_ROLE_EXECUTE && gp_session_id > 0)
 

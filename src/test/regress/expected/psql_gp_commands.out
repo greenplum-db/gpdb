@@ -121,7 +121,6 @@ DROP ROLE test_psql_du_e9;
 -- Create a test schema, with different kinds of relations. To make the
 -- expected output insensitive to the current username, change the owner.
 CREATE ROLE test_psql_de_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE FOREIGN DATA WRAPPER dummy_wrapper;
 COMMENT ON FOREIGN DATA WRAPPER dummy_wrapper IS 'useless';
 CREATE SERVER dummy_server FOREIGN DATA WRAPPER dummy_wrapper;
@@ -258,13 +257,13 @@ ALTER FUNCTION foofunc_exec_on_all_segments() OWNER TO test_psql_de_role;
 CREATE FUNCTION foofunc_exec_on_initplan() RETURNS setof int AS 'SELECT 1' LANGUAGE SQL EXECUTE ON INITPLAN;
 ALTER FUNCTION foofunc_exec_on_initplan() OWNER TO test_psql_de_role;
 \df+ foofunc_exec_on_*
-                                                                                                                List of functions
-      Schema      |             Name             | Result data type | Argument data types | Type | Data access  |  Execute on  | Volatility | Parallel |       Owner       | Security | Access privileges | Language | Source code | Description 
-------------------+------------------------------+------------------+---------------------+------+--------------+--------------+------------+----------+-------------------+----------+-------------------+----------+-------------+-------------
- test_psql_schema | foofunc_exec_on_all_segments | SETOF integer    |                     | func | contains sql | all segments | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
- test_psql_schema | foofunc_exec_on_any          | integer          |                     | func | contains sql | any          | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
- test_psql_schema | foofunc_exec_on_coordinator  | SETOF integer    |                     | func | contains sql | coordinator  | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
- test_psql_schema | foofunc_exec_on_initplan     | SETOF integer    |                     | func | contains sql | initplan     | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
+                                                                                                        List of functions
+      Schema      |             Name             | Result data type | Argument data types | Type |  Execute on  | Volatility | Parallel |       Owner       | Security | Access privileges | Language | Source code | Description 
+------------------+------------------------------+------------------+---------------------+------+--------------+------------+----------+-------------------+----------+-------------------+----------+-------------+-------------
+ test_psql_schema | foofunc_exec_on_all_segments | SETOF integer    |                     | func | all segments | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
+ test_psql_schema | foofunc_exec_on_any          | integer          |                     | func | any          | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
+ test_psql_schema | foofunc_exec_on_coordinator  | SETOF integer    |                     | func | coordinator  | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
+ test_psql_schema | foofunc_exec_on_initplan     | SETOF integer    |                     | func | initplan     | volatile   | unsafe   | test_psql_de_role | invoker  |                   | sql      | SELECT 1    | 
 (4 rows)
 
 -- Clean up

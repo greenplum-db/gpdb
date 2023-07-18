@@ -1,15 +1,15 @@
 --
 -- Validate GPDB can create unique index on a table created in utility mode
 --
--- NOTICE: we must connect to master in utility mode because the oid of table is
+-- NOTICE: we must connect to coordinator in utility mode because the oid of table is
 -- preassigned in QD, if we create a table in utility mode in QE, the oid might
 -- conflict with preassigned oid.
 -1U: create table utilitymode_primary_key_tab (c1 int);
-CREATE
+CREATE TABLE
 -1U: create unique index idx_utilitymode_c1 on utilitymode_primary_key_tab (c1);
-CREATE
+CREATE INDEX
 -1U: drop table utilitymode_primary_key_tab;
-DROP
+DROP TABLE
 
 -- Try a few queries in utility mode. (Once upon a time, there was a bug that
 -- caused a crash on EXPLAIN ANALYZE on a Sort node in utility mode.)
@@ -55,7 +55,7 @@ ROLLBACK
 --
 -- We have changed the name to pg_temp_0<backend_id> in utility mode.
 0U: CREATE TEMP TABLE utilitymode_tmp_tab (c1 int) DISTRIBUTED BY (c1);
-CREATE
+CREATE TABLE
 0U: SELECT substring(n.nspname FROM 1 FOR 9) FROM pg_namespace n JOIN pg_class c ON n.oid = c.relnamespace WHERE c.relname = 'utilitymode_tmp_tab';
  substring 
 -----------
@@ -66,3 +66,37 @@ CREATE
 -----------------
  pg_toast_temp_0 
 (1 row)
+
+--
+-- gp_dist_random('<view>') should not crash in utility mode
+--
+create or replace view misc_v as select 1;
+CREATE VIEW
+0U: select 1 from gp_dist_random('misc_v') union select 1 from misc_v;
+ ?column? 
+----------
+ 1        
+(1 row)
+0U: select count(*) from gp_dist_random('misc_v');
+ count 
+-------
+ 1     
+(1 row)
+-- But views created in utility mode should not throw away gp_dist_random
+0U: create or replace view misc_v2 as select 1 from gp_dist_random('pg_class');
+CREATE VIEW
+0U: select definition from pg_views where viewname = 'misc_v2';
+ definition                                                  
+-------------------------------------------------------------
+  SELECT 1 AS "?column?"
+   FROM gp_dist_random('pg_class'); 
+(1 row)
+0U: select count(*) > 0 from gp_dist_random('misc_v2');
+ ?column? 
+----------
+ t        
+(1 row)
+0U: drop view misc_v2;
+DROP VIEW
+drop view misc_v;
+DROP VIEW

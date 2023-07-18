@@ -1,0 +1,145 @@
+---------------------------------------------------
+-- ALTER TABLE concurrency tests
+---------------------------------------------------
+
+--
+-- ADD COLUMN
+--
+create table t_addcol_@amname@(a int) using @amname@ distributed replicated;
+CREATE TABLE
+insert into t_addcol_@amname@ values(1);
+INSERT 0 1
+
+alter table t_addcol_@amname@ add column b int default 99;
+ALTER TABLE
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+-- both trx should not read what the other is inserting
+1: insert into t_addcol_@amname@ values(101);
+INSERT 0 1
+2: insert into t_addcol_@amname@ values(201);
+INSERT 0 1
+1: select * from t_addcol_@amname@;
+ a   | b  
+-----+----
+ 1   | 99 
+ 101 | 99 
+(2 rows)
+2: select * from t_addcol_@amname@;
+ a   | b  
+-----+----
+ 1   | 99 
+ 201 | 99 
+(2 rows)
+-- now insert non-default values, should read correctly
+1: insert into t_addcol_@amname@ values(102, 0);
+INSERT 0 1
+2: insert into t_addcol_@amname@ values(202, 0);
+INSERT 0 1
+1: insert into t_addcol_@amname@ values(103, NULL);
+INSERT 0 1
+2: insert into t_addcol_@amname@ values(203, NULL);
+INSERT 0 1
+1: select * from t_addcol_@amname@;
+ a   | b  
+-----+----
+ 1   | 99 
+ 101 | 99 
+ 102 | 0  
+ 103 |    
+(4 rows)
+2: select * from t_addcol_@amname@;
+ a   | b  
+-----+----
+ 1   | 99 
+ 201 | 99 
+ 202 | 0  
+ 203 |    
+(4 rows)
+1: end;
+COMMIT
+2: end;
+COMMIT
+-- both trx should read the same data now
+1: select * from t_addcol_@amname@;
+ a   | b  
+-----+----
+ 1   | 99 
+ 101 | 99 
+ 102 | 0  
+ 103 |    
+ 201 | 99 
+ 202 | 0  
+ 203 |    
+(7 rows)
+2: select * from t_addcol_@amname@;
+ a   | b  
+-----+----
+ 1   | 99 
+ 101 | 99 
+ 102 | 0  
+ 103 |    
+ 201 | 99 
+ 202 | 0  
+ 203 |    
+(7 rows)
+
+-- add column should be blocked while another trx is doing the same
+1: begin;
+BEGIN
+1: alter table t_addcol_@amname@ add column c1 text default 'trx1';
+ALTER TABLE
+2: begin;
+BEGIN
+2>: alter table t_addcol_@amname@ add column c2 text default 'trx2';  <waiting ...>
+1: end;
+COMMIT
+2<:  <... completed>
+ALTER TABLE
+2: end;
+COMMIT
+select * from t_addcol_@amname@;
+ a   | b  | c1   | c2   
+-----+----+------+------
+ 1   | 99 | trx1 | trx2 
+ 101 | 99 | trx1 | trx2 
+ 102 | 0  | trx1 | trx2 
+ 103 |    | trx1 | trx2 
+ 201 | 99 | trx1 | trx2 
+ 202 | 0  | trx1 | trx2 
+ 203 |    | trx1 | trx2 
+(7 rows)
+
+delete from t_addcol_@amname@;
+DELETE 7
+select count(*) from t_addcol_@amname@;
+ count 
+-------
+ 0     
+(1 row)
+
+-- only one trx commits but another one aborts
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: insert into t_addcol_@amname@ select * from generate_series(1,10000);
+INSERT 0 10000
+2: insert into t_addcol_@amname@ select * from generate_series(1,10000);
+INSERT 0 10000
+1: abort;
+ROLLBACK
+2: end;
+COMMIT
+select count(*) from t_addcol_@amname@;
+ count 
+-------
+ 10000 
+(1 row)
+select sum(b) = count(*) * 99 as expected from t_addcol_@amname@;
+ expected 
+----------
+ t        
+(1 row)

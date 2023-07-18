@@ -67,7 +67,6 @@ Feature: gpconfig integration tests
     Examples:
         | test_case                                   | guc                          | type       | seed_value | value     | file_value | live_value | value_coordinator_only | file_value_coordinator_only | value_coordinator | file_value_coordinator | live_value_coordinator |
         | bool                                        | log_connections              | bool       | off        | on        | on         | on         | off                    | off                         | off               | off                    | off                    |
-        | enum                                        | gp_resgroup_memory_policy    | enum       | eager_free | auto      | auto       | auto       | eager_free             | eager_free                  | eager_free        | eager_free             | eager_free             |
         | integer                                     | vacuum_cost_limit            | integer    | 300        | 400       | 400        | 400        | 555                    | 555                         | 500               | 500                    | 500                    |
         | integer with memory unit                    | statement_mem                | int w/unit | 123MB      | 500MB     | 500MB      | 500MB      | 500MB                  | 500MB                       | 500MB             | 500MB                  | 500MB                  |
         | integer with time unit                      | statement_timeout            | int w/unit | 1min       | 5min      | 5min       | 5min       | 5min                   | 5min                        | 5min              | 5min                   | 5min                   |
@@ -116,7 +115,6 @@ Feature: gpconfig integration tests
     Examples:
         | guc                          | type     | seed_value | value    | file_value | live_value |
         | log_connections              |  bool    | off        | on       | on         | on         |
-        | gp_resgroup_memory_policy    |  enum    | eager_free | auto     | auto       | auto       |
         | vacuum_cost_limit            |  integer | 300        | 400      | 400        | 400        |
         | checkpoint_completion_target |  real    | 0.4        | 0.5      | 0.5        | 0.5        |
         | application_name             |  string  | xxxxxx     | bodhi    | bodhi      | bodhi      |
@@ -173,7 +171,6 @@ Feature: gpconfig integration tests
     Examples:
         | guc                          | type     | value      |
         | log_connections              |  bool    | off        |
-        | gp_resgroup_memory_policy    |  enum    | eager_free |
         | vacuum_cost_limit            |  integer | 300        |
         | checkpoint_completion_target |  real    | 0.4        |
         | application_name             |  string  | bengie     |

@@ -993,22 +993,22 @@ SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_c2';
 SELECT * FROM pg_stats WHERE tablename = 'ana_parent';
  schemaname | tablename  | attname | inherited | null_frac | avg_width | n_distinct  | most_common_vals | most_common_freqs |                 histogram_bounds                  | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
 ------------+------------+---------+-----------+-----------+-----------+-------------+------------------+-------------------+---------------------------------------------------+-------------+-------------------+------------------------+----------------------
- public     | ana_parent | aa      | t         |         0 |         4 | -0.95238096 | {10}             | {0.0952381}       | {1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20} |  0.38961038 |                   |                        | 
+ public     | ana_parent | aa      | t         |         0 |         4 | -0.95238096 | {10}             | {0.0952381}       | {1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20} |           1 |                   |                        | 
 (1 row)
 
 SELECT * FROM pg_stats WHERE tablename = 'ana_c1';
  schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct  | most_common_vals | most_common_freqs |                 histogram_bounds                  | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
 ------------+-----------+---------+-----------+-----------+-----------+-------------+------------------+-------------------+---------------------------------------------------+-------------+-------------------+------------------------+----------------------
- public     | ana_c1    | aa      | f         |         0 |         4 |          -1 |                  |                   | {1,2,3,4,5,6,7,8,9,10}                            |   0.6727273 |                   |                        | 
+ public     | ana_c1    | aa      | f         |         0 |         4 |          -1 |                  |                   | {1,2,3,4,5,6,7,8,9,10}                            |           1 |                   |                        | 
  public     | ana_c1    | bb      | f         |         0 |         3 |           1 | {bb}             | {1}               |                                                   |           1 |                   |                        | 
- public     | ana_c1    | aa      | t         |         0 |         4 | -0.95238096 | {10}             | {0.0952381}       | {1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20} |  0.38961038 |                   |                        | 
+ public     | ana_c1    | aa      | t         |         0 |         4 | -0.95238096 | {10}             | {0.0952381}       | {1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20} |           1 |                   |                        | 
  public     | ana_c1    | bb      | t         |         0 |         3 |           1 | {bb}             | {1}               |                                                   |           1 |                   |                        | 
 (4 rows)
 
 SELECT * FROM pg_stats WHERE tablename = 'ana_c2';
  schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |          histogram_bounds          | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
 ------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------------------------+-------------+-------------------+------------------------+----------------------
- public     | ana_c2    | aa      | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19,20} |  -0.3272727 |                   |                        | 
+ public     | ana_c2    | aa      | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19,20} |           1 |                   |                        | 
  public     | ana_c2    | bb      | f         |         0 |         3 |          1 | {bb}             | {1}               |                                    |           1 |                   |                        | 
  public     | ana_c2    | cc      | f         |         0 |         3 |          1 | {cc}             | {1}               |                                    |           1 |                   |                        | 
 (3 rows)
@@ -1038,3 +1038,258 @@ select * from pg_stats where tablename = 'no_eqop';
  public     | no_eqop   | c       | t         | 0.33333334 |        15 |          0 |                  |                   |                  |             |                   |                        | 
 (1 row)
 
+-- Issue 14644 keep catalog inconsistency of relhassubclass after analyze
+CREATE TYPE test_type_14644 AS (a int, b text);
+CREATE TABLE test_tb_14644 OF test_type_14644;
+CREATE TABLE test_tb_14644_subclass () INHERITS (test_tb_14644);
+DROP TABLE test_tb_14644_subclass;
+select relhassubclass from pg_class where relname = 'test_tb_14644';
+ relhassubclass 
+------------
+ t
+(1 row)
+
+select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_14644';
+ relhassubclass 
+------------
+ t
+ t
+ t
+(3 rows)
+
+ANALYZE;
+select relhassubclass from pg_class where relname = 'test_tb_14644';
+ relhassubclass 
+------------
+ f
+(1 row)
+
+select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_14644';
+ relhassubclass 
+------------
+ f
+ f
+ f
+(3 rows)
+
+-- test correlation of the table
+-- test1: there is no data
+drop table analyze_test;
+ERROR:  table "analyze_test" does not exist
+create table analyze_test(tc1 int,tc2 int);
+analyze analyze_test;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_test';
+ correlation 
+-------------
+(0 rows)
+
+-- test2: there is only 1 tuple in the table
+drop table analyze_table;
+ERROR:  table "analyze_table" does not exist
+create table analyze_table(tc1 int,tc2 int);
+insert into analyze_table values(1,1);
+analyze analyze_table;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+            
+            
+(2 rows)
+
+-- test3: there are 2 tuples in the table but on different segemnts
+drop table analyze_table;
+create table analyze_table(tc1 int,tc2 int);
+insert into analyze_table values(1,1);
+insert into analyze_table values(2,0);
+analyze analyze_table;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+            
+            
+(2 rows)
+
+-- test4: some columns have no value
+drop table analyze_table;
+create table analyze_table(tc1 int,tc2 int);
+insert into analyze_table(tc2) values(1);
+analyze analyze_table;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+            
+            
+(2 rows)
+
+drop table analyze_table;
+create table analyze_table(tc1 int,tc2 int);
+insert into analyze_table(tc2) values(1);
+insert into analyze_table values(2,0);
+analyze analyze_table;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+            
+          -1
+(2 rows)
+
+-- test5: some columns are dropped for a table
+drop table analyze_table;
+create table analyze_table(tc1 int,tc2 int,tc3 int);
+insert into analyze_table values(1,1,1);
+alter table analyze_table drop column tc2;
+insert into analyze_table(tc1) values(1);
+insert into analyze_table values(2,0);
+analyze analyze_table;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+           1
+            
+(2 rows)
+
+-- test6: randomly table
+-- we use weighted mean algorithm to calculate correlations.
+-- the formula for calculating the weighted mean is:
+-- sum(correlationOnSeg[i] * (totalRowsOnSeg[i] / totalRows))
+-- i is from 0 to N. N is the number of segments.
+-- however, for randomly table the data in each segment may diff each time.
+-- it will affect the value of correlation.
+-- So ignore the results
+drop table analyze_table;
+create table analyze_table(tc1 int,tc2 int) distributed randomly;
+insert into analyze_table select i,i from generate_series(1,100) i;
+analyze analyze_table;
+-- start_ignore
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+           1
+           1
+(2 rows)
+
+-- end_ignore
+alter table analyze_table drop column tc1;
+analyze analyze_table;
+-- start_ignore
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+           1
+(1 row)
+
+-- end_ignore
+-- test7: replicated table
+drop table analyze_table;
+create table analyze_table(tc1 int,tc2 int) distributed replicated;
+insert into analyze_table select i,i from generate_series(1,100) i;
+analyze analyze_table;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+           1
+           1
+(2 rows)
+
+analyze analyze_table;
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+           1
+           1
+(2 rows)
+
+-- test8: inherit table
+drop table analyze_parent cascade;
+ERROR:  table "analyze_parent" does not exist
+create table analyze_parent (tc1 int,tc2 int);
+create table analyze_child(tc3 int,tc4 int)inherits (analyze_parent);
+insert into analyze_parent values(5,5);
+insert into analyze_child values (4,4,4,4);
+insert into analyze_parent select * from analyze_parent;
+analyze analyze_parent;
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='analyze_parent';
+ correlation | attname | inherited 
+-------------+---------+-----------
+           1 | tc1     | f
+           1 | tc2     | f
+           1 | tc1     | t
+           1 | tc2     | t
+(4 rows)
+
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='analyze_child';
+ correlation | attname | inherited 
+-------------+---------+-----------
+(0 rows)
+
+-- test9: partition table test
+CREATE TABLE partition_table (
+    tc1 int,
+    tc2 int
+)
+PARTITION BY RANGE (tc2)
+(
+    start (1) end (100) every(20)
+);
+insert into partition_table select i,i from generate_series(1,99) i;
+analyze partition_table;
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='partition_table';
+ correlation | attname | inherited 
+-------------+---------+-----------
+(0 rows)
+
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='partition_table_1_prt_1';
+ correlation | attname | inherited 
+-------------+---------+-----------
+           1 | tc1     | f
+           1 | tc2     | f
+(2 rows)
+
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='partition_table_1_prt_2';
+ correlation | attname | inherited 
+-------------+---------+-----------
+           1 | tc1     | f
+           1 | tc2     | f
+(2 rows)
+
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='partition_table_1_prt_3';
+ correlation | attname | inherited 
+-------------+---------+-----------
+  0.99999994 | tc1     | f
+  0.99999994 | tc2     | f
+(2 rows)
+
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='partition_table_1_prt_4';
+ correlation | attname | inherited 
+-------------+---------+-----------
+           1 | tc1     | f
+           1 | tc2     | f
+(2 rows)
+
+SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='partition_table_1_prt_5';
+ correlation | attname | inherited 
+-------------+---------+-----------
+           1 | tc1     | f
+           1 | tc2     | f
+(2 rows)
+
+--
+-- Test analyze for table with maximum float8 value 1.7976931348623157e+308
+-- There should be no "ERROR:  value out of range: overflow"
+--
+set extra_float_digits to 0;
+create table test_max_float8(a double precision);
+insert into test_max_float8 values(1.7976931348623157e+308);
+analyze test_max_float8;
+drop table test_max_float8;
+reset extra_float_digits;
+-- test analyze when table has large column
+create table ttt_large_column(tc1 int,tc2 char(1500),tc3 char(1500));
+insert into ttt_large_column select i,repeat('wwweereeer',150),repeat('ssddbbbbbb',150) from generate_series(1,5) i;
+analyze ttt_large_column;
+drop table ttt_large_column;
+--test analyze replicated table
+create table analyze_replicated(tc1 int,tc2 int) distributed replicated;
+insert into analyze_replicated select i, i from generate_series(1,1000) i;
+analyze analyze_replicated;
+drop table analyze_replicated;

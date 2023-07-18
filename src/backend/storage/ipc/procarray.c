@@ -18,7 +18,7 @@
  * at need by checking for pid == 0.
  *
  * During hot standby, we also keep a list of XIDs representing transactions
- * that are known to be running in the master (or more precisely, were running
+ * that are known to be running on the primary (or more precisely, were running
  * as of the current point in the WAL stream).  This list is kept in the
  * KnownAssignedXids array, and is updated by watching the sequence of
  * arriving XIDs.  This is necessary because if we leave those XIDs out of
@@ -27,7 +27,7 @@
  * array represents standby processes, which by definition are not running
  * transactions that have XIDs.
  *
- * It is perhaps possible for a backend on the master to terminate without
+ * It is perhaps possible for a backend on the primary to terminate without
  * writing an abort record for its transaction.  While that shouldn't really
  * happen, it would tie up KnownAssignedXids indefinitely, so we protect
  * ourselves by pruning the array when a valid list of running XIDs arrives.
@@ -115,6 +115,11 @@ static PGXACT *allPgXact;
 static TMGXACT *allTmGxact;
 
 /*
+ * Cache to reduce overhead of repeated calls to TransactionIdIsInProgress()
+ */
+static TransactionId cachedXidIsNotInProgress = InvalidTransactionId;
+
+/*
  * Bookkeeping for tracking emulated transactions in recovery
  */
 static TransactionId *KnownAssignedXids;
@@ -164,6 +169,11 @@ static void DisplayXidCache(void);
 #define xc_no_overflow_inc()		((void) 0)
 #define xc_slow_answer_inc()		((void) 0)
 #endif							/* XIDCACHE_DEBUG */
+
+static VirtualTransactionId *GetVirtualXIDsDelayingChkptGuts(int *nvxids,
+															 int type);
+static bool HaveVirtualXIDsDelayingChkptGuts(VirtualTransactionId *vxids,
+											 int nvxids, int type);
 
 /* Primitives for KnownAssignedXids array handling for standby */
 static void KnownAssignedXidsCompress(bool force);
@@ -475,8 +485,11 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 		 */
 		if (LWLockConditionalAcquire(ProcArrayLock, LW_EXCLUSIVE))
 		{
-			if (TransactionIdIsValid(latestXid))
-				ProcArrayEndTransactionInternal(proc, pgxact, latestXid);
+			/*
+			 * Greenplum needs to clear things of pgxact too in the case that
+			 * the distributed XID is valid but XID is not.
+			 */
+			ProcArrayEndTransactionInternal(proc, pgxact, latestXid);
 
 			if (TransactionIdIsValid(tmGxact->gxid))
 				ProcArrayEndGxact(tmGxact);
@@ -486,29 +499,38 @@ ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid)
 		else
 			ProcArrayGroupClearXid(proc, latestXid);
 	}
+	else
+	{
+		/*
+		 * If we have no XID, we don't need to lock, since we won't affect
+		 * anyone else's calculation of a snapshot.  We might change their
+		 * estimate of global xmin, but that's OK.
+		 */
+		Assert(!TransactionIdIsValid(allPgXact[proc->pgprocno].xid));
+		Assert(!TransactionIdIsValid(allTmGxact[proc->pgprocno].gxid));
+
+		proc->lxid = InvalidLocalTransactionId;
+		pgxact->xmin = InvalidTransactionId;
+		/* must be cleared with xid/xmin: */
+		pgxact->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
+
+		/* be sure these are cleared in abort */
+		pgxact->delayChkpt = false;
+		proc->delayChkptEnd = false;
+
+		proc->recoveryConflictPending = false;
+
+		Assert(pgxact->nxids == 0);
+		Assert(pgxact->overflowed == false);
+	}
 
 	/*
-	 * If we have no XID, we don't need to lock, since we won't affect
-	 * anyone else's calculation of a snapshot.  We might change their
-	 * estimate of global xmin, but that's OK.
+	 * reset global transaction context
 	 *
-	 * NB: this may reset the pgxact and tmGxact twice (not including the xid
-	 * and gxid), it should be no harm to the correctness, just an easy way to
-	 * handle the cases like: there's a valid distributed XID but no local XID.
+	 * proc is currently always MyProc, and we reset MyTmGxact without question,
+	 * assert it.
 	 */
-	Assert(!TransactionIdIsValid(allPgXact[proc->pgprocno].xid));
-	Assert(!TransactionIdIsValid(allTmGxact[proc->pgprocno].gxid));
-
-	proc->lxid = InvalidLocalTransactionId;
-	pgxact->xmin = InvalidTransactionId;
-	/* must be cleared with xid/xmin: */
-	pgxact->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
-	pgxact->delayChkpt = false;		/* be sure this is cleared in abort */
-	proc->recoveryConflictPending = false;
-
-	Assert(pgxact->nxids == 0);
-	Assert(pgxact->overflowed == false);
-
+	Assert(proc == MyProc);
 	resetTmGxact();
 }
 
@@ -521,17 +543,26 @@ static inline void
 ProcArrayEndTransactionInternal(PGPROC *proc, PGXACT *pgxact,
 								TransactionId latestXid)
 {
+	bool onlyClear = !TransactionIdIsValid(pgxact->xid);
+
 	pgxact->xid = InvalidTransactionId;
 	proc->lxid = InvalidLocalTransactionId;
 	pgxact->xmin = InvalidTransactionId;
 	/* must be cleared with xid/xmin: */
 	pgxact->vacuumFlags &= ~PROC_VACUUM_STATE_MASK;
-	pgxact->delayChkpt = false; /* be sure this is cleared in abort */
+
+	/* be sure these are cleared in abort */
+	pgxact->delayChkpt = false;
+	proc->delayChkptEnd = false;
+
 	proc->recoveryConflictPending = false;
 
 	/* Clear the subtransaction-XID cache too while holding the lock */
 	pgxact->nxids = 0;
 	pgxact->overflowed = false;
+
+	if (onlyClear)
+		return;
 
 	/* Also advance global latestCompletedXid while holding the lock */
 	if (TransactionIdPrecedes(ShmemVariableCache->latestCompletedXid,
@@ -623,18 +654,21 @@ ProcArrayGroupClearXid(PGPROC *proc, TransactionId latestXid)
 	/* Walk the list and clear all XIDs. */
 	while (nextidx != INVALID_PGPROCNO)
 	{
-		PGPROC	   *proc = &allProcs[nextidx];
+		PGPROC	   *nextproc = &allProcs[nextidx];
 		PGXACT	   *pgxact = &allPgXact[nextidx];
 		TMGXACT	   *tmGxact = &allTmGxact[nextidx];
 
-		if (TransactionIdIsValid(proc->procArrayGroupMemberXid))
-			ProcArrayEndTransactionInternal(proc, pgxact, proc->procArrayGroupMemberXid);
+		/*
+		 * Greenplum needs to clear things of pgxact too in the case that the
+		 * distributed XID is valid but XID is not.
+		 */
+		ProcArrayEndTransactionInternal(nextproc, pgxact, nextproc->procArrayGroupMemberXid);
 
 		if (TransactionIdIsValid(tmGxact->gxid))
 			ProcArrayEndGxact(tmGxact);
 
 		/* Move to next proc in list. */
-		nextidx = pg_atomic_read_u32(&proc->procArrayGroupNext);
+		nextidx = pg_atomic_read_u32(&nextproc->procArrayGroupNext);
 	}
 
 	/* We're done with the lock now. */
@@ -649,18 +683,18 @@ ProcArrayGroupClearXid(PGPROC *proc, TransactionId latestXid)
 	 */
 	while (wakeidx != INVALID_PGPROCNO)
 	{
-		PGPROC	   *proc = &allProcs[wakeidx];
+		PGPROC	   *nextproc = &allProcs[wakeidx];
 
-		wakeidx = pg_atomic_read_u32(&proc->procArrayGroupNext);
-		pg_atomic_write_u32(&proc->procArrayGroupNext, INVALID_PGPROCNO);
+		wakeidx = pg_atomic_read_u32(&nextproc->procArrayGroupNext);
+		pg_atomic_write_u32(&nextproc->procArrayGroupNext, INVALID_PGPROCNO);
 
 		/* ensure all previous writes are visible before follower continues. */
 		pg_write_barrier();
 
-		proc->procArrayGroupMember = false;
+		nextproc->procArrayGroupMember = false;
 
-		if (proc != MyProc)
-			PGSemaphoreUnlock(proc->sem);
+		if (nextproc != MyProc)
+			PGSemaphoreUnlock(nextproc->sem);
 	}
 }
 
@@ -729,7 +763,7 @@ ProcArrayInitRecovery(TransactionId initializedUptoXID)
  * Normal case is to go all the way to Ready straight away, though there
  * are atypical cases where we need to take it in steps.
  *
- * Use the data about running transactions on master to create the initial
+ * Use the data about running transactions on the primary to create the initial
  * state of KnownAssignedXids. We also use these records to regularly prune
  * KnownAssignedXids because we know it is possible that some transactions
  * with FATAL errors fail to write abort records, which could cause eventual
@@ -873,8 +907,13 @@ ProcArrayApplyRecoveryInfo(RunningTransactions running)
 		/*
 		 * Sort the array so that we can add them safely into
 		 * KnownAssignedXids.
+		 *
+		 * We have to sort them logically, because in KnownAssignedXidsAdd we
+		 * call TransactionIdFollowsOrEquals and so on. But we know these XIDs
+		 * come from RUNNING_XACTS, which means there are only normal XIDs from
+		 * the same epoch, so this is safe.
 		 */
-		qsort(xids, nxids, sizeof(TransactionId), xidComparator);
+		qsort(xids, nxids, sizeof(TransactionId), xidLogicalComparator);
 
 		/*
 		 * Add the sorted snapshot into KnownAssignedXids.  The running-xacts
@@ -1049,7 +1088,7 @@ ProcArrayApplyXidAssignment(TransactionId topxid,
  * We can find this out cheaply too.
  *
  * 3. In Hot Standby mode, we must search the KnownAssignedXids list to see
- * if the Xid is running on the master.
+ * if the Xid is running on the primary.
  *
  * 4. Search the SubTrans tree to find the Xid's topmost parent, and then see
  * if that is running according to PGXACT or KnownAssignedXids.  This is the
@@ -1089,7 +1128,7 @@ TransactionIdIsInProgress(TransactionId xid)
 	 * already known to be completed, we can fall out without any access to
 	 * shared memory.
 	 */
-	if (TransactionIdIsKnownCompleted(xid))
+	if (TransactionIdEquals(cachedXidIsNotInProgress, xid))
 	{
 		xc_by_known_xact_inc();
 		return false;
@@ -1239,6 +1278,7 @@ TransactionIdIsInProgress(TransactionId xid)
 	if (nxids == 0)
 	{
 		xc_no_overflow_inc();
+		cachedXidIsNotInProgress = xid;
 		return false;
 	}
 
@@ -1253,7 +1293,10 @@ TransactionIdIsInProgress(TransactionId xid)
 	xc_slow_answer_inc();
 
 	if (TransactionIdDidAbort(xid))
+	{
+		cachedXidIsNotInProgress = xid;
 		return false;
+	}
 
 	/*
 	 * It isn't aborted, so check whether the transaction tree it belongs to
@@ -1271,6 +1314,7 @@ TransactionIdIsInProgress(TransactionId xid)
 		}
 	}
 
+	cachedXidIsNotInProgress = xid;
 	return false;
 }
 
@@ -1278,7 +1322,7 @@ TransactionIdIsInProgress(TransactionId xid)
  * TransactionIdIsActive -- is xid the top-level XID of an active backend?
  *
  * This differs from TransactionIdIsInProgress in that it ignores prepared
- * transactions, as well as transactions running on the master if we're in
+ * transactions, as well as transactions running on the primary if we're in
  * hot standby.  Also, we ignore subtransactions since that's not needed
  * for current uses.
  */
@@ -1368,7 +1412,7 @@ TransactionIdIsActive(TransactionId xid)
  * Nonetheless it is safe to vacuum a table in the current database with the
  * first result.  There are also replication-related effects: a walsender
  * process can set its xmin based on transactions that are no longer running
- * in the master but are still being replayed on the standby, thus possibly
+ * on the primary but are still being replayed on the standby, thus possibly
  * making the GetOldestXmin reading go backwards.  In this case there is a
  * possibility that we lose data that the standby would like to have, but
  * unless the standby uses a replication slot to make its xmin persistent
@@ -1520,7 +1564,7 @@ GetLocalOldestXmin(Relation rel, int flags)
 		 *
 		 * vacuum_defer_cleanup_age provides some additional "slop" for the
 		 * benefit of hot standby queries on standby servers.  This is quick
-		 * and dirty, and perhaps not all that useful unless the master has a
+		 * and dirty, and perhaps not all that useful unless the primary has a
 		 * predictable transaction rate, but it offers some protection when
 		 * there's no walsender connection.  Note that we are assuming
 		 * vacuum_defer_cleanup_age isn't large enough to cause wraparound ---
@@ -2422,8 +2466,9 @@ GetSnapshotData(Snapshot snapshot, DtxContext distributedTransactionContext)
 		MyPgXact->xmin = TransactionXmin = xmin;
 	}
 
-	/* GP: QD takes a distributed snapshot */
-	if (distributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE && !Debug_disable_distributed_snapshot)
+	/* GP: QD takes a distributed snapshot iff QD not in retry phase and the query needs distributed snapshot */
+	if (distributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE && !Debug_disable_distributed_snapshot 
+			&& needDistributedSnapshot)
 	{
 		CreateDistributedSnapshot(ds);
 		snapshot->haveDistribSnapshot = true;
@@ -3023,30 +3068,35 @@ GetOldestSafeDecodingTransactionId(bool catalogOnly)
 }
 
 /*
- * GetVirtualXIDsDelayingChkpt -- Get the VXIDs of transactions that are
- * delaying checkpoint because they have critical actions in progress.
+ * GetVirtualXIDsDelayingChkptGuts -- Get the VXIDs of transactions that are
+ * delaying the start or end of a checkpoint because they have critical
+ * actions in progress.
  *
  * Constructs an array of VXIDs of transactions that are currently in commit
- * critical sections, as shown by having delayChkpt set in their PGXACT.
+ * critical sections, as shown by having specified delayChkpt or delayChkptEnd
+ * set.
  *
  * Returns a palloc'd array that should be freed by the caller.
  * *nvxids is the number of valid entries.
  *
- * Note that because backends set or clear delayChkpt without holding any lock,
- * the result is somewhat indeterminate, but we don't really care.  Even in
- * a multiprocessor with delayed writes to shared memory, it should be certain
- * that setting of delayChkpt will propagate to shared memory when the backend
- * takes a lock, so we cannot fail to see a virtual xact as delayChkpt if
- * it's already inserted its commit record.  Whether it takes a little while
- * for clearing of delayChkpt to propagate is unimportant for correctness.
+ * Note that because backends set or clear delayChkpt and delayChkptEnd
+ * without holding any lock, the result is somewhat indeterminate, but we
+ * don't really care.  Even in a multiprocessor with delayed writes to
+ * shared memory, it should be certain that setting of delayChkpt will
+ * propagate to shared memory when the backend takes a lock, so we cannot
+ * fail to see a virtual xact as delayChkpt if it's already inserted its
+ * commit record.  Whether it takes a little while for clearing of
+ * delayChkpt to propagate is unimportant for correctness.
  */
-VirtualTransactionId *
-GetVirtualXIDsDelayingChkpt(int *nvxids)
+static VirtualTransactionId *
+GetVirtualXIDsDelayingChkptGuts(int *nvxids, int type)
 {
 	VirtualTransactionId *vxids;
 	ProcArrayStruct *arrayP = procArray;
 	int			count = 0;
 	int			index;
+
+	Assert(type != 0);
 
 	/* allocate what's certainly enough result space */
 	vxids = (VirtualTransactionId *)
@@ -3060,7 +3110,8 @@ GetVirtualXIDsDelayingChkpt(int *nvxids)
 		PGPROC	   *proc = &allProcs[pgprocno];
 		PGXACT	   *pgxact = &allPgXact[pgprocno];
 
-		if (pgxact->delayChkpt)
+		if (((type & DELAY_CHKPT_START) && pgxact->delayChkpt) ||
+			((type & DELAY_CHKPT_COMPLETE) && proc->delayChkptEnd))
 		{
 			VirtualTransactionId vxid;
 
@@ -3077,6 +3128,26 @@ GetVirtualXIDsDelayingChkpt(int *nvxids)
 }
 
 /*
+ * GetVirtualXIDsDelayingChkpt - Get the VXIDs of transactions that are
+ * delaying the start of a checkpoint.
+ */
+VirtualTransactionId *
+GetVirtualXIDsDelayingChkpt(int *nvxids)
+{
+	return GetVirtualXIDsDelayingChkptGuts(nvxids, DELAY_CHKPT_START);
+}
+
+/*
+ * GetVirtualXIDsDelayingChkptEnd - Get the VXIDs of transactions that are
+ * delaying the end of a checkpoint.
+ */
+VirtualTransactionId *
+GetVirtualXIDsDelayingChkptEnd(int *nvxids)
+{
+	return GetVirtualXIDsDelayingChkptGuts(nvxids, DELAY_CHKPT_COMPLETE);
+}
+
+/*
  * HaveVirtualXIDsDelayingChkpt -- Are any of the specified VXIDs delaying?
  *
  * This is used with the results of GetVirtualXIDsDelayingChkpt to see if any
@@ -3085,12 +3156,15 @@ GetVirtualXIDsDelayingChkpt(int *nvxids)
  * Note: this is O(N^2) in the number of vxacts that are/were delaying, but
  * those numbers should be small enough for it not to be a problem.
  */
-bool
-HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids)
+static bool
+HaveVirtualXIDsDelayingChkptGuts(VirtualTransactionId *vxids, int nvxids,
+								 int type)
 {
 	bool		result = false;
 	ProcArrayStruct *arrayP = procArray;
 	int			index;
+
+	Assert(type != 0);
 
 	LWLockAcquire(ProcArrayLock, LW_SHARED);
 
@@ -3103,7 +3177,9 @@ HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids)
 
 		GET_VXID_FROM_PGPROC(vxid, *proc);
 
-		if (pgxact->delayChkpt && VirtualTransactionIdIsValid(vxid))
+		if ((((type & DELAY_CHKPT_START) && pgxact->delayChkpt) ||
+			 ((type & DELAY_CHKPT_COMPLETE) && proc->delayChkptEnd)) &&
+			VirtualTransactionIdIsValid(vxid))
 		{
 			int			i;
 
@@ -3166,6 +3242,28 @@ UpdateCommandIdInSnapshot(CommandId curcid)
 
 		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 	}
+}
+
+/*
+ * HaveVirtualXIDsDelayingChkpt -- Are any of the specified VXIDs delaying
+ * the start of a checkpoint?
+ */
+bool
+HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids)
+{
+	return HaveVirtualXIDsDelayingChkptGuts(vxids, nvxids,
+											DELAY_CHKPT_START);
+}
+
+/*
+ * HaveVirtualXIDsDelayingChkptEnd -- Are any of the specified VXIDs delaying
+ * the end of a checkpoint?
+ */
+bool
+HaveVirtualXIDsDelayingChkptEnd(VirtualTransactionId *vxids, int nvxids)
+{
+	return HaveVirtualXIDsDelayingChkptGuts(vxids, nvxids,
+											DELAY_CHKPT_COMPLETE);
 }
 
 /*
@@ -3469,6 +3567,13 @@ GetConflictingVirtualXIDs(TransactionId limitXmin, Oid dbOid)
 pid_t
 CancelVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode)
 {
+	return SignalVirtualTransaction(vxid, sigmode, true);
+}
+
+pid_t
+SignalVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode,
+						 bool conflictPending)
+{
 	ProcArrayStruct *arrayP = procArray;
 	int			index;
 	pid_t		pid = 0;
@@ -3486,7 +3591,7 @@ CancelVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode)
 		if (procvxid.backendId == vxid.backendId &&
 			procvxid.localTransactionId == vxid.localTransactionId)
 		{
-			proc->recoveryConflictPending = true;
+			proc->recoveryConflictPending = conflictPending;
 			pid = proc->pid;
 			if (pid != 0)
 			{
@@ -3851,6 +3956,9 @@ ProcArraySetReplicationSlotXmin(TransactionId xmin, TransactionId catalog_xmin,
 
 	if (!already_locked)
 		LWLockRelease(ProcArrayLock);
+
+	elog(DEBUG1, "xmin required by slots: data %u, catalog %u",
+		 xmin, catalog_xmin);
 }
 
 /*
@@ -4024,7 +4132,7 @@ FindProcByGpSessionId(long gp_session_id)
 
 /*
  * In Hot Standby mode, we maintain a list of transactions that are (or were)
- * running in the master at the current point in WAL.  These XIDs must be
+ * running on the primary at the current point in WAL.  These XIDs must be
  * treated as running by standby transactions, even though they are not in
  * the standby server's PGXACT array.
  *
@@ -4044,7 +4152,7 @@ FindProcByGpSessionId(long gp_session_id)
  * links are *not* maintained (which does not affect visibility).
  *
  * We have room in KnownAssignedXids and in snapshots to hold maxProcs *
- * (1 + PGPROC_MAX_CACHED_SUBXIDS) XIDs, so every master transaction must
+ * (1 + PGPROC_MAX_CACHED_SUBXIDS) XIDs, so every primary transaction must
  * report its subtransaction XIDs in a WAL XLOG_XACT_ASSIGNMENT record at
  * least every PGPROC_MAX_CACHED_SUBXIDS.  When we receive one of these
  * records, we mark the subXIDs as children of the top XID in pg_subtrans,
@@ -4177,24 +4285,41 @@ ExpireTreeKnownAssignedTransactionIds(TransactionId xid, int nsubxids,
 
 /*
  * ExpireAllKnownAssignedTransactionIds
- *		Remove all entries in KnownAssignedXids
+ *		Remove all entries in KnownAssignedXids and reset lastOverflowedXid.
  */
 void
 ExpireAllKnownAssignedTransactionIds(void)
 {
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 	KnownAssignedXidsRemovePreceding(InvalidTransactionId);
+
+	/*
+	 * Reset lastOverflowedXid.  Currently, lastOverflowedXid has no use after
+	 * the call of this function.  But do this for unification with what
+	 * ExpireOldKnownAssignedTransactionIds() do.
+	 */
+	procArray->lastOverflowedXid = InvalidTransactionId;
 	LWLockRelease(ProcArrayLock);
 }
 
 /*
  * ExpireOldKnownAssignedTransactionIds
- *		Remove KnownAssignedXids entries preceding the given XID
+ *		Remove KnownAssignedXids entries preceding the given XID and
+ *		potentially reset lastOverflowedXid.
  */
 void
 ExpireOldKnownAssignedTransactionIds(TransactionId xid)
 {
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+
+	/*
+	 * Reset lastOverflowedXid if we know all transactions that have been
+	 * possibly running are being gone.  Not doing so could cause an incorrect
+	 * lastOverflowedXid value, which makes extra snapshots be marked as
+	 * suboverflowed.
+	 */
+	if (TransactionIdPrecedes(procArray->lastOverflowedXid, xid))
+		procArray->lastOverflowedXid = InvalidTransactionId;
 	KnownAssignedXidsRemovePreceding(xid);
 	LWLockRelease(ProcArrayLock);
 }
@@ -4219,7 +4344,7 @@ ExpireOldKnownAssignedTransactionIds(TransactionId xid)
  * order, to be exact --- to allow binary search for specific XIDs.  Note:
  * in general TransactionIdPrecedes would not provide a total order, but
  * we know that the entries present at any instant should not extend across
- * a large enough fraction of XID space to wrap around (the master would
+ * a large enough fraction of XID space to wrap around (the primary would
  * shut down for fear of XID wrap long before that happens).  So it's OK to
  * use TransactionIdPrecedes as a binary-search comparator.
  *
@@ -5005,39 +5130,214 @@ GetSessionIdByPid(int pid)
 /*
  * Set the destination group slot or group id in PGPROC, and send a signal to the proc.
  * slot is NULL on QE.
+ * The process we want to notify on coordinator can act as executor(GP_ROLE_EXECUTE) in case of
+ * entrydb. 'isExecutor' helps us to determine a process to which we need to send signal.
  */
-void
-ResGroupSignalMoveQuery(int sessionId, void *slot, Oid groupId)
+bool
+ResGroupMoveSignalTarget(int sessionId, void *slot, Oid groupId,
+						 bool isExecutor)
 {
-	pid_t pid;
-	BackendId backendId;
+	pid_t		pid;
+	BackendId	backendId;
 	ProcArrayStruct *arrayP = procArray;
+	bool		sent = false;
+	bool		found = false;
+
+	Assert(groupId != InvalidOid);
+	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE);
+	AssertImply(Gp_role == GP_ROLE_EXECUTE, isExecutor);
 
 	LWLockAcquire(ProcArrayLock, LW_SHARED);
 	for (int i = 0; i < arrayP->numProcs; i++)
 	{
-		volatile PGPROC *proc = &allProcs[arrayP->pgprocnos[i]];
+		PGPROC	   *proc = &allProcs[arrayP->pgprocnos[i]];
+
 		if (proc->mppSessionId != sessionId)
+			continue;
+
+		/*
+		 * Before, we didn't distinguish entrydb processes from main target
+		 * process on coordinator. There was a case with entrydb executors
+		 * when we can send a signal to target process only, but not to
+		 * entrydb executor process or vice versa. As a mediocre solution we
+		 * assume mppIsWriter for entrydb processes is always false.
+		 *
+		 * We can send a signal to target or entrydb processes only from QD.
+		 * The second (XOR) part of condition checks did we find entrydb
+		 * (isExecutor && !mppIsWriter) or target (!isExecutor &&
+		 * mppIsWriter). If neither, we continue the search.
+		 */
+		if (Gp_role == GP_ROLE_DISPATCH && !(isExecutor ^ proc->mppIsWriter))
+			continue;
+
+		found = true;
+		pid = proc->pid;
+		backendId = proc->backendId;
+
+		SpinLockAcquire(&proc->movetoMutex);
+		/* only target process needs slot and callerPid to operate */
+		if (Gp_role == GP_ROLE_DISPATCH && proc->mppIsWriter)
+		{
+			/*
+			 * movetoCallerPid is a guard which marks there is currently
+			 * active initiator process
+			 */
+			if (proc->movetoCallerPid != InvalidPid)
+			{
+				SpinLockRelease(&proc->movetoMutex);
+				elog(NOTICE, "cannot move process, which is already moving");
+				break;
+			}
+			Assert(proc->movetoCallerPid == InvalidPid);
+			Assert(proc->movetoResSlot == NULL);
+			Assert(slot != NULL);
+
+			proc->movetoResSlot = slot;
+			proc->movetoCallerPid = MyProc->pid;
+		}
+		proc->movetoGroupId = groupId;
+		SpinLockRelease(&proc->movetoMutex);
+
+		if (SendProcSignal(pid, PROCSIG_RESOURCE_GROUP_MOVE_QUERY, backendId))
+		{
+			SpinLockAcquire(&proc->movetoMutex);
+			if (Gp_role == GP_ROLE_DISPATCH && proc->mppIsWriter)
+			{
+				proc->movetoResSlot = NULL;
+				proc->movetoCallerPid = InvalidPid;
+			}
+			proc->movetoGroupId = InvalidOid;
+			SpinLockRelease(&proc->movetoMutex);
+
+			/*
+			 * It's not an error, if we can't notify, for example, already
+			 * finished QE process (because of async nature of resgroup
+			 * moving). If we can't notify QD, the caller should raise an
+			 * error by itself, based on returned value.
+			 */
+			elog(NOTICE, "cannot send signal to backend %d with PID %d",
+				 backendId, pid);
+		}
+		else
+			sent = true;
+
+		/*
+		 * Don't break for executors, need to signal all the procs of this
+		 * session. It's safe to break if we are QD, because we want to notify
+		 * only one process at once - main target or entrydb.
+		 */
+		if (Gp_role == GP_ROLE_DISPATCH)
+			break;
+	}
+	LWLockRelease(ProcArrayLock);
+
+	if (!found && !isExecutor)
+		elog(NOTICE, "cannot find target process");
+
+	return sent;
+}
+
+/*
+ * Check if slot control is on the target side and clean all target's
+ * moveto* params.
+ *
+ * Cleaning and checking should be performed as one atomic operation inside one
+ * mutex.
+ * 'clean' flag is bidirectional. If 'clean' is set to true, then all moveto*
+ * params will be cleaned, no matter was target handled them or not.
+ * More, it will be forcefully set to true, if target process handled our
+ * command. Thus, if function returned true in 'clean', it should be treated
+ * as terminal state and all new calls to ResGroupMoveCheckTargetReady()
+ * before calling ResGroupMoveSignalTarget() make no sense.
+ */
+void
+ResGroupMoveCheckTargetReady(int sessionId, bool *clean, bool *result)
+{
+	pid_t		pid;
+	BackendId	backendId;
+	ProcArrayStruct *arrayP = procArray;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
+	*result = false;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+	for (int i = 0; i < arrayP->numProcs; i++)
+	{
+		PGPROC	   *proc = &allProcs[arrayP->pgprocnos[i]];
+
+		/*
+		 * Also ignore entrydb processes. We use mppIsWriter which described
+		 * in ResGroupMoveSignalTarget().
+		 */
+		if (proc->mppSessionId != sessionId || !proc->mppIsWriter)
 			continue;
 
 		pid = proc->pid;
 		backendId = proc->backendId;
-		if (Gp_role == GP_ROLE_DISPATCH)
+
+		SpinLockAcquire(&proc->movetoMutex);
+		/* If proc->movetoCallerPid not equals to MyProc->pid, the target
+		 * process could is handling signal from another caller.After we
+		 * get the movetoMutex check it again.
+		 */
+		if (proc->movetoCallerPid == MyProc->pid)
 		{
-			Assert(proc->movetoResSlot == NULL);
-			Assert(slot != NULL);
-			proc->movetoResSlot = slot;
-			SendProcSignal(pid, PROCSIG_RESOURCE_GROUP_MOVE_QUERY, backendId);
-			break;
+			/*
+			 * InvalidOid of movetoGroupId means target process tried to
+			 * handle our command
+			 */
+			if (proc->movetoGroupId == InvalidOid)
+			{
+				/*
+				 * empty movetoResSlot means target process got all the
+				 * control over slot
+				 */
+				*result = (proc->movetoResSlot == NULL);
+				*clean = true;
+			}
+
+			/*
+			 * Clean all params, especially movetoCallerPid, which guards
+			 * target processes from another initiators. After releasing
+			 * spinlock any other process allowed to start new move command.
+			 */
+			if (*clean)
+			{
+				proc->movetoResSlot = NULL;
+				proc->movetoGroupId = InvalidOid;
+				proc->movetoCallerPid = InvalidPid;
+			}
 		}
-		else if (Gp_role == GP_ROLE_EXECUTE)
-		{
-			Assert(groupId != InvalidOid);
-			Assert(proc->movetoGroupId == InvalidOid);
-			proc->movetoGroupId = groupId;
-			SendProcSignal(pid, PROCSIG_RESOURCE_GROUP_MOVE_QUERY, backendId);
-			/* don't break, need to signal all the procs of this session */
-		}
+		SpinLockRelease(&proc->movetoMutex);
+		break;
+	}
+	LWLockRelease(ProcArrayLock);
+}
+
+/*
+ * Notify initiator process that target process is ready to move to a new
+ * group. This is an optional feature to speed up initiator's awakening.
+ * Inititator will get the actual command result by changed movetoResSlot
+ * and movetoGroupId values.
+ */
+void
+ResGroupMoveNotifyInitiator(pid_t callerPid)
+{
+	ProcArrayStruct *arrayP = procArray;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+	for (int i = 0; i < arrayP->numProcs; i++)
+	{
+		PGPROC	   *proc = &allProcs[arrayP->pgprocnos[i]];
+
+		if (proc->pid != callerPid)
+			continue;
+
+		SetLatch(&proc->procLatch);
+		break;
 	}
 	LWLockRelease(ProcArrayLock);
 }

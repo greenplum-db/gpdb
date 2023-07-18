@@ -28,6 +28,7 @@ class Options:
         self.parallelDegree = 1
         self.parallelPerHost = 1
         self.forceFullResynchronization = None
+        self.differentialResynchronization = None
         self.persistent_check = None
         self.quiet = None
         self.interactive = False
@@ -71,7 +72,7 @@ class GpRecoversegTestCase(GpTestCase):
 
         self.config_provider_mock.loadSystemConfig.return_value = self.gpArrayMock
 
-        self.mirror_to_build = GpMirrorToBuild(self.mirror0, self.primary0, None, False)
+        self.mirror_to_build = GpMirrorToBuild(self.mirror0, self.primary0, None, False, False)
         self.apply_patches([
             patch('os.environ', new=self.os_env),
             patch('gppylib.db.dbconn.connect', return_value=self.conn),
@@ -142,7 +143,7 @@ class GpRecoversegTestCase(GpTestCase):
         with self.assertRaisesRegex(Exception, "Heap checksum setting differences reported on segments"):
             self.subject.run()
 
-        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0])
+        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0, self.mirror0])
         self.subject.logger.fatal.assert_any_call('Heap checksum setting differences reported on segments')
         self.subject.logger.fatal.assert_any_call('Failed checksum consistency validation:')
         self.subject.logger.fatal.assert_any_call('sdw1 checksum set to 0 differs from coordinator checksum set to 1')
@@ -157,7 +158,7 @@ class GpRecoversegTestCase(GpTestCase):
         with self.assertRaisesRegex(Exception, "No segments responded to ssh query for heap checksum validation."):
             self.subject.run()
 
-        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0])
+        self.mock_get_segments_checksum_settings.assert_called_with([self.primary0, self.mirror0])
         mock_heap_checksum_init.assert_called_with(self.gpArrayMock, logger=self.subject.logger, num_workers=1)
 
     @patch("os._exit")

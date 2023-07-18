@@ -243,24 +243,24 @@ CDistributionSpecTest::EresUnittest_Singleton()
 	// basic tests with singleton distributions
 	CDistributionSpecSingleton *pdssSegment = GPOS_NEW(mp)
 		CDistributionSpecSingleton(CDistributionSpecSingleton::EstSegment);
-	CDistributionSpecSingleton *pdssMaster = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+	CDistributionSpecSingleton *pdssCoordinator = GPOS_NEW(mp)
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 
-	GPOS_RTL_ASSERT(pdssMaster->FSatisfies(pdssMaster));
-	GPOS_RTL_ASSERT(pdssMaster->Matches(pdssMaster));
+	GPOS_RTL_ASSERT(pdssCoordinator->FSatisfies(pdssCoordinator));
+	GPOS_RTL_ASSERT(pdssCoordinator->Matches(pdssCoordinator));
 
 	GPOS_RTL_ASSERT(pdssSegment->FSatisfies(pdssSegment));
 	GPOS_RTL_ASSERT(pdssSegment->Matches(pdssSegment));
 
-	GPOS_RTL_ASSERT(!pdssMaster->FSatisfies(pdssSegment) &&
-					!pdssSegment->FSatisfies(pdssMaster));
+	GPOS_RTL_ASSERT(!pdssCoordinator->FSatisfies(pdssSegment) &&
+					!pdssSegment->FSatisfies(pdssCoordinator));
 
 	// singleton and replicated
 	CDistributionSpecReplicated *pdsreplicated = GPOS_NEW(mp)
 		CDistributionSpecReplicated(CDistributionSpec::EdtStrictReplicated);
 
 	GPOS_RTL_ASSERT(pdsreplicated->FSatisfies(pdssSegment));
-	GPOS_RTL_ASSERT(!pdsreplicated->FSatisfies(pdssMaster));
+	GPOS_RTL_ASSERT(!pdsreplicated->FSatisfies(pdssCoordinator));
 
 	GPOS_RTL_ASSERT(!pdssSegment->FSatisfies(pdsreplicated));
 
@@ -268,9 +268,9 @@ CDistributionSpecTest::EresUnittest_Singleton()
 	CDistributionSpecRandom *pdsrandom = GPOS_NEW(mp) CDistributionSpecRandom();
 
 	GPOS_RTL_ASSERT(!pdsrandom->FSatisfies(pdssSegment));
-	GPOS_RTL_ASSERT(!pdsrandom->FSatisfies(pdssMaster));
+	GPOS_RTL_ASSERT(!pdsrandom->FSatisfies(pdssCoordinator));
 	GPOS_RTL_ASSERT(!pdssSegment->FSatisfies(pdsrandom));
-	GPOS_RTL_ASSERT(!pdssMaster->FSatisfies(pdsrandom));
+	GPOS_RTL_ASSERT(!pdssCoordinator->FSatisfies(pdsrandom));
 
 	// singleton and any
 	CDistributionSpecAny *pdsany =
@@ -281,10 +281,10 @@ CDistributionSpecTest::EresUnittest_Singleton()
 
 	CAutoTrace at(mp);
 	at.Os() << std::endl;
-	at.Os() << *pdssMaster << std::endl;
+	at.Os() << *pdssCoordinator << std::endl;
 	at.Os() << *pdssSegment << std::endl;
 
-	pdssMaster->Release();
+	pdssCoordinator->Release();
 	pdssSegment->Release();
 	pdsreplicated->Release();
 	pdsrandom->Release();

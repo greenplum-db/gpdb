@@ -67,13 +67,8 @@ private:
 	// operator families for each index key
 	IMdIdArray *m_mdid_opfamilies_array;
 
-	// partition constraint
-	// GPDB_12_MERGE_FIXME: This field is no longer needed,
-	// we should get rid of it.
-	IMDPartConstraint *m_mdpart_constraint;
-
 	// DXL for object
-	const CWStringDynamic *m_dxl_str;
+	const CWStringDynamic *m_dxl_str = nullptr;
 
 	// Child index oids
 	IMdIdArray *m_child_index_oids;
@@ -88,7 +83,6 @@ public:
 				 ULongPtrArray *index_key_cols_array,
 				 ULongPtrArray *included_cols_array,
 				 IMdIdArray *mdid_opfamilies_array,
-				 IMDPartConstraint *mdpart_constraint,
 				 IMdIdArray *child_index_oids);
 
 	// dtor
@@ -127,15 +121,8 @@ public:
 	// return the position of the included column
 	ULONG GetIncludedColPos(ULONG column) const override;
 
-	// part constraint
-	IMDPartConstraint *MDPartConstraint() const override;
-
 	// DXL string for index
-	const CWStringDynamic *
-	GetStrRepr() const override
-	{
-		return m_dxl_str;
-	}
+	const CWStringDynamic *GetStrRepr() override;
 
 	// serialize MD index in DXL format given a serializer object
 	void Serialize(gpdxl::CXMLSerializer *) const override;

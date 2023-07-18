@@ -37,6 +37,19 @@ CXformDynamicGet2DynamicTableScan::CXformDynamicGet2DynamicTableScan(
 {
 }
 
+// compute xform promise for a given expression handle
+CXform::EXformPromise
+CXformDynamicGet2DynamicTableScan::Exfp(CExpressionHandle &exprhdl) const
+{
+	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(exprhdl.Pop());
+	// Do not run if contains foreign partitions, instead run CXformExpandDynamicGetWithForeignPartitions
+	if (popGet->ContainsForeignParts())
+	{
+		return CXform::ExfpNone;
+	}
+
+	return CXform::ExfpHigh;
+}
 
 //---------------------------------------------------------------------------
 //	@function:

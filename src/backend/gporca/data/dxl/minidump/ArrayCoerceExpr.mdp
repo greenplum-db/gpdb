@@ -15,12 +15,12 @@ explain select * from foo where d in ('a', 'b');
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="2147483647" ArrayExpansionThreshold="25" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000"/>
       <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.97283.1.1" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.97283.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.97283.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -193,11 +193,14 @@ explain select * from foo where d in ('a', 'b');
           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
             <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1043.1.0"/>
           </dxl:Cast>
-          <dxl:ArrayCoerceExpr ElementFunc="0.0.0.0" TypeMdid="0.1009.1.0" IsExplicit="false" CoercionForm="2" Location="0">
+          <dxl:ArrayCoerceExpr TypeMdid="0.1009.1.0" CoercionForm="2" Location="0">
             <dxl:Array ArrayType="0.1015.1.0" ElementType="0.1043.1.0" MultiDimensional="false">
               <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWE=" LintValue="160440876"/>
               <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWI=" LintValue="160449068"/>
             </dxl:Array>
+	    <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+             <dxl:CaseTest TypeMdid="0.1043.1.0"/>
+            </dxl:Cast>
           </dxl:ArrayCoerceExpr>
         </dxl:ArrayComp>
         <dxl:LogicalGet>
@@ -249,12 +252,15 @@ explain select * from foo where d in ('a', 'b');
               <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
                 <dxl:Ident ColId="1" ColName="d" TypeMdid="0.1043.1.0"/>
               </dxl:Cast>
-              <dxl:ArrayCoerceExpr ElementFunc="0.0.0.0" TypeMdid="0.1009.1.0" IsExplicit="false" CoercionForm="2" Location="0">
+              <dxl:ArrayCoerceExpr TypeMdid="0.1009.1.0" CoercionForm="2" Location="0">
                 <dxl:Array ArrayType="0.1015.1.0" ElementType="0.1043.1.0" MultiDimensional="false">
                   <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWE=" LintValue="160440876"/>
                   <dxl:ConstValue TypeMdid="0.1043.1.0" Value="AAAABWI=" LintValue="160449068"/>
                 </dxl:Array>
-              </dxl:ArrayCoerceExpr>
+		<dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                 <dxl:CaseTest TypeMdid="0.1043.1.0"/>
+                </dxl:Cast>
+	      </dxl:ArrayCoerceExpr>
             </dxl:ArrayComp>
           </dxl:Filter>
           <dxl:TableDescriptor Mdid="6.97283.1.1" TableName="foo">

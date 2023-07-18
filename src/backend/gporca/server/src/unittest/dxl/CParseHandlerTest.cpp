@@ -103,7 +103,7 @@ const CHAR *CParseHandlerTest::m_rgszQueryDXLFileNames[] = {
 	"../data/dxl/parse_tests/q55-Insert.xml",
 	"../data/dxl/parse_tests/q56-Delete.xml",
 	"../data/dxl/parse_tests/q59-Update.xml",
-	"../data/dxl/parse_tests/q63-LogicalExternalGet.xml",
+	"../data/dxl/parse_tests/q63-LogicalForeignGet.xml",
 	"../data/dxl/parse_tests/q65-LogicalCTASHash.xml",
 	"../data/dxl/parse_tests/q66-LogicalCTASRandom.xml",
 	"../data/dxl/parse_tests/q68-ArrayRef1.xml",

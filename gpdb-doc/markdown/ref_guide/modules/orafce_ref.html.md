@@ -8,7 +8,7 @@ There are some restrictions and limitations when you use the module in Greenplum
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
-**Note:** Always use the Oracle Compatibility Functions module included with your Greenplum Database version. Before upgrading to a new Greenplum Database version, uninstall the compatibility functions from each of your databases, and then, when the upgrade is complete, reinstall the compatibility functions from the new Greenplum Database release. See the Greenplum Database release notes for upgrade prerequisites and procedures.
+> **Note** Always use the Oracle Compatibility Functions module included with your Greenplum Database version. Before upgrading to a new Greenplum Database version, uninstall the compatibility functions from each of your databases, and then, when the upgrade is complete, reinstall the compatibility functions from the new Greenplum Database release. See the Greenplum Database release notes for upgrade prerequisites and procedures.
 
 The `orafce` module is installed when you install Greenplum Database. Before you can use any of the functions defined in the module, you must register the `orafce` extension in each database in which you want to use the functions. Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
 
@@ -65,7 +65,7 @@ There are differences in the implementation of the compatibility functions in Gr
 
     The Greenplum Database implementation returns the row, but the original implementation returns no rows.
 
-    **Note:** The correct syntax when using the original `orafce` implementation to return the row is:
+    > **Note** The correct syntax when using the original `orafce` implementation to return the row is:
 
     ```
     SELECT DECODE(to_char(date1, 'YYYY-MM-DD'), '2001-11-11', 
@@ -86,10 +86,10 @@ ALTER DATABASE <db_name> SET <search_path> = "$user", public, oracle;
 Note the following differences when using the Oracle Compatibility Functions with PostgreSQL vs. using them with Greenplum Database:
 
 -   If you use validation scripts, the output may not be exactly the same as with the original `orafce` module implementation.
--   The functions in the Oracle Compatibility Functions `dbms_pipe` package run only on the Greenplum Database master host.
+-   The functions in the Oracle Compatibility Functions `dbms_pipe` package run only on the Greenplum Database coordinator host.
 -   The upgrade scripts in the Orafce project do not work with Greenplum Database.
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the [README](https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/orafce/README.asciidoc) and [Greenplum Database orafce documentation](https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/orafce/doc/orafce_documentation) in the Greenplum Database github repository for detailed information about the individual functions and supporting objects provided in this module.
+Refer to the [README](https://github.com/greenplum-db/gpdb/tree/main/gpcontrib/orafce/README.asciidoc) and [Greenplum Database orafce documentation](https://github.com/greenplum-db/gpdb/tree/main/gpcontrib/orafce/doc/orafce_documentation) in the Greenplum Database github repository for detailed information about the individual functions and supporting objects provided in this module.
 

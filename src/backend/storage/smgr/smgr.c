@@ -71,7 +71,7 @@ static const f_smgr smgrsw[] = {
 	 * Append-optimized relation files currently fall in this category.
 	 */
 	{
-		.smgr_init = mdinit,
+		.smgr_init = NULL,
 		.smgr_shutdown = NULL,
 		.smgr_close = mdclose,
 		.smgr_create = mdcreate,
@@ -120,7 +120,6 @@ smgr_init_standard(void)
 		if (smgrsw[i].smgr_init)
 			smgrsw[i].smgr_init();
 	}
-	mdinit();
 }
 
 

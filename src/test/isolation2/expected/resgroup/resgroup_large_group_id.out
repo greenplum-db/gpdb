@@ -5,8 +5,8 @@ select gp_inject_fault('bump_oid', 'skip', dbid) from gp_segment_configuration w
  Success:        
 (1 row)
 
-create resource group rg_large_oid with (cpu_rate_limit=20, memory_limit=10);
-CREATE
+create resource group rg_large_oid with (cpu_max_percent=20);
+CREATE RESOURCE GROUP
 
 select gp_inject_fault('bump_oid', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
  gp_inject_fault 
@@ -28,4 +28,4 @@ select count(*) > 0 from pg_resgroup_get_status(NULL);
 (1 row)
 
 drop resource group rg_large_oid;
-DROP
+DROP RESOURCE GROUP

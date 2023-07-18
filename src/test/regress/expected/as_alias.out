@@ -749,3 +749,11 @@ SELECT * FROM colalias_dml_decimal ORDER BY 1,2,3,4;
  1.00 | 2.00 | a    | 1.00 | 1.00
 (1 row)
 
+-- GPDB: allow keywords defined in PartitionIdentKeyword (see gram.y) to be created as column alias without the 'AS'
+-- XXX: this will not be a GPDB-only feature when we catch up with PG14
+create table colalias_noas(a int, b int);
+select a new, b old from colalias_noas;
+ new | old 
+-----+-----
+(0 rows)
+

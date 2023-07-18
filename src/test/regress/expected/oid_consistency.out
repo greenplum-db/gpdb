@@ -557,14 +557,11 @@ SELECT * FROM constraint_t3 ORDER BY year, month, region, id;
  region | text    |           |          |         | extended |              | 
 Partition of: constraint_pt3_1_prt_2_2_prt_3 FOR VALUES IN ('europe')
 Partition constraint: ((year IS NOT NULL) AND (year >= 2001) AND (year < 2002) AND (month IS NOT NULL) AND (month >= 2) AND (month < 3) AND (region IS NOT NULL) AND (region = 'europe'::text))
-Compression Type: None
-Compression Level: 0
-Block Size: 32768
-Checksum: t
 Check constraints:
     "day_check" CHECK (day > 0)
     "month_check" CHECK (month > 0)
 Distributed by: (id)
+Options: blocksize=32768, compresslevel=0, compresstype=none, checksum=true
 
 CREATE DOMAIN const_domain1 AS TEXT
       CONSTRAINT cons_check1 check (char_length(VALUE) = 5);

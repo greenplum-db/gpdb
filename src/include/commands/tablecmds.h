@@ -29,10 +29,6 @@
 #include "storage/lock.h"
 #include "utils/relcache.h"
 
-/* Convenient macro for checking AO AMs */
-#define IsAccessMethodAO(am_oid) \
-	(am_oid == AO_ROW_TABLE_AM_OID || am_oid == AO_COLUMN_TABLE_AM_OID)
-
 extern const char *synthetic_sql;
 
 extern void	DefineExternalRelation(CreateExternalStmt *stmt);
@@ -89,6 +85,8 @@ extern void RenameRelationInternal(Oid myrelid,
 								   const char *newrelname, bool is_internal,
 								   bool is_index);
 
+extern void ResetRelRewrite(Oid myrelid);
+
 extern void find_composite_type_dependencies(Oid typeOid,
 											 Relation origRelation,
 											 const char *origTypeName);
@@ -124,5 +122,6 @@ extern void GpAlterPartMetaTrackUpdObject(Oid relid, AlterTableType subcmdtype);
 extern void GpRenameChildPartitions(Relation targetrelation,
 									const char *oldparentrelname,
 									const char *newparentrelname);
+Datum get_rel_opts(Relation rel);
 
 #endif							/* TABLECMDS_H */

@@ -77,8 +77,6 @@ bool		verify_gpfdists_cert; /* verifies gpfdist's certificate */
 
 int			gp_external_max_segs;	/* max segdbs per gpfdist/gpfdists URI */
 
-int			gp_safefswritesize; /* set for safe AO writes in non-mature fs */
-
 int			gp_cached_gang_threshold;	/* How many gangs to keep around from
 										 * stmt to stmt. */
 
@@ -257,8 +255,6 @@ uint32		gp_interconnect_id = 0;
 double		gp_motion_cost_per_row = 0;
 int			gp_segments_for_planner = 0;
 
-int			gp_hashagg_default_nbatches = 32;
-
 bool		gp_adjust_selectivity_for_outerjoins = true;
 bool		gp_selectivity_damping_for_scans = false;
 bool		gp_selectivity_damping_for_joins = false;
@@ -266,7 +262,6 @@ double		gp_selectivity_damping_factor = 1;
 bool		gp_selectivity_damping_sigsort = true;
 
 int			gp_hashjoin_tuples_per_bucket = 5;
-int			gp_hashagg_groups_per_bucket = 5;
 
 /* Analyzing aid */
 int			gp_motion_slice_noop = 0;
@@ -321,6 +316,9 @@ char	   *gp_autostats_mode_in_functions_string;
 int			gp_autostats_on_change_threshold = 100000;
 bool		gp_autostats_allow_nonowner = false;
 bool		log_autostats = true;
+
+/* GUC to toggle JIT instrumentation output for EXPLAIN */
+bool		gp_explain_jit = true;
 
 /* --------------------------------------------------------------------------------------------------
  * Server debugging
@@ -512,8 +510,10 @@ gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource s
 {
 	if (*newval == NULL ||
 		*newval[0] == 0 ||
+		!pg_strcasecmp("none", *newval) ||
 		!pg_strcasecmp("queue", *newval) ||
-		!pg_strcasecmp("group", *newval))
+		!pg_strcasecmp("group", *newval) ||
+		!pg_strcasecmp("group-v2", *newval))
 		return true;
 
 	GUC_check_errmsg("invalid value for resource manager policy: \"%s\"", *newval);
@@ -524,12 +524,19 @@ void
 gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra)
 {
 	if (newval == NULL || newval[0] == 0)
-		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_QUEUE;
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_NONE;
+	else if (!pg_strcasecmp("none", newval))
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_NONE;
 	else if (!pg_strcasecmp("queue", newval))
 		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_QUEUE;
 	else if (!pg_strcasecmp("group", newval))
 	{
 		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_GROUP;
+		gp_enable_resqueue_priority = false;
+	}
+	else if (!pg_strcasecmp("group-v2", newval))
+	{
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_GROUP_V2;
 		gp_enable_resqueue_priority = false;
 	}
 	/*
@@ -542,10 +549,14 @@ gpvars_show_gp_resource_manager_policy(void)
 {
 	switch (Gp_resource_manager_policy)
 	{
+		case RESOURCE_MANAGER_POLICY_NONE:
+			return "none";
 		case RESOURCE_MANAGER_POLICY_QUEUE:
 			return "queue";
 		case RESOURCE_MANAGER_POLICY_GROUP:
 			return "group";
+		case RESOURCE_MANAGER_POLICY_GROUP_V2:
+			return "group-v2";
 		default:
 			Assert(!"unexpected resource manager policy");
 			return "unknown";
@@ -562,6 +573,23 @@ gpvars_check_statement_mem(int *newval, void **extra, GucSource source)
 	{
 		GUC_check_errmsg("Invalid input for statement_mem, must be less than max_statement_mem (%d kB)",
 						 max_statement_mem);
+		return false;
+	}
+
+	return true;
+}
+
+/*
+ * gpvars_check_rg_query_fixed_mem
+ */
+bool
+gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source)
+{
+	if (*newval >= max_statement_mem)
+	{
+		GUC_check_errmsg("Invalid input for gp_resgroup_memory_query_fixed_mem, must be less than max_statement_mem (%d kB)",
+						 max_statement_mem);
+		return false;
 	}
 
 	return true;

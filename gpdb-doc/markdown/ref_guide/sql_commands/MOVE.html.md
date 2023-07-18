@@ -8,7 +8,7 @@ Positions a cursor.
 MOVE [ <forward_direction> [ FROM | IN ] ] <cursor_name>
 ```
 
-where forward\_direction can be empty or one of:
+where <forward_direction> can be empty or one of:
 
 ```
     NEXT
@@ -27,11 +27,13 @@ where forward\_direction can be empty or one of:
 
 `MOVE` repositions a cursor without retrieving any data. `MOVE` works exactly like the [FETCH](FETCH.html) command, except it only positions the cursor and does not return rows.
 
-**Note:** You cannot `MOVE` a `PARALLEL RETRIEVE CURSOR`.
+> **Note** You cannot `MOVE` a `PARALLEL RETRIEVE CURSOR`.
 
-It is not possible to move a cursor position backwards in Greenplum Database, since scrollable cursors are not supported. You can only move a cursor forward in position using `MOVE`.
+> **Note** Because Greenplum Database does not support scrollable cursors, it is not possible to move a cursor position backwards. You can only move a cursor forward in position using `MOVE`.
 
-**Outputs**
+The parameters for the `MOVE` command are identical to those of the `FETCH` command; refer to [FETCH](FETCH.html) for details on syntax and usage.
+
+## <a id="section5a"></a>Outputs
 
 On successful completion, a `MOVE` command returns a command tag of the form
 
@@ -41,36 +43,28 @@ MOVE <count>
 
 The count is the number of rows that a `FETCH` command with the same parameters would have returned \(possibly zero\).
 
-## <a id="section5"></a>Parameters 
-
-forward\_direction
-:   The parameters for the `MOVE` command are identical to those of the `FETCH` command; refer to [FETCH](FETCH.html) for details on syntax and usage.
-
-cursor\_name
-:   The name of an open cursor.
-
 ## <a id="section6"></a>Examples 
 
--- Start the transaction:
+Start the transaction:
 
 ```
 BEGIN;
 ```
 
--- Set up a cursor:
+Create a cursor:
 
 ```
 DECLARE mycursor CURSOR FOR SELECT * FROM films;
 ```
 
--- Move forward 5 rows in the cursor `mycursor`:
+Skip the first 5 rows in the cursor `mycursor`:
 
 ```
 MOVE FORWARD 5 IN mycursor;
 MOVE 5
 ```
 
--- Fetch the next row after that \(row 6\):
+Fetch the next row after that \(row 6\):
 
 ```
 FETCH 1 FROM mycursor;
@@ -80,7 +74,7 @@ FETCH 1 FROM mycursor;
 (1 row)
 ```
 
--- Close the cursor and end the transaction:
+Close the cursor and end the transaction:
 
 ```
 CLOSE mycursor;

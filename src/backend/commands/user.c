@@ -577,10 +577,16 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 		Oid			rsgid;
 
 		rsgid = get_resgroup_oid(resgroup, false);
+
 		if (rsgid == ADMINRESGROUP_OID && !issuper)
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("only superuser can be assigned to admin resgroup")));
+
+		if (rsgid == SYSTEMRESGROUP_OID)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("assigning to system resgroup is not allowed")));
 
 		ResGroupCheckForRole(rsgid);
 
@@ -648,20 +654,31 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 	/*
 	 * Add the new role to the specified existing roles.
 	 */
-	foreach(item, addroleto)
+	if (addroleto)
 	{
-		RoleSpec   *oldrole = lfirst(item);
-		HeapTuple	oldroletup = get_rolespec_tuple(oldrole);
-		Form_pg_authid oldroleform = (Form_pg_authid) GETSTRUCT(oldroletup);
-		Oid			oldroleid = oldroleform->oid;
-		char	   *oldrolename = NameStr(oldroleform->rolname);
+		RoleSpec   *thisrole = makeNode(RoleSpec);
+		List	   *thisrole_list = list_make1(thisrole);
+		List	   *thisrole_oidlist = list_make1_oid(roleid);
 
-		AddRoleMems(oldrolename, oldroleid,
-					list_make1(makeString(stmt->role)),
-					list_make1_oid(roleid),
-					GetUserId(), false);
+		thisrole->roletype = ROLESPEC_CSTRING;
+		thisrole->rolename = stmt->role;
+		thisrole->location = -1;
 
-		ReleaseSysCache(oldroletup);
+		foreach(item, addroleto)
+		{
+			RoleSpec   *oldrole = lfirst(item);
+			HeapTuple	oldroletup = get_rolespec_tuple(oldrole);
+			Form_pg_authid oldroleform = (Form_pg_authid) GETSTRUCT(oldroletup);
+			Oid			oldroleid = oldroleform->oid;
+			char	   *oldrolename = NameStr(oldroleform->rolname);
+
+			AddRoleMems(oldrolename, oldroleid,
+						thisrole_list,
+						thisrole_oidlist,
+						GetUserId(), false);
+
+			ReleaseSysCache(oldroletup);
+		}
 	}
 
 	/*
@@ -1007,8 +1024,10 @@ AlterRole(AlterRoleStmt *stmt)
 	roleid = authform->oid;
 
 	/*
-	 * To mess with a superuser you gotta be superuser; else you need
-	 * createrole, or just want to change your own password
+	 * To mess with a superuser or replication role in any way you gotta be
+	 * superuser.  We also insist on superuser to change the BYPASSRLS
+	 * property.  Otherwise, if you don't have createrole, you're only allowed
+	 * to change your own password.
 	 */
 
 	bWas_super = ((Form_pg_authid) GETSTRUCT(tuple))->rolsuper;
@@ -1027,7 +1046,7 @@ AlterRole(AlterRoleStmt *stmt)
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("must be superuser to alter replication users")));
 	}
-	else if (authform->rolbypassrls || bypassrls >= 0)
+	else if (bypassrls >= 0)
 	{
 		if (!superuser())
 			ereport(ERROR,
@@ -1036,11 +1055,11 @@ AlterRole(AlterRoleStmt *stmt)
 	}
 	else if (!have_createrole_privilege())
 	{
+		/* We already checked issuper, isreplication, and bypassrls */
 		if (!(inherit < 0 &&
 			  createrole < 0 &&
 			  createdb < 0 &&
 			  canlogin < 0 &&
-			  isreplication < 0 &&
 			  !dconnlimit &&
 			  !rolemembers &&
 			  !validUntil &&
@@ -1288,10 +1307,17 @@ AlterRole(AlterRoleStmt *stmt)
 		}
 
 		rsgid = get_resgroup_oid(resgroup, false);
+
 		if (rsgid == ADMINRESGROUP_OID && !bWas_super)
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("only superuser can be assigned to admin resgroup")));
+
+		if (rsgid == SYSTEMRESGROUP_OID)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("assigning to system resgroup is not allowed")));
+
 		ResGroupCheckForRole(rsgid);
 		new_record[Anum_pg_authid_rolresgroup - 1] =
 			ObjectIdGetDatum(rsgid);
@@ -2090,7 +2116,7 @@ AddRoleMems(const char *rolename, Oid roleid,
 
 	forboth(specitem, memberSpecs, iditem, memberIds)
 	{
-		RoleSpec   *memberRole = lfirst(specitem);
+		RoleSpec   *memberRole = lfirst_node(RoleSpec, specitem);
 		Oid			memberid = lfirst_oid(iditem);
 		HeapTuple	authmem_tuple;
 		HeapTuple	tuple;

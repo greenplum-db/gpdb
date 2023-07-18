@@ -1,7 +1,7 @@
 DROP ROLE IF EXISTS role_dumpinfo_test;
-DROP
+DROP ROLE
 DROP ROLE IF EXISTS role_permission;
-DROP
+DROP ROLE
 -- start_ignore
 DROP RESOURCE GROUP rg_dumpinfo_test;
 ERROR:  resource group "rg_dumpinfo_test" does not exist
@@ -9,22 +9,23 @@ CREATE LANGUAGE plpython3u;
 CREATE
 -- end_ignore
 
-CREATE FUNCTION dump_test_check() RETURNS bool as $$ import json import pg 
-def validate(json_obj, segnum): array = json_obj.get("info") #validate segnum if len(array) != segnum: return False qd_info = [j for j in array if j["segid"] == -1][0] #validate keys keys = ["segid", "segmentsOnMaster", "loaded", "totalChunks", "freeChunks", "chunkSizeInBits", "groups"] for key in keys: if key not in qd_info: return False 
-groups = [g for g in qd_info["groups"] if g["group_id"] > 6441] #validate user created group if len(groups) != 1: return False group = groups[0] #validate group keys keys = ["group_id", "nRunning", "locked_for_drop", "memExpected", "memQuotaGranted", "memSharedGranted", "memQuotaUsed", "memUsage", "memSharedUsage"] for key in keys: if key not in group: return False 
+CREATE FUNCTION dump_test_check() RETURNS bool as $$ import json 
+def validate(json_obj, segnum): array = json_obj.get("info") #validate segnum if len(array) != segnum: return False qd_info = [j for j in array if j["segid"] == -1][0] #validate keys keys = ["segid", "segmentsOnCoordinator", "loaded", "groups"] for key in keys: if key not in qd_info: return False 
+groups = [g for g in qd_info["groups"] if g["group_id"] > 6441] #validate user created group if len(groups) != 1: return False group = groups[0] #validate group keys keys = ["group_id", "nRunning", "locked_for_drop"] for key in keys: if key not in group: return False 
 #validate waitqueue wait_queue = group["wait_queue"] if wait_queue["wait_queue_size"] != 1: return False #validate nrunning nrunning = group["nRunning"] if nrunning != 2: return False 
 return True 
-conn = pg.connect(dbname="postgres") 
-r = conn.query("select count(*) from gp_segment_configuration where  role = 'p';") n = r.getresult()[0][0] 
-r = conn.query("select value from pg_resgroup_get_status_kv('dump');") json_text =  r.getresult()[0][0] json_obj = json.loads(json_text) 
+r = plpy.execute("select count(*) from gp_segment_configuration where  role = 'p';") n = r[0]['count'] 
+# The pg_resgroup_get_status_kv() function must output valid result in CTAS # and simple select queries 
+r = plpy.execute("select value from pg_resgroup_get_status_kv('dump');") json_text =  r[0]['value'] json_obj = json.loads(json_text) if not validate(json_obj, n): return False 
+plpy.execute("""CREATE TEMPORARY TABLE t_pg_resgroup_get_status_kv AS SELECT * FROM pg_resgroup_get_status_kv('dump');""") r = plpy.execute("SELECT value FROM t_pg_resgroup_get_status_kv;") json_text = r[0]['value'] json_obj = json.loads(json_text) 
 return validate(json_obj, n) 
 $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
-CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
-CREATE
+CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_max_percent=20);
+CREATE RESOURCE GROUP
 CREATE ROLE role_dumpinfo_test RESOURCE GROUP rg_dumpinfo_test;
-CREATE
+CREATE ROLE
 
 2:SET ROLE role_dumpinfo_test;
 SET
@@ -45,19 +46,19 @@ SELECT dump_test_check();
 (1 row)
 
 2:END;
-END
+COMMIT
 3:END;
-END
+COMMIT
 4<:  <... completed>
 BEGIN
 4:END;
-END
+COMMIT
 2q: ... <quitting>
 3q: ... <quitting>
 4q: ... <quitting>
 
 CREATE ROLE role_permission;
-CREATE
+CREATE ROLE
 SET ROLE role_permission;
 SET
 select value from pg_resgroup_get_status_kv('dump');
@@ -66,11 +67,24 @@ ERROR:  only superusers can call this function
 RESET ROLE;
 RESET
 
+-- Now 'dump' is the only value at which the function outputs tuples, but the
+-- function must correctly handle any value
+SELECT count(*) FROM pg_resgroup_get_status_kv('not_dump');
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(*) FROM pg_resgroup_get_status_kv(NULL);
+ count 
+-------
+ 0     
+(1 row)
+
 DROP ROLE role_dumpinfo_test;
-DROP
+DROP ROLE
 DROP ROLE role_permission;
-DROP
+DROP ROLE
 DROP RESOURCE GROUP rg_dumpinfo_test;
-DROP
+DROP RESOURCE GROUP
 DROP LANGUAGE plpython3u CASCADE;
-DROP
+DROP LANGUAGE

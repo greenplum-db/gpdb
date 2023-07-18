@@ -125,6 +125,26 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Extra" to stdout
         And gpcheckcat should print "Table miss_attr_db4.public.heap_table.1" to stdout
 
+    Scenario: gpcheckcat should report inconsistent pg_fastsequence.lastrownums values with gp_fastsequence
+        Given database "errorneous_lastrownums" is dropped and recreated
+        And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_row; insert into errlastrownum select * from generate_series(1,100);""
+        And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 0
+        When the user runs sql "set allow_system_table_mods=on; update gp_fastsequence set last_sequence = 0 where last_sequence > 0;" in "errorneous_lastrownums" on first primary segment
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: ao_lastrownums" to stdout
+        Given database "errorneous_lastrownums" is dropped and recreated
+        And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_row; insert into errlastrownum select * from generate_series(1,10);""
+        And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 0
+        Then the user runs sql "set allow_system_table_mods=on; delete from gp_fastsequence where last_sequence > 0;" in "errorneous_lastrownums" on first primary segment
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: ao_lastrownums" to stdout
+
     Scenario: gpcheckcat should report and repair owner errors and produce timestamped repair scripts
         Given database "owner_db1" is dropped and recreated
         And database "owner_db2" is dropped and recreated
@@ -155,6 +175,27 @@ Feature: gpcheckcat tests
         And the user runs "dropdb owner_db2"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    Scenario: gpcheckcat should report and repair owner errors on appendonly tables and its indexes
+        Given database "owner_db" is dropped and recreated
+          And the path "gpcheckcat.repair.*" is removed from current working directory
+          And there is a "ao" table "public.gpadmin_ao_tbl" in "owner_db" with data
+          And the user runs "psql owner_db -c "CREATE INDEX gpadmin_ao_tbl_idx on gpadmin_ao_tbl (column1);""
+          And the user runs sql "alter table gpadmin_ao_tbl OWNER TO wolf" in "owner_db" on first primary segment
+         Then psql should return a return code of 0
+
+        When the user runs "gpcheckcat -R owner owner_db"
+         Then gpcheckcat should return a return code of 3
+         Then the path "gpcheckcat.repair.*" is found in cwd "1" times
+
+        When the user runs all the repair scripts in the dir "gpcheckcat.repair.*"
+          And the path "gpcheckcat.repair.*" is removed from current working directory
+          And the user runs "gpcheckcat -R owner owner_db"
+         Then Then gpcheckcat should return a return code of 0
+         Then the path "gpcheckcat.repair.*" is found in cwd "0" times
+
+        And the user runs "dropdb owner_db"
+        And the path "gpcheckcat.repair.*" is removed from current working directory
+        
     Scenario: gpcheckcat should report and repair invalid constraints
         Given database "constraint_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
@@ -253,6 +294,7 @@ Feature: gpcheckcat tests
         Given database "fkey_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
         And there is a "heap" table "gpadmin_tbl" in "fkey_db" with data
+        And there is a view without columns in "fkey_db"
         When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_class" with key "oid" in the database "fkey_db"
         Then the user runs "gpcheckcat -E -R missing_extraneous fkey_db"
         And gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_class" to stdout
@@ -434,7 +476,7 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Table pg_type has a dependency issue on oid .* at content 0" to stdout
         And the user runs "dropdb gpcheckcat_dependency"
 
-    Scenario: gpcheckcat should report no inconsistency of pg_extension between Master and Segements
+    Scenario: gpcheckcat should report no inconsistency of pg_extension between Coordinator and Segements
         Given database "pgextension_db" is dropped and recreated
         And the user runs sql "set allow_system_table_mods=true;update pg_extension set extconfig='{2130}', extcondition='{2130}';" in "pgextension_db" on first primary segment
         Then the user runs "gpcheckcat -R inconsistent pgextension_db"
@@ -579,11 +621,20 @@ Feature: gpcheckcat tests
           And there is a "co" table "public.co_vpinfo" in "vpinfo_inconsistent_db" with data
          When the user runs "gpcheckcat vpinfo_inconsistent_db"
          Then gpcheckcat should return a return code of 0
-         When an attribute of table "co_vpinfo" in database "vpinfo_inconsistent_db" is deleted on segment with content id "0"
+         When a table "co_vpinfo" in database "vpinfo_inconsistent_db" has its relnatts inflated on segment with content id "0"
          Then psql should return a return code of 0
          When the user runs "gpcheckcat -R aoseg_table vpinfo_inconsistent_db"
          Then gpcheckcat should print "Failed test\(s\) that are not reported here: aoseg_table" to stdout
           And the user runs "dropdb vpinfo_inconsistent_db"
+
+    Scenario: gpcheckcat should not print error when vpinfo for RESERVED_SEGNO is of different length than relnatts
+        Given database "vpinfo_reserved_segno" is dropped and recreated
+        And the user runs "psql vpinfo_reserved_segno -c "CREATE TABLE co_table(a int, b int) using ao_column; INSERT INTO co_table values (1,1);""
+        And the user runs "psql vpinfo_reserved_segno -c "BEGIN; ALTER TABLE co_table ADD COLUMN newcol int; INSERT INTO co_table VALUES (1,1,1); ABORT;""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat vpinfo_reserved_segno"
+        And gpcheckcat should return a return code of 0
+        Then gpcheckcat should not print "[FAIL] inconsistent vpinfo" to stdout
 
     Scenario: skip one check in gpcheckcat
         Given database "all_good" is dropped and recreated
@@ -623,17 +674,23 @@ Feature: gpcheckcat tests
         Then gpcheckcat should return a return code of 3
         And the user runs "dropdb mis_attr_db"
 
-    Scenario: gpcheckcat should not report dependency error from pg_default_acl
+    Scenario: gpcheckcat should not report dependency error from pg_default_acl, pg_subscription and pg_transform
         Given database "check_dependency_error" is dropped and recreated
         And the user runs "psql -d check_dependency_error -c "CREATE ROLE foo; ALTER DEFAULT PRIVILEGES FOR ROLE foo REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;""
         Then psql should return a return code of 0
-        When the user runs "gpcheckcat check_dependency_error"
+        And the user runs "psql -d check_dependency_error -c "CREATE SUBSCRIPTION foo CONNECTION '' PUBLICATION bar WITH (connect = false, slot_name = NONE);""
+        Then psql should return a return code of 0
+        And the user runs "psql -d check_dependency_error -c "CREATE TRANSFORM FOR int LANGUAGE SQL (FROM SQL WITH FUNCTION prsd_lextype(internal), TO SQL WITH FUNCTION int4recv(internal));""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -R dependency check_dependency_error"
         Then gpcheckcat should return a return code of 0
         And gpcheckcat should not print "SUMMARY REPORT: FAILED" to stdout
         And gpcheckcat should not print "has a dependency issue on oid" to stdout
         And gpcheckcat should print "Found no catalog issue" to stdout
+        And the user runs "psql -d check_dependency_error -c "DROP SUBSCRIPTION foo""
+        And the user runs "psql -d check_dependency_error -c "DROP TRANSFORM FOR int LANGUAGE SQL""
         And the user runs "dropdb check_dependency_error"
-        And the user runs "psql -c "DROP ROLE foo""
+        And the user runs "psql -d postgres -c "DROP ROLE foo""
 
 
 ########################### @concourse_cluster tests ###########################

@@ -1,17 +1,17 @@
 -- @Description Tests the state for pg_endpoints AND gp_get_segment_endpoints(), focus in wait mode
 --
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t1 select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 --------- Test1: Basic test for parallel retrieve interface & close cursor
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
@@ -160,7 +160,7 @@ DECLARE
  t        
 (1 row)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 -- check no endpoint info
 1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c1';
  auth_token | state 
@@ -194,7 +194,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -458,7 +458,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
@@ -594,7 +594,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
  endpoint_id4 | token_id | host_id | port_id | READY
  endpoint_id4 | token_id | host_id | port_id | READY
@@ -731,7 +731,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c5';
  endpoint_id5 | token_id | host_id | port_id | READY
  endpoint_id5 | token_id | host_id | port_id | READY
@@ -866,7 +866,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c6';
  endpoint_id6 | token_id | host_id | port_id | READY
  endpoint_id6 | token_id | host_id | port_id | READY
@@ -996,7 +996,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c61 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 61 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c61';
  endpoint_id61 | token_id | host_id | port_id | READY
  endpoint_id61 | token_id | host_id | port_id | READY
@@ -1125,7 +1125,7 @@ ERROR:  canceling statement due to user request
 1: BEGIN;
 BEGIN
 1: DECLARE c7 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 7 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c7';
  endpoint_id7 | token_id | host_id | port_id | READY
  endpoint_id7 | token_id | host_id | port_id | READY
@@ -1211,7 +1211,7 @@ DECLARE
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
--- quit all sessions on the master, because connect lost
+-- quit all sessions on the coordinator, because connect lost
 1q: ... <quitting>
 2q: ... <quitting>
 -1Uq: ... <quitting>
@@ -1267,7 +1267,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'get_tuple_cell SESSION81 1 1 ; create_match_sub_with_spaces $SESSION81 session81': SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
  sessionid | state
 -----------+-------
@@ -1279,7 +1279,7 @@ DECLARE
 2: BEGIN;
 BEGIN
 2: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 2: @post_run 'get_tuple_cell SESSION82 1 1 ; create_match_sub_with_spaces $SESSION82 session82': SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
  sessionid | state
 -----------+-------
@@ -1300,19 +1300,19 @@ DECLARE
 (6 rows)
 
 1: CLOSE c8;
-CLOSE
+CLOSE CURSOR
 1: END;
-END
+COMMIT
 2: CLOSE c8;
-CLOSE
+CLOSE CURSOR
 2: END;
-END
+COMMIT
 
 ---------- Test9: Cancel (using pg_cancel_backend(pid)) the process of 'CHECK PARALLEL RETRIEVE CURSOR'
 1: BEGIN;
 BEGIN
 1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 9 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
  endpoint_id9 | token_id | host_id | port_id | READY
  endpoint_id9 | token_id | host_id | port_id | READY
@@ -1370,7 +1370,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c10 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 10 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c10';
  endpoint_id10 | token_id | host_id | port_id | READY
  endpoint_id10 | token_id | host_id | port_id | READY
@@ -1400,7 +1400,7 @@ FATAL:  terminating connection due to administrator command
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
--- quit all sessions on the master, because connect lost
+-- quit all sessions on the coordinator, because connect lost
 1q: ... <quitting>
 2q: ... <quitting>
 -1Uq: ... <quitting>
@@ -1450,4 +1450,79 @@ ROLLBACK
 
  ?column? | ?column? | state 
 ----------+----------+-------
+(0 rows)
+0Rq: ... <quitting>
+1Rq: ... <quitting>
+
+--------- Test11: Test t1 has large amount of tuples, only retreive small number of tuples, we can still close cursor.
+1:DROP TABLE IF EXISTS t2;
+DROP TABLE
+1:CREATE TABLE t2 (id integer, data text) DISTRIBUTED by (id);
+CREATE TABLE
+1:INSERT INTO t2 select id, 'test ' || id from generate_series(1,100000) id;
+INSERT 0 100000
+
+1: BEGIN;
+BEGIN
+1: DECLARE c11 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2;
+DECLARE PARALLEL RETRIEVE CURSOR
+1: @post_run 'parse_endpoint_info 11 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c11';
+ endpoint_id11 | token_id | host_id | port_id | READY
+ endpoint_id11 | token_id | host_id | port_id | READY
+ endpoint_id11 | token_id | host_id | port_id | READY
+(3 rows)
+0R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+ id | data   
+----+--------
+ 2  | test 2 
+ 3  | test 3 
+ 4  | test 4 
+ 7  | test 7 
+ 8  | test 8 
+(5 rows)
+1R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+ id | data    
+----+---------
+ 1  | test 1  
+ 12 | test 12 
+ 15 | test 15 
+ 20 | test 20 
+ 23 | test 23 
+(5 rows)
+2R: @pre_run 'set_endpoint_variable @ENDPOINT11': RETRIEVE 5 FROM ENDPOINT "@ENDPOINT11";
+ id | data    
+----+---------
+ 5  | test 5  
+ 6  | test 6  
+ 9  | test 9  
+ 10 | test 10 
+ 11 | test 11 
+(5 rows)
+
+1: CLOSE c11;
+CLOSE CURSOR
+1: ROLLBACK;
+ROLLBACK
+
+-- check no endpoint info
+1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c11';
+ auth_token | state 
+------------+-------
+(0 rows)
+-- check no token info on QE after close PARALLEL RETRIEVE CURSOR
+*U: SELECT * FROM gp_get_segment_endpoints() WHERE cursorname='c11';
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
+(0 rows)
+
+ auth_token | databaseid | senderpid | receiverpid | state | gp_segment_id | sessionid | username | endpointname | cursorname 
+------------+------------+-----------+-------------+-------+---------------+-----------+----------+--------------+------------
 (0 rows)

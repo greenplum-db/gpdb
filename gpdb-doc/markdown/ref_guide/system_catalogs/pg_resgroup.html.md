@@ -1,6 +1,6 @@
 # pg_resgroup 
 
-**Note:** The `pg_resgroup` system catalog table is valid only when resource group-based resource management is active.
+> **Note** The `pg_resgroup` system catalog table is valid only when resource group-based resource management is active.
 
 The `pg_resgroup` system catalog table contains information about Greenplum Database resource groups, which are used for managing concurrent statements, CPU, and memory resources. This table, defined in the `pg_global` tablespace, is globally shared across all databases in the system.
 

@@ -17,6 +17,8 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"
+#include "gpopt/operators/CScalarIdent.h"
+#include "naucrates/md/IMDIndex.h"
 
 namespace gpopt
 {
@@ -130,11 +132,13 @@ public:
 	static BOOL FPlainEquality(CExpression *pexpr);
 
 	// is the given expression a self comparison on some column
-	static BOOL FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt);
+	static BOOL FSelfComparison(CExpression *pexpr, IMDType::ECmpType *pecmpt,
+								CColRefSet *pcrsNotNull);
 
 	// eliminate self comparison if possible
 	static CExpression *PexprEliminateSelfComparison(CMemoryPool *mp,
-													 CExpression *pexpr);
+													 CExpression *pexpr,
+													 CColRefSet *pcrsNotNull);
 
 	// is the given expression in the form (col1 Is NOT DISTINCT FROM col2)
 	static BOOL FINDFScalarIdents(CExpression *pexpr);
@@ -185,6 +189,9 @@ public:
 
 	// is the given expression a comparison between a scalar ident and a constant
 	static BOOL FCompareIdentToConst(CExpression *pexpr);
+
+	// is the given expression an equality between ident/const without cast
+	static BOOL FPlainEqualityIdentConstWithoutCast(CExpression *pexpr);
 
 	// is the given expression a comparison between a const and a const
 	static BOOL FCompareConstToConstIgnoreCast(CExpression *pexpr);
@@ -322,20 +329,6 @@ public:
 	// check if the given expression of the form "col is not null"
 	static BOOL FNotNullCheckOnColumn(CExpression *pexpr, CColRef *colref);
 
-	// check if the given expression is a disjunction of scalar cmp
-	// expressions on the given column
-	static BOOL IsDisjunctionOfRangeComparison(CMemoryPool *mp,
-											   CExpression *pexpr,
-											   CColRef *colref,
-											   CColRefSet *pcrsAllowedRefs,
-											   BOOL allowNotEqualPreds);
-
-	// check if the given comparison type is one of the range comparisons, i.e.
-	// LT, GT, LEq, GEq, Eq
-	static BOOL FRangeComparison(CExpression *expr, CColRef *colref,
-								 CColRefSet *pcrsAllowedRefs,
-								 BOOL allowNotEqualPreds);
-
 	// create disjunction
 	static CExpression *PexprDisjunction(CMemoryPool *mp,
 										 CExpressionArray *Pdrgpexpr);
@@ -362,6 +355,18 @@ public:
 		CMemoryPool *mp, CExpression *pexprScalar,
 		CColRef2dArray *pdrgpdrgpcrPartKeys, CColRefSet *pcrsAllowedRefs,
 		BOOL fUseConstraints, const IMDRelation *pmdrel = nullptr);
+
+	// checks if the operator belongs to the column's opfamily
+	static BOOL FOpInOpfamily(CColRef *colref, CExpression *pexpr,
+							  IMDIndex::EmdindexType access_method);
+
+	// checks if the operator belongs to the scalar expression's opfamily
+	static BOOL FOpInOpfamily(CExpression *pexprScalar, CExpression *pexpr,
+							  IMDIndex::EmdindexType access_method);
+
+	// checks if the operator belongs to the column's opfamily
+	static BOOL FOpInOpfamily(IMDId *col_mdid, CExpression *pexpr,
+							  IMDIndex::EmdindexType access_method);
 
 	// extract the constraint on the given column and return the corresponding
 	// scalar expression
@@ -398,7 +403,7 @@ public:
 		CExpressionArray *pdrgpexprResidual,
 		CColRefSet *pcrsAcceptedOuterRefs =
 			nullptr,  // outer refs that are acceptable in an index predicate
-		BOOL allowArrayCmpForBTreeIndexes = false);
+		BOOL considerBitmapAltForArrayCmp = false);
 
 	// return the inverse of given comparison expression
 	static CExpression *PexprInverseComparison(CMemoryPool *mp,
@@ -428,7 +433,7 @@ public:
 	static CExpression *PexprIndexLookup(
 		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpPred,
 		const IMDIndex *pmdindex, CColRefArray *pdrgpcrIndex,
-		CColRefSet *outer_refs, BOOL allowArrayCmpForBTreeIndexes);
+		CColRefSet *outer_refs, BOOL considerBitmapAltForArrayCmp);
 
 	// split given scalar expression into two conjunctions; without and with outer references
 	static void SeparateOuterRefs(CMemoryPool *mp, CExpression *pexprScalar,

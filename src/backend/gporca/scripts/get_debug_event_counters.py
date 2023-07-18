@@ -17,7 +17,7 @@ CDebugCounter class, see file ../libgpos/include/gpos/common/CDebugCounter.h
 # "DebugCounterEvent".
 #
 # The log file is either specified by the user, or we grep the log files
-# $MASTER_DATA_DIRECTORY/log/*.csv
+# $COORDINATOR_DATA_DIRECTORY/log/*.csv
 #
 # The log may contain multiple "runs". A run is a series of log entries made by
 # the same process. Note that this tool doesn't support concurrent processes logging.
@@ -172,11 +172,12 @@ def processLogFile(logFileLines, allruns):
 
 
 def parseargs():
-	parser = argparse.ArgumentParser(description=_help, version='1.0')
+	parser = argparse.ArgumentParser(description=_help)
 
+	parser.add_argument('--version', action='version', version='1.0')
 	parser.add_argument("--logFile", default="",
 						help="GPDB log file saved from a run with debug event counters enabled (default is to search "
-							 "GPDB master log directory)")
+							 "GPDB coordinator log directory)")
 	parser.add_argument("--allRuns", action="store_true",
 						help="Record all runs, instead of just the last one, use this if you had several psql runs")
 	parser.add_argument("--sql", action="store_true",
@@ -224,12 +225,12 @@ def main():
 	gather_command = ['sh', '-c']
 
 	if logfile is None or len(logfile) == 0:
-		if 'MASTER_DATA_DIRECTORY' in os.environ:
-			master_data_dir = os.environ['MASTER_DATA_DIRECTORY']
+		if 'COORDINATOR_DATA_DIRECTORY' in os.environ:
+			coordinator_data_dir = os.environ['COORDINATOR_DATA_DIRECTORY']
 		else:
-			print("$MASTER_DATA_DIRECTORY environment variable is not defined, exiting")
+			print("$COORDINATOR_DATA_DIRECTORY environment variable is not defined, exiting")
 			exit()
-		grep_command = grep_command + master_data_dir + '/log/*.csv'
+		grep_command = grep_command + coordinator_data_dir + '/log/*.csv'
 	else:
 		grep_command = grep_command + logfile
 

@@ -33,16 +33,15 @@
 # RowExclusiveLock and the tests can probably be enabled back.
 # Additionally, skip-locked-4 uses pg_advisory_lock() which only takes the lock
 # on QD, but it needs to take it on QE segments as well.
-# GPDB_95_MERGE_FIXME: insert-conflict-do-nothing, insert-conflict-do-update,
-# and insert-conflict-do-update-2 fail because isolationtester does not include
-# QEs when checking pg_locks. If we are able to add the QE backend pids of gang
-# to this list then these tests can be enabled.  insert-conflict-do-update-2
-# has additional issue where GPDB does not support creating unique indexes on
-# mutated columns via lower().
+# insert-conflict-do-update-3 related to issue https://github.com/greenplum-db/gpdb/issues/15635
+
 #
 # GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: tuplelock-upgrade-no-deadlock, freeze-the-dead
 # don't pass in normal mode for GPDB as SELECT..FOR SHARE/UPDATE can
 # block each other in gpdb if GDD does not open.
+#
+# GPDB_12_MERGE_FRATURE_NOT_SUPPORTED: disable test predicate-lock-hot-tuple, update-conflict-out
+# because Greenplum does not support serializable transactions.
 #
 #############################################################
 #
@@ -80,13 +79,15 @@ test: deadlock-soft-2
 #test: fk-partitioned-1
 #test: fk-partitioned-2
 #test: eval-plan-qual
+#test: eval-plan-qual-trigger
 #test: lock-update-delete
 #test: lock-update-traversal
 test: inherit-temp
-#test: insert-conflict-do-nothing
-#test: insert-conflict-do-nothing-2
-#test: insert-conflict-do-update
-#test: insert-conflict-do-update-2
+test: temp-schema-cleanup
+test: insert-conflict-do-nothing
+test: insert-conflict-do-nothing-2
+test: insert-conflict-do-update
+test: insert-conflict-do-update-2
 #test: insert-conflict-do-update-3
 test: insert-conflict-toast
 test: insert-conflict-specconflict
@@ -103,6 +104,7 @@ test: update-locked-tuple
 #test: tuplelock-conflict
 #test: tuplelock-update
 #test: tuplelock-upgrade-no-deadlock
+#test: tuplelock-partition
 #test: freeze-the-dead
 #test: nowait
 #test: nowait-2
@@ -133,6 +135,7 @@ test: vacuum-skip-locked
 #test: predicate-gist
 #test: predicate-gin
 
+test: partition-concurrent-attach
 test: partition-drop-index-locking
 
 # GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: Disabled test partition-key-update-1
@@ -155,3 +158,4 @@ test: heap-repeatable-read-vacuum
 test: ao-repeatable-read-vacuum
 
 test: ao-insert-eof create_index_hot udf-insert-deadlock heap-repeatable-read ao-repeatable-read
+test: vacuum-ao-concurrent-drop

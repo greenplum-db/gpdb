@@ -158,7 +158,7 @@ check_parallel_retrieve_cursor_errors(EState *estate)
 		estate->dispatcherState = NULL;
 		cdbdisp_cancelDispatch(ds);
 		FlushErrorState();
-		ReThrowError(qeError);
+		ThrowErrorData(qeError);
 	}
 }
 
@@ -307,7 +307,7 @@ gp_get_endpoints(PG_FUNCTION_ARGS)
 				{
 					EndpointInfo *info = &all_info->infos[idx];
 
-					info->segmentIndex = MASTER_CONTENT_ID;
+					info->segmentIndex = COORDINATOR_CONTENT_ID;
 					get_token_from_session_hashtable(entry->sessionID, entry->userID,
 													 info->token);
 					StrNCpy(info->name, entry->name, NAMEDATALEN);
@@ -422,8 +422,8 @@ gp_get_segment_endpoints(PG_FUNCTION_ARGS)
 		MemSet(nulls, 0, sizeof(nulls));
 
 		/*
-		 * Only allow current user to list his/her own endpoints, or let
-		 * superuser list all endpoints.
+		 * Only allow the current user to list own endpoints, or let superuser
+		 * list all endpoints.
 		 */
 		if (!entry->empty && entry->databaseID == MyDatabaseId && (superuser() || entry->userID == GetUserId()))
 		{

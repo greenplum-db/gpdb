@@ -15,7 +15,7 @@ INSERT INTO t_concurrent_update VALUES(1,1,'test');
 
 DROP TABLE t_concurrent_update;
 
--- Test the concurrent update transaction order on the segment is reflected on master
+-- Test the concurrent update transaction order on the segment is reflected on coordinator
 1: CREATE TABLE t_concurrent_update(a int, b int);
 1: INSERT INTO t_concurrent_update VALUES(1,1);
 
@@ -31,7 +31,7 @@ DROP TABLE t_concurrent_update;
 2: select gp_inject_fault('before_xact_end_procarray', 'suspend', '', 'isolation2test', '', 1, 1, 0, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
 2&: END;
 1: select gp_wait_until_triggered_fault('before_xact_end_procarray', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
--- transaction 3 should wait transaction 2 commit on master
+-- transaction 3 should wait transaction 2 commit on coordinator
 3<:
 3&: END;
 -- the query should not get the incorrect distributed snapshot: transaction 1 in-progress
@@ -128,6 +128,69 @@ DROP TABLE t_concurrent_update;
 0: drop table tab_update_epq1;
 0: drop table tab_update_epq2;
 0q:
+1q:
+2q:
+
+-- check that orca concurrent delete transaction won't delete tuple, updated in other transaction (which doesn't match predicate anymore)
+create table test as select 0 as i distributed randomly;
+1: begin;
+1: update test set i = i + 1;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;
+1: end;
+2<:
+drop table test;
+1q:
+2q:
+
+-- check that orca concurrent delete transaction will delete tuple, updated in other transaction (which still matches predicate)
+create table test as select 0 as i distributed randomly;
+1: begin;
+1: update test set i = i;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;
+1: end;
+2<:
+drop table test;
+1q:
+2q:
+
+-- test ORCA partition table
+create table test(a int, b int, c int) partition by range(b) (start (1) end (7) every (3));
+insert into test values (1, 1, 1);
+1: begin;
+1: delete from test where b = 1;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: update test set b = 1;
+1: end;
+2<:
+
+0: select * from test;
+0: drop table test;
+0q:
+1q:
+2q:
+
+-- test ORCA partition table
+-- related github issue https://github.com/greenplum-db/gpdb/issues/14935
+create table test(a int, b int, c int) partition by range(b) (start (1) end (7) every (3));
+insert into test values (1, 1, 1), (1, 2, 1);
+1: begin;
+1: update test set c = 1;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: update test set c = 1;
+1: end;
+2<:
+
+0: select * from test;
+0: drop table test;
+0q:
+1q:
+2q:
 
 -- split update is to implement updating on hash keys,
 -- it deletes the tuple and insert a new tuple in a

@@ -45,8 +45,13 @@ const CDouble CCostModelParamsGPDB::DIndexBlockCostUnitVal = 1.27e-06;
 // index filtering cost unit
 const CDouble CCostModelParamsGPDB::DIndexFilterCostUnitVal = 1.65e-04;
 
-// index scan cost unit per tuple per width
+// index scan cost unit per tuple per width. includes the cost to read from the
+// index and the heap.
 const CDouble CCostModelParamsGPDB::DIndexScanTupCostUnitVal = 3.66e-06;
+
+// index only scan cost unit per tuple per width. includes only the cost to
+// read from the index, _not_ the heap.
+const CDouble CCostModelParamsGPDB::DIndexOnlyScanTupCostUnitVal = 3.66e-06;
 
 // index scan random IO factor
 const CDouble CCostModelParamsGPDB::DIndexScanTupRandomFactorVal = 6.0;
@@ -292,6 +297,9 @@ CCostModelParamsGPDB::CCostModelParamsGPDB(CMemoryPool *mp) : m_mp(mp)
 	m_rgpcp[EcpIndexScanTupCostUnit] = GPOS_NEW(mp) SCostParam(
 		EcpIndexScanTupCostUnit, DIndexScanTupCostUnitVal,
 		DIndexScanTupCostUnitVal - 1.0, DIndexScanTupCostUnitVal + 1.0);
+	m_rgpcp[EcpIndexOnlyScanTupCostUnit] = GPOS_NEW(mp) SCostParam(
+		EcpIndexOnlyScanTupCostUnit, DIndexOnlyScanTupCostUnitVal,
+		DIndexOnlyScanTupCostUnitVal - 1.0, DIndexOnlyScanTupCostUnitVal + 1.0);
 	m_rgpcp[EcpIndexScanTupRandomFactor] = GPOS_NEW(mp) SCostParam(
 		EcpIndexScanTupRandomFactor, DIndexScanTupRandomFactorVal,
 		DIndexScanTupRandomFactorVal - 1.0, DIndexScanTupRandomFactorVal + 1.0);

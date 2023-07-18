@@ -1,0 +1,218 @@
+-- Test on AO ROW tables with bloat, and with auxiliary tables included.  Check both physical and
+-- logical size, check with seg0, and also check if rewrite removes the bloat
+CREATE TABLE aorowsizetest (a int, col1 int, col2 text) WITH (appendonly=true, orientation=row);
+CREATE TABLE
+INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+3: BEGIN;
+BEGIN
+1: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+2: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+3: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+3: ABORT;
+ROLLBACK
+select pg_relation_size('aorowsizetest', /* include_ao_aux */ false, /* physical_ao_size */ true) between 10000000 and 10500000;
+ ?column? 
+----------
+ t        
+(1 row)
+-- 10411040
+select pg_relation_size('aorowsizetest', /* include_ao_aux */ true, /* physical_ao_size */ true) > pg_relation_size('aorowsizetest', /* include_ao_aux */ false, /* physical_ao_size */ true);
+ ?column? 
+----------
+ t        
+(1 row)
+select pg_relation_size('aorowsizetest', /* include_ao_aux */ true, /* physical_ao_size */ true) = pg_relation_size('aorowsizetest', /* include_ao_aux */ true, /* physical_ao_size */ false);
+ ?column? 
+----------
+ f        
+(1 row)
+select pg_table_size('aorowsizetest') between 10500000 and 11000000;
+ ?column? 
+----------
+ t        
+(1 row)
+-- 10771488
+select pg_table_size('aorowsizetest') = pg_relation_size('aorowsizetest', /* include_ao_aux */ true, /* physical_ao_size */ true);
+ ?column? 
+----------
+ f        
+(1 row)
+select pg_total_relation_size('aorowsizetest') = pg_table_size('aorowsizetest');
+ ?column? 
+----------
+ t        
+(1 row)
+-- Test seg0
+1: BEGIN;
+BEGIN
+1: ALTER TABLE aorowsizetest SET WITH (reorganize = 'true');
+ALTER TABLE
+1: INSERT INTO aorowsizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+1: COMMIT;
+COMMIT
+SELECT * FROM gp_toolkit.__gp_aoseg('aorowsizetest') ORDER BY segment_id;
+ segment_id | segno | eof     | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+---------+----------+---------------+------------------+----------+---------------+-------
+ 0          | 0     | 3483688 | 133848   | 107           | 3483688          | 2        | 3             | 1     
+ 1          | 0     | 3469648 | 133308   | 107           | 3469648          | 2        | 3             | 1     
+ 2          | 0     | 3457584 | 132844   | 107           | 3457584          | 2        | 3             | 1     
+(3 rows)
+select pg_relation_size('aorowsizetest', /* include_ao_aux */ false, /* physical_ao_size */ true) between 10000000 and 10500000;
+ ?column? 
+----------
+ t        
+(1 row)
+-- 10410920
+select pg_relation_size('aorowsizetest', /* include_ao_aux */ false, /* physical_ao_size */ false) between 10000000 and 10500000;
+ ?column? 
+----------
+ t        
+(1 row)
+-- 10410920
+select pg_relation_size('aorowsizetest', /* include_ao_aux */ true, /* physical_ao_size */ true) > pg_relation_size('aorowsizetest', /* include_ao_aux */ false, /* physical_ao_size */ true);
+ ?column? 
+----------
+ t        
+(1 row)
+select pg_table_size('aorowsizetest') between 10500000 and 11000000;
+ ?column? 
+----------
+ t        
+(1 row)
+-- 10771368
+select pg_table_size('aorowsizetest') = pg_relation_size('aorowsizetest', /* include_ao_aux */ true, /* physical_ao_size */ true);
+ ?column? 
+----------
+ f        
+(1 row)
+select pg_total_relation_size('aorowsizetest') = pg_table_size('aorowsizetest');
+ ?column? 
+----------
+ t        
+(1 row)
+
+
+-- Test on AOCO tables with bloat, and with auxiliary tables included.  Check both physical and
+-- logical size, check with seg0, and also check if rewrite removes the bloat
+CREATE TABLE aocssizetest (a int, col1 int, col2 text) WITH (appendonly=true, orientation=column);
+CREATE TABLE
+INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+3: BEGIN;
+BEGIN
+1: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+2: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+3: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+3: ABORT;
+ROLLBACK
+select pg_relation_size('aocssizetest', /* include_ao_aux */ false, /* physical_ao_size */ true) between 5000000 and 6000000;
+ ?column? 
+----------
+ t        
+(1 row)
+-- 5964800
+select pg_relation_size('aocssizetest', /* include_ao_aux */ true, /* physical_ao_size */ true) > pg_relation_size('aocssizetest', /* include_ao_aux */ false, /* physical_ao_size */ true);
+ ?column? 
+----------
+ t        
+(1 row)
+select pg_relation_size('aocssizetest', /* include_ao_aux */ true, /* physical_ao_size */ true) = pg_relation_size('aocssizetest', /* include_ao_aux */ true, /* physical_ao_size */ false);
+ ?column? 
+----------
+ f        
+(1 row)
+select pg_table_size('aocssizetest') between 4000000 and 5000000;
+ ?column? 
+----------
+ f        
+(1 row)
+-- 6194176
+select pg_table_size('aocssizetest') = pg_relation_size('aocssizetest', /* include_ao_aux */ true, /* physical_ao_size */ true);
+ ?column? 
+----------
+ t        
+(1 row)
+select pg_total_relation_size('aocssizetest') = pg_table_size('aocssizetest');
+ ?column? 
+----------
+ t        
+(1 row)
+-- Test seg0
+1: BEGIN;
+BEGIN
+1: ALTER TABLE aocssizetest SET WITH (reorganize = 'true');
+ALTER TABLE
+1: INSERT INTO aocssizetest SELECT g, g, 'x' || g FROM generate_series(1, 100000) g;
+INSERT 0 100000
+1: COMMIT;
+COMMIT
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocssizetest') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof    | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+--------+------------------+----------+---------------+-------
+ 0          | 0     | 0          | 0              | 133848   | 536176 | 536176           | 2        | 3             | 1     
+ 0          | 0     | 1          | 128            | 133848   | 536176 | 536176           | 2        | 3             | 1     
+ 0          | 0     | 2          | 256            | 133848   | 923248 | 923248           | 2        | 3             | 1     
+ 1          | 0     | 0          | 0              | 133308   | 534024 | 534024           | 2        | 3             | 1     
+ 1          | 0     | 1          | 128            | 133308   | 534024 | 534024           | 2        | 3             | 1     
+ 1          | 0     | 2          | 256            | 133308   | 919464 | 919464           | 2        | 3             | 1     
+ 2          | 0     | 0          | 0              | 132844   | 532168 | 532168           | 2        | 3             | 1     
+ 2          | 0     | 1          | 128            | 132844   | 532168 | 532168           | 2        | 3             | 1     
+ 2          | 0     | 2          | 256            | 132844   | 916664 | 916664           | 2        | 3             | 1     
+(9 rows)
+select pg_relation_size('aocssizetest', /* include_ao_aux */ false, /* physical_ao_size */ true) between 5500000 and 6500000;
+ ?column? 
+----------
+ t        
+(1 row)
+-- 5964112
+select pg_relation_size('aocssizetest', /* include_ao_aux */ false, /* physical_ao_size */ false) between 1000000 and 2000000;
+ ?column? 
+----------
+ f        
+(1 row)
+-- 5964112
+select pg_relation_size('aocssizetest', /* include_ao_aux */ true, /* physical_ao_size */ true) > pg_relation_size('aocssizetest', /* include_ao_aux */ false, /* physical_ao_size */ true);
+ ?column? 
+----------
+ t        
+(1 row)
+select pg_table_size('aocssizetest') between 2500000 and 3500000;
+ ?column? 
+----------
+ f        
+(1 row)
+-- 3015168
+select pg_table_size('aocssizetest') = pg_relation_size('aocssizetest', /* include_ao_aux */ true, /* physical_ao_size */ true);
+ ?column? 
+----------
+ t        
+(1 row)
+select pg_total_relation_size('aocssizetest') = pg_table_size('aocssizetest');
+ ?column? 
+----------
+ t        
+(1 row)

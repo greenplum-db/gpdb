@@ -199,11 +199,11 @@ SELECT * FROM transform(
 ```
 
 The more examples of using GPPC table function are listed in  
-https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/tabfunc_gppc_demo.c
+https://github.com/greenplum-db/gpdb/tree/main/src/interfaces/gppc/test/tabfunc_gppc_demo.c
 
 ### Reference
 https://www.postgresql.org/docs/devel/xfunc-c.html  
-https://github.com/greenplum-db/gpdb/blob/master/src/include/gppc/gppc.h  
-https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/gppc_demo.c  
-https://github.com/greenplum-db/gpdb/tree/master/src/interfaces/gppc/test/tabfunc_gppc_demo.c
+https://github.com/greenplum-db/gpdb/blob/main/src/include/gppc/gppc.h  
+https://github.com/greenplum-db/gpdb/tree/main/src/interfaces/gppc/test/gppc_demo.c  
+https://github.com/greenplum-db/gpdb/tree/main/src/interfaces/gppc/test/tabfunc_gppc_demo.c
 

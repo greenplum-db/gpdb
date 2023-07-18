@@ -1517,6 +1517,9 @@ SetDefaultACL(InternalDefaultACL *iacls)
 		ReleaseSysCache(tuple);
 
 	table_close(rel, RowExclusiveLock);
+
+	/* prevent error when processing duplicate objects */
+	CommandCounterIncrement();
 }
 
 
@@ -1747,6 +1750,11 @@ expand_all_col_privileges(Oid table_oid, Form_pg_class classForm,
 
 		/* Views don't have any system columns at all */
 		if (classForm->relkind == RELKIND_VIEW && curr_att < 0)
+			continue;
+
+		/* AO rows and columns do not have system columns: cmin, cmax, xmin, and xmax */
+		if ((classForm->relam == AO_COLUMN_TABLE_AM_OID || classForm->relam == AO_ROW_TABLE_AM_OID) &&
+			(curr_att >= -5) && (curr_att <=-2))
 			continue;
 
 		attTuple = SearchSysCache2(ATTNUM,

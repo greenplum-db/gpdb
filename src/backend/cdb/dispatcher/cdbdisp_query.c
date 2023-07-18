@@ -37,7 +37,6 @@
 #include "utils/faultinjector.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/cgroup.h"
 #include "utils/session_state.h"
 #include "utils/typcache.h"
 #include "miscadmin.h"
@@ -126,12 +125,10 @@ static List *formIdleSegmentIdList(void);
 
 static bool param_walker(Node *node, ParamWalkerContext *context);
 static Oid	findParamType(List *params, int paramid);
-static Bitmapset *getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
-										  List **paramExecTypes);
+static Bitmapset *getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm);
 static SerializedParams *serializeParamsForDispatch(QueryDesc *queryDesc,
 													ParamListInfo externParams,
 													ParamExecData *execParams,
-													List *paramExecTypes,
 													Bitmapset *sendParams);
 
 
@@ -146,8 +143,6 @@ static SerializedParams *serializeParamsForDispatch(QueryDesc *queryDesc,
  * 'sendParams' indicates which parameters are included and 'execParams'
  * contains their values. 'paramExecTypes' is a list indexed by paramid,
  * containing the datatype OID of each parameter.
- * GPDB_11_MERGE_FIXME: In PostgreSQL v11, we have paramExecTypes in
- * PlannedStmt, so it will no longer be necessary to pass it as a param.
  *
  * If cancelOnError is true, then any dispatching error, a cancellation
  * request from the client, or an error from any of the associated QEs,
@@ -186,7 +181,6 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 {
 	PlannedStmt *stmt;
 	bool		is_SRI = false;
-	List	   *paramExecTypes;
 	Bitmapset  *sendParams;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
@@ -246,11 +240,11 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 	 * values that need to be included with the query. Then serialize them,
 	 * and also any PARAM_EXTERN parameters.
 	 */
-	sendParams = getExecParamsToDispatch(stmt, execParams, &paramExecTypes);
+	sendParams = getExecParamsToDispatch(stmt, execParams);
 	queryDesc->ddesc->paramInfo =
 		serializeParamsForDispatch(queryDesc,
 								   queryDesc->params,
-								   execParams, paramExecTypes, sendParams);
+								   execParams, sendParams);
 
 	/*
 	 * Cursor queries and bind/execute path queries don't run on the
@@ -266,21 +260,6 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 	if (queryDesc->extended_query)
 	{
 		verify_shared_snapshot_ready(gp_command_count);
-	}
-
-	/* In the final stage, add the resource information needed for QE by the resource group */
-	stmt->total_memory_coordinator = 0;
-	stmt->nsegments_coordinator = 0;
-
-	if (IsResGroupEnabled() && gp_resource_group_enable_recalculate_query_mem &&
-		memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
-	{
-		/*
-		 * We enable resource group re-calculate the query_mem on QE, and we are not in
-		 * fall back mode (use statement_mem).
-		 */
-		stmt->total_memory_coordinator = cgroupOpsRoutine->gettotalmemory();
-		stmt->nsegments_coordinator = ResGroupGetHostPrimaryCount();
 	}
 
 	cdbdisp_dispatchX(queryDesc, planRequiresTxn, cancelOnError);
@@ -374,7 +353,7 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 	{
 
 		FlushErrorState();
-		ReThrowError(qeError);
+		ThrowErrorData(qeError);
 	}
 
 	cdbdisp_destroyDispatcherState(ds);
@@ -529,7 +508,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	if (qeError)
 	{
 		FlushErrorState();
-		ReThrowError(qeError);
+		ThrowErrorData(qeError);
 	}
 
 	/* collect pgstat from QEs for current transaction level */
@@ -646,11 +625,8 @@ cdbdisp_buildPlanQueryParms(struct QueryDesc *queryDesc,
 
 	int			splan_len,
 				splan_len_uncompressed,
-				sddesc_len,
-				rootIdx;
+				sddesc_len;
 	Oid			save_userid;
-
-	rootIdx = RootSliceIndex(queryDesc->estate);
 
 	DispatchCommandQueryParms *pQueryParms = (DispatchCommandQueryParms *) palloc0(sizeof(*pQueryParms));
 
@@ -1235,7 +1211,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		if (qeError)
 		{
 			FlushErrorState();
-			ReThrowError(qeError);
+			ThrowErrorData(qeError);
 		}
 
 		/*
@@ -1386,7 +1362,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	if (!cdbdisp_getDispatchResults(ds, &error))
 	{
 		FlushErrorState();
-		ReThrowError(error);
+		ThrowErrorData(error);
 	}
 
 	/*
@@ -1486,7 +1462,6 @@ static SerializedParams *
 serializeParamsForDispatch(QueryDesc *queryDesc,
 						   ParamListInfo externParams,
 						   ParamExecData *execParams,
-						   List *paramExecTypes,
 						   Bitmapset *sendParams)
 {
 	SerializedParams *result = makeNode(SerializedParams);
@@ -1535,7 +1510,7 @@ serializeParamsForDispatch(QueryDesc *queryDesc,
 	/* materialize Exec params */
 	if (!bms_is_empty(sendParams))
 	{
-		int			numExecParams = list_length(paramExecTypes);
+		int			numExecParams = list_length(queryDesc->plannedstmt->paramExecTypes);
 		int			x;
 
 		result->nExecParams = numExecParams;
@@ -1546,7 +1521,7 @@ serializeParamsForDispatch(QueryDesc *queryDesc,
 		{
 			ParamExecData *prm = &execParams[x];
 			SerializedParamExecData *sprm = &result->execParams[x];
-			Oid			ptype = list_nth_oid(paramExecTypes, x);
+			Oid			ptype = list_nth_oid(queryDesc->plannedstmt->paramExecTypes, x);
 
 			sprm->value = prm->value;
 			sprm->isnull = prm->isnull;
@@ -1581,8 +1556,7 @@ serializeParamsForDispatch(QueryDesc *queryDesc,
  * in the EState->es_param_exec_vals array.
  */
 static Bitmapset *
-getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
-						List **paramExecTypes)
+getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm)
 {
 	ParamWalkerContext context;
 	int			i;
@@ -1591,10 +1565,8 @@ getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
 	Bitmapset  *sendParams = NULL;
 
 	if (nIntPrm == 0)
-	{
-		*paramExecTypes = NIL;
 		return NULL;
-	}
+	
 	Assert(intPrm != NULL);		/* So there must be some internal parameters. */
 
 	/*
@@ -1629,12 +1601,10 @@ getExecParamsToDispatch(PlannedStmt *stmt, ParamExecData *intPrm,
 	 * Now set the bit corresponding to each init plan param. Use the datatype
 	 * info harvested above.
 	 */
-	*paramExecTypes = NIL;
 	for (i = 0; i < nIntPrm; i++)
 	{
 		Oid			paramType = findParamType(context.params, i);
 
-		*paramExecTypes = lappend_oid(*paramExecTypes, paramType);
 		if (paramType != InvalidOid)
 		{
 			sendParams = bms_add_member(sendParams, i);

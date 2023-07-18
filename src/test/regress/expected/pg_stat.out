@@ -4,7 +4,7 @@ create table pg_stat_test(a int);
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup
-from pg_stat_all_tables where relname = 'pg_stat_test';
+from gp_stat_all_tables_summary where relname = 'pg_stat_test';
  schemaname |   relname    | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup 
 ------------+--------------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------
  public     | pg_stat_test |        0 |            0 |          |               |         0 |         0 |         0 |             0 |          0 |          0
@@ -13,7 +13,7 @@ from pg_stat_all_tables where relname = 'pg_stat_test';
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup
-from pg_stat_user_tables where relname = 'pg_stat_test';
+from gp_stat_user_tables_summary where relname = 'pg_stat_test';
  schemaname |   relname    | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup 
 ------------+--------------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------
  public     | pg_stat_test |        0 |            0 |          |               |         0 |         0 |         0 |             0 |          0 |          0
@@ -21,14 +21,14 @@ from pg_stat_user_tables where relname = 'pg_stat_test';
 
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_all_indexes where relname = 'pg_stat_test';
+from gp_stat_all_indexes_summary where relname = 'pg_stat_test';
  schemaname | relname | indexrelname | idx_scan | idx_tup_read | idx_tup_fetch 
 ------------+---------+--------------+----------+--------------+---------------
 (0 rows)
 
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_user_indexes where relname = 'pg_stat_test';
+from gp_stat_user_indexes_summary where relname = 'pg_stat_test';
  schemaname | relname | indexrelname | idx_scan | idx_tup_read | idx_tup_fetch 
 ------------+---------+--------------+----------+--------------+---------------
 (0 rows)
@@ -62,7 +62,7 @@ reset enable_seqscan;
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze
-from pg_stat_all_tables where relname = 'pg_stat_test';
+from gp_stat_all_tables_summary where relname = 'pg_stat_test';
  schemaname |   relname    | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
 ------------+--------------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------+---------------------
  public     | pg_stat_test |       12 |          391 |        1 |             0 |       110 |         0 |        19 |             0 |         91 |         19 |                 129
@@ -71,7 +71,7 @@ from pg_stat_all_tables where relname = 'pg_stat_test';
 select
     schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,
     n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze
-from pg_stat_user_tables where relname = 'pg_stat_test';
+from gp_stat_user_tables_summary where relname = 'pg_stat_test';
  schemaname |   relname    | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_tup_ins | n_tup_upd | n_tup_del | n_tup_hot_upd | n_live_tup | n_dead_tup | n_mod_since_analyze 
 ------------+--------------+----------+--------------+----------+---------------+-----------+-----------+-----------+---------------+------------+------------+---------------------
  public     | pg_stat_test |       12 |          391 |        1 |             0 |       110 |         0 |        19 |             0 |         91 |         19 |                 129
@@ -79,7 +79,7 @@ from pg_stat_user_tables where relname = 'pg_stat_test';
 
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_all_indexes where relname = 'pg_stat_test';
+from gp_stat_all_indexes_summary where relname = 'pg_stat_test';
  schemaname |   relname    |       indexrelname       | idx_scan | idx_tup_read | idx_tup_fetch 
 ------------+--------------+--------------------------+----------+--------------+---------------
  public     | pg_stat_test | pg_stat_user_table_index |        1 |            1 |             0
@@ -87,10 +87,235 @@ from pg_stat_all_indexes where relname = 'pg_stat_test';
 
 select
     schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch
-from pg_stat_user_indexes where relname = 'pg_stat_test';
+from gp_stat_user_indexes_summary where relname = 'pg_stat_test';
  schemaname |   relname    |       indexrelname       | idx_scan | idx_tup_read | idx_tup_fetch 
 ------------+--------------+--------------------------+----------+--------------+---------------
  public     | pg_stat_test | pg_stat_user_table_index |        1 |            1 |             0
 (1 row)
 
 reset optimizer;
+------------
+-- "user" views should exclude AO/CO auxiliary tables, and "sys" views should include them
+------------
+create table pg_stat_ao(a int) using ao_row;
+create table pg_stat_co(a int) using ao_column;
+create index pg_stat_ao_ind on pg_stat_ao(a);
+create index pg_stat_co_ind on pg_stat_co(a);
+-- "user" views:
+select c.relname from pg_stat_user_tables s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_stat_user_tables s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_stat_user_tables_summary s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from pg_stat_xact_user_tables s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_stat_xact_user_tables s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from pg_stat_user_indexes s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_stat_user_indexes s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_stat_user_indexes_summary s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from pg_statio_user_indexes s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_statio_user_indexes s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+-- no AO/CO aux tables are sequence, but test it anyway 
+select c.relname from pg_statio_user_sequences s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_statio_user_sequences s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+-- "sys" views:
+-- for cluster-wide views, just test output of one segment.
+-- also take a fixed part of the aux table names to avoid different column length because of OIDs.
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from pg_stat_sys_tables s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%';
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aoseg_
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aocsse
+ pg_stat_co | pg_aovisi
+(6 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from gp_stat_sys_tables s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aoseg_
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aocsse
+ pg_stat_co | pg_aovisi
+(6 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from pg_stat_xact_sys_tables s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%';
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aoseg_
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aocsse
+ pg_stat_co | pg_aovisi
+(6 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from gp_stat_xact_sys_tables s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aoseg_
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aocsse
+ pg_stat_co | pg_aovisi
+(6 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from pg_statio_sys_tables s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%';
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aoseg_
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aocsse
+ pg_stat_co | pg_aovisi
+(6 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from gp_statio_sys_tables s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aoseg_
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aocsse
+ pg_stat_co | pg_aovisi
+(6 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from pg_stat_sys_indexes s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%';
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aovisi
+(4 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from gp_stat_sys_indexes s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aovisi
+(4 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from pg_statio_sys_indexes s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%';
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aovisi
+(4 rows)
+
+select c.relname as aorelname, substring(s.relname, 1, 9) as aoauxrelname 
+from gp_statio_sys_indexes s 
+join pg_appendonly a on s.relid = a.segrelid or s.relid = a.blkdirrelid or s.relid = a.visimaprelid 
+join pg_class c on a.relid = c.oid 
+where c.relname like 'pg_stat_%' and gp_segment_id = 0;
+ aorelname  | aoauxrelname 
+------------+--------------
+ pg_stat_ao | pg_aoblkd
+ pg_stat_ao | pg_aovisi
+ pg_stat_co | pg_aoblkd
+ pg_stat_co | pg_aovisi
+(4 rows)
+
+-- no AO/CO aux tables are sequence, but test it anyway 
+select c.relname from pg_statio_sys_sequences s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+
+select c.relname from gp_statio_sys_sequences s join pg_class c on s.relid = c.oid where c.relkind in ('o', 'b', 'M');
+ relname 
+---------
+(0 rows)
+

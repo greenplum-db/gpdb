@@ -622,34 +622,6 @@ inner join lateral
  from t_mylog_issue_8860 where myid = ml1.myid and log_date > ml1.log_date order by log_date asc limit 1) ml2
 on true;
 
--- test prefetch join qual
--- we do not handle this correct
--- the only case we need to prefetch join qual is:
---   1. outer plan contains motion
---   2. the join qual contains subplan that contains motion
-reset client_min_messages;
-set Test_print_prefetch_joinqual = true;
--- prefetch join qual is only set correct for planner
-set optimizer = off;
-
-create table t1_test_pretch_join_qual(a int, b int, c int);
-create table t2_test_pretch_join_qual(a int, b int, c int);
-
--- the following plan contains redistribute motion in both inner and outer plan
--- the join qual is t1.c > t2.c, it contains no motion, should not prefetch
-explain (costs off) select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
-on t1.b = t2.b and t1.c > t2.c;
-
-create table t3_test_pretch_join_qual(a int, b int, c int);
-
--- the following plan contains motion in both outer plan and join qual,
--- so we should prefetch join qual
-explain (costs off) select * from t1_test_pretch_join_qual t1 join t2_test_pretch_join_qual t2
-on t1.b = t2.b and t1.a > any (select sum(b) from t3_test_pretch_join_qual t3 where c > t2.a);
-
-reset Test_print_prefetch_joinqual;
-reset optimizer;
-
 -- Github Issue: https://github.com/greenplum-db/gpdb/issues/9733
 -- Previously in the function bring_to_outer_query and
 -- bring_to_singleQE it depends on the path->param_info field
@@ -768,3 +740,254 @@ full join ( select r.id1, r.id2 from t_issue_10315 r group by r.id1, r.id2 ) tq_
 on (coalesce(t.id1) = tq_all.id1  and t.id2 = tq_all.id2) ;
 
 drop table t_issue_10315;
+--
+-- Left Join Pruning --
+-- Cases when join will be pruned--
+-- Single Unique key in inner relation --
+create table fooJoinPruning (a int,b int,c int,constraint idx1 unique(a));
+create table barJoinPruning (p int,q int,r int,constraint idx2 unique(p));
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100  where fooJoinPruning.b>300;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b>300;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains subquery--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b>300 and fooJoinPruning.c in (select barJoinPruning.q from barJoinPruning );
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p where fooJoinPruning.b>300 and fooJoinPruning.c > ANY (select barJoinPruning.q from barJoinPruning );
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing outer relation column--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select fooJoinPruning.a from barJoinPruning);
+drop table fooJoinPruning;
+drop table barJoinPruning;
+-- MultipleUnique key sets  in inner relation --
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+create table t1JoinPruning(m int primary key,n int);
+create table t2JoinPruning(x int primary key,y int);
+-- Unique key set of inner relation ie 'p,q' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200 where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.q=100 where fooJoinPruning.e >300 and fooJoinPruning.f<>10;
+-- Unique key set of inner relation ie 'p,r,s' is present in the join condition and is equal to a column from outer relation or is a constant --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and barJoinPruning.r=100 and fooJoinPruning.b=barJoinPruning.s where fooJoinPruning.f<>10;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and fooJoinPruning.c=barJoinPruning.s and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains subquery --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.c in (select barJoinPruning.t from barJoinPruning );
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.c > ANY (select barJoinPruning.t from barJoinPruning );
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing outer relation column --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.e in (select fooJoinPruning.f from barJoinPruning);
+-- Prunable Left join present in subquery --
+explain select t1JoinPruning.n from t1JoinPruning where t1JoinPruning.m in (select fooJoinPruning.a from fooJoinPruning left join barJoinPruning on barJoinPruning.p=100 and barJoinPruning.q=200);
+drop table fooJoinPruning;
+drop table barJoinPruning;
+drop table t1JoinPruning;
+drop table t2JoinPruning;
+create table t1 (a int);
+create table t2 (a int primary key, b int);
+create table t3 (a int primary key, b int);
+-- inner table is join
+EXPLAIN select t1.a from t1 left join (t2 join t3 on true) on t2.a=t1.a and t3.a=t1.a;
+-- inner table has new left join
+EXPLAIN select t1.* from t1 left join (t2 left join t3 on t3.a=t2.b) on t2.a=t1.a;
+-- inner table is a derived table
+EXPLAIN
+select t1.* from t1 left join
+                 (
+                     select t2.b as v2b, count(*) as v2c
+                     from t2 left join t3 on t3.a=t2.b
+                     group by t2.b
+                 ) v2
+                 on v2.v2b=t1.a;
+drop table t1;
+drop table t2;
+drop table t3;
+--
+-- Cases where join will not be pruned
+--
+-- Single Unique key in inner relation --
+create table fooJoinPruning (a int,b int,c int,constraint idx1 unique(a));
+create table barJoinPruning (p int,q int,r int,constraint idx2 unique(p));
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation but filter is on a inner relation --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=fooJoinPruning.b  where barJoinPruning.q<>10;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation but output columns are from inner relation --
+explain select barJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p=fooJoinPruning.b  where fooJoinPruning.b>1000;
+-- Subquery present in join condition
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p in (select fooJoinPruning.b from fooJoinPruning  ) where fooJoinPruning.c>100;
+-- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing inner relation column--
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select barJoinPruning.q from fooJoinPruning);
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select barJoinPruning.q from fooJoinPruning where fooJoinPruning.a=barJoinPruning.r);
+drop table fooJoinPruning;
+drop table barJoinPruning;
+-- Multiple Unique key sets  in inner relation --
+create table fooJoinPruning (a int, b int, c int,d int,e int,f int,g int,constraint idx1 unique(a,b),constraint idx2 unique(a,c,d));
+create table barJoinPruning (p int, q int, r int,s int,t int,u int,v int,constraint idx3 unique(p,q),constraint idx4 unique(p,r,s));
+-- No equality operator present in join condition --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on barJoinPruning.p>100 and barJoinPruning.q>200  where fooJoinPruning.b>300;
+-- OR operator is present in join condition --
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.c=barJoinPruning.r or fooJoinPruning.d=barJoinPruning.s;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p or fooJoinPruning.b=barJoinPruning.q  where fooJoinPruning.b>300;
+-- Not all unique keys of inner relation are equal to a constant or column from outer relation
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and barJoinPruning.r=barJoinPruning.s;
+explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.a=barJoinPruning.p and fooJoinPruning.b=barJoinPruning.r and barJoinPruning.s=barJoinPruning.t where fooJoinPruning.b>300;
+drop table fooJoinPruning;
+drop table barJoinPruning;
+
+-----------------------------------------------------------------
+-- Test cases on Dynamic Partition Elimination(DPE) for Right Joins
+-----------------------------------------------------------------
+
+-- Note1 : DPE for Right join will happen if, all the following satisfy
+-- Condition 1: Outer table is partition table
+-- Condition 2: The partitioned column is same as distribution column
+-- Condition 3: Join condition is on partitioned key of outer table
+
+-- Note2 : To view the effect of DPE, the queries should be run with
+-- "Explain Analyze ...". With it, the exact number of partitions scanned
+-- will be shows in the plan.
+-- Eg: explain analyze select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a;
+
+drop table if exists foo;
+drop table if exists bar_PT1;
+drop table if exists bar_PT2;
+drop table if exists bar_PT3;
+drop table if exists bar_List_PT1;
+drop table if exists bar_List_PT2;
+
+-- Table creation : Normal table
+create table foo (a int , b int) distributed by (a);
+insert into foo select i,i from generate_series(1,5)i;
+analyze foo;
+-- Table creation : First range Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_PT1 (a1_PC int, b1 int) partition by range(a1_PC) (start (1) inclusive end (12) every (2)) distributed by (a1_PC);
+insert into bar_PT1 select i,i from generate_series(1,11)i;
+analyze bar_PT1;
+-- Table creation : Second range Partitioned table with different 'Distribution Column' and 'Partitioning key'
+create table bar_PT2 (a2 int, b2_PC int) partition by range(b2_PC) (start (1) inclusive end (12) every (2)) distributed by (a2);
+insert into bar_PT2 select i,i from generate_series(1,11)i;
+analyze bar_PT2;
+-- Table creation : Third range Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_PT3 (a3_PC int, b3 int) partition by range(a3_PC) (start (1) inclusive end (6) every (2))distributed by (a3_PC);
+insert into bar_PT3 select i,i from generate_series(1,5)i;
+analyze bar_PT3;
+
+-- Table creation : First list Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_List_PT1 (a1_PC int, b1 int) partition by list(a1_PC)
+(partition p1 values(1,2), partition p2 values(3,4), partition p3 values(5,6), partition p4 values(7,8), partition p5 values(9,10),
+ partition p6 values(11,12), partition p7 values(13,14), partition p8 values(15,16), partition p9 values(17,18), partition p10 values(19,20),
+ partition p11 values(21,22), partition p12 values(23,24), default partition pdefault) distributed by (a1_PC);
+insert into bar_List_PT1 select i,i from generate_series(1,24)i;
+analyze bar_List_PT1;
+
+-- Table creation : Second list Partitioned table with same 'Distribution Column' and 'Partitioning key'
+create table bar_List_PT2 (a2_PC int, b2 int) partition by list(a2_PC)
+ (partition p1 values(1,2), partition p2 values(3,4), partition p3 values(5,6), partition p4 values(7,8), partition p5 values(9,10),
+ partition p6 values(11,12), default partition pdefault) distributed by (a2_PC);
+insert into bar_List_PT2 select i,i from generate_series(1,12)i;
+analyze bar_List_PT2;
+
+-- Case-1 : Distribution colm = Partition Key.
+
+-- FOR RANGE PARTITIONED TABLE
+
+-- Outer table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - YES
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a;
+-- Outer table: Partitioned table, Join Condition on Partition key: No, Result: DPE - No
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.b1 =foo.a;
+select * from bar_PT1 right join foo on bar_PT1.b1 =foo.a;
+-- Outer,Inner table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - Yes
+explain (costs off) select * from bar_PT1 right join bar_PT3 on bar_PT1.a1_PC =bar_PT3.a3_PC;
+select * from bar_PT1 right join bar_PT3 on bar_PT1.a1_PC =bar_PT3.a3_PC;
+-- Outer table: Not a Partitioned table, Join Condition on Partition key: Yes, Result: DPE - No
+explain (costs off) select * from foo right join bar_PT1 on foo.a=bar_PT1.a1_PC;
+select * from foo right join bar_PT1 on foo.a=bar_PT1.a1_PC;
+-- Right join with predicate on the column of non partitioned table in 'where clause'.
+-- Result: DPE - Yes,
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a where foo.a>2;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a where foo.a>2;
+--Conjunction in join condition, Result: DPE - Yes
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and bar_PT1.b1 =foo.b;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and bar_PT1.b1 =foo.b;
+
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and foo.b>2;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a and foo.b>2;
+
+-- Multiple Right Joins, DPE- Yes
+explain (costs off) select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a right join bar_PT2 on bar_PT1.a1_PC =bar_PT2.b2_PC;
+select * from bar_PT1 right join foo on bar_PT1.a1_PC =foo.a right join bar_PT2 on bar_PT1.a1_PC =bar_PT2.b2_PC;
+
+-- FOR LIST PARTITIONED TABLE
+
+-- Outer table: List Partitioned table, Join Condition on Partition key: Yes, Result: DPE - YES
+explain (costs off) select * from bar_List_PT1 right join foo on bar_List_PT1.a1_PC =foo.a;
+select * from bar_List_PT1 right join foo on bar_List_PT1.a1_PC =foo.a;
+
+-- Outer,Inner table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - Yes
+explain (costs off) select * from bar_List_PT1 right join bar_List_PT2 on bar_List_PT1.a1_PC =bar_List_PT2.a2_PC;
+select * from bar_List_PT1 right join bar_List_PT2 on bar_List_PT1.a1_PC =bar_List_PT2.a2_PC;
+
+-- Case-2 : Distribution colm <> Partition Key.
+
+-- Outer table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - No
+explain (costs off) select * from bar_PT2 right join foo on bar_PT2.b2_PC =foo.a;
+select * from bar_PT2 right join foo on bar_PT2.b2_PC =foo.a;
+-- Outer,Inner table: Partitioned table, Join Condition on Partition key: Yes, Result: DPE - No
+explain (costs off) select * from bar_PT2 right join bar_PT1 on bar_PT2.b2_PC =bar_PT1.b1;
+select * from bar_PT2 right join bar_PT1 on bar_PT2.b2_PC =bar_PT1.b1;
+
+drop table if exists foo;
+drop table if exists bar_PT1;
+drop table if exists bar_PT2;
+drop table if exists bar_PT3;
+drop table if exists bar_List_PT1;
+drop table if exists bar_List_PT2;
+
+create table foo_varchar (a varchar(5)) distributed by (a);
+create table bar_char (p char(5)) distributed by (p);
+create table random_dis_varchar (x varchar(5)) distributed randomly;
+create table random_dis_char (y char(5)) distributed randomly;
+
+insert into foo_varchar values ('1 '),('2  '),('3   ');
+insert into bar_char values ('1 '),('2  '),('3   ');
+insert into random_dis_varchar values ('1 '),('2  '),('3   ');
+insert into random_dis_char values ('1 '),('2  '),('3   ');
+
+set optimizer_enable_hashjoin to off;
+set enable_hashjoin to off;
+set enable_nestloop to on;
+
+-- check motion is added when performing a NL Left Outer Join between relations
+-- when the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar left join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar left join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char left join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+-- check motion is added when performing a NL Inner Join between relations when
+-- the join condition columns belong to different opfamily and both are
+-- distribution keys
+explain select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+select * from foo_varchar inner join bar_char on foo_varchar.a=bar_char.p;
+
+-- There is a plan change (from redistribution to broadcast) because a NULL
+-- matching distribution is returned when there is opfamily mismatch between join
+-- columns.
+explain select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis_char.y;
+
+explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
+
+drop table foo_varchar;
+drop table bar_char;
+drop table random_dis_varchar;
+drop table random_dis_char;
+
+set optimizer_enable_hashjoin to on;
+reset enable_hashjoin;
+reset enable_nestloop;

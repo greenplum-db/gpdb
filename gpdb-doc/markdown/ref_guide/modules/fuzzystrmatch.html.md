@@ -10,5 +10,5 @@ The `fuzzystrmatch` module is installed when you install Greenplum Database. Bef
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [fuzzystrmatch](https://www.postgresql.org/docs/9.4/fuzzystrmatch.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
+See [fuzzystrmatch](https://www.postgresql.org/docs/12/fuzzystrmatch.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
 

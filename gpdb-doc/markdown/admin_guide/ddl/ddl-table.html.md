@@ -33,7 +33,7 @@ You can define constraints on columns and tables to restrict the data in your ta
 -   `CHECK` constraints can refer only to the table on which they are defined.
 -   `UNIQUE` and `PRIMARY KEY` constraints must be compatible with their tableʼs distribution key and partitioning key, if any.
 
-    **Note:** `UNIQUE` and `PRIMARY KEY` constraints are not allowed on append-optimized tables because the `UNIQUE` indexes that are created by the constraints are not allowed on append-optimized tables.
+    > **Note** `UNIQUE` and `PRIMARY KEY` constraints are not allowed on append-optimized tables because the `UNIQUE` indexes that are created by the constraints are not allowed on append-optimized tables.
 
 -   `FOREIGN KEY` constraints are allowed, but not enforced.
 -   Constraints that you define on partitioned tables apply to the partitioned table as a whole. You cannot define constraints on the individual parts of the table.
@@ -93,11 +93,31 @@ Foreign keys are not supported. You can declare them, but referential integrity 
 
 Foreign key constraints specify that the values in a column or a group of columns must match the values appearing in some row of another table to maintain referential integrity between two related tables. Referential integrity checks cannot be enforced between the distributed table segments of a Greenplum database.
 
+#### <a id="exclusion"></a>Exclusion Constraints
+
+Exclusion constraints ensure that if any two rows are compared on the specified columns or expressions using the specified operators, at least one of these operator comparisons will return false or null. The syntax is:
+
+``` sql
+CREATE TABLE circles (
+    c circle,
+    EXCLUDE USING gist (c WITH &&)
+) DISTRIBUTED REPLICATED;
+```
+
+Similar to unique constraints, an exclusion constraint is permitted only for replicated tables or when the distribution key columns are part of the constraint, with the same `=` operator as in the distribution key's hash operator class.
+
+Exclusion constraints are not supported for partitioned tables.
+
+See also [CREATE TABLE ... CONSTRAINT ... EXCLUDE](../../ref_guide/sql_commands/CREATE_TABLE.html) for details.
+
+Adding an exclusion constraint automatically creates an index of the type specified in the constraint declaration.
+
+
 ### <a id="topic34"></a>Choosing the Table Distribution Policy 
 
-All Greenplum Database tables are distributed. When you create or alter a table, you optionally specify `DISTRIBUTED BY` \(hash distribution\), `DISTRIBUTED RANDOMLY` \(round-robin distribution\), or `DISTRIBUTED REPLICATED` \(fully distributed\) to determine the table row distribution.
+All Greenplum Database tables are distributed. When you create or alter a table, you optionally specify `DISTRIBUTED BY` \(hash distribution\), `DISTRIBUTED RANDOMLY` \(random distribution\), or `DISTRIBUTED REPLICATED` \(fully distributed\) to determine the table row distribution.
 
-**Note:** The Greenplum Database server configuration parameter `gp_create_table_random_default_distribution` controls the table distribution policy if the DISTRIBUTED BY clause is not specified when you create a table.
+> **Note** The Greenplum Database server configuration parameter `gp_create_table_random_default_distribution` controls the table distribution policy if the DISTRIBUTED BY clause is not specified when you create a table.
 
 For information about the parameter, see "Server Configuration Parameters" of the *Greenplum Database Reference Guide*.
 
@@ -112,11 +132,11 @@ The replicated table distribution policy \(`DISTRIBUTED REPLICATED`\) should be 
 -   remove restrictions on operations that user-defined functions can perform on segments, and
 -   improve query performance by making it unnecessary to broadcast frequently used tables to all segments.
 
-**Note:** The hidden system columns \(`ctid`, `cmin`, `cmax`, `xmin`, `xmax`, and `gp_segment_id`\) cannot be referenced in user queries on replicated tables because they have no single, unambiguous value. Greenplum Database returns a `column does not exist` error for the query.
+> **Note** The hidden system columns \(`ctid`, `cmin`, `cmax`, `xmin`, `xmax`, and `gp_segment_id`\) cannot be referenced in user queries on replicated tables because they have no single, unambiguous value. Greenplum Database returns a `column does not exist` error for the query.
 
 #### <a id="topic35"></a>Declaring Distribution Keys 
 
-`CREATE TABLE`'s optional clauses `DISTRIBUTED BY`, `DISTRIBUTED RANDOMLY`, and `DISTRIBUTED REPLICATED` specify the distribution policy for a table. The default is a hash distribution policy that uses either the `PRIMARY KEY` \(if the table has one\) or the first column of the table as the distribution key. Columns with geometric or user-defined data types are not eligible as Greenplum Database distribution key columns. If a table does not have an eligible column, Greenplum Database distributes the rows randomly or in round-robin fashion.
+`CREATE TABLE`'s optional clauses `DISTRIBUTED BY`, `DISTRIBUTED RANDOMLY`, and `DISTRIBUTED REPLICATED` specify the distribution policy for a table. The default is a hash distribution policy that uses either the `PRIMARY KEY` \(if the table has one\) or the first column of the table as the distribution key. Columns with geometric or user-defined data types are not eligible as Greenplum Database distribution key columns. If a table does not have an eligible column, Greenplum Database distributes the rows randomly.
 
 Replicated tables have no distribution key because every row is distributed to every Greenplum Database segment instance.
 
@@ -140,7 +160,7 @@ To ensure even distribution of hash-distributed data, choose a distribution key 
 `
 ```
 
-**Important:** If a primary key exists, it is the default distribution key for the table. If no primary key exists, but a unique key exists, this is the default distribution key for the table.
+> **Important** If a primary key exists, it is the default distribution key for the table. If no primary key exists, but a unique key exists, this is the default distribution key for the table.
 
 #### <a id="topic36"></a>Custom Distribution Key Hash Functions 
 

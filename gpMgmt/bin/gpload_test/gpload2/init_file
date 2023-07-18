@@ -1,3 +1,10 @@
+-- start_matchignore
+m/^WARNING:  nonstandard use of.*/
+m/^LINE \d+:                  and pgext.fmtopts like.*/
+m/ +\^/
+m/^HINT:  Use the escape string syntax for backslashes.*/
+-- end_matchignore
+
 -- start_matchsubs
 -- m/|/
 -- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d+)-(\d+)/TODAYS_DATE/
@@ -16,7 +23,7 @@
 -- m/started gpfdist/
 -- s/started gpfdist -p \d* -P \d* -f .*/ports/
 -- m/gpfdist:/
--- s#gpfdist://\d*.\d*.\d*.\d*:\d*//\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*\w*\W*data_file.txt#LOCATION#
+-- s#gpfdist:.*data_file.txt#LOCATION#
 -- m/data_file.tbl/
 -- s/(").*data_file.tbl(")/data/
 -- m/cmdtime/

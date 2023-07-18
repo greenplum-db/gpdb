@@ -84,6 +84,10 @@ public:
 			xml_serializer,
 			CDXLTokens::GetDXLTokenStr(EdxltokenMDTypeLegacyDistrOpfamily),
 			mdtype->m_legacy_distr_opfamily);
+		mdtype->SerializeMDIdAsElem(
+			xml_serializer,
+			CDXLTokens::GetDXLTokenStr(EdxltokenMDTypePartOpfamily),
+			mdtype->m_part_opfamily);
 
 		mdtype->SerializeMDIdAsElem(
 			xml_serializer, CDXLTokens::GetDXLTokenStr(EdxltokenMDTypeEqOp),

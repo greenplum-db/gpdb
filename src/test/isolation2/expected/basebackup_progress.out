@@ -1,0 +1,206 @@
+!\retcode rm -rf /tmp/basebackup_progress_tablespace;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode mkdir -p /tmp/basebackup_progress_tablespace;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+CREATE TABLESPACE basebackuptest_space LOCATION '/tmp/basebackup_progress_tablespace';
+CREATE TABLESPACE
+
+-- Inject fault after checkpoint creation in basebackup
+SELECT gp_inject_fault('basebackup_progress_tablespace_streamed', 'suspend', dbid) FROM gp_segment_configuration WHERE content >= -1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+
+-- Run pg_basebackup which should trigger and suspend at the fault
+1&: SELECT pg_basebackup(hostname, 100+content, port, false, NULL, '/tmp/baseback_progress_test' || content, true, 'fetch', true) from gp_segment_configuration where content = -1 and role = 'p';  <waiting ...>
+2&: SELECT pg_basebackup(hostname, 100+content, port, false, NULL, '/tmp/baseback_progress_test' || content, true, 'fetch', true) from gp_segment_configuration where content = 0 and role = 'p';  <waiting ...>
+3&: SELECT pg_basebackup(hostname, 100+content, port, false, NULL, '/tmp/baseback_progress_test' || content, true, 'fetch', true) from gp_segment_configuration where content = 1 and role = 'p';  <waiting ...>
+4&: SELECT pg_basebackup(hostname, 100+content, port, false, NULL, '/tmp/baseback_progress_test' || content, true, 'fetch', true) from gp_segment_configuration where content = 2 and role = 'p';  <waiting ...>
+
+-- Wait until fault has been triggered
+SELECT gp_wait_until_triggered_fault('basebackup_progress_tablespace_streamed', 1, dbid) FROM gp_segment_configuration WHERE content >= -1 and role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+ Success:                      
+(4 rows)
+
+-- See that pg_basebackup is still running
+SELECT application_name, state FROM pg_stat_replication;
+ application_name | state     
+------------------+-----------
+ gp_walreceiver   | streaming 
+ pg_basebackup    | backup    
+(2 rows)
+SELECT gp_segment_id, pid is not null as has_pid, phase, (backup_total > backup_streamed and tablespaces_total >= tablespaces_streamed) as is_streaming_tablespaces, tablespaces_streamed = 1 FROM gp_stat_progress_basebackup ORDER BY gp_segment_id ASC;
+ gp_segment_id | has_pid | phase                    | is_streaming_tablespaces | ?column? 
+---------------+---------+--------------------------+--------------------------+----------
+ -1            | t       | streaming database files | t                        | t        
+ 0             | t       | streaming database files | t                        | t        
+ 1             | t       | streaming database files | t                        | t        
+ 2             | t       | streaming database files | t                        | t        
+(4 rows)
+SELECT s.pid is not null as has_pid, s.phase, (s.backup_total = (select sum(backup_total) from gp_stat_progress_basebackup)) as sum_backup_total, (s.backup_streamed = (select sum(backup_streamed) from gp_stat_progress_basebackup)) as sum_backup_streamed, (s.tablespaces_total = (select avg(tablespaces_total) from gp_stat_progress_basebackup)) as avg_tablespace_total, (s.tablespaces_streamed = (select avg(tablespaces_streamed) from gp_stat_progress_basebackup)) as avg_tablespace_streamed FROM gp_stat_progress_basebackup_summary s;
+ has_pid | phase                    | sum_backup_total | sum_backup_streamed | avg_tablespace_total | avg_tablespace_streamed 
+---------+--------------------------+------------------+---------------------+----------------------+-------------------------
+ t       | streaming database files | t                | t                   | t                    | t                       
+(1 row)
+
+-- Resume basebackup
+SELECT gp_inject_fault('basebackup_progress_end', 'suspend', dbid) FROM gp_segment_configuration WHERE content >= -1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+SELECT gp_inject_fault('basebackup_progress_tablespace_streamed', 'reset', dbid) FROM gp_segment_configuration WHERE content >= -1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+
+-- Wait until fault has been triggered
+SELECT gp_wait_until_triggered_fault('basebackup_progress_end', 1, dbid) FROM gp_segment_configuration WHERE content >= -1 and role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+ Success:                      
+(4 rows)
+
+-- See that pg_basebackup is still running
+SELECT application_name, state FROM pg_stat_replication;
+ application_name | state     
+------------------+-----------
+ gp_walreceiver   | streaming 
+ pg_basebackup    | backup    
+(2 rows)
+SELECT gp_segment_id, pid is not null as has_pid, phase, (backup_total = backup_streamed and tablespaces_total = tablespaces_streamed) as backup_all FROM gp_stat_progress_basebackup ORDER BY gp_segment_id ASC;
+ gp_segment_id | has_pid | phase                  | backup_all 
+---------------+---------+------------------------+------------
+ -1            | t       | transferring wal files | t          
+ 0             | t       | transferring wal files | t          
+ 1             | t       | transferring wal files | t          
+ 2             | t       | transferring wal files | t          
+(4 rows)
+SELECT s.pid is not null as has_pid, s.phase, (s.backup_total = (select sum(backup_total) from gp_stat_progress_basebackup)) as sum_backup_total, (s.backup_streamed = (select sum(backup_streamed) from gp_stat_progress_basebackup)) as sum_backup_streamed, (s.tablespaces_total = (select avg(tablespaces_total) from gp_stat_progress_basebackup)) as avg_tablespace_total, (s.tablespaces_streamed = (select avg(tablespaces_streamed) from gp_stat_progress_basebackup)) as avg_tablespace_streamed FROM gp_stat_progress_basebackup_summary s;
+ has_pid | phase                  | sum_backup_total | sum_backup_streamed | avg_tablespace_total | avg_tablespace_streamed 
+---------+------------------------+------------------+---------------------+----------------------+-------------------------
+ t       | transferring wal files | t                | t                   | t                    | t                       
+(1 row)
+
+-- Resume basebackup
+SELECT gp_inject_fault('basebackup_progress_end', 'reset', dbid) FROM gp_segment_configuration WHERE content >= -1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+ Success:        
+(4 rows)
+
+-- Wait until basebackup finishes
+--start_ignore
+1<:  <... completed>
+ pg_basebackup                                                                                                                                                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ waiting for checkpoint
+     0/104217 kB (0%), 0/2 tablespaces
+ 80426/104217 kB (77%), 1/2 tablespaces
+169764/169764 kB (100%), 1/2 tablespaces
+169764/169764 kB (100%), 1/2 tablespaces
+169764/169764 kB (100%), 2/2 tablespaces
+ 
+(1 row)
+2<:  <... completed>
+ pg_basebackup                                                                                                                                                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ waiting for checkpoint
+     0/103792 kB (0%), 0/2 tablespaces
+   252/103792 kB (0%), 1/2 tablespaces
+169338/169338 kB (100%), 1/2 tablespaces
+169339/169339 kB (100%), 1/2 tablespaces
+169339/169339 kB (100%), 2/2 tablespaces
+ 
+(1 row)
+3<:  <... completed>
+ pg_basebackup                                                                                                                                                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ waiting for checkpoint
+     0/103792 kB (0%), 0/2 tablespaces
+ 79127/103792 kB (76%), 1/2 tablespaces
+169338/169338 kB (100%), 1/2 tablespaces
+169339/169339 kB (100%), 1/2 tablespaces
+169339/169339 kB (100%), 2/2 tablespaces
+ 
+(1 row)
+4<:  <... completed>
+ pg_basebackup                                                                                                                                                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ waiting for checkpoint
+     0/103792 kB (0%), 0/2 tablespaces
+   771/103792 kB (0%), 1/2 tablespaces
+169338/169338 kB (100%), 1/2 tablespaces
+169339/169339 kB (100%), 1/2 tablespaces
+169339/169339 kB (100%), 2/2 tablespaces
+ 
+(1 row)
+--end_ignore
+
+-- The summary view should be empty after basebackup finishes
+select * from gp_stat_progress_basebackup_summary;
+ pid | phase | backup_total | backup_streamed | tablespaces_total | tablespaces_streamed 
+-----+-------+--------------+-----------------+-------------------+----------------------
+(0 rows)
+
+drop tablespace basebackuptest_space;
+DROP TABLESPACE
+
+-- loop while segments come in sync
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+--start_ignore
+-- cleanup
+!\retcode rm -rf /tmp/baseback_progress_test-1;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode rm -rf /tmp/baseback_progress_test0;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode rm -rf /tmp/baseback_progress_test1;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode rm -rf /tmp/baseback_progress_test2;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+--end_ignore

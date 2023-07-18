@@ -42,6 +42,7 @@
 #include "utils/guc.h"
 #include "utils/int8.h"
 #include "utils/snapmgr.h"
+#include "utils/syscache.h"
 
 #define SEGFILE_CAPACITY_THRESHOLD	0.9
 
@@ -163,8 +164,8 @@ LockSegnoForWrite(Relation rel, int segno)
 	LockRelationForExtension(rel, ExclusiveLock);
 
 	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-	GetAppendOnlyEntryAuxOids(rel->rd_id, appendOnlyMetaDataSnapshot,
-							  &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(rel,
+							  &segrelid, NULL, NULL);
 	/*
 	 * Now pick a segment that is not in use, and is not over the allowed
 	 * size threshold (90% full).
@@ -214,7 +215,7 @@ LockSegnoForWrite(Relation rel, int segno)
 			elog(ERROR, "segfile %d is full", segno);
 
 		/* Skip using the ao segment if not latest version (except as a compaction target) */
-		if (formatversion != AORelationVersion_GetLatest())
+		if (formatversion != AOSegfileFormatVersion_GetLatest())
 			elog(ERROR, "segfile %d is not of the latest version", segno);
 
 		found = true;
@@ -332,9 +333,6 @@ ChooseSegnoForCompaction(Relation rel, List *avoid_segnos)
 static bool
 ShouldUseReservedSegno(Relation rel, choose_segno_mode mode)
 {
-	Relation pg_class;
-	ScanKeyData scankey[1];
-	SysScanDesc scan;
 	HeapTuple tuple;
 	TransactionId xmin;
 
@@ -345,21 +343,13 @@ ShouldUseReservedSegno(Relation rel, choose_segno_mode mode)
 	if (mode != CHOOSE_MODE_WRITE)
 		return false;
 
-	ScanKeyInit(&scankey[0],
-				Anum_pg_class_oid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(RelationGetRelid(rel)));
-	pg_class = table_open(RelationRelationId, AccessShareLock);
-	scan = systable_beginscan(pg_class, ClassOidIndexId, true,
-							  NULL, 1, scankey);
-	tuple = systable_getnext(scan);
-	if (!tuple)
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(RelationGetRelid(rel)));
+	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "unable to find relation entry in pg_class for %s",
 			 RelationGetRelationName(rel));
 	
 	xmin = HeapTupleHeaderGetXmin(tuple->t_data);
-	systable_endscan(scan);
-	table_close(pg_class, NoLock);
+	ReleaseSysCache(tuple);
 
 	return TransactionIdIsCurrentTransactionId(xmin);
 }
@@ -445,8 +435,8 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 		LogDistributedSnapshotInfo(snapshot, "Used snapshot: ");
 	}
 
-	GetAppendOnlyEntryAuxOids(rel->rd_id, NULL,
-							  &segrelid, NULL, NULL, NULL, NULL);
+	GetAppendOnlyEntryAuxOids(rel,
+							  &segrelid, NULL, NULL);
 
 	/*
 	 * Now pick a segment that is not in use, and is not over the allowed
@@ -487,7 +477,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 				continue;
 
 			/* Skip using the ao segment if not latest version (except as a compaction target) */
-			if (formatversion != AORelationVersion_GetLatest())
+			if (formatversion != AOSegfileFormatVersion_GetLatest())
 				continue;
 
 			/*
@@ -619,6 +609,8 @@ choose_new_segfile(Relation rel, bool *used, List *avoid_segnos)
 {
 	int		chosen_segno = -1;
 
+	Assert(RelationStorageIsAO(rel));
+
 	/* No segment found. Try to create a new one. */
 	for (int segno = 0; segno < MAX_AOREL_CONCURRENCY; segno++)
 	{
@@ -648,8 +640,8 @@ choose_new_segfile(Relation rel, bool *used, List *avoid_segnos)
 			Snapshot appendOnlyMetaDataSnapshot;
 
 			appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-			GetAppendOnlyEntryAuxOids(rel->rd_id, appendOnlyMetaDataSnapshot,
-									  &segrelid, NULL, NULL, NULL, NULL);
+			GetAppendOnlyEntryAuxOids(rel,
+									  &segrelid, NULL, NULL);
 			UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 
 			InsertInitialAOCSFileSegInfo(rel, chosen_segno,
@@ -675,6 +667,8 @@ get_aoseg_fields(Relation rel, Relation pg_aoseg_rel, HeapTuple tuple,
 {
 	TupleDesc	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 	bool		isNull;
+
+	Assert(RelationStorageIsAO(rel));
 
 	if (RelationIsAoRows(rel))
 	{
@@ -732,6 +726,8 @@ AORelIncrementModCount(Relation parentrel)
 {
 	int			segno;
 
+	Assert(RelationStorageIsAO(parentrel));
+
 	if (Debug_appendonly_print_segfile_choice)
 		ereport(LOG,
 				(errmsg("AORelIncrementModCount: Incrementing modcount of aoseg entry for append-only relation %d",
@@ -746,7 +742,7 @@ AORelIncrementModCount(Relation parentrel)
 	if (RelationIsAoRows(parentrel))
 	{
 		/*
-		 * Update the master AO segment info table with correct tuple count total
+		 * Update the coordinator AO segment info table with correct tuple count total
 		 */
 		IncrementFileSegInfoModCount(parentrel, segno);
 	}

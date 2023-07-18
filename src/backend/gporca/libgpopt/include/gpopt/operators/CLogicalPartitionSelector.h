@@ -37,9 +37,6 @@ private:
 	// filter expressions corresponding to various levels
 	CExpressionArray *m_pdrgpexprFilters;
 
-	// oid column - holds the OIDs for leaf parts
-	CColRef *m_pcrOid;
-
 public:
 	CLogicalPartitionSelector(const CLogicalPartitionSelector &) = delete;
 
@@ -47,8 +44,7 @@ public:
 	explicit CLogicalPartitionSelector(CMemoryPool *mp);
 
 	CLogicalPartitionSelector(CMemoryPool *mp, IMDId *mdid,
-							  CExpressionArray *pdrgpexprFilters,
-							  CColRef *pcrOid);
+							  CExpressionArray *pdrgpexprFilters);
 
 	// dtor
 	~CLogicalPartitionSelector() override;
@@ -72,13 +68,6 @@ public:
 	MDId() const
 	{
 		return m_mdid;
-	}
-
-	// oid column
-	CColRef *
-	PcrOid() const
-	{
-		return m_pcrOid;
 	}
 
 	// number of partitioning levels

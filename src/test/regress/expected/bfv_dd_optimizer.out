@@ -18,6 +18,7 @@ insert into dd_singlecol_1 values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_1;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- ctas tests
 create table dd_ctas_1 as select * from dd_singlecol_1 where a=1 distributed by (a);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
@@ -312,7 +313,9 @@ insert into dd_singlecol_idx2 values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_idx;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 analyze dd_singlecol_idx2;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- disjunction with index scans
 select * from dd_singlecol_idx where (a=1 or a=2) and b<2;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -360,6 +363,7 @@ insert into dd_singlecol_bitmap_idx values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_bitmap_idx;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- disjunction with bitmap index scans
 select * from dd_singlecol_bitmap_idx where (a=1 or a=2) and b<2;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -435,6 +439,12 @@ insert into dd_singlecol_part_bitmap_idx values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_part_bitmap_idx;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- bitmap indexes on partitioned tables
 select * from dd_singlecol_part_bitmap_idx where a=1 and b=0;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -480,6 +490,7 @@ INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 analyze dd_multicol_idx;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 select count(*) from dd_multicol_idx;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
  count 
@@ -601,7 +612,19 @@ insert into dd_singlecol_part_idx2 values(null, null);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 analyze dd_singlecol_part_idx;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 analyze dd_singlecol_part_idx2;
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- indexes on partitioned tables
 select * from dd_singlecol_part_idx where a=1 and b>0;
 INFO:  (slice 1) Dispatch command to SINGLE content

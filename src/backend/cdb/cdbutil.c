@@ -35,6 +35,7 @@
 #include "nodes/makefuncs.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/fmgrprotos.h"
 #include "utils/memutils.h"
 #include "catalog/gp_id.h"
 #include "catalog/indexing.h"
@@ -92,8 +93,6 @@ static void getAddressesForDBid(GpSegConfigEntry *c, int elevel);
 static HTAB *hostPrimaryCountHashTableInit(void);
 
 static int nextQEIdentifer(CdbComponentDatabases *cdbs);
-
-Datum gp_get_suboverflowed_backends(PG_FUNCTION_ARGS);
 
 static HTAB *segment_ip_cache_htab = NULL;
 
@@ -1079,14 +1078,14 @@ ensureInterconnectAddress(void)
 		 * from `cdbcomponent*`. We couldn't get it in a way as the QEs.
 		 */
 		CdbComponentDatabaseInfo *qdInfo;
-		qdInfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+		qdInfo = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID);
 		interconnect_address = MemoryContextStrdup(TopMemoryContext, qdInfo->config->hostip);
 	}
 	else if (qdHostname && qdHostname[0] != '\0')
 	{
 		Assert(Gp_role == GP_ROLE_EXECUTE);
 		/*
-		 * QE on the master can't get its interconnect address like that on the primary.
+		 * QE on the coordinator can't get its interconnect address like that on the primary.
 		 * The QD connects to its postmaster via the unix domain socket.
 		 */
 		interconnect_address = qdHostname;
@@ -1478,10 +1477,10 @@ makeRandomSegMap(int total_primaries, int total_to_skip)
 }
 
 /*
- * Determine the dbid for the master standby
+ * Determine the dbid for the coordinator standby
  */
 int16
-master_standby_dbid(void)
+coordinator_standby_dbid(void)
 {
 	int16		dbid = 0;
 	HeapTuple	tup;
@@ -1490,11 +1489,11 @@ master_standby_dbid(void)
 	SysScanDesc scan;
 
 	/*
-	 * Can only run on a master node, this restriction is due to the reliance
+	 * Can only run on a coordinator node, this restriction is due to the reliance
 	 * on the gp_segment_configuration table.
 	 */
 	if (!IS_QUERY_DISPATCHER())
-		elog(ERROR, "master_standby_dbid() executed on execution segment");
+		elog(ERROR, "coordinator_standby_dbid() executed on execution segment");
 
 	/*
 	 * SELECT * FROM gp_segment_configuration WHERE content = -1 AND role =
@@ -1539,7 +1538,7 @@ dbid_get_dbinfo(int16 dbid)
 	GpSegConfigEntry *i = NULL;
 
 	/*
-	 * Can only run on a master node, this restriction is due to the reliance
+	 * Can only run on a coordinator node, this restriction is due to the reliance
 	 * on the gp_segment_configuration table.  This may be able to be relaxed
 	 * by switching to a different method of checking.
 	 */
@@ -1666,7 +1665,7 @@ contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRo
 	HeapTuple	tup;
 
 	/*
-	 * Can only run on a master node, this restriction is due to the reliance
+	 * Can only run on a coordinator node, this restriction is due to the reliance
 	 * on the gp_segment_configuration table.  This may be able to be relaxed
 	 * by switching to a different method of checking.
 	 */
@@ -1821,29 +1820,3 @@ AvoidCorefileGeneration()
 #endif
 }
 
-PG_FUNCTION_INFO_V1(gp_get_suboverflowed_backends);
-/*
- * Find the backends where subtransaction overflowed.
- */
-Datum
-gp_get_suboverflowed_backends(PG_FUNCTION_ARGS)
-{
-	int 			i;
-	ArrayBuildState *astate = NULL;
-
-	LWLockAcquire(ProcArrayLock, LW_SHARED);
-	for (i = 0; i < ProcGlobal->allProcCount; i++)
-	{
-		if (ProcGlobal->allPgXact[i].overflowed)
-			astate = accumArrayResult(astate,
-									  Int32GetDatum(ProcGlobal->allProcs[i].pid),
-									  false, INT4OID, CurrentMemoryContext);
-	}
-	LWLockRelease(ProcArrayLock);
-
-	if (astate)
-		PG_RETURN_DATUM(makeArrayResult(astate,
-											CurrentMemoryContext));
-	else
-		PG_RETURN_NULL();
-}

@@ -111,10 +111,32 @@ static TupleTableSlot *
 ExecForeignScan(PlanState *pstate)
 {
 	ForeignScanState *node = castNode(ForeignScanState, pstate);
+	TupleTableSlot *result = NULL;
+	bool err_caught = false;
 
-	return ExecScan(&node->ss,
-					(ExecScanAccessMtd) ForeignNext,
-					(ExecScanRecheckMtd) ForeignRecheck);
+	/* The loop is to ensure that the null result is returned only at the end of the scan 
+	 * To prevent an infinite loop, it is necessary to execute PG_END_TRY in every 
+	 * iteration of the loop when an exception occurs. Therefore, returning the 
+	 * ExecScan immediately and breaking the loop before PG_END_TRY are not possible.
+	 */
+	do 
+	{
+		err_caught = false;
+		PG_TRY();
+		{
+			result = ExecScan(&node->ss,
+							(ExecScanAccessMtd) ForeignNext,
+							(ExecScanRecheckMtd) ForeignRecheck);
+		}
+		PG_CATCH();
+		{
+			err_caught = true;
+			ExecForeignScanError(node);
+		}
+		PG_END_TRY();
+	} while (!result && err_caught);
+
+	return result;
 }
 
 
@@ -125,8 +147,22 @@ ExecForeignScan(PlanState *pstate)
 ForeignScanState *
 ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 {
-	ForeignScanState *scanstate;
 	Relation	currentRelation = NULL;
+
+	/*
+	 * get the relation object id from the relid'th entry in the range table,
+	 * open that relation and acquire appropriate lock on it.
+	 */
+	if (node->scan.scanrelid > 0)
+		currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
+
+	return ExecInitForeignScanForPartition(node, estate, eflags, currentRelation);
+}
+
+ForeignScanState *
+ExecInitForeignScanForPartition(ForeignScan *node, EState *estate, int eflags, Relation currentRelation)
+{
+	ForeignScanState *scanstate;
 	Index		scanrelid = node->scan.scanrelid;
 	Index		tlistvarno;
 	FdwRoutine *fdwroutine;
@@ -155,7 +191,6 @@ ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 	 */
 	if (scanrelid > 0)
 	{
-		currentRelation = ExecOpenScanRelation(estate, scanrelid, eflags);
 		scanstate->ss.ss_currentRelation = currentRelation;
 		fdwroutine = GetFdwRoutineForRelation(currentRelation, true);
 	}
@@ -383,4 +418,15 @@ ExecShutdownForeignScan(ForeignScanState *node)
 
 	if (fdwroutine->ShutdownForeignScan)
 		fdwroutine->ShutdownForeignScan(node);
+}
+
+void
+ExecForeignScanError(ForeignScanState *node)
+{
+	FdwRoutine *fdwroutine = node->fdwroutine;
+	if (fdwroutine->HandleForeignScanError)
+		fdwroutine->HandleForeignScanError(node);
+	else 
+		PG_RE_THROW();
+	return;
 }

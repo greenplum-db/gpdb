@@ -110,11 +110,11 @@ lseg, a488 point, a489 double precision, a490 circle, a491 int4, a492
 numeric(8), a493 polygon, a494 date, a495 real, a496 money, a497 cidr,
 a498 inet, a499 time, a500 text)
  DISTRIBUTED BY (id);
-SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
- visimapidxid is not NULL AND relid='sto_uao_500cols'::regclass;
+SELECT count(i.indexrelid) = 1 AS VisimapPresent  FROM pg_appendonly a, pg_index i WHERE a.visimaprelid = i.indrelid AND
+ a.relid='sto_uao_500cols'::regclass;
  visimappresent 
-----------------
-              1
+------------
+ t
 (1 row)
 
 INSERT into sto_uao_500cols (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10,

@@ -202,6 +202,7 @@ void
 ic_proxy_router_route(uv_loop_t *loop, ICProxyPkt *pkt,
 					  ic_proxy_sent_cb callback, void *opaque)
 {
+	Assert(ic_proxy_pkt_is_valid(pkt));
 	if (pkt->dstDbid == pkt->srcDbid)
 	{
 		/*
@@ -254,10 +255,12 @@ ic_proxy_router_on_write(uv_write_t *req, int status)
 	ICProxyWriteReq *wreq = (ICProxyWriteReq *) req;
 	ICProxyPkt *pkt = req->data;
 
+	Assert(ic_proxy_pkt_is_valid(pkt));
+
 	if (status < 0)
 	{
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
-			   "ic-proxy: router: fail to send %s: %s",
+			   "ic-proxy: router: failed to send %s: %s",
 					 ic_proxy_pkt_to_str(pkt), uv_strerror(status));
 	}
 	else

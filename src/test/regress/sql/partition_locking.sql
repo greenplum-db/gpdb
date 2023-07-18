@@ -8,12 +8,6 @@
 -- max_locks_per_transactions.
 --
 
--- ORCA doesn't support DDL queries on partitioned tables and falls back to
--- planner. However, the locking pattern when ORCA falls back is be different
--- when ICG is run in assert vs non-assert modes.  Revisit this once DML
--- queries are supported by ORCA
-set optimizer = off;
-
 -- Show locks in master and in segments. Because the number of segments
 -- in the cluster depends on configuration, we print only summary information
 -- of the locks in segments. If a relation is locked only on one segment,
@@ -83,6 +77,15 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 commit;
 
+-- select
+select * from partlockt where i = 1;
+-- check locks when the relation found in MD cache
+begin;
+select * from partlockt where i = 1;
+select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+commit;
+
 -- drop
 begin;
 drop table partlockt;
@@ -140,23 +143,29 @@ set enable_seqscan=off;
 -- test select locking
 begin;
 select * from partlockt where i = 1;
--- Known_opt_diff: MPP-20936
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 commit;
 
+-- In ORCA we are seeing discrepancy with 'AccessShareLock' on root partition table
+-- with-assert and without-assert modes of DML queries, because
+-- with-assert mode we are forced to release the cache, which leads to acquire
+-- 'AccessShareLock' always on master.  Since the AccessShareLock on root
+-- partition is redundant so we are skipping to evaluate.
+
 begin;
 -- insert locking
 insert into partlockt values(3, 'f');
-select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%' and
+                                    not(coalesce like 'partlockt' and mode like 'AccessShareLock');
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 commit;
 
 -- delete locking
 begin;
 delete from partlockt where i = 4;
--- Known_opt_diff: MPP-20936
-select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%' and
+                                    not(coalesce like 'partlockt' and mode like 'AccessShareLock');
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 commit;
 
@@ -167,4 +176,3 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 commit;
 
-reset optimizer;

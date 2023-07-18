@@ -8,7 +8,6 @@ CREATE LANGUAGE plpython3u;
 CREATE FUNCTION dump_test_check() RETURNS bool
 as $$
 import json
-import pg
 
 def validate(json_obj, segnum):
    array = json_obj.get("info")
@@ -17,8 +16,7 @@ def validate(json_obj, segnum):
       return False
    qd_info = [j for j in array if j["segid"] == -1][0]
    #validate keys
-   keys = ["segid", "segmentsOnMaster", "loaded", "totalChunks",
-   		   "freeChunks", "chunkSizeInBits", "groups"]
+   keys = ["segid", "segmentsOnCoordinator", "loaded", "groups"]
    for key in keys:
        if key not in qd_info:
            return False
@@ -29,9 +27,7 @@ def validate(json_obj, segnum):
       return False
    group = groups[0]
    #validate group keys
-   keys = ["group_id", "nRunning", "locked_for_drop", "memExpected",
-   		   "memQuotaGranted", "memSharedGranted", "memQuotaUsed",
-   		   "memUsage", "memSharedUsage"]
+   keys = ["group_id", "nRunning", "locked_for_drop"]
    for key in keys:
       if key not in group:
          return False
@@ -47,20 +43,29 @@ def validate(json_obj, segnum):
 
    return True
 
-conn = pg.connect(dbname="postgres")
+r = plpy.execute("select count(*) from gp_segment_configuration where  role = 'p';")
+n = r[0]['count']
 
-r = conn.query("select count(*) from gp_segment_configuration where  role = 'p';")
-n = r.getresult()[0][0]
+# The pg_resgroup_get_status_kv() function must output valid result in CTAS
+# and simple select queries
 
-r = conn.query("select value from pg_resgroup_get_status_kv('dump');")
-json_text =  r.getresult()[0][0]
+r = plpy.execute("select value from pg_resgroup_get_status_kv('dump');")
+json_text =  r[0]['value']
+json_obj = json.loads(json_text)
+if not validate(json_obj, n):
+   return False
+
+plpy.execute("""CREATE TEMPORARY TABLE t_pg_resgroup_get_status_kv AS
+              SELECT * FROM pg_resgroup_get_status_kv('dump');""")
+r = plpy.execute("SELECT value FROM t_pg_resgroup_get_status_kv;")
+json_text = r[0]['value']
 json_obj = json.loads(json_text)
 
 return validate(json_obj, n)
 
 $$ LANGUAGE plpython3u;
 
-CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
+CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_max_percent=20);
 CREATE ROLE role_dumpinfo_test RESOURCE GROUP rg_dumpinfo_test;
 
 2:SET ROLE role_dumpinfo_test;
@@ -85,6 +90,11 @@ SET ROLE role_permission;
 select value from pg_resgroup_get_status_kv('dump');
 
 RESET ROLE;
+
+-- Now 'dump' is the only value at which the function outputs tuples, but the
+-- function must correctly handle any value
+SELECT count(*) FROM pg_resgroup_get_status_kv('not_dump');
+SELECT count(*) FROM pg_resgroup_get_status_kv(NULL);
 
 DROP ROLE role_dumpinfo_test;
 DROP ROLE role_permission;

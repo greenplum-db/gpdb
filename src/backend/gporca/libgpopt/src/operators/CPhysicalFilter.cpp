@@ -14,6 +14,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/CDistributionSpecAny.h"
+#include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CPartInfo.h"
 #include "gpopt/operators/CExpressionHandle.h"
@@ -124,6 +125,16 @@ CPhysicalFilter::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		return pdsRequired;
 	}
 
+	if (CDistributionSpec::EdtNonSingleton == pdsRequired->Edt() &&
+		!CDistributionSpecNonSingleton::PdsConvert(pdsRequired)
+			 ->FAllowReplicated())
+	{
+		// this situation arises when we have Filter instead inlined CTE,
+		// in this case, we need to push down non-singleton with not allowed replicated through Filter
+		pdsRequired->AddRef();
+		return pdsRequired;
+	}
+
 	return CPhysical::PdsUnary(mp, exprhdl, pdsRequired, child_index, ulOptReq);
 }
 
@@ -144,7 +155,12 @@ CPhysicalFilter::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 ) const
 {
 	GPOS_ASSERT(0 == child_index);
-
+	if (prsRequired->IsOriginNLJoin())
+	{
+		CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
+			CRewindabilitySpec::ErtNone, prsRequired->Emht());
+		return prs;
+	}
 	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
 }
 
@@ -373,6 +389,11 @@ CEnfdProp::EPropEnforcingType
 CPhysicalFilter::EpetRewindability(CExpressionHandle &exprhdl,
 								   const CEnfdRewindability *per) const
 {
+	if (per->PrsRequired()->IsOriginNLJoin())
+	{
+		return CEnfdProp::EpetRequired;
+	}
+
 	// get rewindability delivered by the Filter node
 	CRewindabilitySpec *prs = CDrvdPropPlan::Pdpplan(exprhdl.Pdp())->Prs();
 	if (per->FCompatible(prs))

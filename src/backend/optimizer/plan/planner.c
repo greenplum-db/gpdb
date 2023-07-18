@@ -290,6 +290,8 @@ static split_rollup_data *make_new_rollups_for_hash_grouping_set(PlannerInfo *ro
 																 Path *path,
 																 grouping_sets_data *gd);
 
+static void compute_jit_flags(PlannedStmt* pstmt);
+
 /*****************************************************************************
  *
  *	   Query optimizer entry point
@@ -347,15 +349,15 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	instr_time		endtime;
 
 	/*
-	 * Use ORCA only if it is enabled and we are in a master QD process.
+	 * Use ORCA only if it is enabled and we are in a coordinator QD process.
 	 *
 	 * ORCA excels in complex queries, most of which will access distributed
 	 * tables. We can't run such queries from the segments slices anyway because
 	 * they require dispatching a query within another - which is not allowed in
 	 * GPDB (see querytree_safe_for_qe()). Note that this restriction also
-	 * applies to non-QD master slices.  Furthermore, ORCA doesn't currently
+	 * applies to non-QD coordinator slices.  Furthermore, ORCA doesn't currently
 	 * support pl/<lang> statements (relevant when they are planned on the segments).
-	 * For these reasons, restrict to using ORCA on the master QD processes only.
+	 * For these reasons, restrict to using ORCA on the coordinator QD processes only.
 	 *
 	 * PARALLEL RETRIEVE CURSOR is not supported by ORCA yet.
 	 */
@@ -368,7 +370,23 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
+#ifdef USE_ORCA
 		result = optimize_query(parse, cursorOptions, boundParams);
+#else
+		/* Make sure this branch is not taken in builds using --disable-orca. */
+		Assert(false);
+		/* Keep compilers quiet in case the build used --disable-orca. */
+		result = NULL;
+#endif
+
+		/* decide jit state */
+		if (result)
+		{
+			/*
+			 * Setting Jit flags for Optimizer
+			 */
+			compute_jit_flags(result);
+		}
 
 		if (gp_log_optimization_time)
 		{
@@ -737,30 +755,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->stmt_location = parse->stmt_location;
 	result->stmt_len = parse->stmt_len;
 
-	result->jitFlags = PGJIT_NONE;
-	if (jit_enabled && jit_above_cost >= 0 &&
-		top_plan->total_cost > jit_above_cost)
-	{
-		result->jitFlags |= PGJIT_PERFORM;
-
-		/*
-		 * Decide how much effort should be put into generating better code.
-		 */
-		if (jit_optimize_above_cost >= 0 &&
-			top_plan->total_cost > jit_optimize_above_cost)
-			result->jitFlags |= PGJIT_OPT3;
-		if (jit_inline_above_cost >= 0 &&
-			top_plan->total_cost > jit_inline_above_cost)
-			result->jitFlags |= PGJIT_INLINE;
-
-		/*
-		 * Decide which operations should be JITed.
-		 */
-		if (jit_expressions)
-			result->jitFlags |= PGJIT_EXPR;
-		if (jit_tuple_deforming)
-			result->jitFlags |= PGJIT_DEFORM;
-	}
+	/* GPDB: JIT flags are set in wrapper function */
+	compute_jit_flags(result);
 
 	if (glob->partition_directory != NULL)
 		DestroyPartitionDirectory(glob->partition_directory);
@@ -859,6 +855,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	Assert(config);
 	root->config = config;
 
+	root->hasPseudoConstantQuals = false;
+	root->hasAlternativeSubPlans = false;
 	root->hasRecursion = hasRecursion;
 	if (hasRecursion)
 		root->wt_param_id = assign_special_exec_param(root);
@@ -1015,9 +1013,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * an empty qual list ... but "HAVING TRUE" is not a semantic no-op.
 	 */
 	root->hasHavingQual = (parse->havingQual != NULL);
-
-	/* Clear this flag; might get set in distribute_qual_to_rels */
-	root->hasPseudoConstantQuals = false;
 
 	/*
 	 * Do expression preprocessing on targetlist and quals, as well as other
@@ -2102,7 +2097,7 @@ inheritance_planner(PlannerInfo *root)
 	else
 	{
 		/*
-		 * Put back the final adjusted rtable into the master copy of the
+		 * Put back the final adjusted rtable into the original copy of the
 		 * Query.  (We mustn't do this if we found no non-excluded children,
 		 * since we never saved an adjusted rtable at all.)
 		 */
@@ -2111,7 +2106,7 @@ inheritance_planner(PlannerInfo *root)
 		root->simple_rel_array = save_rel_array;
 		root->append_rel_array = save_append_rel_array;
 
-		/* Must reconstruct master's simple_rte_array, too */
+		/* Must reconstruct original's simple_rte_array, too */
 		root->simple_rte_array = (RangeTblEntry **)
 			palloc0((list_length(final_rtable) + 1) * sizeof(RangeTblEntry *));
 		rti = 1;
@@ -2773,28 +2768,9 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		 * The conflict with UPDATE|DELETE is implemented by locking the entire
 		 * table in ExclusiveMode. More details please refer docs.
 		 */
-		/*
-		 * GPDB_96_MERGE_FIXME: since we now process this in the path
-		 * context, it's much simpler than before, please kindly
-		 * revisit this, I'm not quite sure here.
-		 */
 		if (parse->rowMarks)
 		{
-			ListCell   *lc;
-			List   *newmarks = NIL;
-
 			if (parse->canOptSelectLockingClause)
-			{
-				foreach(lc, root->rowMarks)
-				{
-					PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
-
-					rc->canOptSelectLockingClause = true;
-					newmarks = lappend(newmarks, rc);
-				}
-			}
-
-			if (newmarks)
 			{
 				/*
 				 * Greenplum specific behavior:
@@ -3754,6 +3730,14 @@ remove_useless_groupby_columns(PlannerInfo *root)
 
 		/* Only plain relations could have primary-key constraints */
 		if (rte->rtekind != RTE_RELATION)
+			continue;
+
+		/*
+		 * We must skip inheritance parent tables as some of the child rels
+		 * may cause duplicate rows.  This cannot happen with partitioned
+		 * tables, however.
+		 */
+		if (rte->inh && rte->relkind != RELKIND_PARTITIONED_TABLE)
 			continue;
 
 		/* Nothing to do unless this rel has multiple Vars in GROUP BY */
@@ -5980,8 +5964,6 @@ mark_partial_aggref(Aggref *agg, AggSplit aggsplit)
 {
 	/* aggtranstype should be computed by this point */
 	Assert(OidIsValid(agg->aggtranstype));
-	/* ... but aggsplit should still be as the parser left it */
-	Assert(agg->aggsplit == AGGSPLIT_SIMPLE);
 
 	/* Mark the Aggref with the intended partial-aggregation mode */
 	agg->aggsplit = aggsplit;
@@ -7082,8 +7064,11 @@ plan_create_index_workers(Oid tableOid, Oid indexOid)
 	double		reltuples;
 	double		allvisfrac;
 
-	/* Return immediately when parallelism disabled */
-	if (max_parallel_maintenance_workers == 0)
+	/*
+	 * We don't allow performing parallel operation in standalone backend or
+	 * when parallelism is disabled.
+	 */
+	if (!IsUnderPostmaster || max_parallel_maintenance_workers == 0)
 		return 0;
 
 	/* Set up largely-dummy planner state */
@@ -7544,6 +7529,14 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 	{
 		PathTarget *partially_grouped_target;
 
+		/*
+		 * fetch_multi_dqas_info() will push the MultiDQA's filter to TupleSplit, 
+		 * then get rid of final and partial DQA aggref filter. If we use the
+		 * same path target as single-stage aggregation, single-stage aggregation
+		 * will lose the filter of MultiDQA.
+		 */
+		PathTarget *final_target = (PathTarget *)copyObject(grouped_rel->reltarget);
+
 		if (gp_eager_two_phase_agg)
 		{
 			ListCell *lc;
@@ -7569,6 +7562,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			if (parse->hasAggs)
 			{
 				List	   *partial_target_exprs;
+				List	   *final_target_exprs;
 
 				/* partial phase */
 				partial_target_exprs = partially_grouped_target->exprs;
@@ -7577,7 +7571,8 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 									 &extra->agg_partial_costs);
 
 				/* final phase */
-				get_agg_clause_costs(root, (Node *) grouped_rel->reltarget->exprs,
+				final_target_exprs = final_target->exprs;
+				get_agg_clause_costs(root, (Node *) final_target_exprs,
 									 AGGSPLIT_FINAL_DESERIAL,
 									 agg_final_costs);
 				get_agg_clause_costs(root, extra->havingQual,
@@ -7607,7 +7602,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 		cdb_create_multistage_grouping_paths(root,
 										   input_rel,
 										   grouped_rel,
-										   grouped_rel->reltarget,
+										   final_target,
 										   partially_grouped_target,
 										   havingQual,
 										   dNumGroupsTotal,
@@ -8600,4 +8595,78 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
 	srd->unhashed_rollup = unhashed_rollup;
 
 	return srd;
+}
+
+/*
+ * GPDB: This is moved from standard_planner(), so that it can be used by both
+ * planner and ORCA. Please move any future code added to standard_planner() too.
+ *
+ * Decide JIT settings for the given plan and record them in PlannedStmt.jitFlags.
+ *
+ * Since the costing model of ORCA and Planner are different
+ * (Planner cost usually higher), setting the JIT flags based on the
+ * common JIT costing GUCs could lead to false triggering of JIT.
+ *
+ * To prevent this situation, separate  costing GUCs are created
+ * for Optimizer and used here for setting the JIT flags.
+ *
+ */
+static void compute_jit_flags(PlannedStmt* pstmt)
+{
+	Plan* top_plan = pstmt->planTree;
+	pstmt->jitFlags = PGJIT_NONE;
+
+	/*
+	 * Common variables to hold values for optimizer or planner
+	 * based on function call.
+	 */
+	double above_cost;
+	double inline_above_cost;
+	double optimize_above_cost;
+
+	if (pstmt->planGen == PLANGEN_OPTIMIZER)
+	{
+
+		/*
+		 * Setting values for ORCA.
+		 */
+		above_cost = optimizer_jit_above_cost;
+		inline_above_cost = optimizer_jit_inline_above_cost;
+		optimize_above_cost = optimizer_jit_optimize_above_cost;
+	}
+	else
+	{
+
+		/*
+		 * Setting values for Planner.
+		 */
+		above_cost = jit_above_cost;
+		inline_above_cost = jit_inline_above_cost;
+		optimize_above_cost = jit_optimize_above_cost;
+
+	}
+
+	if (jit_enabled && above_cost >= 0 &&
+		top_plan->total_cost > above_cost)
+	{
+		pstmt->jitFlags |= PGJIT_PERFORM;
+
+		/*
+		 * Decide how much effort should be put into generating better code.
+		 */
+		if (optimize_above_cost >= 0 &&
+			top_plan->total_cost > optimize_above_cost)
+			pstmt->jitFlags |= PGJIT_OPT3;
+		if (inline_above_cost >= 0 &&
+			top_plan->total_cost > inline_above_cost)
+			pstmt->jitFlags |= PGJIT_INLINE;
+
+		/*
+		 * Decide which operations should be JITed.
+		 */
+		if (jit_expressions)
+			pstmt->jitFlags |= PGJIT_EXPR;
+		if (jit_tuple_deforming)
+			pstmt->jitFlags |= PGJIT_DEFORM;
+	}
 }

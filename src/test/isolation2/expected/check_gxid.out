@@ -15,7 +15,7 @@ select gp_segment_id,gp_get_next_gxid() on_seg, (select gp_get_next_gxid() on_co
 (3 rows)
 -- end_ignore
 
--- trigger master panic and wait until master down before running any new query.
+-- trigger coordinator panic and wait until coordinator down before running any new query.
 1&: SELECT wait_till_master_shutsdown();  <waiting ...>
 2: SELECT gp_inject_fault('before_read_command', 'panic', 1);
  gp_inject_fault 
@@ -32,7 +32,7 @@ server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
 
--- wait until master is up for querying.
+-- wait until coordinator is up for querying.
 3: SELECT 1;
  ?column? 
 ----------

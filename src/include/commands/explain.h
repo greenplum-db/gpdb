@@ -124,4 +124,5 @@ extern void ExplainCloseGroup(const char *objtype, const char *labelname,
 
 extern void ExplainPrintExecStatsEnd(ExplainState *es, QueryDesc *queryDesc);
 
+extern void cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc);
 #endif							/* EXPLAIN_H */

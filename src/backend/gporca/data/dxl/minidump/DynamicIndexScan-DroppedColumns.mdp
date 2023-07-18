@@ -143,7 +143,7 @@
           <dxl:Partition Mdid="6.566955006.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955001.1.0" Name="testbug_char5_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955001.1.0" Name="testbug_char5_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -198,7 +198,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955002.1.0" Name="testbug_char5_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955002.1.0" Name="testbug_char5_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -253,7 +253,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955003.1.0" Name="testbug_char5_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955003.1.0" Name="testbug_char5_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -308,7 +308,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955004.1.0" Name="testbug_char5_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955004.1.0" Name="testbug_char5_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -363,7 +363,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955005.1.0" Name="testbug_char5_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955005.1.0" Name="testbug_char5_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -418,7 +418,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955006.1.0" Name="testbug_char5_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955006.1.0" Name="testbug_char5_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -581,7 +581,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.567110.1.0" Name="testbug_char5_tag1_1_prt_part201203" IsClustered="false" KeyColumns="3" IncludedColumns="0,1,3,4,5,6,7,8,9,10,11">
+      <dxl:Index Mdid="0.567110.1.0" Name="testbug_char5_tag1_1_prt_part201203" IsClustered="false" KeyColumns="3" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
         </dxl:Opfamilies>
@@ -606,10 +606,10 @@
       <dxl:ColumnStatistics Mdid="1.566955.1.1.8" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.566955.1.1.1" Name="user_id" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.566955.1.1.0" Name="timest" Width="8.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.566955.1.1" Name="testbug_char5" Rows="0.000000"/>
@@ -665,7 +665,7 @@
           <dxl:Partition Mdid="6.566955006.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955001.1.1" Name="testbug_char5_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955001.1.1" Name="testbug_char5_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -720,7 +720,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955002.1.1" Name="testbug_char5_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955002.1.1" Name="testbug_char5_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -775,7 +775,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955003.1.1" Name="testbug_char5_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955003.1.1" Name="testbug_char5_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -830,7 +830,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955004.1.1" Name="testbug_char5_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955004.1.1" Name="testbug_char5_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -885,7 +885,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955005.1.1" Name="testbug_char5_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955005.1.1" Name="testbug_char5_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>
@@ -940,7 +940,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.566955006.1.1" Name="testbug_char5_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.566955006.1.1" Name="testbug_char5_prt_6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="timest" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="6">
             <dxl:DefaultValue/>

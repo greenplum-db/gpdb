@@ -24,7 +24,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE e > 20 OR f > 22;
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="10000000" EnforceConstraintsOnDML="false"/>
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
@@ -79,7 +79,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE e > 20 OR f > 22;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.24976.1.0" Name="complete_idx_ef_1_prt_p2" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="4,5" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.24976.1.0" Name="complete_idx_ef_1_prt_p2" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="4,5" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
@@ -143,7 +143,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE e > 20 OR f > 22;
         </dxl:And>
       </dxl:CheckConstraint>
       <dxl:RelationStatistics Mdid="2.24864.1.0" Name="foo_1_prt_p2" Rows="10000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24864.1.0" Name="foo_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,6" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="6.24864.1.0" Name="foo_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,6">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -182,7 +182,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE e > 20 OR f > 22;
           <dxl:CheckConstraint Mdid="0.24866.1.0"/>
         </dxl:CheckConstraints>
       </dxl:Relation>
-      <dxl:Index Mdid="0.25018.1.0" Name="complete_idx_f_1_prt_p2" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="5" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.25018.1.0" Name="complete_idx_f_1_prt_p2" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="5" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -197,7 +197,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE e > 20 OR f > 22;
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="20"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.24931.1.0" Name="complete_idx_cd_1_prt_p2" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2,3" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.24931.1.0" Name="complete_idx_cd_1_prt_p2" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2,3" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

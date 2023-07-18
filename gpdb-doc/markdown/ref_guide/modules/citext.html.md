@@ -10,5 +10,5 @@ The `citext` module is installed when you install Greenplum Database. Before you
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [citext](https://www.postgresql.org/docs/9.4/citext.html) in the PostgreSQL documentation for detailed information about the data types, operators, and functions defined in this module.
+See [citext](https://www.postgresql.org/docs/12/citext.html) in the PostgreSQL documentation for detailed information about the data types, operators, and functions defined in this module.
 

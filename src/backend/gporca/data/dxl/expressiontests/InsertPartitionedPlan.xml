@@ -18,7 +18,7 @@
     </dxl:Type>
   </dxl:Metadata>
   <dxl:Plan>
-    <dxl:DMLInsert Columns="1,2" ActionCol="3" OidCol="4" CtidCol="0" SegmentIdCol="0">
+    <dxl:DMLInsert Columns="1,2" ActionCol="3" CtidCol="0" SegmentIdCol="0">
       <dxl:Properties>
         <dxl:Cost StartupCost="0" TotalCost="100.000000" Rows="1000.000000" Width="1"/>
       </dxl:Properties>

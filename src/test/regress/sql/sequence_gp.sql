@@ -4,7 +4,7 @@
 CREATE TABLE tmp_table (a int);
 INSERT INTO tmp_table VALUES (0),(1),(2),(3);
 
--- Test execution of nextval on master with CACHE 1
+-- Test execution of nextval on coordinator with CACHE 1
 CREATE SEQUENCE tmp_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2 START 1 CACHE 1 NO CYCLE;
 SELECT nextval('tmp_seq');
 SELECT nextval('tmp_seq');
@@ -17,7 +17,7 @@ CREATE SEQUENCE tmp_seq INCREMENT 1 MINVALUE 1 MAXVALUE 4 START 1 CACHE 1 NO CYC
 SELECT val from (SELECT nextval('tmp_seq'), a as val FROM tmp_table ORDER BY a) as val ORDER BY val;
 DROP SEQUENCE tmp_seq;
 
--- Test execution of nextval on master with CACHE > 1
+-- Test execution of nextval on coordinator with CACHE > 1
 CREATE SEQUENCE tmp_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2 START 1 CACHE 20 NO CYCLE;
 SELECT nextval('tmp_seq');
 SELECT nextval('tmp_seq');
@@ -25,7 +25,7 @@ SELECT nextval('tmp_seq');
 SELECT nextval('tmp_seq');
 DROP SEQUENCE tmp_seq;
 
--- Test execution of nextval on master (when optimizer = on) and segments (when optimizer=off) with CACHE > 1
+-- Test execution of nextval on coordinator (when optimizer = on) and segments (when optimizer=off) with CACHE > 1
 CREATE TABLE tmp_table_cache (a int, b int);
 -- forcing the values to go on one segment only, to predict the sequence values.
 INSERT INTO tmp_table_cache VALUES (1,0),(1,1),(1,2),(1,3);
@@ -41,7 +41,8 @@ DROP SEQUENCE tmp_seq;
 
 DROP TABLE tmp_table;
 
-CREATE TABLE mytable (size INTEGER, gid bigserial NOT NULL);
+CREATE SEQUENCE mytable_gid_seq CACHE 1;
+CREATE TABLE mytable (size INTEGER, gid BIGINT NOT NULL DEFAULT nextval('mytable_gid_seq'));
 ALTER SEQUENCE mytable_gid_seq RESTART WITH 9223372036854775805;
 /* Consume rest of serial sequence column values */
 INSERT INTO mytable VALUES (1), (2), (3);

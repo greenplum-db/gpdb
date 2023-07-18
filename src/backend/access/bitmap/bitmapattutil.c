@@ -43,6 +43,7 @@
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/snapmgr.h"
@@ -331,7 +332,7 @@ _bitmap_insert_lov(Relation lovHeap, Relation lovIndex, Datum *datum,
 
 	/* insert this tuple into the heap */
 	tuple = heap_form_tuple(tupDesc, datum, nulls);
-	frozen_heap_insert(lovHeap, tuple);
+	simple_heap_insert(lovHeap, tuple);
 
 	/* insert a new tuple into the index */
 	indexDatum = palloc0((tupDesc->natts - 2) * sizeof(Datum));
@@ -341,6 +342,23 @@ _bitmap_insert_lov(Relation lovHeap, Relation lovIndex, Datum *datum,
 	result = index_insert(lovIndex, indexDatum, indexNulls,
 					 	  &(tuple->t_self), lovHeap, true, NULL);
 
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+							"insert_bmlov_before_freeze",
+							DDLNotSpecified,
+							"", //databaseName
+							RelationGetRelationName(lovHeap));
+#endif
+	/* freeze the tuple */
+	heap_freeze_tuple_wal_logged(lovHeap, tuple);
+
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet(
+							"insert_bmlov_after_freeze",
+							DDLNotSpecified,
+							"", //databaseName
+							RelationGetRelationName(lovHeap));
+#endif
 	pfree(indexDatum);
 	pfree(indexNulls);
 	Assert(result);

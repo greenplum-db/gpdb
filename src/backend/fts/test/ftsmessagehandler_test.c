@@ -9,6 +9,8 @@
 /* Actual function body */
 #include "../ftsmessagehandler.c"
 
+static XLogRecPtr fakeRedoRecPtr = 8948;
+
 static void
 expectSendFtsResponse(const char *expectedMessageType, const FtsResponse *expectedResponse)
 {
@@ -150,6 +152,7 @@ test_HandleFtsWalRepPromoteMirror(void **state)
 	am_mirror = true;
 
 	will_return(GetCurrentDBState, DB_IN_ARCHIVE_RECOVERY);
+	will_return(GetRedoRecPtr, &fakeRedoRecPtr);
 	will_be_called(UnsetSyncStandbysDefined);
 	will_be_called(SignalPromote);
 
@@ -185,6 +188,7 @@ test_HandleFtsWalRepPromotePrimary(void **state)
 	am_mirror = false;
 
 	will_return(GetCurrentDBState, DB_IN_PRODUCTION);
+	will_return(GetRedoRecPtr, &fakeRedoRecPtr);
 
 	FtsResponse mockresponse;
 	mockresponse.IsMirrorUp       = false;

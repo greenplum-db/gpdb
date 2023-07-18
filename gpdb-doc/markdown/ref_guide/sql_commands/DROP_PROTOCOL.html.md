@@ -1,6 +1,6 @@
 # DROP PROTOCOL 
 
-Removes a external table data access protocol from a database.
+Removes a data access protocol from a database.
 
 ## <a id="section2"></a>Synopsis 
 
@@ -10,25 +10,25 @@ DROP PROTOCOL [IF EXISTS] <name>
 
 ## <a id="section3"></a>Description 
 
-`DROP PROTOCOL` removes the specified protocol from a database. A protocol name can be specified in the `CREATE EXTERNAL TABLE` command to read data from or write data to an external data source.
+`DROP PROTOCOL` removes the specified protocol from a database. You specify a protocol name in the `CREATE EXTERNAL TABLE` command to read data from or write data to an external data source.
 
 You must be a superuser or the protocol owner to drop a protocol.
 
-**Warning:** If you drop a data access prococol, external tables that have been defined with the protocol will no longer be able to access the external data source.
+> **Caution** If you drop a data access prococol, external tables that have been defined specifying the protocol will no longer be able to access the external data source.
 
 ## <a id="section4"></a>Parameters 
 
 IF EXISTS
-:   Do not throw an error if the protocol does not exist. A notice is issued in this case.
+:   Do not throw an error if the protocol does not exist. Greenplum Database issues a notice in this case.
 
 name
 :   The name of an existing data access protocol.
 
 ## <a id="section5"></a>Notes 
 
-If you drop a data access protocol, the call handlers that defined in the database that are associated with the protocol are not dropped. You must drop the functions manually.
+Dropping a data access protocol, does not drop the protocol's call handlers. You must drop these functions manually.
 
-Shared libraries that were used by the protocol should also be removed from the Greenplum Database hosts.
+Be sure to remove any shared libraries that were used by the protocol from the Greenplum Database hosts.
 
 ## <a id="section6"></a>Compatibility 
 

@@ -10,31 +10,31 @@
 
 -- start_ignore
 DROP FUNCTION IF EXISTS corrupt_snapshot_file(text, text);
-DROP
+DROP FUNCTION
 DROP FUNCTION IF EXISTS snapshot_file_ds_fields_exist(text);
-DROP
+DROP FUNCTION
 DROP LANGUAGE IF EXISTS plpython3u cascade;
-DROP
+DROP LANGUAGE
 DROP TABLE IF EXISTS export_distributed_snapshot_test1;
-DROP
+DROP TABLE
 -- end_ignore
 
 CREATE LANGUAGE plpython3u;
-CREATE
+CREATE LANGUAGE
 
 -- Corrupt field entry for given snapshot file
 CREATE OR REPLACE FUNCTION  corrupt_snapshot_file(token text, field text) RETURNS integer as $$ import os content = bytearray() query = "select (select datadir from gp_segment_configuration where role='p' and content=-1) || '/pg_snapshots/' as path" rv = plpy.execute(query) abs_path = rv[0]['path'] snapshot_file = abs_path + token if not os.path.isfile(snapshot_file): plpy.info('skipping non-existent file %s' % (snapshot_file)) else: plpy.info('corrupting file %s for field %s' % (snapshot_file, field)) with open(snapshot_file , "rb+") as f: for line in f: l = line.decode() id = l.split(":")[0] if field == id: corrupt = l[:-2] + '*' + l[len(l)-1:] content.extend(corrupt.encode()) else: content.extend(line) f.seek(0) f.truncate f.write(content) f.close() return 0 $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
 -- Determine if field exists for given snapshot file
 CREATE OR REPLACE FUNCTION  snapshot_file_ds_fields_exist(token text) RETURNS boolean as $$ import os content = bytearray() query = "select (select datadir from gp_segment_configuration where role='p' and content=-1) || '/pg_snapshots/' as path" rv = plpy.execute(query) abs_path = rv[0]['path'] snapshot_file = abs_path + token if not os.path.isfile(snapshot_file): plpy.info('snapshot file %s does not exist' % (snapshot_file)) return -1 else: plpy.info('checking file %s for ds fields' % (snapshot_file)) with open(snapshot_file , "rb+") as f: for line in f: l = line.decode() if "ds" in l: return True return False $$ LANGUAGE plpython3u;
-CREATE
+CREATE FUNCTION
 
 -- INSERT test
 CREATE TABLE export_distributed_snapshot_test1 (a int);
-CREATE
+CREATE TABLE
 INSERT INTO export_distributed_snapshot_test1 values(1);
-INSERT 1
+INSERT 0 1
 
 1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 BEGIN
@@ -45,7 +45,7 @@ BEGIN
 (1 row)
 
 INSERT INTO export_distributed_snapshot_test1 values(2);
-INSERT 1
+INSERT 0 1
 SELECT * FROM  export_distributed_snapshot_test1;
  a 
 ---
@@ -81,9 +81,9 @@ COMMIT
 
 -- DELETE test
 CREATE TABLE export_distributed_snapshot_test2 (a int);
-CREATE
+CREATE TABLE
 INSERT INTO export_distributed_snapshot_test2 SELECT a FROM generate_series(1,3) a;
-INSERT 3
+INSERT 0 3
 
 1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 BEGIN
@@ -134,9 +134,9 @@ COMMIT
 
 -- UPDATE test
 CREATE TABLE export_distributed_snapshot_test3 (a int);
-CREATE
+CREATE TABLE
 INSERT INTO export_distributed_snapshot_test3 SELECT a FROM generate_series(1,5) a;
-INSERT 5
+INSERT 0 5
 
 1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 BEGIN
@@ -187,7 +187,7 @@ COMMIT
 
 -- DROP test
 CREATE TABLE export_distributed_snapshot_test4 (a int);
-CREATE
+CREATE TABLE
 
 1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 BEGIN
@@ -209,7 +209,7 @@ BEGIN
 
 -- Drop table in transaction
 2: DROP TABLE export_distributed_snapshot_test4;
-DROP
+DROP TABLE
 2: COMMIT;
 COMMIT
 
@@ -263,9 +263,9 @@ ERROR:  could not import the requested snapshot
 DETAIL:  The source process with PID 651456 is not running anymore.
 
 1: END;
-END
+COMMIT
 2: END;
-END
+ROLLBACK
 
 -- dsxminall
 
@@ -292,9 +292,9 @@ BEGIN
 SET
 
 1: END;
-END
+COMMIT
 2: END;
-END
+COMMIT
 
 -- dsxmin
 1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -320,9 +320,9 @@ BEGIN
 ERROR:  invalid snapshot data in file "pg_snapshots/00000007-00000006-1"
 
 1: END;
-END
+COMMIT
 2: END;
-END
+ROLLBACK
 
 -- Test export snapshot in utility mode does not export distributed snapshot fields
 
@@ -345,7 +345,7 @@ BEGIN
 
 -1Uq: ... <quitting>
 1: END;
-END
+COMMIT
 
 -- Test import snapshot in utility mode fails if distributed snapshot fields exist
 1: BEGIN;
@@ -367,7 +367,7 @@ HINT:  export the snapshot in utility mode
 
 -1Uq: ... <quitting>
 1: END;
-END
+COMMIT
 
 -- Test export snapshot in utility mode and import snapshot in utility mode succeeds
 -1U: @db_name postgres: BEGIN;

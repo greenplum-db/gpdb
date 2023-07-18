@@ -422,3 +422,37 @@ SELECT count(nspname) FROM gp_dist_random('pg_namespace') WHERE nspname LIKE 'pg
 DROP TABLE just_a_temp_table;
 RESET search_path;
 
+-- Test for resource management commands on log_statement='ddl'
+-- Modify log_statement to 'ddl'.
+SET log_statement = 'ddl';
+-- We don't really modify resources config.
+ALTER RESOURCE GROUP default_group SET concurrency -1;
+ALTER RESOURCE QUEUE pg_default ACTIVE THRESHOLD -10;
+-- Reset
+RESET log_statement;
+
+-- Try to set statement_mem > max_statement_mem
+SET statement_mem = '4000MB';
+RESET statement_mem;
+
+-- enabling gp_force_random_redistribution makes sure random redistribution happens
+-- only relevant to postgres optimizer
+set optimizer = false;
+
+create table t1_dist_rand(a int) distributed randomly;
+create table t2_dist_rand(a int) distributed randomly;
+create table t_dist_hash(a int) distributed by (a);
+
+-- with the GUC turned off, redistribution won't happen (no redistribution motion)
+set gp_force_random_redistribution = false;
+explain insert into t2_dist_rand select * from t1_dist_rand;
+explain insert into t2_dist_rand select * from t_dist_hash;
+
+-- with the GUC turned on, redistribution would happen
+set gp_force_random_redistribution = true;
+explain insert into t2_dist_rand select * from t1_dist_rand;
+explain insert into t2_dist_rand select * from t_dist_hash;
+
+reset gp_force_random_redistribution;
+reset optimizer;
+

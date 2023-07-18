@@ -22,6 +22,7 @@ typedef struct ICProxyPkt ICProxyPkt;
 #include "ic_proxy_key.h"
 
 #define IC_PROXY_MAX_PKT_SIZE (Gp_max_packet_size + sizeof(ICProxyPkt))
+#define IC_PROXY_PKT_MAGIC_NUMBER (0xBADDCAFE)
 
 typedef enum
 {
@@ -41,6 +42,9 @@ typedef enum
 
 struct ICProxyPkt
 {
+	/* for the sanity check of package */
+	uint32		magicNumber;
+
 	uint16		len;
 	uint16		type;
 
@@ -66,8 +70,6 @@ extern void ic_proxy_message_init(ICProxyPkt *pkt,
 								  ICProxyMessageType type,
 								  const ICProxyKey *key);
 
-extern ICProxyPkt *ic_proxy_pkt_new(const ICProxyKey *key,
-									const void *data, uint16 size);
 extern ICProxyPkt *ic_proxy_pkt_dup(const ICProxyPkt *pkt);
 extern const char *ic_proxy_pkt_to_str(const ICProxyPkt *pkt);
 extern bool ic_proxy_pkt_is_from_client(const ICProxyPkt *pkt,
@@ -95,6 +97,14 @@ ic_proxy_pkt_is(const ICProxyPkt *pkt, ICProxyMessageType type)
 
 	/* then check the message type on demand */
 	return type == pkt->type;
+}
+
+/* check the validity of a package by magicNumber */
+static inline bool
+ic_proxy_pkt_is_valid(const ICProxyPkt *pkt)
+{
+	Assert(pkt);
+	return pkt->magicNumber == IC_PROXY_PKT_MAGIC_NUMBER;
 }
 
 #endif   /* IC_PROXY_PACKET_H */

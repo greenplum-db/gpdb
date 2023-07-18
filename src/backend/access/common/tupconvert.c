@@ -144,8 +144,18 @@ convert_tuples_by_position(TupleDesc indesc,
 	{
 		for (i = 0; i < n; i++)
 		{
-			Form_pg_attribute inatt;
-			Form_pg_attribute outatt;
+			Form_pg_attribute inatt = TupleDescAttr(indesc, i);
+			Form_pg_attribute outatt = TupleDescAttr(outdesc, i);
+
+			/*
+			 * If the input column has a missing attribute, we need a
+			 * conversion.
+			 */
+			if (inatt->atthasmissing)
+			{
+				same = false;
+				break;
+			}
 
 			if (attrMap[i] == (i + 1))
 				continue;
@@ -155,8 +165,6 @@ convert_tuples_by_position(TupleDesc indesc,
 			 * also dropped, we needn't convert.  However, attlen and attalign
 			 * must agree.
 			 */
-			inatt = TupleDescAttr(indesc, i);
-			outatt = TupleDescAttr(outdesc, i);
 			if (attrMap[i] == 0 &&
 				inatt->attisdropped &&
 				inatt->attlen == outatt->attlen &&
@@ -347,8 +355,18 @@ convert_tuples_by_name_map_if_req(TupleDesc indesc,
 		same = true;
 		for (i = 0; i < n; i++)
 		{
-			Form_pg_attribute inatt;
-			Form_pg_attribute outatt;
+			Form_pg_attribute inatt = TupleDescAttr(indesc, i);
+			Form_pg_attribute outatt = TupleDescAttr(outdesc, i);
+
+			/*
+			 * If the input column has a missing attribute, we need a
+			 * conversion.
+			 */
+			if (inatt->atthasmissing)
+			{
+				same = false;
+				break;
+			}
 
 			if (attrMap[i] == (i + 1))
 				continue;
@@ -358,8 +376,6 @@ convert_tuples_by_name_map_if_req(TupleDesc indesc,
 			 * also dropped, we needn't convert.  However, attlen and attalign
 			 * must agree.
 			 */
-			inatt = TupleDescAttr(indesc, i);
-			outatt = TupleDescAttr(outdesc, i);
 			if (attrMap[i] == 0 &&
 				inatt->attisdropped &&
 				inatt->attlen == outatt->attlen &&
@@ -475,6 +491,59 @@ execute_attr_map_slot(AttrNumber *attrMap,
 	ExecStoreVirtualTuple(out_slot);
 
 	return out_slot;
+}
+
+/*
+ * Perform conversion of bitmap of columns according to the map.
+ *
+ * The input and output bitmaps are offset by
+ * FirstLowInvalidHeapAttributeNumber to accommodate system cols, like the
+ * column-bitmaps in RangeTblEntry.
+ */
+Bitmapset *
+execute_attr_map_cols(Bitmapset *in_cols, TupleConversionMap *map)
+{
+	AttrNumber *attrMap = map->attrMap;
+	int			maplen = map->outdesc->natts;
+	Bitmapset  *out_cols;
+	int			out_attnum;
+
+	/* fast path for the common trivial case */
+	if (in_cols == NULL)
+		return NULL;
+
+	/*
+	 * For each output column, check which input column it corresponds to.
+	 */
+	out_cols = NULL;
+
+	for (out_attnum = FirstLowInvalidHeapAttributeNumber + 1;
+		 out_attnum <= maplen;
+		 out_attnum++)
+	{
+		int			in_attnum;
+
+		if (out_attnum < 0)
+		{
+			/* System column. No mapping. */
+			in_attnum = out_attnum;
+		}
+		else if (out_attnum == 0)
+			continue;
+		else
+		{
+			/* normal user column */
+			in_attnum = attrMap[out_attnum - 1];
+
+			if (in_attnum == 0)
+				continue;
+		}
+
+		if (bms_is_member(in_attnum - FirstLowInvalidHeapAttributeNumber, in_cols))
+			out_cols = bms_add_member(out_cols, out_attnum - FirstLowInvalidHeapAttributeNumber);
+	}
+
+	return out_cols;
 }
 
 /*

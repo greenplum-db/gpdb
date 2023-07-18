@@ -18,10 +18,12 @@ If a schema name is given then the operator family is created in the specified s
 
 The user who defines an operator family becomes its owner. Presently, the creating user must be a superuser. \(This restriction is made because an erroneous operator family definition could confuse or even crash the server.\)
 
+Refer to [Interfacing Extensions to Indexes](https://www.postgresql.org/docs/12/xindex.html) in the PostgreSQL documentation for more information.
+
 ## <a id="section4"></a>Parameters 
 
 name
-:   The \(optionally schema-qualified\) name of the operator family to be defined. The name can be schema-qualified.
+:   The \(optionally schema-qualified\) name of the operator family to be created.
 
 index\_method
 :   The name of the index method this operator family is for.
@@ -32,7 +34,7 @@ index\_method
 
 ## <a id="section8"></a>See Also 
 
-[ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.html), [DROP OPERATOR FAMILY](DROP_OPERATOR_FAMILY.html), [CREATE FUNCTION](CREATE_FUNCTION.html), [ALTER OPERATOR CLASS](ALTER_OPERATOR_CLASS.html), [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
+[ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.html), [DROP OPERATOR FAMILY](DROP_OPERATOR_FAMILY.html), [ALTER OPERATOR CLASS](ALTER_OPERATOR_CLASS.html), [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

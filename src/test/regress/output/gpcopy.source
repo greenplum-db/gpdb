@@ -704,7 +704,7 @@ COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEG
 -- 'COPY (SELECT ...) TO' on utility mode
 CREATE EXTERNAL WEB TABLE copy_cmd_utility(a text, b int)
   EXECUTE E'PGOPTIONS="-c gp_role=utility" \\
-    psql -p $GP_MASTER_PORT $GP_DATABASE $GP_USER -c \\
+    psql -X -p $GP_MASTER_PORT $GP_DATABASE $GP_USER -c \\
       "COPY (SELECT * FROM pg_class) TO \'/dev/null\'"'
   ON COORDINATOR FORMAT 'text' (DELIMITER ' ');
 SELECT a FROM copy_cmd_utility;
@@ -748,6 +748,8 @@ ERROR:  COPY single row error handling only available using COPY FROM
 \copy segment_reject_limit_from from 'stdin';
 \copy segment_reject_limit_from to 'stdout';
 \copy segment_reject_limit_from from 'stdout';
+\!rm stdin
+\!rm stdout
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
 -- the data. If there is a valid row within the first 'n' rows specified by
@@ -1436,9 +1438,14 @@ ALTER TABLE
 DROP TABLE ext_dec17;
 DROP TABLE
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_all' IGNORE EXTERNAL PARTITIONS;
-NOTICE:  COPY ignores external partition(s)
+NOTICE:  COPY ignores external partition(s)  (seg1 10.117.190.237:7003 pid=9154)
+NOTICE:  COPY ignores external partition(s)  (seg2 10.117.190.237:7004 pid=9155)
+NOTICE:  COPY ignores external partition(s)  (seg0 10.117.190.237:7002 pid=9153)
 COPY 24
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_with_external';
+ERROR:  cannot copy from relation "sales" which has external partition(s)
+HINT:  Try the COPY (SELECT ...) TO variant.
+COPY (SELECT * FROM sales) TO PROGRAM 'cat > /tmp/test_sales_with_external';
 COPY 25
 COPY sales TO PROGRAM 'cat > /tmp/test_sales_<SEGID>' ON SEGMENT IGNORE EXTERNAL PARTITIONS;
 NOTICE:  COPY ignores external partition(s)

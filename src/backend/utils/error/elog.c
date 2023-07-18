@@ -324,11 +324,11 @@ errstart(int elevel, const char *domain)
 		}
 
 		/*
-		 * If master process hits FATAL, post PREPARE but before COMMIT / ABORT on segment,
-		 * just master process dies silently, leaves dangling prepared xact on segment.
-		 * This also introduces inconsistency in the cluster, as xact is commited on master
+		 * If coordinator process hits FATAL, post PREPARE but before COMMIT / ABORT on segment,
+		 * just coordinator process dies silently, leaves dangling prepared xact on segment.
+		 * This also introduces inconsistency in the cluster, as xact is commited on coordinator
 		 * and some segments and still in-progress on few others.
-		 * Hence converting FATAL to PANIC, here to reset master and perform full recovery
+		 * Hence converting FATAL to PANIC, here to reset coordinator and perform full recovery
 		 * instead, which would clean the dangling transaction update to COMMIT / ABORT.
 		 */
 		if ((elevel == FATAL) && (Gp_role == GP_ROLE_DISPATCH))
@@ -710,8 +710,6 @@ errfinish_and_return(const char *filename, int lineno, const char *funcname)
 {
 	ErrorData  *edata = &errordata[errordata_stack_depth];
 	ErrorData  *edata_copy;
-	ErrorContextCallback *econtext;
-	MemoryContext oldcontext;
 	int			saved_errno;            /*CDB*/
 
 	recursion_depth++;
@@ -732,24 +730,6 @@ errfinish_and_return(const char *filename, int lineno, const char *funcname)
 	edata->filename = filename;
 	edata->lineno = lineno;
 	edata->funcname = funcname;
-
-	/*
-	 * Do processing in ErrorContext, which we hope has enough reserved space
-	 * to report an error.
-	 */
-	oldcontext = MemoryContextSwitchTo(ErrorContext);
-
-	/*
-	 * Call any context callback functions.  Errors occurring in callback
-	 * functions will be treated as recursive errors --- this ensures we will
-	 * avoid infinite recursion (see errstart).
-	 */
-	for (econtext = error_context_stack;
-		 econtext != NULL;
-		 econtext = econtext->previous)
-		(*econtext->callback) (econtext->arg);
-
-	MemoryContextSwitchTo(oldcontext);
 
 	edata_copy = CopyErrorData();
 

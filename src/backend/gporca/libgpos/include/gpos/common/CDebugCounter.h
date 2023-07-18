@@ -59,7 +59,7 @@
     script gporca/scripts/get_debug_event_counters.py
 
     Run this script with the --help option to get more info.
-    Usually (if you have the MASTER_DATA_DIRECTORY environment
+    Usually (if you have the COORDINATOR_DATA_DIRECTORY environment
     variable set), you can just run the script without any arguments.
     The script can also store the result in an SQL table.
 

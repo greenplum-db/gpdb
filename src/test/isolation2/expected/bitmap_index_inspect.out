@@ -4,15 +4,15 @@
 
 -- Setup
 1U: CREATE EXTENSION pageinspect;
-CREATE
+CREATE EXTENSION
 1U: CREATE TABLE bmtest_t1(i int, bmfield int);
-CREATE
+CREATE TABLE
 1U: CREATE INDEX bmtest_i1 ON bmtest_t1 USING bitmap(bmfield);
-CREATE
+CREATE INDEX
 1U: INSERT INTO bmtest_t1 SELECT i,1 FROM generate_series(1, 1000) i;
-INSERT 1000
+INSERT 0 1000
 1U: INSERT INTO bmtest_t1 SELECT i,2 FROM generate_series(1, 1000) i;
-INSERT 1000
+INSERT 0 1000
 
 -- start_matchsubs
 -- m/bmfuncs.c:\d+/
@@ -63,6 +63,6 @@ ERROR:  block 1 is not a bitmap page, it is a LOV item page (bmfuncs.c:507)
 
 -- cleanup
 1U: DROP TABLE bmtest_t1;
-DROP
+DROP TABLE
 1U: DROP EXTENSION pageinspect;
-DROP
+DROP EXTENSION

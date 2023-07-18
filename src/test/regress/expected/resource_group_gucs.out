@@ -2,33 +2,6 @@
 -- in case any of them are removed by accident.
 -- do not care about the values / ranges / types
 -- start_ignore
-\! gpconfig -s gp_resgroup_print_operator_memory_limits;
-Values on all segments are consistent
-GUC              : gp_resgroup_print_operator_memory_limits
-Coordinator value: off
-Segment     value: off
--- end_ignore
-\! echo $?;
-0
--- start_ignore
-\! gpconfig -s gp_resgroup_memory_policy_auto_fixed_mem;
-Values on all segments are consistent
-GUC              : gp_resgroup_memory_policy_auto_fixed_mem
-Coordinator value: 100kB
-Segment     value: 100kB
--- end_ignore
-\! echo $?;
-0
--- start_ignore
-\! gpconfig -s gp_resgroup_memory_policy;
-Values on all segments are consistent
-GUC              : gp_resgroup_memory_policy
-Coordinator value: eager_free
-Segment     value: eager_free
--- end_ignore
-\! echo $?;
-0
--- start_ignore
 \! gpconfig -s gp_resource_group_cpu_priority;
 Values on all segments are consistent
 GUC              : gp_resource_group_cpu_priority
@@ -43,15 +16,6 @@ Values on all segments are consistent
 GUC              : gp_resource_group_cpu_limit
 Coordinator value: 0.9
 Segment     value: 0.9
--- end_ignore
-\! echo $?;
-0
--- start_ignore
-\! gpconfig -s gp_resource_group_memory_limit;
-Values on all segments are consistent
-GUC              : gp_resource_group_memory_limit
-Coordinator value: 0.6924
-Segment     value: 0.6924
 -- end_ignore
 \! echo $?;
 0

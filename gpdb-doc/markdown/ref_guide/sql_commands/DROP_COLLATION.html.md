@@ -8,6 +8,10 @@ Removes a previously defined collation.
 DROP COLLATION [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 ```
 
+## <a id="section3"></a>Description
+
+`DROP COLLATION` removes a previously defined collation. To be able to drop a collation, you must own the collation.
+
 ## <a id="section4"></a>Parameters 
 
 `IF EXISTS`
@@ -17,14 +21,11 @@ name
 :   The name of the collation. The collation name can be schema-qualified.
 
 `CASCADE`
-:   Automatically drop objects that depend on the collation.
+:   Automatically drop objects that depend on the collation, and in turn all objects that depend on those objects.
 
 `RESTRICT`
 :   Refuse to drop the collation if any objects depend on it. This is the default.
 
-## <a id="section5"></a>Notes 
-
-`DROP COLLATION` removes a previously defined collation. To be able to drop a collation, you must own the collation.
 
 ## <a id="section6"></a>Examples 
 

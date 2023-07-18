@@ -1750,7 +1750,7 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 				CDouble(0.0) + CStatistics::Epsilon);
 #endif
 
-	// GPDB_12_MERGE_FIXME: the desired_num_buckets handling is broken for singleton buckets
+	// FIXME: the desired_num_buckets handling is broken for singleton buckets
 	// While it limits the number of buckets for non-singleton buckets, singleton buckets
 	// are not merged, and thus we can get cases where the number of result buckets is
 	// larger than the desired number of buckets
@@ -2291,14 +2291,22 @@ CHistogram::AddDummyHistogramAndWidthInfo(
 		CColRef *col_ref = col_factory->LookupColRef(colid);
 		GPOS_ASSERT(nullptr != col_ref);
 
-		CHistogram *histogram =
-			CHistogram::MakeDefaultHistogram(mp, col_ref, is_empty);
-		output_histograms->Insert(GPOS_NEW(mp) ULONG(colid), histogram);
+		if (nullptr == output_histograms->Find(&colid))
+		{
+			CHistogram *histogram =
+				CHistogram::MakeDefaultHistogram(mp, col_ref, is_empty);
+			output_histograms->Insert(GPOS_NEW(mp) ULONG(colid), histogram);
+		}
 
-		CDouble width =
-			CStatisticsUtils::DefaultColumnWidth(col_ref->RetrieveType());
-		output_col_widths->Insert(GPOS_NEW(mp) ULONG(colid),
-								  GPOS_NEW(mp) CDouble(width));
+
+
+		if (nullptr == output_col_widths->Find(&colid))
+		{
+			CDouble width =
+				CStatisticsUtils::DefaultColumnWidth(col_ref->RetrieveType());
+			output_col_widths->Insert(GPOS_NEW(mp) ULONG(colid),
+									  GPOS_NEW(mp) CDouble(width));
+		}
 	}
 }
 

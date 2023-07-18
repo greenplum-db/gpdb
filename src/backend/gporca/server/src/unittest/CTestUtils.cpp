@@ -45,7 +45,7 @@
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CLogicalDelete.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalExternalGet.h"
+#include "gpopt/operators/CLogicalForeignGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
@@ -221,8 +221,9 @@ CTestUtils::PtabdescPlainWithColNameFormat(
 		mp, mdid, nameTable,
 		false,	// convert_hash_to_random
 		IMDRelation::EreldistrRandom, IMDRelation::ErelstorageHeap,
-		0,	// ulExecuteAsUser
-		-1	// lockmode
+		0,	 // ulExecuteAsUser
+		-1,	 // lockmode
+		0	 // UNASSIGNED_QUERYID
 	);
 
 	for (ULONG i = 0; i < num_cols; i++)
@@ -388,14 +389,14 @@ CTestUtils::PexprLogicalGet(CMemoryPool *mp)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTestUtils::PexprLogicalExternalGet
+//		CTestUtils::PexprLogicalForeignGet
 //
 //	@doc:
-//		Generate a randomized external get expression
+//		Generate a randomized foreign get expression
 //
 //---------------------------------------------------------------------------
 CExpression *
-CTestUtils::PexprLogicalExternalGet(CMemoryPool *mp)
+CTestUtils::PexprLogicalForeignGet(CMemoryPool *mp)
 {
 	CWStringConst strName(GPOS_WSZ_LIT("ExternalTable"));
 	CMDIdGPDB *mdid =
@@ -404,7 +405,7 @@ CTestUtils::PexprLogicalExternalGet(CMemoryPool *mp)
 	CWStringConst strAlias(GPOS_WSZ_LIT("ExternalTableAlias"));
 
 	return GPOS_NEW(mp)
-		CExpression(mp, GPOS_NEW(mp) CLogicalExternalGet(
+		CExpression(mp, GPOS_NEW(mp) CLogicalForeignGet(
 							mp, GPOS_NEW(mp) CName(mp, &strAlias), ptabdesc));
 }
 
@@ -451,12 +452,13 @@ CTestUtils::PexprLogicalDynamicGetWithIndexes(CMemoryPool *mp)
 	CWStringConst strAlias(GPOS_WSZ_LIT("P1Alias"));
 
 	IMdIdArray *partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
+	IMdIdArray *foreign_mdids = GPOS_NEW(mp) IMdIdArray(mp);
 
 	return GPOS_NEW(mp) CExpression(
 		mp, GPOS_NEW(mp) CLogicalDynamicGet(
 				mp, GPOS_NEW(mp) CName(mp, CName(&strAlias)), ptabdesc,
 				0,	// ulPartIndex
-				partition_mdids));
+				partition_mdids, foreign_mdids));
 }
 
 
@@ -1859,11 +1861,12 @@ CTestUtils::PexprLogicalDynamicGet(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 	GPOS_ASSERT(nullptr != ptabdesc);
 
 	IMdIdArray *partition_mdids = GPOS_NEW(mp) IMdIdArray(mp);
+	IMdIdArray *foreign_mdids = GPOS_NEW(mp) IMdIdArray(mp);
 
-	return GPOS_NEW(mp)
-		CExpression(mp, GPOS_NEW(mp) CLogicalDynamicGet(
-							mp, GPOS_NEW(mp) CName(mp, CName(pstrTableAlias)),
-							ptabdesc, ulPartIndex, partition_mdids));
+	return GPOS_NEW(mp) CExpression(
+		mp, GPOS_NEW(mp) CLogicalDynamicGet(
+				mp, GPOS_NEW(mp) CName(mp, CName(pstrTableAlias)), ptabdesc,
+				ulPartIndex, partition_mdids, foreign_mdids));
 }
 
 //---------------------------------------------------------------------------
@@ -2471,7 +2474,7 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
@@ -2480,7 +2483,7 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr,
 
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 
-	// we require exact matching on distribution since final query results must be sent to master
+	// we require exact matching on distribution since final query results must be sent to coordinator
 	CEnfdDistribution *ped =
 		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
 
@@ -2552,14 +2555,14 @@ CTestUtils::PqcGenerate(CMemoryPool *mp, CExpression *pexpr)
 				pcrsOutput->PcrAny(), COrderSpec::EntFirst);
 
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 
-	// we require exact matching on distribution since final query results must be sent to master
+	// we require exact matching on distribution since final query results must be sent to coordinator
 	CEnfdDistribution *ped =
 		GPOS_NEW(mp) CEnfdDistribution(pds, CEnfdDistribution::EdmExact);
 

@@ -1,17 +1,17 @@
 -- t0r is the reference table to provide the data distribution info.
 DROP TABLE IF EXISTS t0p;
-DROP
+DROP TABLE
 CREATE TABLE t0p (id int, val int);
-CREATE
+CREATE TABLE
 INSERT INTO t0p (id, val) SELECT i, i FROM generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 
 DROP TABLE IF EXISTS t0r;
-DROP
+DROP TABLE
 CREATE TABLE t0r (id int, val int, segid int) DISTRIBUTED REPLICATED;
-CREATE
+CREATE TABLE
 INSERT INTO t0r (id, val, segid) SELECT id, val, gp_segment_id from t0p;
-INSERT 100
+INSERT 0 100
 
 -- GDD tests rely on the data distribution, but depends on the number of
 -- the segments the distribution might be different.
@@ -19,10 +19,10 @@ INSERT 100
 -- * `seg` is the segment id, starts from 0;
 -- * `idx` is the index on the segment, starts from 1;
 CREATE OR REPLACE FUNCTION segid(seg int, idx int) RETURNS int AS $$ SELECT id FROM t0r WHERE segid=$1 ORDER BY id LIMIT 1 OFFSET ($2-1) $$ LANGUAGE sql;
-CREATE
+CREATE FUNCTION
 
 -- In some of the testcases the execution order of two background queries
--- must be enforced not only on master but also on segments, for example
+-- must be enforced not only on coordinator but also on segments, for example
 -- in below case the order of 10 and 20 on segments results in different
 -- waiting relations:
 --
@@ -38,7 +38,7 @@ CREATE
 -- So we provide this barrier function to ensure the execution order.
 -- It's implemented with sleep now, but should at least work.
 CREATE OR REPLACE FUNCTION barrier() RETURNS void AS $$ SELECT pg_sleep(4) $$ LANGUAGE sql;
-CREATE
+CREATE FUNCTION
 
 -- verify the function
 -- Data distribution is sensitive to the underlying hash algorithm, we need each
@@ -61,18 +61,18 @@ SELECT segid(2,10) is not null;
 
 --enable GDD
 
--- table to just store the master's data directory path on segment.
+-- table to just store the coordinator's data directory path on segment.
 CREATE TABLE datadir(a int, dir text);
-CREATE
+CREATE TABLE
 INSERT INTO datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
-INSERT 1
+INSERT 0 1
 
 ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
-ALTER
+ALTER SYSTEM
 ALTER SYSTEM SET gp_global_deadlock_detector_period TO 5;
-ALTER
+ALTER SYSTEM
 
--- Use utility session on seg 0 to restart master. This way avoids the
+-- Use utility session on seg 0 to restart coordinator. This way avoids the
 -- situation where session issuing the restart doesn't disappear
 -- itself.
 1U:SELECT pg_ctl(dir, 'restart') from datadir;
@@ -80,7 +80,7 @@ ALTER
 --------
  OK     
 (1 row)
--- Start new session on master to make sure it has fully completed
+-- Start new session on coordinator to make sure it has fully completed
 -- recovery and up and running again.
 1: SHOW gp_enable_global_deadlock_detector;
  gp_enable_global_deadlock_detector 

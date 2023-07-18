@@ -20,6 +20,8 @@
 #include "nodes/nodes.h"
 #include "utils/fmgrprotos.h"
 
+/* Sign + the most decimal digits an 8-byte number could have */
+#define MAXINT8LEN 20
 
 /* bool.c */
 extern bool parse_bool(const char *value, bool *result);
@@ -48,10 +50,12 @@ extern int32 pg_atoi(const char *s, int size, int c);
 extern int16 pg_strtoint16(const char *s);
 extern int32 pg_strtoint32(const char *s);
 extern void pg_itoa(int16 i, char *a);
+int			pg_ultoa_n(uint32 l, char *a);
+int			pg_ulltoa_n(uint64 l, char *a);
 extern void pg_ltoa(int32 l, char *a);
 extern void pg_lltoa(int64 ll, char *a);
-extern char *pg_ltostr_zeropad(char *str, int32 value, int32 minwidth);
-extern char *pg_ltostr(char *str, int32 value);
+extern char *pg_ultostr_zeropad(char *str, uint32 value, int32 minwidth);
+extern char *pg_ultostr(char *str, uint32 value);
 extern uint64 pg_strtouint64(const char *str, char **endptr, int base);
 
 /* dbsize.c */
@@ -101,6 +105,7 @@ extern void text_to_cstring_buffer(const text *src, char *dst, size_t dst_len);
 
 /* xid.c */
 extern int	xidComparator(const void *arg1, const void *arg2);
+extern int	xidLogicalComparator(const void *arg1, const void *arg2);
 
 /* inet_cidr_ntop.c */
 extern char *inet_cidr_ntop(int af, const void *src, int bits,

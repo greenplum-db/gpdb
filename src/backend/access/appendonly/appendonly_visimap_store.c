@@ -16,6 +16,7 @@
 
 #include "access/genam.h"
 #include "access/table.h"
+#include "catalog/aocatalog.h"
 #include "catalog/aovisimap.h"
 #include "catalog/indexing.h"
 #include "access/appendonly_visimap_store.h"
@@ -58,23 +59,26 @@ AppendOnlyVisimapStore_Finish(AppendOnlyVisimapStore *visiMapStore,
 void
 AppendOnlyVisimapStore_Init(AppendOnlyVisimapStore *visiMapStore,
 							Oid visimapRelid,
-							Oid visimapIdxid,
 							LOCKMODE lockmode,
 							Snapshot snapshot,
 							MemoryContext memoryContext)
 {
 	TupleDesc	heapTupleDesc;
 	ScanKey		scanKey;
+	Oid 		visimapIdxid;
 
 	Assert(visiMapStore);
 	Assert(CurrentMemoryContext == memoryContext);
 	Assert(OidIsValid(visimapRelid));
-	Assert(OidIsValid(visimapIdxid));
 
 	visiMapStore->snapshot = RegisterSnapshot(snapshot);
 	visiMapStore->memoryContext = memoryContext;
 
 	visiMapStore->visimapRelation = table_open(visimapRelid, lockmode);
+
+	visimapIdxid = AppendonlyGetAuxIndex(visiMapStore->visimapRelation);
+	Assert(OidIsValid(visimapIdxid));
+
 	visiMapStore->visimapIndex = index_open(visimapIdxid, lockmode);
 
 	heapTupleDesc =

@@ -65,6 +65,11 @@ public:
 		return "RANDOM";
 	}
 
+	CColRef *
+	GetGpSegmentId()
+	{
+		return m_gp_segment_id;
+	}
 	// is distribution duplicate sensitive
 	BOOL
 	IsDuplicateSensitive() const
@@ -76,8 +81,6 @@ public:
 	void
 	MarkDuplicateSensitive()
 	{
-		GPOS_ASSERT(!m_is_duplicate_sensitive);
-
 		m_is_duplicate_sensitive = true;
 	}
 

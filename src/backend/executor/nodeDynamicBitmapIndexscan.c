@@ -13,7 +13,7 @@
  *
  * This is somewhat different from a Dynamic Index Scan. While a Dynamic
  * Index Scan needs to iterate through all the active partitions, a Dynamic
- * Bitmap Index Scan works as a slave of a dynamic Bitmap Heap Scan node
+ * Bitmap Index Scan works as a subsidiary of a dynamic Bitmap Heap Scan node
  * above it. It scans only one partition at a time, but the partition
  * can change at a rescan.
  *

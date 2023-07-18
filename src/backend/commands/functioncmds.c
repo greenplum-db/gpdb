@@ -63,6 +63,7 @@
 #include "parser/parse_func.h"
 #include "parser/parse_type.h"
 #include "pgstat.h"
+#include "tcop/pquery.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
@@ -71,6 +72,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/typcache.h"
 
@@ -527,7 +529,6 @@ compute_common_attribute(ParseState *pstate,
 						 DefElem **support_item,
 						 DefElem **parallel_item,
 						 DefElem **describe_item,
-						 DefElem **data_access_item,
 						 DefElem **exec_location_item)
 {
 	if (strcmp(defel->defname, "volatility") == 0)
@@ -613,10 +614,13 @@ compute_common_attribute(ParseState *pstate,
 	}
 	else if (strcmp(defel->defname, "data_access") == 0)
 	{
-		if (*data_access_item)
-			goto duplicate_error;
-
-		*data_access_item = defel;
+		/*
+		 * Do nothing.
+		 *
+		 * This "data_access" DefElem was created in gram.y for compatibility,
+		 * Greenplum now allows the syntax of data access indicator, but
+		 * ignores it from here on.
+		 */
 	}
 	else if (strcmp(defel->defname, "exec_location") == 0)
 	{
@@ -665,62 +669,6 @@ interpret_func_volatility(DefElem *defel)
 }
 
 static char
-interpret_data_access(DefElem *defel)
-{
-	char *str = strVal(defel->arg);
-	char proDataAccess = PRODATAACCESS_NONE;
-
-	if (strcmp(str, "none") == 0)
-		proDataAccess = PRODATAACCESS_NONE;
-	else if (strcmp(str, "contains") == 0)
-		proDataAccess = PRODATAACCESS_CONTAINS;
-	else if (strcmp(str, "reads") == 0)
-		proDataAccess = PRODATAACCESS_READS;
-	else if (strcmp(str, "modifies") == 0)
-		proDataAccess = PRODATAACCESS_MODIFIES;
-	else
-		elog(ERROR, "invalid data access \"%s\"", str);
-
-	return proDataAccess;
-}
-
-static char
-getDefaultDataAccess(Oid languageOid)
-{
-	char proDataAccess = PRODATAACCESS_NONE;
-	if (languageOid == SQLlanguageId)
-		proDataAccess = PRODATAACCESS_CONTAINS;
-
-	return proDataAccess;
-}
-
-static void
-validate_sql_data_access(char data_access, char volatility, Oid languageOid)
-{
-	/* IMMUTABLE is not compatible with READS SQL DATA or MODIFIES SQL DATA */
-	if (volatility == PROVOLATILE_IMMUTABLE &&
-			data_access == PRODATAACCESS_READS)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				errmsg("conflicting options"),
-				errhint("IMMUTABLE conflicts with READS SQL DATA.")));
-
-	if (volatility == PROVOLATILE_IMMUTABLE &&
-			data_access == PRODATAACCESS_MODIFIES)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("conflicting options"),
-				 errhint("IMMUTABLE conflicts with MODIFIES SQL DATA.")));
-
-	/* SQL language function cannot specify NO SQL */
-	if (languageOid == SQLlanguageId && data_access == PRODATAACCESS_NONE)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("conflicting options"),
-				 errhint("A SQL function cannot specify NO SQL.")));
-}
-
-static char
 interpret_exec_location(DefElem *defel)
 {
 	char	   *str = strVal(defel->arg);
@@ -735,7 +683,7 @@ interpret_exec_location(DefElem *defel)
 	else if (strcmp(str, "all_segments") == 0)
 		exec_location = PROEXECLOCATION_ALL_SEGMENTS;
 	else
-		elog(ERROR, "invalid data access \"%s\"", str);
+		elog(ERROR, "invalid exec location \"%s\"", str);
 
 	return exec_location;
 }
@@ -892,7 +840,6 @@ compute_function_attributes(ParseState *pstate,
 							Oid *prosupport,
 							char *parallel_p,
 							List **describeQualName_p,
-							char *data_access_p,
 							char *exec_location_p)
 {
 	ListCell   *option;
@@ -910,7 +857,6 @@ compute_function_attributes(ParseState *pstate,
 	DefElem    *support_item = NULL;
 	DefElem    *parallel_item = NULL;
 	DefElem    *describe_item = NULL;
-	DefElem    *data_access_item = NULL;
 	DefElem    *exec_location_item = NULL;
 
 	foreach(option, options)
@@ -971,7 +917,6 @@ compute_function_attributes(ParseState *pstate,
 										  &support_item,
 										  &parallel_item,
 										  &describe_item,
-										  &data_access_item,
 										  &exec_location_item))
 		{
 			/* recognized common option */
@@ -1040,8 +985,6 @@ compute_function_attributes(ParseState *pstate,
 		*parallel_p = interpret_func_parallel(parallel_item);
 	if (describe_item)
 		*describeQualName_p = defGetQualifiedName(describe_item);
-	if (data_access_item)
-		*data_access_p = interpret_data_access(data_access_item);
 	if (exec_location_item)
 		*exec_location_p = interpret_exec_location(exec_location_item);
 }
@@ -1291,7 +1234,6 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	char		parallel;
 	List       *describeQualName = NIL;
 	Oid         describeFuncOid  = InvalidOid;
-	char		dataAccess;
 	char		execLocation;
 	ObjectAddress objAddr;
 
@@ -1317,7 +1259,6 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	prorows = -1;				/* indicates not set */
 	prosupport = InvalidOid;
 	parallel = PROPARALLEL_UNSAFE;
-	dataAccess = '\0';			/* indicates not set */
 	execLocation = '\0';		/* indicates not set */
 
 	/* Extract non-default attributes from stmt->options list */
@@ -1330,7 +1271,7 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 								&proconfig, &procost, &prorows,
 								&prosupport, &parallel,
 								&describeQualName,
-								&dataAccess, &execLocation);
+								&execLocation);
 
 	/* Look up the language and validate permissions */
 	languageTuple = SearchSysCache1(LANGNAME, PointerGetDatum(language));
@@ -1343,10 +1284,6 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 
 	languageStruct = (Form_pg_language) GETSTRUCT(languageTuple);
 	languageOid = languageStruct->oid;
-
-	/* If prodataaccess indicator not specified, fill in default. */
-	if (dataAccess == '\0')
-		dataAccess = getDefaultDataAccess(languageOid);
 
 	/* If proexeclocation indicator not specified, fill in default. */
 	if (execLocation == '\0')
@@ -1373,12 +1310,6 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 	languageValidator = languageStruct->lanvalidator;
 
 	ReleaseSysCache(languageTuple);
-
-	/*
-	 * Check consistency for data access.  Note this comes after the language
-	 * tuple lookup, as we need language oid.
-	 */
-	validate_sql_data_access(dataAccess, volatility, languageOid);
 
 	/*
 	 * Only superuser is allowed to create leakproof functions because
@@ -1548,7 +1479,6 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 						   prosupport,
 						   procost,
 						   prorows,
-						   dataAccess,
 						   execLocation);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -1641,10 +1571,8 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
 	DefElem    *parallel_item = NULL;
 	ObjectAddress address;
 	DefElem    *describe_item = NULL;
-	DefElem    *data_access_item = NULL;
 	DefElem    *exec_location_item = NULL;
 	bool		isnull;
-	char		data_access;
 	char		exec_location;
 
 	rel = table_open(ProcedureRelationId, RowExclusiveLock);
@@ -1693,7 +1621,6 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
 									 &support_item,
 									 &parallel_item,
 									 &describe_item,
-									 &data_access_item,
 									 &exec_location_item) == false)
 			elog(ERROR, "option \"%s\" not recognized", defel->defname);
 	}
@@ -1754,6 +1681,8 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
 
 		procForm->prosupport = newsupport;
 	}
+	if (parallel_item)
+		procForm->proparallel = interpret_func_parallel(parallel_item);
 	if (set_items)
 	{
 		Datum		datum;
@@ -1788,26 +1717,9 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
 		tup = heap_modify_tuple(tup, RelationGetDescr(rel),
 								repl_val, repl_null, repl_repl);
 	}
-	if (parallel_item)
-		procForm->proparallel = interpret_func_parallel(parallel_item);
 	if (describe_item)
 	{
 		elog(ERROR, "cannot change DESCRIBE function");
-	}
-	if (data_access_item)
-	{
-		Datum		repl_val[Natts_pg_proc];
-		bool		repl_null[Natts_pg_proc];
-		bool		repl_repl[Natts_pg_proc];
-
-		MemSet(repl_null, 0, sizeof(repl_null));
-		MemSet(repl_repl, 0, sizeof(repl_repl));
-		repl_repl[Anum_pg_proc_prodataaccess - 1] = true;
-		repl_val[Anum_pg_proc_prodataaccess - 1] =
-			CharGetDatum(interpret_data_access(data_access_item));
-
-		tup = heap_modify_tuple(tup, RelationGetDescr(rel),
-								repl_val, repl_null, repl_repl);
 	}
 	if (exec_location_item)
 	{
@@ -1825,20 +1737,15 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
 								repl_val, repl_null, repl_repl);
 	}
 
-	data_access = DatumGetChar(
-		heap_getattr(tup, Anum_pg_proc_prodataaccess,
-					 RelationGetDescr(rel), &isnull));
-	Assert(!isnull);
 	exec_location = DatumGetChar(
 		heap_getattr(tup, Anum_pg_proc_proexeclocation,
 					 RelationGetDescr(rel), &isnull));
 	Assert(!isnull);
 	/* Cross check for various properties. */
-	validate_sql_data_access(data_access,
-							 procForm->provolatile,
-							 procForm->prolang);
 	validate_sql_exec_location(exec_location,
 							   procForm->proretset);
+
+	/* DO NOT put more touches of procForm below here; it's now dangling. */
 
 	/* Do the update */
 	CatalogTupleUpdate(rel, &tup->t_self, tup);
@@ -2906,6 +2813,16 @@ ExecuteCallStmt(CallStmt *stmt, ParamListInfo params, bool atomic, DestReceiver 
 	estate->es_param_list_info = params;
 	econtext = CreateExprContext(estate);
 
+	/*
+	 * If we're called in non-atomic context, we also have to ensure that the
+	 * argument expressions run with an up-to-date snapshot.  Our caller will
+	 * have provided a current snapshot in atomic contexts, but not in
+	 * non-atomic contexts, because the possibility of a COMMIT/ROLLBACK
+	 * destroying the snapshot makes higher-level management too complicated.
+	 */
+	if (!atomic)
+		PushActiveSnapshot(GetTransactionSnapshot());
+
 	i = 0;
 	foreach(lc, fexpr->args)
 	{
@@ -2923,20 +2840,23 @@ ExecuteCallStmt(CallStmt *stmt, ParamListInfo params, bool atomic, DestReceiver 
 		i++;
 	}
 
+	/* Get rid of temporary snapshot for arguments, if we made one */
+	if (!atomic)
+		PopActiveSnapshot();
+
+	/* Here we actually call the procedure */
 	pgstat_init_function_usage(fcinfo, &fcusage);
 	retval = FunctionCallInvoke(fcinfo);
 	pgstat_end_function_usage(&fcusage, true);
 
+	/* Handle the procedure's outputs */
 	if (fexpr->funcresulttype == VOIDOID)
 	{
 		/* do nothing */
 	}
 	else if (fexpr->funcresulttype == RECORDOID)
 	{
-		/*
-		 * send tuple to client
-		 */
-
+		/* send tuple to client */
 		HeapTupleHeader td;
 		Oid			tupType;
 		int32		tupTypmod;
@@ -2947,6 +2867,20 @@ ExecuteCallStmt(CallStmt *stmt, ParamListInfo params, bool atomic, DestReceiver 
 
 		if (fcinfo->isnull)
 			elog(ERROR, "procedure returned null record");
+
+		/*
+		 * Ensure there's an active snapshot whilst we execute whatever's
+		 * involved here.  Note that this is *not* sufficient to make the
+		 * world safe for TOAST pointers to be included in the returned data:
+		 * the referenced data could have gone away while we didn't hold a
+		 * snapshot.  Hence, it's incumbent on PLs that can do COMMIT/ROLLBACK
+		 * to not return TOAST pointers, unless those pointers were fetched
+		 * after the last COMMIT/ROLLBACK in the procedure.
+		 *
+		 * XXX that is a really nasty, hard-to-test requirement.  Is there a
+		 * way to remove it?
+		 */
+		EnsurePortalSnapshotExists();
 
 		td = DatumGetHeapTupleHeader(retval);
 		tupType = HeapTupleHeaderGetTypeId(td);

@@ -11,7 +11,7 @@
  *		pages from a relation that is in the process of being dropped.
  *
  *		While prewarming, autoprewarm will use two workers.  There's a
- *		master worker that reads and sorts the list of blocks to be
+ *		leader worker that reads and sorts the list of blocks to be
  *		prewarmed and then launches a per-database worker for each
  *		relevant database in turn.  The former keeps running after the
  *		initial prewarm is complete to update the dump file periodically.
@@ -88,7 +88,7 @@ PG_FUNCTION_INFO_V1(autoprewarm_dump_now);
 
 static void apw_load_buffers(void);
 static int	apw_dump_now(bool is_bgworker, bool dump_unlogged);
-static void apw_start_master_worker(void);
+static void apw_start_leader_worker(void);
 static void apw_start_database_worker(void);
 static bool apw_init_shmem(void);
 static void apw_detach_shmem(int code, Datum arg);
@@ -146,17 +146,18 @@ _PG_init(void)
 
 	/* Register autoprewarm worker, if enabled. */
 	if (autoprewarm)
-		apw_start_master_worker();
+		apw_start_leader_worker();
 }
 
 /*
- * Main entry point for the master autoprewarm process.  Per-database workers
+ * Main entry point for the leader autoprewarm process.  Per-database workers
  * have a separate entry point.
  */
 void
 autoprewarm_main(Datum main_arg)
 {
 	bool		first_time = true;
+	bool		final_dump_allowed = true;
 	TimestampTz last_dump_time = 0;
 
 	/* Establish signal handlers; once that's done, unblock signals. */
@@ -197,10 +198,15 @@ autoprewarm_main(Datum main_arg)
 	 * There's not much point in performing a dump immediately after we finish
 	 * preloading; so, if we do end up preloading, consider the last dump time
 	 * to be equal to the current time.
+	 *
+	 * If apw_load_buffers() is terminated early by a shutdown request,
+	 * prevent dumping out our state below the loop, because we'd effectively
+	 * just truncate the saved state to however much we'd managed to preload.
 	 */
 	if (first_time)
 	{
 		apw_load_buffers();
+		final_dump_allowed = !got_sigterm;
 		last_dump_time = GetCurrentTimestamp();
 	}
 
@@ -224,18 +230,16 @@ autoprewarm_main(Datum main_arg)
 		}
 		else
 		{
-			long		delay_in_ms = 0;
-			TimestampTz next_dump_time = 0;
-			long		secs = 0;
-			int			usecs = 0;
+			TimestampTz next_dump_time;
+			long		delay_in_ms;
 
 			/* Compute the next dump time. */
 			next_dump_time =
 				TimestampTzPlusMilliseconds(last_dump_time,
 											autoprewarm_interval * 1000);
-			TimestampDifference(GetCurrentTimestamp(), next_dump_time,
-								&secs, &usecs);
-			delay_in_ms = secs + (usecs / 1000);
+			delay_in_ms =
+				TimestampDifferenceMilliseconds(GetCurrentTimestamp(),
+												next_dump_time);
 
 			/* Perform a dump if it's time. */
 			if (delay_in_ms <= 0)
@@ -260,7 +264,8 @@ autoprewarm_main(Datum main_arg)
 	 * Dump one last time.  We assume this is probably the result of a system
 	 * shutdown, although it's possible that we've merely been terminated.
 	 */
-	apw_dump_now(true, true);
+	if (final_dump_allowed)
+		apw_dump_now(true, true);
 }
 
 /*
@@ -394,6 +399,13 @@ apw_load_buffers(void)
 			break;
 
 		/*
+		 * Likewise, don't launch if we've already been told to shut down.
+		 * (The launch would fail anyway, but we might as well skip it.)
+		 */
+		if (got_sigterm)
+			break;
+
+		/*
 		 * Start a per-database worker to load blocks for this database; this
 		 * function will return once the per-database worker exits.
 		 */
@@ -410,10 +422,11 @@ apw_load_buffers(void)
 	apw_state->pid_using_dumpfile = InvalidPid;
 	LWLockRelease(&apw_state->lock);
 
-	/* Report our success. */
-	ereport(LOG,
-			(errmsg("autoprewarm successfully prewarmed %d of %d previously-loaded blocks",
-					apw_state->prewarmed_blocks, num_elements)));
+	/* Report our success, if we were able to finish. */
+	if (!got_sigterm)
+		ereport(LOG,
+				(errmsg("autoprewarm successfully prewarmed %d of %d previously-loaded blocks",
+						apw_state->prewarmed_blocks, num_elements)));
 }
 
 /*
@@ -716,7 +729,7 @@ autoprewarm_start_worker(PG_FUNCTION_ARGS)
 				 errmsg("autoprewarm worker is already running under PID %lu",
 						(unsigned long) pid)));
 
-	apw_start_master_worker();
+	apw_start_leader_worker();
 
 	PG_RETURN_VOID();
 }
@@ -786,10 +799,10 @@ apw_detach_shmem(int code, Datum arg)
 }
 
 /*
- * Start autoprewarm master worker process.
+ * Start autoprewarm leader worker process.
  */
 static void
-apw_start_master_worker(void)
+apw_start_leader_worker(void)
 {
 	BackgroundWorker worker;
 	BackgroundWorkerHandle *handle;
@@ -801,8 +814,8 @@ apw_start_master_worker(void)
 	worker.bgw_start_time = BgWorkerStart_ConsistentState;
 	strcpy(worker.bgw_library_name, "pg_prewarm");
 	strcpy(worker.bgw_function_name, "autoprewarm_main");
-	strcpy(worker.bgw_name, "autoprewarm master");
-	strcpy(worker.bgw_type, "autoprewarm master");
+	strcpy(worker.bgw_name, "autoprewarm leader");
+	strcpy(worker.bgw_type, "autoprewarm leader");
 
 	if (process_shared_preload_libraries_in_progress)
 	{

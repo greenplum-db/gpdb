@@ -18,7 +18,7 @@ The `CREATE PROTOCOL` command must specify either a read call handler or a write
 
 The protocol name can be specified in a `CREATE EXTERNAL TABLE` command.
 
-For information about creating and enabling a custom data access protocol, see "Example Custom Data Access Protocol" in the *Greenplum Database Administrator Guide*.
+For information about creating and enabling a custom data access protocol, refer to the [Example Custom Data Access Protocol](../../admin_guide/load/topics/g-example-custom-data-access-protocol.html) documentation.
 
 ## <a id="section4"></a>Parameters 
 

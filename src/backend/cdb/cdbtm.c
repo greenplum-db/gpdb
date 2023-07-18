@@ -58,6 +58,8 @@
 #include "utils/snapmgr.h"
 #include "utils/memutils.h"
 
+#include "nodes/plannodes.h"
+
 typedef struct TmControlBlock
 {
 	bool						DtmStarted;
@@ -85,6 +87,7 @@ uint32 *shmNextSnapshotId;
 slock_t *shmGxidGenLock;
 
 int	max_tm_gxacts = 100;
+bool needDistributedSnapshot = true;
 
 int gp_gxid_prefetch_num;
 #define GXID_PRETCH_THRESHOLD (gp_gxid_prefetch_num>>1)
@@ -781,18 +784,11 @@ doNotifyingAbort(void)
 		case DTX_STATE_NOTIFYING_ABORT_PREPARED:
 			{
 				DtxProtocolCommand dtxProtocolCommand;
-				char	   *abortString;
 
 				if (MyTmGxactLocal->state == DTX_STATE_NOTIFYING_ABORT_SOME_PREPARED)
-				{
 					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_ABORT_SOME_PREPARED;
-					abortString = "Abort [Prepared]";
-				}
 				else
-				{
 					dtxProtocolCommand = DTX_PROTOCOL_COMMAND_ABORT_PREPARED;
-					abortString = "Abort Prepared";
-				}
 
 				savedInterruptHoldoffCount = InterruptHoldoffCount;
 
@@ -1049,7 +1045,7 @@ tmShmemInit(void)
 	 *  will all use two-phase commit, so the number of global transactions is
 	 *  bound to the number of prepared.
 	 *
-	 * Note on master, it is possible that some prepared xacts just use partial
+	 * Note on coordinator, it is possible that some prepared xacts just use partial
 	 * gang so on QD the total prepared xacts might be quite large but it is
 	 * limited by max_connections since one QD should only have one 2pc one
 	 * time, so if we set max_tm_gxacts as max_prepared_transactions as before,
@@ -1057,11 +1053,11 @@ tmShmemInit(void)
 	 * not forgotten transactions (standby recovery will fail if encountering
 	 * this issue) if max_prepared_transactions is smaller than max_connections
 	 * (though this is not suggested). Not to mention that
-	 * max_prepared_transactions might be inconsistent between master/standby
+	 * max_prepared_transactions might be inconsistent between primary/standby
 	 * and segments (though this is not suggested).
 	 *
 	 * We can assign MaxBackends (MaxConnections should be fine also but let's
-	 * be conservative) to max_tm_gxacts on master/standby to tolerate various
+	 * be conservative) to max_tm_gxacts on primary/standby to tolerate various
 	 * configuration combinations of max_prepared_transactions and
 	 * max_connections. max_tm_gxacts is used on the coordinator only, and the
 	 * coordinator might be accessed in dispatch mode or utility mode.
@@ -1259,7 +1255,7 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		else
 		{
 			FlushErrorState();
-			ReThrowError(qeError);
+			ThrowErrorData(qeError);
 		}
 		return false;
 	}
@@ -2329,7 +2325,7 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		case DTX_PROTOCOL_COMMAND_SUBTRANSACTION_ROLLBACK_INTERNAL:
 
 			/*
-			 * Rollback performs work on master and then dispatches, hence has
+			 * Rollback performs work on coordinator and then dispatches, hence has
 			 * nestingLevel its expecting post operation
 			 */
 			if ((contextInfo->nestingLevel + 1) > GetCurrentTransactionNestLevel())

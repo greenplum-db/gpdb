@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cp20941">DROP CAST</title><body><p id="sql_command_desc">Removes a cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP CAST [IF EXISTS] (&lt;sourcetype> AS &lt;targettype>) [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP CAST</codeph> will delete a previously defined cast. To
-be able to drop a cast, you must own the source or the target data type.
-These are the same privileges that are required to create a cast.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the cast does not exist. A notice is issued
-in this case. </pd></plentry><plentry><pt><varname>sourcetype</varname></pt><pd>The name of the source data type of the cast. </pd></plentry><plentry><pt><varname>targettype</varname></pt><pd>The name of the target data type of the cast. </pd></plentry><plentry><pt>CASCADE</pt><pt>RESTRICT</pt><pd>These keywords have no effect since there are no dependencies on
-casts.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>To drop the cast from type <codeph>text</codeph> to type <codeph>int</codeph>:</p><codeblock>DROP CAST (text AS int);</codeblock></section><section id="section6"><title>Compatibility</title><p>There <codeph>DROP CAST</codeph> command conforms to the SQL standard.
-</p></section><section id="section7"><title>See Also</title><p><xref href="CREATE_CAST.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

@@ -99,7 +99,7 @@ SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, cc
      1
 (1 row)
 
--- regression to EXPLAN ANALZE
+-- regression to EXPLAN ANALYZE
 EXPLAIN ANALYZE SELECT 1/0;
 ERROR:  division by zero
 EXPLAIN ANALYZE SELECT count(*) FROM a where id < (1/(select count(*) where 1=0));

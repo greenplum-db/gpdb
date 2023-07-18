@@ -2,7 +2,12 @@ use strict;
 use warnings;
 use TestLib;
 use PostgresNode;
-use Test::More tests => 15;
+use Test::More tests => 1;
+
+# GPDB: Effectively disable this TAP test. We don't support logical decoding
+# yet. TAP needs at least 1 test so create a dummy one.
+is(-1, -1, "Disable this TAP test");
+exit;
 
 program_help_ok('pg_recvlogical');
 program_version_ok('pg_recvlogical');

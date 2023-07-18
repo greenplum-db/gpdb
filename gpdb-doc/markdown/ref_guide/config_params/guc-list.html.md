@@ -8,7 +8,7 @@ Sets the application name for a client session. For example, if connecting via `
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |master, session, reload|
+|string| |coordinator, session, reload|
 
 ## <a id="array_nulls"></a>array\_nulls 
 
@@ -16,7 +16,7 @@ This controls whether the array input parser recognizes unquoted NULL as specify
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="authentication_timeout"></a>authentication\_timeout 
 
@@ -26,13 +26,70 @@ Maximum time to complete client authentication. This prevents hung clients from 
 |-----------|-------|-------------------|
 |Any valid time expression \(number and unit\)|1min|local, system, restart|
 
+## <a id="autovacuum"></a>autovacuum 
+
+When enabled, Greenplum Database starts up the autovacuum daemon, which operates at the database level. When the daemon is running, Greenplum Database:
+
+- Automatically vacuums catalog tables and possibly auxiliary tables (determined by the [gp_autovacuum_scope](#gp_autovacuum_scope) configuration parameter setting).
+- Automatically analyzes the vacuumed tables.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|coordinator, system, restart|
+
+## <a id="autovacuum_freeze_max_age"></a>autovacuum_freeze_max_age
+
+Specifies the maximum age at which to automatically vacuum a table to prevent transaction ID wraparound. Note that the system will launch autovacuum processes to prevent wraparound even when `autovacuum=off`. The default value is 200 million transactions. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|100000 < integer < 2000000000|200000000|local, system, restart|
+
+## <a id="autovacuum_naptime"></a>autovacuum\_naptime
+
+When `autovacuum=on` (the default), specifies the minimum delay between autovacuum runs. In each round, the daemon issues `VACUUM` and `ANALYZE` commands as needed for catalog (and possibly auxiliary) tables.
+
+A value without units is taken to be seconds. The default is one minute.
+
+This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|1 < integer < INT_MAX/1000 | 60 |coordinator, system, restart|
+
+## <a id="autovacuum_vacuum_cost_delay"></a>autovacuum_vacuum_cost_delay
+
+Specifies the cost delay value in milliseconds for automatic vacuum operations. If set to -1, the value of this parameter is the set by [`vacuum_cost_delay`](#vacuum_cost_delay).
+
+A value without units is taken to be milliseconds. The default is 2 milliseconds. This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| floating point < 100 | 2 |local, system, reload|
+
+## <a id="autovacuum_vacuum_scale_factor"></a>autovacuum_vacuum_scale_factor
+
+Specifies a fraction of the table size to add to [`autovacuum_vacuum_threshold`](#autovacuum_vacuum_threshold) when deciding whether to trigger a `VACUUM`. The default is 0.2 (20% of table size). This parameter may be set only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| floating point (%) | 0.05 |local, system, reload|
+
+## <a id="autovacuum_vacuum_threshold"></a>autovacuum_vacuum_threshold
+
+Specifies the minimum number of updated or deleted tuples needed to trigger a `VACUUM` in any one table. The default is 50 tuples. This parameter can only be set in the postgresql.conf file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| 0 < integer < INT_MAX | 500 |local, system, reload|
+
 ## <a id="backslash_quote"></a>backslash\_quote 
 
 This controls whether a quote mark can be represented by \\' in a string literal. The preferred, SQL-standard way to represent a quote mark is by doubling it \(''\) but PostgreSQL has historically also accepted \\'. However, use of \\' creates security risks because in some client character set encodings, there are multibyte characters in which the last byte is numerically equivalent to ASCII \\.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|on \(allow \\' always\), off \(reject always\), safe\_encoding \(allow only if client encoding does not allow ASCII \\ within a multibyte character\)|safe\_encoding|master, session, reload|
+|on \(allow \\' always\), off \(reject always\), safe\_encoding \(allow only if client encoding does not allow ASCII \\ within a multibyte character\)|safe\_encoding|coordinator, session, reload|
 
 ## <a id="block_size"></a>block\_size 
 
@@ -48,7 +105,7 @@ Specifies the Bonjour broadcast name. By default, the computer name is used, spe
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string|unset|master, system, restart|
+|string|unset|coordinator, system, restart|
 
 ## <a id="check_function_bodies"></a>check\_function\_bodies 
 
@@ -56,7 +113,7 @@ When set to off, deactivates validation of the function body string during `CREA
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="client_connection_check_interval"></a>client\_connection\_check\_interval 
 
@@ -64,15 +121,15 @@ Sets the time interval between optional checks that the client is still connecte
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of milliseconds|0|master, session, reload|
+|number of milliseconds|0|coordinator, session, reload|
 
 ## <a id="client_encoding"></a>client\_encoding 
 
-Sets the client-side encoding \(character set\). The default is to use the same as the database encoding. See [Supported Character Sets](https://www.postgresql.org/docs/9.4/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED) in the PostgreSQL documentation.
+Sets the client-side encoding \(character set\). The default is to use the same as the database encoding. See [Supported Character Sets](https://www.postgresql.org/docs/12/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED) in the PostgreSQL documentation.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|character set|UTF8|master, session, reload|
+|character set|UTF8|coordinator, session, reload|
 
 ## <a id="client_min_messages"></a>client\_min\_messages 
 
@@ -80,7 +137,7 @@ Controls which message levels are sent to the client. Each level includes all th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, LOG, NOTICE, WARNING, ERROR, FATAL, PANIC|NOTICE|master, session, reload|
+|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, LOG, NOTICE, WARNING, ERROR, FATAL, PANIC|NOTICE|coordinator, session, reload|
 
 `INFO` level messages are always sent to the client.
 
@@ -90,7 +147,7 @@ For the Postgres Planner, sets the estimate of the cost of processing each index
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0.005|master, session, reload|
+|floating point|0.005|coordinator, session, reload|
 
 ## <a id="cpu_operator_cost"></a>cpu\_operator\_cost 
 
@@ -98,7 +155,7 @@ For the Postgres Planner, sets the estimate of the cost of processing each opera
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0.0025|master, session, reload|
+|floating point|0.0025|coordinator, session, reload|
 
 ## <a id="cpu_tuple_cost"></a>cpu\_tuple\_cost 
 
@@ -106,7 +163,7 @@ For the Postgres Planner, Sets the estimate of the cost of processing each row d
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0.01|master, session, reload|
+|floating point|0.01|coordinator, session, reload|
 
 ## <a id="cursor_tuple_fraction"></a>cursor\_tuple\_fraction 
 
@@ -114,7 +171,7 @@ Tells the Postgres Planner how many rows are expected to be fetched in a cursor 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1|master, session, reload|
+|integer|1|coordinator, session, reload|
 
 ## <a id="data_checksums"></a>data\_checksums 
 
@@ -136,7 +193,7 @@ Sets the display format for date and time values, as well as the rules for inter
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|<format\>, <date style\><br/><br/>where:<br/><br/><format\> is ISO, Postgres, SQL, or German<br/><br/><date style\> is DMY, MDY, or YMD|ISO, MDY|master, session, reload|
+|<format\>, <date style\><br/><br/>where:<br/><br/><format\> is ISO, Postgres, SQL, or German<br/><br/><date style\> is DMY, MDY, or YMD|ISO, MDY|coordinator, session, reload|
 
 ## <a id="db_user_namespace"></a>db\_user\_namespace 
 
@@ -168,7 +225,7 @@ Indents debug output to produce a more readable but much longer output format. *
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="debug_print_parse"></a>debug\_print\_parse 
 
@@ -176,7 +233,7 @@ For each query run, prints the resulting parse tree. *client\_min\_messages* or 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="debug_print_plan"></a>debug\_print\_plan 
 
@@ -184,7 +241,7 @@ For each query run, prints the Greenplum parallel query execution plan. *client\
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="debug_print_prelim_plan"></a>debug\_print\_prelim\_plan 
 
@@ -192,7 +249,7 @@ For each query run, prints the preliminary query plan. *client\_min\_messages* o
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="debug_print_rewritten"></a>debug\_print\_rewritten 
 
@@ -200,7 +257,7 @@ For each query run, prints the query rewriter output. *client\_min\_messages* or
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="debug_print_slice_table"></a>debug\_print\_slice\_table 
 
@@ -208,15 +265,18 @@ For each query run, prints the Greenplum query slice plan. *client\_min\_message
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="default_statistics_target"></a>default\_statistics\_target 
 
-Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates.
+Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates, particularly for columns with irregular data distributions, at the expense of consuming more space in `pg_statistic` and slightly more time to compute the estimates. Conversely, a lower limit might be sufficient for columns with simple data distributions. The default is 100.
+
+For more information on the use of statistics by the Postgres Planner, refer to [Statistics Used by the Planner](https://www.postgresql.org/docs/12/planner-stats.html) in the PostgreSQL documentation.
+
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 \> Integer \> 10000|100|master, session, reload|
+|0 \> Integer \> 10000|100|coordinator, session, reload|
 
 ## <a id="default_table_access_method"></a>default_table_access_method
 
@@ -224,7 +284,7 @@ Sets the default table access method when a `CREATE TABLE` command does not expl
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|heap, ao_row, ao_column|heap|master, session|
+|heap, ao_row, ao_column|heap|coordinator, session|
 
 ## <a id="default_tablespace"></a>default\_tablespace 
 
@@ -232,7 +292,7 @@ The default tablespace in which to create objects \(tables and indexes\) when a 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|name of a tablespace|unset|master, session, reload|
+|name of a tablespace|unset|coordinator, session, reload|
 
 ## <a id="default_text_search_config"></a>default\_text\_search\_config 
 
@@ -240,7 +300,7 @@ Selects the text search configuration that is used by those variants of the text
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|The name of a text search configuration.|`pg_catalog.simple`|master, session, reload|
+|The name of a text search configuration.|`pg_catalog.simple`|coordinator, session, reload|
 
 ## <a id="default_transaction_deferrable"></a>default\_transaction\_deferrable 
 
@@ -248,11 +308,11 @@ When running at the `SERIALIZABLE` isolation level, a deferrable read-only SQL t
 
 This parameter controls the default deferrable status of each new transaction. It currently has no effect on read-write transactions or those operating at isolation levels lower than `SERIALIZABLE`. The default is `off`.
 
-**Note:** Setting `default_transaction_deferrable` to `on` has no effect in Greenplum Database. Only read-only, `SERIALIZABLE` transactions can be deferred. However, Greenplum Database does not support the `SERIALIZABLE` transaction isolation level. See [SET TRANSACTION](../sql_commands/SET_TRANSACTION.html).
+> **Note** Setting `default_transaction_deferrable` to `on` has no effect in Greenplum Database. Only read-only, `SERIALIZABLE` transactions can be deferred. However, Greenplum Database does not support the `SERIALIZABLE` transaction isolation level. See [SET TRANSACTION](../sql_commands/SET_TRANSACTION.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="default_transaction_isolation"></a>default\_transaction\_isolation 
 
@@ -260,7 +320,7 @@ Controls the default isolation level of each new transaction. Greenplum Database
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|read committed, read uncommitted, repeatable read, serializable|read committed|master, session, reload|
+|read committed, read uncommitted, repeatable read, serializable|read committed|coordinator, session, reload|
 
 ## <a id="default_transaction_read_only"></a>default\_transaction\_read\_only 
 
@@ -268,7 +328,7 @@ Controls the default read-only status of each new transaction. A read-only SQL t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="dynamic_library_path"></a>dynamic\_library\_path 
 
@@ -286,7 +346,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - INT\_MAX *or* number and unit|524288 \(16GB\)|master, session, reload|
+|1 - INT\_MAX *or* number and unit|524288 \(16GB\)|coordinator, session, reload|
 
 ## <a id="enable_bitmapscan"></a>enable\_bitmapscan 
 
@@ -294,7 +354,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="enable_groupagg"></a>enable\_groupagg 
 
@@ -302,7 +362,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="enable_hashagg"></a>enable\_hashagg 
 
@@ -310,7 +370,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="enable_hashjoin"></a>enable\_hashjoin 
 
@@ -318,7 +378,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="enable_indexscan"></a>enable\_indexscan 
 
@@ -326,7 +386,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="enable_mergejoin"></a>enable\_mergejoin 
 
@@ -334,7 +394,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="enable_nestloop"></a>enable\_nestloop 
 
@@ -342,7 +402,16 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
+
+## <a id="enable_partition_pruning"></a>enable_partition_pruning 
+
+ Enables or disables the query planner's ability to eliminate a partitioned table's partitions from query plans. This also controls the planner's ability to generate query plans which allow the query executor to remove (ignore) partitions during query execution. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|coordinator, session, reload|
+
 
 ## <a id="enable_seqscan"></a>enable\_seqscan 
 
@@ -350,7 +419,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="enable_sort"></a>enable\_sort 
 
@@ -358,7 +427,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="enable_tidscan"></a>enable\_tidscan 
 
@@ -366,7 +435,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="escape_string_warning"></a>escape\_string\_warning 
 
@@ -374,7 +443,7 @@ When on, a warning is issued if a backslash \(\\\) appears in an ordinary string
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="explain_pretty_print"></a>explain\_pretty\_print 
 
@@ -382,7 +451,7 @@ Determines whether EXPLAIN VERBOSE uses the indented or non-indented format for 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="extra_float_digits"></a>extra\_float\_digits 
 
@@ -390,7 +459,7 @@ Adjusts the number of digits displayed for floating-point values, including floa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \(-15 to 3\)|0|master, session, reload|
+|integer \(-15 to 3\)|0|coordinator, session, reload|
 
 ## <a id="from_collapse_limit"></a>from\_collapse\_limit 
 
@@ -398,7 +467,19 @@ The Postgres Planner will merge sub-queries into upper queries if the resulting 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-*n*|20|master, session, reload|
+|1-*n*|20|coordinator, session, reload|
+
+## <a id="gin_pending_list_limit"></a>gin\_pending\_list\_limit
+
+Sets the maximum size of a GIN index's pending list, which is used when `fastupdate` is enabled. If the list grows larger than this maximum size, it is cleaned up by moving the entries in it to the index's main GIN data structure in bulk.
+
+A value specified without units is taken to be kilobytes. The default is four megabytes (4MB).
+
+You can override this setting for individual GIN indexes by changing index storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|64 - `MAX_KILOBYTES` |4096|coordinator, session, reload|
 
 ## <a id="gp_adjust_selectivity_for_outerjoins"></a>gp\_adjust\_selectivity\_for\_outerjoins 
 
@@ -406,7 +487,7 @@ Enables the selectivity of NULL tests over outer joins.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_appendonly_compaction"></a>gp\_appendonly\_compaction 
 
@@ -414,7 +495,7 @@ Enables compacting segment files during `VACUUM` commands. When deactivated, `VA
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_appendonly_compaction_threshold"></a>gp\_appendonly\_compaction\_threshold 
 
@@ -422,7 +503,7 @@ Specifies the threshold ratio \(as a percentage\) of hidden rows to total rows t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \(%\)|10|master, session, reload|
+|integer \(%\)|10|coordinator, session, reload|
 
 ## <a id="gp_autostats_allow_nonowner"></a>gp\_autostats\_allow\_nonowner 
 
@@ -439,7 +520,7 @@ The `gp_autostats_allow_nonowner` configuration parameter can be changed only by
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|master, session, reload, superuser|
+|Boolean|false|coordinator, session, reload, superuser|
 
 ## <a id="gp_autostats_mode"></a>gp\_autostats\_mode 
 
@@ -459,13 +540,13 @@ The `on_change` option triggers statistics collection only when the number of ro
 
 Default is `on_no_stats`.
 
-**Note:** For partitioned tables, automatic statistics collection is not triggered if data is inserted from the top-level parent table of a partitioned table.
+> **Note** For partitioned tables, automatic statistics collection is not triggered if data is inserted from the top-level parent table of a partitioned table.
 
 Automatic statistics collection is triggered if data is inserted directly in a leaf table \(where the data is stored\) of the partitioned table. Statistics are collected only on the leaf table.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none, on\_change, on\_no\_stats, |on\_no\_ stats|master, session, reload|
+|none, on\_change, on\_no\_stats, |on\_no\_ stats|coordinator, session, reload|
 
 ## <a id="gp_autostats_mode_in_functions"></a>gp\_autostats\_mode\_in\_functions 
 
@@ -485,7 +566,7 @@ The `on_change` option triggers statistics collection only when the number of ro
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none, on\_change, on\_no\_stats, |none|master, session, reload|
+|none, on\_change, on\_no\_stats, |none|coordinator, session, reload|
 
 ## <a id="gp_autostats_on_change_threshold"></a>gp\_autostats\_on\_change\_threshold 
 
@@ -493,7 +574,20 @@ Specifies the threshold for automatic statistics collection when `gp_autostats_m
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|2147483647|master, session, reload|
+|integer|2147483647|coordinator, session, reload|
+
+## <a id="gp_autovacuum_scope"></a>gp\_autovacuum\_scope
+
+When `autovacuum=on` (the default), specifies the types of tables that are eligible for automatic vacuuming of dead tuples. Greenplum Database supports two `gp_autovacuum_scope` values:
+
+- `catalog` - Greenplum Database autovacuums catalog tables only (`pg_catalog` relations).
+- `catalog_ao_aux` - Greenplum Database autovacuums catalog tables and append-optimized auxiliary tables (`pg_catalog`, `pg_toast`, and `pg_aoseg` relations).
+
+Only superusers can change this setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|catalog, catalog_ao_aux | catalog |coordinator, system, reload|
 
 ## <a id="gp_cached_segworkers_threshold"></a>gp\_cached\_segworkers\_threshold 
 
@@ -501,11 +595,11 @@ When a user starts a session with Greenplum Database and issues a query, the sys
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|5|master, session, reload|
+|integer \> 0|5|coordinator, session, reload|
 
 ## <a id="gp_command_count"></a>gp\_command\_count 
 
-Shows how many commands the master has received from the client. Note that a single SQLcommand might actually involve more than one command internally, so the counter may increment by more than one for a single query. This counter also is shared by all of the segment processes working on the command.
+Shows how many commands the coordinator has received from the client. Note that a single SQLcommand might actually involve more than one command internally, so the counter may increment by more than one for a single query. This counter also is shared by all of the segment processes working on the command.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -521,7 +615,7 @@ Could not send data to client: Connection timed out.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of seconds|3600 \(1 hour\)|master, system, reload|
+|number of seconds|3600 \(1 hour\)|coordinator, system, reload|
 
 ## <a id="gp_content"></a>gp\_content 
 
@@ -556,7 +650,7 @@ For information about the Postgres Planner and GPORCA, see "Querying Data" in th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|boolean|off|master, session, reload|
+|boolean|off|coordinator, session, reload|
 
 ## <a id="gp_dbid"></a>gp\_dbid 
 
@@ -572,7 +666,7 @@ Number of seconds for a Greenplum process to linger after a fatal internal error
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|0|master, session, reload|
+|Any valid time expression \(number and unit\)|0|coordinator, session, reload|
 
 ## <a id="gp_default_storage_options"></a>gp\_default\_storage\_options 
 
@@ -580,7 +674,7 @@ Set the default values for the following table storage options when a table is c
 
 -   appendoptimized
 
-    **Note:** You use the `appendoptimized=value` syntax to specify the append-optimized table storage type. `appendoptimized` is a thin alias for the `appendonly` legacy storage option. Greenplum Database stores `appendonly` in the catalog, and displays the same when listing the storage options for append-optimized tables.
+    > **Note** You use the `appendoptimized=value` syntax to specify the append-optimized table storage type. `appendoptimized` is a thin alias for the `appendonly` legacy storage option. Greenplum Database stores `appendonly` in the catalog, and displays the same when listing the storage options for append-optimized tables.
 
 -   blocksize
 -   checksum
@@ -617,7 +711,7 @@ This example `gpconfig` utility command sets the default storage option for a Gr
 gpconfig -c 'gp_default_storage_options' -v 'appendoptimized=true, orientation=column'
 ```
 
-This example `gpconfig` utility command shows the value of the parameter. The parameter value must be consistent across the Greenplum Database master and all segments.
+This example `gpconfig` utility command shows the value of the parameter. The parameter value must be consistent across the Greenplum Database coordinator and all segments.
 
 ```
 gpconfig -s 'gp_default_storage_options'
@@ -625,11 +719,9 @@ gpconfig -s 'gp_default_storage_options'
 
 |Value Range|Default|Set Classifications<sup>1</sup>|
 |-----------|-------|---------------------|
-|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|master, session, reload|
+|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|coordinator, session, reload|
 
-**Note:** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
-
-**Note:** <sup>2</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+> **Note** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
 
 ## <a id="gp_dispatch_keepalives_count"></a>gp\_dispatch\_keepalives\_count 
 
@@ -637,7 +729,7 @@ Maximum number of TCP keepalive retransmits from a Greenplum Query Dispatcher to
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 to 127|0 \(it uses the system default\)|master, system, restart|
+|0 to 127|0 \(it uses the system default\)|coordinator, system, restart|
 
 ## <a id="gp_dispatch_keepalives_idle"></a>gp\_dispatch\_keepalives\_idle 
 
@@ -645,7 +737,7 @@ Time in seconds between issuing TCP keepalives from a Greenplum Query Dispatcher
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 to 32767|0 \(it uses the system default\)|master, system, restart|
+|0 to 32767|0 \(it uses the system default\)|coordinator, system, restart|
 
 ## <a id="gp_dispatch_keepalives_interval"></a>gp\_dispatch\_keepalives\_interval 
 
@@ -653,7 +745,7 @@ Time in seconds between TCP keepalive retransmits from a Greenplum Query Dispatc
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 to 32767|0 \(it uses the system default\)|master, system, restart|
+|0 to 32767|0 \(it uses the system default\)|coordinator, system, restart|
 
 ## <a id="gp_dynamic_partition_pruning"></a>gp\_dynamic\_partition\_pruning 
 
@@ -661,7 +753,7 @@ Enables plans that can dynamically eliminate the scanning of partitions.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_eager_two_phase_agg"></a>gp\_eager\_two\_phase\_agg
 
@@ -671,7 +763,7 @@ The default value is `off`; the Planner chooses the best aggregate path for a qu
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_enable_agg_distinct"></a>gp\_enable\_agg\_distinct 
 
@@ -679,7 +771,7 @@ The default value is `off`; the Planner chooses the best aggregate path for a qu
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_agg_distinct_pruning"></a>gp\_enable\_agg\_distinct\_pruning 
 
@@ -687,27 +779,15 @@ The default value is `off`; the Planner chooses the best aggregate path for a qu
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_direct_dispatch"></a>gp\_enable\_direct\_dispatch 
 
- Activates or deactivates  the dispatching of targeted query plans for queries that access data on a single segment. When on, queries that target rows on a single segment will only have their query plan dispatched to that segment \(rather than to all segments\). This significantly reduces the response time of qualifying queries as there is no interconnect setup involved. Direct dispatch does require more CPU utilization on the master.
+ Activates or deactivates  the dispatching of targeted query plans for queries that access data on a single segment. When on, queries that target rows on a single segment will only have their query plan dispatched to that segment \(rather than to all segments\). This significantly reduces the response time of qualifying queries as there is no interconnect setup involved. Direct dispatch does require more CPU utilization on the coordinator.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
-
-## <a id="gp_enable_exchange_default_partition"></a>gp\_enable\_exchange\_default\_partition 
-
-Controls availability of the `EXCHANGE DEFAULT PARTITION` clause for `ALTER TABLE`. The default value for the parameter is `off`. The clause is not available and Greenplum Database returns an error if the clause is specified in an `ALTER TABLE` command.
-
-If the value is `on`, Greenplum Database returns a warning stating that exchanging the default partition might result in incorrect results due to invalid data in the default partition.
-
-**Warning:** Before you exchange the default partition, you must ensure the data in the table to be exchanged, the new default partition, is valid for the default partition. For example, the data in the new default partition must not contain data that would be valid in other leaf child partitions of the partitioned table. Otherwise, queries against the partitioned table with the exchanged default partition that are run by GPORCA might return incorrect results.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_fast_sri"></a>gp\_enable\_fast\_sri 
 
@@ -715,11 +795,11 @@ When set to `on`, the Postgres Planner plans single row inserts so that they are
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_global_deadlock_detector"></a>gp\_enable\_global\_deadlock\_detector 
 
-Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd)in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is deactivated.
+Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd) in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is deactivated.
 
 If the Global Deadlock Detector is deactivated \(the default\), Greenplum Database runs concurrent update and delete operations on a heap table serially.
 
@@ -727,7 +807,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, restart|
+|Boolean|off|coordinator, system, restart|
 
 ## <a id="gp_enable_groupext_distinct_gather"></a>gp\_enable\_groupext\_distinct\_gather 
 
@@ -735,7 +815,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_groupext_distinct_pruning"></a>gp\_enable\_groupext\_distinct\_pruning 
 
@@ -743,7 +823,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_multiphase_agg"></a>gp\_enable\_multiphase\_agg 
 
@@ -751,7 +831,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_predicate_propagation"></a>gp\_enable\_predicate\_propagation 
 
@@ -759,7 +839,7 @@ When enabled, the Postgres Planner applies query predicates to both table expres
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_preunique"></a>gp\_enable\_preunique 
 
@@ -767,7 +847,7 @@ Enables two-phase duplicate removal for `SELECT DISTINCT` queries \(not `SELECT 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_enable_query_metrics"></a>gp\_enable\_query\_metrics 
 
@@ -775,13 +855,13 @@ Enables collection of query metrics. When query metrics collection is enabled, G
 
 After changing this configuration parameter, Greenplum Database must be restarted for the change to take effect.
 
-The Greenplum Database metrics collection extension, when enabled, sends the collected metrics over UDP to a Tanzu Greenplum Command Center agent<sup>1</sup>.
+The Greenplum Database metrics collection extension, when enabled, sends the collected metrics over UDP to a VMware Greenplum Command Center agent<sup>1</sup>.
 
-**Note:** <sup>1</sup>The metrics collection extension is included in VMware's commercial version of Greenplum Database. Tanzu Greenplum Command Center is supported only with Tanzu Greenplum.
+> **Note** <sup>1</sup>The metrics collection extension is included in VMware's commercial version of Greenplum Database. VMware Greenplum Command Center is supported only with VMware Greenplum.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, restart|
+|Boolean|off|coordinator, system, restart|
 
 ## <a id="gp_enable_relsize_collection"></a>gp\_enable\_relsize\_collection 
 
@@ -791,7 +871,7 @@ This parameter is ignored for a root partition of a partitioned table. When GPOR
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_enable_segment_copy_checking"></a>gp\_enable\_segment\_copy\_checking 
 
@@ -803,7 +883,7 @@ The parameter can be set for a database system or a session. The parameter canno
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="gp_enable_sort_limit"></a>gp\_enable\_sort\_limit 
 
@@ -811,7 +891,7 @@ Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently w
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_external_enable_exec"></a>gp\_external\_enable\_exec 
 
@@ -819,7 +899,15 @@ Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently w
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, system, restart|
+|Boolean|on|coordinator, system, restart|
+
+## <a id="gp_explain_jit"></a>gp\_explain\_jit
+
+Prints summarized JIT information from all query executions when JIT compilation is enabled.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|on|coordinator, session, reload |
 
 ## <a id="gp_external_max_segs"></a>gp\_external\_max\_segs 
 
@@ -827,7 +915,7 @@ Sets the number of segments that will scan external table data during an externa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|64|master, session, reload|
+|integer|64|coordinator, session, reload|
 
 ## <a id="gp_external_enable_filter_pushdown"></a>gp\_external\_enable\_filter\_pushdown 
 
@@ -835,7 +923,7 @@ Enable filter pushdown when reading data from external tables. If pushdown fails
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_fts_probe_interval"></a>gp\_fts\_probe\_interval 
 
@@ -843,7 +931,7 @@ Specifies the polling interval for the fault detection process \(`ftsprobe`\). T
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|10 - 3600 seconds|1min|master, system, reload|
+|10 - 3600 seconds|1min|coordinator, system, reload|
 
 ## <a id="gp_fts_probe_retries"></a>gp\_fts\_probe\_retries 
 
@@ -851,7 +939,7 @@ Specifies the number of times the fault detection process \(`ftsprobe`\) attempt
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|master, system, reload|
+|integer|5|coordinator, system, reload|
 
 ## <a id="gp_fts_probe_timeout"></a>gp\_fts\_probe\_timeout 
 
@@ -859,7 +947,7 @@ Specifies the allowed timeout for the fault detection process \(`ftsprobe`\) to 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|10 - 3600 seconds|20 secs|master, system, reload|
+|10 - 3600 seconds|20 secs|coordinator, system, reload|
 
 ## <a id="gp_fts_replication_attempt_count"></a>gp\_fts\_replication\_attempt\_count 
 
@@ -867,7 +955,7 @@ Specifies the maximum number of times that Greenplum Database attempts to establ
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 100|10|master, system, reload|
+|0 - 100|10|coordinator, system, reload|
 
 ## <a id="gp_global_deadlock_detector_period"></a>gp\_global\_deadlock\_detector\_period 
 
@@ -875,7 +963,7 @@ Specifies the executing interval \(in seconds\) of the global deadlock detector 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|5 - `INT_MAX` secs|120 secs|master, system, reload|
+|5 - `INT_MAX` secs|120 secs|coordinator, system, reload|
 
 ## <a id="gp_log_endpoints"></a>gp\_log\_endpoints
 
@@ -885,7 +973,7 @@ The default value is `false`, Greenplum Database does not log endpoint details t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|master, session, reload|
+|Boolean|false|coordinator, session, reload|
 
 
 ## <a id="gp_log_fts"></a>gp\_log\_fts 
@@ -894,17 +982,17 @@ Controls the amount of detail the fault detection process \(`ftsprobe`\) writes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFF, TERSE, VERBOSE, DEBUG|TERSE|master, system, restart|
+|OFF, TERSE, VERBOSE, DEBUG|TERSE|coordinator, system, restart|
 
 ## <a id="gp_log_interconnect"></a>gp\_log\_interconnect 
 
-Controls the amount of information that is written to the log file about communication between Greenplum Database segment instance worker processes. The default value is `terse`. The log information is written to both the master and segment instance logs.
+Controls the amount of information that is written to the log file about communication between Greenplum Database segment instance worker processes. The default value is `terse`. The log information is written to both the coordinator and segment instance logs.
 
 Increasing the amount of logging could affect performance and increase disk space usage.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|off,  terse,  verbose,  debug|terse|master, session, reload|
+|off,  terse,  verbose,  debug|terse|coordinator, session, reload|
 
 ## <a id="gp_log_gang"></a>gp\_log\_gang 
 
@@ -912,7 +1000,7 @@ Controls the amount of information that is written to the log file about query w
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFF, TERSE, VERBOSE, DEBUG|OFF|master, session, restart|
+|OFF, TERSE, VERBOSE, DEBUG|OFF|coordinator, session, restart|
 
 ## <a id="gp_hashjoin_tuples_per_bucket"></a>gp\_hashjoin\_tuples\_per\_bucket 
 
@@ -920,13 +1008,13 @@ Sets the target density of the hash table used by HashJoin operations. A smaller
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|master, session, reload|
+|integer|5|coordinator, session, reload|
 
 ## <a id="gp_ignore_error_table"></a>gp\_ignore\_error\_table 
 
 Controls Greenplum Database behavior when the deprecated `INTO ERROR TABLE` clause is specified in a `CREATE EXTERNAL TABLE` or `COPY` command.
 
-**Note:** The `INTO ERROR TABLE` clause was deprecated and removed in Greenplum Database 5. In Greenplum Database 7, this parameter will be removed as well, causing all `INTO ERROR TABLE` invocations be yield a syntax error.
+> **Note** The `INTO ERROR TABLE` clause was deprecated and removed in Greenplum Database 5. In Greenplum Database 7, this parameter will be removed as well, causing all `INTO ERROR TABLE` invocations be yield a syntax error.
 
 The default value is `false`, Greenplum Database returns an error if the `INTO ERROR TABLE` clause is specified in a command.
 
@@ -936,7 +1024,7 @@ You can set this value to `true` to avoid the Greenplum Database error when you 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|master, session, reload|
+|Boolean|false|coordinator, session, reload|
 
 ## <a id="topic_lvm_ttc_3p"></a>gp\_initial\_bad\_row\_limit 
 
@@ -950,7 +1038,7 @@ The `SEGMENT REJECT LIMIT` clause can also be specified for the `COPY` command o
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 0 - `INT_MAX`|1000|master, session, reload|
+|integer 0 - `INT_MAX`|1000|coordinator, session, reload|
 
 ## <a id="gp_instrument_shmem_size"></a>gp\_instrument\_shmem\_size 
 
@@ -958,22 +1046,22 @@ The amount of shared memory, in kilobytes, allocated for query metrics. The defa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer `0 - 131072`|5120|master, system, restart|
+|integer `0 - 131072`|5120|coordinator, system, restart|
 
 ## <a id="gp_interconnect_address_type"></a>gp_interconnect_address_type
 
-Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `wildcard`.
+Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `unicast`.
 
-- When this parameter is set to `unicast`, Greenplum Database  uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. 
+- When this parameter is set to `unicast`, Greenplum Database uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. This is the recommended option.
 
 - When this parameter is set to `wildcard`, Greenplum Database uses a wildcard address for binding, enabling the use of any network interface compliant with routing rules.
 
-**NOTE**: In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules do not allow for such
-communication. In these cases, you must configure this parameter to use a wildcard address for address binding.
+> **Note** In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules do not allow for such
+communication. In these cases, we recommend you use a single subnet for all segment addresses, or fix routing rules to allow communication between subnets. If neither is possible, you will need to configure this parameter to `wildcard` for wildcard address binding.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|wildcard,unicast|wildcard|local, system, reload|
+|wildcard,unicast|unicast|local, system, reload|
 
 ## <a id="gp_interconnect_debug_retry_interval"></a>gp_interconnect_debug_retry_interval 
 
@@ -983,7 +1071,7 @@ The log messages contain information about the interconnect communication betwee
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 =< Integer < 4096|10|master, session, reload|
+|1 =< Integer < 4096|10|coordinator, session, reload|
 
 ## <a id="gp_interconnect_fc_method"></a>gp\_interconnect\_fc\_method 
 
@@ -995,28 +1083,28 @@ Loss based flow control is based on capacity based flow control, and also tunes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|CAPACITY, LOSS|LOSS|master, session, reload|
+|CAPACITY, LOSS|LOSS|coordinator, session, reload|
 
 ## <a id="gp_interconnect_proxy_addresses"></a>gp\_interconnect\_proxy\_addresses 
 
 Sets the proxy ports that Greenplum Database uses when the server configuration parameter [gp\_interconnect\_type](#gp_interconnect_type) is set to `proxy`. Otherwise, this parameter is ignored. The default value is an empty string \(""\).
 
-When the `gp_interconnect_type` parameter is set to `proxy`, You must specify a proxy port for the master, standby master, and all primary and mirror segment instances in this format:
+When the `gp_interconnect_type` parameter is set to `proxy`, You must specify a proxy port for the coordinator, standby coordinator, and all primary and mirror segment instances in this format:
 
 ```
 <db_id>:<cont_id>:<seg_address>:<port>[, ... ]
 ```
 
-For the master, standby master, and segment instance, the first three fields, db\_id, cont\_id, and seg\_address can be found in the [gp\_segment\_configuration](../system_catalogs/gp_segment_configuration.html) catalog table. The fourth field, port, is the proxy port for the Greenplum master or a segment instance.
+For the coordinator, standby coordinator, and segment instance, the first three fields, db\_id, cont\_id, and seg\_address can be found in the [gp\_segment\_configuration](../system_catalogs/gp_segment_configuration.html) catalog table. The fourth field, port, is the proxy port for the Greenplum coordinator or a segment instance.
 
 -   db\_id is the `dbid` column in the catalog table.
 -   cont\_id is the `content` column in the catalog table.
 -   seg\_address is the IP address or hostname corresponding to tge `address` column in the catalog table.
 -   port is the TCP/IP port for the segment instance proxy that you specify.
 
-**Important:** If a segment instance hostname is bound to a different IP address at runtime, you must run `gpstop -U` to re-load the `gp_interconnect_proxy_addresses` value.
+> **Important** If a segment instance hostname is bound to a different IP address at runtime, you must run `gpstop -U` to re-load the `gp_interconnect_proxy_addresses` value.
 
-You must specify the value as a single-quoted string. This `gpconfig` command sets the value for `gp_interconnect_proxy_addresses` as a single-quoted string. The Greenplum system consists of a master and a single segment instance.
+You must specify the value as a single-quoted string. This `gpconfig` command sets the value for `gp_interconnect_proxy_addresses` as a single-quoted string. The Greenplum system consists of a coordinator and a single segment instance.
 
 ```
 gpconfig --skipvalidation -c gp_interconnect_proxy_addresses -v "'1:-1:192.168.180.50:35432,2:0:192.168.180.54:35000'"
@@ -1034,7 +1122,7 @@ Sets the amount of data per-peer to be queued by the Greenplum Database intercon
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-2048|4|master, session, reload|
+|1-2048|4|coordinator, session, reload|
 
 ## <a id="gp_interconnect_setup_timeout"></a>gp\_interconnect\_setup\_timeout 
 
@@ -1042,7 +1130,7 @@ Specifies the amount of time, in seconds, that Greenplum Database waits for the 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 7200 seconds|7200 seconds \(2 hours\)|master, session, reload|
+|0 - 7200 seconds|7200 seconds \(2 hours\)|coordinator, session, reload|
 
 ## <a id="gp_interconnect_snd_queue_depth"></a>gp\_interconnect\_snd\_queue\_depth 
 
@@ -1050,7 +1138,7 @@ Sets the amount of data per-peer to be queued by the default UDPIFC interconnect
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - 4096|2|master, session, reload|
+|1 - 4096|2|coordinator, session, reload|
 
 ## <a id="gp_interconnect_transmit_timeout"></a>gp\_interconnect\_transmit\_timeout 
 
@@ -1058,7 +1146,7 @@ Specifies the amount of time, in seconds, that Greenplum Database waits for netw
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - 7200 seconds|3600 seconds \(1 hour\)|master, session, reload|
+|1 - 7200 seconds|3600 seconds \(1 hour\)|coordinator, session, reload|
 
 ## <a id="gp_interconnect_type"></a>gp_interconnect_type 
 
@@ -1068,7 +1156,7 @@ UDPIFC \(the default\) specifies using UDP with flow control for interconnect tr
 
 With TCP as the interconnect protocol, Greenplum Database has an upper limit of 1000 segment instances - less than that if the query workload involves complex, multi-slice queries.
 
-The `PROXY` value specifies using the TCP protocol, and when running queries, using a proxy for Greenplum interconnect communication between the master instance and segment instances and between two segment instances. When this parameter is set to `PROXY`, you must specify the proxy ports for the master and segment instances with the server configuration parameter [gp\_interconnect\_proxy\_addresses](#gp_interconnect_proxy_addresses). For information about configuring and using proxies with the Greenplum interconnect, see [Configuring Proxies for the Greenplum Interconnect](../../admin_guide/managing/proxy-ic.html).
+The `PROXY` value specifies using the TCP protocol, and when running queries, using a proxy for Greenplum interconnect communication between the coordinator instance and segment instances and between two segment instances. When this parameter is set to `PROXY`, you must specify the proxy ports for the coordinator and segment instances with the server configuration parameter [gp\_interconnect\_proxy\_addresses](#gp_interconnect_proxy_addresses). For information about configuring and using proxies with the Greenplum interconnect, see [Configuring Proxies for the Greenplum Interconnect](../../admin_guide/managing/proxy-ic.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1100,7 +1188,19 @@ Sets the tuple-serialization chunk size for the Greenplum Database interconnect.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|512-65536|8192|master, system, reload|
+|512-65536|8192|coordinator, system, reload|
+
+## <a id="gp_max_parallel_cursors"></a>gp\_max\_parallel\_cursors
+
+Specifies the maximum number of active parallel retrieve cursors allowed on a Greenplum Database cluster. A parallel retrieve cursor is considered active after it has been `DECLARE`d, but before it is `CLOSE`d or returns an error.
+
+The default value is `-1`; there is no limit on the number of open parallel retrieve cursors that may be concurrently active in the cluster \(up to the maximum value of 1024\).
+
+You must be a superuser to change the `gp_max_parallel_cursors` setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|-1 - 1024 | -1 | coordinator, superuser, session, reload|
 
 ## <a id="gp_max_plan_size"></a>gp\_max\_plan\_size 
 
@@ -1110,7 +1210,7 @@ You can specify a value in `kB`, `MB`, or `GB`. The default unit is `kB`. For ex
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|0|master, superuser, session, reload|
+|integer|0|coordinator, superuser, session, reload|
 
 ## <a id="gp_max_slices"></a>gp\_max\_slices 
 
@@ -1120,7 +1220,21 @@ Running a query that generates a large number of slices might affect Greenplum D
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - INT\_MAX|0|master, session, reload|
+|0 - INT\_MAX|0|coordinator, session, reload|
+
+## <a id="max_slot_wal_keep_size"></a>max_slot_wal_keep_size 
+
+Sets the maximum size in megabytes of Write-Ahead Logging (WAL) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby coordinator to keep it synchronized with the corresponding primary segment instance or coordinator. The default is -1; when set to the default, Greenplum can retain an unlimited amount of WAL files on disk.
+
+If the file size exceeds the maximum size, the files are released and are available for deletion. A mirror or standby may no longer be able to continue replication due to removal of required WAL files.
+
+In Greenplum Database, replication slots exist internally by default for primary/mirror pairs. Consequently, even if you do not configure this parameter, that functionality is available by default. 
+
+>> **CAUTION** If `max_slot_wal_keep_size` is set to a non-default value for acting primaries, full and incremental recovery of their mirrors may not be possible. Depending on the workload on the primary running concurrently with a full recovery, the recovery may fail with a missing WAL error. Therefore, you must ensure that `max_slot_wal_keep_size` is set to the default of `-1` or a high enough value before running full recovery. Similarly, depending on how behind the downed mirror is, an incremental recovery of it may fail with a missing WAL error. In this case, full recovery would be the only recourse.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|-1|local, system, reload|
 
 ## <a id="gp_motion_cost_per_row"></a>gp\_motion\_cost\_per\_row 
 
@@ -1128,7 +1242,25 @@ Sets the Postgres Planner cost estimate for a Motion operator to transfer a row 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0|master, session, reload|
+|floating point|0|coordinator, session, reload|
+
+## <a id="gp_print_create_gang_time"></a>gp\_print\_create\_gang\_time 
+
+When a user starts a session with Greenplum Database and issues a query, the system creates groups or 'gangs' of worker processes on each segment to do the work. `gp_print_create_gang_time` controls the display of additional information about gang creation, including gang reuse status and the shortest and longest connection establishment time to the segment.
+
+The default value is `false`, Greenplum Database does not display the additional gang creation information.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|coordinator, session, reload|
+
+## <a id="gp_quickz_fallback"></a>gp\_quickz\_fallback
+
+Determines how Greenplum Database handles legacy SQL that specifies a compression type of QuickLZ, which is not supported in Greenplum Database 7 and later. When set to `true`, if legacy SQL specifies a compression type of QuickLZ, Greenplum Database will apply a compression type of zstd. When set to `false` -- the default -- specifying a compression type of QuickLZ will result in an error.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_recursive_cte"></a>gp\_recursive\_cte 
 
@@ -1138,11 +1270,11 @@ For information about the `RECURSIVE` keyword, see the [SELECT](../sql_commands/
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-**Note:** This parameter was previously named `gp_recursive_cte_prototype`, but has been renamed to reflect the current status of the implementation.
+> **Note** This parameter was previously named `gp_recursive_cte_prototype`, but has been renamed to reflect the current status of the implementation.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, restart|
+|Boolean|true|coordinator, session, restart|
 
 ## <a id="gp_reject_percent_threshold"></a>gp\_reject\_percent\_threshold 
 
@@ -1150,7 +1282,7 @@ For single row error handling on COPY and external table SELECTs, sets the numbe
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-*n*|300|master, session, reload|
+|1-*n*|300|coordinator, session, reload|
 
 ## <a id="gp_reraise_signal"></a>gp\_reraise\_signal 
 
@@ -1158,11 +1290,11 @@ If enabled, will attempt to dump core if a fatal server error occurs.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="gp_resgroup_memory_policy"></a>gp\_resgroup\_memory\_policy 
 
-**Note:** The `gp_resgroup_memory_policy` server configuration parameter is enforced only when resource group-based resource management is active.
+> **Note** The `gp_resgroup_memory_policy` server configuration parameter is enforced only when resource group-based resource management is active.
 
 Used by a resource group to manage memory allocation to query operators.
 
@@ -1174,18 +1306,29 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 |-----------|-------|-------------------|
 |auto, eager\_free|eager\_free|local, system, superuser, reload|
 
+## <a id="gp_resgroup_memory_query_fixed_mem"></a>gp_resgroup_memory_query_fixed_mem
+
+> **Note** The `gp_resgroup_memory_query_fixed_mem` server configuration parameter is enforced only when resource group-based resource management is active.
+
+Specifies a fixed amount of memory, in MB, reserved for all queries in a resource group **for the scope of a session**. When this parameter is set to `0`, the default, the `MEMORY_LIMIT` resource group attribute determines this memory limit instead. 
+
+While `MEMORY LIMIT` applies to queries across sessions, `gp_resgroup_memory_query_fixed_mem` overrides that limit at a session level. Thus, you can use this configuration parameter to adjust query memory budget for a particular session, on an ad hoc basis. 
+
+The value of `gp_resgroup_memory_query_fixed_mem` must be lower than `max_statement_mem`.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 < integer < INT_MAX| 0 |coordinator, session, user|
+
 ## <a id="gp_resource_group_bypass"></a>gp\_resource\_group\_bypass 
 
-**Note:** The `gp_resource_group_bypass` server configuration parameter is enforced only when resource group-based resource management is active.
+> **Note** The `gp_resource_group_bypass` server configuration parameter is enforced only when resource group-based resource management is active.
 
- Activates or deactivates  the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries and external components such as PL/Container.
+This parameter can only be changed by a superuser.
 
-You can set this parameter to `true` to bypass resource group concurrent transaction limitations so that a query can run immediately. For example, you can set the parameter to `true` for a session to run a system catalog query or a similar query that requires a minimal amount of resources.
+ Activates or deactivates  the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries.
 
-When you set this parameter to `true` and a run a query, the query runs in this environment:
-
--   The query runs inside a resource group. The resource group assignment for the query does not change.
--   The query memory quota is approximately 10 MB per query. The memory is allocated from resource group shared memory or global shared memory. The query fails if there is not enough shared memory available to fulfill the memory allocation request.
+You can set this parameter to `true` to bypass resource group concurrent transaction limitations so that a query can run immediately. If you set this parameter to true, the query no longer enforces the CPU or memory limits assigned to its resource group. Instead, the memory quota assigned to this query is `statement_mem` per query. If there is not enough memory to satisfy the memory allocation request, the query will fail.
 
 This parameter can be set for a session. The parameter cannot be set within a transaction or a function.
 
@@ -1193,17 +1336,38 @@ This parameter can be set for a session. The parameter cannot be set within a tr
 |-----------|-------|-------------------|
 |Boolean|false|local, session, reload|
 
-## <a id="gp_resource_group_cpu_ceiling_enforcement"></a>gp\_resource\_group\_cpu\_ceiling\_enforcement 
+## <a id="gp_resource_group_bypass_catalog_query"></a>gp_resource_group_bypass_catalog_query
 
-Enables the Ceiling Enforcement mode when assigning CPU resources by Percentage. When deactivated, the Elastic mode will be used.
+> **Note** The `gp_resource_group_bypass_catalog_query` server configuration parameter is enforced only when resource group-based resource management is active.
+
+When set to `true` -- the default -- Greenplum Database's resource group scheduler bypasses all queries that fulfill both of the following criteria:
+
+- They read exclusively from system catalogs
+- They contain in their query text `pg_catalog` schema tables only
+
+>**Note**
+>If a query contains a mix of `pg_catalog` and any other schema tables the scheduler will **not** bypass the query.
+
+When this configuration parameter is set to `false` and the database has reached the maximum amount of concurrent transactions, the scheduler can block queries that exclusively read from system catalogs. 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|local, system, restart|
+|Boolean|true|local, session, reload|
+
+## <a id="gp_resource_group_bypass_direct_dispatch"></a>gp_resource_group_bypass_direct_dispatch
+
+> **Note** 
+>The `gp_resource_group_bypass_direct_dispatch` server configuration parameter is enforced only when resource group-based resource management is active.
+
+When set to `true` (the default) Greenplum Database's resource group scheduler bypasses the resource group's limits for a direct dispatch query so it can run immediately. A direct dispatch query is a special type of query that only requires a single segment to participate in the execution. In order to improve efficiency, Greenplum optimizes this type of query, called Direct Dispatch optimization. The system sends the query plan to the execution of a single segment that needs to execute the plan, instead of sending it to all segments for execution. The query uses resources outside the resource groups to allocate memory. If there is not enough memory to satisfy the memory allocation request, the query will fail. You may only set this parameter for a single session, not within a transaction or a function.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|true|local, session, reload|
 
 ## <a id="gp_resource_group_cpu_limit"></a>gp\_resource\_group\_cpu\_limit 
 
-**Note:** The `gp_resource_group_cpu_limit` server configuration parameter is enforced only when resource group-based resource management is active.
+> **Note** The `gp_resource_group_cpu_limit` server configuration parameter is enforced only when resource group-based resource management is active.
 
 Identifies the maximum percentage of system CPU resources to allocate to resource groups on each Greenplum Database segment node.
 
@@ -1211,58 +1375,47 @@ Identifies the maximum percentage of system CPU resources to allocate to resourc
 |-----------|-------|-------------------|
 |0.1 - 1.0|0.9|local, system, restart|
 
-## <a id="gp_resource_group_enable_recalculate_query_mem"></a>gp\_resource\_group\_enable\_recalculate\_query\_mem
+## <a id="gp_resource_group_cpu_priority"></a>gp_resource_group_cpu_priority
 
-**Note:** The `gp_resource_group_enable_recalculate_query_mem` server configuration parameter is enforced only when resource group-based resource management is active.
+Sets the CPU priority for Greenplum processes relative to non-Greenplum processes when resource groups are enabled. For example, setting this parameter to `10` sets the ratio of allotted CPU resources for Greenplum processes to non-Greenplum processes to 10:1. 
 
-Specifies whether or not Greenplum Database recalculates the maximum amount of memory to allocate per query running in a resource group. The default value is `true`, Greenplum Database recalculates the maximum per-query memory based on the memory configuration and the number of primary segments on the segment host. When set to `false`, Greenplum database calculates the maximum per-query memory based on the memory configuration and the number of primary segments on the coordinator host.
+> **Note** 
+> This ratio calculation applies only when the machine's CPU usage is at 100%.
 
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
-
-## <a id="gp_resource_group_memory_limit"></a>gp\_resource\_group\_memory\_limit 
-
-**Note:** The `gp_resource_group_memory_limit` server configuration parameter is enforced only when resource group-based resource management is active.
-
-Identifies the maximum percentage of system memory resources to allocate to resource groups on each Greenplum Database segment node.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0.1 - 1.0|0.7|local, system, restart|
-
-**Note:** When resource group-based resource management is active, the memory allotted to a segment host is equally shared by active primary segments. Greenplum Database assigns memory to primary segments when the segment takes the primary role. The initial memory allotment to a primary segment does not change, even in a failover situation. This may result in a segment host utilizing more memory than the `gp_resource_group_memory_limit` setting permits.
-
-For example, suppose your Greenplum Database cluster is utilizing the default `gp_resource_group_memory_limit` of `0.7` and a segment host named `seghost1` has 4 primary segments and 4 mirror segments. Greenplum Database assigns each primary segment on `seghost1` `(0.7 / 4 = 0.175)` of overall system memory. If failover occurs and two mirrors on `seghost1` fail over to become primary segments, each of the original 4 primaries retain their memory allotment of `0.175`, and the two new primary segments are each allotted `(0.7 / 6 = 0.116)` of system memory. `seghost1`'s overall memory allocation in this scenario is
-
-```
-
-0.7 + (0.116 * 2) = 0.932
-```
-
-which is above the percentage configured in the `gp_resource_group_memory_limit` setting.
+|1 - 50|10|local, system, restart|
 
 ## <a id="gp_resource_group_queuing_timeout"></a>gp\_resource\_group\_queuing\_timeout 
 
-**Note:** The `gp_resource_group_queuing_timeout` server configuration parameter is enforced only when resource group-based resource management is active.
+> **Note** The `gp_resource_group_queuing_timeout` server configuration parameter is enforced only when resource group-based resource management is active.
 
 Cancel a transaction queued in a resource group that waits longer than the specified number of milliseconds. The time limit applies separately to each transaction. The default value is zero; transactions are queued indefinitely and never time out.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - `INT_MAX` millisecs|0 millisecs|master, session, reload|
+|0 - `INT_MAX` millisecs|0 millisecs|coordinator, session, reload|
 
 ## <a id="gp_resource_manager"></a>gp\_resource\_manager 
 
-Identifies the resource management scheme currently enabled in the Greenplum Database cluster. The default scheme is to use resource queues. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
+Identifies the resource management scheme currently enabled in the Greenplum Database cluster. For information about Greenplum Database resource management, see [Managing Resources](../../admin_guide/wlmgmt.html).
+
+- `none` - configures Greenplum Database to not use any resource manager. This is the default.
+
+- `group` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v1 version of Linux cgroup functionality. 
+
+- `group-v2` - configures Greenplum Database to use resource groups and base resource group behavior on the cgroup v2 version of Linux cgroup functionality. 
+
+- `queue` - configures Greenplum Database to use resource queues. 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|group, queue|queue|local, system, restart|
+|none, group, group-v2, queue|none|local, system, restart|
 
 ## <a id="gp_resqueue_memory_policy"></a>gp\_resqueue\_memory\_policy 
 
-**Note:** The `gp_resqueue_memory_policy` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `gp_resqueue_memory_policy` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 Enables Greenplum memory management features. The distribution algorithm `eager_free` takes advantage of the fact that not all operators run at the same time\(in Greenplum Database 4.2 and later\). The query plan is divided into stages and Greenplum Database eagerly frees memory allocated to a previous stage at the end of that stage's execution, then allocates the eagerly freed memory to the new stage.
 
@@ -1276,7 +1429,7 @@ When set to `auto`, query memory usage is controlled by [statement\_mem](#statem
 
 ## <a id="gp_resqueue_priority"></a>gp\_resqueue\_priority 
 
-**Note:** The `gp_resqueue_priority` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `gp_resqueue_priority` server configuration parameter is enforced only when resource queue-based resource management is active.
 
  Activates or deactivates  query prioritization. When this parameter is deactivated, existing priority settings are not evaluated at query run time.
 
@@ -1286,11 +1439,11 @@ When set to `auto`, query memory usage is controlled by [statement\_mem](#statem
 
 ## <a id="gp_resqueue_priority_cpucores_per_segment"></a>gp\_resqueue\_priority\_cpucores\_per\_segment 
 
-**Note:** The `gp_resqueue_priority_cpucores_per_segment` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `gp_resqueue_priority_cpucores_per_segment` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 Specifies the number of CPU units allocated to each segment instance on a segment host. If the segment is configured with primary-mirror segment instance pairs, use the number of primary segment instances on the host in the calculation. Include any CPU core that is available to the operating system, including virtual CPU cores, in the total number of available cores.
 
-For example, if a Greenplum Database cluster has 10-core segment hosts that are configured with four primary segments, set the value to 2.5 on each segment host \(10 divided by 4\). A master host typically has only a single running master instance, so set the value on the master and standby maaster hosts to reflect the usage of all available CPU cores, in this case 10.
+For example, if a Greenplum Database cluster has 10-core segment hosts that are configured with four primary segments, set the value to 2.5 on each segment host \(10 divided by 4\). A coordinator host typically has only a single running coordinator instance, so set the value on the coordinator and standby maaster hosts to reflect the usage of all available CPU cores, in this case 10.
 
 Incorrect settings can result in CPU under-utilization or query prioritization not working as designed.
 
@@ -1300,7 +1453,7 @@ Incorrect settings can result in CPU under-utilization or query prioritization n
 
 ## <a id="gp_resqueue_priority_sweeper_interval"></a>gp\_resqueue\_priority\_sweeper\_interval 
 
-**Note:** The `gp_resqueue_priority_sweeper_interval` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `gp_resqueue_priority_sweeper_interval` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 Specifies the interval at which the sweeper process evaluates current CPU usage. When a new statement becomes active, its priority is evaluated and its CPU share determined when the next interval is reached.
 
@@ -1320,23 +1473,15 @@ The default value is `false`.
 
 ## <a id="gp_role"></a>gp\_role 
 
-The role of this server process is set to *dispatch* for the master and *execute* for a segment.
+The role of this server process is set to *dispatch* for the coordinator and *execute* for a segment.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |dispatchexecute, utility| |read only|
 
-## <a id="gp_safefswritesize"></a>gp\_safefswritesize 
-
-Specifies a minimum size for safe write operations to append-optimized tables in a non-mature file system. When a number of bytes greater than zero is specified, the append-optimized writer adds padding data up to that number in order to prevent data corruption due to file system errors. Each non-mature file system has a known safe write size that must be specified here when using Greenplum Database with that type of file system. This is commonly set to a multiple of the extent size of the file system; for example, Linux ext3 is 4096 bytes, so a value of 32768 is commonly used.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|integer|0|local, system, reload|
-
 ## <a id="gp_segment_connect_timeout"></a>gp\_segment\_connect\_timeout 
 
-Time that the Greenplum interconnect will try to connect to a segment instance over the network before timing out. Controls the network connection timeout between master and primary segments, and primary to mirror segment replication processes.
+Time that the Greenplum interconnect will try to connect to a segment instance over the network before timing out. Controls the network connection timeout between coordinator and primary segments, and primary to mirror segment replication processes.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1348,7 +1493,7 @@ Sets the number of primary segment instances for the Postgres Planner to assume 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0-*n*|0|master, session, reload|
+|0-*n*|0|coordinator, session, reload|
 
 ## <a id="gp_server_version"></a>gp\_server\_version 
 
@@ -1368,7 +1513,7 @@ Reports the version number of the server as an integer. The number is guaranteed
 
 ## <a id="gp_session_id"></a>gp\_session\_id 
 
-A system assigned ID number for a client session. Starts counting from 1 when the master instance is first started.
+A system assigned ID number for a client session. Starts counting from 1 when the coordinator instance is first started.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1380,7 +1525,7 @@ If enabled, when a Greenplum server process \(postmaster\) is started it will bi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, restart|
+|Boolean|off|coordinator, system, restart|
 
 ## <a id="gp_set_read_only"></a>gp\_set\_read\_only 
 
@@ -1388,25 +1533,29 @@ Set to on to deactivate writes to the database. Any in progress transactions mus
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, restart|
+|Boolean|off|coordinator, system, restart|
 
 ## <a id="gp_statistics_pullup_from_child_partition"></a>gp\_statistics\_pullup\_from\_child\_partition 
 
-Enables the use of statistics from child tables when planning queries on the parent table by the Postgres Planner.
+This parameter directs the Postgres Planner on where to obtain statistics when it plans a query on a partitioned table.
+
+The default value is `off`, the Postgres Planner uses the statistics of the root partitioned table, if it has any, when it plans a query. If the root partitioned table has no statistics, the Planner attempts to use the statistics from the largest child partition.
+
+When set to `on`, the Planner attempts to use the statistics from the largest child partition when it plans a query on a partitioned table.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_statistics_use_fkeys"></a>gp\_statistics\_use\_fkeys 
 
 When enabled, the Postgres Planner will use the statistics of the referenced column in the parent table when a column is foreign key reference to another table instead of the statistics of the column itself.
 
-**Note:** This parameter is deprecated and will be removed in a future Greenplum Database release.
+> **Note** This parameter is deprecated and will be removed in a future Greenplum Database release.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_use_legacy_hashops"></a>gp\_use\_legacy\_hashops 
 
@@ -1416,7 +1565,7 @@ Setting the value to `true` uses the modulo hash algorithm that is compatible wi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|master, session, reload|
+|Boolean|false|coordinator, session, reload|
 
 ## <a id="gp_vmem_idle_resource_timeout"></a>gp\_vmem\_idle\_resource\_timeout 
 
@@ -1424,13 +1573,11 @@ If a database session is idle for longer than the time specified, the session wi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|18s|master, session, reload|
+|Any valid time expression \(number and unit\)|18s|coordinator, session, reload|
 
 ## <a id="gp_vmem_protect_limit"></a>gp\_vmem\_protect\_limit 
 
-**Note:** The `gp_vmem_protect_limit` server configuration parameter is enforced only when resource queue-based resource management is active.
-
-Sets the amount of memory \(in number of MBs\) that all `postgres` processes of an active segment instance can consume. If a query causes this limit to be exceeded, memory will not be allocated and the query will fail. Note that this is a local parameter and must be set for every segment in the system \(primary and mirrors\). When setting the parameter value, specify only the numeric value. For example, to specify 4096MB, use the value `4096`. Do not add the units `MB` to the value.
+When resource queue-based or resource-group based resource management is active, the parameter sets the amount of memory \(in number of MBs\) that all `postgres` processes of an active segment instance can consume. If a query causes this limit to be exceeded, memory will not be allocated and the query will fail. Note that this is a local parameter and must be set for every segment in the system \(primary and mirrors\). When setting the parameter value, specify only the numeric value. For example, to specify 4096MB, use the value `4096`. Do not add the units `MB` to the value.
 
 To prevent over-allocation of memory, these calculations can estimate a safe `gp_vmem_protect_limit` value.
 
@@ -1447,7 +1594,6 @@ First calculate the value of `gp_vmem`. This is the Greenplum Database memory av
     ```
     gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.17
     ```
-
 
 where SWAP is the host swap space and RAM is the RAM on the host in GB.
 
@@ -1473,7 +1619,6 @@ For scenarios where a large number of workfiles are generated, this is the calcu
     <gp_vmem> = ((<SWAP> + <RAM>) – (7.5GB + 0.05 * <RAM> - (300KB * <total_#_workfiles>))) / 1.17
     ```
 
-
 For information about monitoring and managing workfile usage, see the *Greenplum Database Administrator Guide*.
 
 Based on the `gp_vmem` value you can calculate the value for the `vm.overcommit_ratio` operating system kernel parameter. This parameter is set when you configure each Greenplum Database host.
@@ -1482,7 +1627,7 @@ Based on the `gp_vmem` value you can calculate the value for the `vm.overcommit_
 vm.overcommit_ratio = (<RAM> - (0.026 * <gp_vmem>)) / <RAM>
 ```
 
-**Note:** The default value for the kernel parameter `vm.overcommit_ratio` in Red Hat Enterprise Linux is 50.
+> **Note** The default value for the kernel parameter `vm.overcommit_ratio` in Red Hat Enterprise Linux is 50.
 
 For information about the kernel parameter, see the *Greenplum Database Installation Guide*.
 
@@ -1506,17 +1651,17 @@ If your Greenplum Database installation uses serial ATA \(SATA\) disk drives, en
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="gp_workfile_limit_files_per_query"></a>gp\_workfile\_limit\_files\_per\_query 
 
 Sets the maximum number of temporary spill files \(also known as workfiles\) allowed per query per segment. Spill files are created when running a query that requires more memory than it is allocated. The current query is terminated when the limit is exceeded.
 
-Set the value to 0 \(zero\) to allow an unlimited number of spill files. master session reload
+Set the value to 0 \(zero\) to allow an unlimited number of spill files. coordinator session reload
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|100000|master, session, reload|
+|integer|100000|coordinator, session, reload|
 
 ## <a id="gp_workfile_limit_per_query"></a>gp\_workfile\_limit\_per\_query 
 
@@ -1524,7 +1669,7 @@ Sets the maximum disk size an individual query is allowed to use for creating te
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|kilobytes|0|master, session, reload|
+|kilobytes|0|coordinator, session, reload|
 
 ## <a id="gp_workfile_limit_per_segment"></a>gp\_workfile\_limit\_per\_segment 
 
@@ -1550,7 +1695,7 @@ Greenplum Database uses checksums to prevent loading data that has been corrupte
 
 By default, when a checksum verify error occurs when reading a heap data page, Greenplum Database generates an error and prevents the page from being loaded into managed memory. When `ignore_checksum_failure` is set to on and a checksum verify failure occurs, Greenplum Database generates a warning, and allows the page to be read into managed memory. If the page is then updated it is saved to disk and replicated to the mirror. If the page header is corrupt an error is reported even if this option is enabled.
 
-**Warning:** Setting `ignore_checksum_failure` to on may propagate or hide data corruption or lead to other serious problems. However, if a checksum failure has already been detected and the page header is uncorrupted, setting `ignore_checksum_failure` to on may allow you to bypass the error and recover undamaged tuples that may still be present in the table.
+> **Caution** Setting `ignore_checksum_failure` to on may propagate or hide data corruption or lead to other serious problems. However, if a checksum failure has already been detected and the page header is uncorrupted, setting `ignore_checksum_failure` to on may allow you to bypass the error and recover undamaged tuples that may still be present in the table.
 
 The default setting is off, and it can only be changed by a superuser.
 
@@ -1572,11 +1717,91 @@ Sets the display format for interval values. The value *sql\_standard* produces 
 
 The value *postgres\_verbose* produces output matching Greenplum releases prior to 3.3 when the [DateStyle](#DateStyle) parameter was set to non-ISO output.
 
-The value *iso\_8601* will produce output matching the time interval *format with designators* defined in section 4.4.3.2 of ISO 8601. See the [PostgreSQL 9.4 documentation](https://www.postgresql.org/docs/9.4/datatype-datetime.html) for more information.
+The value *iso\_8601* will produce output matching the time interval *format with designators* defined in section 4.4.3.2 of ISO 8601. See the [PostgreSQL 9.4 documentation](https://www.postgresql.org/docs/12/datatype-datetime.html) for more information.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|postgres, postgres\_verbose, sql\_standard, iso\_8601|postgres|master, session, reload|
+|postgres, postgres\_verbose, sql\_standard, iso\_8601|postgres|coordinator, session, reload|
+
+## <a id="jit"></a>jit
+
+Determines whether JIT compilation may be used by Greenplum Database. It enables or disables JIT for both GPORCA and Postgres Planner.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|off|coordinator, session, reload|
+
+## <a id="jit_above_cost"></a>jit\_above\_cost
+
+When using Postgres Planner, sets the query cost above which JIT compilation is activated when JIT is enabled. Performing JIT compilation costs planning time but can accelerate query execution. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables JIT compilation.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|floating point|100000|coordinator, session, reload|
+
+## <a id="jit_debugging_support"></a>jit_debugging_support
+
+If LLVM has the required functionality, register generated functions with GDB. This makes debugging easier. The default setting is `off`. This parameter can only be set at server start or when a client connection starts (for example using `PGOPTIONS`).
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|off|coordinator, session, reload, superuser|
+
+## <a id="jit_dump_bitcode"></a>jit_dump_bitcode
+
+Writes the generated LLVM IR out to the file system, inside [data_directory](../../install_guide/create_data_dirs.html). This is only useful for working on the internals of the JIT implementation. The default setting is `off`. Only superusers and users with the appropriate `SET` privilege can change this setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|off|coordinator, session, reload|
+
+## <a id="jit_expressions"></a>jit_expressions
+ 
+Allows JIT compilation of expressions, when JIT compilation is activated.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|on|coordinator, session, reload|
+
+## <a id="jit_inline_above_cost"></a>jit_inline_above_cost
+
+When using Postgres Planner, sets the query cost above which JIT compilation attempts to inline functions and operators. Inlining adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables inlining.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|floating point|500000|coordinator, session, reload|
+
+## <a id="jit_optimize_above_cost"></a>jit_optimize_above_cost
+
+When using Postgres Planner, sets the query cost above which JIT compilation applies expensive optimizations. Such optimization adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`, and it is unlikely to be beneficial to set it to more than `jit_inline_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables expensive optimizations.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|floating point|500000|coordinator, session, reload|
+
+## <a id="jit_profiling_support"></a>jit_profiling_support
+
+If LLVM has the required functionality, emit the data needed to allow `perf` command to profile functions generated by JIT. This writes out files to `~/.debug/jit/`. If you have set and loaded the environment variable `JITDUMPDIR`, it will write to `JITDUMPDIR/debug/jit` instead. You are responsible for performing cleanup when desired. The default setting is `off`. This parameter can only be set at server start or when a client connection starts (for example using `PGOPTIONS`).
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|off|coordinator, session, reload, superuser|
+
+## <a id="jit_provider"></a>jit_provider
+
+Indicates the name of the JIT provider (library of JIT driver) to load. The default is `llvmjit`, any other value is not officially supported. This parameter can only be set at server start.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|string|llvmjit|local, session, restart, superuser|
+
+## <a id="jit_tuple_deforming"></a>jit_tuple_deforming
+ 
+Allows JIT compilation of tuple deforming, when JIT compilation is activated.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|boolean|on|coordinator, session, reload|
 
 ## <a id="join_collapse_limit"></a>join\_collapse\_limit 
 
@@ -1584,7 +1809,7 @@ The Postgres Planner will rewrite explicit inner `JOIN` constructs into lists of
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-*n*|20|master, session, reload|
+|1-*n*|20|coordinator, session, reload|
 
 ## <a id="krb_caseins_users"></a>krb\_caseins\_users 
 
@@ -1592,7 +1817,7 @@ Sets whether Kerberos user names should be treated case-insensitively. The defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, reload|
+|Boolean|off|coordinator, system, reload|
 
 ## <a id="krb_server_keyfile"></a>krb\_server\_keyfile 
 
@@ -1600,7 +1825,7 @@ Sets the location of the Kerberos server key file.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|path and file name|unset|master, system, restart|
+|path and file name|unset|coordinator, system, restart|
 
 ## <a id="lc_collate"></a>lc\_collate 
 
@@ -1656,7 +1881,7 @@ Specifies the TCP/IP address\(es\) on which the server is to listen for connecti
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|localhost, host names, IP addresses, \* \(all available IP interfaces\)|\*|master, system, restart|
+|localhost, host names, IP addresses, \* \(all available IP interfaces\)|\*|coordinator, system, restart|
 
 ## <a id="local_preload_libraries"></a>local\_preload\_libraries 
 
@@ -1674,11 +1899,11 @@ Unlike [statement\_timeout](#statement_timeout), this timeout can only occur whi
 
 Greenplum Database uses the [deadlock\_timeout](#deadlock_timeout) and [gp\_global\_deadlock\_detector\_period](#gp_global_deadlock_detector_period) to trigger local and global deadlock detection. Note that if `lock_timeout` is turned on and set to a value smaller than these deadlock detection timeouts, Greenplum Database will abort a statement before it would ever trigger a deadlock check in that session.
 
-**Note:** Setting `lock_timeout` in `postgresql.conf` is not recommended because it would affect all sessions
+> **Note** Setting `lock_timeout` in `postgresql.conf` is not recommended because it would affect all sessions
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - `INT_MAX` millisecs|0 millisecs|master, session, reload|
+|0 - `INT_MAX` millisecs|0 millisecs|coordinator, session, reload|
 
 ## <a id="log_autostats"></a>log\_autostats 
 
@@ -1686,7 +1911,7 @@ Logs information about automatic `ANALYZE` operations related to [gp\_autostats\
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload, superuser|
+|Boolean|off|coordinator, session, reload, superuser|
 
 ## <a id="log_connections"></a>log\_connections 
 
@@ -1718,7 +1943,7 @@ Causes the duration of every completed statement which satisfies *log\_statement
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload, superuser|
+|Boolean|off|coordinator, session, reload, superuser|
 
 ## <a id="log_error_verbosity"></a>log\_error\_verbosity 
 
@@ -1726,7 +1951,7 @@ Controls the amount of detail written in the server log for each message that is
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|TERSE, DEFAULT, VERBOSE|DEFAULT|master, session, reload, superuser|
+|TERSE, DEFAULT, VERBOSE|DEFAULT|coordinator, session, reload, superuser|
 
 ## <a id="log_executor_stats"></a>log\_executor\_stats 
 
@@ -1746,11 +1971,11 @@ On Unix systems this parameter sets the permissions for log files when `logging_
 
 ## <a id="log_hostname"></a>log\_hostname 
 
-By default, connection log messages only show the IP address of the connecting host. Turning on this option causes logging of the IP address and host name of the Greenplum Database master. Note that depending on your host name resolution setup this might impose a non-negligible performance penalty.
+By default, connection log messages only show the IP address of the connecting host. Turning on this option causes logging of the IP address and host name of the Greenplum Database coordinator. Note that depending on your host name resolution setup this might impose a non-negligible performance penalty.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, reload|
+|Boolean|off|coordinator, system, reload|
 
 ## <a id="log_min_duration_statement"></a>log\_min\_duration\_statement 
 
@@ -1758,7 +1983,7 @@ Logs the statement and its duration on a single log line if its duration is grea
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of milliseconds, 0, -1|-1|master, session, reload, superuser|
+|number of milliseconds, 0, -1|-1|coordinator, session, reload, superuser|
 
 ## <a id="log_min_error_statement"></a>log\_min\_error\_statement 
 
@@ -1766,7 +1991,7 @@ Controls whether or not the SQL statement that causes an error condition will al
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, INFO, NOTICE, WARNING, ERROR, FATAL, PANIC|ERROR|master, session, reload, superuser|
+|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, INFO, NOTICE, WARNING, ERROR, FATAL, PANIC|ERROR|coordinator, session, reload, superuser|
 
 ## <a id="log_min_messages"></a>log\_min\_messages 
 
@@ -1776,7 +2001,7 @@ If the Greenplum Database PL/Container extension is installed. This parameter al
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, INFO, NOTICE, WARNING, LOG, ERROR, FATAL, PANIC|WARNING|master, session, reload, superuser|
+|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, INFO, NOTICE, WARNING, LOG, ERROR, FATAL, PANIC|WARNING|coordinator, session, reload, superuser|
 
 ## <a id="log_parser_stats"></a>log\_parser\_stats 
 
@@ -1784,7 +2009,7 @@ For each query, write performance statistics of the query parser to the server l
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload, superuser|
+|Boolean|off|coordinator, session, reload, superuser|
 
 ## <a id="log_planner_stats"></a>log\_planner\_stats 
 
@@ -1792,7 +2017,7 @@ For each query, write performance statistics of the Postgres Planner to the serv
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload, superuser|
+|Boolean|off|coordinator, session, reload, superuser|
 
 ## <a id="log_rotation_age"></a>log\_rotation\_age 
 
@@ -1818,7 +2043,7 @@ Controls which SQL statements are logged. DDL logs all data definition commands 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|NONE, DDL, MOD, ALL|ALL|master, session, reload, superuser|
+|NONE, DDL, MOD, ALL|ALL|coordinator, session, reload, superuser|
 
 ## <a id="log_statement_stats"></a>log\_statement\_stats 
 
@@ -1826,11 +2051,11 @@ For each query, write total performance statistics of the query parser, planner,
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload, superuser|
+|Boolean|off|coordinator, session, reload, superuser|
 
 ## <a id="log_temp_files"></a>log\_temp\_files 
 
-Controls logging of temporary file names and sizes. Temporary files can be created for sorts, hashes, temporary query results and spill files. A log entry is made in `log` for each temporary file when it is deleted. Depending on the source of the temporary files, the log entry could be created on either the master and/or segments. A `log_temp_files` value of zero logs all temporary file information, while positive values log only files whose size is greater than or equal to the specified number of kilobytes. The default setting is `-1`, which deactivates logging. Only superusers can change this setting.
+Controls logging of temporary file names and sizes. Temporary files can be created for sorts, hashes, temporary query results and spill files. A log entry is made in `log` for each temporary file when it is deleted. Depending on the source of the temporary files, the log entry could be created on either the coordinator and/or segments. A `log_temp_files` value of zero logs all temporary file information, while positive values log only files whose size is greater than or equal to the specified number of kilobytes. The default setting is `-1`, which deactivates logging. Only superusers can change this setting.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1860,31 +2085,15 @@ Specifies the maximum amount of memory to be used in maintenance operations, suc
 |-----------|-------|-------------------|
 |Integer|16|local, system, reload|
 
-## <a id="max_appendonly_tables"></a>max\_appendonly\_tables 
-
-Sets the maximum number of concurrent transactions that can write to or update append-optimized tables. Transactions that exceed the maximum return an error.
-
-Operations that are counted are `INSERT`, `UPDATE`, `COPY`, and `VACUUM` operations. The limit is only for in-progress transactions. Once a transaction ends \(either aborted or committed\), it is no longer counted against this limit.
-
-**Note:** Greenplum Database limits the maximum number of concurrent inserts into an append-only table to 127.
-
-For operations against a partitioned table, each subpartition \(child table\) that is an append-optimized table and is changed counts as a single table towards the maximum. For example, a partitioned table `p_tbl` is defined with three subpartitions that are append-optimized tables `p_tbl_ao1`, `p_tbl_ao2`, and `p_tbl_ao3`. An `INSERT` or `UPDATE` command against the partitioned table `p_tbl` that changes append-optimized tables `p_tbl_ao1` and `p_tbl_ao2` is counted as two transactions.
-
-Increasing the limit allocates more shared memory on the master host at server start.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|integer \> 0|10000|master, system, restart|
-
 ## <a id="max_connections"></a>max\_connections 
 
-The maximum number of concurrent connections to the database server. In a Greenplum Database system, user client connections go through the Greenplum master instance only. Segment instances should allow 3-10 times the amount as the master. When you increase this parameter, [max\_prepared\_transactions](#max_prepared_transactions) must be increased as well. For more information about limiting concurrent connections, see "Configuring Client Authentication" in the *Greenplum Database Administrator Guide*.
+The maximum number of concurrent connections to the database server. In a Greenplum Database system, user client connections go through the Greenplum coordinator instance only. Segment instances should allow 3-10 times the amount as the coordinator. When you increase this parameter, [max\_prepared\_transactions](#max_prepared_transactions) must be increased as well. For more information about limiting concurrent connections, see "Configuring Client Authentication" in the *Greenplum Database Administrator Guide*.
 
 Increasing this parameter may cause Greenplum Database to request more shared memory. See [shared\_buffers](#shared_buffers) for information about Greenplum server instance shared memory buffers.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|10 - 262143|250 on master750 on segments
+|10 - 262143|250 on coordinator750 on segments
 
 |local, system, restart|
 
@@ -1930,31 +2139,31 @@ The shared lock table is created with room to describe locks on *max\_locks\_per
 
 ## <a id="max_prepared_transactions"></a>max\_prepared\_transactions 
 
-Sets the maximum number of transactions that can be in the prepared state simultaneously. Greenplum uses prepared transactions internally to ensure data integrity across the segments. This value must be at least as large as the value of [max\_connections](#max_connections) on the master. Segment instances should be set to the same value as the master.
+Sets the maximum number of transactions that can be in the prepared state simultaneously. Greenplum uses prepared transactions internally to ensure data integrity across the segments. This value must be at least as large as the value of [max\_connections](#max_connections) on the coordinator. Segment instances should be set to the same value as the coordinator.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|250 on master, 250 on segments|local, system, restart|
+|integer|250 on coordinator, 250 on segments|local, system, restart|
 
 ## <a id="max_resource_portals_per_transaction"></a>max\_resource\_portals\_per\_transaction 
 
-**Note:** The `max_resource_portals_per_transaction` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `max_resource_portals_per_transaction` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 Sets the maximum number of simultaneously open user-declared cursors allowed per transaction. Note that an open cursor will hold an active query slot in a resource queue. Used for resource management.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|64|master, system, restart|
+|integer|64|coordinator, system, restart|
 
 ## <a id="max_resource_queues"></a>max\_resource\_queues 
 
-**Note:** The `max_resource_queues` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `max_resource_queues` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 Sets the maximum number of resource queues that can be created in a Greenplum Database system. Note that resource queues are system-wide \(as are roles\) so they apply to all databases in the system.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|9|master, system, restart|
+|integer|9|coordinator, system, restart|
 
 ## <a id="max_stack_depth"></a>max\_stack\_depth 
 
@@ -1976,11 +2185,11 @@ When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|2000MB|master, session, reload, superuser|
+|number of kilobytes|2000MB|coordinator, session, reload, superuser|
 
 ## <a id="memory_spill_ratio"></a>memory\_spill\_ratio 
 
-**Note:** The `memory_spill_ratio` server configuration parameter is enforced only when resource group-based resource management is active.
+> **Note** The `memory_spill_ratio` server configuration parameter is enforced only when resource group-based resource management is active.
 
 Sets the memory usage threshold percentage for memory-intensive operators in a transaction. When a transaction reaches this threshold, it spills to disk.
 
@@ -1990,7 +2199,7 @@ You can specify an integer percentage value from 0 to 100 inclusive. If you spec
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 100|20|master, session, reload|
+|0 - 100|20|coordinator, session, reload|
 
 ## <a id="optimizer"></a>optimizer 
 
@@ -2004,7 +2213,7 @@ For information about the Postgres Planner and GPORCA, see [Querying Data](../..
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="optimizer_analyze_root_partition"></a>optimizer\_analyze\_root\_partition 
 
@@ -2018,7 +2227,7 @@ For information about the Postgres Planner and GPORCA, see [Querying Data](../..
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="optimizer_array_expansion_threshold"></a>optimizer\_array\_expansion\_threshold 
 
@@ -2034,7 +2243,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Integer \> 0|20|master, session, reload|
+|Integer \> 0|20|coordinator, session, reload|
 
 ## <a id="optimizer_control"></a>optimizer\_control 
 
@@ -2042,7 +2251,7 @@ Controls whether the server configuration parameter optimizer can be changed wit
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload, superuser|
+|Boolean|on|coordinator, session, reload, superuser|
 
 ## <a id="optimizer_cost_model"></a>optimizer\_cost\_model 
 
@@ -2056,17 +2265,17 @@ The default cost model, `calibrated`, is more likely to choose a faster bitmap i
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|legacy, calibrated, experimental|calibrated|master, session, reload|
+|legacy, calibrated, experimental|calibrated|coordinator, session, reload|
 
 ## <a id="optimizer_cte_inlining_bound"></a>optimizer\_cte\_inlining\_bound 
 
-When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WHERE` clause\). The default value, 0, deactivates inlining.
+When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WITH` clause\). The default value, 0, deactivates inlining.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Decimal \>= 0|0|master, session, reload|
+|Decimal \>= 0|0|coordinator, session, reload|
 
 ## <a id="optimizer_dpe_stats"></a>optimizer\_dpe\_stats 
 
@@ -2076,7 +2285,18 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
+
+## <a id="optimizer_discard_redistribute_hashjoin"></a>optimizer\_discard\_redistribute\_hashjoin
+
+When GPORCA is enabled \(the default\), this parameter specifies whether the Query Optimizer should eliminate plans that include a HashJoin operator with a Redistribute Motion child. Eliminating such plans can improve performance in cases where the data being joined exhibits high skewness in the join keys.
+
+The default setting is `off`, GPORCA considers all plan alternatives, including those with a Redistribute Motion child, in the HashJoin operator. If you observe performance issues with queries that use a HashJoin with highly skewed data, you may want to consider setting `optimizer_discard_redistribute_hashjoin` to `on` to instruct GPORCA to discard such plans.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, reload|
+
 
 ## <a id="optimizer_enable_associativity"></a>optimizer\_enable\_associativity 
 
@@ -2090,7 +2310,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="optimizer_enable_dml"></a>optimizer\_enable\_dml 
 
@@ -2104,7 +2324,15 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
+
+## <a id="optimizer_enable_foreign_table"></a>optimizer\_enable\_foreign\_table
+
+When GPORCA is enabled \(the default\) and this configuration parameter is `true` \(the default\), GPORCA generates plans for queries that involve foreign tables. When `false`, queries that include foreign tables fall back to the Postgres Planner.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="optimizer_enable_indexonlyscan"></a>optimizer\_enable\_indexonlyscan 
 
@@ -2118,21 +2346,21 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
-## <a id="optimizer_enable_master_only_queries"></a>optimizer\_enable\_master\_only\_queries 
+## <a id="optimizer_enable_coordinator_only_queries"></a>optimizer\_enable\_coordinator\_only\_queries 
 
-When GPORCA is enabled \(the default\), this parameter allows GPORCA to run catalog queries that run only on the Greenplum Database master. For the default value `off`, only the Postgres Planner can run catalog queries that run only on the Greenplum Database master.
+When GPORCA is enabled \(the default\), this parameter allows GPORCA to run catalog queries that run only on the Greenplum Database coordinator. For the default value `off`, only the Postgres Planner can run catalog queries that run only on the Greenplum Database coordinator.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-**Note:** Enabling this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.
+> **Note** Enabling this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.
 
 For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="optimizer_enable_multiple_distinct_aggs"></a>optimizer\_enable\_multiple\_distinct\_aggs 
 
@@ -2144,7 +2372,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="optimizer_enable_replicated_table"></a>optimizer\_enable\_replicated\_table 
 
@@ -2158,7 +2386,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="optimizer_force_agg_skew_avoidance"></a>optimizer\_force\_agg\_skew\_avoidance 
 
@@ -2170,7 +2398,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="optimizer_force_comprehensive_join_implementation"></a>optimizer\_force\_comprehensive\_join\_implementation 
 
@@ -2180,7 +2408,7 @@ The default value is `false`, GPORCA does not consider nested loop join alternat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|master, session, reload|
+|Boolean|false|coordinator, session, reload|
 
 ## <a id="optimizer_force_multistage_agg"></a>optimizer\_force\_multistage\_agg 
 
@@ -2190,7 +2418,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="optimizer_force_three_stage_scalar_dqa"></a>optimizer\_force\_three\_stage\_scalar\_dqa 
 
@@ -2200,7 +2428,31 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
+
+## <a id="optimizer_jit_above_cost"></a>optimizer_jit_above_cost
+
+When using GPORCA, sets the query cost above which JIT compilation is activated when JIT is enabled. Performing JIT compilation costs planning time but can accelerate query execution. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables JIT compilation.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|7500|coordinator, session, reload|
+
+## <a id="optimizer_jit_inline_above_cost"></a>optimizer_jit_inline_above_cost
+
+When using GPORCA, sets the query cost above which JIT compilation attempts to inline functions and operators. Inlining adds planning time, but can improve execution speed. It is not meaningful to set this to less than jit_above_cost. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables inlining.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|37500|coordinator, session, reload|
+
+## <a id="optimizer_jit_optimize_above_cost"></a>optimizer_jit_optimize_above_cost
+
+When using GPORCA, sets the query cost above which JIT compilation applies expensive optimizations. Such optimization adds planning time, but can improve execution speed. It is not meaningful to set this to less than `optimizer_jit_above_cost`, and it is unlikely to be beneficial to set it to more than `optimizer_jit_inline_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables expensive optimizations.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|37500|coordinator, session, reload|
 
 ## <a id="optimizer_join_arity_for_associativity_commutativity"></a>optimizer\_join\_arity\_for\_associativity\_commutativity 
 
@@ -2232,7 +2484,7 @@ This parameter can be set for an individual database, a session, or a query.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|query, greedy, exhaustive|exhaustive|master, session, reload|
+|query, greedy, exhaustive|exhaustive|coordinator, session, reload|
 
 ## <a id="optimizer_join_order_threshold"></a>optimizer\_join\_order\_threshold 
 
@@ -2242,11 +2494,11 @@ This parameter has no effect when the `optimizer_join_query` parameter is set to
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 12|10|master, session, reload|
+|0 - 12|10|coordinator, session, reload|
 
 ## <a id="optimizer_mdcache_size"></a>optimizer\_mdcache\_size 
 
-Sets the maximum amount of memory on the Greenplum Database master that GPORCA uses to cache query metadata \(optimization data\) during query optimization. The memory limit session based. GPORCA caches query metadata during query optimization with the default settings: GPORCA is enabled and [optimizer\_metadata\_caching](#optimizer_metadata_caching) is `on`.
+Sets the maximum amount of memory on the Greenplum Database coordinator that GPORCA uses to cache query metadata \(optimization data\) during query optimization. The memory limit session based. GPORCA caches query metadata during query optimization with the default settings: GPORCA is enabled and [optimizer\_metadata\_caching](#optimizer_metadata_caching) is `on`.
 
 The default value is 16384 \(16MB\). This is an optimal value that has been determined through performance analysis.
 
@@ -2256,11 +2508,11 @@ This parameter can be set for a database system, an individual database, or a se
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Integer \>= 0|16384|master, session, reload|
+|Integer \>= 0|16384|coordinator, session, reload|
 
 ## <a id="optimizer_metadata_caching"></a>optimizer\_metadata\_caching 
 
-When GPORCA is enabled \(the default\), this parameter specifies whether GPORCA caches query metadata \(optimization data\) in memory on the Greenplum Database master during query optimization. The default for this parameter is `on`, enable caching. The cache is session based. When a session ends, the cache is released. If the amount of query metadata exceeds the cache size, then old, unused metadata is evicted from the cache.
+When GPORCA is enabled \(the default\), this parameter specifies whether GPORCA caches query metadata \(optimization data\) in memory on the Greenplum Database coordinator during query optimization. The default for this parameter is `on`, enable caching. The cache is session based. When a session ends, the cache is released. If the amount of query metadata exceeds the cache size, then old, unused metadata is evicted from the cache.
 
 If the value is `off`, GPORCA does not cache metadata during query optimization.
 
@@ -2270,11 +2522,11 @@ The server configuration parameter [optimizer\_mdcache\_size](#optimizer_mdcache
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="optimizer_minidump"></a>optimizer\_minidump 
 
-GPORCA generates minidump files to describe the optimization context for a given query. The information in the file is not in a format that can be easily used for debugging or troubleshooting. The minidump file is located under the master data directory and uses the following naming format:
+GPORCA generates minidump files to describe the optimization context for a given query. The information in the file is not in a format that can be easily used for debugging or troubleshooting. The minidump file is located under the coordinator data directory and uses the following naming format:
 
 `Minidump_date_time.mdp`
 
@@ -2292,7 +2544,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|ONERROR, ALWAYS|ONERROR|master, session, reload|
+|ONERROR, ALWAYS|ONERROR|coordinator, session, reload|
 
 ## <a id="optimizer_nestloop_factor"></a>optimizer\_nestloop\_factor 
 
@@ -2302,7 +2554,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|INT\_MAX \> 1|1024|master, session, reload|
+|INT\_MAX \> 1|1024|coordinator, session, reload|
 
 ## <a id="optimizer_parallel_union"></a>optimizer\_parallel\_union 
 
@@ -2316,7 +2568,17 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|boolean|off|master, session, reload|
+|boolean|off|coordinator, session, reload|
+
+## <a id="optimizer_penalize_broadcast_threshold"></a>optimizer_penalize_skew_broadcast_threshold
+
+When GPORCA is enabled (the default), during query optimization GPORCA penalizes the cost of plans that attempt to broadcast more than the value specified by `optimizer_penalize_broadcast_threshold`. For example, if this parameter is set to 100K rows (the default), any broadcast of more than 100K rows is heavily penalized. 
+
+When this parameter is set to `0`, GPORCA sets this broadcast threshold to unlimited and never penalizes a broadcast motion.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|integer >= 0|100K rows|coordinator, session, reload|
 
 ## <a id="optimizer_penalize_skew"></a>optimizer\_penalize\_skew 
 
@@ -2330,7 +2592,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="optimizer_print_missing_stats"></a>optimizer\_print\_missing\_stats 
 
@@ -2342,7 +2604,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="optimizer_print_optimization_stats"></a>optimizer\_print\_optimization\_stats 
 
@@ -2357,7 +2619,21 @@ This parameter can be set for a database system, an individual database, or a se
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
+
+## <a id="optimizer_skew_factor"></a>optimizer\_skew\_factor 
+
+When GPORCA is enabled \(the default\), `optimizer_skew_factor` controls skew ratio computation.
+
+The default value is `0`, skew computation is turned off for GPORCA. To enable skew computation, set `optimizer_skew_factor` to a value between `1` and `100`, inclusive.
+
+The larger the `optimizer_skew_factor`, the larger the cost that GPORCA assigns to redistributed hash join, such that GPORCA favors more a broadcast hash join.
+
+The parameter can be set for a database system, an individual database, or a session or query.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|integer 0-100 |0|coordinator, session, reload|
 
 ## <a id="optimizer_sort_factor"></a>optimizer\_sort\_factor 
 
@@ -2367,7 +2643,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Decimal \> 0|1|master, session, reload|
+|Decimal \> 0|1|coordinator, session, reload|
 
 ## <a id="optimizer_use_gpdb_allocators"></a>optimizer\_use\_gpdb\_allocators 
 
@@ -2377,7 +2653,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, system, restart|
+|Boolean|true|coordinator, system, restart|
 
 ## <a id="optimizer_xform_bind_threshold"></a>optimizer\_xform\_bind\_threshold 
 
@@ -2387,7 +2663,7 @@ The default value is `0`, GPORCA produces an unlimited set of bindings.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - INT\_MAX|0|master, session, reload|
+|0 - INT\_MAX|0|coordinator, session, reload|
 
 ## <a id="password_encryption"></a>password\_encryption 
 
@@ -2395,7 +2671,7 @@ When a password is specified in CREATE USER or ALTER USER without writing either
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="plan_cache_mode"></a>plan\_cache\_mode 
 
@@ -2407,7 +2683,7 @@ The parameter can be set for a database system, an individual database, a sessio
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|auto, force\_custom\_plan, force\_generic\_plan|auto|master, session, reload|
+|auto, force\_custom\_plan, force\_generic\_plan|auto|coordinator, session, reload|
 
 ## <a id="pljava_classpath"></a>pljava\_classpath 
 
@@ -2417,23 +2693,23 @@ The `pljava_classpath` parameter is used to assemble the PL/Java classpath at th
 
 If the full path to a jar file is specified in `pljava_classpath` it is added to the PL/Java classpath. When a directory is specified, any jar files the directory contains are added to the PL/Java classpath. The search does not descend into subdirectories of the specified directories. If the name of a jar file is included in `pljava_classpath` with no path, the jar file must be in the `$GPHOME/lib/postgresql/java` directory.
 
-**Note:** Performance can be affected if there are many directories to search or a large number of jar files.
+> **Note** Performance can be affected if there are many directories to search or a large number of jar files.
 
 If [pljava\_classpath\_insecure](#pljava_classpath_insecure) is `false`, setting the `pljava_classpath` parameter requires superuser privilege. Setting the classpath in SQL code will fail when the code is run by a user without superuser privilege. The `pljava_classpath` parameter must have been set previously by a superuser or in the `postgresql.conf` file. Changing the classpath in the `postgresql.conf` file requires a reload \(`gpstop -u`\).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |master, session, reload, superuser|
+|string| |coordinator, session, reload, superuser|
 
 ## <a id="pljava_classpath_insecure"></a>pljava\_classpath\_insecure 
 
 Controls whether the server configuration parameter [pljava\_classpath](#pljava_classpath) can be set by a user without Greenplum Database superuser privileges. When `true`, `pljava_classpath` can be set by a regular user. Otherwise, [pljava\_classpath](#pljava_classpath) can be set only by a database superuser. The default is `false`.
 
-**Warning:** Enabling this parameter exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
+> **Caution** Enabling this parameter exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|master, session, reload, superuser|
+|Boolean|false|coordinator, session, reload, superuser|
 
 ## <a id="pljava_statement_cache_size"></a>pljava\_statement\_cache\_size 
 
@@ -2441,7 +2717,7 @@ Sets the size in KB of the JRE MRU \(Most Recently Used\) cache for prepared sta
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|10|master, system, reload, superuser|
+|number of kilobytes|10|coordinator, system, reload, superuser|
 
 ## <a id="pljava_release_lingering_savepoints"></a>pljava\_release\_lingering\_savepoints 
 
@@ -2449,7 +2725,7 @@ If true, lingering savepoints used in PL/Java functions will be released on func
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, system, reload, superuser|
+|Boolean|true|coordinator, system, reload, superuser|
 
 ## <a id="pljava_vmoptions"></a>pljava\_vmoptions 
 
@@ -2457,11 +2733,11 @@ Defines the startup options for the Java VM. The default value is an empty strin
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |master, system, reload, superuser|
+|string| |coordinator, system, reload, superuser|
 
 ## <a id="port"></a>port 
 
-The database listener port for a Greenplum instance. The master and each segment has its own port. Port numbers for the Greenplum system must also be changed in the `gp_segment_configuration` catalog. You must shut down your Greenplum Database system before changing port numbers.
+The database listener port for a Greenplum instance. The coordinator and each segment has its own port. Port numbers for the Greenplum system must also be changed in the `gp_segment_configuration` catalog. You must shut down your Greenplum Database system before changing port numbers.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2481,7 +2757,7 @@ Sets the estimate of the cost of a nonsequentially fetched disk page for the Pos
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|100|master, session, reload|
+|floating point|100|coordinator, session, reload|
 
 ## <a id="readable_external_table_timeout"></a>readable\_external\_table\_timeout 
 
@@ -2493,47 +2769,61 @@ If queries that use gpfdist run a long time and then return the error "intermitt
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \>= 0|0|master, system, reload|
+|integer \>= 0|0|coordinator, system, reload|
 
 ## <a id="repl_catchup_within_range"></a>repl\_catchup\_within\_range 
 
-For Greenplum Database master mirroring, controls updates to the active master. If the number of WAL segment files that have not been processed by the `walsender` exceeds this value, Greenplum Database updates the active master.
+For Greenplum Database coordinator mirroring, controls updates to the active coordinator. If the number of WAL segment files that have not been processed by the `walsender` exceeds this value, Greenplum Database updates the active coordinator.
 
-If the number of segment files does not exceed the value, Greenplum Database blocks updates to the to allow the `walsender` process the files. If all WAL segments have been processed, the active master is updated.
+If the number of segment files does not exceed the value, Greenplum Database blocks updates to the to allow the `walsender` process the files. If all WAL segments have been processed, the active coordinator is updated.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 64|1|master, system, reload, superuser|
+|0 - 64|1|coordinator, system, reload, superuser|
 
 ## <a id="replication_timeout"></a>wal\_sender\_timeout 
 
-For Greenplum Database master mirroring, sets the maximum time in milliseconds that the `walsender` process on the active master waits for a status message from the `walreceiver` process on the standby master. If a message is not received, the `walsender` logs an error message.
+For Greenplum Database coordinator mirroring, sets the maximum time in milliseconds that the `walsender` process on the active coordinator waits for a status message from the `walreceiver` process on the standby coordinator. If a message is not received, the `walsender` logs an error message.
 
 The [wal\_receiver\_status\_interval](#wal_receiver_status_interval) controls the interval between `walreceiver` status messages.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - INT\_MAX|60000 ms \(60 seconds\)|master, system, reload, superuser|
+|0 - INT\_MAX|60000 ms \(60 seconds\)|coordinator, system, reload, superuser|
 
 ## <a id="resource_cleanup_gangs_on_wait"></a>resource\_cleanup\_gangs\_on\_wait 
 
-**Note:** The `resource_cleanup_gangs_on_wait` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `resource_cleanup_gangs_on_wait` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 If a statement is submitted through a resource queue, clean up any idle query executor worker processes before taking a lock on the resource queue.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="resource_select_only"></a>resource\_select\_only 
 
-**Note:** The `resource_select_only` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `resource_select_only` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 Sets the types of queries managed by resource queues. If set to on, then `SELECT`, `SELECT INTO`, `CREATE TABLE AS SELECT`, and `DECLARE CURSOR` commands are evaluated. If set to off `INSERT`, `UPDATE`, and `DELETE` commands will be evaluated as well.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, restart|
+|Boolean|off|coordinator, system, restart|
+
+## <a id="row_security"></a>row\_security
+
+> **Note** This configuration parameter has no effect on roles which bypass every row security policy, for example, superusers and roles configured with the `BYPASSRLS` attribute.
+
+Controls whether to raise an error in lieu of applying a row security policy. When set to `on`, policies apply normally. When set to `off`, queries which would otherwise apply at least one policy fail.
+
+The default is `on`. Change `row_security` to `off` where limited row visibility could cause incorrect results; for example, `pg_dump` makes that change by default.
+
+For more information about row-level security policies, see [CREATE POLICY](../sql_commands/CREATE_POLICY.html).
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|coordinator, system, restart|
 
 ## <a id="runaway_detector_activation_percent"></a>runaway\_detector\_activation\_percent 
 
@@ -2541,23 +2831,13 @@ For queries that are managed by resource queues or resource groups, this paramet
 
 Either the resource queue or the resource group management scheme can be active in Greenplum Database; both schemes cannot be active at the same time. The server configuration parameter [gp\_resource\_manager](#gp_resource_manager) controls which scheme is active.
 
-**When resource queues are enabled -** This parameter sets the percent of utilized Greenplum Database vmem memory that triggers the termination of queries. If the percentage of vmem memory that is utilized for a Greenplum Database segment exceeds the specified value, Greenplum Database terminates queries managed by resource queues based on memory usage, starting with the query consuming the largest amount of memory. Queries are terminated until the percentage of utilized vmem is below the specified percentage.
+This parameter sets the percent of utilized Greenplum Database virtual memory that triggers the termination of queries. If the percentage of virtual memory that is utilized for a Greenplum Database segment exceeds the specified value, Greenplum Database terminates queries managed by resource queues based on memory usage, starting with the query consuming the largest amount of memory. Queries are terminated until the percentage of utilized virtual memory is below the specified percentage.
 
-Specify the maximum vmem value for active Greenplum Database segment instances with the server configuration parameter [gp\_vmem\_protect\_limit](#gp_vmem_protect_limit).
+Specify the maximum virtual memory value for active Greenplum Database segment instances with the server configuration parameter [gp\_vmem\_protect\_limit](#gp_vmem_protect_limit).
 
-For example, if vmem memory is set to 10GB, and this parameter is 90 \(90%\), Greenplum Database starts terminating queries when the utilized vmem memory exceeds 9 GB.
+For example, if `gp_vmem_protect_limit` is set to 10GB, and `runaway_detector_activation_percent` is 90 \(90%\), Greenplum Database starts terminating queries when the utilized virtual memory exceeds 9 GB.
 
-For information about resource queues, see [Using Resource Queues](../../admin_guide/workload_mgmt.html).
-
-**When resource groups are enabled -** This parameter sets the percent of utilized resource group global shared memory that triggers the termination of queries that are managed by resource groups that are configured to use the `vmtracker` memory auditor, such as `admin_group` and `default_group`. For information about memory auditors, see [Memory Auditor](../../admin_guide/workload_mgmt_resgroups.html#topic8339777).
-
-Resource groups have a global shared memory pool when the sum of the `MEMORY_LIMIT` attribute values configured for all resource groups is less than 100. For example, if you have 3 resource groups configured with `memory_limit` values of 10 , 20, and 30, then global shared memory is 40% = 100% - \(10% + 20% + 30%\). See [Global Shared Memory](../../admin_guide/workload_mgmt_resgroups.html#topic833glob).
-
-If the percentage of utilized global shared memory exceeds the specified value, Greenplum Database terminates queries based on memory usage, selecting from queries managed by the resource groups that are configured to use the `vmtracker` memory auditor. Greenplum Database starts with the query consuming the largest amount of memory. Queries are terminated until the percentage of utilized global shared memory is below the specified percentage.
-
-For example, if global shared memory is 10GB, and this parameter is 90 \(90%\), Greenplum Database starts terminating queries when the utilized global shared memory exceeds 9 GB.
-
-For information about resource groups, see [Using Resource Groups](../../admin_guide/workload_mgmt_resgroups.html).
+For information about resource groups and resource queues, see [Managing Resources]((../../admin_guide/wlmgmt.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2569,7 +2849,7 @@ Specifies the order in which schemas are searched when an object is referenced b
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|a comma-separated list of schema names|$user,public|master, session, reload|
+|a comma-separated list of schema names|$user,public|coordinator, session, reload|
 
 ## <a id="seq_page_cost"></a>seq\_page\_cost 
 
@@ -2577,7 +2857,7 @@ For the Postgres Planner, sets the estimate of the cost of a disk page fetch tha
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|1|master, session, reload|
+|floating point|1|coordinator, session, reload|
 
 ## <a id="server_encoding"></a>server\_encoding 
 
@@ -2617,7 +2897,7 @@ The operating system parameter `SHMMAX` specifies maximum size of a single share
 
 The value of `other_seg_shmem` is the portion the Greenplum Database shared memory calculation that is not accounted for by the `shared_buffers` value. The `other_seg_shmem` value will vary based on the segment configuration.
 
-With the default Greenplum Database parameter values, the value for `other_seg_shmem` is approximately 111MB for Greenplum Database segments and approximately 79MB for the Greenplum Database master.
+With the default Greenplum Database parameter values, the value for `other_seg_shmem` is approximately 111MB for Greenplum Database segments and approximately 79MB for the Greenplum Database coordinator.
 
 The operating system parameter `SHMALL` specifies the maximum amount of shared memory on the host. The value of `SHMALL` must be greater than this value:
 
@@ -2639,7 +2919,7 @@ See the *Greenplum Database Installation Guide* for information about the Greenp
 
 A comma-separated list of shared libraries that are to be preloaded at server start. PostgreSQL procedural language libraries can be preloaded in this way, typically by using the syntax '`$libdir/plXXX`' where XXX is pgsql, perl, tcl, or python. By preloading a shared library, the library startup time is avoided when the library is first used. If a specified library is not found, the server will fail to start.
 
-**Note:** When you add a library to `shared_preload_libraries`, be sure to retain any previous setting of the parameter.
+> **Note** When you add a library to `shared_preload_libraries`, be sure to retain any previous setting of the parameter.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2651,19 +2931,19 @@ Enables SSL connections.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, system, restart|
+|Boolean|off|coordinator, system, restart|
 
 ## <a id="ssl_ciphers"></a>ssl\_ciphers 
 
 Specifies a list of SSL ciphers that are allowed to be used on secure connections. `ssl_ciphers` *overrides* any ciphers string specified in `/etc/openssl.cnf`. The default value `ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH` enables all ciphers except for ADH, LOW, EXP, and MD5 ciphers, and prioritizes ciphers by their strength.
 
-**Note:** With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL encryption \(no encryption for transport\), which the default `ssl_ciphers` string allows. To bypass NULL ciphers with TLS 1.2 use a string such as `TLSv1.2:!eNULL:!aNULL`.
+> **Note** With TLS 1.2 some ciphers in MEDIUM and HIGH strength still use NULL encryption \(no encryption for transport\), which the default `ssl_ciphers` string allows. To bypass NULL ciphers with TLS 1.2 use a string such as `TLSv1.2:!eNULL:!aNULL`.
 
 See the openssl manual page for a list of supported ciphers.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string|ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH|master, system, restart|
+|string|ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH|coordinator, system, restart|
 
 ## <a id="standard_conforming_strings"></a>standard\_conforming\_strings 
 
@@ -2671,44 +2951,36 @@ Determines whether ordinary string literals \('...'\) treat backslashes literall
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="statement_mem"></a>statement\_mem 
 
 Allocates segment host memory per query. The amount of memory allocated with this parameter cannot exceed [max\_statement\_mem](#max_statement_mem) or the memory limit on the resource queue or resource group through which the query was submitted. If additional memory is required for a query, temporary spill files on disk are used.
 
+You can use the following calculation to estimate a reasonable `statement_mem` value for a wide variety of situations:
+
+```
+( <gp_vmem_protect_limit>GB * .9 ) / <max_expected_concurrent_queries>
+```
+
 *If you are using resource groups to control resource allocation in your Greenplum Database cluster*:
 
--   Greenplum Database uses `statement_mem` to control query memory usage when the resource group `MEMORY_SPILL_RATIO` is set to 0.
--   You can use the following calculation to estimate a reasonable `statement_mem` value:
-
-    ```
-    rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments
-    statement_mem = rg_perseg_mem / max_expected_concurrent_queries
-    ```
-
+- If the server configuration parameter [gp_resgroup_memory_query_fixed_mem](#gp_resgroup_memory_query_fixed_mem) is set to 0, and the resource group parameter `MEMORY_LIMIT` is set to -1, `statement_mem` sets the amount of memory allocated for a query.
+- If you set the configuration parameters [gp_resource_group_bypass](#gp_resource_group_bypass) or [gp_resource_group_bypass_catalog_query](#gp_resource_group_bypass_catalog_query) to bypass the resource group limits, `statement_mem` sets the amount of memory allocated for the query.
+- `statement_mem` also sets the amount of memory allocated for a query if its value is greater than `MEMORY_LIMIT` / `CONCURRENCY`.
+- Queries whose plan cost is less than the limit `MIN_COST` use `statement_mem` as their memory quota.
 
 *If you are using resource queues to control resource allocation in your Greenplum Database cluster*:
 
--   When [gp\_resqueue\_memory\_policy](#gp_resqueue_memory_policy) =auto, `statement_mem` and resource queue memory limits control query memory usage.
--   You can use the following calculation to estimate a reasonable `statement_mem` value for a wide variety of situations:
+- When [gp\_resqueue\_memory\_policy](#gp_resqueue_memory_policy) is set to "auto", `statement_mem` and resource queue memory limits control query memory usage.
 
-    ```
-    ( <gp_vmem_protect_limit>GB * .9 ) / <max_expected_concurrent_queries>
-    ```
-
-    For example, with a `gp_vmem_protect_limit` set to 8192MB \(8GB\) and assuming a maximum of 40 concurrent queries with a 10% buffer, you would use the following calculation to determine the `statement_mem` value:
-
-    ```
-    (8GB * .9) / 40 = .18GB = 184MB
-    ```
-
+For information about resource groups and resource queues, see [Managing Resources]((../../admin_guide/wlmgmt.html).
 
 When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` must be changed first, or listed first in the postgresql.conf file.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|128MB|master, session, reload|
+|number of kilobytes|128MB|coordinator, session, reload|
 
 ## <a id="statement_timeout"></a>statement\_timeout 
 
@@ -2716,17 +2988,17 @@ Abort any statement that takes over the specified number of milliseconds. 0 turn
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of milliseconds|0|master, session, reload|
+|number of milliseconds|0|coordinator, session, reload|
 
 ## <a id="stats_queue_level"></a>stats\_queue\_level 
 
-**Note:** The `stats_queue_level` server configuration parameter is enforced only when resource queue-based resource management is active.
+> **Note** The `stats_queue_level` server configuration parameter is enforced only when resource queue-based resource management is active.
 
 Collects resource queue statistics on database activity.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="superuser_reserved_connections"></a>superuser\_reserved\_connections 
 
@@ -2774,7 +3046,7 @@ You can set this parameter to the number of 32K blocks \(for example, `1024` to 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1024 \(32MB\)|master, session, reload|
+|integer|1024 \(32MB\)|coordinator, session, reload|
 
 ## <a id="topic_k52_fqm_f3b"></a>temp\_tablespaces 
 
@@ -2790,11 +3062,11 @@ See also [default\_tablespace](#default_tablespace).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|one or more tablespace names|unset|master, session, reload|
+|one or more tablespace names|unset|coordinator, session, reload|
 
 ## <a id="TimeZone"></a>TimeZone 
 
-Sets the time zone for displaying and interpreting time stamps. The default is to use whatever the system environment specifies as the time zone. See [Date/Time Keywords](https://www.postgresql.org/docs/9.4/datetime-keywords.html) in the PostgreSQL documentation.
+Sets the time zone for displaying and interpreting time stamps. The default is to use whatever the system environment specifies as the time zone. See [Date/Time Keywords](https://www.postgresql.org/docs/12/datetime-keywords.html) in the PostgreSQL documentation.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2804,26 +3076,26 @@ Sets the time zone for displaying and interpreting time stamps. The default is t
 
 Sets the collection of time zone abbreviations that will be accepted by the server for date time input. The default is `Default`, which is a collection that works in most of the world. `Australia` and `India`, and other collections can be defined for a particular installation. Possible values are names of configuration files stored in `$GPHOME/share/postgresql/timezonesets/`.
 
-To configure Greenplum Database to use a custom collection of timezones, copy the file that contains the timezone definitions to the directory `$GPHOME/share/postgresql/timezonesets/` on the Greenplum Database master and segment hosts. Then set value of the server configuration parameter `timezone_abbreviations` to the file. For example, to use a file `custom` that contains the default timezones and the WIB \(Waktu Indonesia Barat\) timezone.
+To configure Greenplum Database to use a custom collection of timezones, copy the file that contains the timezone definitions to the directory `$GPHOME/share/postgresql/timezonesets/` on the Greenplum Database coordinator and segment hosts. Then set value of the server configuration parameter `timezone_abbreviations` to the file. For example, to use a file `custom` that contains the default timezones and the WIB \(Waktu Indonesia Barat\) timezone.
 
 1.  Copy the file `Default` from the directory `$GPHOME/share/postgresql/timezonesets/` the file `custom`. Add the WIB timezone information from the file `Asia.txt` to the `custom`.
-2.  Copy the file `custom` to the directory `$GPHOME/share/postgresql/timezonesets/` on the Greenplum Database master and segment hosts.
+2.  Copy the file `custom` to the directory `$GPHOME/share/postgresql/timezonesets/` on the Greenplum Database coordinator and segment hosts.
 3.  Set value of the server configuration parameter `timezone_abbreviations` to `custom`.
 4.  Reload the server configuration file \(`gpstop -u`\).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string|Default|master, session, reload|
+|string|Default|coordinator, session, reload|
 
 ## <a id="track_activities"></a>track\_activities 
 
 Enables the collection of information on the currently executing command of each session, along with the time when that command began execution. This parameter is `true` by default. Only superusers can change this setting. See the `pg_stat_activity` view.
 
-**Note:** Even when enabled, this information is not visible to all users, only to superusers and the user owning the session being reported on, so it should not represent a security risk.
+> **Note** Even when enabled, this information is not visible to all users, only to superusers and the user owning the session being reported on, so it should not represent a security risk.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload, superuser|
+|Boolean|true|coordinator, session, reload, superuser|
 
 ## <a id="track_activity_query_size"></a>track\_activity\_query\_size 
 
@@ -2839,7 +3111,15 @@ Collects information about executing commands. Enables the collection of informa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload, superuser|
+|Boolean|true|coordinator, session, reload, superuser|
+
+## <a id="track_wal_io_timing"></a>track_wal_io_timing
+
+Enables timing of WAL I/O calls. This parameter is disabled by default, as it repeatedly queries the operating system for the current time, which may cause significant overhead on some platforms. The view [pg_stat_wal](../system_catalogs/catalog_ref-views.html#pg_stat_wal) displays WAL I/O timing information. Only superusers and users with the appropriate `SET` privilege can change this setting.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|coordinator, session, reload|
 
 ## <a id="transaction_isolation"></a>transaction\_isolation 
 
@@ -2847,7 +3127,7 @@ Sets the current transaction's isolation level.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|read committed, serializable|read committed|master, session, reload|
+|read committed, serializable|read committed|coordinator, session, reload|
 
 ## <a id="transaction_read_only"></a>transaction\_read\_only 
 
@@ -2855,7 +3135,7 @@ Sets the current transaction's read-only status.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="transform_null_equals"></a>transform\_null\_equals 
 
@@ -2863,13 +3143,13 @@ When on, expressions of the form expr = NULL \(or NULL = expr\) are treated as e
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="unix_socket_directory"></a>unix\_socket\_directories 
 
 Specifies the directory of the UNIX-domain socket on which the server is to listen for connections from client applications. Multiple sockets can be created by listing multiple directories separated by commas.
 
-**Important:** Do not change the value of this parameter. The default location is required for Greenplum Database utilities.
+> **Important** Do not change the value of this parameter. The default location is required for Greenplum Database utilities.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2898,6 +3178,16 @@ Enables updating of the process title every time a new SQL command is received b
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|local, session, reload|
+
+## <a id="vacuum_cleanup_index_scale_factor"></a>vacuum_cleanup_index_scale_factor
+
+Specifies the fraction of the total number of heap tuples counted in the previous statistics collection that can be inserted without incurring an index scan at the `VACUUM` cleanup stage. The purpose of this parameter is to minimize unnecessary vacuum index scans. This setting currently applies to B-tree indexes only. When its value is 0, `VACUUM` cleanup never skips index scans.
+
+If no tuples were deleted from the heap, B-tree indexes are still scanned at the `VACUUM` cleanup stage when at least one of the following conditions is met: the index statistics are stale, or the index contains deleted pages that can be recycled during cleanup. Index statistics are considered to be stale if the number of newly inserted tuples exceeds the `vacuum_cleanup_index_scale_factor` fraction of the total number of heap tuples detected by the previous statistics collection. The total number of heap tuples is stored in the index meta-page. Note that the meta-page does not include this data until `VACUUM` finds no dead tuples, so B-tree index scan at the cleanup stage can only be skipped if the second and subsequent `VACUUM` cycles detect no dead tuples.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|floating point 0 to 10000000000|0.1|local, session, reload|
 
 ## <a id="vacuum_cost_delay"></a>vacuum\_cost\_delay 
 
@@ -2937,13 +3227,13 @@ The estimated cost for vacuuming a buffer that has to be read from disk. This re
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|10|local, session, reload|
+|integer \> 0|2|local, session, reload|
 
 ## <a id="vacuum_freeze_min_age"></a>vacuum\_freeze\_min\_age 
 
 Specifies the cutoff age \(in transactions\) that `VACUUM` should use to decide whether to replace transaction IDs with *FrozenXID* while scanning a table.
 
-For information about `VACUUM` and transaction ID management, see "Managing Data" in the *Greenplum Database Administrator Guide* and the [PostgreSQL documentation](https://www.postgresql.org/docs/9.4/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND).
+For information about `VACUUM` and transaction ID management, see "Managing Data" in the *Greenplum Database Administrator Guide* and the [PostgreSQL documentation](https://www.postgresql.org/docs/12/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2955,11 +3245,11 @@ Enables a test that validates the free tuple ID \(TID\) list. The list is mainta
 
 If Greenplum Database detects a corruption in the free TID list, the free TID list is rebuilt, a warning is logged, and a warning is returned by queries for which the check failed. Greenplum Database attempts to run the queries.
 
-**Note:** If a warning is returned, please contact VMware Support.
+> **Note** If a warning is returned, please contact VMware Support.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="verify_gpfdists_cert"></a>verify\_gpfdists\_cert 
 
@@ -2976,13 +3266,13 @@ The value `false` deactivates SSL certificate authentication. These SSL exceptio
 
 You can set the value to `false` to deactivate authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data.
 
-**Warning:** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
+> **Caution** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
 For information about the `gpfdists` protocol, see [gpfdists:// Protocol](../../admin_guide/external/g-gpfdists-protocol.html). For information about running the `gpfdist` utility, see [gpfdist](../../utility_guide/ref/gpfdist.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|master, session, reload|
+|Boolean|true|coordinator, session, reload|
 
 ## <a id="vmem_process_interrupt"></a>vmem\_process\_interrupt 
 
@@ -2990,7 +3280,7 @@ Enables checking for interrupts before reserving vmem memory for a query during 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|master, session, reload|
+|Boolean|off|coordinator, session, reload|
 
 ## <a id="wait_for_replication_threshold"></a>wait\_for\_replication\_threshold 
 
@@ -3002,27 +3292,29 @@ If you set the value to 0, database performance issues might occur under heavy l
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - MAX-INT / 1024|1024|master, system, reload|
+|0 - MAX-INT / 1024|1024|coordinator, system, reload|
 
-## <a id="wal_keep_segments"></a>wal\_keep\_segments 
+## <a id="wal_keep_size"></a>wal_keep_size 
 
-For Greenplum Database master mirroring, sets the maximum number of processed WAL segment files that are saved by the by the active Greenplum Database master if a checkpoint operation occurs.
+Specifies the minimum size of past log file segments kept in the `pg_wal` directory, in case a standby coordinator or mirror segment instance needs to fetch them for streaming replication. If a standby coordinator or mirror segment instance connected to the sending server falls behind by more than `wal_keep_size` megabytes, the sending server might remove a WAL segment still needed by the standby coordinator or mirror segment instance, in which case the replication connection will be terminated. 
 
-The segment files are used to synchronize the active master on the standby master.
+This sets only the minimum size of segments retained in `pg_wal`; the system might need to retain more segments for WAL archival or to recover from a checkpoint. If `wal_keep_size` is zero (the default), the number of old WAL segments available to mirror servers is a function of the location of replication slot's `restart_lsn` and `max_slot_wal_keep_size` parameters, as well as the status of WAL archiving. 
+
+If this value is specified without units, it is taken as megabytes.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|master, system, reload, superuser|
+|integer|5 times the default size of the write-ahead log file|coordinator, system, reload, superuser|
 
 ## <a id="wal_receiver_status_interval"></a>wal\_receiver\_status\_interval 
 
-For Greenplum Database master mirroring, sets the interval in seconds between `walreceiver` process status messages that are sent to the active master. Under heavy loads, the time might be longer.
+For Greenplum Database coordinator mirroring, sets the interval in seconds between `walreceiver` process status messages that are sent to the active coordinator. Under heavy loads, the time might be longer.
 
 The value of [wal\_sender\_timeout](#replication_timeout) controls the time that the `walsender` process waits for a `walreceiver` message.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 0- INT\_MAX/1000|10 sec|master, system, reload, superuser|
+|integer 0- INT\_MAX/1000|10 sec|coordinator, system, reload, superuser|
 
 ## <a id="writable_external_table_bufsize"></a>writable\_external\_table\_bufsize 
 
@@ -3056,7 +3348,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|base64, hex|base64|master, session, reload|
+|base64, hex|base64|coordinator, session, reload|
 
 ## <a id="xmloption"></a>xmloption 
 
@@ -3064,7 +3356,7 @@ Specifies whether XML data is to be considered as an XML document \(`document`\)
 
 This parameter affects the validation performed by `xml_is_well_formed()`. If the value is `document`, the function checks for a well-formed XML document. If the value is `content`, the function checks for a well-formed XML content fragment.
 
-**Note:** An XML document that contains a document type declaration \(DTD\) is not considered a valid XML content fragment. If `xmloption` set to `content`, XML that contains a DTD is not considered valid XML.
+> **Note** An XML document that contains a document type declaration \(DTD\) is not considered a valid XML content fragment. If `xmloption` set to `content`, XML that contains a DTD is not considered valid XML.
 
 To cast a character string that contains a DTD to the `xml` data type, use the `xmlparse` function with the `document` keyword, or change the `xmloption` value to `document`.
 
@@ -3076,5 +3368,5 @@ SET XML OPTION { DOCUMENT | CONTENT }
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|document, content|content|master, session, reload|
+|document, content|content|coordinator, session, reload|
 

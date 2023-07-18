@@ -86,6 +86,37 @@ class TestUnitPgReplicationSlot(GpTestCase):
                           call('Successfully dropped replication slot internal_wal_replication_slot for host:bar, port:1234')],
                          self.mock_logger.debug.call_args_list)
 
+    @patch('gppylib.db.dbconn.connect', side_effect=Exception())
+    def test_create_slot_conn_exception(self, mock1):
+        with self.assertRaises(Exception) as ex:
+            self.pg_replication_slot.create_slot()
+
+        self.assertEqual(1, self.mock_logger.debug.call_count)
+        self.assertEqual([call('Creating slot internal_wal_replication_slot for host:bar, port:1234')],
+                         self.mock_logger.debug.call_args_list)
+        self.assertTrue('Failed to create replication slot for host:bar, port:1234' in str(ex.exception))
+
+    @patch('gppylib.db.dbconn.connect', autospec=True)
+    @patch('gppylib.db.dbconn.query', side_effect=DatabaseError("DatabaseError Exception"))
+    def test_create_slot_db_error_exception(self, mock1, mock2):
+        self.pg_replication_slot.create_slot()
+        self.assertEqual(1, self.mock_logger.debug.call_count)
+        self.assertEqual(1, self.mock_logger.exception.call_count)
+        self.assertEqual([call('Creating slot internal_wal_replication_slot for host:bar, port:1234')],
+                         self.mock_logger.debug.call_args_list)
+        self.assertEqual(
+            [call('Failed to query pg_create_physical_replication_slot for host:bar, port:1234: DatabaseError Exception')],
+            self.mock_logger.exception.call_args_list)
+
+    @patch('gppylib.db.dbconn.connect', autospec=True)
+    @patch('gppylib.db.dbconn.query', autospec=True)
+    def test_create_slot_success(self, mock1, mock2):
+        self.assertTrue(self.pg_replication_slot.create_slot())
+        self.assertEqual(2, self.mock_logger.debug.call_count)
+        self.assertEqual([call('Creating slot internal_wal_replication_slot for host:bar, port:1234'),
+                          call(
+                              'Successfully created replication slot internal_wal_replication_slot for host:bar, port:1234')],
+                         self.mock_logger.debug.call_args_list)
 
 class TestUnitPgBaseBackup(unittest.TestCase):
     def test_replication_slot_not_passed_when_not_given_slot_name(self):

@@ -55,7 +55,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenMDRequest, &CreateMDRequestParseHandler},
 		{EdxltokenTraceFlags, &CreateTraceFlagsParseHandler},
 		{EdxltokenOptimizerConfig, &CreateOptimizerCfgParseHandler},
-		{EdxltokenRelationExternal, &CreateMDRelationExtParseHandler},
 		{EdxltokenRelationCTAS, &CreateMDRelationCTASParseHandler},
 		{EdxltokenEnumeratorConfig, &CreateEnumeratorCfgParseHandler},
 		{EdxltokenStatisticsConfig, &CreateStatisticsCfgParseHandler},
@@ -72,6 +71,13 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenGPDBAgg, &CreateMDAggParseHandler},
 		{EdxltokenCheckConstraint, &CreateMDChkConstraintParseHandler},
 		{EdxltokenRelationStats, &CreateRelStatsParseHandler},
+		{EdxltokenRelationExtendedStats, &CreateRelationExtStatsParseHandler},
+		{EdxltokenExtendedStats, &CreateExtStatsParseHandler},
+		{EdxltokenExtendedStatsInfo, &CreateExtStatsInfoParseHandler},
+		{EdxltokenMVDependencyList, &CreateExtStatsDependenciesParseHandler},
+		{EdxltokenMVDependency, &CreateExtStatsDependencyParseHandler},
+		{EdxltokenMVNDistinctList, &CreateExtStatsNDistinctListParseHandler},
+		{EdxltokenMVNDistinct, &CreateExtStatsNDistinctParseHandler},
 		{EdxltokenColumnStats, &CreateColStatsParseHandler},
 		{EdxltokenMetadataIdList, &CreateMDIdListParseHandler},
 		{EdxltokenIndexInfoList, &CreateMDIndexInfoListParseHandler},
@@ -90,7 +96,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalBitmapTableScan, &CreateBitmapTableScanParseHandler},
 		{EdxltokenPhysicalDynamicBitmapTableScan,
 		 &CreateDynBitmapTableScanParseHandler},
-		{EdxltokenPhysicalExternalScan, &CreateExternalScanParseHandler},
+		{EdxltokenPhysicalForeignScan, &CreateForeignScanParseHandler},
 		{EdxltokenPhysicalHashJoin, &CreateHashJoinParseHandler},
 		{EdxltokenPhysicalNLJoin, &CreateNLJoinParseHandler},
 		{EdxltokenPhysicalMergeJoin, &CreateMergeJoinParseHandler},
@@ -109,6 +115,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalMaterialize, &CreateMaterializeParseHandler},
 		{EdxltokenPhysicalDynamicTableScan, &CreateDTSParseHandler},
 		{EdxltokenPhysicalDynamicIndexScan, &CreateDynamicIdxScanParseHandler},
+		{EdxltokenPhysicalDynamicForeignScan, &CreateDFSParseHandler},
 		{EdxltokenPhysicalPartitionSelector,
 		 &CreatePartitionSelectorParseHandler},
 		{EdxltokenPhysicalSequence, &CreateSequenceParseHandler},
@@ -182,14 +189,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		 &CreateScSubPlanParamListParseHandler},
 		{EdxltokenScalarSubPlanParam, &CreateScSubPlanParamParseHandler},
 		{EdxltokenScalarOpList, &CreateScOpListParseHandler},
-		{EdxltokenScalarPartOid, &CreateScPartOidParseHandler},
-		{EdxltokenScalarPartDefault, &CreateScPartDefaultParseHandler},
-		{EdxltokenScalarPartBound, &CreateScPartBoundParseHandler},
-		{EdxltokenScalarPartBoundInclusion, &CreateScPartBoundInclParseHandler},
-		{EdxltokenScalarPartBoundOpen, &CreateScPartBoundOpenParseHandler},
-		{EdxltokenScalarPartListValues, &CreateScPartListValuesParseHandler},
-		{EdxltokenScalarPartListNullTest,
-		 &CreateScPartListNullTestParseHandler},
 
 		{EdxltokenScalarSubquery, &CreateScSubqueryParseHandler},
 		{EdxltokenScalarBitmapAnd, &CreateScBitmapBoolOpParseHandler},
@@ -217,7 +216,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 
 		{EdxltokenQuery, &CreateQueryParseHandler},
 		{EdxltokenLogicalGet, &CreateLogicalGetParseHandler},
-		{EdxltokenLogicalExternalGet, &CreateLogicalExtGetParseHandler},
+		{EdxltokenLogicalForeignGet, &CreateLogicalForeignGetParseHandler},
 		{EdxltokenLogical, &CreateLogicalOpParseHandler},
 		{EdxltokenLogicalProject, &CreateLogicalProjParseHandler},
 		{EdxltokenLogicalSelect, &CreateLogicalSelectParseHandler},
@@ -320,7 +319,6 @@ CParseHandlerFactory::GetParseHandler(CMemoryPool *mp,
 	// did not find the physical operator in the table
 	CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
 		&dxl_memory_manager, token_identifier_str);
-	;
 
 	GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnrecognizedOperator,
 			   str->GetBuffer());
@@ -456,16 +454,6 @@ CParseHandlerFactory::CreateMDRelationParseHandler(
 		CParseHandlerMDRelation(mp, parse_handler_mgr, parse_handler_root);
 }
 
-// creates a parse handler for parsing external relation metadata
-CParseHandlerBase *
-CParseHandlerFactory::CreateMDRelationExtParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerMDRelationExternal(mp, parse_handler_mgr,
-														parse_handler_root);
-}
-
 // creates a parse handler for parsing CTAS relation metadata
 CParseHandlerBase *
 CParseHandlerFactory::CreateMDRelationCTASParseHandler(
@@ -494,6 +482,71 @@ CParseHandlerFactory::CreateRelStatsParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerRelStats(mp, parse_handler_mgr, parse_handler_root);
+}
+
+// creates a parse handler for parsing relation stats
+CParseHandlerBase *
+CParseHandlerFactory::CreateRelationExtStatsParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerRelationExtendedStats(
+		mp, parse_handler_mgr, parse_handler_root);
+}
+
+// creates a parse handler for parsing relation stats
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp)
+		CParseHandlerExtStats(mp, parse_handler_mgr, parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsInfoParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp)
+		CParseHandlerExtStatsInfo(mp, parse_handler_mgr, parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsDependenciesParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerExtStatsDependencies(mp, parse_handler_mgr,
+														  parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsDependencyParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerExtStatsDependency(mp, parse_handler_mgr,
+														parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsNDistinctListParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerExtStatsNDistinctList(
+		mp, parse_handler_mgr, parse_handler_root);
+}
+
+CParseHandlerBase *
+CParseHandlerFactory::CreateExtStatsNDistinctParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerExtStatsNDistinct(mp, parse_handler_mgr,
+													   parse_handler_root);
 }
 
 // creates a parse handler for parsing column stats
@@ -695,14 +748,14 @@ CParseHandlerFactory::CreateDynBitmapTableScanParseHandler(
 		mp, parse_handler_mgr, parse_handler_root);
 }
 
-// creates a parse handler for parsing an external scan
+// creates a parse handler for parsing a foreign scan
 CParseHandlerBase *
-CParseHandlerFactory::CreateExternalScanParseHandler(
+CParseHandlerFactory::CreateForeignScanParseHandler(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 {
 	return GPOS_NEW(mp)
-		CParseHandlerExternalScan(mp, parse_handler_mgr, parse_handler_root);
+		CParseHandlerForeignScan(mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing a subquery scan
@@ -803,6 +856,16 @@ CParseHandlerFactory::CreateDynamicIdxScanParseHandler(
 {
 	return GPOS_NEW(mp) CParseHandlerDynamicIndexScan(mp, parse_handler_mgr,
 													  parse_handler_root);
+}
+
+// creates a parse handler for parsing a dynamic table scan operator
+CParseHandlerBase *
+CParseHandlerFactory::CreateDFSParseHandler(
+	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+	CParseHandlerBase *parse_handler_root)
+{
+	return GPOS_NEW(mp) CParseHandlerDynamicForeignScan(mp, parse_handler_mgr,
+														parse_handler_root);
 }
 
 // creates a parse handler for parsing a partition selector operator
@@ -923,76 +986,6 @@ CParseHandlerFactory::CreateScOpListParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerScalarOpList(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part OID
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartOidParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp)
-		CParseHandlerScalarPartOid(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part default
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartDefaultParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartDefault(mp, parse_handler_mgr,
-													   parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part boundary
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartBoundParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp)
-		CParseHandlerScalarPartBound(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part bound inclusion
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartBoundInclParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartBoundInclusion(
-		mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part bound openness
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartBoundOpenParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartBoundOpen(mp, parse_handler_mgr,
-														 parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part list values
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartListValuesParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartListValues(mp, parse_handler_mgr,
-														  parse_handler_root);
-}
-
-// creates a parse handler for parsing a scalar part list null test
-CParseHandlerBase *
-CParseHandlerFactory::CreateScPartListNullTestParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerScalarPartListNullTest(
-		mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing direct dispatch info
@@ -1551,14 +1544,14 @@ CParseHandlerFactory::CreateLogicalGetParseHandler(
 		CParseHandlerLogicalGet(mp, parse_handler_mgr, parse_handler_root);
 }
 
-// creates a parse handler for parsing a logical external get operator
+// creates a parse handler for parsing a logical foreign get operator
 CParseHandlerBase *
-CParseHandlerFactory::CreateLogicalExtGetParseHandler(
+CParseHandlerFactory::CreateLogicalForeignGetParseHandler(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 {
-	return GPOS_NEW(mp) CParseHandlerLogicalExternalGet(mp, parse_handler_mgr,
-														parse_handler_root);
+	return GPOS_NEW(mp) CParseHandlerLogicalForeignGet(mp, parse_handler_mgr,
+													   parse_handler_root);
 }
 
 // creates a parse handler for parsing a logical project operator

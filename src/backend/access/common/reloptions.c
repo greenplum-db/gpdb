@@ -716,9 +716,8 @@ add_int_reloption(bits32 kinds, const char *name, const char *desc, int default_
  *		Add a new float reloption
  */
 void
-add_real_reloption(bits32 kinds, const char *name, const char *desc,
-				   double default_val, double min_val, double max_val,
-				   LOCKMODE lockmode)
+add_real_reloption(bits32 kinds, const char *name, const char *desc, double default_val,
+				   double min_val, double max_val, LOCKMODE lockmode)
 {
 	relopt_real *newoption;
 
@@ -741,9 +740,8 @@ add_real_reloption(bits32 kinds, const char *name, const char *desc,
  * the validation.
  */
 void
-add_string_reloption(bits32 kinds, const char *name, const char *desc,
-					 const char *default_val, validate_string_relopt validator,
-					 LOCKMODE lockmode)
+add_string_reloption(bits32 kinds, const char *name, const char *desc, const char *default_val,
+					 validate_string_relopt validator, LOCKMODE lockmode)
 {
 	relopt_string *newoption;
 
@@ -1450,7 +1448,7 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 	fillRelOptions((void *) rdopts, sizeof(StdRdOptions), options, numoptions,
 				   validate, tab, lengthof(tab));
 
-	validate_and_refill_options(rdopts, options, numoptions, kind, validate);
+	validate_and_adjust_options(rdopts, options, numoptions, kind, validate);
 
 	free_options_deep(options, numoptions);
 

@@ -5,7 +5,7 @@ image_resource:
 
 inputs:
   - name: gpdb_src
-  - name: bin_gpdb_rhel8
+  - name: bin_gpdb
 
 run:
   path: gpdb_src/concourse/scripts/verify_gpdb_versions.bash

@@ -32,28 +32,19 @@
 #define MaxCpuSetLength 1024
 
 /*
- * The max length of cpuset array
- */
-#define CpuSetArrayLength 2
-
-/*
  * Default value of cpuset
  */
 #define DefaultCpuset "-1"
 
 /*
- * When setting memory_limit to 0 the group will has no reserved quota, all the
- * memory need to be acquired from the global shared memory.
+ * Default value of io_limit
  */
-#define RESGROUP_UNLIMITED_MEMORY_LIMIT		(0)
+#define DefaultIOLimit "-1"
 
 /*
- * When setting memory_spill_ratio to 0 the statement_mem will be used to
- * decide the operator memory, this is called the fallback mode, the benefit is
- * statement_mem can be set in absolute values such as "128 MB" which is easier
- * to understand.
+ * Default value of cpu weight
  */
-#define RESGROUP_FALLBACK_MEMORY_SPILL_RATIO		(0)
+#define DefaultCPUWeight 100
 
 /*
  * Resource group capability.
@@ -81,11 +72,17 @@ typedef struct ResGroupCaps
 {
 	ResGroupCap		__unknown;			/* placeholder, do not use it */
 	ResGroupCap		concurrency;
-	ResGroupCap		cpuRateLimit;
-	ResGroupCap		memLimit;
-	ResGroupCap		memSharedQuota;
-	ResGroupCap		memSpillRatio;
-	ResGroupCap		memAuditor;
+	ResGroupCap		cpuMaxPercent;
+	ResGroupCap		cpuWeight;
+	ResGroupCap		memory_limit;
+	volatile ResGroupCap	min_cost;
+
+	/*
+	 * io_limit are local pointers,
+	 * do not use it for cross MemoryContext.
+	 */
+	char			*io_limit;
+
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -98,24 +95,24 @@ typedef struct ResGroupCaps
 /*
  * GUC variables.
  */
+extern int						gp_resgroup_memory_policy;
 extern bool						gp_log_resgroup_memory;
+extern int						gp_resgroup_memory_query_fixed_mem;
 extern int						gp_resgroup_memory_policy_auto_fixed_mem;
 extern bool						gp_resgroup_print_operator_memory_limits;
 extern bool						gp_resgroup_debug_wait_queue;
-extern int						memory_spill_ratio;
 
 extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
-extern bool gp_resource_group_cpu_ceiling_enforcement;
-extern double gp_resource_group_memory_limit;
 extern bool gp_resource_group_bypass;
 extern int gp_resource_group_queuing_timeout;
+extern bool gp_resource_group_bypass_catalog_query;
+extern int gp_resource_group_move_timeout;
+extern bool gp_resource_group_bypass_direct_dispatch;
 
 /*
  * Non-GUC global variables.
  */
-extern bool gp_resource_group_enable_cgroup_memory;
-extern bool gp_resource_group_enable_cgroup_swap;
 extern bool gp_resource_group_enable_cgroup_cpuset;
 
 /*
@@ -138,7 +135,6 @@ typedef enum
 	RES_GROUP_STAT_TOTAL_QUEUED,
 	RES_GROUP_STAT_TOTAL_QUEUE_TIME,
 	RES_GROUP_STAT_CPU_USAGE,
-	RES_GROUP_STAT_MEM_USAGE,
 } ResGroupStatType;
 
 /*
@@ -146,17 +142,19 @@ typedef enum
  */
 typedef struct
 {
-	Oid		groupid;
+	Oid					groupid;
 	ResGroupLimitType	limittype;
-	ResGroupCaps	caps;
-	ResGroupCaps	oldCaps;	/* last config value, alter operation need to
-								 * check last config for recycling */
-	ResGroupCap		memLimitGap;
+	ResGroupCaps		caps;
+	ResGroupCaps		oldCaps;	/* last config value, alter operation need to
+ 										* check last config for recycling */
+
+	List				*ioLimit;
 } ResourceGroupCallbackContext;
 
 /* Shared memory and semaphores */
 extern Size ResGroupShmemSize(void);
 extern void ResGroupControlInit(void);
+extern void CGroupOpsAndInfoInit(void);
 
 extern void initCgroup(void);
 /* Load resource group information from catalog */
@@ -170,10 +168,10 @@ extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 									const char *buf,
 									int len);
 
-extern bool ShouldAssignResGroupOnMaster(void);
+extern bool ShouldAssignResGroupOnCoordinator(void);
 extern bool ShouldUnassignResGroup(void);
-extern void AssignResGroupOnMaster(void);
-extern void UnassignResGroup(bool releaseSlot);
+extern void AssignResGroupOnCoordinator(void);
+extern void UnassignResGroup(void);
 extern void SwitchResGroupOnSegment(const char *buf, int len);
 
 extern bool ResGroupIsAssigned(void);
@@ -181,18 +179,13 @@ extern bool ResGroupIsAssigned(void);
 /* Retrieve statistic information of type from resource group */
 extern Datum ResGroupGetStat(Oid groupId, ResGroupStatType type);
 
-extern void ResGroupDumpMemoryInfo(void);
-
-/* Check the memory limit of resource group */
-extern bool ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed);
-/* Update the memory usage of resource group */
-extern void ResGroupReleaseMemory(int32 memoryChunks);
-
 extern void ResGroupDropFinish(const ResourceGroupCallbackContext *callbackCtx,
 							   bool isCommit);
 extern void ResGroupCreateOnAbort(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
+extern void check_and_unassign_from_resgroup(PlannedStmt* stmt);
+extern uint64 ResourceGroupGetQueryMemoryLimit(void);
 
 /*
  * Get resource group id of my proc.
@@ -202,15 +195,6 @@ extern void ResGroupCheckForDrop(Oid groupId, char *name);
  * information.
  */
 extern Oid GetMyResGroupId(void);
-
-extern int32 ResGroupGetVmemLimitChunks(void);
-extern int32 ResGroupGetVmemChunkSizeInBits(void);
-extern int32 ResGroupGetMaxChunksPerQuery(void);
-
-/* test helper function */
-extern void ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota);
-
-extern int64 ResourceGroupGetQueryMemoryLimit(void);
 
 extern void ResGroupDumpInfo(StringInfo str);
 
@@ -226,14 +210,9 @@ extern void CpusetDifference(char *cpuset1, const char *cpuset2, int len);
 extern bool CpusetIsEmpty(const char *cpuset);
 extern void SetCpusetEmpty(char *cpuset, int cpusetSize);
 extern bool EnsureCpusetIsAvailable(int elevel);
-extern bool IsGroupInRedZone(void);
-extern void ResGroupGetMemoryRunawayInfo(StringInfo str);
 extern Oid SessionGetResGroupId(SessionState *session);
-extern int32 SessionGetResGroupGlobalShareMemUsage(SessionState *session);
 extern void HandleMoveResourceGroup(void);
 extern void ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName);
-extern int32 ResGroupGetSessionMemUsage(int sessionId);
-extern int32 ResGroupGetGroupAvailableMem(Oid groupId);
 extern Oid ResGroupGetGroupIdBySessionId(int sessionId);
 extern char *getCpuSetByRole(const char *cpuset);
 extern void checkCpuSetByRole(const char *cpuset);

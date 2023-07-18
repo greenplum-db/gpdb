@@ -107,7 +107,7 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" KeyColumns="1" IncludedColumns="0,1">
+    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" KeyColumns="1" IncludedColumns="">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.1978.1.0"/>
       </dxl:Opfamilies>
@@ -116,7 +116,7 @@
         <dxl:Partition Mdid="6.2351.2.1"/>
       </dxl:Partitions>
     </dxl:Index>
-    <dxl:Index Mdid="0.2347.1.1" Name="T_a" IsClustered="false" KeyColumns="0" IncludedColumns="0,1">
+    <dxl:Index Mdid="0.2347.1.1" Name="T_a" IsClustered="false" KeyColumns="0" IncludedColumns="">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -256,13 +256,13 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:GPDBFunc Mdid="0.218.1.0" Name="float8pl" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.218.1.0" Name="float8pl" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.701.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.1781.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1781.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:Relation Mdid="6.35085.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.35085.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -449,7 +449,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1607264.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1607264.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -650,7 +650,7 @@
     </dxl:Relation>
     <!-- Query to DXL and back 64-bit tests END -->
     <!-- PlStmt to DXL and back 64-bit tests START -->
-    <dxl:Relation Mdid="6.17140.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17140.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -797,7 +797,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17281.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17281.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -809,7 +809,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17230.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17230.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
           <dxl:DefaultValue/>
@@ -1386,7 +1386,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.13144342.1.0" Name="idx_p1_j_1_prt_p11" IsClustered="false" KeyColumns="1" IncludedColumns="0,1">
+    <dxl:Index Mdid="0.13144342.1.0" Name="idx_p1_j_1_prt_p11" IsClustered="false" KeyColumns="1" IncludedColumns="">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -1395,7 +1395,7 @@
         <dxl:Partition Mdid="6.13144344.1.0"/>
       </dxl:Partitions>
     </dxl:Index>
-    <dxl:Index Mdid="0.13144285.1.0" Name="idx_p1_i_1_prt_p11" IsClustered="false" KeyColumns="0" IncludedColumns="0,1">
+    <dxl:Index Mdid="0.13144285.1.0" Name="idx_p1_i_1_prt_p11" IsClustered="false" KeyColumns="0" IncludedColumns="">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -1416,7 +1416,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.18452.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.18452.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1428,7 +1428,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17091.1.1" Name="s" IsTemporary="true" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17091.1.1" Name="s" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1440,7 +1440,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.17136.1.1" Name="t" IsTemporary="true" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.17136.1.1" Name="t" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="e" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1452,7 +1452,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1139398.1.1" Name="d" IsTemporary="true" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1139398.1.1" Name="d" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1571,7 +1571,7 @@
       <dxl:Commutator Mdid="0.1695.1.0"/>
       <dxl:InverseOp Mdid="0.59.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.313.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.313.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.23.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBScalarOp Mdid="0.59.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
@@ -1629,13 +1629,13 @@
       <dxl:Commutator Mdid="0.98.1.0"/>
       <dxl:InverseOp Mdid="0.531.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.274.1.0" Name="timeofday" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.274.1.0" Name="timeofday" ReturnsSet="false" Stability="Volatile" IsStrict="true">
       <dxl:ResultType Mdid="0.25.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.7000.1.0" Name="row_number" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.7001.1.0" Name="rank" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.7001.1.0" Name="rank" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBAgg Mdid="0.2101.1.0" Name="avg">
@@ -1689,7 +1689,7 @@
       <dxl:Commutator Mdid="0.91.1.0"/>
       <dxl:InverseOp Mdid="0.85.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:Relation Mdid="6.48716.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.48716.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -1701,10 +1701,10 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:GPDBFunc Mdid="0.216.1.0" Name="float8mul" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.216.1.0" Name="float8mul" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.701.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.1397.1.0" Name="abs" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1397.1.0" Name="abs" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.23.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBScalarOp Mdid="0.2345.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true">
@@ -1779,7 +1779,7 @@
       <dxl:Commutator Mdid="0.1095.1.0"/>
       <dxl:InverseOp Mdid="0.1096.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:Relation Mdid="6.18983.1.0" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.18983.1.0" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2262,10 +2262,10 @@
       <dxl:ResultType Mdid="0.1700.1.0"/>
       <dxl:IntermediateResultType Mdid="0.1700.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:GPDBFunc Mdid="0.1740.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1740.1.0" Name="numeric" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.1700.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:Relation Mdid="6.57808.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.57808.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2281,7 +2281,7 @@
       <dxl:ResultType Mdid="0.20.1.0"/>
       <dxl:IntermediateResultType Mdid="0.20.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:Relation Mdid="6.58045.1.0" Name="basetable" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="0;0,1">
+    <dxl:Relation Mdid="6.58045.1.0" Name="basetable" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="0;0,1">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2312,13 +2312,13 @@
       <dxl:Commutator Mdid="0.413.1.0"/>
       <dxl:InverseOp Mdid="0.415.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.20.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.483.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.483.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.20.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1598.1.0" Name="random" ReturnsSet="false" Stability="Volatile" IsStrict="true">
       <dxl:ResultType Mdid="0.701.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBScalarOp Mdid="0.674.1.0" Name="&gt;" ComparisonType="GT" ReturnsNullOnNullInput="true">
@@ -2369,27 +2369,27 @@
       <dxl:Commutator Mdid="0.667.1.0"/>
       <dxl:InverseOp Mdid="0.666.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.701.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBAgg Mdid="0.2116.1.0" Name="max">
       <dxl:ResultType Mdid="0.23.1.0"/>
       <dxl:IntermediateResultType Mdid="0.23.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:GPDBFunc Mdid="0.1277.1.0" Name="int84div" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1277.1.0" Name="int84div" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.20.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.668.1.0" Name="bpchar" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.668.1.0" Name="bpchar" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.1042.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBAgg Mdid="0.2132.1.0" Name="min">
       <dxl:ResultType Mdid="0.23.1.0"/>
       <dxl:IntermediateResultType Mdid="0.23.1.0"/>
     </dxl:GPDBAgg>
-    <dxl:GPDBFunc Mdid="0.1346.1.0" Name="pow" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1346.1.0" Name="pow" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.701.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.177.1.0" Name="int4pl" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.177.1.0" Name="int4pl" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.23.1.0"/>
     </dxl:GPDBFunc>
     <dxl:GPDBAgg Mdid="0.2147.1.0" Name="count">
@@ -2408,7 +2408,7 @@
       <dxl:Commutator Mdid="0.1752.1.0"/>
       <dxl:InverseOp Mdid="0.1753.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.65.1.0" Name="int4eq" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.65.1.0" Name="int4eq" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.16.1.0"/>
     </dxl:GPDBFunc>
     <dxl:Relation Mdid="6.35039.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
@@ -2782,7 +2782,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1846705.1.1" Name="rm" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1846705.1.1" Name="rm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="r1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2818,7 +2818,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1846728.1.1" Name="sm" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1846728.1.1" Name="sm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="s1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2854,7 +2854,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Relation Mdid="6.1846751.1.1" Name="tm" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+    <dxl:Relation Mdid="6.1846751.1.1" Name="tm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="t1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           <dxl:DefaultValue/>
@@ -2938,7 +2938,7 @@
       <dxl:Commutator Mdid="0.414.1.0"/>
       <dxl:InverseOp Mdid="0.412.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.351.1.0" Name="btint4cmp" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.351.1.0" Name="btint4cmp" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.23.1.0"/>
     </dxl:GPDBFunc>
     <dxl:Type Mdid="0.1016.1.0" Name="_int8" IsRedistributable="true" IsHashable="false" IsMergeJoinable="false" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -2956,16 +2956,16 @@
       <dxl:SumAgg Mdid="0.3218.1.0"/>
       <dxl:CountAgg Mdid="0.2147.1.0"/>
     </dxl:Type>
-    <dxl:GPDBFunc Mdid="0.387972.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.387972.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Volatile" IsStrict="false">
       <dxl:ResultType Mdid="0.26.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.396072.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.396072.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="false">
       <dxl:ResultType Mdid="0.2278.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.32990.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.32990.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Volatile" IsStrict="true">
       <dxl:ResultType Mdid="0.26.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.41852.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.41852.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Volatile" IsStrict="false">
       <dxl:ResultType Mdid="0.2249.1.0"/>
     </dxl:GPDBFunc>
     <dxl:Type Mdid="0.2278.1.0" Name="void" IsRedistributable="false" IsHashable="false" IsMergeJoinable="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -3075,13 +3075,13 @@
       <dxl:Commutator Mdid="0.418.1.0"/>
       <dxl:InverseOp Mdid="0.80.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.855.1.0" Name="int48gt" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.855.1.0" Name="int48gt" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.16.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" IsStrict="true">
       <dxl:ResultType Mdid="0.23.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.2585897.1.0" Name="recordtvf" ReturnsSet="true" Stability="Volatile" DataAccess="ReadsSQLData" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.2585897.1.0" Name="recordtvf" ReturnsSet="true" Stability="Volatile" IsStrict="false">
       <dxl:ResultType Mdid="0.2249.1.0"/>
     </dxl:GPDBFunc>
     <dxl:Type Mdid="0.2249.1.0" Name="record" IsRedistributable="false" IsHashable="false" IsMergeJoinable="true" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -3099,13 +3099,13 @@
       <dxl:SumAgg Mdid="0.0.0.0"/>
       <dxl:CountAgg Mdid="0.2147.1.0"/>
     </dxl:Type>
-    <dxl:Index Mdid="0.197454.1.1" Name="foo_ab" IsClustered="false" KeyColumns="0,1" IncludedColumns="0,1,2,3,4">
+    <dxl:Index Mdid="0.197454.1.1" Name="foo_ab" IsClustered="false" KeyColumns="0,1" IncludedColumns="">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
     </dxl:Index>
-    <dxl:Index Mdid="0.197514.1.1" Name="foo_bitmap_c" IsClustered="false" KeyColumns="2" IncludedColumns="0,1,2,3,4">
+    <dxl:Index Mdid="0.197514.1.1" Name="foo_bitmap_c" IsClustered="false" KeyColumns="2" IncludedColumns="">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -3258,10 +3258,10 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:GPDBFunc Mdid="0.7000.1.1" Name="row_number" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.7000.1.1" Name="row_number" ReturnsSet="false" Stability="Immutable" IsStrict="false">
       <dxl:ResultType Mdid="0.20.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.7001.1.1" Name="rank" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.7001.1.1" Name="rank" ReturnsSet="false" Stability="Immutable" IsStrict="false">
       <dxl:ResultType Mdid="0.20.1.0"/>
     </dxl:GPDBFunc>
     <dxl:Relation Mdid="6.239963.1.1" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
@@ -3600,7 +3600,7 @@
       <dxl:IndexInfoList/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:GPDBFunc Mdid="0.7029.1.0" Name="first_value" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.7029.1.0" Name="first_value" ReturnsSet="false" Stability="Immutable" IsStrict="false">
       <dxl:ResultType Mdid="0.23.1.0"/>
     </dxl:GPDBFunc>
     <dxl:Relation Mdid="6.307041.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
@@ -4015,10 +4015,10 @@
       <dxl:OpFunc Mdid="0.265.1.0"/>
       <dxl:Commutator Mdid="0.574.1.0"/>
     </dxl:GPDBScalarOp>
-    <dxl:GPDBFunc Mdid="0.1234567.1.0" Name="&quot;'&lt;&gt;&amp;" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+    <dxl:GPDBFunc Mdid="0.1234567.1.0" Name="&quot;'&lt;&gt;&amp;" ReturnsSet="false" Stability="Immutable" IsStrict="true">
       <dxl:ResultType Mdid="0.701.1.0"/>
     </dxl:GPDBFunc>
-    <dxl:GPDBFunc Mdid="0.74752.1.0" Name="funcvolatile" ReturnsSet="false" Stability="Volatile" DataAccess="ModifiesSQLData" IsStrict="false">
+    <dxl:GPDBFunc Mdid="0.74752.1.0" Name="funcvolatile" ReturnsSet="false" Stability="Volatile" IsStrict="false">
       <dxl:ResultType Mdid="0.23.1.0"/>
     </dxl:GPDBFunc>
     <dxl:Relation Mdid="6.74764.1.1" Name="pt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
@@ -4323,7 +4323,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.27324.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
+    <dxl:Index Mdid="0.27324.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>

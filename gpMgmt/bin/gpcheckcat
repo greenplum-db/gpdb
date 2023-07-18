@@ -13,8 +13,8 @@ Usage: gpcheckcat [<option>] [dbname]
     -S option                : shared table options (none, only)
     -O                       : Online
     -l                       : list all tests
-    -R test | 'test1, test2' : run this particular test(s) (quoted, comma seperated list for multiple tests)
-    -s test | 'test1, test2' : skip this particular test(s) (quoted, comma seperated list for multiple tests)
+    -R test | 'test1, test2' : run this particular test(s) (quoted, comma separated list for multiple tests)
+    -s test | 'test1, test2' : skip this particular test(s) (quoted, comma separated list for multiple tests)
     -C catname               : run cross consistency, FK and ACL tests for this catalog table
 
     Test subset options are mutually exclusive, use only one of '-R', '-s', or '-C'.
@@ -167,7 +167,7 @@ class Global():
         # array of SQL statements. Key is dbid
         self.ReSync = {}
 
-        # constraints which are actually unenforcable
+        # constraints which are actually unenforceable
         self.Constraints = []
 
         # ownership fixups
@@ -414,7 +414,7 @@ def connect2run(qry, col=None):
     threads = []
     i = 1
 
-    # parallelise queries
+    # parallelize queries
     for dbid in GV.cfg:
         c = GV.cfg[dbid]
         db = connect2(c)
@@ -1069,9 +1069,12 @@ def checkOwners():
                     a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
+      left join pg_index i on (c.oid = i.indexrelid)
       left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.blkdirrelid or
-                                     c.oid = ao.blkdiridxid)
+                                     c.oid = ao.visimaprelid or
+                                     i.indrelid = ao.blkdirrelid or
+                                     i.indrelid = ao.visimaprelid)
       left join pg_class o on (o.oid = ao.relid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)
@@ -1425,8 +1428,9 @@ class checkAOSegVpinfoThread(execThread):
 
     def run(self):
         aoseg_query = """
-           SELECT a.relname, a.relid, a.segrelid, cl.relname
-           FROM (SELECT p.relid, p.segrelid, c.relname FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid WHERE p.columnstore = true) a
+           SELECT a.relname, a.relid, a.segrelid, cl.relname, a.relnatts
+           FROM (SELECT p.relid, p.segrelid, c.relname, c.relnatts FROM pg_appendonly p LEFT JOIN pg_class c ON p.relid = c.oid LEFT JOIN pg_am a ON (a.oid = c.relam) 
+           WHERE a.amname = 'ao_column') a 
            LEFT JOIN pg_class cl ON a.segrelid = cl.oid;
         """
 
@@ -1434,11 +1438,16 @@ class checkAOSegVpinfoThread(execThread):
             # Read the list of aoseg tables from the database
             curs = self.db.query(aoseg_query)
 
-            for relname, relid, segrelid, segrelname in curs.getresult():
-                qry = "SELECT count(*) FROM pg_attribute WHERE attrelid=%d AND attnum > 0;" % (relid)
-                attr_count = self.db.query(qry).getresult()[0][0]
-
-                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1;" % (segrelname)
+            for relname, relid, segrelid, segrelname, attr_count in curs.getresult():
+                # We check vpinfo consistency only for segs that are in state
+                # AOSEG_STATE_DEFAULT and which are not RESERVED_SEGNO.
+                # RESERVED_SEGNO can have a different number of attributes than
+                # the other segments. For eg. if we ALTER TABLE ADD COLUMN in a
+                # transaction, and then insert rows in the same transaction, and
+                # then abort, the RESERVED_SEGNO will hold the inserted rows.
+                # The vpinfo for RESERVED_SEGNO will have more columns than
+                # relnatts in that case.
+                qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1 and segno <> 0;" % (segrelname)
                 vpinfo_curs = self.db.query(qry)
                 nrows = vpinfo_curs.ntuples()
                 if nrows == 0:
@@ -1471,7 +1480,7 @@ class checkAOSegVpinfoThread(execThread):
                     GV.checkStatus = False
                     setError(ERROR_NOREPAIR)
                     logger.info('[FAIL] inconsistent vpinfo')
-                    logger.error("vpinfo in 'pg_aoseg.{segrelname}' of table '{relname}' contains {vpinfo_attr_count} attributes, while pg_attribute has {attr_count} attributes on segment {content}"
+                    logger.error("vpinfo in 'pg_aoseg.{segrelname}' of table '{relname}' contains {vpinfo_attr_count} attributes, while pg_class has {attr_count} attributes on segment {content}"
                                  .format(segrelname = segrelname,
                                          relname = relname,
                                          vpinfo_attr_count = vpinfo_attr_count,
@@ -1490,6 +1499,82 @@ def checkAOSegVpinfo():
         cfg = GV.cfg[dbid]
         db_connection = connect2(cfg)
         thread = checkAOSegVpinfoThread(cfg, db_connection)
+        thread.start()
+        logger.debug('launching check thread %s for dbid %i' %
+                     (thread.name, dbid))
+        threads.append(thread)
+
+        if (i % GV.opt['-B']) == 0:
+            processThread(threads)
+            threads = []
+
+        i += 1
+
+    processThread(threads)
+
+class checkAOLastrownumThread(execThread):
+    def __init__(self, cfg, db):
+        execThread.__init__(self, cfg, db, None)
+
+    # pg_attribute_encoding.lastrownums[segno], if exists, should have a corresponding entry in gp_fastsequence with
+    # an objid same as segno. And the value of pg_attribute_encoding.lastrownums[segno] should fall in the range of
+    # [0, {last_sequence}] where {last_sequence} is the current gp_fastsequence value with the corresponding objid.
+    # Note that objmod starts from 0 but the array index starts from 1.
+    def run(self):
+        aolastrownum_query = """
+            SELECT
+                c.relname,
+                ao.relid,
+                ae.attnum,
+                ae.lastrownums,
+                f.objmod,
+                f.last_sequence,
+                ae.lastrownums[f.objmod + 1] AS lastrownum
+            FROM
+                pg_attribute_encoding ae
+                JOIN pg_appendonly ao ON ae.attrelid = ao.relid
+                LEFT JOIN gp_fastsequence f ON ao.segrelid = f.objid
+                JOIN pg_class c ON ao.relid = c.oid
+            WHERE
+                f.last_sequence IS NULL
+                OR f.last_sequence < ae.lastrownums[f.objmod + 1]
+                OR ae.lastrownums[f.objmod + 1] < 0;
+        """
+
+        try:
+            # Execute the query
+            curs = self.db.query(aolastrownum_query)
+            nrows = curs.ntuples()
+
+            if nrows == 0:
+                logger.info('[OK] AO lastrownums check for pg_attribute_encoding')
+            else:
+                GV.checkStatus = False
+                # we could not fix this issue automatically
+                setError(ERROR_NOREPAIR)
+                logger.info('[FAIL] AO lastrownums check for pg_attribute_encoding')
+                for relname, relid, attnum, lastrownums, objmod, last_sequence, last_rownum in curs.getresult():
+                    logger.error("   found inconsistent last_rownum {rownum} with last_sequence {seqnum} of aoseg {segno} for table '{relname}' attribute {attnum} on segment {content}"
+                                 .format(rownum = last_rownum,
+                                         seqnum = last_sequence,
+                                         segno = objmod,
+                                         relname = relname,
+                                         attnum = attnum,
+                                         content = self.cfg['content']))
+
+        except Exception as e:
+            GV.checkStatus = False
+            self.error = e
+
+# for test "ao_lastrownums"
+def checkAOLastrownums():
+    threads = []
+    i = 1
+    # parallelise check
+    for dbid in GV.cfg:
+        cfg = GV.cfg[dbid]
+        db_connection = connect2(cfg)
+        thread = checkAOLastrownumThread(cfg, db_connection)
         thread.start()
         logger.debug('launching check thread %s for dbid %i' %
                      (thread.name, dbid))
@@ -1609,6 +1694,11 @@ def checkTableInconsistentEntry(cat):
     castcols = list(map(lambda b: b.replace("stxddependencies","stxddependencies::text"), castcols))
     columns = list(map(lambda b: b.replace("stxdmcv","stxdmcv::text"), columns))
     castcols = list(map(lambda b: b.replace("stxdmcv","stxdmcv::text"), castcols))
+
+    # pg_attribute_encoding.lastrownums could have various values on segments, ignore them
+    if catname == 'pg_attribute_encoding':
+        columns.remove('lastrownums')
+        castcols.remove('lastrownums')
 
     if cat.tableHasConsistentOids():
         qry = inconsistentEntryQuery(GV.max_content, catname, ['oid'], columns, castcols)
@@ -2036,6 +2126,14 @@ all_checks = {
             "version": 'main',
             "order": 15,
             "online": False
+        },
+    "ao_lastrownums":
+        {
+            "description": "Check that lastrownums in pg_attribute_encoding is consistent with gp_fastsequence",
+            "fn": lambda: checkAOLastrownums(),
+            "version": 'main',
+            "order": 16,
+            "online": False
         }
 }
 
@@ -2308,6 +2406,7 @@ TableMainColumn['pg_attribute_encoding'] = ['attrelid', 'pg_class']
 TableMainColumn['pg_auth_members'] = ['roleid', 'pg_authid']
 TableMainColumn['pg_autovacuum'] = ['vacrelid', 'pg_class']
 TableMainColumn['pg_compression'] = ['compname', 'pg_compression']
+TableMainColumn['pg_db_role_setting'] = ['setdatabase', 'pg_database']
 TableMainColumn['pg_depend'] = ['objid', 'pg_class']
 TableMainColumn['pg_foreign_table'] = ['ftrelid', 'pg_class']
 TableMainColumn['pg_index'] = ['indexrelid', 'pg_class']

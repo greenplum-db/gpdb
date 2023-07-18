@@ -53,7 +53,7 @@ drop table yyy;
 -- Now repeat all the above tests, but using a hacked master-only 'm' table
 drop table m;
 
-set optimizer_enable_master_only_queries=on;
+set optimizer_enable_coordinator_only_queries=on;
 
 
 -- create master-only table
@@ -355,3 +355,9 @@ delete from foo using (select a from foo union all select b from bar) v;
 select * from foo;
 drop table foo;
 drop table bar;
+
+-- This test is to verify ORCA can generate plans with empty
+-- target lists. This can happen when inserting rows with no
+-- columns into a table with no columns
+create table test();
+explain (analyze, costs off, timing off, summary off) insert into test default values;

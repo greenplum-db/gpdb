@@ -12,11 +12,11 @@
 -- The new strategy would not impact table->reltuples updates.
 
 create table vacuum_index_stats_@amname@ (a int, b int, c int) using @amname@;
-CREATE
+CREATE TABLE
 insert into vacuum_index_stats_@amname@ select 2, b, b from generate_series(1, 11) b;
-INSERT 11
+INSERT 0 11
 create index i_b_vacuum_index_stats_@amname@ on vacuum_index_stats_@amname@(b);
-CREATE
+CREATE INDEX
 
 set gp_appendonly_compaction_threshold = 10;
 SET
@@ -102,6 +102,6 @@ VACUUM
 0Uq: ... <quitting>
 
 drop table vacuum_index_stats_@amname@;
-DROP
+DROP TABLE
 reset gp_appendonly_compaction_threshold;
 RESET

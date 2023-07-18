@@ -135,6 +135,16 @@ select * from atsdb;
 select * from distcheck where rel = 'atsdb';
 drop table atsdb;
 
+-- check DROP TYPE..CASCADE updates distribution policy to random if
+-- any a dist key column is dropped for multi key distribution key columns
+create domain int_new as int;
+create table atsdb (i int_new, j int, t text, n numeric) distributed by (i, j);
+insert into atsdb select i, i+1, i+2, i+3 from generate_series(1, 20) i;
+drop type int_new cascade;
+select * from atsdb;
+select * from distcheck where rel = 'atsdb';
+drop table atsdb;
+
 -- Check that we correctly cascade for partitioned tables
 create table atsdb (i int, j int, k int) distributed by (i) partition by range(k)
 (start(1) end(10) every(1));
@@ -143,12 +153,62 @@ select * from distcheck where rel like 'atsdb%';
 alter table atsdb set distributed by (j);
 select * from distcheck where rel like 'atsdb%';
 select * from atsdb order by 1, 2, 3;
-select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where
-relname  like 'atsdb%' and c.oid = a.relid order by 1;
+select relname, reloptions from pg_class c where relname  like 'atsdb%' order by 1;
 select * from atsdb order by 1, 2, 3;
 insert into atsdb select i+2, i+1, i from generate_series(1, 9) i;
 select * from atsdb order by 1, 2, 3;
 drop table atsdb;
+
+-- check distribution correctly cascaded for inherited tables
+create table dropColumnCascade (a int, b int, e int);
+create table dropColumnCascadeChild (c int) inherits (dropColumnCascade);
+create table dropColumnCascadeAnother (d int) inherits (dropColumnCascadeChild);
+insert into dropColumnCascadeAnother select i,i,i from generate_series(1,10)i;
+alter table dropColumnCascade drop column a;
+select * from distcheck where rel like 'dropcolumnicascade%';
+drop table dropColumnCascade cascade;
+
+-- check DROP TYPE..CASCADE for dist key type for inherited tables
+-- distribution should be set to randomly for base and inherited tables
+create domain int_new as int;
+create table dropColumnCascade (a int_new, b int, e int);
+create table dropColumnCascadeChild (c int) inherits (dropColumnCascade);
+create table dropColumnCascadeAnother (d int) inherits (dropColumnCascadeChild);
+insert into dropColumnCascadeAnother select i,i,i from generate_series(1,10)i;
+drop type int_new cascade;
+select * from distcheck where rel like 'dropcolumncascade%';
+drop table dropColumnCascade cascade;
+
+-- Test corner cases in dropping distkey as inherited columns
+create table p1 (f1 int, f2 int);
+create table c1 (f1 int not null) inherits(p1);
+alter table p1 drop column f1;
+-- only p1 is randomly distributed, c1 is still distributed by c1.f1
+select * from distcheck where rel in ('p1', 'c1');
+alter table c1 drop column f1;
+-- both c1 and p1 randomly distributed
+select * from distcheck where rel in ('p1', 'c1');
+drop table p1 cascade;
+
+create table p1 (f1 int, f2 int);
+create table c1 () inherits(p1);
+alter table only p1 drop column f1;
+-- only p1 is randomly distributed, c1 is still distributed by c1.f1
+select * from distcheck where rel in ('p1', 'c1');
+drop table p1 cascade;
+
+-- check DROP TYPE..CASCADE for dist key type for inherited tables
+-- distribution should be set to randomly for base and inherited tables
+create domain int_new as int;
+create table p1 (f1 int_new, f2 int);
+create table c1 (f1 int_new not null) inherits(p1);
+create table p1_inh (f1 int_new, f2 int);
+create table c1_inh () inherits(p1_inh);
+drop type int_new cascade;
+-- all above tables set to randomly distributed
+select * from distcheck where rel in ('p1', 'c1');
+drop table p1 cascade;
+drop table p1_inh cascade;
 drop view distcheck;
 
 -- MPP-5452
@@ -479,3 +539,80 @@ SELECT gp_segment_id,count(*) from t_reorganize_false GROUP BY 1;
 ALTER TABLE t_reorganize_false SET WITH (REORGANIZE=false) DISTRIBUTED RANDOMLY;
 SELECT gp_segment_id,count(*) from t_reorganize_false GROUP BY 1;
 DROP TABLE t_reorganize_false;
+
+--
+-- Test case for GUC gp_force_random_redistribution.
+-- Manually toggle the GUC should control the behavior of redistribution for randomly-distributed tables.
+-- But REORGANIZE=true should redistribute no matter what.
+--
+
+-- this only affects postgres planner;
+set optimizer = false;
+
+-- check the distribution difference between 't1' and 't2' after executing 'query_string'
+-- return true if data distribution changed, otherwise false.
+-- Note: in extremely rare cases, even after 't2' being randomly-distributed from 't1', they could still have the 
+-- exact same distribution. So let the tables have a reasonably large number of rows to reduce that possibility.
+CREATE OR REPLACE FUNCTION check_redistributed(query_string text, t1 text, t2 text) 
+RETURNS BOOLEAN AS 
+$$
+DECLARE
+    before_query TEXT;
+    after_query TEXT;
+    comparison_query TEXT;
+    comparison_count INT;
+BEGIN
+    -- Prepare the query strings
+    before_query := format('SELECT gp_segment_id as segid, count(*) AS tupcount FROM %I GROUP BY gp_segment_id', t1);
+    after_query := format('SELECT gp_segment_id as segid, count(*) AS tupcount FROM %I GROUP BY gp_segment_id', t2);
+    comparison_query := format('SELECT COUNT(*) FROM ((TABLE %I EXCEPT TABLE %I) UNION ALL (TABLE %I EXCEPT TABLE %I))q', 'distribution1', 'distribution2', 'distribution2', 'distribution1');
+
+    -- Create temp tables to store the result
+    EXECUTE format('CREATE TEMP TABLE distribution1 AS %s DISTRIBUTED REPLICATED', before_query);
+
+    -- Execute provided query string
+    EXECUTE query_string;
+
+    EXECUTE format('CREATE TEMP TABLE distribution2 AS %s DISTRIBUTED REPLICATED', after_query);
+
+    -- Compare the tables using EXCEPT clause
+    EXECUTE comparison_query INTO comparison_count;
+
+    -- Drop temp tables
+    EXECUTE 'DROP TABLE distribution1';
+    EXECUTE 'DROP TABLE distribution2';
+
+    -- If count is greater than zero, then there's a difference
+    RETURN comparison_count > 0;
+END;
+$$ 
+LANGUAGE plpgsql;
+
+-- CO table builds temp table first instead of doing CTAS during REORGANIZE=true
+create table t_reorganize(a int, b int) using ao_column distributed by (a);
+insert into t_reorganize select 0,i from generate_series(1,1000)i;
+select gp_segment_id, count(*) from t_reorganize group by gp_segment_id;
+
+-- firstly, no redistribute
+set gp_force_random_redistribution = off;
+select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
+-- reorganize from randomly to randomly should still redistribute
+select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
+-- but insert into table won't redistribute
+create table t_random (like t_reorganize) distributed randomly;
+select check_redistributed('insert into t_random select * from t_reorganize', 't_reorganize', 't_random');
+-- but insert into a different distribution policy would still redistribute
+create table t_distbya (like t_reorganize) distributed by (a);
+select check_redistributed('insert into t_distbya select * from t_reorganize', 't_reorganize', 't_distbya');
+
+-- now force distribute should redistribute in all cases
+set gp_force_random_redistribution = on;
+select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
+select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
+create table t_random (like t_reorganize) distributed randomly;
+select check_redistributed('insert into t_random select * from t_reorganize', 't_reorganize', 't_random');
+create table t_distbya (like t_reorganize) distributed by (a);
+select check_redistributed('insert into t_distbya select * from t_reorganize', 't_reorganize', 't_distbya');
+
+reset optimizer;
+reset gp_force_random_redistribution;

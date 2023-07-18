@@ -1,20 +1,20 @@
 -- @Description Tests the compaction of data inserted in utility mode
 --
 DROP TABLE IF EXISTS foo;
-DROP
+DROP TABLE
 CREATE TABLE foo (a INT, b INT, c CHAR(128)) USING @amname@ distributed randomly;
-CREATE
+CREATE TABLE
 CREATE INDEX foo_index ON foo(b);
-CREATE
+CREATE INDEX
 
 0U: INSERT INTO foo VALUES (2, 2, 'c');
-INSERT 1
+INSERT 0 1
 0U: INSERT INTO foo VALUES (3, 3, 'c');
-INSERT 1
+INSERT 0 1
 SELECT *, segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
  segment_id | segno | tupcount | modcount | formatversion | state | segno | tupcount | state 
 ------------+-------+----------+----------+---------------+-------+-------+----------+-------
- 0          | 0     | 2        | 2        | 4             | 1     | 0     | 2        | 1     
+ 0          | 0     | 2        | 2        | 3             | 1     | 0     | 2        | 1     
 (1 row)
 DELETE FROM foo WHERE a = 2;
 DELETE 1

@@ -160,6 +160,7 @@ public:
 										 CMDAccessor *md_accessor,
 										 CIdGenerator *id_generator,
 										 const RangeTblEntry *rte,
+										 ULONG assigned_query_id_for_target_rel,
 										 BOOL *is_distributed_table = nullptr);
 
 	// translate a RangeTableEntry into a CDXLLogicalTVF
@@ -387,6 +388,10 @@ public:
 	// check if const func returns composite type
 	static BOOL IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
 								 const RangeTblFunction *rtfunc);
+
+	// check if rel contains foreign partitions
+	static BOOL RelContainsForeignPartitions(const IMDRelation *rel,
+											 CMDAccessor *md_accessor);
 };
 }  // namespace gpdxl
 

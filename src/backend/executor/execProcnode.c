@@ -125,6 +125,7 @@
 #include "executor/nodeAssertOp.h"
 #include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeDynamicSeqscan.h"
+#include "executor/nodeDynamicForeignscan.h"
 #include "executor/nodeMotion.h"
 #include "executor/nodePartitionSelector.h"
 #include "executor/nodeSequence.h"
@@ -163,6 +164,10 @@ static TupleTableSlot *ExecProcNodeFirst(PlanState *node);
 static TupleTableSlot *ExecProcNodeInstr(PlanState *node);
 #endif
 static TupleTableSlot *ExecProcNodeGPDB(PlanState *node);
+
+/* Greenplum specific helper function */
+static void prefetch_subplans(PlanState *ps);
+static List *find_all_mat_nodes(PlanState *ps);
 
 
 /* ------------------------------------------------------------------------
@@ -370,6 +375,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 		case T_ForeignScan:
 			result = (PlanState *) ExecInitForeignScan((ForeignScan *) node,
 														estate, eflags);
+			break;
+
+		case T_DynamicForeignScan:
+			result = (PlanState *) ExecInitDynamicForeignScan((DynamicForeignScan *) node,
+												   estate, eflags);
 			break;
 
 		case T_CustomScan:
@@ -619,6 +629,12 @@ ExecProcNodeGPDB(PlanState *node)
 
 	if ((node->state->es_instrument & INSTRUMENT_MEMORY_DETAIL) != 0)
 		oldcxt = MemoryContextSwitchTo(node->node_context);
+
+	if (node->subPlan != NIL && !node->prefetch_subplans_done)
+	{
+		prefetch_subplans(node);
+		node->prefetch_subplans_done = true;
+	}
 
 	result = node->ExecProcNodeReal(node);
 
@@ -904,6 +920,10 @@ ExecEndNode(PlanState *node)
 
 		case T_ForeignScanState:
 			ExecEndForeignScan((ForeignScanState *) node);
+			break;
+
+		case T_DynamicForeignScanState:
+			ExecEndDynamicForeignScan((DynamicForeignScanState *) node);
 			break;
 
 		case T_CustomScanState:
@@ -1294,8 +1314,6 @@ ExecShutdownNode(PlanState *node)
 
 	check_stack_depth();
 
-	planstate_tree_walker(node, ExecShutdownNode, NULL);
-
 	/*
 	 * Treat the node as running while we shut it down, but only if it's run
 	 * at least once already.  We don't expect much CPU consumption during
@@ -1308,6 +1326,8 @@ ExecShutdownNode(PlanState *node)
 	 */
 	if (node->instrument && node->instrument->running)
 		InstrStartNode(node->instrument);
+
+	planstate_tree_walker(node, ExecShutdownNode, NULL);
 
 	switch (nodeTag(node))
 	{
@@ -1425,7 +1445,19 @@ ExecSetTupleBound(int64 tuples_needed, PlanState *child_node)
 		 * that condition succeeds it affects nothing, while if it fails, no
 		 * rows will be demanded from the Result child anyway.
 		 */
-		if (outerPlanState(child_node))
+
+		/*
+		* GPDB: The second condition ensures qual is empty.
+		* In case the RESULT node has a filter,
+		* we do not want to push down the tuple bound.
+		* This is because the bound will be applied before the filter,
+		* and could lead to a subset of the actual result being returned.
+		* Postgres doesn't create RESULT node with quals,
+		* whereas GPDB can, hence the deviation.
+		* See ExecResult() and create_projection_path_with_quals().
+		*/
+
+		if (outerPlanState(child_node) && child_node->plan->qual == NULL)
 			ExecSetTupleBound(tuples_needed, outerPlanState(child_node));
 	}
 	else if (IsA(child_node, SubqueryScanState))
@@ -1472,4 +1504,105 @@ ExecSetTupleBound(int64 tuples_needed, PlanState *child_node)
 	 * can do that, we can't propagate the bound any further.  For the moment
 	 * it's unclear that any other cases are worth checking here.
 	 */
+}
+
+/*
+ * Greenplum specific code.
+ * Interconnect UDP deadlock might happen between outer plan and SubPlans.
+ * This kind of deadlock in fact is not directly related to Join Plan. To
+ * Get rid of this kind of deadlock, the method here is to prefetch all
+ * SubPlans for a node at the first time.
+ *
+ * For more details please refer to the thread in gpdb-dev mailing list:
+ * https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/Y4ajINeKeUw
+ */
+static void
+prefetch_subplans(PlanState *node)
+{
+	List     *subPlans    = node->subPlan;
+	List     *mat_nodes   = NIL;
+	ListCell *lc;
+
+	if (subPlans == NIL)
+		return;
+
+	foreach(lc, subPlans)
+	{
+		PlanState *ps = ((SubPlanState *) lfirst(lc))->planstate;
+		mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(ps));
+	}
+
+	if (mat_nodes != NIL)
+	{
+		foreach(lc, mat_nodes)
+		{
+			PlanState *ps = (PlanState *) lfirst(lc);
+			Assert(IsA(ps, MaterialState));
+
+			((MaterialState *) ps)->cdb_strict = true;
+			((MaterialState *) ps)->eflags |= EXEC_FLAG_REWIND;
+
+			(void) ExecProcNode(ps);
+			ExecReScan(ps);
+		}
+	}
+
+	foreach(lc, subPlans)
+	{
+		SubPlanState *sps = ((SubPlanState *) lfirst(lc));
+		SubPlan   *subplan = sps->subplan;
+
+		if (subplan->useHashTable && sps->hashtable == NULL)
+			PrefetchbuildSubPlanHash(sps);
+	}
+}
+
+/*
+ * Greenplum specific code.
+ * Here we do not use planstate_tree_walker is because
+ * we do not want to walk into InitPlans. InitPlans are
+ * separately dispatched before the main plan.
+ *
+ * NOTE: this function is only supposed to be called
+ * in prefetch_subplans().
+ */
+static List *
+find_all_mat_nodes(PlanState *ps)
+{
+	List     *mat_nodes = NIL;
+	ListCell *lc        = NULL;
+
+	if (ps == NULL)
+		return NIL;
+
+	if (IsA(ps, MotionState))
+	{
+		/*
+		 * This function is only designed to search in a SubPlan.
+		 * In SubPlan, motion nodes should be wrapped by a MaterialState
+		 * to make it rescannable. Only exception case I can think of,
+		 * is HashSubPlan, which will be handled below. So if we meet a
+		 * motion here, just return not recursively walk into other slice.
+		 */
+		return NIL;
+	}
+
+	if (IsA(ps, MaterialState) &&
+		IsA(outerPlanState(ps), MotionState))
+		return list_make1(ps);
+
+	if (outerPlanState(ps))
+		mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(outerPlanState(ps)));
+	if (innerPlanState(ps))
+		mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(innerPlanState(ps)));
+	if (ps->subPlan)
+	{
+		foreach(lc, ps->subPlan)
+		{
+			PlanState *sps = ((SubPlanState *) lfirst(lc))->planstate;
+			mat_nodes = list_concat(mat_nodes, find_all_mat_nodes(sps));
+		}
+	}
+
+	return mat_nodes;
 }

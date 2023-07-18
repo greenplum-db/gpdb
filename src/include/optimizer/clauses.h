@@ -47,6 +47,7 @@ extern bool contain_subplans(Node *clause);
 extern char max_parallel_hazard(Query *parse);
 extern bool is_parallel_safe(PlannerInfo *root, Node *node);
 extern bool contain_nonstrict_functions(Node *clause);
+extern bool contain_exec_param(Node *clause, List *param_ids);
 extern bool contain_leaked_vars(Node *clause);
 
 extern Relids find_nonnullable_rels(Node *clause);
@@ -60,6 +61,7 @@ extern bool is_pseudo_constant_clause(Node *clause);
 extern bool is_pseudo_constant_clause_relids(Node *clause, Relids relids);
 
 extern int	NumRelids(Node *clause);
+extern int	NumRelids_new(PlannerInfo *root, Node *clause);
 
 extern void CommuteOpExpr(OpExpr *clause);
 

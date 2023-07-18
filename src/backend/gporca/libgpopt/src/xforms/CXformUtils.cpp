@@ -34,7 +34,6 @@
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
-#include "gpopt/operators/CLogicalPartitionSelector.h"
 #include "gpopt/operators/CLogicalSelect.h"
 #include "gpopt/operators/CLogicalSequenceProject.h"
 #include "gpopt/operators/CPhysicalInnerHashJoin.h"
@@ -154,12 +153,6 @@ CXformUtils::ExfpExpandJoinOrder(CExpressionHandle &exprhdl,
 		// subqueries must be unnested before applying xform
 		return CXform::ExfpNone;
 	}
-
-#ifdef GPOS_DEBUG
-	CAutoMemoryPool amp;
-	GPOS_ASSERT(!FJoinPredOnSingleChild(amp.Pmp(), exprhdl) &&
-				"join predicates are not pushed down");
-#endif	// GPOS_DEBUG
 
 	if (nullptr != exprhdl.Pgexpr())
 	{
@@ -1278,39 +1271,6 @@ CXformUtils::PexprNullIndicator(CMemoryPool *mp, CExpression *pexpr)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformUtils::PexprLogicalPartitionSelector
-//
-//	@doc:
-// 		Create a logical partition selector for the given table descriptor on top
-//		of the given child expression. The partition selection filters use columns
-//		from the given column array
-//
-//---------------------------------------------------------------------------
-CExpression *
-CXformUtils::PexprLogicalPartitionSelector(CMemoryPool *mp,
-										   CTableDescriptor *ptabdesc,
-										   CColRefArray *colref_array,
-										   CExpression *pexprChild)
-{
-	IMDId *rel_mdid = ptabdesc->MDId();
-	rel_mdid->AddRef();
-
-	// create an oid column
-	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDTypeOid *pmdtype = md_accessor->PtMDType<IMDTypeOid>();
-	CColRef *pcrOid = col_factory->PcrCreate(pmdtype, default_type_modifier);
-	CExpressionArray *pdrgpexprFilters =
-		PdrgpexprPartEqFilters(mp, ptabdesc, colref_array);
-
-	CLogicalPartitionSelector *popSelector = GPOS_NEW(mp)
-		CLogicalPartitionSelector(mp, rel_mdid, pdrgpexprFilters, pcrOid);
-
-	return GPOS_NEW(mp) CExpression(mp, popSelector, pexprChild);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CXformUtils::PexprLogicalDMLOverProject
 //
 //	@doc:
@@ -1336,7 +1296,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	// new expressions to project
 	CExpression *pexprProject = nullptr;
 	CColRef *pcrAction = nullptr;
-	CColRef *pcrOid = nullptr;
 
 	CExpressionArray *pdrgpexprProjected = GPOS_NEW(mp) CExpressionArray(mp);
 	// generate one project node with new columns: action
@@ -1365,10 +1324,9 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 
 	CExpression *pexprDML = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp)
-			CLogicalDML(mp, edmlop, ptabdesc, colref_array,
-						GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/, pcrAction,
-						pcrOid, pcrCtid, pcrSegmentId, true),
+		GPOS_NEW(mp) CLogicalDML(mp, edmlop, ptabdesc, colref_array,
+								 GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/,
+								 pcrAction, pcrCtid, pcrSegmentId, true),
 		pexprProject);
 
 	CExpression *pexprOutput = pexprDML;
@@ -1816,6 +1774,25 @@ CXformUtils::PstrErrorMessage(CMemoryPool *mp, ULONG major, ULONG minor, ...)
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CXformUtils::PcrsIndexKeysAndIncludes
+//
+//	@doc:
+//		Return the set of columns from the given array of columns which appear
+//		in the index key and included columns
+//
+//---------------------------------------------------------------------------
+CColRefSet *
+CXformUtils::PcrsIndexKeysAndIncludes(CMemoryPool *mp,
+									  CColRefArray *colref_array,
+									  const IMDIndex *pmdindex,
+									  const IMDRelation *pmdrel)
+{
+	return PcrsIndexColumns(mp, colref_array, pmdindex, pmdrel,
+							EicKeyAndIncluded);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CXformUtils::PdrgpcrIndexKeys
 //
 //	@doc:
@@ -1849,23 +1826,6 @@ CXformUtils::PcrsIndexKeys(CMemoryPool *mp, CColRefArray *colref_array,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformUtils::PcrsIndexIncludedCols
-//
-//	@doc:
-//		Return the set of columns from the given array of columns which appear
-//		in the index included columns
-//
-//---------------------------------------------------------------------------
-CColRefSet *
-CXformUtils::PcrsIndexIncludedCols(CMemoryPool *mp, CColRefArray *colref_array,
-								   const IMDIndex *pmdindex,
-								   const IMDRelation *pmdrel)
-{
-	return PcrsIndexColumns(mp, colref_array, pmdindex, pmdrel, EicIncluded);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CXformUtils::PcrsIndexColumns
 //
 //	@doc:
@@ -1878,7 +1838,7 @@ CXformUtils::PcrsIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 							  const IMDIndex *pmdindex,
 							  const IMDRelation *pmdrel, EIndexCols eic)
 {
-	GPOS_ASSERT(EicKey == eic || EicIncluded == eic);
+	GPOS_ASSERT(EicKey == eic || EicKeyAndIncluded == eic);
 	CColRefArray *pdrgpcrIndexColumns =
 		PdrgpcrIndexColumns(mp, colref_array, pmdindex, pmdrel, eic);
 	CColRefSet *pcrsCols = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrIndexColumns);
@@ -1902,32 +1862,31 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 								 const IMDIndex *pmdindex,
 								 const IMDRelation *pmdrel, EIndexCols eic)
 {
-	GPOS_ASSERT(EicKey == eic || EicIncluded == eic);
+	GPOS_ASSERT(EicKey == eic || EicKeyAndIncluded == eic);
 
 	CColRefArray *pdrgpcrIndex = GPOS_NEW(mp) CColRefArray(mp);
 
-	ULONG length = pmdindex->Keys();
-	if (EicIncluded == eic)
+	// key columns
+	for (ULONG ul = 0; ul < pmdindex->Keys(); ul++)
 	{
-		length = pmdindex->IncludedCols();
-	}
+		ULONG ulPos = pmdindex->KeyAt(ul);
 
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		ULONG ulPos = gpos::ulong_max;
-		if (EicIncluded == eic)
-		{
-			ulPos = pmdindex->IncludedColAt(ul);
-		}
-		else
-		{
-			ulPos = pmdindex->KeyAt(ul);
-		}
 		ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
-
 		GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
 		GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
+		CColRef *colref = (*colref_array)[ulPosNonDropped];
+		pdrgpcrIndex->Append(colref);
+	}
 
+	// included columns
+	for (ULONG ul = 0;
+		 ul < (EicKeyAndIncluded == eic ? pmdindex->IncludedCols() : 0); ul++)
+	{
+		ULONG ulPos = pmdindex->IncludedColAt(ul);
+
+		ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
+		GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
+		GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
 		CColRef *colref = (*colref_array)[ulPosNonDropped];
 		pdrgpcrIndex->Append(colref);
 	}
@@ -1947,7 +1906,7 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 BOOL
 CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 							  const IMDRelation *pmdrel,
-							  CColRefArray *pdrgpcrOutput, CColRefSet *pcrsReqd,
+							  CColRefArray *pdrgpcrOutput,
 							  CColRefSet *pcrsScalar,
 							  IMDIndex::EmdindexType emdindtype,
 							  IMDIndex::EmdindexType altindtype)
@@ -1955,8 +1914,9 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 	BOOL possible_ao_table = pmdrel->IsAORowOrColTable() ||
 							 pmdrel->RetrieveRelStorageType() ==
 								 IMDRelation::ErelstorageMixedPartitioned;
-	// GiST can match with either Btree or Bitmap indexes
+	// GiST and Hash can match with either Btree or Bitmap indexes
 	if (pmdindex->IndexType() == IMDIndex::EmdindGist ||
+		pmdindex->IndexType() == IMDIndex::EmdindHash ||
 		// GIN and BRIN can only match with Bitmap Indexes
 		(emdindtype == IMDIndex::EmdindBitmap &&
 		 (IMDIndex::EmdindGin == pmdindex->IndexType() ||
@@ -1984,19 +1944,15 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 
 	BOOL fApplicable = true;
 
-	CColRefSet *pcrsIncludedCols =
-		CXformUtils::PcrsIndexIncludedCols(mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CColRefSet *pcrsIndexCols =
 		CXformUtils::PcrsIndexKeys(mp, pdrgpcrOutput, pmdindex, pmdrel);
-	if (!pcrsIncludedCols->ContainsAll(pcrsReqd) ||	 // index is not covering
-		pcrsScalar->IsDisjoint(
+	if (pcrsScalar->IsDisjoint(
 			pcrsIndexCols))	 // indexing columns disjoint from the columns used in the scalar expression
 	{
 		fApplicable = false;
 	}
 
 	// clean up
-	pcrsIncludedCols->Release();
 	pcrsIndexCols->Release();
 
 	return fApplicable;
@@ -2055,8 +2011,8 @@ CXformUtils::PexprWindowWithRowNumber(CMemoryPool *mp,
 	}
 	else
 	{
-		pds = GPOS_NEW(mp)
-			CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		pds = GPOS_NEW(mp) CDistributionSpecSingleton(
+			CDistributionSpecSingleton::EstCoordinator);
 	}
 
 	// window frames
@@ -2440,15 +2396,16 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 //
 //---------------------------------------------------------------------------
 CExpression *
-CXformUtils::PexprBuildBtreeIndexPlan(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
-	ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds, CColRefSet *pcrsReqd,
-	CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-	const IMDIndex *pmdindex, const IMDRelation *pmdrel)
+CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
+									  CExpression *pexprGet, ULONG ulOriginOpId,
+									  CExpressionArray *pdrgpexprConds,
+									  CColRefSet *pcrsScalarExpr,
+									  CColRefSet *outer_refs,
+									  const IMDIndex *pmdindex,
+									  const IMDRelation *pmdrel)
 {
 	GPOS_ASSERT(nullptr != pexprGet);
 	GPOS_ASSERT(nullptr != pdrgpexprConds);
-	GPOS_ASSERT(nullptr != pcrsReqd);
 	GPOS_ASSERT(nullptr != pcrsScalarExpr);
 	GPOS_ASSERT(nullptr != pmdindex);
 	GPOS_ASSERT(nullptr != pmdrel);
@@ -2468,7 +2425,8 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	IMdIdArray *partition_mdids = nullptr;
 
 	if (ptabdesc->RetrieveRelStorageType() != IMDRelation::ErelstorageHeap &&
-		pmdindex->IndexType() == IMDIndex::EmdindGist)
+		(pmdindex->IndexType() == IMDIndex::EmdindGist ||
+		 pmdindex->IndexType() == IMDIndex::EmdindHash))
 	{
 		// Non-heap tables not supported for GiST
 		return nullptr;
@@ -2496,8 +2454,8 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 			GPOS_NEW(mp) CWStringConst(mp, popGet->Name().Pstr()->GetBuffer());
 	}
 
-	if (!FIndexApplicable(mp, pmdindex, pmdrel, pdrgpcrOutput, pcrsReqd,
-						  pcrsScalarExpr, IMDIndex::EmdindBtree))
+	if (!FIndexApplicable(mp, pmdindex, pmdrel, pdrgpcrOutput, pcrsScalarExpr,
+						  IMDIndex::EmdindBtree))
 	{
 		GPOS_DELETE(alias);
 
@@ -2857,9 +2815,9 @@ CExpression *
 CXformUtils::PexprBitmapSelectBestIndex(
 	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprPred,
 	CTableDescriptor *ptabdesc, const IMDRelation *pmdrel,
-	CColRefArray *pdrgpcrOutput, CColRefSet *pcrsReqd,
-	CColRefSet *pcrsOuterRefs, CExpression **ppexprRecheck,
-	CExpression **ppexprResidual, BOOL alsoConsiderBTreeIndexes)
+	CColRefArray *pdrgpcrOutput, CColRefSet *pcrsOuterRefs,
+	CExpression **ppexprRecheck, CExpression **ppexprResidual,
+	BOOL considerBitmapAltForArrayCmp)
 {
 	CColRefSet *pcrsScalar = pexprPred->DeriveUsedColumns();
 	ULONG ulBestIndex = 0;
@@ -2870,7 +2828,7 @@ CXformUtils::PexprBitmapSelectBestIndex(
 	ULONG bestNumIndexCols = gpos::ulong_max;
 	IMDIndex::EmdindexType altIndexType = IMDIndex::EmdindBitmap;
 
-	if (alsoConsiderBTreeIndexes)
+	if (considerBitmapAltForArrayCmp)
 	{
 		altIndexType = IMDIndex::EmdindBtree;
 	}
@@ -2882,8 +2840,8 @@ CXformUtils::PexprBitmapSelectBestIndex(
 			md_accessor->RetrieveIndex(pmdrel->IndexMDidAt(ul));
 
 		if (CXformUtils::FIndexApplicable(mp, pmdindex, pmdrel, pdrgpcrOutput,
-										  pcrsReqd, pcrsScalar,
-										  IMDIndex::EmdindBitmap, altIndexType))
+										  pcrsScalar, IMDIndex::EmdindBitmap,
+										  altIndexType))
 		{
 			// found an applicable index
 			CExpressionArray *pdrgpexprScalar =
@@ -2898,7 +2856,7 @@ CXformUtils::PexprBitmapSelectBestIndex(
 			CPredicateUtils::ExtractIndexPredicates(
 				mp, md_accessor, pdrgpexprScalar, pmdindex, pdrgpcrIndexCols,
 				pdrgpexprIndex, pdrgpexprResidual, pcrsOuterRefs,
-				alsoConsiderBTreeIndexes);
+				considerBitmapAltForArrayCmp);
 
 			pdrgpexprScalar->Release();
 
@@ -3152,10 +3110,10 @@ CXformUtils::CreateBitmapIndexProbesWithOrWithoutPredBreakdown(
 
 			// this also applies for the simple predicates of the form "ident op const" or "ident op const-array"
 			pexprBitmapLocal = PexprBitmapSelectBestIndex(
-				pmp, pmda, pexprPred, ptabdesc, pmdrel, pdrgpcrOutput, pcrsReqd,
+				pmp, pmda, pexprPred, ptabdesc, pmdrel, pdrgpcrOutput,
 				pcrsOuterRefs, &pexprRecheckLocal, &pexprResidualLocal,
 				isAPartialPredicateOrArrayCmp  // for partial preds or array comps
-				// we want to consider btree indexes
+				// we want to consider btree/hash indexes
 			);
 
 			// since we did not break the conjunct tree, the index path found may cover a part of the
@@ -3646,13 +3604,14 @@ CXformUtils::PexprWinFuncAgg2ScalarAgg(CMemoryPool *mp,
 	mdid_func->AddRef();
 	return GPOS_NEW(mp) CExpression(
 		mp,
-		CUtils::PopAggFunc(mp, mdid_func,
-						   GPOS_NEW(mp) CWStringConst(
-							   mp, popScWinFunc->PstrFunc()->GetBuffer()),
-						   popScWinFunc->IsDistinct(), EaggfuncstageGlobal,
-						   false,	 // fSplit
-						   nullptr,	 // pmdidResolvedReturnType
-						   EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp)),
+		CUtils::PopAggFunc(
+			mp, mdid_func,
+			GPOS_NEW(mp)
+				CWStringConst(mp, popScWinFunc->PstrFunc()->GetBuffer()),
+			popScWinFunc->IsDistinct(), EaggfuncstageGlobal,
+			false,	  // fSplit
+			nullptr,  // pmdidResolvedReturnType
+			EaggfunckindNormal, GPOS_NEW(mp) ULongPtrArray(mp), false),
 		pdrgpexprFullWinFuncArgs);
 }
 
@@ -3720,6 +3679,11 @@ CXformUtils::MapPrjElemsWithDistinctAggs(
 		{
 			// use first argument of Distinct Agg as key
 			pexprKey = (*pexprChild)[0];
+		}
+		else if (is_distinct && COperator::EopScalarAggFunc == eopidChild)
+		{
+			// use first argument of AggFunc args list as key
+			pexprKey = (*(pexprChild->PdrgPexpr()))[EaggfuncIndexArgs];
 		}
 		else
 		{

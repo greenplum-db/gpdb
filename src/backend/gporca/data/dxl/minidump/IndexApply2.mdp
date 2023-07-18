@@ -6,7 +6,7 @@
       <dxl:StatisticsConfig DampingFactorFilter="0.750000" DampingFactorJoin="0.010000" DampingFactorGroupBy="0.750000" MaxStatsBuckets="100"/>
       <dxl:CTEConfig CTEInliningCutoff="0"/> 
       <dxl:WindowOids RowNumber="7000" Rank="7001"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102027,102144,103001,103027,103033"/>
+      <dxl:TraceFlags Value="102001,102002,102003,103046,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.26.1.0" Name="oid" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -264,7 +264,7 @@
       </dxl:GPDBScalarOp>
       <dxl:ColumnStatistics Mdid="1.40972.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.40972.1.1.2" Name="ctid" Width="6.000000" NullFreq="0.000000"/>
-      <dxl:Index Mdid="0.1369110.1.0" Name="index_yj" IsClustered="false" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8">
+      <dxl:Index Mdid="0.1369110.1.0" Name="index_yj" IsClustered="false" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

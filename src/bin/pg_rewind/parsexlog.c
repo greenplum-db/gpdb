@@ -58,6 +58,9 @@ static int	SimpleXLogPageRead(XLogReaderState *xlogreader,
  * Read WAL from the datadir/pg_wal, starting from 'startpoint' on timeline
  * index 'tliIndex' in target timeline history, until 'endpoint'. Make note of
  * the data blocks touched by the WAL records, and return them in a page map.
+ *
+ * 'endpoint' is the end of the last record to read. The record starting at
+ * 'endpoint' is the first one that is not read.
  */
 void
 extractPageMap(const char *datadir, XLogRecPtr startpoint, int tliIndex,
@@ -98,7 +101,17 @@ extractPageMap(const char *datadir, XLogRecPtr startpoint, int tliIndex,
 
 		startpoint = InvalidXLogRecPtr; /* continue reading at next record */
 
-	} while (xlogreader->ReadRecPtr != endpoint);
+	} while (xlogreader->EndRecPtr < endpoint);
+
+	/*
+	 * If 'endpoint' didn't point exactly at a record boundary, the caller
+	 * messed up.
+	 */
+	if (xlogreader->EndRecPtr != endpoint)
+		pg_fatal("end pointer %X/%X is not a valid end point; expected %X/%X",
+				 (uint32) (endpoint >> 32), (uint32) (endpoint),
+				 (uint32) (xlogreader->EndRecPtr >> 32), (uint32)
+				 (xlogreader->EndRecPtr));
 
 	XLogReaderFree(xlogreader);
 	if (xlogreadfd != -1)
@@ -207,7 +220,7 @@ findLastCheckpoint(const char *datadir, XLogRecPtr forkptr, int tliIndex,
 		/*
 		 * Check if it is a checkpoint record. This checkpoint record needs to
 		 * be the latest checkpoint before WAL forked and not the checkpoint
-		 * where the master has been stopped to be rewinded.
+		 * where the primary has been stopped to be rewinded.
 		 */
 		info = XLogRecGetInfo(xlogreader) & ~XLR_INFO_MASK;
 		if (searchptr < forkptr &&
@@ -406,19 +419,7 @@ extractPageInfo(XLogReaderState *record)
 			 * and will copy the missing tail from remote system.
 			 */
 		}
-
-		/*
-		 * GPDB_95_MERGE_FIXME: should we just return here? there seems be no buffer
-		 * registered when xlog is inserted.
-		 */
 	}
-	/*
-	 * GPDB_95_MERGE_FIXME:
-	 * 1. should RM_DISTRIBUTEDLOG_ID be taken care of
-	 * 2. we used to have a special treat towards RM_BITMAP_ID, now we hope the
-	 * buffers are registered properly when the xlog is inserted. We need to
-	 * revisit here to make sure RM_BITMAP_ID works.
-	 */
 
 	for (block_id = 0; block_id <= record->max_block_id; block_id++)
 	{

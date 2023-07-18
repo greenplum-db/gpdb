@@ -27,6 +27,7 @@
 /external_table.sql
 /filespace.sql
 /gpcopy.sql
+/gp_check_files.sql
 /gp_dispatch_keepalives.sql
 /gp_tablespace_path_too_long.sql
 /gp_tablespace.sql
@@ -36,6 +37,7 @@
 /guc_env_var.sql
 /hooktest.sql
 /oid_wraparound.sql
+/part_external_table.sql
 /partition_ddl.sql
 /pgstat_qd_tabstat.sql
 /qp_gist_indexes2.sql

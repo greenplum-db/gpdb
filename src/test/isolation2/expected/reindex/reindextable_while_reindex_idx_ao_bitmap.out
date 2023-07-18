@@ -1,14 +1,14 @@
 DROP TABLE IF EXISTS reindex_crtab_ao_bitmap;
-DROP
+DROP TABLE
 
 CREATE TABLE reindex_crtab_ao_bitmap (a INT) WITH (appendonly=true);
-CREATE
+CREATE TABLE
 insert into reindex_crtab_ao_bitmap select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 insert into reindex_crtab_ao_bitmap select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 create index idx_reindex_crtab_ao_bitmap on reindex_crtab_ao_bitmap USING BITMAP(a);
-CREATE
+CREATE INDEX
 -- @Description Ensures that a reindex table during reindex index operations is ok
 --
 
@@ -17,7 +17,7 @@ DELETE 254
 1: BEGIN;
 BEGIN
 1: create temp table old_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname = 'idx_reindex_crtab_ao_bitmap' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname = 'idx_reindex_crtab_ao_bitmap');
-CREATE 4
+SELECT 4
 2: BEGIN;
 BEGIN
 1: REINDEX index idx_reindex_crtab_ao_bitmap;
@@ -32,7 +32,7 @@ REINDEX
 -- validates that reindex command in session 1 indeed generates new
 -- relfilenode for the index.
 1: insert into old_relfilenodes (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname = 'idx_reindex_crtab_ao_bitmap' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname = 'idx_reindex_crtab_ao_bitmap');
-INSERT 4
+INSERT 0 4
 -- Expect two distinct relfilenodes per segment in old_relfilenodes table.
 1: select distinct count(distinct relfilenode), relname from old_relfilenodes group by dbid, relname;
  count | relname                     
@@ -44,7 +44,7 @@ COMMIT
 -- After session 2 commits, the relfilenode it assigned to the index
 -- is visible to session 1.
 1: insert into old_relfilenodes (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname = 'idx_reindex_crtab_ao_bitmap' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname = 'idx_reindex_crtab_ao_bitmap');
-INSERT 4
+INSERT 0 4
 -- Expect three distinct relfilenodes per segment in old_relfilenodes table.
 1: select distinct count(distinct relfilenode), relname from old_relfilenodes group by dbid, relname;
  count | relname                     

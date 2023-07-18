@@ -153,7 +153,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>
@@ -175,7 +175,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>
@@ -209,7 +209,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>
@@ -401,16 +401,6 @@
 				</xsd:restriction>
 			</xsd:simpleType>
 		</xsd:attribute>
-		<xsd:attribute name="DataAccess" use="required">
-			<xsd:simpleType>
-				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="NoSQL"/>
-					<xsd:enumeration m_bytearray_value="ContainsSQL"/>
-					<xsd:enumeration m_bytearray_value="ReadsSQLData"/>
-					<xsd:enumeration m_bytearray_value="ModifiesSQLData"/>
-				</xsd:restriction>
-			</xsd:simpleType>
-		</xsd:attribute>
 		<xsd:attribute name="IsStrict" type="xsd:boolean" use="required"/>
 	</xsd:complexType>	
 	
@@ -530,7 +520,6 @@
 			<xsd:element name="Array" type="dxl:ScalarArrayType"/>
 			<xsd:element name="ArrayRef" type="dxl:ScalarArrayRefType"/>
 			<xsd:element name="BitmapIndexProbe" type="dxl:BitmapIndexProbeType"/>			
-			<xsd:element name="PartOid" type="dxl:ScalarPartOidType"/>
 			<xsd:element name="PartBound" type="dxl:ScalarPartBoundType"/>
 			<xsd:element name="PartBoundInclusion" type="dxl:ScalarPartBoundInclusionType"/>
 			<xsd:group ref="dxl:ScalarBoolOp"/>
@@ -694,7 +683,7 @@
 		<xsd:attribute name="DistributionPolicy" use="required">
 			<xsd:simpleType>
 				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="MasterOnly"/>
+					<xsd:enumeration m_bytearray_value="CoordinatorOnly"/>
 					<xsd:enumeration m_bytearray_value="Hash"/>
 					<xsd:enumeration m_bytearray_value="Random"/>
 				</xsd:restriction>
@@ -1510,10 +1499,6 @@
 		<xsd:sequence>
 			<xsd:group ref="dxl:ScalarOp" minOccurs="0" maxOccurs="1"/>
 		</xsd:sequence>
-	</xsd:complexType>
-
-	<xsd:complexType name="ScalarPartOidType">
-		<xsd:attribute name="Level" type="xsd:string" use="required"/>
 	</xsd:complexType>
 
 	<xsd:complexType name="ScalarPartBoundType">

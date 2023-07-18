@@ -315,7 +315,6 @@ BEGIN;
 DROP ROLE IF EXISTS guc_gp_test_role1;
 NOTICE:  role "guc_gp_test_role1" does not exist, skipping
 CREATE ROLE guc_gp_test_role1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role1;
 RESET ROLE;
 END;
@@ -330,7 +329,6 @@ BEGIN ISOLATION LEVEL REPEATABLE READ;
 DROP ROLE IF EXISTS guc_gp_test_role2;
 NOTICE:  role "guc_gp_test_role2" does not exist, skipping
 CREATE ROLE guc_gp_test_role2;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role2;
 RESET ROLE;
 END;
@@ -348,7 +346,6 @@ FETCH c1;
 
 DROP ROLE IF EXISTS guc_gp_test_role1;
 CREATE ROLE guc_gp_test_role1;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE guc_gp_test_role1;
 RESET ROLE;
 FETCH c2;
@@ -729,3 +726,113 @@ SELECT count(nspname) FROM gp_dist_random('pg_namespace') WHERE nspname LIKE 'pg
 -- Cleanup
 DROP TABLE just_a_temp_table;
 RESET search_path;
+-- Test for resource management commands on log_statement='ddl'
+-- Modify log_statement to 'ddl'.
+SET log_statement = 'ddl';
+-- We don't really modify resources config.
+ALTER RESOURCE GROUP default_group SET concurrency -1;
+ERROR:  concurrency range is [0, 'max_connections']
+ALTER RESOURCE QUEUE pg_default ACTIVE THRESHOLD -10;
+ERROR:  active threshold cannot be less than -1 or equal to 0
+-- Reset
+RESET log_statement;
+-- Try to set statement_mem > max_statement_mem
+SET statement_mem = '4000MB';
+ERROR:  Invalid input for statement_mem, must be less than max_statement_mem (2048000 kB)
+RESET statement_mem;
+-- enabling gp_force_random_redistribution makes sure random redistribution happens
+-- only relevant to postgres optimizer
+set optimizer = false;
+create table t1_dist_rand(a int) distributed randomly;
+create table t2_dist_rand(a int) distributed randomly;
+create table t_dist_hash(a int) distributed by (a);
+-- with the GUC turned off, redistribution won't happen (no redistribution motion)
+set gp_force_random_redistribution = false;
+explain insert into t2_dist_rand select * from t1_dist_rand;
+QUERY PLAN
+___________
+{
+  'child' => [
+    {
+      'id' => 2,
+      'parent' => 1,
+      'short' => 'Seq Scan on t1_dist_rand'
+    }
+  ],
+  'id' => 1,
+  'short' => 'Insert on t2_dist_rand'
+}
+GP_IGNORE:(3 rows)
+
+explain insert into t2_dist_rand select * from t_dist_hash;
+QUERY PLAN
+___________
+{
+  'child' => [
+    {
+      'id' => 2,
+      'parent' => 1,
+      'short' => 'Seq Scan on t_dist_hash'
+    }
+  ],
+  'id' => 1,
+  'short' => 'Insert on t2_dist_rand'
+}
+GP_IGNORE:(3 rows)
+
+-- with the GUC turned on, redistribution would happen
+set gp_force_random_redistribution = true;
+explain insert into t2_dist_rand select * from t1_dist_rand;
+QUERY PLAN
+___________
+{
+  'child' => [
+    {
+      'child' => [
+        {
+          'id' => 3,
+          'parent' => 2,
+          'short' => 'Seq Scan on t1_dist_rand'
+        }
+      ],
+      'id' => 2,
+      'parent' => 1,
+      'recvsize' => 3,
+      'segments' => 3,
+      'sendsize' => 3,
+      'short' => 'Redistribute Motion'
+    }
+  ],
+  'id' => 1,
+  'short' => 'Insert on t2_dist_rand'
+}
+GP_IGNORE:(4 rows)
+
+explain insert into t2_dist_rand select * from t_dist_hash;
+QUERY PLAN
+___________
+{
+  'child' => [
+    {
+      'child' => [
+        {
+          'id' => 3,
+          'parent' => 2,
+          'short' => 'Seq Scan on t_dist_hash'
+        }
+      ],
+      'id' => 2,
+      'parent' => 1,
+      'recvsize' => 3,
+      'segments' => 3,
+      'sendsize' => 3,
+      'short' => 'Redistribute Motion'
+    }
+  ],
+  'id' => 1,
+  'short' => 'Insert on t2_dist_rand'
+}
+GP_IGNORE:(4 rows)
+
+reset gp_force_random_redistribution;
+reset optimizer;

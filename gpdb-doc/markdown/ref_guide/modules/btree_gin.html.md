@@ -16,5 +16,5 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [btree\_gin](https://www.postgresql.org/docs/9.4/btree-gin.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
+See [btree\_gin](https://www.postgresql.org/docs/12/btree-gin.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
 

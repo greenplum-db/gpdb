@@ -33,12 +33,12 @@ SET auto_explain.log_verbose = FALSE;
 LOG:  statement: SET auto_explain.log_verbose = FALSE;
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
-"Feature not supported: Queries on master-only tables",
+"Feature not supported: Queries on coordinator-only tables",
 LOG:  duration: 0.026 ms  plan:
 Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
 Index Only Scan using pg_class_relname_nsp_index on pg_class  (cost=0.15..4.17 rows=1 width=64) (actual rows=1 loops=1)
   Index Cond: (relname = 'pg_class'::name)
-  Heap Fetches: 0
+  Heap Fetches: 1
 Optimizer: Postgres query optimizer
   (slice0)    Executor memory: 105K bytes.
 Memory used:  128000kB
@@ -78,7 +78,7 @@ LOG:  statement: SET auto_explain.log_verbose = TRUE;
 -- this select should not dump execution plan
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
-"Feature not supported: Queries on master-only tables",
+"Feature not supported: Queries on coordinator-only tables",
  relname  
 ----------
  pg_class

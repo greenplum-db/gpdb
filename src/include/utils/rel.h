@@ -69,7 +69,7 @@ typedef struct RelationData
 								 * rd_replidindex) */
 	bool		rd_statvalid;	/* is rd_statlist valid? */
 
-	/*
+	/*----------
 	 * rd_createSubid is the ID of the highest subtransaction the rel has
 	 * survived into; or zero if the rel was not created in the current top
 	 * transaction.  This can be now be relied on, whereas previously it could
@@ -79,8 +79,13 @@ typedef struct RelationData
 	 * have forgotten changing it). rd_newRelfilenodeSubid can be forgotten
 	 * when a relation has multiple new relfilenodes within a single
 	 * transaction, with one of them occurring in a subsequently aborted
-	 * subtransaction, e.g. BEGIN; TRUNCATE t; SAVEPOINT save; TRUNCATE t;
-	 * ROLLBACK TO save; -- rd_newRelfilenode is now forgotten
+	 * subtransaction, e.g.
+	 *		BEGIN;
+	 *		TRUNCATE t;
+	 *		SAVEPOINT save;
+	 *		TRUNCATE t;
+	 *		ROLLBACK TO save;
+	 *		-- rd_newRelfilenodeSubid is now forgotten
 	 */
 	SubTransactionId rd_createSubid;	/* rel was created in current xact */
 	SubTransactionId rd_newRelfilenodeSubid;	/* new relfilenode assigned in
@@ -159,13 +164,6 @@ typedef struct RelationData
 	 * those with lefttype and righttype equal to the opclass's opcintype. The
 	 * arrays are indexed by support function number, which is a sufficient
 	 * identifier given that restriction.
-	 *
-	 * Note: rd_amcache is available for index AMs to cache private data about
-	 * an index.  This must be just a cache since it may get reset at any time
-	 * (in particular, it will get reset by a relcache inval message for the
-	 * index).  If used, it must point to a single memory chunk palloc'd in
-	 * rd_indexcxt.  A relcache reset will include freeing that chunk and
-	 * setting rd_amcache = NULL.
 	 */
 	MemoryContext rd_indexcxt;	/* private memory cxt for this stuff */
 	/* use "struct" here to avoid needing to include amapi.h: */
@@ -180,8 +178,24 @@ typedef struct RelationData
 	Oid		   *rd_exclops;		/* OIDs of exclusion operators, if any */
 	Oid		   *rd_exclprocs;	/* OIDs of exclusion ops' procs, if any */
 	uint16	   *rd_exclstrats;	/* exclusion ops' strategy numbers, if any */
-	void	   *rd_amcache;		/* available for use by index AM */
 	Oid		   *rd_indcollation;	/* OIDs of index collations */
+
+	/*
+	 * rd_amcache is available for index and table AMs to cache private data
+	 * about the relation.  This must be just a cache since it may get reset
+	 * at any time (in particular, it will get reset by a relcache inval
+	 * message for the relation).  If used, it must point to a single memory
+	 * chunk palloc'd in CacheMemoryContext, or in rd_indexcxt for an index
+	 * relation.  A relcache reset will include freeing that chunk and setting
+	 * rd_amcache = NULL.
+	 */
+	void	   *rd_amcache;		/* available for use by index/table AM */
+
+	/*
+	 * AO table support info (used only for AO and AOCS relations)
+	 */
+	Form_pg_appendonly rd_appendonly;
+	struct HeapTupleData *rd_aotuple;		/* all of pg_appendonly tuple */
 
 	/*
 	 * foreign-table support
@@ -401,10 +415,13 @@ typedef struct ViewOptions
 
 #define InvalidRelation ((Relation) NULL)
 
-/* GPDB_12_MERGE_FIXME: I hope we don't need these macros anymore, now that
- * everything should go through the table access method API.
+/*
+ * CAUTION: this macro is a violation of the absraction that table AM and
+ * index AM interfaces provide.  Use of this macro is discouraged.  If
+ * table/index AM API falls short for your use case, consider enhancing the
+ * interface.
+ *
  */
-
 #define RelationIsHeap(relation) \
 	((relation)->rd_rel->relam == HEAP_TABLE_AM_OID)
 
@@ -420,6 +437,10 @@ typedef struct ViewOptions
 #define RelationIsAoRows(relation) \
 	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID)
 
+#define RelationStorageIsAoRows(relation) \
+	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
  * index AM interfaces provide.  Use of this macro is discouraged.  If
@@ -432,6 +453,10 @@ typedef struct ViewOptions
 #define RelationIsAoCols(relation) \
 	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID)
 
+#define RelationStorageIsAoCols(relation) \
+	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
  * index AM interfaces provide.  Use of this macro is discouraged.  If
@@ -442,8 +467,11 @@ typedef struct ViewOptions
  * 		True iff relation has append only storage (can be row or column orientation)
  */
 #define RelationIsAppendOptimized(relation) \
+	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
+
+#define RelationStorageIsAO(relation) \
 	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
-		relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 
 /*
  * RelationIsBitmapIndex
@@ -538,7 +566,7 @@ typedef struct ViewOptions
 			smgrsetowner(&((relation)->rd_smgr), \
 						 smgropen((relation)->rd_node, \
 								  (relation)->rd_backend, \
-								  RelationIsAppendOptimized(relation)?SMGR_AO:SMGR_MD)); \
+								  RelationStorageIsAO(relation)?SMGR_AO:SMGR_MD)); \
 	} while (0)
 
 /*
@@ -688,7 +716,6 @@ typedef struct ViewOptions
 /* routines in utils/cache/relcache.c */
 extern void RelationIncrementReferenceCount(Relation rel);
 extern void RelationDecrementReferenceCount(Relation rel);
-extern bool RelationHasUnloggedIndex(Relation rel);
 extern List *RelationGetRepsetList(Relation rel);
 
 #endif							/* REL_H */

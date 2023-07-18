@@ -88,6 +88,7 @@ typedef enum NodeTag
 	T_NamedTuplestoreScan,
 	T_WorkTableScan,
 	T_ForeignScan,
+	T_DynamicForeignScan,
 	T_CustomScan,
 	T_NestLoop,
 	T_MergeJoin,
@@ -160,6 +161,7 @@ typedef enum NodeTag
 	T_NamedTuplestoreScanState,
 	T_WorkTableScanState,
 	T_ForeignScanState,
+	T_DynamicForeignScanState,
 	T_CustomScanState,
 	T_NestLoopState,
 	T_MergeJoinState,
@@ -269,7 +271,6 @@ typedef enum NodeTag
 	T_WindowFuncExprState,
 	T_SetExprState,
 	T_SubPlanState,
-	T_AlternativeSubPlanState,
 	T_DomainConstraintState,
 	T_AggExprIdState,
 	T_RowIdExprState,
@@ -922,6 +923,7 @@ typedef enum AggStrategy
 #define AGGSPLITOP_DESERIALIZE	0x08	/* apply deserializefn to input */
 
 #define AGGSPLITOP_DEDUPLICATED	0x100
+#define AGGSPLITOP_DQAWITHAGG	0x200
 
 /* Supported operating modes (i.e., useful combinations of these options): */
 typedef enum AggSplit
@@ -940,7 +942,14 @@ typedef enum AggSplit
 	 */
 	AGGSPLIT_DEDUPLICATED = AGGSPLITOP_DEDUPLICATED,
 
-	AGGSPLIT_INTERNMEDIATE = AGGSPLITOP_SKIPFINAL | AGGSPLITOP_SERIALIZE | AGGSPLITOP_COMBINE | AGGSPLITOP_DESERIALIZE,
+	/*
+	 * Dummy agg-split type for intermediate agg targetlist(combine + simple)
+	 * Only exist on top/final agg node of intermediate aggregation in planner
+	 * It is never set on Aggrefs.
+	 */
+	AGGSPLIT_DQAWITHAGG = AGGSPLITOP_DQAWITHAGG,
+
+    AGGSPLIT_INTERMEDIATE = AGGSPLITOP_SKIPFINAL | AGGSPLITOP_SERIALIZE | AGGSPLITOP_COMBINE | AGGSPLITOP_DESERIALIZE,
 } AggSplit;
 
 /* Test whether an AggSplit value selects each primitive option: */
@@ -950,6 +959,7 @@ typedef enum AggSplit
 #define DO_AGGSPLIT_DESERIALIZE(as) (((as) & AGGSPLITOP_DESERIALIZE) != 0)
 
 #define DO_AGGSPLIT_DEDUPLICATED(as) (((as) & AGGSPLITOP_DEDUPLICATED) != 0)
+#define DO_AGGSPLIT_DQAWITHAGG(as)  (((as) & AGGSPLITOP_DQAWITHAGG) != 0)
 
 /*
  * SetOpCmd and SetOpStrategy -

@@ -283,8 +283,9 @@ class Session(cmd.Cmd):
 
         for s in self.pxssh_list:
             # Split the output into an array of lines so that we can add text to the beginning of
-            #    each line
-            output = s.before.split(b'\n')
+            # each line. Decoding string as we are getting bytecode string in s.before
+            # Removing \r characters in each line by strip
+            output = [x.strip() for x in s.before.decode().split('\n')]
             output = output[1:-1]
 
             commandoutput.append(output)

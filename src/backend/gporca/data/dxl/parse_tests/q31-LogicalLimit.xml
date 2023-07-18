@@ -9,13 +9,13 @@
     <dxl:LogicalLimit>
       <dxl:SortingColumnList/>
       <dxl:LimitCount>
-        <dxl:FuncExpr FuncId="0.481.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
+        <dxl:FuncExpr FuncId="0.481.1.0" FuncRetSet="false" TypeMdid="0.20.1.0" FuncVariadic="false">
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="100"/>
         </dxl:FuncExpr>
       </dxl:LimitCount>
       <dxl:LimitOffset>
-        <dxl:FuncExpr FuncId="0.483.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
-          <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
+        <dxl:FuncExpr FuncId="0.483.1.0" FuncRetSet="false" TypeMdid="0.20.1.0" FuncVariadic="false">
+          <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false"/>
         </dxl:FuncExpr>
       </dxl:LimitOffset>
       <dxl:LogicalGet>

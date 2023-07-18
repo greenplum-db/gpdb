@@ -247,6 +247,45 @@ select x, not x as not_x, q2 from
   group by grouping sets(x, q2)
   order by x, q2;
 
+-- check qual push-down rules for a subquery with grouping sets
+explain (verbose, costs off)
+select * from (
+  select 1 as x, q1, sum(q2)
+  from int8_tbl i1
+  group by grouping sets(1, 2)
+) ss
+where x = 1 and q1 = 123;
+
+select * from (
+  select 1 as x, q1, sum(q2)
+  from int8_tbl i1
+  group by grouping sets(1, 2)
+) ss
+where x = 1 and q1 = 123;
+
+-- check handling of pulled-up SubPlan in GROUPING() argument (bug #17479)
+explain (verbose, costs off)
+select grouping(ss.x)
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+
+select grouping(ss.x)
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+
+explain (verbose, costs off)
+select (select grouping(ss.x))
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+
+select (select grouping(ss.x))
+from int8_tbl i1
+cross join lateral (select (select i1.q1) as x) ss
+group by ss.x;
+
 -- simple rescan tests
 
 select a, b, sum(v.x)
@@ -337,10 +376,7 @@ select ten, sum(distinct four) filter (where four::text ~ '123') from onek a
 group by rollup(ten);
 
 -- More rescan tests
--- start_ignore
--- GPDB_95_MERGE_FIXME: the lateral query with grouping sets do not make right plans
 select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, count(*) from onek group by cube(four,ten)) s on true order by v.a,four,ten;
--- end_ignore
 select array(select row(v.a,s1.*) from (select two,four, count(*) from onek group by cube(two,four) order by two,four) s1) from (values (1),(2)) v(a);
 
 -- Grouping on text columns
@@ -486,11 +522,20 @@ explain (costs off)
     from (values (1),(2)) v(x), gstest_data(v.x)
    group by cube (a,b) order by a,b;
 
+-- Verify that we correctly handle the child node returning a
+-- non-minimal slot, which happens if the input is pre-sorted,
+-- e.g. due to an index scan.
+BEGIN;
+SET LOCAL enable_hashagg = false;
+EXPLAIN (COSTS OFF) SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+SET LOCAL enable_seqscan = false;
+EXPLAIN (COSTS OFF) SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+SELECT a, b, count(*), max(a), max(b) FROM gstest3 GROUP BY GROUPING SETS(a, b,()) ORDER BY a, b;
+COMMIT;
+
 -- More rescan tests
--- start_ignore
--- GPDB_95_MERGE_FIXME: the lateral query with grouping sets do not make right plans
 select * from (values (1),(2)) v(a) left join lateral (select v.a, four, ten, count(*) from onek group by cube(four,ten)) s on true order by v.a,four,ten;
--- end_ignore
 select array(select row(v.a,s1.*) from (select two,four, count(*) from onek group by cube(two,four) order by two,four) s1) from (values (1),(2)) v(a);
 
 -- Rescan logic changes when there are no empty grouping sets, so test
@@ -534,6 +579,38 @@ select v||'a', case when grouping(v||'a') = 1 then 1 else 0 end, count(*)
   from unnest(array[1,1], array['a','b']) u(i,v)
  group by rollup(i, v||'a') order by 1,3;
 
+-- test handling of outer GroupingFunc within subqueries
+explain (costs off)
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by cube(v1);
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by cube(v1);
+
+explain (costs off)
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
+select (select grouping(v1)) from (values ((select 1))) v(v1) group by v1;
+
+-- Bug #16784
+CREATE TABLE bug_16784(i INT, j INT);
+ANALYZE bug_16784;
+ALTER TABLE bug_16784 SET (autovacuum_enabled = 'false');
+SET allow_system_table_mods=true;
+UPDATE pg_class SET reltuples = 10 WHERE relname='bug_16784';
+SET allow_system_table_mods=false;
+
+INSERT INTO bug_16784 SELECT g/10, g FROM generate_series(1,40) g;
+
+SET work_mem='64kB';
+
+explain (costs off) select * from
+  (values (1),(2)) v(a),
+  lateral (select v.a, i, j, count(*) from
+             bug_16784 group by cube(i,j)) s
+  order by v.a, i, j;
+select * from
+  (values (1),(2)) v(a),
+  lateral (select a, i, j, count(*) from
+             bug_16784 group by cube(i,j)) s
+  order by v.a, i, j;
+
 --
 -- Compare results between plans using sorting and plans using hash
 -- aggregation. Force spilling in both cases by setting work_mem low
@@ -559,7 +636,7 @@ create table gs_group_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 set jit_above_cost to default;
 
@@ -567,13 +644,13 @@ create table gs_group_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 create table gs_group_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
+group by grouping sets (g100,g10) distributed by (g100);
 
 -- Produce results with hash aggregation.
 
@@ -593,7 +670,7 @@ create table gs_hash_1 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g%1000 as g1000, g%100 as g100, g%10 as g10, g
    from generate_series(0,199999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 set jit_above_cost to default;
 
@@ -601,23 +678,18 @@ create table gs_hash_2 as
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
   (select g/20 as g1000, g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by cube (g1000,g100,g10);
+group by cube (g1000,g100,g10) distributed by (g1000);
 
 create table gs_hash_3 as
 select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
   (select g/200 as g100, g/2000 as g10, g
    from generate_series(0,19999) g) s
-group by grouping sets (g100,g10);
+group by grouping sets (g100,g10) distributed by (g100);
 
 set enable_sort = true;
 set work_mem to default;
 
--- GPDB_12_MERGE_FIXME: the following comparison query has an ORCA plan that
--- relies on "IS NOT DISTINCT FROM" Hash Join, a variant that we likely have
--- lost during the merge with upstream Postgres 12. Disable ORCA for this query
-SET optimizer TO off;
-
--- Compare results
+-- Compare results of ORCA plan that relies on "IS NOT DISTINCT FROM" HASH Join
 
 (select * from gs_hash_1 except select * from gs_group_1)
   union all
@@ -633,7 +705,7 @@ SET optimizer TO off;
 (select g100,g10,unnest(a),c,m from gs_group_3 except
   select g100,g10,unnest(a),c,m from gs_hash_3);
 
-RESET optimizer;
+
 
 drop table gs_group_1;
 drop table gs_group_2;

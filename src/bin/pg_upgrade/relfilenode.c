@@ -56,8 +56,12 @@ transfer_all_new_tablespaces(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 	 * NULL tablespace path, which matches all tablespaces.  In parallel mode,
 	 * we pass the default tablespace and all user-created tablespaces and let
 	 * those operations happen in parallel.
+	 *
+	 * GPDB: Disable pg_upgrade's broken parallel tablespace transfer to make the rest
+	 * of the parallelism from the --jobs flag usable now to get a performance
+	 * boost.
 	 */
-	if (user_opts.jobs <= 1)
+	if (true) /* (user_opts.jobs <= 1) */
 		parallel_transfer_all_new_dbs(old_db_arr, new_db_arr, old_pgdata,
 									  new_pgdata, NULL);
 	else
@@ -183,16 +187,12 @@ transfer_single_new_db(FileNameMap *maps, int size, char *old_tablespace)
 				/* transfer primary file */
 				transfer_relfile(&maps[mapnum], "", vm_must_add_frozenbit);
 
-				/* fsm/vm files added in PG 8.4 */
-				if (GET_MAJOR_VERSION(old_cluster.major_version) >= 804)
-				{
-					/*
-					 * Copy/link any fsm and vm files, if they exist
-					 */
-					transfer_relfile(&maps[mapnum], "_fsm", vm_must_add_frozenbit);
-					if (vm_crashsafe_match)
-						transfer_relfile(&maps[mapnum], "_vm", vm_must_add_frozenbit);
-				}
+				/*
+				 * Copy/link any fsm and vm files, if they exist
+				 */
+				transfer_relfile(&maps[mapnum], "_fsm", vm_must_add_frozenbit);
+				if (vm_crashsafe_match)
+					transfer_relfile(&maps[mapnum], "_vm", vm_must_add_frozenbit);
 			}
 		}
 	}

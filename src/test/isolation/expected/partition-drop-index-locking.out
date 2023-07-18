@@ -6,7 +6,9 @@ step s1lock: LOCK TABLE part_drop_index_locking_subpart_child IN ACCESS SHARE MO
 step s2begin: BEGIN;
 step s2drop: DROP INDEX part_drop_index_locking_idx; <waiting ...>
 step s1select: SELECT * FROM part_drop_index_locking_subpart_child;
-id             
+id
+--
+(0 rows)
 
 step s3getlocks: 
         SELECT s.query, c.relname, l.mode, l.granted
@@ -16,15 +18,17 @@ step s3getlocks:
         WHERE c.relname LIKE 'part_drop_index_locking%'
         ORDER BY s.query, c.relname, l.mode, l.granted;
 
-query          relname        mode           granted        
+query                                               |relname                                      |mode               |granted
+----------------------------------------------------+---------------------------------------------+-------------------+-------
+DROP INDEX part_drop_index_locking_idx;             |part_drop_index_locking                      |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;             |part_drop_index_locking_idx                  |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;             |part_drop_index_locking_subpart              |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;             |part_drop_index_locking_subpart_child        |AccessExclusiveLock|f      
+SELECT * FROM part_drop_index_locking_subpart_child;|part_drop_index_locking_subpart_child        |AccessShareLock    |t      
+SELECT * FROM part_drop_index_locking_subpart_child;|part_drop_index_locking_subpart_child_id_idx |AccessShareLock    |t      
+SELECT * FROM part_drop_index_locking_subpart_child;|part_drop_index_locking_subpart_child_id_idx1|AccessShareLock    |t      
+(7 rows)
 
-DROP INDEX part_drop_index_locking_idx;part_drop_index_lockingAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_idxAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_subpartAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_subpart_childAccessExclusiveLockf              
-SELECT * FROM part_drop_index_locking_subpart_child;part_drop_index_locking_subpart_childAccessShareLockt              
-SELECT * FROM part_drop_index_locking_subpart_child;part_drop_index_locking_subpart_child_id_idxAccessShareLockt              
-SELECT * FROM part_drop_index_locking_subpart_child;part_drop_index_locking_subpart_child_id_idx1AccessShareLockt              
 step s1commit: COMMIT;
 step s2drop: <... completed>
 step s3getlocks: 
@@ -35,14 +39,16 @@ step s3getlocks:
         WHERE c.relname LIKE 'part_drop_index_locking%'
         ORDER BY s.query, c.relname, l.mode, l.granted;
 
-query          relname        mode           granted        
+query                                  |relname                                     |mode               |granted
+---------------------------------------+--------------------------------------------+-------------------+-------
+DROP INDEX part_drop_index_locking_idx;|part_drop_index_locking                     |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;|part_drop_index_locking_idx                 |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;|part_drop_index_locking_subpart             |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;|part_drop_index_locking_subpart_child       |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;|part_drop_index_locking_subpart_child_id_idx|AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_idx;|part_drop_index_locking_subpart_id_idx      |AccessExclusiveLock|t      
+(6 rows)
 
-DROP INDEX part_drop_index_locking_idx;part_drop_index_lockingAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_idxAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_subpartAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_subpart_childAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_subpart_child_id_idxAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_idx;part_drop_index_locking_subpart_id_idxAccessExclusiveLockt              
 step s2commit: COMMIT;
 
 starting permutation: s1begin s1lock s2begin s2dropsub s1select s3getlocks s1commit s3getlocks s2commit
@@ -51,7 +57,9 @@ step s1lock: LOCK TABLE part_drop_index_locking_subpart_child IN ACCESS SHARE MO
 step s2begin: BEGIN;
 step s2dropsub: DROP INDEX part_drop_index_locking_subpart_idx; <waiting ...>
 step s1select: SELECT * FROM part_drop_index_locking_subpart_child;
-id             
+id
+--
+(0 rows)
 
 step s3getlocks: 
         SELECT s.query, c.relname, l.mode, l.granted
@@ -61,14 +69,16 @@ step s3getlocks:
         WHERE c.relname LIKE 'part_drop_index_locking%'
         ORDER BY s.query, c.relname, l.mode, l.granted;
 
-query          relname        mode           granted        
+query                                               |relname                                      |mode               |granted
+----------------------------------------------------+---------------------------------------------+-------------------+-------
+DROP INDEX part_drop_index_locking_subpart_idx;     |part_drop_index_locking_subpart              |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_subpart_idx;     |part_drop_index_locking_subpart_child        |AccessExclusiveLock|f      
+DROP INDEX part_drop_index_locking_subpart_idx;     |part_drop_index_locking_subpart_idx          |AccessExclusiveLock|t      
+SELECT * FROM part_drop_index_locking_subpart_child;|part_drop_index_locking_subpart_child        |AccessShareLock    |t      
+SELECT * FROM part_drop_index_locking_subpart_child;|part_drop_index_locking_subpart_child_id_idx |AccessShareLock    |t      
+SELECT * FROM part_drop_index_locking_subpart_child;|part_drop_index_locking_subpart_child_id_idx1|AccessShareLock    |t      
+(6 rows)
 
-DROP INDEX part_drop_index_locking_subpart_idx;part_drop_index_locking_subpartAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_subpart_idx;part_drop_index_locking_subpart_childAccessExclusiveLockf              
-DROP INDEX part_drop_index_locking_subpart_idx;part_drop_index_locking_subpart_idxAccessExclusiveLockt              
-SELECT * FROM part_drop_index_locking_subpart_child;part_drop_index_locking_subpart_childAccessShareLockt              
-SELECT * FROM part_drop_index_locking_subpart_child;part_drop_index_locking_subpart_child_id_idxAccessShareLockt              
-SELECT * FROM part_drop_index_locking_subpart_child;part_drop_index_locking_subpart_child_id_idx1AccessShareLockt              
 step s1commit: COMMIT;
 step s2dropsub: <... completed>
 step s3getlocks: 
@@ -79,10 +89,12 @@ step s3getlocks:
         WHERE c.relname LIKE 'part_drop_index_locking%'
         ORDER BY s.query, c.relname, l.mode, l.granted;
 
-query          relname        mode           granted        
+query                                          |relname                                      |mode               |granted
+-----------------------------------------------+---------------------------------------------+-------------------+-------
+DROP INDEX part_drop_index_locking_subpart_idx;|part_drop_index_locking_subpart              |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_subpart_idx;|part_drop_index_locking_subpart_child        |AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_subpart_idx;|part_drop_index_locking_subpart_child_id_idx1|AccessExclusiveLock|t      
+DROP INDEX part_drop_index_locking_subpart_idx;|part_drop_index_locking_subpart_idx          |AccessExclusiveLock|t      
+(4 rows)
 
-DROP INDEX part_drop_index_locking_subpart_idx;part_drop_index_locking_subpartAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_subpart_idx;part_drop_index_locking_subpart_childAccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_subpart_idx;part_drop_index_locking_subpart_child_id_idx1AccessExclusiveLockt              
-DROP INDEX part_drop_index_locking_subpart_idx;part_drop_index_locking_subpart_idxAccessExclusiveLockt              
 step s2commit: COMMIT;

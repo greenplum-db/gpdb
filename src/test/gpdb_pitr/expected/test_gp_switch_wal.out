@@ -74,7 +74,7 @@ CREATE TABLE this_ctas_should_fail AS SELECT gp_segment_id AS contentid, pg_swit
 ERROR:  cannot use gp_switch_wal() when not in QD mode (xlogfuncs_gp.c:LINE_NUM)
 
 CREATE ROLE switch_wal_error_role;
-CREATE
+CREATE ROLE
 SET ROLE TO switch_wal_error_role;
 SET
 SELECT * FROM gp_switch_wal();
@@ -82,4 +82,4 @@ ERROR:  permission denied for function gp_switch_wal
 RESET ROLE;
 RESET
 DROP ROLE switch_wal_error_role;
-DROP
+DROP ROLE

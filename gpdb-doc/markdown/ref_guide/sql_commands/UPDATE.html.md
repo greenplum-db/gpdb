@@ -26,7 +26,7 @@ The optional `RETURNING` clause causes `UPDATE` to compute and return value\(s\)
 
 You must have the `UPDATE` privilege on the table, or at least on the column\(s\) that are listed to be updated. You must also have the `SELECT` privilege on any column whose values are read in the expressions or condition.
 
-**Note:** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `UPDATE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
+> **Note** As the default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `UPDATE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 ## <a id="section5"></a>Parameters 
 

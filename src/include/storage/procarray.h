@@ -98,7 +98,11 @@ extern TransactionId GetOldestActiveTransactionId(void);
 extern TransactionId GetOldestSafeDecodingTransactionId(bool catalogOnly);
 
 extern VirtualTransactionId *GetVirtualXIDsDelayingChkpt(int *nvxids);
-extern bool HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids);
+extern VirtualTransactionId *GetVirtualXIDsDelayingChkptEnd(int *nvxids);
+extern bool HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids,
+										 int nvxids);
+extern bool HaveVirtualXIDsDelayingChkptEnd(VirtualTransactionId *vxids,
+											int nvxids);
 
 extern PGPROC *BackendPidGetProc(int pid);
 extern PGPROC *BackendPidGetProcWithLock(int pid);
@@ -110,6 +114,8 @@ extern VirtualTransactionId *GetCurrentVirtualXIDs(TransactionId limitXmin,
 												   int *nvxids);
 extern VirtualTransactionId *GetConflictingVirtualXIDs(TransactionId limitXmin, Oid dbOid);
 extern pid_t CancelVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode);
+extern pid_t SignalVirtualTransaction(VirtualTransactionId vxid, ProcSignalReason sigmode,
+									  bool conflictPending);
 
 extern bool MinimumActiveBackends(int min);
 extern int	CountDBBackends(Oid databaseid);
@@ -147,6 +153,9 @@ extern void ProcArrayGetReplicationSlotXmin(TransactionId *xmin,
 											TransactionId *catalog_xmin);
 extern DistributedTransactionId LocalXidGetDistributedXid(TransactionId xid);
 extern int GetSessionIdByPid(int pid);
-extern void ResGroupSignalMoveQuery(int sessionId, void *slot, Oid groupId);
+extern bool ResGroupMoveSignalTarget(int sessionId, void *slot, Oid groupId,
+								bool isExecutor);
+extern void ResGroupMoveCheckTargetReady(int sessionId, bool *clean, bool *result);
+extern void ResGroupMoveNotifyInitiator(pid_t callerPid);
 
 #endif							/* PROCARRAY_H */

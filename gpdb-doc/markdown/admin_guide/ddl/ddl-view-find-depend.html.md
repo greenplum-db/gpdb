@@ -74,7 +74,7 @@ WHERE v.relkind = 'v'         -- filter views only
 (7 rows)
 ```
 
-The query performs casts to the `regclass` object identifier type. For information about object identifier types, see the PostgeSQL documentation on [Object Identifier Types](https://www.postgresql.org/docs/9.4/datatype-oid.html).
+The query performs casts to the `regclass` object identifier type. For information about object identifier types, see the PostgeSQL documentation on [Object Identifier Types](https://www.postgresql.org/docs/12/datatype-oid.html).
 
 In some cases, the views are listed multiple times because the view references multiple table columns. You can remove those duplicates using `DISTINCT`.
 

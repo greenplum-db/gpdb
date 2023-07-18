@@ -21,23 +21,11 @@ GP_IGNORE: formatted by atmsort.pm
 -- end_matchignore
 GP_IGNORE: defined new match expression
 
--- start_matchsubs
--- m/tx:\s+\d+/
--- s/tx:\s+\d+/tx: ##/
-
--- m/lsn: \d\/[0-9a-fA-F]+, prev \d\/[0-9a-fA-F]+/
--- s/lsn: \d\/[0-9a-fA-F]+, prev \d\/[0-9a-fA-F]+/lsn: #\/########, prev #\/########/
-
--- m/rel \d+\/\d+\/\d+/
--- s/rel \d+\/\d+\/\d+/rel ####\/######\/######/
--- end_matchsubs
-GP_IGNORE: defined new match expression
-
 -- Create tables (AO, AOCO)
 -1U: CREATE TABLE ao_foo (n int) WITH (appendonly=true);
-CREATE
+CREATE TABLE
 -1U: CREATE TABLE aoco_foo (n int, m int) WITH (appendonly=true, orientation=column);
-CREATE
+CREATE TABLE
 
 -- Switch WAL file
 -1U: SELECT true FROM pg_switch_wal();
@@ -47,10 +35,10 @@ CREATE
 (1 row)
 -- Insert data (AO)
 -1U: INSERT INTO ao_foo SELECT generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Insert data (AOCO)
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
 DELETE 5
@@ -68,10 +56,10 @@ VACUUM
 
 
 -- *********** Set wal_level=minimal **************
-!\retcode gpconfig -c wal_level -v minimal --masteronly;
+!\retcode gpconfig -c wal_level -v minimal --coordinatoronly;
 (exited with code 0)
 -- Set max_wal_senders to 0 because a non-zero value requires wal_level >= 'archive'
-!\retcode gpconfig -c max_wal_senders -v 0 --masteronly;
+!\retcode gpconfig -c max_wal_senders -v 0 --coordinatoronly;
 (exited with code 0)
 -- Restart QD
 !\retcode pg_ctl -l /dev/null -D $COORDINATOR_DATA_DIRECTORY restart -w -t 600 -m fast;
@@ -85,10 +73,10 @@ VACUUM
 (1 row)
 -- Insert data (AO)
 -1U: INSERT INTO ao_foo SELECT generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Insert data (AOCO)
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
-INSERT 10
+INSERT 0 10
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
 DELETE 5
@@ -105,15 +93,15 @@ VACUUM
 
 
 -1U: DROP TABLE ao_foo;
-DROP
+DROP TABLE
 -1U: DROP TABLE aoco_foo;
-DROP
+DROP TABLE
 
 -- Reset wal_level
-!\retcode gpconfig -r wal_level --masteronly;
+!\retcode gpconfig -r wal_level --coordinatoronly;
 (exited with code 0)
 -- Reset max_wal_senders
-!\retcode gpconfig -r max_wal_senders --masteronly;
+!\retcode gpconfig -r max_wal_senders --coordinatoronly;
 (exited with code 0)
 -- Restart QD
 !\retcode pg_ctl -l /dev/null -D $COORDINATOR_DATA_DIRECTORY restart -w -t 600 -m fast;

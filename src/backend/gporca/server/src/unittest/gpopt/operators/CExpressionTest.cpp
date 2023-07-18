@@ -54,7 +54,7 @@ CExpressionTest::PrppCreateRequiredProperties(CMemoryPool *mp, CColRefSet *pcrs)
 {
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
@@ -158,7 +158,7 @@ CExpressionTest::EresUnittest_SimpleOps()
 
 	Pfpexpr rgpf[] = {
 		CTestUtils::PexprLogicalGet,
-		CTestUtils::PexprLogicalExternalGet,
+		CTestUtils::PexprLogicalForeignGet,
 		CTestUtils::PexprLogicalGetPartitioned,
 		CTestUtils::PexprLogicalSelect,
 		CTestUtils::PexprLogicalSelectCmpToConst,
@@ -781,7 +781,7 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidOrder()
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
 
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdDistribution *ped =
@@ -901,7 +901,7 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidRewindability()
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtRewindable, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
@@ -962,7 +962,7 @@ CExpressionTest::EresUnittest_FValidPlan_InvalidCTEs()
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 	CDistributionSpec *pds = GPOS_NEW(mp)
-		CDistributionSpecSingleton(CDistributionSpecSingleton::EstMaster);
+		CDistributionSpecSingleton(CDistributionSpecSingleton::EstCoordinator);
 	CRewindabilitySpec *prs = GPOS_NEW(mp) CRewindabilitySpec(
 		CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, CEnfdOrder::EomSatisfy);

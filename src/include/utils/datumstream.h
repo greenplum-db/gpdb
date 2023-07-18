@@ -93,6 +93,7 @@ typedef struct DatumStreamRead
 	int64		blockFirstRowNum;
 	int64		blockFileOffset;
 	int			blockRowCount;
+	int			blockRowsProcessed;
 
 	AppendOnlyStorageRead ao_read;
 
@@ -256,7 +257,6 @@ extern DatumStreamWrite *create_datumstreamwrite(
 						char *compName,
 						int32 compLevel,
 						bool checksum,
-						int32 safeFSWriteSize,
 						int32 maxsz,
 						Form_pg_attribute attr,
 						char *relname,
@@ -267,7 +267,6 @@ extern DatumStreamRead *create_datumstreamread(
 					   char *compName,
 					   int32 compLevel,
 					   bool checksum,
-					   int32 safeFSWriteSize,
 					   int32 maxsz,
 					   Form_pg_attribute attr,
 					   char *relname,
@@ -297,15 +296,15 @@ extern void destroy_datumstreamwrite(DatumStreamWrite * ds);
 extern void destroy_datumstreamread(DatumStreamRead * ds);
 
 /* Read and Write op */
-extern int64 datumstreamwrite_block(DatumStreamWrite *ds,
-									AppendOnlyBlockDirectory *blockDirectory,
-									int columnGroupNo,
-									bool addColAction);
-extern int64 datumstreamwrite_lob(DatumStreamWrite *ds,
-								  Datum d,
-								  AppendOnlyBlockDirectory *blockDirectory,
-								  int columnGroupNo,
-								  bool addColAction);
+extern int64
+datumstreamwrite_block(DatumStreamWrite *acc,
+					   AppendOnlyBlockDirectory *blockDirectory,
+					   int columnGroupNo);
+extern int64
+datumstreamwrite_lob(DatumStreamWrite *acc,
+					 Datum d,
+					 AppendOnlyBlockDirectory *blockDirectory,
+					 int colGroupNo);
 extern int	datumstreamread_block(DatumStreamRead * ds,
 								  AppendOnlyBlockDirectory *blockDirectory,
 								  int colGroupNo);
@@ -318,8 +317,9 @@ extern bool datumstreamread_find_block(DatumStreamRead * datumStream,
 extern void *datumstreamread_get_upgrade_space(DatumStreamRead *datumStream,
 											   size_t len);
 
+extern bool datumstreamread_block_info(DatumStreamRead * acc);
 /*
- * MPP-17061: make sure datumstream_read_block_info was called first for the CO block
+ * MPP-17061: make sure datumstreamread_block_info was called first for the CO block
  * before calling datumstreamread_block_content.
  */
 extern void datumstreamread_block_content(DatumStreamRead * acc);

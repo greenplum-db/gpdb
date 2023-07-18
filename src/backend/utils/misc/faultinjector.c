@@ -193,7 +193,7 @@ FaultInjector_ShmemSize(void)
  * Hash table contains fault injection that are set on the system waiting to be injected.
  * FaultInjector identifier is the key in the hash table.
  * Hash table in shared memory is initialized only on primary and mirror segment. 
- * It is not initialized on master host.
+ * It is not initialized on coordinator host.
  */
 void
 FaultInjector_ShmemInit(void)
@@ -242,6 +242,44 @@ FaultInjector_ShmemInit(void)
 	return;						  
 }
 
+static bool
+checkBgProcessSkipFault(const char* faultName)
+{
+	if (IsAutoVacuumLauncherProcess())
+	{
+		/* autovacuum launcher process */
+		elog(LOG, "skipped fault '%s' in autovacuum launcher process", faultName);
+		return true;
+	}
+	else if (IsAutoVacuumWorkerProcess())
+	{
+		/* autovacuum worker process */
+		 if (0 != strcmp("vacuum_update_dat_frozen_xid", faultName) &&
+				0 != strcmp("auto_vac_worker_before_do_autovacuum", faultName) &&
+				0 != strcmp("auto_vac_worker_after_report_activity", faultName) &&
+				0 != strcmp("auto_vac_worker_abort", faultName) &&
+				0 != strcmp("analyze_after_hold_lock", faultName) &&
+				0 != strcmp("analyze_finished_one_relation", faultName))
+		{
+			elog(LOG, "skipped fault '%s' in autovacuum worker process", faultName);
+			return true;
+		}
+	}
+	else if (IsDtxRecoveryProcess())
+	{
+		/* dtx recovery process */
+		 if (0 != strcmp("before_orphaned_check", faultName) &&
+				0 != strcmp("after_orphaned_check", faultName) &&
+				0 != strcmp("post_in_doubt_tx_in_progress", faultName) &&
+				0 != strcmp("post_progress_recovery_comitted", faultName))
+		{
+			elog(LOG, "skipped fault '%s' in dtx recovery process", faultName);
+			return true;
+		}
+	}
+	return false;
+}
+
 FaultInjectorType_e
 FaultInjector_InjectFaultIfSet_out_of_line(
 							   const char*				 faultName,
@@ -268,20 +306,12 @@ FaultInjector_InjectFaultIfSet_out_of_line(
 		elog(ERROR, "table name too long: '%s'", tableName);
 
 	/*
-	 * Auto-vacuum worker and launcher process, may run at unpredictable times
-	 * while running tests. So, skip setting any faults for auto-vacuum
-	 * launcher or worker. If anytime in future need to test these processes
-	 * using fault injector framework, this restriction needs to be lifted and
-	 * some other mechanism needs to be placed to avoid flaky failures.
+	 * Some background processes may run at unpredictable times and hit faults that
+	 * are desired for other backends. So, skip setting any faults for the processes
+	 * we've found problems with, except for a few faults that we want to test for
+	 * those processes. 
 	 */
-	if (IsAutoVacuumLauncherProcess() ||
-		(IsAutoVacuumWorkerProcess() &&
-		 !(0 == strcmp("vacuum_update_dat_frozen_xid", faultName) ||
-		   0 == strcmp("auto_vac_worker_before_do_autovacuum", faultName) ||
-		   0 == strcmp("auto_vac_worker_after_report_activity", faultName) ||
-		   0 == strcmp("auto_vac_worker_abort", faultName) ||
-		   0 == strcmp("analyze_after_hold_lock", faultName) ||
-		   0 == strcmp("analyze_finished_one_relation", faultName))))
+	if (checkBgProcessSkipFault(faultName))
 		return FaultInjectorTypeNotSpecified;
 
 	/*
@@ -324,7 +354,7 @@ FaultInjector_InjectFaultIfSet_out_of_line(
 			/* fault injection is not set for the specified database name */
 			break;
 	
-		if (strcmp(entryShared->tableName, tableNameLocal) != 0)
+		if (strlen(entryShared->tableName) > 0 && strcmp(entryShared->tableName, tableNameLocal) != 0)
 			/* fault injection is not set for the specified table name */
 			break;
 

@@ -1,7 +1,7 @@
 -- Try to verify that a session fatal due to OOM should have no effect on other sessions.
 -- Report on https://github.com/greenplum-db/gpdb/issues/12399
 
--- Because the number of errors reported to master can depend on ic types (i.e. ic-tcp and ic-proxy have one 
+-- Because the number of errors reported to coordinator can depend on ic types (i.e. ic-tcp and ic-proxy have one 
 -- additional error from the backend on seg0 which is trying to tear down TCP connection), we have to ignore
 -- all of them.
 -- start_matchignore

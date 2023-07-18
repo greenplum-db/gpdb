@@ -208,9 +208,12 @@ typedef struct _typeInfo
 	 * result of format_type(), which will be quoted if needed, and might be
 	 * schema-qualified too.
 	 */
-	char		*ftypname;
-	const char  *rolname;
-	char		*typacl;
+	char	   *ftypname;
+	const char *rolname;		/* name of owner, or empty string */
+	char	   *typacl;
+	char	   *rtypacl;
+	char	   *inittypacl;
+	char	   *initrtypacl;
 	Oid			typelem;
 	Oid			typrelid;
 	char		typrelkind;		/* 'r', 'v', 'c', etc */
@@ -338,7 +341,7 @@ typedef struct _tableInfo
 	uint32		toast_minmxid;	/* toast table's relminmxid */
 	int			ncheck;			/* # of CHECK expressions */
 	Oid			reltype;		/* OID of table's composite type, if any */
-	char	   *reloftype;		/* underlying type for typed table */
+	Oid			reloftype;		/* underlying type for typed table */
 	/* these two are set only if table is a sequence owned by a column: */
 	Oid			owning_tab;		/* OID of table owning sequence */
 	int			owning_col;		/* attr # of column owning sequence */
@@ -376,8 +379,6 @@ typedef struct _tableInfo
 	char	  **attencoding;	/* the attribute encoding values */
 	struct _attrDefInfo **attrdefs; /* DEFAULT expressions */
 	struct _constraintInfo *checkexprs; /* CHECK constraints */
-	char	   *partkeydef;		/* partition key definition */
-	char	   *partbound;		/* partition bound definition */
 	bool		needs_override; /* has GENERATED ALWAYS AS IDENTITY */
 	char	   *amname;			/* relation access method */
 
@@ -396,7 +397,6 @@ typedef struct _tableInfo
 
 	/* GPDB */
 	Oid		toast_index; 				/* OID of toast table's index */
-	Oid		toast_type;					/* OID of toast table's composite type */
 	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
 	char	*distclause; /* distributed by clause */
 	char	*partclause;	/* partition definition, if table is partition parent */
@@ -455,7 +455,7 @@ typedef struct _indxInfo
 								 * contains both key and nonkey attributes */
 	bool		indisclustered;
 	bool		indisreplident;
-	Oid			parentidx;		/* if partitioned, parent index OID */
+	Oid			parentidx;		/* if a partition, parent index OID */
 	SimplePtrList partattaches;	/* if partitioned, partition attach objects */
 
 	/* if there is an associated constraint object, its dumpId: */
@@ -508,6 +508,7 @@ typedef struct _triggerInfo
 	Oid			tgconstrrelid;
 	char	   *tgconstrrelname;
 	char		tgenabled;
+	bool		tgisinternal;
 	bool		tgdeferrable;
 	bool		tginitdeferred;
 	char	   *tgdef;
@@ -797,6 +798,7 @@ extern ExtProtInfo *getExtProtocols(Archive *fout, int *numExtProtocols);
 extern BinaryUpgradeInfo *getBinaryUpgradeObjects(void);
 extern void getAOTableInfo(Archive *fout);
 extern void getBMIndxInfo(Archive *fout);
+extern void getPartitionDefs(Archive *fout, TableInfo tblinfo[], int numTables);
 /* END MPP ADDITION */
 
 #endif							/* PG_DUMP_H */

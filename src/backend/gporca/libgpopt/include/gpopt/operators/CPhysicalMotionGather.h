@@ -30,7 +30,7 @@ namespace gpopt
 class CPhysicalMotionGather : public CPhysicalMotion
 {
 private:
-	// type of segment on which this gather runs (master/segment)
+	// type of segment on which this gather runs (coordinator/segment)
 	CDistributionSpecSingleton *m_pdssSingeton;
 
 	// merge spec if the operator is order-preserving
@@ -86,9 +86,9 @@ public:
 	}
 
 	BOOL
-	FOnMaster() const
+	FOnCoordinator() const
 	{
-		return CDistributionSpecSingleton::EstMaster == Est();
+		return CDistributionSpecSingleton::EstCoordinator == Est();
 	}
 
 	// order spec

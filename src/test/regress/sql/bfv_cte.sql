@@ -228,3 +228,18 @@ select const_a, const_b, sum(n)
  ) x
  group by const_a, const_b
 ;
+
+-- test cte can not be the param for gp_dist_random
+-- so in set_cte_pathlist we do not neet to check forceDistRandom
+create table ttt(tc1 int,tc2 int) ;
+insert into ttt values(1,1);
+insert into ttt  values(2,2);
+
+WITH cte AS (
+  SELECT oid, relname
+  FROM pg_class
+  WHERE oid <2000
+)
+SELECT *
+FROM gp_dist_random('cte')
+JOIN ttt ON cte.oid = ttt.tc2;

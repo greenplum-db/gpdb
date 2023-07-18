@@ -148,5 +148,40 @@ SELECT * FROM test1;
 SELECT * FROM pg_cursors;
 
 
+-- check handling of an error during COMMIT
+-- FOREIGN KEY constraints are not supported in GPDB, simulate an error instead
+CREATE TABLE testpk (id int PRIMARY KEY);
+CREATE TABLE testfk(f1 int REFERENCES testpk DEFERRABLE INITIALLY DEFERRED);
+
+DO LANGUAGE plpythonu $$
+# this insert will fail during commit:
+plpy.execute("INSERT INTO testfk VALUES (0)")
+plpy.execute("select gp_inject_fault('start_prepare', 'error', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0")
+plpy.commit()
+plpy.warning('should not get here')
+$$;
+
+SELECT * FROM testpk;
+SELECT * FROM testfk;
+select gp_inject_fault('start_prepare', 'reset', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0;
+
+DO LANGUAGE plpythonu $$
+# this insert will fail during commit:
+plpy.execute("INSERT INTO testfk VALUES (0)")
+plpy.execute("select gp_inject_fault('start_prepare', 'error', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0")
+try:
+    plpy.commit()
+except Exception as e:
+    plpy.info('sqlstate: %s' % (e.sqlstate))
+# these inserts should work:
+plpy.execute("INSERT INTO testpk VALUES (1)")
+plpy.execute("INSERT INTO testfk VALUES (1)")
+$$;
+
+SELECT * FROM testpk;
+SELECT * FROM testfk;
+select gp_inject_fault('start_prepare', 'reset', dbid) from gp_segment_configuration where role = 'p' and status = 'u' and content = 0;
+
+
 DROP TABLE test1;
 DROP TABLE test2;

@@ -28,10 +28,11 @@
 #include "utils/memutils.h"
 
 static int	TupleHashTableMatch(struct tuplehash_hash *tb, const MinimalTuple tuple1, const MinimalTuple tuple2);
-static uint32 TupleHashTableHash_internal(struct tuplehash_hash *tb,
-										  const MinimalTuple tuple);
-static TupleHashEntry LookupTupleHashEntry_internal(
-	TupleHashTable hashtable, TupleTableSlot *slot, bool *isnew, uint32 hash);
+static inline uint32 TupleHashTableHash_internal(struct tuplehash_hash *tb,
+												 const MinimalTuple tuple);
+static inline TupleHashEntry LookupTupleHashEntry_internal(TupleHashTable hashtable,
+														   TupleTableSlot *slot,
+														   bool *isnew, uint32 hash);
 
 /*
  * Define parameters for tuple hash table code generation. The interface is
@@ -171,6 +172,7 @@ BuildTupleHashTableExt(PlanState *parent,
 	TupleHashTable hashtable;
 	Size		entrysize = sizeof(TupleHashEntryData) + additionalsize;
 	MemoryContext oldcontext;
+	bool		allow_jit;
 
 	/*
 	 * Many callers pass "long" values for nbuckets, which means that we can
@@ -203,7 +205,7 @@ BuildTupleHashTableExt(PlanState *parent,
 	hashtable->cur_eq_func = NULL;
 
 	/*
-	 * If parallelism is in use, even if the master backend is performing the
+	 * If parallelism is in use, even if the leader backend is performing the
 	 * scan itself, we don't want to create the hashtable exactly the same way
 	 * in all workers. As hashtables are iterated over in keyspace-order,
 	 * doing so in all processes in the same way is likely to lead to
@@ -224,13 +226,23 @@ BuildTupleHashTableExt(PlanState *parent,
 	hashtable->tableslot = MakeSingleTupleTableSlot(CreateTupleDescCopy(inputDesc),
 													&TTSOpsMinimalTuple);
 
+	/*
+	 * If the old reset interface is used (i.e. BuildTupleHashTable, rather
+	 * than BuildTupleHashTableExt), allowing JIT would lead to the generated
+	 * functions to a) live longer than the query b) be re-generated each time
+	 * the table is being reset. Therefore prevent JIT from being used in that
+	 * case, by not providing a parent node (which prevents accessing the
+	 * JitContext in the EState).
+	 */
+	allow_jit = metacxt != tablecxt;
+
 	/* build comparator for all columns */
 	/* XXX: should we support non-minimal tuples for the inputslot? */
 	hashtable->tab_eq_func = ExecBuildGroupingEqual(inputDesc, inputDesc,
 													&TTSOpsMinimalTuple, &TTSOpsMinimalTuple,
 													numCols,
 													keyColIdx, eqfuncoids, collations,
-													NULL);
+													allow_jit ? parent : NULL);
 
 	/*
 	 * While not pretty, it's ok to not shut down this context, but instead
@@ -294,6 +306,9 @@ ResetTupleHashTable(TupleHashTable hashtable)
  * If isnew is NULL, we do not create new entries; we return NULL if no
  * match is found.
  *
+ * If hash is not NULL, we set it to the calculated hash value. This allows
+ * callers access to the hash value even if no entry is returned.
+ *
  * If isnew isn't NULL, then a new entry is created if no existing entry
  * matches.  On return, *isnew is true if the entry is newly created,
  * false if it existed already.  ->additional_data in the new entry has
@@ -301,11 +316,11 @@ ResetTupleHashTable(TupleHashTable hashtable)
  */
 TupleHashEntry
 LookupTupleHashEntry(TupleHashTable hashtable, TupleTableSlot *slot,
-					 bool *isnew)
+					 bool *isnew, uint32 *hash)
 {
-	TupleHashEntry	entry;
-	MemoryContext	oldContext;
-	uint32			hash;
+	TupleHashEntry entry;
+	MemoryContext oldContext;
+	uint32		local_hash;
 
 	/* Need to run the hash functions in short-lived context */
 	oldContext = MemoryContextSwitchTo(hashtable->tempcxt);
@@ -315,8 +330,13 @@ LookupTupleHashEntry(TupleHashTable hashtable, TupleTableSlot *slot,
 	hashtable->in_hash_funcs = hashtable->tab_hash_funcs;
 	hashtable->cur_eq_func = hashtable->tab_eq_func;
 
-	hash = TupleHashTableHash_internal(hashtable->hashtab, NULL);
-	entry = LookupTupleHashEntry_internal(hashtable, slot, isnew, hash);
+	local_hash = TupleHashTableHash_internal(hashtable->hashtab, NULL);
+	entry = LookupTupleHashEntry_internal(hashtable, slot, isnew, local_hash);
+
+	if (hash != NULL)
+		*hash = local_hash;
+
+	Assert(entry == NULL || entry->hash == local_hash);
 
 	MemoryContextSwitchTo(oldContext);
 
@@ -365,6 +385,7 @@ LookupTupleHashEntryHash(TupleHashTable hashtable, TupleTableSlot *slot,
 	hashtable->cur_eq_func = hashtable->tab_eq_func;
 
 	entry = LookupTupleHashEntry_internal(hashtable, slot, isnew, hash);
+	Assert(entry == NULL || entry->hash == hash);
 
 	MemoryContextSwitchTo(oldContext);
 
@@ -483,7 +504,7 @@ TupleHashTableHash_internal(struct tuplehash_hash *tb,
  * NB: This function may or may not change the memory context. Caller is
  * expected to change it back.
  */
-static TupleHashEntry
+static inline TupleHashEntry
 LookupTupleHashEntry_internal(TupleHashTable hashtable, TupleTableSlot *slot,
 							  bool *isnew, uint32 hash)
 {

@@ -960,6 +960,11 @@ DROP TABLE y;
 --
 -- error cases
 --
+WITH x(n, b) AS (SELECT 1)
+SELECT * FROM x;
+ERROR:  WITH query "x" has 1 columns available but 2 columns specified
+LINE 1: WITH x(n, b) AS (SELECT 1)
+             ^
 -- INTERSECT
 WITH RECURSIVE x(n) AS (SELECT 1 INTERSECT SELECT n+1 FROM x)
 	SELECT * FROM x;
@@ -1145,9 +1150,9 @@ WITH RECURSIVE foo(i) AS
           UNION ALL
        SELECT i+1 FROM foo WHERE i < 5) AS t
 ) SELECT * FROM foo;
-ERROR:  recursive reference to query "foo" must not appear within a subquery
-LINE 5:        (SELECT i+1 FROM foo WHERE i < 10
-                                ^
+ERROR:  recursive reference to query "foo" must not appear more than once
+LINE 7:        SELECT i+1 FROM foo WHERE i < 5) AS t
+                               ^
 WITH RECURSIVE foo(i) AS
     (values (1)
     UNION ALL
@@ -1770,7 +1775,7 @@ SELECT * FROM bug6051;
 CREATE TEMP TABLE bug6051_2 (i int);
 CREATE RULE bug6051_ins AS ON INSERT TO bug6051 DO INSTEAD
  INSERT INTO bug6051_2
- SELECT NEW.i;
+ VALUES(NEW.i);
 WITH t1 AS ( DELETE FROM bug6051 RETURNING * )
 INSERT INTO bug6051 SELECT * FROM t1;
 ERROR:  writable CTE queries cannot be themselves writable
@@ -1788,6 +1793,105 @@ SELECT * FROM bug6051_2;
  i 
 ---
 (0 rows)
+
+-- check INSERT...SELECT rule actions are disallowed on commands
+-- that have modifyingCTEs
+CREATE OR REPLACE RULE bug6051_ins AS ON INSERT TO bug6051 DO INSTEAD
+ INSERT INTO bug6051_2
+ SELECT NEW.i;
+WITH t1 AS ( DELETE FROM bug6051 RETURNING * )
+INSERT INTO bug6051 SELECT * FROM t1;
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
+-- silly example to verify that hasModifyingCTE flag is propagated
+CREATE TEMP TABLE bug6051_3 AS
+  SELECT a FROM generate_series(11,13) AS a;
+CREATE RULE bug6051_3_ins AS ON INSERT TO bug6051_3 DO INSTEAD
+  SELECT i FROM bug6051_2;
+BEGIN; SET LOCAL force_parallel_mode = on;
+WITH t1 AS ( DELETE FROM bug6051_3 RETURNING * )
+  INSERT INTO bug6051_3 SELECT * FROM t1;
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
+COMMIT;
+SELECT * FROM bug6051_3;
+ a  
+----
+ 12
+ 11
+ 13
+(3 rows)
+
+-- check case where CTE reference is removed due to optimization
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT q1 FROM
+(
+  WITH t_cte AS (SELECT * FROM int8_tbl t)
+  SELECT q1, (SELECT q2 FROM t_cte WHERE t_cte.q1 = i8.q1) AS t_sub
+  FROM int8_tbl i8
+) ss;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ss.q1
+   ->  Subquery Scan on ss
+         Output: ss.q1
+         ->  Seq Scan on public.int8_tbl i8
+               Output: i8.q1, NULL::bigint
+ Optimizer: Postgres query optimizer
+ Settings: gp_cte_sharing = 'on', optimizer = 'off'
+(8 rows)
+
+SELECT q1 FROM
+(
+  WITH t_cte AS (SELECT * FROM int8_tbl t)
+  SELECT q1, (SELECT q2 FROM t_cte WHERE t_cte.q1 = i8.q1) AS t_sub
+  FROM int8_tbl i8
+) ss;
+        q1        
+------------------
+              123
+              123
+ 4567890123456789
+ 4567890123456789
+ 4567890123456789
+(5 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT q1 FROM
+(
+  WITH t_cte AS MATERIALIZED (SELECT * FROM int8_tbl t)
+  SELECT q1, (SELECT q2 FROM t_cte WHERE t_cte.q1 = i8.q1) AS t_sub
+  FROM int8_tbl i8
+) ss;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ss.q1
+   ->  Subquery Scan on ss
+         Output: ss.q1
+         ->  Seq Scan on public.int8_tbl i8
+               Output: i8.q1, NULL::bigint
+ Optimizer: Postgres query optimizer
+ Settings: gp_cte_sharing = 'on', optimizer = 'off'
+(8 rows)
+
+SELECT q1 FROM
+(
+  WITH t_cte AS MATERIALIZED (SELECT * FROM int8_tbl t)
+  SELECT q1, (SELECT q2 FROM t_cte WHERE t_cte.q1 = i8.q1) AS t_sub
+  FROM int8_tbl i8
+) ss;
+        q1        
+------------------
+              123
+              123
+ 4567890123456789
+ 4567890123456789
+ 4567890123456789
+(5 rows)
 
 -- a truly recursive CTE in the same list
 ANALYZE y; -- There is a bug, the below case will fail for generating plan which execute ModifyTable on reader gang.
@@ -2273,6 +2377,31 @@ WITH t AS (
 )
 VALUES(FALSE);
 ERROR:  conditional DO INSTEAD rules are not supported for data-modifying statements in WITH
+CREATE OR REPLACE RULE y_rule AS ON INSERT TO y DO INSTEAD NOTHING;
+WITH t AS (
+	INSERT INTO y VALUES(0)
+)
+VALUES(FALSE);
+ERROR:  DO INSTEAD NOTHING rules are not supported for data-modifying statements in WITH
+CREATE OR REPLACE RULE y_rule AS ON INSERT TO y DO INSTEAD NOTIFY foo;
+WITH t AS (
+	INSERT INTO y VALUES(0)
+)
+VALUES(FALSE);
+ERROR:  DO INSTEAD NOTIFY rules are not supported for data-modifying statements in WITH
+CREATE OR REPLACE RULE y_rule AS ON INSERT TO y DO ALSO NOTIFY foo;
+WITH t AS (
+	INSERT INTO y VALUES(0)
+)
+VALUES(FALSE);
+ERROR:  DO ALSO rules are not supported for data-modifying statements in WITH
+CREATE OR REPLACE RULE y_rule AS ON INSERT TO y
+  DO INSTEAD (NOTIFY foo; NOTIFY bar);
+WITH t AS (
+	INSERT INTO y VALUES(0)
+)
+VALUES(FALSE);
+ERROR:  multi-statement DO INSTEAD rules are not supported for data-modifying statements in WITH
 DROP RULE y_rule ON y;
 -- check that parser lookahead for WITH doesn't cause any odd behavior
 create table foo (with baz);  -- fail, WITH is a reserved word
@@ -2290,19 +2419,19 @@ with ordinality as (select 1 as x) select * from ordinality;
 (1 row)
 
 -- check sane response to attempt to modify CTE relation
-WITH test AS (SELECT 42) INSERT INTO test VALUES (1);
-ERROR:  relation "test" does not exist
-LINE 1: WITH test AS (SELECT 42) INSERT INTO test VALUES (1);
-                                             ^
+WITH with_test AS (SELECT 42) INSERT INTO with_test VALUES (1);
+ERROR:  relation "with_test" does not exist
+LINE 1: WITH with_test AS (SELECT 42) INSERT INTO with_test VALUES (...
+                                                  ^
 -- check response to attempt to modify table with same name as a CTE (perhaps
 -- surprisingly it works, because CTEs don't hide tables from data-modifying
 -- statements)
-create temp table test (i int);
-with test as (select 42) insert into test select * from test;
-select * from test;
+create temp table with_test (i int);
+with with_test as (select 42) insert into with_test select * from with_test;
+select * from with_test;
  i  
 ----
  42
 (1 row)
 
-drop table test;
+drop table with_test;

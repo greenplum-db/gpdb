@@ -211,6 +211,7 @@ DecodeXLogOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 		case XLOG_FPI_FOR_HINT:
 		case XLOG_FPI:
 		case XLOG_NEXTRELFILENODE:
+		case XLOG_OVERWRITE_CONTRECORD:
 			break;
 		default:
 			elog(ERROR, "unexpected RM_XLOG_ID record type: %u", info);
@@ -229,12 +230,15 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	uint8		info = XLogRecGetInfo(r) & XLOG_XACT_OPMASK;
 
 	/*
-	 * No point in doing anything yet, data could not be decoded anyway. It's
-	 * ok not to call ReorderBufferProcessXid() in that case, except in the
-	 * assignment case there'll not be any later records with the same xid;
-	 * and in the assignment case we'll not decode those xacts.
+	 * If the snapshot isn't yet fully built, we cannot decode anything, so
+	 * bail out.
+	 *
+	 * However, it's critical to process XLOG_XACT_ASSIGNMENT records even
+	 * when the snapshot is being built: it is possible to get later records
+	 * that require subxids to be properly assigned.
 	 */
-	if (SnapBuildCurrentState(builder) < SNAPBUILD_FULL_SNAPSHOT)
+	if (SnapBuildCurrentState(builder) < SNAPBUILD_FULL_SNAPSHOT &&
+		info != XLOG_XACT_ASSIGNMENT)
 		return;
 
 	switch (info)
@@ -812,19 +816,17 @@ DecodeDelete(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	if (target_node.dbNode != ctx->slot->data.database)
 		return;
 
-	/*
-	 * Super deletions are irrelevant for logical decoding, it's driven by the
-	 * confirmation records.
-	 */
-	if (xlrec->flags & XLH_DELETE_IS_SUPER)
-		return;
-
 	/* output plugin doesn't look for this origin, no need to queue */
 	if (FilterByOrigin(ctx, XLogRecGetOrigin(r)))
 		return;
 
 	change = ReorderBufferGetChange(ctx->reorder);
-	change->action = REORDER_BUFFER_CHANGE_DELETE;
+
+	if (xlrec->flags & XLH_DELETE_IS_SUPER)
+		change->action = REORDER_BUFFER_CHANGE_INTERNAL_SPEC_ABORT;
+	else
+		change->action = REORDER_BUFFER_CHANGE_DELETE;
+
 	change->origin_id = XLogRecGetOrigin(r);
 
 	memcpy(&change->data.tp.relnode, &target_node, sizeof(RelFileNode));

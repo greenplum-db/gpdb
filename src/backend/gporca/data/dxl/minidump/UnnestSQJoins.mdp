@@ -27,7 +27,7 @@ WHERE
           <dxl:CostParam Name="NLJFactor" Value="1024.000000" LowerBound="1023.500000" UpperBound="1024.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:Hint MinNumOfPartsToRequireSortOnInsert="2147483647" JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
+      <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
       <dxl:TraceFlags Value="102001,102002,102003,102144,103001,103026,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Stacktrace/>
@@ -131,13 +131,13 @@ WHERE
         <dxl:Commutator Mdid="0.410.1.0"/>
         <dxl:InverseOp Mdid="0.411.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2654.1.0" Name="pg_amop_opr_opc_index" IsClustered="false" KeyColumns="4,0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11">
+      <dxl:Index Mdid="0.2654.1.0" Name="pg_amop_opr_opc_index" IsClustered="false" KeyColumns="4,0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2652.1.0" Name="pg_am_oid_index" IsClustered="false" KeyColumns="26" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32">
+      <dxl:Index Mdid="0.2652.1.0" Name="pg_am_oid_index" IsClustered="false" KeyColumns="26" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -501,26 +501,26 @@ WHERE
         <dxl:Commutator Mdid="0.1869.1.0"/>
         <dxl:InverseOp Mdid="0.1862.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2653.1.0" Name="pg_amop_opc_strat_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11">
+      <dxl:Index Mdid="0.2653.1.0" Name="pg_amop_opc_strat_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2651.1.0" Name="pg_am_name_index" IsClustered="false" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32">
+      <dxl:Index Mdid="0.2651.1.0" Name="pg_am_name_index" IsClustered="false" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2686.1.0" Name="pg_opclass_am_name_nsp_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14">
+      <dxl:Index Mdid="0.2686.1.0" Name="pg_opclass_am_name_nsp_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2687.1.0" Name="pg_opclass_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14">
+      <dxl:Index Mdid="0.2687.1.0" Name="pg_opclass_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
@@ -663,7 +663,7 @@ WHERE
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2602.1.1" Name="pg_amop" Rows="702.000000"/>
       <dxl:RelationStatistics Mdid="2.2616.1.1" Name="pg_opclass" Rows="141.000000"/>
-      <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amopclaid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -708,7 +708,7 @@ WHERE
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="opcamid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -970,7 +970,7 @@ WHERE
       <dxl:ColumnStatistics Mdid="1.2601.1.1.1" Name="amstrategies" Width="2.000000"/>
       <dxl:ColumnStatistics Mdid="1.2601.1.1.0" Name="amname" Width="64.000000"/>
       <dxl:RelationStatistics Mdid="2.2601.1.1" Name="pg_am" Rows="5.000000"/>
-      <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>

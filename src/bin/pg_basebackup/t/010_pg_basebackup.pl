@@ -3,10 +3,11 @@ use warnings;
 use Cwd;
 use Config;
 use File::Basename qw(basename dirname);
+use File::Compare;
 use File::Path qw(rmtree);
 use PostgresNode;
 use TestLib;
-use Test::More tests => 106 + 15;
+use Test::More tests => 107 + 25;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -36,7 +37,7 @@ if (open my $badchars, '>>', "$tempdir/pgdata/FOO\xe0\xe0\xe0BAR")
 }
 
 $node->set_replication_conf();
-system_or_bail 'pg_ctl', '-D', $pgdata, 'reload';
+$node->reload;
 
 command_fails(['pg_basebackup', '-D', "$tempdir/backup" ],
 	'pg_basebackup fails without specifiying the target greenplum db id');
@@ -68,8 +69,8 @@ $node->restart;
 
 # Write some files to test that they are not copied.
 foreach my $filename (
-	qw(backup_label tablespace_map postgresql.auto.conf.tmp current_logfiles.tmp)
-  )
+	qw(backup_label tablespace_map postgresql.auto.conf.tmp
+	current_logfiles.tmp global/pg_internal.init.123))
 {
 	open my $file, '>>', "$pgdata/$filename";
 	print $file "DONOTCOPY";
@@ -138,7 +139,7 @@ foreach my $dirname (
 # These files should not be copied.
 foreach my $filename (
 	qw(postgresql.auto.conf.tmp postmaster.opts postmaster.pid tablespace_map current_logfiles.tmp
-	global/pg_internal.init))
+	global/pg_internal.init global/pg_internal.init.123))
 {
 	ok(!-f "$tempdir/backup/$filename", "$filename not copied");
 }
@@ -176,6 +177,52 @@ $node->command_ok([ 'pg_basebackup', '-D', "$tempdir/tarbackup", '--target-gp-db
 	'tar format');
 ok(-f "$tempdir/tarbackup/base.tar", 'backup tar was created');
 rmtree("$tempdir/tarbackup");
+
+########################## Test that the headers are zeroed out in both the primary and mirror WAL files
+my $compare_tempdir = "$tempdir/checksum_test";
+
+# Ensure that when pg_basebackup is run that the last WAL segment file
+# containing the BACKUP_END and wal SWITCH records match on both
+# the primary and mirror segment. We want to ensure that all pages after
+# the wal SWITCH record are all zeroed out. Previously, the primary
+# segment's WAL segment file would have interleaved page headers instead
+# of all zeros. Although the WAL segment files from the primary and
+# mirror segments were logically the same, they were different physically
+# and would lead to checksum mismatches for external tools that checked
+# for that.
+
+#Insert data and then run pg_basebackup
+$node->safe_psql('postgres',  'CREATE TABLE zero_header_test as SELECT generate_series(1,1000);');
+$node->command_ok([ 'pg_basebackup', '-D', $compare_tempdir, '--target-gp-dbid', '123' , '-X', 'stream'],
+	'pg_basebackup wal file comparison test');
+ok( -f "$compare_tempdir/PG_VERSION", 'pg_basebackup ran successfully');
+
+my $current_wal_file = $node->safe_psql('postgres', "SELECT pg_walfile_name(pg_current_wal_lsn());");
+my $primary_wal_file_path = "$pgdata/pg_wal/$current_wal_file";
+my $mirror_wal_file_path = "$compare_tempdir/pg_wal/$current_wal_file";
+
+## Test that primary and mirror WAL file is the same
+ok(compare($primary_wal_file_path, $mirror_wal_file_path) eq 0, "wal file comparison");
+
+## Test that all the bytes after the last written record in the WAL file are zeroed out
+my $total_bytes_cmd = 'pg_controldata ' . $compare_tempdir .  ' | grep "Bytes per WAL segment:" |  awk \'{print $5}\'';
+my $total_allocated_bytes = `$total_bytes_cmd`;
+
+my $current_lsn_cmd = 'pg_waldump -f ' . $primary_wal_file_path . ' | grep "SWITCH" | awk \'{print $10}\' | sed "s/,//"';
+my $current_lsn = `$current_lsn_cmd`;
+chomp($current_lsn);
+my $current_byte_offset = $node->safe_psql('postgres', "SELECT file_offset FROM pg_walfile_name_offset('$current_lsn');");
+
+#Get offset of last written record
+open my $fh, '<:raw', $primary_wal_file_path;
+#Since pg_walfile_name_offset does not account for the wal switch record, we need to add it ourselves
+my $wal_switch_record_len = 32;
+seek $fh, $current_byte_offset + $wal_switch_record_len, 0;
+my $bytes_read = "";
+my $len_bytes_to_validate = $total_allocated_bytes - $current_byte_offset;
+read($fh, $bytes_read, $len_bytes_to_validate);
+close $fh;
+ok($bytes_read =~ /\A\x00*+\z/, 'make sure wal segment is zeroed');
 
 $node->command_fails(
 	[ 'pg_basebackup', '-D', "$tempdir/backup_foo", '--target-gp-dbid', '123', '-Fp', "-T=/foo" ],
@@ -503,16 +550,14 @@ my $file_corrupt2 = $node->safe_psql('postgres',
 	q{SELECT b INTO corrupt2 FROM generate_series(1,2) AS b; ALTER TABLE corrupt2 SET (autovacuum_enabled=false); SELECT pg_relation_filepath('corrupt2')}
 );
 
-# set page header and block sizes
-my $pageheader_size = 24;
+# get block size for corruption steps
 my $block_size = $node->safe_psql('postgres', 'SHOW block_size;');
 
 # induce corruption
+# Greenplum invokes pg_ctl to start, haven't defined $self->{_pid}
+# $node->stop;
 system_or_bail 'pg_ctl', '-D', $pgdata, 'stop';
-open $file, '+<', "$pgdata/$file_corrupt1";
-seek($file, $pageheader_size, 0);
-syswrite($file, "\0\0\0\0\0\0\0\0\0");
-close $file;
+$node->corrupt_page_checksum($file_corrupt1, 0);
 system_or_bail 'pg_ctl', '-o', '-c gp_role=utility --gp_dbid=1 --gp_contentid=-1', '-D', $pgdata, 'start';
 
 $node->command_checks_all(
@@ -524,15 +569,13 @@ $node->command_checks_all(
 rmtree("$tempdir/backup_corrupt");
 
 # induce further corruption in 5 more blocks
+# Greenplum invokes pg_ctl to start, haven't defined $self->{_pid}
+# $node->stop;
 system_or_bail 'pg_ctl', '-D', $pgdata, 'stop';
-open $file, '+<', "$pgdata/$file_corrupt1";
 for my $i (1 .. 5)
 {
-	my $offset = $pageheader_size + $i * $block_size;
-	seek($file, $offset, 0);
-	syswrite($file, "\0\0\0\0\0\0\0\0\0");
+	$node->corrupt_page_checksum($file_corrupt1, $i * $block_size);
 }
-close $file;
 system_or_bail 'pg_ctl', '-o', '-c gp_role=utility --gp_dbid=1 --gp_contentid=-1', '-D', $pgdata, 'start';
 
 $node->command_checks_all(
@@ -544,11 +587,10 @@ $node->command_checks_all(
 rmtree("$tempdir/backup_corrupt2");
 
 # induce corruption in a second file
+# Greenplum invokes pg_ctl to start, haven't defined $self->{_pid}
+# $node->stop;
 system_or_bail 'pg_ctl', '-D', $pgdata, 'stop';
-open $file, '+<', "$pgdata/$file_corrupt2";
-seek($file, $pageheader_size, 0);
-syswrite($file, "\0\0\0\0\0\0\0\0\0");
-close $file;
+$node->corrupt_page_checksum($file_corrupt2, 0);
 system_or_bail 'pg_ctl', '-o', '-c gp_role=utility --gp_dbid=1 --gp_contentid=-1', '-D', $pgdata, 'start';
 
 $node->command_checks_all(
@@ -655,3 +697,21 @@ $node->command_ok([ 'pg_basebackup', '-D', $gpbackup_test_dir, '--target-gp-dbid
 
 ok(! -d "$gpbackup_test_dir/backups", 'gpbackup default backup directory should be excluded');
 rmtree($gpbackup_test_dir);
+
+#GPDB: write config files only
+mkdir("$tempdir/backup");
+
+$node->command_fails([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123',
+	                   '--write-conf-files-only', '--create-slot', '--slot', "wal_replication_slot"],
+	                  'pg_basebackup --write-conf-files-only fails with --create_slot');
+
+$node->command_fails([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123',
+	                   '--write-conf-files-only', '--write-recovery-conf' ],
+	                   'pg_basebackup --write-conf-files-only fails with --write-recovery-conf');
+
+$node->command_ok([ 'pg_basebackup', '-D', "$tempdir/backup", '--target-gp-dbid', '123', '--write-conf-files-only' ],
+	'pg_basebackup runs with write-conf-files-only');
+ok(-f "$tempdir/backup/internal.auto.conf", 'internal.auto.conf was created');
+ok(-f "$tempdir/backup/postgresql.auto.conf", 'postgresql.auto.conf was created');
+ok(-f "$tempdir/backup/standby.signal",       'standby.signal was created');
+rmtree("$tempdir/backup");

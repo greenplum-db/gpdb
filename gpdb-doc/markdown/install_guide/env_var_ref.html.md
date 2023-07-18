@@ -15,7 +15,7 @@ Set these in your user's startup shell profile \(such as `~/.bashrc` or `~/.bash
 
 ## <a id="topic2"></a>Required Environment Variables 
 
-**Note:** `GPHOME`, `PATH` and `LD_LIBRARY_PATH` can be set by sourcing the `greenplum_path.sh` file from your Greenplum Database installation directory
+> **Note** `GPHOME`, `PATH` and `LD_LIBRARY_PATH` can be set by sourcing the `greenplum_path.sh` file from your Greenplum Database installation directory
 
 **Parent topic:** [Greenplum Environment Variables](env_var_ref.html)
 
@@ -46,13 +46,13 @@ LD_LIBRARY_PATH=$GPHOME/lib
 export LD_LIBRARY_PATH
 ```
 
-### <a id="topic6"></a>MASTER\_DATA\_DIRECTORY 
+### <a id="topic6"></a>COORDINATOR\_DATA\_DIRECTORY 
 
 This should point to the directory created by the gpinitsystem utility in the coordinator data directory location. For example:
 
 ```
-MASTER_DATA_DIRECTORY=/data/coordinator/gpseg-1
-export MASTER_DATA_DIRECTORY
+COORDINATOR_DATA_DIRECTORY=/data/coordinator/gpseg-1
+export COORDINATOR_DATA_DIRECTORY
 ```
 
 ## <a id="topic7"></a>Optional Environment Variables 
@@ -83,7 +83,7 @@ The password used if the server demands password authentication. Use of this env
 
 ### <a id="topic13"></a>PGPASSFILE 
 
-The name of the password file to use for lookups. If not set, it defaults to `~/.pgpass`. See the topic about [The Password File](https://www.postgresql.org/docs/9.4/libpq-pgpass.html) in the PostgreSQL documentation for more information.
+The name of the password file to use for lookups. If not set, it defaults to `~/.pgpass`. See the topic about [The Password File](https://www.postgresql.org/docs/12/libpq-pgpass.html) in the PostgreSQL documentation for more information.
 
 ### <a id="topic14"></a>PGOPTIONS 
 

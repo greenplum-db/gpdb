@@ -1,11 +1,11 @@
 -- @Description Tests with faut inject
 --
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t1 select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 --------- Test1: fault injection end-point shared memory slot full on QE
 2: SELECT gp_inject_fault('alloc_endpoint_slot_full', 'reset', 2);
@@ -48,7 +48,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
@@ -197,7 +197,7 @@ DECLARE
  t        
 (1 row)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 -- check no endpoint info
 1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c1' or endpointname='DUMMYENDPOINTNAME';
  auth_token | state 
@@ -239,7 +239,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -301,7 +301,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
@@ -358,7 +358,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id4 | token_id | host_id | port_id | READY
  endpoint_id4 | token_id | host_id | port_id | READY
@@ -476,7 +476,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id5 | token_id | host_id | port_id | READY
  endpoint_id5 | token_id | host_id | port_id | READY
@@ -576,7 +576,7 @@ SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 5, 5
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 7 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id7 | token_id | host_id | port_id | READY
  endpoint_id7 | token_id | host_id | port_id | READY
@@ -610,7 +610,7 @@ DECLARE
  f        
 (1 row)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 
 SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'resume', 2);
  gp_inject_fault 
@@ -638,7 +638,7 @@ ERROR:  endpoint is not available because the parallel retrieve cursor was abort
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
 ERROR:  cursor "c1" does not exist
 1: END;
-END
+ROLLBACK
 1: SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', 2);
  gp_inject_fault 
 -----------------
@@ -656,15 +656,15 @@ END
 (1 row)
 
 DROP TABLE t1;
-DROP
+DROP TABLE
 
 -- Test7: error inject at the 1000th time while retrieving tuples from endpoint. other retrieve session finished.
 DROP TABLE IF EXISTS t2;
-DROP
+DROP TABLE
 CREATE TABLE t2 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t2 select generate_series(1,10000);
-INSERT 10000
+INSERT 0 10000
 
 SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'reset', dbid) FROM gp_segment_configuration WHERE content=1 AND role='p';
  gp_inject_fault 
@@ -700,7 +700,7 @@ SELECT gp_inject_fault('fetch_tuples_from_endpoint', 'suspend', '', '', '', 800,
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t2;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id6 | token_id | host_id | port_id | READY
  endpoint_id6 | token_id | host_id | port_id | READY
@@ -770,4 +770,4 @@ ROLLBACK
 (1 row)
 
 DROP TABLE t2;
-DROP
+DROP TABLE

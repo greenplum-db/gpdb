@@ -95,7 +95,7 @@ SELECT * FROM machines WHERE ip_address IN
 ('192.0.2.43'));
 ```
 
-**Note:** For simple `IN` tests, it is better to rely on the list-of-scalars form of `IN` than to write a `VALUES` query as shown above. The list of scalars method requires less writing and is often more efficient.
+> **Note** For simple `IN` tests, it is better to rely on the list-of-scalars form of `IN` than to write a `VALUES` query as shown above. The list of scalars method requires less writing and is often more efficient.
 
 ## <a id="section7"></a>Compatibility 
 

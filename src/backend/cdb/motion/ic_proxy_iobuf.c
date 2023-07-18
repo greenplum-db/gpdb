@@ -151,13 +151,14 @@ ic_proxy_ibuf_push(ICProxyIBuf *ibuf,
 			/* have a complete header now */
 
 			packet_size = ibuf->get_packet_size(ibuf->buf);
-			delta = Min(packet_size - ibuf->len, size);
-
-			memcpy(ibuf->buf + ibuf->len, data, delta);
-			ibuf->len += delta;
-			data += delta;
-			size -= delta;
-
+			if (packet_size > ibuf->len)
+			{
+				delta = Min(packet_size - ibuf->len, size);
+				memcpy(ibuf->buf + ibuf->len, data, delta);
+				ibuf->len += delta;
+				data += delta;
+				size -= delta;
+			}
 			if (ibuf->len < packet_size)
 				/* still not having a complete packet */
 				return;
@@ -175,7 +176,7 @@ ic_proxy_ibuf_push(ICProxyIBuf *ibuf,
 	{
 		packet_size = ibuf->get_packet_size(data);
 
-		if (packet_size <= size)
+		if (packet_size > 0 && packet_size <= size)
 		{
 			/* got a complete pkt */
 			callback(opaque, data, packet_size);
@@ -362,27 +363,6 @@ ic_proxy_obuf_push(ICProxyOBuf *obuf,
 		memcpy(obuf->buf + obuf->len, data, size);
 		obuf->len += size;
 	}
-}
-
-/*
- * Set the packet size of a b2c one.
- *
- * The b2c packet only contains a 4-byte packet length in host byte-order.
- */
-static void
-ic_proxy_obuf_set_packet_size_b2c(void *data, uint16 size)
-{
-	*(uint32 *) data = size;
-}
-
-/*
- * Initialize an obuf for b2c packet.
- */
-void
-ic_proxy_obuf_init_b2c(ICProxyOBuf *obuf)
-{
-	ic_proxy_obuf_init(obuf, PACKET_HEADER_SIZE,
-					   ic_proxy_obuf_set_packet_size_b2c);
 }
 
 /*

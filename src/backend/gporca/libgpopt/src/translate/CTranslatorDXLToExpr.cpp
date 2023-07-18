@@ -34,7 +34,7 @@
 #include "gpopt/operators/CLogicalDifference.h"
 #include "gpopt/operators/CLogicalDifferenceAll.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalExternalGet.h"
+#include "gpopt/operators/CLogicalForeignGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalInsert.h"
@@ -429,7 +429,7 @@ CTranslatorDXLToExpr::PexprLogical(const CDXLNode *dxlnode)
 	switch (dxl_op->GetDXLOperator())
 	{
 		case EdxlopLogicalGet:
-		case EdxlopLogicalExternalGet:
+		case EdxlopLogicalForeignGet:
 			return CTranslatorDXLToExpr::PexprLogicalGet(dxlnode);
 		case EdxlopLogicalTVF:
 			return CTranslatorDXLToExpr::PexprLogicalTVF(dxlnode);
@@ -593,9 +593,11 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 	const IMDRelation *pmdrel = m_pmda->RetrieveRel(table_descr->MDId());
 	if (pmdrel->IsPartitioned())
 	{
-		GPOS_ASSERT(EdxlopLogicalGet == edxlopid);
+		GPOS_ASSERT(EdxlopLogicalGet == edxlopid ||
+					EdxlopLogicalForeignGet == edxlopid);
 
 		IMdIdArray *partition_mdids = pmdrel->ChildPartitionMdids();
+		IMdIdArray *foreign_server_mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
 		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
 		{
 			IMDId *part_mdid = (*partition_mdids)[ul];
@@ -607,13 +609,30 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 						   GPOS_WSZ_LIT("Multi-level partitioned tables"));
 			}
+
+			// store array of foreign partitions
+			IMDId *foreign_server_mdid = nullptr;
+			if (IMDRelation::ErelstorageForeign ==
+				partrel->RetrieveRelStorageType())
+			{
+				foreign_server_mdid = partrel->ForeignServer();
+				foreign_server_mdid->AddRef();
+			}
+			else
+			{
+				// not foreign, store as invalid mdid
+				foreign_server_mdid =
+					GPOS_NEW(m_mp) CMDIdGPDB(CMDIdGPDB::m_mdid_invalid_key);
+			}
+			foreign_server_mdids->Append(foreign_server_mdid);
 		}
 
 		// generate a part index id
 		ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
 		partition_mdids->AddRef();
-		popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(
-			m_mp, pname, ptabdesc, part_idx_id, partition_mdids);
+		popGet = GPOS_NEW(m_mp)
+			CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id,
+							   partition_mdids, foreign_server_mdids);
 		CLogicalDynamicGet *popDynamicGet =
 			CLogicalDynamicGet::PopConvert(popGet);
 
@@ -628,8 +647,8 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 		}
 		else
 		{
-			GPOS_ASSERT(EdxlopLogicalExternalGet == edxlopid);
-			popGet = GPOS_NEW(m_mp) CLogicalExternalGet(m_mp, pname, ptabdesc);
+			GPOS_ASSERT(EdxlopLogicalForeignGet == edxlopid);
+			popGet = GPOS_NEW(m_mp) CLogicalForeignGet(m_mp, pname, ptabdesc);
 		}
 
 		// get the output column references
@@ -778,16 +797,20 @@ CTranslatorDXLToExpr::PexprCastPrjElem(IMDId *pmdidSource, IMDId *mdid_dest,
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+		CExpression *pexprCastScalarFunc = CUtils::PexprFuncElemExpr(
+			m_mp, m_pmda, mdid_func, parrayCoerceCast->GetSrcElemTypeMdId(),
+			parrayCoerceCast->TypeModifier());
+
 		pexprCast = GPOS_NEW(m_mp) CExpression(
 			m_mp,
 			GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-				m_mp, parrayCoerceCast->GetCastFuncMdId(), mdid_dest,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				m_mp, mdid_dest, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			GPOS_NEW(m_mp) CExpression(
-				m_mp, GPOS_NEW(m_mp) CScalarIdent(m_mp, pcrToCast)));
+			GPOS_NEW(m_mp)
+				CExpression(m_mp, GPOS_NEW(m_mp) CScalarIdent(m_mp, pcrToCast)),
+			pexprCastScalarFunc);
 	}
 	else
 	{
@@ -1797,7 +1820,7 @@ CTranslatorDXLToExpr::PexprLogicalSeqPr(const CDXLNode *dxlnode)
 		{
 			// if no partition-by columns, window functions need gathered input
 			pds = GPOS_NEW(m_mp) CDistributionSpecSingleton(
-				CDistributionSpecSingleton::EstMaster);
+				CDistributionSpecSingleton::EstCoordinator);
 		}
 		colref_array->Release();
 
@@ -2120,7 +2143,7 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type, table_descr->GetExecuteAsUserId(),
-		table_descr->LockMode());
+		table_descr->LockMode(), table_descr->GetAssignedQueryIdForTargetRel());
 
 	const ULONG ulColumns = table_descr->Arity();
 	for (ULONG ul = 0; ul < ulColumns; ul++)
@@ -2178,9 +2201,9 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	phmiulAttnoColMapping->Release();
 	phmululColMapping->Release();
 
-	if (IMDRelation::EreldistrMasterOnly == rel_distr_policy)
+	if (IMDRelation::EreldistrCoordinatorOnly == rel_distr_policy)
 	{
-		COptCtxt::PoctxtFromTLS()->SetHasMasterOnlyTables();
+		COptCtxt::PoctxtFromTLS()->SetHasCoordinatorOnlyTables();
 	}
 
 	if (IMDRelation::EreldistrReplicated == rel_distr_policy)
@@ -2318,9 +2341,9 @@ CTranslatorDXLToExpr::PtabdescFromCTAS(CDXLLogicalCTAS *pdxlopCTAS)
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type,
-		0,	// TODO:  - Mar 5, 2014; ulExecuteAsUser
-		-1	// GPDB_12_MERGE_FIXME: Extract the lockmode from CTE
-	);
+		0,	// ulExecuteAsUser, use permissions of current user
+		3,	// CTEs always use a RowExclusiveLock on the table. See createas.c
+		UNASSIGNED_QUERYID);
 
 	// populate column information from the dxl table descriptor
 	CDXLColDescrArray *dxl_col_descr_array =
@@ -2955,9 +2978,7 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 			CMDArrayCoerceCastGPDB *parrayCoerceCast =
 				(CMDArrayCoerceCastGPDB *) pmdcast;
 			pop = GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-				m_mp, parrayCoerceCast->GetCastFuncMdId(), mdid_return_type,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				m_mp, mdid_return_type, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location());
 		}
@@ -2972,7 +2993,8 @@ CTranslatorDXLToExpr::PexprScalarFunc(const CDXLNode *pdxlnFunc)
 		pop = GPOS_NEW(m_mp) CScalarFunc(
 			m_mp, mdid_func, mdid_return_type, pdxlopFuncExpr->TypeModifier(),
 			GPOS_NEW(m_mp) CWStringConst(
-				m_mp, (pmdfunc->Mdname().GetMDName())->GetBuffer()));
+				m_mp, (pmdfunc->Mdname().GetMDName())->GetBuffer()),
+			pdxlopFuncExpr->IsFuncVariadic());
 	}
 
 	CExpression *pexprFunc = nullptr;
@@ -3190,7 +3212,7 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		GPOS_NEW(m_mp)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
 		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
-		agg_func_kind, dxl_op->GetArgTypes());
+		agg_func_kind, dxl_op->GetArgTypes(), pmdagg->IsAggRepSafe());
 
 	CExpression *pexprAggFunc = nullptr;
 
@@ -3657,15 +3679,18 @@ CTranslatorDXLToExpr::PexprScalarCast(const CDXLNode *pdxlnCast)
 	{
 		CMDArrayCoerceCastGPDB *parrayCoerceCast =
 			(CMDArrayCoerceCastGPDB *) pmdcast;
+		IMDId *mdid_func = pmdcast->GetCastFuncMdId();
+		CExpression *pexprCastScalarFunc = CUtils::PexprFuncElemExpr(
+			m_mp, m_pmda, mdid_func, parrayCoerceCast->GetSrcElemTypeMdId(),
+			parrayCoerceCast->TypeModifier());
+
 		pexpr = GPOS_NEW(m_mp) CExpression(
 			m_mp,
 			GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-				m_mp, parrayCoerceCast->GetCastFuncMdId(), mdid_type,
-				parrayCoerceCast->TypeModifier(),
-				parrayCoerceCast->IsExplicit(),
+				m_mp, mdid_type, parrayCoerceCast->TypeModifier(),
 				(COperator::ECoercionForm) parrayCoerceCast->GetCoercionForm(),
 				parrayCoerceCast->Location()),
-			pexprChild);
+			pexprChild, pexprCastScalarFunc);
 	}
 	else
 	{
@@ -3769,12 +3794,11 @@ CTranslatorDXLToExpr::PexprScalarArrayCoerceExpr(
 	CDXLScalarArrayCoerceExpr *dxl_op =
 		CDXLScalarArrayCoerceExpr::Cast(pdxlnArrayCoerceExpr->GetOperator());
 
-	GPOS_ASSERT(1 == pdxlnArrayCoerceExpr->Arity());
+	GPOS_ASSERT(2 == pdxlnArrayCoerceExpr->Arity());
 	CDXLNode *child_dxlnode = (*pdxlnArrayCoerceExpr)[0];
+	CDXLNode *elemexpr_dxlnode = (*pdxlnArrayCoerceExpr)[1];
 	CExpression *pexprChild = Pexpr(child_dxlnode);
-
-	IMDId *element_func = dxl_op->GetCoerceFuncMDid();
-	element_func->AddRef();
+	CExpression *pexprElem = Pexpr(elemexpr_dxlnode);
 
 	IMDId *result_type_mdid = dxl_op->GetResultTypeMdId();
 	result_type_mdid->AddRef();
@@ -3784,12 +3808,11 @@ CTranslatorDXLToExpr::PexprScalarArrayCoerceExpr(
 	return GPOS_NEW(m_mp) CExpression(
 		m_mp,
 		GPOS_NEW(m_mp) CScalarArrayCoerceExpr(
-			m_mp, element_func, result_type_mdid, dxl_op->TypeModifier(),
-			dxl_op->IsExplicit(),
+			m_mp, result_type_mdid, dxl_op->TypeModifier(),
 			(COperator::ECoercionForm)
 				dxl_coerce_format,	// map Coercion Form directly based on position in enum
 			dxl_op->GetLocation()),
-		pexprChild);
+		pexprChild, pexprElem);
 }
 
 //---------------------------------------------------------------------------

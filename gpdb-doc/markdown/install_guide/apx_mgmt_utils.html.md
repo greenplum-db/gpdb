@@ -18,7 +18,7 @@ The following Greenplum Database management utilities are located in `$GPHOME/bi
 </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpcheckperf.html">gpcheckperf</a>
 </li>
-<li class="li"><a class="xref" href="../utility_guide/ref/gpcopy.html">gpcopy</a> (Tanzu Greenplum only) </li>
+<li class="li"><a class="xref" href="../utility_guide/ref/gpcopy.html">gpcopy</a> (VMware Greenplum only) </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpdeletesystem.html">gpdeletesystem</a>
 </li>
 <li class="li"><a class="xref" href="../utility_guide/ref/gpinitstandby.html">gpinitstandby</a>

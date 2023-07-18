@@ -38,17 +38,17 @@
 (exited with code 0)
 
 create table fsync_ao(a int, b int) with (appendoptimized = true) distributed by (a);
-CREATE
+CREATE TABLE
 create table fsync_co(a int, b int) with (appendoptimized = true, orientation = column) distributed by (a);
-CREATE
+CREATE TABLE
 -- no fsync requests should ever be registered for unlogged tables
 create unlogged table ul_fsync_co(a int, b int, c int) using ao_column distributed by (a);
-CREATE
+CREATE TABLE
 
 insert into fsync_ao select i, i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 insert into fsync_co select i, i from generate_series(1,10)i;
-INSERT 10
+INSERT 0 10
 
 -- Fault to check that mirror has flushed pending fsync requests.
 select gp_inject_fault_infinite('restartpoint_guts', 'skip', dbid) from gp_segment_configuration where role = 'm' and content = 0;
@@ -76,11 +76,11 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 1, dbid) from gp_segme
 -- Write ao and co data files including aoseg & gp_fastsequence.
 -- These should be fsync-ed by checkpoint & restartpoint.
 insert into fsync_ao select i, i from generate_series(1,20)i;
-INSERT 20
+INSERT 0 20
 insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
+INSERT 0 20
 insert into ul_fsync_co select i, i, i from generate_series(1,20)i;
-INSERT 20
+INSERT 0 20
 
 -- Inject fault to count relfiles fsync'ed by checkpointer on mirror.
 select gp_inject_fault_infinite('ao_fsync_counter', 'skip', dbid) from gp_segment_configuration where content=0 and role='m';
@@ -100,13 +100,17 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 2, dbid) from gp_segme
 (1 row)
 
 -- Validate that the number of files fsync'ed by checkpointer (on
--- mirror).  `num times hit` is corresponding to the number of files
--- synced by `ao_fsync_counter` fault.
+-- mirror).  This should match the number of files for fsync_ao and fsync_co.
+select gp_wait_until_triggered_fault('ao_fsync_counter', 3, dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
 select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='m';
  gp_inject_fault                                                                                                                                                                                                        
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'3' 
  
+ Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'3' 
 (1 row)
 
 -- Test vacuum compaction with more than one segment file per table.
@@ -116,19 +120,19 @@ select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_confi
 1: begin;
 BEGIN
 1: insert into fsync_ao select i, i from generate_series(1,20)i;
-INSERT 20
+INSERT 0 20
 1: insert into fsync_co select i, i from generate_series(1,20)i;
-INSERT 20
+INSERT 0 20
 1: insert into ul_fsync_co select i, i, i from generate_series(1,20)i;
-INSERT 20
+INSERT 0 20
 insert into fsync_ao select i, i from generate_series(21,40)i;
-INSERT 20
+INSERT 0 20
 insert into fsync_co select i, i from generate_series(21,40)i;
-INSERT 20
+INSERT 0 20
 insert into ul_fsync_co select i, i, i from generate_series(1,40)i;
-INSERT 40
+INSERT 0 40
 1: end;
-END
+COMMIT
 -- Generate some invisible tuples in both the tables so as to trigger
 -- compaction during vacuum.
 delete from fsync_ao where a > 20;
@@ -203,6 +207,11 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 3, dbid) from gp_segme
 (1 row)
 
 -- Expect the segment files that were updated by vacuum to be fsync'ed.
+select gp_wait_until_triggered_fault('ao_fsync_counter', 12, dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
 select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='m';
  gp_inject_fault                                                                                                                                                                                                         
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -215,23 +224,23 @@ select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_confi
 update fsync_co set b = -a;
 UPDATE 70
 drop table fsync_co;
-DROP
+DROP TABLE
 update ul_fsync_co set c = -a;
 UPDATE 23
 drop table ul_fsync_co;
-DROP
+DROP TABLE
 -- Drop but don't commit the transaction.
 begin;
 BEGIN
 update fsync_ao set b = -a;
 UPDATE 50
 drop table fsync_ao;
-DROP
+DROP TABLE
 abort;
-ABORT
+ROLLBACK
 -- Fsync request for the following insert should not be forgotten.
 insert into fsync_ao select * from generate_series(41,60)i;
-INSERT 20
+INSERT 0 20
 
 checkpoint;
 CHECKPOINT
@@ -244,11 +253,16 @@ select gp_wait_until_triggered_fault('restartpoint_guts', 4, dbid) from gp_segme
 
 -- Expect that fsync is only performed for fsync_ao table (1 file) but
 -- not for fsync_co table because it was dropped after being updated.
+select gp_wait_until_triggered_fault('ao_fsync_counter', 13, dbid) from gp_segment_configuration where content=0 and role='m';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
 select gp_inject_fault('ao_fsync_counter', 'status', dbid) from gp_segment_configuration where content=0 and role='m';
  gp_inject_fault                                                                                                                                                                                                         
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- 
  Success: fault name:'ao_fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'13' 
+ 
 (1 row)
 
 -- Reset all faults.

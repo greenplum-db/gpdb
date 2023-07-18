@@ -11,7 +11,7 @@ import platform
 import re
 import subprocess
 from shutil import copyfile
-import pg
+import psycopg2
 
 """
 Global Values
@@ -275,44 +275,34 @@ def copy_data(source='',target=''):
     copyfile(os.path.join('data', source), target)
 
 def get_table_name():
-    try:
-        db = pg.DB(dbname='reuse_gptest'
-                  ,host='localhost'
-                  ,port=int(PGPORT)
-                  )
-    except Exception as e:
-        errorMessage = str(e)
-        print(('could not connect to database: ' + errorMessage))
-    queryString = """SELECT relname
-                     from pg_class
-                     WHERE relname
-                     like 'ext_gpload_reusable%'
-                     OR relname
-                     like 'staging_gpload_reusable%';"""
-    resultList = db.query(queryString.encode('utf-8')).getresult()
-    return resultList
+    with psycopg2.connect(dbname='reuse_gptest',
+                          host='localhost',
+                          port=int(PGPORT)) as conn:
+        with conn.cursor() as cur:
+            queryString = """SELECT relname
+            from pg_class
+            WHERE relname
+            like 'ext_gpload_reusable%'
+            OR relname
+            like 'staging_gpload_reusable%';"""
+            cur.execute(queryString)
+            resultList = cur.fetchall()
+            return resultList
 
 def drop_tables():
-    try:
-        db = pg.DB(dbname='reuse_gptest'
-                  ,host='localhost'
-                  ,port=int(PGPORT)
-                  )
-    except Exception as e:
-        errorMessage = str(e)
-        print(('could not connect to database: ' + errorMessage))
-
-    list = get_table_name()
-    for i in list:
-        name = i[0]
-        match = re.search('ext_gpload',name)
-        if match:
-            queryString = "DROP EXTERNAL TABLE %s" % name
-            db.query(queryString.encode('utf-8'))
-
-        else:
-            queryString = "DROP TABLE %s" % name
-            db.query(queryString.encode('utf-8'))
+    table_list = get_table_name()
+    with psycopg2.connect(dbname='reuse_gptest',
+                          host='localhost',
+                          port=int(PGPORT)) as conn:
+        with conn.cursor() as cur:
+            for i in table_list:
+                name = i[0]
+                match = re.search('ext_gpload',name)
+                if match:
+                    queryString = "DROP EXTERNAL TABLE %s" % name
+                else:
+                    queryString = "DROP TABLE %s" % name
+                cur.execute(queryString)
 
 class PSQLError(Exception):
     '''

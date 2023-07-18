@@ -180,7 +180,6 @@ AlterObjectRename_internal(Relation rel, Oid objectId, const char *new_name)
 	AttrNumber	Anum_name = get_object_attnum_name(classId);
 	AttrNumber	Anum_namespace = get_object_attnum_namespace(classId);
 	AttrNumber	Anum_owner = get_object_attnum_owner(classId);
-	ObjectType	objtype = get_object_type(classId, objectId);
 	HeapTuple	oldtup;
 	HeapTuple	newtup;
 	Datum		datum;
@@ -232,7 +231,8 @@ AlterObjectRename_internal(Relation rel, Oid objectId, const char *new_name)
 		ownerId = DatumGetObjectId(datum);
 
 		if (!has_privs_of_role(GetUserId(), DatumGetObjectId(ownerId)))
-			aclcheck_error(ACLCHECK_NOT_OWNER, objtype, old_name);
+			aclcheck_error(ACLCHECK_NOT_OWNER, get_object_type(classId, objectId),
+						   old_name);
 
 		/* User must have CREATE privilege on the namespace */
 		if (OidIsValid(namespaceId))
@@ -463,10 +463,22 @@ ExecAlterObjectDependsStmt(AlterObjectDependsStmt *stmt, ObjectAddress *refAddre
 	ObjectAddress address;
 	ObjectAddress refAddr;
 	Relation	rel;
+	List   *currexts;
 
 	address =
 		get_object_address_rv(stmt->objectType, stmt->relation, (List *) stmt->object,
 							  &rel, AccessExclusiveLock, false);
+
+	/*
+	 * Verify that the user is entitled to run the command.
+	 *
+	 * We don't check any privileges on the extension, because that's not
+	 * needed.  The object owner is stipulating, by running this command, that
+	 * the extension owner can drop the object whenever they feel like it,
+	 * which is not considered a problem.
+	 */
+	check_object_ownership(GetUserId(),
+						   stmt->objectType, address, stmt->object, rel);
 
 	/*
 	 * If a relation was involved, it would have been opened and locked. We
@@ -481,7 +493,11 @@ ExecAlterObjectDependsStmt(AlterObjectDependsStmt *stmt, ObjectAddress *refAddre
 	if (refAddress)
 		*refAddress = refAddr;
 
-	recordDependencyOn(&address, &refAddr, DEPENDENCY_AUTO_EXTENSION);
+	/* Avoid duplicates */
+	currexts = getAutoExtensionsOfObject(address.classId,
+										 address.objectId);
+	if (!list_member_oid(currexts, refAddr.objectId))
+		recordDependencyOn(&address, &refAddr, DEPENDENCY_AUTO_EXTENSION);
 
 	if (Gp_role == GP_ROLE_DISPATCH && shouldDispatchForObject(stmt->objectType))
 	{
@@ -731,7 +747,6 @@ AlterObjectNamespace_internal(Relation rel, Oid objid, Oid nspOid)
 	AttrNumber	Anum_name = get_object_attnum_name(classId);
 	AttrNumber	Anum_namespace = get_object_attnum_namespace(classId);
 	AttrNumber	Anum_owner = get_object_attnum_owner(classId);
-	ObjectType	objtype = get_object_type(classId, objid);
 	Oid			oldNspOid;
 	Datum		name,
 				namespace;
@@ -787,7 +802,7 @@ AlterObjectNamespace_internal(Relation rel, Oid objid, Oid nspOid)
 		ownerId = DatumGetObjectId(owner);
 
 		if (!has_privs_of_role(GetUserId(), ownerId))
-			aclcheck_error(ACLCHECK_NOT_OWNER, objtype,
+			aclcheck_error(ACLCHECK_NOT_OWNER, get_object_type(classId, objid),
 						   NameStr(*(DatumGetName(name))));
 
 		/* User must have CREATE privilege on new namespace */
@@ -1032,8 +1047,6 @@ AlterObjectOwner_internal(Relation rel, Oid objectId, Oid new_ownerId)
 		/* Superusers can bypass permission checks */
 		if (!superuser())
 		{
-			ObjectType	objtype = get_object_type(classId, objectId);
-
 			/* must be owner */
 			if (!has_privs_of_role(GetUserId(), old_ownerId))
 			{
@@ -1052,7 +1065,8 @@ AlterObjectOwner_internal(Relation rel, Oid objectId, Oid new_ownerId)
 					snprintf(namebuf, sizeof(namebuf), "%u", objectId);
 					objname = namebuf;
 				}
-				aclcheck_error(ACLCHECK_NOT_OWNER, objtype, objname);
+				aclcheck_error(ACLCHECK_NOT_OWNER, get_object_type(classId, objectId),
+							   objname);
 			}
 			/* Must be able to become new owner */
 			check_is_member_of_role(GetUserId(), new_ownerId);

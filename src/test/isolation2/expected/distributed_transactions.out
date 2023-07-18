@@ -9,7 +9,7 @@ SELECT gp_inject_fault( 'abort_after_procarray_end', 'error', 1);
 BEGIN;
 BEGIN
 CREATE TABLE test_xact_abort_failure(a int);
-CREATE
+CREATE TABLE
 ABORT;
 ERROR:  fault triggered, fault name:'abort_after_procarray_end' fault type:'error'
 SELECT gp_inject_fault( 'abort_after_procarray_end', 'reset', 1);
@@ -27,9 +27,9 @@ SELECT gp_inject_fault( 'abort_after_procarray_end', 'error', dbid) from gp_segm
 BEGIN;
 BEGIN
 CREATE TABLE test_xact_abort_failure(a int);
-CREATE
+CREATE TABLE
 ABORT;
-ABORT
+ROLLBACK
 SELECT gp_inject_fault( 'abort_after_procarray_end', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
  gp_inject_fault 
 -----------------
@@ -45,7 +45,7 @@ SELECT gp_inject_fault( 'abort_after_procarray_end', 'error', dbid) from gp_segm
 0U: BEGIN;
 BEGIN
 0U: CREATE TABLE test_xact_abort_failure(a int);
-CREATE
+CREATE TABLE
 0U: ABORT;
 ERROR:  fault triggered, fault name:'abort_after_procarray_end' fault type:'error'
 SELECT gp_inject_fault( 'abort_after_procarray_end', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;

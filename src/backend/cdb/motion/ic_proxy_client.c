@@ -325,7 +325,7 @@ ic_proxy_client_register(ICProxyClient *client)
 			 */
 			ic_proxy_free(placeholder);
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
-				   "%s: freed my placeholder",
+				   "ic-proxy: %s: freed my placeholder",
 						 ic_proxy_client_get_name(client));
 		}
 	}
@@ -380,7 +380,7 @@ ic_proxy_client_unregister(ICProxyClient *client)
 		if (client->pkts)
 		{
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-				   "%s: transfer %d unhandled pkts to my successor",
+				   "ic-proxy: %s: transfer %d unhandled pkts to my successor",
 						 ic_proxy_client_get_name(client),
 						 list_length(client->pkts));
 
@@ -389,7 +389,7 @@ ic_proxy_client_unregister(ICProxyClient *client)
 		}
 
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-			   "%s: re-register my successor",
+			   "ic-proxy: %s: re-register my successor",
 					 ic_proxy_client_get_name(client));
 
 		/* the successor must have not registered */
@@ -407,7 +407,7 @@ ic_proxy_client_unregister(ICProxyClient *client)
 		ICProxyClient *placeholder;
 
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-			   "%s: transfer %d unhandled pkts to my placeholder",
+			   "ic-proxy: %s: transfer %d unhandled pkts to my placeholder",
 					 ic_proxy_client_get_name(client),
 					 list_length(client->pkts));
 
@@ -511,7 +511,7 @@ ic_proxy_client_on_c2p_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "ic-proxy: %s: fail to receive c2p DATA: %s",
+			elog(WARNING, "ic-proxy: %s: failed to receive c2p DATA: %s",
 						 ic_proxy_client_get_name(client), uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -565,7 +565,7 @@ ic_proxy_client_on_c2p_data(uv_stream_t *stream,
 					 ic_proxy_client_get_name(client), nread, client->state);
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
-		   "%s: received DATA[%zd bytes] from the backend",
+		   "ic-proxy: %s: received DATA[%zd bytes] from the backend",
 				 ic_proxy_client_get_name(client), nread);
 
 	/*
@@ -665,6 +665,15 @@ ic_proxy_client_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	/* we only expect one HELLO message */
 	uv_read_stop((uv_stream_t *) &client->pipe);
 
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					ic_proxy_client_get_name(client), ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	if (!ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_HELLO))
 	{
 		elog(WARNING, "ic-proxy: %s: invalid %s",
@@ -676,7 +685,7 @@ ic_proxy_client_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	}
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
-		   "%s: received %s from the backend",
+		   "ic-proxy: %s: received %s from the backend",
 				 ic_proxy_client_get_name(client), ic_proxy_pkt_to_str(pkt));
 
 	client->state |= IC_PROXY_CLIENT_STATE_RECEIVED_HELLO;
@@ -713,7 +722,7 @@ ic_proxy_client_on_hello_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "ic-proxy: %s: fail to receive HELLO: %s",
+			elog(WARNING, "ic-proxy: %s: failed to receive HELLO: %s",
 						 ic_proxy_client_get_name(client), uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -773,7 +782,7 @@ ic_proxy_client_read_data(ICProxyClient *client)
 
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: %s: state=0x%08x: fail to start reading data: %s",
+		elog(WARNING, "ic-proxy: %s: state=0x%08x: failed to start reading data: %s",
 					 ic_proxy_client_get_name(client),
 					 client->state, uv_strerror(ret));
 
@@ -898,7 +907,7 @@ ic_proxy_client_on_close(uv_handle_t *handle)
 
 	client->state |= IC_PROXY_CLIENT_STATE_CLOSED;
 
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG, "%s: closed",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG, "ic-proxy: %s: closed",
 		   ic_proxy_client_get_name(client));
 
 	ic_proxy_client_free(client);
@@ -964,11 +973,11 @@ ic_proxy_client_on_sent_c2p_bye(void *opaque, const ICProxyPkt *pkt, int status)
 		 * sent out.
 		 */
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-			   "ic-proxy: %s: fail to shutdown c2p",
+			   "ic-proxy: %s: failed to shutdown c2p",
 					 ic_proxy_client_get_name(client));
 
 		/*
-		 * When we fail to send the BYE, should we trigger the shutdown_p2c
+		 * When we failed to send the BYE, should we trigger the shutdown_p2c
 		 * process immediately?
 		 */
 	}
@@ -1044,7 +1053,7 @@ ic_proxy_client_on_shutdown_p2c(uv_shutdown_t *req, int status)
 	ic_proxy_free(req);
 
 	if (status < 0)
-		elog(WARNING, "ic-proxy: %s: fail to shutdown p2c: %s",
+		elog(WARNING, "ic-proxy: %s: failed to shutdown p2c: %s",
 					 ic_proxy_client_get_name(client), uv_strerror(status));
 	else
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -1092,7 +1101,7 @@ ic_proxy_client_on_sent_c2p_resume(void *opaque,
 	if (status < 0)
 	{
 		/*
-		 * TODO: Fail to send the RESUME, should we retry instead of shutting
+		 * TODO: Failed to send the RESUME, should we retry instead of shutting
 		 * down?
 		 */
 		ic_proxy_client_shutdown_p2c(client);
@@ -1179,6 +1188,15 @@ void
 ic_proxy_client_on_p2c_data(ICProxyClient *client, ICProxyPkt *pkt,
 							ic_proxy_sent_cb callback, void *opaque)
 {
+	/* sanity check: drop the packet with incorrect magic number */
+	if (!ic_proxy_pkt_is_valid(pkt))
+	{
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			"ic-proxy: %s: received %s, dropping the invalid package (magic number mismatch)",
+					ic_proxy_client_get_name(client), ic_proxy_pkt_to_str(pkt));
+		return;
+	}
+
 	/* A placeholder does not send any packets, it always cache them */
 	if (client->state & IC_PROXY_CLIENT_STATE_PLACEHOLDER)
 	{
@@ -1200,7 +1218,7 @@ ic_proxy_client_on_p2c_data(ICProxyClient *client, ICProxyPkt *pkt,
 		if (ic_proxy_pkt_is_out_of_date(pkt, &client->key))
 		{
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-				   "%s: drop out-of-date %s",
+				   "ic-proxy: %s: drop out-of-date %s",
 						 ic_proxy_client_get_name(client),
 						 ic_proxy_pkt_to_str(pkt));
 			/* TODO: callback? */
@@ -1258,6 +1276,8 @@ ic_proxy_client_cache_p2c_pkt(ICProxyClient *client, ICProxyPkt *pkt)
 {
 	/* TODO: drop out-of-date pkt directly */
 	/* TODO: verify the pkt is to client */
+
+	Assert(ic_proxy_pkt_is_valid(pkt));
 
 	client->pkts = lappend(client->pkts, pkt);
 

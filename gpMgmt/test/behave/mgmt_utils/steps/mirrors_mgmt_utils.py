@@ -481,7 +481,7 @@ def make_temp_dir_on_remote(context, hostname, tmp_base_dir_remote, mode='700'):
         raise Exception("tmp_base_dir cannot be empty")
 
     tempfile_cmd = Command(name="Create temp directory on remote host",
-                           cmdStr=""" python -c "import tempfile; t=tempfile.mkdtemp(dir='{}');print(t)" """
+                           cmdStr=""" python3 -c "import tempfile; t=tempfile.mkdtemp(dir='{}');print(t)" """
                            .format(tmp_base_dir_remote),
                            remoteHost=hostname, ctxt=REMOTE)
     tempfile_cmd.run(validateAfter=True)
@@ -521,6 +521,45 @@ def impl(context, content):
                 fd.write('{} {}\n'.format(valid_config, valid_config))
             break
 
+@given("edit the hostsname input file to recover segment with content {content} full inplace")
+def impl(context,  content):
+    content = int(content)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}|{} localhost|{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory())
+            context.hostname = mirror.getSegmentHostName()
+
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{}'.format(valid_config))
+            break
+
+@given("edit the hostsname input file to recover segment with content {content} with invalid hostname")
+def impl(context,  content):
+    content = int(content)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
+        if seg.mirrorDB.getSegmentContentId() == content:
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{}|{} invalid_host|{}|{}|{}'.format(mirror.getSegmentHostName(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory(),
+                                                                   mirror.getSegmentAddress(),
+                                                                   mirror.getSegmentPort(),
+                                                                   mirror.getSegmentDataDirectory())
+
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{}'.format(valid_config))
+            break
+
 
 @given("edit the input file to recover mirror with content {content} incremental")
 def impl(context, content):
@@ -552,6 +591,31 @@ def impl(context, content_id, recovery_host):
             with open(context.mirror_context.input_file_path(), 'a') as fd:
                 fd.write('{}\n'.format(valid_config))
             break
+
+
+@given("a temporary directory with mode '{mode}' is created under data_dir of primary with content {content}")
+@when("a temporary directory with mode '{mode}' is created under data_dir of primary with content {content}")
+@then("a temporary directory with mode '{mode}' is created under data_dir of primary with content {content}")
+def impl(context, mode, content):
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    primary_segment = list(filter(lambda seg: seg.getSegmentRole() == ROLE_PRIMARY and
+                                  seg.getSegmentContentId() == int(content), all_segments))[0]
+    mirror_segment = list(filter(lambda seg: seg.getSegmentRole() == ROLE_MIRROR and
+                                             seg.getSegmentContentId() == int(content), all_segments))[0]
+    make_temp_dir(context, primary_segment.getSegmentDataDirectory(), mode=mode)
+    context.mirror_datadir = mirror_segment.getSegmentDataDirectory()
+
+
+@when('the temporary directory is removed')
+@then('the temporary directory is removed')
+def impl(context):
+    if 'temp_base_dir' in context and os.path.exists(context.temp_base_dir):
+        base = os.path.basename(context.temp_base_dir)
+        os.chmod(context.temp_base_dir, 0o700)
+        os.chmod(os.path.join(context.mirror_datadir, base), 0o700)
+        shutil.rmtree(context.temp_base_dir)
+        shutil.rmtree(os.path.join(context.mirror_datadir, base))
+
 
 @given("{num} {utility} directory under '{parent_dir}' with mode '{mode}' is created")
 @when("{num} {utility} directory under '{parent_dir}' with mode '{mode}' is created")
@@ -810,6 +874,16 @@ def impl(context):
 def impl(context):
     context.execute_steps(u'''
         Then the user runs "gprecoverseg -aF"
+        And gprecoverseg should return a return code of 0
+        And user can start transactions
+        And the segments are synchronized
+        And the cluster is rebalanced
+        ''')
+
+@then('the cluster is recovered using differential and rebalanced')
+def impl(context):
+    context.execute_steps(u'''
+        Then the user runs "gprecoverseg -a --differential"
         And gprecoverseg should return a return code of 0
         And user can start transactions
         And the segments are synchronized

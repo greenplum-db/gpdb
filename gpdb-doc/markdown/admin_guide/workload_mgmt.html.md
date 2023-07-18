@@ -21,12 +21,12 @@ Resource queues define classes of queries with similar resource requirements. Ad
 A resource queue has the following characteristics:
 
 `MEMORY_LIMIT`
-:   The amount of memory used by all the queries in the queue \(per segment\). For example, setting MEMORY\_LIMIT to 2GB on the ETL queue allows ETL queries to use up to 2GB of memory in each segment.
+:   The amount of memory used by all the queries in the queue \(per segment\). For example, setting `MEMORY_LIMIT` to 2GB on the ETL queue allows ETL queries to use up to 2GB of memory in each segment.
 
 `ACTIVE_STATEMENTS`
 :   The number of *slots* for a queue; the maximum concurrency level for a queue. When all slots are used, new queries must wait. Each query uses an equal amount of memory by default.
 
-For example, the `pg_default` resource queue has ACTIVE\_STATEMENTS = 20.
+For example, the `pg_default` resource queue has `ACTIVE_STATEMENTS` = 20.
 
 `PRIORITY`
 :   The relative CPU usage for queries. This may be one of the following levels: `LOW`, `MEDIUM`, `HIGH`, `MAX`. The default level is `MEDIUM`. The query prioritization mechanism monitors the CPU usage of all the queries running in the system, and adjusts the CPU usage for each to conform to its priority level. For example, you could set `MAX` priority to the `executive` resource queue and `MEDIUM` to other queues to ensure that executive queries receive a greater share of CPU.
@@ -36,7 +36,7 @@ For example, the `pg_default` resource queue has ACTIVE\_STATEMENTS = 20.
 
 The Greenplum Database optimizer assigns a numeric cost to each query. If the cost exceeds the `MAX_COST` value set for the resource queue, the query is rejected as too expensive.
 
-**Note:** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
+> **Note** GPORCA and the Postgres Planner utilize different query costing models and may compute different costs for the same query. The Greenplum Database resource queue resource management scheme neither differentiates nor aligns costs between GPORCA and the Postgres Planner; it uses the literal cost value returned from the optimizer to throttle queries.
 
 When resource queue-based resource management is active, use the `MEMORY_LIMIT` and `ACTIVE_STATEMENTS` limits for resource queues rather than configuring cost-based limits. Even when using GPORCA, Greenplum Database may fall back to using the Postgres Planner for certain queries, so using cost-based limits can lead to unexpected results.
 
@@ -44,12 +44,12 @@ The default configuration for a Greenplum Database system has a single default r
 
 The number of concurrent queries a resource queue allows depends on whether the `MEMORY_LIMIT` parameter is set:
 
--   If no `MEMORY_LIMIT` is set for a resource queue, the amount of memory allocated per query is the value of the [statement\_mem](../ref_guide/config_params/guc-list.html) server configuration parameter. The maximum memory the resource queue can use is the product of `statement_mem` and `ACTIVE_STATEMENTS`.
+-   If no `MEMORY_LIMIT` is set for a resource queue, the amount of memory allocated per query is the value of the [statement_mem](../ref_guide/config_params/guc-list.html#statement_mem) server configuration parameter. The maximum memory the resource queue can use is the product of `statement_mem` and `ACTIVE_STATEMENTS`.
 -   When a `MEMORY_LIMIT` is set on a resource queue, the number of queries that the queue can run concurrently is limited by the queue's available memory.
 
 A query admitted to the system is allocated an amount of memory and a query plan tree is generated for it. Each node of the tree is an operator, such as a sort or hash join. Each operator is a separate execution thread and is allocated a fraction of the overall statement memory, at minimum 100KB. If the plan has a large number of operators, the minimum memory required for operators can exceed the available memory and the query will be rejected with an insufficient memory error. Operators determine if they can complete their tasks in the memory allocated, or if they must spill data to disk, in work files. The mechanism that allocates and controls the amount of memory used by each operator is called *memory quota*.
 
-Not all SQL statements submitted through a resource queue are evaluated against the queue limits. By default only `SELECT`, `SELECT INTO`, `CREATE TABLE AS SELECT`, and `DECLARE CURSOR` statements are evaluated. If the server configuration parameter `resource_select_only` is set to *off*, then `INSERT`, `UPDATE`, and `DELETE` statements will be evaluated as well.
+Not all SQL statements submitted through a resource queue are evaluated against the queue limits. By default only `SELECT`, `SELECT INTO`, `CREATE TABLE AS SELECT`, and `DECLARE CURSOR` statements are evaluated. If the server configuration parameter [resource_select_only](../ref_guide/config_params/guc-list.html#resource_select_only) is set to `off`, then `INSERT`, `UPDATE`, and `DELETE` statements will be evaluated as well.
 
 Also, an SQL statement that is run during the execution of an `EXPLAIN ANALYZE` command is excluded from resource queues.
 
@@ -73,7 +73,7 @@ This example has three classes of queries with different characteristics and ser
 
 The total memory allocated to the queues is 6.4GB, or 80% of the total segment memory defined by the `gp_vmem_protect_limit` server configuration parameter. Allowing a safety margin of 20% accommodates some operators and queries that are known to use more memory than they are allocated by the resource queue.
 
-See the `CREATE RESOURCE QUEUE` and `CREATE/ALTER ROLE` statements in the *Greenplum Database Reference Guide* for help with command syntax and detailed reference information.
+See the [CREATE RESOURCE QUEUE](../ref_guide/sql_commands/CREATE_RESOURCE_QUEUE.html), [CREATE ROLE](../ref_guide/sql_commands/CREATE_ROLE.html), and [ALTER ROLE](../ref_guide/sql_commands/ALTER_ROLE.html) statements in the *Greenplum Database Reference Guide* for help with command syntax and detailed reference information.
 
 ## <a id="topic113"></a>How Memory Limits Work 
 
@@ -124,9 +124,7 @@ At runtime, the CPU share of active statements is determined by these priority s
 
 ![CPU share readjusted according to priority](graphics/gp_query_priority1.png "CPU share readjusted according to priority")
 
-**Note:**
-
-The percentages shown in these illustrations are approximate. CPU usage between high, low and maximum priority queues is not always calculated in precisely these proportions.
+> **Note** The percentages shown in these illustrations are approximate. CPU usage between high, low and maximum priority queues is not always calculated in precisely these proportions.
 
 When an executive query enters the group of running statements, CPU usage is adjusted to account for its maximum priority setting. It may be a simple query compared to the analyst and reporting queries, but until it is completed, it will claim the largest share of CPU.
 
@@ -134,86 +132,87 @@ When an executive query enters the group of running statements, CPU usage is adj
 
 For more information about commands to set priorities, see [Setting Priority Levels](#topic16).
 
-## <a id="topic8"></a>Steps to Enable Resource Management 
+## <a id="topic8"></a>Enabling Resource Queues
 
-Enabling and using resource management in Greenplum Database involves the following high-level tasks:
+When you install Greenplum Database, no resource management policy is enabled by default. To use resource queues, set the [gp_resource_manager](../ref_guide/config_params/guc-list.html#gp_resource_manager) server configuration parameter:
 
-1.  Configure resource management. See [Configuring Resource Management](#topic9).
-2.  Create the resource queues and set limits on them. See [Creating Resource Queues](#topic10) and [Modifying Resource Queues](#topic19).
-3.  Assign a queue to one or more user roles. See [Assigning Roles \(Users\) to a Resource Queue](#topic17).
-4.  Use the resource management system views to monitor and manage the resource queues. See [Checking Resource Queue Status](#topic22).
+1.  Set the `gp_resource_manager` server configuration parameter to the value `"queue"`
 
-## <a id="topic9"></a>Configuring Resource Management 
+    ```
+    gpconfig -c gp_resource_manager -v "queue"
+    ```
 
-Resource scheduling is enabled by default when you install Greenplum Database, and is required for all roles. The default resource queue, `pg_default`, has an active statement limit of 20, no memory limit, and a medium priority setting. Create resource queues for the various types of workloads.
+2.  Restart Greenplum Database: 
 
-### <a id="iz169600"></a>To configure resource management 
+    ```
+    gpstop
+    gpstart 
+    ```
+## <a id="topic9"></a>Configuring Resource Queues
 
-1.  The following parameters are for the general configuration of resource queues:
+Before you create any resource groups, learn about the different resouce queue server configuration parameters and their usage. See [Server Configuration Parameters](../ref_guide/config_params/guc-list.html) for more information.
+
+1.  General configuration
     -   `max_resource_queues` - Sets the maximum number of resource queues.
     -   `max_resource_portals_per_transaction` - Sets the maximum number of simultaneously open cursors allowed per transaction. Note that an open cursor will hold an active query slot in a resource queue.
     -   `resource_select_only` - If set to *on*, then `SELECT`, `SELECT INTO`, `CREATE TABLE AS``SELECT`, and `DECLARE CURSOR` commands are evaluated. If set to *off* `INSERT`, `UPDATE`, and `DELETE` commands will be evaluated as well.
     -   `resource_cleanup_gangs_on_wait` - Cleans up idle segment worker processes before taking a slot in the resource queue.
     -   `stats_queue_level` - Enables statistics collection on resource queue usage, which can then be viewed by querying the pg\_stat\_resqueues system view.
-2.  The following parameters are related to memory utilization:
+
+2.  Memory utilization
     -   `gp_resqueue_memory_policy` - Enables Greenplum Database memory management features.
 
-        In Greenplum Database4.2 and later, the distribution algorithm `eager_free` takes advantage of the fact that not all operators run at the same time. The query plan is divided into stages and Greenplum Database eagerly frees memory allocated to a previous stage at the end of that stage's execution, then allocates the eagerly freed memory to the new stage.
+        In Greenplum Database 4.2 and later, the distribution algorithm `eager_free` takes advantage of the fact that not all operators run at the same time. The query plan is divided into stages and Greenplum Database eagerly frees memory allocated to a previous stage at the end of that stage's execution, then allocates the eagerly freed memory to the new stage.
 
         When set to `none`, memory management is the same as in Greenplum Database releases prior to 4.1. When set to `auto`, query memory usage is controlled by `statement_mem` and resource queue memory limits.
     -   `statement_mem` and `max_statement_mem` - Used to allocate memory to a particular query at runtime \(override the default allocation assigned by the resource queue\). `max_statement_mem` is set by database superusers to prevent regular database users from over-allocation.
     -   `gp_vmem_protect_limit` - Sets the upper boundary that all query processes can consume and should not exceed the amount of physical memory of a segment host. When a segment host reaches this limit during query execution, the queries that cause the limit to be exceeded will be cancelled.
     -   `gp_vmem_idle_resource_timeout` and `gp_vmem_protect_segworker_cache_limit` - used to free memory on segment hosts held by idle database processes. Administrators may want to adjust these settings on systems with lots of concurrency.
     -   `shared_buffers` - Sets the amount of memory a Greenplum server instance uses for shared memory buffers. This setting must be at least 128 kilobytes and at least 16 kilobytes times `max_connections`. The value must not exceed the operating system shared memory maximum allocation request size, `shmmax` on Linux. See the *Greenplum Database Installation Guide* for recommended OS memory settings for your platform.
-3.  The following parameters are related to query prioritization. Note that the following parameters are all *local* parameters, meaning they must be set in the `postgresql.conf` files of the master and all segments:
+
+3.  Query prioritization. Note that the following parameters are all *local* parameters, meaning they must be set in the `postgresql.conf` files of the coordinator and all segments:
     -   `gp_resqueue_priority` - The query prioritization feature is enabled by default.
     -   `gp_resqueue_priority_sweeper_interval` - Sets the interval at which CPU usage is recalculated for all active statements. The default value for this parameter should be sufficient for typical database operations.
-    -   `gp_resqueue_priority_cpucores_per_segment` - Specifies the number of CPU cores allocated per segment instance on a segment host. If the segment is configured with primary-mirror segment instance pairs, use the number of primary segment instances on the host in the calculation. The default value is 4 for the master and segment hosts.
+    -   `gp_resqueue_priority_cpucores_per_segment` - Specifies the number of CPU cores allocated per segment instance on a segment host. If the segment is configured with primary-mirror segment instance pairs, use the number of primary segment instances on the host in the calculation. The default value is 4 for the coordinator and segment hosts.
 
-        Each Greenplum host checks its own `postgresql.conf` file for the value of this parameter. This parameter also affects the master host, where it should be set to a value reflecting the higher ratio of CPU cores. For example, on a cluster that has 10 CPU cores per segment host and 4 primary segments per host, you would specify the following values for `gp_resqueue_priority_cpucores_per_segment`:
+        Each Greenplum host checks its own `postgresql.conf` file for the value of this parameter. This parameter also affects the coordinator host, where it should be set to a value reflecting the higher ratio of CPU cores. For example, on a cluster that has 10 CPU cores per segment host and 4 primary segments per host, you would specify the following values for `gp_resqueue_priority_cpucores_per_segment`:
 
-        -   10 on the master and standby master hosts. Typically, only a single master segment instance runs on the master host.
+        -   10 on the coordinator and standby coordinator hosts. Typically, only a single coordinator segment instance runs on the coordinator host.
         -   2.5 on each segment host \(10 cores divided by 4 primary segments\).
         <br/>If the parameter value is not set correctly, either the CPU might not be fully utilized, or query prioritization might not work as expected. For example, if the Greenplum Database cluster has fewer than one segment instance per CPU core on your segment hosts, make sure that you adjust this value accordingly.
 
         Actual CPU core utilization is based on the ability of Greenplum Database to parallelize a query and the resources required to run the query.
 
-        **Note:** Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
+        > **Note** Include any CPU core that is available to the operating system in the number of CPU cores, including virtual CPU cores.
 
-4.  If you wish to view or change any of the resource management parameter values, you can use the `gpconfig` utility.
-5.  For example, to see the setting of a particular parameter:
+Use the `gpconfig` utility to view or change any of the resource management parameter values. For example, to see the setting of a particular parameter:
 
-    ```
-    $ gpconfig --show gp_vmem_protect_limit
-    
-    ```
+```
+gpconfig --show gp_vmem_protect_limit
+```
 
-6.  For example, to set one value on all segment instances and a different value on the master:
+To set one value on all segment instances and a different value on the coordinator:
 
-    ```
-    $ gpconfig -c gp_resqueue_priority_cpucores_per_segment -v 2 -m 8
-    
-    ```
+```
+gpconfig -c gp_resqueue_priority_cpucores_per_segment -v 2 -m 8
+```
 
-7.  Restart Greenplum Database to make the configuration changes effective:
+Restart Greenplum Database to make the configuration changes effective:
 
-    ```
-    $ gpstop -r
-    
-    ```
-
+```
+gpstop -r
+```
 
 ## <a id="topic10"></a>Creating Resource Queues 
 
-Creating a resource queue involves giving it a name, setting an active query limit, and optionally a query priority on the resource queue. Use the `CREATE RESOURCE QUEUE` command to create new resource queues.
+When you create a resource queue for a role, you provide a name, set an active query limit, and optionally a query priority for the resource queue. Use the [CREATE RESOURCE QUEUE](../ref_guide/sql_commands/CREATE_RESOURCE_QUEUE.html) command to create new resource queues.
 
 ### <a id="topic11"></a>Creating Queues with an Active Query Limit 
 
 Resource queues with an `ACTIVE_STATEMENTS` setting limit the number of queries that can be run by roles assigned to that queue. For example, to create a resource queue named *adhoc* with an active query limit of three:
 
 ```
-=# CREATE RESOURCE QUEUE adhoc WITH (ACTIVE_STATEMENTS=3);
-
+CREATE RESOURCE QUEUE adhoc WITH (ACTIVE_STATEMENTS=3);
 ```
 
 This means that for all roles assigned to the *adhoc* resource queue, only three active queries can be running on the system at any given time. If this queue has three queries running, and a fourth query is submitted by a role in that queue, that query must wait until a slot is free before it can run.
@@ -227,18 +226,16 @@ When used in conjunction with `ACTIVE_STATEMENTS`, the default amount of memory 
 For example, to create a resource queue with an active query limit of 10 and a total memory limit of 2000MB \(each query will be allocated 200MB of segment host memory at execution time\):
 
 ```
-=# CREATE RESOURCE QUEUE myqueue WITH (ACTIVE_STATEMENTS=20, 
+CREATE RESOURCE QUEUE myqueue WITH (ACTIVE_STATEMENTS=20, 
 MEMORY_LIMIT='2000MB');
-
 ```
 
 The default memory allotment can be overridden on a per-query basis using the `statement_mem` server configuration parameter, provided that `MEMORY_LIMIT` or `max_statement_mem` is not exceeded. For example, to allocate more memory to a particular query:
 
 ```
-=> SET statement_mem='2GB';
-=> SELECT * FROM my_big_table WHERE column='value' ORDER BY id;
-=> RESET statement_mem;
-
+SET statement_mem='2GB';
+SELECT * FROM my_big_table WHERE column='value' ORDER BY id;
+RESET statement_mem;
 ```
 
 As a general guideline, `MEMORY_LIMIT` for all of your resource queues should not exceed the amount of physical memory of a segment host. If workloads are staggered over multiple queues, it may be OK to oversubscribe memory allocations, keeping in mind that queries may be cancelled during execution if the segment host memory limit \(`gp_vmem_protect_limit`\) is exceeded.
@@ -250,30 +247,29 @@ To control a resource queue's consumption of available CPU resources, an adminis
 Priority settings are created or altered using the `WITH` parameter of the commands `CREATE RESOURCE QUEUE` and `ALTER RESOURCE QUEUE`. For example, to specify priority settings for the *adhoc* and *reporting* queues, an administrator would use the following commands:
 
 ```
-=# ALTER RESOURCE QUEUE adhoc WITH (PRIORITY=LOW);
-=# ALTER RESOURCE QUEUE reporting WITH (PRIORITY=HIGH);
+ALTER RESOURCE QUEUE adhoc WITH (PRIORITY=LOW);
+ALTER RESOURCE QUEUE reporting WITH (PRIORITY=HIGH);
 ```
 
 To create the *executive* queue with maximum priority, an administrator would use the following command:
 
 ```
-=# CREATE RESOURCE QUEUE executive WITH (ACTIVE_STATEMENTS=3, PRIORITY=MAX);
+CREATE RESOURCE QUEUE executive WITH (ACTIVE_STATEMENTS=3, PRIORITY=MAX);
 ```
 
 When the query prioritization feature is enabled, resource queues are given a `MEDIUM` priority by default if not explicitly assigned. For more information on how priority settings are evaluated at runtime, see [How Priorities Work](#priorities).
 
-**Important:** In order for resource queue priority levels to be enforced on the active query workload, you must enable the query prioritization feature by setting the associated server configuration parameters. See [Configuring Resource Management](#topic9).
+> **Important** In order for resource queue priority levels to be enforced on the active query workload, you must enable the query prioritization feature by setting the associated server configuration parameters. See [Configuring Resource Queues](#topic9).
 
-## <a id="topic17"></a>Assigning Roles \(Users\) to a Resource Queue 
+## <a id="topic17"></a>Assigning Roles to a Resource Queue 
 
 Once a resource queue is created, you must assign roles \(users\) to their appropriate resource queue. If roles are not explicitly assigned to a resource queue, they will go to the default resource queue, `pg_default`. The default resource queue has an active statement limit of 20, no cost limit, and a medium priority setting.
 
 Use the `ALTER ROLE` or `CREATE ROLE` commands to assign a role to a resource queue. For example:
 
 ```
-=# ALTER ROLE `name` RESOURCE QUEUE `queue_name`;
-=# CREATE ROLE `name` WITH LOGIN RESOURCE QUEUE `queue_name`;
-
+ALTER ROLE `name` RESOURCE QUEUE `queue_name`;
+CREATE ROLE `name` WITH LOGIN RESOURCE QUEUE `queue_name`;
 ```
 
 A role can only be assigned to one resource queue at any given time, so you can use the `ALTER ROLE` command to initially assign or change a role's resource queue.
@@ -287,36 +283,32 @@ Superusers are always exempt from resource queue limits. Superuser queries will 
 All users *must* be assigned to a resource queue. If not explicitly assigned to a particular queue, users will go into the default resource queue, `pg_default`. If you wish to remove a role from a resource queue and put them in the default queue, change the role's queue assignment to `none`. For example:
 
 ```
-=# ALTER ROLE `role_name` RESOURCE QUEUE none;
-
+ALTER ROLE `role_name` RESOURCE QUEUE none;
 ```
 
 ## <a id="topic19"></a>Modifying Resource Queues 
 
-After a resource queue has been created, you can change or reset the queue limits using the `ALTER RESOURCE QUEUE` command. You can remove a resource queue using the `DROP RESOURCE QUEUE` command. To change the roles \(users\) assigned to a resource queue, [Assigning Roles \(Users\) to a Resource Queue](#topic17).
+After a resource queue has been created, you can change or reset the queue limits using the `ALTER RESOURCE QUEUE` command. You can remove a resource queue using the `DROP RESOURCE QUEUE` command. To change the roles \(users\) assigned to a resource queue, [Assigning Roles to a Resource Queue](#topic17).
 
 ### <a id="topic20"></a>Altering a Resource Queue 
 
 The `ALTER RESOURCE QUEUE` command changes the limits of a resource queue. To change the limits of a resource queue, specify the new values you want for the queue. For example:
 
 ```
-=# ALTER RESOURCE QUEUE <adhoc> WITH (ACTIVE_STATEMENTS=5);
-=# ALTER RESOURCE QUEUE <exec> WITH (PRIORITY=MAX);
-
+ALTER RESOURCE QUEUE <adhoc> WITH (ACTIVE_STATEMENTS=5);
+ALTER RESOURCE QUEUE <exec> WITH (PRIORITY=MAX);
 ```
 
 To reset active statements or memory limit to no limit, enter a value of `-1`. To reset the maximum query cost to no limit, enter a value of `-1.0`. For example:
 
 ```
-=# ALTER RESOURCE QUEUE <adhoc> WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
-
+ALTER RESOURCE QUEUE <adhoc> WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
 ```
 
 You can use the `ALTER RESOURCE QUEUE` command to change the priority of queries associated with a resource queue. For example, to set a queue to the minimum priority level:
 
 ```
 ALTER RESOURCE QUEUE <webuser> WITH (PRIORITY=MIN);
-
 ```
 
 ### <a id="topic21"></a>Dropping a Resource Queue 
@@ -324,78 +316,63 @@ ALTER RESOURCE QUEUE <webuser> WITH (PRIORITY=MIN);
 The `DROP RESOURCE QUEUE` command drops a resource queue. To drop a resource queue, the queue cannot have any roles assigned to it, nor can it have any statements waiting in the queue. See [Removing a Role from a Resource Queue](#topic18) and [Clearing a Waiting Statement From a Resource Queue](#topic27) for instructions on emptying a resource queue. To drop a resource queue:
 
 ```
-=# DROP RESOURCE QUEUE <name>;
-
+DROP RESOURCE QUEUE <name>;
 ```
 
-## <a id="topic22"></a>Checking Resource Queue Status 
+## <a id="topic22"></a>Monitoring Resource Queue Status 
 
-Checking resource queue status involves the following tasks:
-
--   [Viewing Queued Statements and Resource Queue Status](#topic23)
--   [Viewing Resource Queue Statistics](#topic24)
--   [Viewing the Roles Assigned to a Resource Queue](#topic25)
--   [Viewing the Waiting Queries for a Resource Queue](#topic26)
--   [Clearing a Waiting Statement From a Resource Queue](#topic27)
--   [Viewing the Priority of Active Statements](#topic28)
--   [Resetting the Priority of an Active Statement](#topic29)
+Monitoring resource queue status involves the following tasks:
 
 ### <a id="topic23"></a>Viewing Queued Statements and Resource Queue Status 
 
-The `gp_toolkit.gp_resqueue_status` view allows administrators to see status and activity for a resource queue. It shows how many queries are waiting to run and how many queries are currently active in the system from a particular resource queue. To see the resource queues created in the system, their limit attributes, and their current status:
+The [gp_resqueue_status](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resqueue_status) `gp_toolkit` view allows administrators to see status and activity for a resource queue. It shows how many queries are waiting to run and how many queries are currently active in the system from a particular resource queue. To see the resource queues created in the system, their limit attributes, and their current status:
 
 ```
-=# SELECT * FROM gp_toolkit.gp_resqueue_status;
-
+SELECT * FROM gp_toolkit.gp_resqueue_status;
 ```
 
 ### <a id="topic24"></a>Viewing Resource Queue Statistics 
 
-If you want to track statistics and performance of resource queues over time, you can enable statistics collecting for resource queues. This is done by setting the following server configuration parameter in your master `postgresql.conf` file:
+If you want to track statistics and performance of resource queues over time, you can enable statistics collecting for resource queues. This is done by setting the following server configuration parameter in your coordinator `postgresql.conf` file:
 
 ```
 stats_queue_level = on
-
 ```
 
-Once this is enabled, you can use the `pg_stat_resqueues` system view to see the statistics collected on resource queue usage. Note that enabling this feature does incur slight performance overhead, as each query submitted through a resource queue must be tracked. It may be useful to enable statistics collecting on resource queues for initial diagnostics and administrative planning, and then deactivate the feature for continued use.
+Once this is enabled, you can use the `pg_stat_resqueue` system view to see the statistics collected on resource queue usage. Note that enabling this feature does incur slight performance overhead, as each query submitted through a resource queue must be tracked. It may be useful to enable statistics collecting on resource queues for initial diagnostics and administrative planning, and then deactivate the feature for continued use.
 
 See the Statistics Collector section in the PostgreSQL documentation for more information about collecting statistics in Greenplum Database.
 
 ### <a id="topic25"></a>Viewing the Roles Assigned to a Resource Queue 
 
-To see the roles assigned to a resource queue, perform the following query of the `pg_roles` and `gp_toolkit.``gp_resqueue_status` system catalog tables:
+To see the roles assigned to a resource queue, perform the following query of the `pg_roles` and The [gp_resqueue_status](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resqueue_status) `gp_toolkit` system catalog tables:
 
 ```
-=# SELECT rolname, rsqname FROM pg_roles, 
-          gp_toolkit.gp_resqueue_status 
-   WHERE pg_roles.rolresqueue=gp_toolkit.gp_resqueue_status.queueid;
-
+SELECT rolname, rsqname FROM pg_roles, 
+       gp_toolkit.gp_resqueue_status 
+WHERE pg_roles.rolresqueue=gp_toolkit.gp_resqueue_status.queueid;
 ```
 
 You may want to create a view of this query to simplify future inquiries. For example:
 
 ```
-=# CREATE VIEW role2queue AS
-   SELECT rolname, rsqname FROM pg_roles, pg_resqueue 
-   WHERE pg_roles.rolresqueue=gp_toolkit.gp_resqueue_status.queueid;
-
+CREATE VIEW role2queue AS
+SELECT rolname, rsqname FROM pg_roles, pg_resqueue 
+WHERE pg_roles.rolresqueue=gp_toolkit.gp_resqueue_status.queueid;
 ```
 
 Then you can just query the view:
 
 ```
-=# SELECT * FROM role2queue;
-
+SELECT * FROM role2queue;
 ```
 
 ### <a id="topic26"></a>Viewing the Waiting Queries for a Resource Queue 
 
-When a slot is in use for a resource queue, it is recorded in the `pg_locks` system catalog table. This is where you can see all of the currently active and waiting queries for all resource queues. To check that statements are being queued \(even statements that are not waiting\), you can also use the `gp_toolkit`.gp\_locks\_on\_resqueue view. For example:
+When a slot is in use for a resource queue, it is recorded in the `pg_locks` system catalog table. This is where you can see all of the currently active and waiting queries for all resource queues. To check that statements are being queued \(even statements that are not waiting\), you can also use the [gp_locks_on_resqueue](../ref_guide/system_catalogs/catalog_ref-views.html#gp_locks_on_resqueue) `gp_toolkit` view. For example:
 
 ```
-=# SELECT * FROM gp_toolkit.gp_locks_on_resqueue WHERE lorwaiting='true';
-
+SELECT * FROM gp_toolkit.gp_locks_on_resqueue WHERE lorwaiting='true';
 ```
 
 If this query returns no results, then that means there are currently no statements waiting in a resource queue.
@@ -407,15 +384,14 @@ In some cases, you may want to clear a waiting statement from a resource queue. 
 For example, to see process information about all statements currently active or waiting in all resource queues, run the following query:
 
 ```
-=# SELECT rolname, rsqname, pg_locks.pid as pid, granted, state,
-          query, datname 
-   FROM pg_roles, gp_toolkit.gp_resqueue_status, pg_locks,
-        pg_stat_activity 
-   WHERE pg_roles.rolresqueue=pg_locks.objid 
-   AND pg_locks.objid=gp_toolkit.gp_resqueue_status.queueid
-   AND pg_stat_activity.pid=pg_locks.pid
-   AND pg_stat_activity.usename=pg_roles.rolname;
-
+SELECT rolname, rsqname, pg_locks.pid as pid, granted, state,
+       query, datname 
+FROM pg_roles, gp_toolkit.gp_resqueue_status, pg_locks,
+     pg_stat_activity 
+WHERE pg_roles.rolresqueue=pg_locks.objid 
+AND pg_locks.objid=gp_toolkit.gp_resqueue_status.queueid
+AND pg_stat_activity.pid=pg_locks.pid
+AND pg_stat_activity.usename=pg_roles.rolname;
 ```
 
 If this query returns no results, then that means there are currently no statements in a resource queue. A sample of a resource queue with two statements in it looks something like this:
@@ -427,18 +403,17 @@ rolname | rsqname |  pid  | granted | state  |         query         
   daria | webuser | 31905 | f       | active | SELECT * FROM topten;  | namesdb
 ```
 
-Use this output to identify the process id \(pid\) of the statement you want to clear from the resource queue. To clear the statement, you would then open a terminal window \(as the `gpadmin` database superuser or as root\) on the master host and cancel the corresponding process. For example:
+Use this output to identify the process id \(pid\) of the statement you want to clear from the resource queue. To clear the statement, you would then open a terminal window \(as the `gpadmin` database superuser or as root\) on the coordinator host and cancel the corresponding process. For example:
 
 ```
-=# pg_cancel_backend(31905)
-
+pg_cancel_backend(31905)
 ```
 
-**Important:** Do not use the operating system `KILL` command.
+> **Important** Do not use the operating system `KILL` command.
 
 ### <a id="topic28"></a>Viewing the Priority of Active Statements 
 
-The *gp\_toolkit* administrative schema has a view called *gp\_resq\_priority\_statement*, which lists all statements currently being run and provides the priority, session ID, and other information.
+The *gp\_toolkit* administrative schema has a view called [gp_resq_priority_statement](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resq_priority_statement), which lists all statements currently being run and provides the priority, session ID, and other information.
 
 This view is only available through the `gp_toolkit` administrative schema. See the *Greenplum Database Reference Guide* for more information.
 
@@ -446,13 +421,15 @@ This view is only available through the `gp_toolkit` administrative schema. See 
 
 Superusers can adjust the priority of a statement currently being run using the built-in function `gp_adjust_priority(session_id, statement_count, priority)`. Using this function, superusers can raise or lower the priority of any query. For example:
 
-`=# SELECT gp_adjust_priority(752, 24905, 'HIGH')`
+```
+SELECT gp_adjust_priority(752, 24905, 'HIGH')`
+```
 
-To obtain the session ID and statement count parameters required by this function, superusers can use the `gp_toolkit` administrative schema view, *gp\_resq\_priority\_statement*. From the view, use these values for the function parameters.
+To obtain the session ID and statement count parameters required by this function, superusers can use the `gp_toolkit` administrative schema view [gp_resq_priority_statement](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resq_priority_statement). From the view, use these values for the function parameters.
 
 -   The value of the `rqpsession` column for the `session_id` parameter
 -   The value of the `rqpcommand` column for the `statement_count` parameter
 -   The value of `rqppriority` column is the current priority. You can specify a string value of `MAX`, `HIGH`, `MEDIUM`, or `LOW` as the `priority`.
 
-**Note:** The `gp_adjust_priority()` function affects only the specified statement. Subsequent statements in the same resource queue are run using the queue's normally assigned priority.
+> **Note** The `gp_adjust_priority()` function affects only the specified statement. Subsequent statements in the same resource queue are run using the queue's normally assigned priority.
 

@@ -32,8 +32,10 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/optimizer.h"
 #include "parser/parse_coerce.h"
+#include "parser/parse_type.h"
 #include "parser/scansup.h"
 #include "storage/proc.h"
+#include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
 #include "tcop/utility.h"
 #include "utils/array.h"
@@ -85,6 +87,13 @@ typedef struct
  * has its own simple-expression EState, which is cleaned up at exit from
  * plpgsql_inline_handler().  DO blocks still use the simple_econtext_stack,
  * though, so that subxact abort cleanup does the right thing.
+ *
+ * (However, if a DO block executes COMMIT or ROLLBACK, then exec_stmt_commit
+ * or exec_stmt_rollback will unlink it from the DO's simple-expression EState
+ * and create a new shared EState that will be used thenceforth.  The original
+ * EState will be cleaned up when we get back to plpgsql_inline_handler.  This
+ * is a bit ugly, but it isn't worth doing better, since scenarios like this
+ * can't result in indefinite accumulation of state trees.)
  */
 typedef struct SimpleEcontextStackEntry
 {
@@ -384,6 +393,7 @@ static void plpgsql_param_eval_generic_ro(ExprState *state, ExprEvalStep *op,
 static void exec_move_row(PLpgSQL_execstate *estate,
 						  PLpgSQL_variable *target,
 						  HeapTuple tup, TupleDesc tupdesc);
+static void revalidate_rectypeid(PLpgSQL_rec *rec);
 static ExpandedRecordHeader *make_expanded_record_for_rec(PLpgSQL_execstate *estate,
 														  PLpgSQL_rec *rec,
 														  TupleDesc srctupdesc,
@@ -809,6 +819,31 @@ coerce_function_result_tuple(PLpgSQL_execstate *estate, TupleDesc tupdesc)
 			 */
 			estate->retval = PointerGetDatum(SPI_returntuple(rettup, tupdesc));
 			/* no need to free map, we're about to return anyway */
+		}
+		else if (!(tupdesc->tdtypeid == erh->er_decltypeid ||
+				   (tupdesc->tdtypeid == RECORDOID &&
+					!ExpandedRecordIsDomain(erh))))
+		{
+			/*
+			 * The expanded record has the right physical tupdesc, but the
+			 * wrong type ID.  (Typically, the expanded record is RECORDOID
+			 * but the function is declared to return a named composite type.
+			 * As in exec_move_row_from_datum, we don't allow returning a
+			 * composite-domain record from a function declared to return
+			 * RECORD.)  So we must flatten the record to a tuple datum and
+			 * overwrite its type fields with the right thing.  spi.c doesn't
+			 * provide any easy way to deal with this case, so we end up
+			 * duplicating the guts of datumCopy() :-(
+			 */
+			Size		resultsize;
+			HeapTupleHeader tuphdr;
+
+			resultsize = EOH_get_flat_size(&erh->hdr);
+			tuphdr = (HeapTupleHeader) SPI_palloc(resultsize);
+			EOH_flatten_into(&erh->hdr, (void *) tuphdr, resultsize);
+			HeapTupleHeaderSetTypeId(tuphdr, tupdesc->tdtypeid);
+			HeapTupleHeaderSetTypMod(tuphdr, tupdesc->tdtypmod);
+			estate->retval = PointerGetDatum(tuphdr);
 		}
 		else
 		{
@@ -2090,15 +2125,29 @@ exec_stmt_perform(PLpgSQL_execstate *estate, PLpgSQL_stmt_perform *stmt)
 
 /*
  * exec_stmt_call
+ *
+ * NOTE: this is used for both CALL and DO statements.
  */
 static int
 exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 {
 	PLpgSQL_expr *expr = stmt->expr;
+	SPIPlanPtr	orig_plan = expr->plan;
+	bool		local_plan;
+	PLpgSQL_variable *volatile cur_target = stmt->target;
 	volatile LocalTransactionId before_lxid;
 	LocalTransactionId after_lxid;
-	volatile bool pushed_active_snap = false;
 	volatile int rc;
+
+	/*
+	 * If not in atomic context, we make a local plan that we'll just use for
+	 * this invocation, and will free at the end.  Otherwise, transaction ends
+	 * would cause errors about plancache leaks.
+	 *
+	 * XXX This would be fixable with some plancache/resowner surgery
+	 * elsewhere, but for now we'll just work around this here.
+	 */
+	local_plan = !estate->atomic;
 
 	/* PG_TRY to ensure we clear the plan link, if needed, on failure */
 	PG_TRY();
@@ -2106,39 +2155,50 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 		SPIPlanPtr	plan = expr->plan;
 		ParamListInfo paramLI;
 
-		if (plan == NULL)
+		/*
+		 * Make a plan if we don't have one, or if we need a local one.  Note
+		 * that we'll overwrite expr->plan either way; the PG_TRY block will
+		 * ensure we undo that on the way out, if the plan is local.
+		 */
+		if (plan == NULL || local_plan)
 		{
-
-			/*
-			 * Don't save the plan if not in atomic context.  Otherwise,
-			 * transaction ends would cause errors about plancache leaks.
-			 *
-			 * XXX This would be fixable with some plancache/resowner surgery
-			 * elsewhere, but for now we'll just work around this here.
-			 */
-			exec_prepare_plan(estate, expr, 0, estate->atomic);
-
-			/*
-			 * The procedure call could end transactions, which would upset
-			 * the snapshot management in SPI_execute*, so don't let it do it.
-			 * Instead, we set the snapshots ourselves below.
-			 */
-			plan = expr->plan;
-			plan->no_snapshots = true;
-
 			/*
 			 * Force target to be recalculated whenever the plan changes, in
 			 * case the procedure's argument list has changed.
 			 */
 			stmt->target = NULL;
+			cur_target = NULL;
+
+			/* Don't let SPI save the plan if it's going to be local */
+			exec_prepare_plan(estate, expr, 0, !local_plan);
+			plan = expr->plan;
 		}
+
+		/*
+		 * A CALL or DO can never be a simple expression.  (If it could be,
+		 * we'd have to worry about saving/restoring the previous values of
+		 * the related expr fields, not just expr->plan.)
+		 */
+		Assert(!expr->expr_simple_expr);
+
+		/*
+		 * Tell SPI to allow non-atomic execution.  (The field name is a
+		 * legacy choice.)
+		 */
+		plan->no_snapshots = true;
 
 		/*
 		 * We construct a DTYPE_ROW datum representing the plpgsql variables
 		 * associated with the procedure's output arguments.  Then we can use
 		 * exec_move_row() to do the assignments.
+		 *
+		 * If we're using a local plan, also make a local target; otherwise,
+		 * since the above code will force a new plan each time through, we'd
+		 * repeatedly leak the memory for the target.  (Note: we also leak the
+		 * target when a plan change is forced, but that isn't so likely to
+		 * cause excessive memory leaks.)
 		 */
-		if (stmt->is_call && stmt->target == NULL)
+		if (stmt->is_call && cur_target == NULL)
 		{
 			Node	   *node;
 			FuncExpr   *funcexpr;
@@ -2152,6 +2212,9 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 			int			nfields;
 			int			i;
 			ListCell   *lc;
+
+			/* Use stmt_mcontext for any cruft accumulated here */
+			oldcontext = MemoryContextSwitchTo(get_stmt_mcontext(estate));
 
 			/*
 			 * Get the parsed CallStmt, and look up the called procedure
@@ -2184,9 +2247,11 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 			ReleaseSysCache(func_tuple);
 
 			/*
-			 * Begin constructing row Datum
+			 * Begin constructing row Datum; keep it in fn_cxt if it's to be
+			 * long-lived.
 			 */
-			oldcontext = MemoryContextSwitchTo(estate->func->fn_cxt);
+			if (!local_plan)
+				MemoryContextSwitchTo(estate->func->fn_cxt);
 
 			row = (PLpgSQL_row *) palloc0(sizeof(PLpgSQL_row));
 			row->dtype = PLPGSQL_DTYPE_ROW;
@@ -2194,7 +2259,8 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 			row->lineno = -1;
 			row->varnos = (int *) palloc(sizeof(int) * list_length(funcargs));
 
-			MemoryContextSwitchTo(oldcontext);
+			if (!local_plan)
+				MemoryContextSwitchTo(get_stmt_mcontext(estate));
 
 			/*
 			 * Examine procedure's argument list.  Each output arg position
@@ -2238,22 +2304,18 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 
 			row->nfields = nfields;
 
-			stmt->target = (PLpgSQL_variable *) row;
+			cur_target = (PLpgSQL_variable *) row;
+
+			/* We can save and re-use the target datum, if it's not local */
+			if (!local_plan)
+				stmt->target = cur_target;
+
+			MemoryContextSwitchTo(oldcontext);
 		}
 
 		paramLI = setup_param_list(estate, expr);
 
 		before_lxid = MyProc->lxid;
-
-		/*
-		 * Set snapshot only for non-read-only procedures, similar to SPI
-		 * behavior.
-		 */
-		if (!estate->readonly_func)
-		{
-			PushActiveSnapshot(GetTransactionSnapshot());
-			pushed_active_snap = true;
-		}
 
 		rc = SPI_execute_plan_with_paramlist(expr->plan, paramLI,
 											 estate->readonly_func, 0);
@@ -2261,17 +2323,27 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 	PG_CATCH();
 	{
 		/*
-		 * If we aren't saving the plan, unset the pointer.  Note that it
-		 * could have been unset already, in case of a recursive call.
+		 * If we are using a local plan, restore the old plan link.
 		 */
-		if (expr->plan && !expr->plan->saved)
-			expr->plan = NULL;
+		if (local_plan)
+			expr->plan = orig_plan;
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 
-	if (expr->plan && !expr->plan->saved)
-		expr->plan = NULL;
+	/*
+	 * If we are using a local plan, restore the old plan link; then free the
+	 * local plan to avoid memory leaks.  (Note that the error exit path above
+	 * just clears the link without risking calling SPI_freeplan; we expect
+	 * that xact cleanup will take care of the mess in that case.)
+	 */
+	if (local_plan)
+	{
+		SPIPlanPtr	plan = expr->plan;
+
+		expr->plan = orig_plan;
+		SPI_freeplan(plan);
+	}
 
 	if (rc < 0)
 		elog(ERROR, "SPI_execute_plan_with_paramlist failed executing query \"%s\": %s",
@@ -2279,21 +2351,11 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 
 	after_lxid = MyProc->lxid;
 
-	if (before_lxid == after_lxid)
+	if (before_lxid != after_lxid)
 	{
 		/*
-		 * If we are still in the same transaction after the call, pop the
-		 * snapshot that we might have pushed.  (If it's a new transaction,
-		 * then all the snapshots are gone already.)
-		 */
-		if (pushed_active_snap)
-			PopActiveSnapshot();
-	}
-	else
-	{
-		/*
-		 * If we are in a new transaction after the call, we need to reset
-		 * some internal state.
+		 * If we are in a new transaction after the call, we need to build new
+		 * simple-expression infrastructure.
 		 */
 		estate->simple_eval_estate = NULL;
 		plpgsql_create_econtext(estate);
@@ -2307,10 +2369,10 @@ exec_stmt_call(PLpgSQL_execstate *estate, PLpgSQL_stmt_call *stmt)
 	{
 		SPITupleTable *tuptab = SPI_tuptable;
 
-		if (!stmt->target)
+		if (!cur_target)
 			elog(ERROR, "DO statement returned a row");
 
-		exec_move_row(estate, stmt->target, tuptab->vals[0], tuptab->tupdesc);
+		exec_move_row(estate, cur_target, tuptab->vals[0], tuptab->tupdesc);
 	}
 	else if (SPI_processed > 1)
 		elog(ERROR, "procedure call returned more than one row");
@@ -2497,7 +2559,8 @@ exec_stmt_case(PLpgSQL_execstate *estate, PLpgSQL_stmt_case *stmt)
 			t_var->datatype->atttypmod != t_typmod)
 			t_var->datatype = plpgsql_build_datatype(t_typoid,
 													 t_typmod,
-													 estate->func->fn_input_collation);
+													 estate->func->fn_input_collation,
+													 NULL);
 
 		/* now we can assign to the variable */
 		exec_assign_value(estate,
@@ -4009,6 +4072,22 @@ exec_eval_cleanup(PLpgSQL_execstate *estate)
 
 /* ----------
  * Generate a prepared plan
+ *
+ * CAUTION: it is possible for this function to throw an error after it has
+ * built a SPIPlan and saved it in expr->plan.  Therefore, be wary of doing
+ * additional things contingent on expr->plan being NULL.  That is, given
+ * code like
+ *
+ *	if (query->plan == NULL)
+ *	{
+ *		// okay to put setup code here
+ *		exec_prepare_plan(estate, query, ...);
+ *		// NOT okay to put more logic here
+ *	}
+ *
+ * extra steps at the end are unsafe because they will not be executed when
+ * re-executing the calling statement, if exec_prepare_plan failed the first
+ * time.  This is annoyingly error-prone, but the alternatives are worse.
  * ----------
  */
 static void
@@ -4038,15 +4117,15 @@ exec_prepare_plan(PLpgSQL_execstate *estate,
 		SPI_keepplan(plan);
 	expr->plan = plan;
 
-	/* Check to see if it's a simple expression */
-	exec_simple_check_plan(estate, expr);
-
 	/*
 	 * Mark expression as not using a read-write param.  exec_assign_value has
 	 * to take steps to override this if appropriate; that seems cleaner than
 	 * adding parameters to all other callers.
 	 */
 	expr->rwparam = -1;
+
+	/* Check to see if it's a simple expression */
+	exec_simple_check_plan(estate, expr);
 }
 
 
@@ -4077,10 +4156,12 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 	 * whether the statement is INSERT/UPDATE/DELETE
 	 */
 	if (expr->plan == NULL)
+		exec_prepare_plan(estate, expr, CURSOR_OPT_PARALLEL_OK, true);
+
+	if (!stmt->mod_stmt_set)
 	{
 		ListCell   *l;
 
-		exec_prepare_plan(estate, expr, CURSOR_OPT_PARALLEL_OK, true);
 		stmt->mod_stmt = false;
 		foreach(l, SPI_plan_get_plan_sources(expr->plan))
 		{
@@ -4101,6 +4182,7 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 				break;
 			}
 		}
+		stmt->mod_stmt_set = true;
 	}
 
 	/*
@@ -4484,7 +4566,7 @@ exec_stmt_dynfors(PLpgSQL_execstate *estate, PLpgSQL_stmt_dynfors *stmt)
 	int			rc;
 
 	portal = exec_dynquery_with_params(estate, stmt->query, stmt->params,
-									   NULL, 0);
+									   NULL, CURSOR_OPT_NO_SCROLL);
 
 	/*
 	 * Execute the loop
@@ -4800,11 +4882,12 @@ exec_stmt_commit(PLpgSQL_execstate *estate, PLpgSQL_stmt_commit *stmt)
 	if (stmt->chain)
 		SPI_commit_and_chain();
 	else
-	{
 		SPI_commit();
-		SPI_start_transaction();
-	}
 
+	/*
+	 * We need to build new simple-expression infrastructure, since the old
+	 * data structures are gone.
+	 */
 	estate->simple_eval_estate = NULL;
 	plpgsql_create_econtext(estate);
 
@@ -4822,11 +4905,12 @@ exec_stmt_rollback(PLpgSQL_execstate *estate, PLpgSQL_stmt_rollback *stmt)
 	if (stmt->chain)
 		SPI_rollback_and_chain();
 	else
-	{
 		SPI_rollback();
-		SPI_start_transaction();
-	}
 
+	/*
+	 * We need to build new simple-expression infrastructure, since the old
+	 * data structures are gone.
+	 */
 	estate->simple_eval_estate = NULL;
 	plpgsql_create_econtext(estate);
 
@@ -4840,6 +4924,7 @@ exec_stmt_rollback(PLpgSQL_execstate *estate, PLpgSQL_stmt_rollback *stmt)
  *
  * We just parse and execute the statement normally, but we have to do it
  * without setting a snapshot, for things like SET TRANSACTION.
+ * XXX spi.c now handles this correctly, so we no longer need a special case.
  */
 static int
 exec_stmt_set(PLpgSQL_execstate *estate, PLpgSQL_stmt_set *stmt)
@@ -4848,10 +4933,7 @@ exec_stmt_set(PLpgSQL_execstate *estate, PLpgSQL_stmt_set *stmt)
 	int			rc;
 
 	if (expr->plan == NULL)
-	{
 		exec_prepare_plan(estate, expr, 0, true);
-		expr->plan->no_snapshots = true;
-	}
 
 	rc = SPI_execute_plan(expr->plan, NULL, NULL, estate->readonly_func, 0);
 
@@ -4880,6 +4962,14 @@ exec_assign_expr(PLpgSQL_execstate *estate, PLpgSQL_datum *target,
 	 * if we can pass the target variable as a read-write parameter to the
 	 * expression.  (This is a bit messy, but it seems cleaner than modifying
 	 * the API of exec_eval_expr for the purpose.)
+	 *
+	 * NOTE: this coding ignores the advice given in exec_prepare_plan's
+	 * comments, that one should not do additional setup contingent on
+	 * expr->plan being NULL.  This means that if we get an error while trying
+	 * to check for the expression being simple, we won't check for a
+	 * read-write parameter either, so that neither optimization will be
+	 * applied in future executions.  Nothing will fail though, so we live
+	 * with that bit of messiness too.
 	 */
 	if (expr->plan == NULL)
 	{
@@ -5828,14 +5918,21 @@ exec_run_select(PLpgSQL_execstate *estate,
 	 * On the first call for this expression generate the plan.
 	 *
 	 * If we don't need to return a portal, then we're just going to execute
-	 * the query once, which means it's OK to use a parallel plan, even if the
-	 * number of rows being fetched is limited.  If we do need to return a
-	 * portal, the caller might do cursor operations, which parallel query
-	 * can't support.
+	 * the query immediately, which means it's OK to use a parallel plan, even
+	 * if the number of rows being fetched is limited.  If we do need to
+	 * return a portal (i.e., this is for a FOR loop), the user's code might
+	 * invoke additional operations inside the FOR loop, making parallel query
+	 * unsafe.  In any case, we don't expect any cursor operations to be done,
+	 * so specify NO_SCROLL for efficiency and semantic safety.
 	 */
 	if (expr->plan == NULL)
-		exec_prepare_plan(estate, expr,
-						  portalP == NULL ? CURSOR_OPT_PARALLEL_OK : 0, true);
+	{
+		int			cursorOptions = CURSOR_OPT_NO_SCROLL;
+
+		if (portalP == NULL)
+			cursorOptions |= CURSOR_OPT_PARALLEL_OK;
+		exec_prepare_plan(estate, expr, cursorOptions, true);
+	}
 
 	/*
 	 * Set up ParamListInfo to pass to executor
@@ -5901,6 +5998,17 @@ exec_for_query(PLpgSQL_execstate *estate, PLpgSQL_stmt_forq *stmt,
 	 * execute.
 	 */
 	PinPortal(portal);
+
+	/*
+	 * In a non-atomic context, we dare not prefetch, even if it would
+	 * otherwise be safe.  Aside from any semantic hazards that that might
+	 * create, if we prefetch toasted data and then the user commits the
+	 * transaction, the toast references could turn into dangling pointers.
+	 * (Rows we haven't yet fetched from the cursor are safe, because the
+	 * PersistHoldablePortal mechanism handles this scenario.)
+	 */
+	if (!estate->atomic)
+		prefetch_ok = false;
 
 	/*
 	 * Fetch the initial tuple(s).  If prefetching is allowed then we grab a
@@ -6079,6 +6187,15 @@ exec_eval_simple_expr(PLpgSQL_execstate *estate,
 	 */
 	if (expr->expr_simple_in_use && expr->expr_simple_lxid == curlxid)
 		return false;
+
+	/*
+	 * Ensure that there's a portal-level snapshot, in case this simple
+	 * expression is the first thing evaluated after a COMMIT or ROLLBACK.
+	 * We'd have to do this anyway before executing the expression, so we
+	 * might as well do it now to ensure that any possible replanning doesn't
+	 * need to take a new snapshot.
+	 */
+	EnsurePortalSnapshotExists();
 
 	/*
 	 * Revalidate cached plan, so that we will notice if it became stale. (We
@@ -6825,6 +6942,76 @@ exec_move_row(PLpgSQL_execstate *estate,
 }
 
 /*
+ * Verify that a PLpgSQL_rec's rectypeid is up-to-date.
+ */
+static void
+revalidate_rectypeid(PLpgSQL_rec *rec)
+{
+	PLpgSQL_type *typ = rec->datatype;
+	TypeCacheEntry *typentry;
+
+	if (rec->rectypeid == RECORDOID)
+		return;					/* it's RECORD, so nothing to do */
+	Assert(typ != NULL);
+	if (typ->tcache &&
+		typ->tcache->tupDesc_identifier == typ->tupdesc_id)
+	{
+		/*
+		 * Although *typ is known up-to-date, it's possible that rectypeid
+		 * isn't, because *rec is cloned during each function startup from a
+		 * copy that we don't have a good way to update.  Hence, forcibly fix
+		 * rectypeid before returning.
+		 */
+		rec->rectypeid = typ->typoid;
+		return;
+	}
+
+	/*
+	 * typcache entry has suffered invalidation, so re-look-up the type name
+	 * if possible, and then recheck the type OID.  If we don't have a
+	 * TypeName, then we just have to soldier on with the OID we've got.
+	 */
+	if (typ->origtypname != NULL)
+	{
+		/* this bit should match parse_datatype() in pl_gram.y */
+		typenameTypeIdAndMod(NULL, typ->origtypname,
+							 &typ->typoid,
+							 &typ->atttypmod);
+	}
+
+	/* this bit should match build_datatype() in pl_comp.c */
+	typentry = lookup_type_cache(typ->typoid,
+								 TYPECACHE_TUPDESC |
+								 TYPECACHE_DOMAIN_BASE_INFO);
+	if (typentry->typtype == TYPTYPE_DOMAIN)
+		typentry = lookup_type_cache(typentry->domainBaseType,
+									 TYPECACHE_TUPDESC);
+	if (typentry->tupDesc == NULL)
+	{
+		/*
+		 * If we get here, user tried to replace a composite type with a
+		 * non-composite one.  We're not gonna support that.
+		 */
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("type %s is not composite",
+						format_type_be(typ->typoid))));
+	}
+
+	/*
+	 * Update tcache and tupdesc_id.  Since we don't support changing to a
+	 * non-composite type, none of the rest of *typ needs to change.
+	 */
+	typ->tcache = typentry;
+	typ->tupdesc_id = typentry->tupDesc_identifier;
+
+	/*
+	 * Update *rec, too.  (We'll deal with subsidiary RECFIELDs as needed.)
+	 */
+	rec->rectypeid = typ->typoid;
+}
+
+/*
  * Build an expanded record object suitable for assignment to "rec".
  *
  * Caller must supply either a source tuple descriptor or a source expanded
@@ -6848,6 +7035,11 @@ make_expanded_record_for_rec(PLpgSQL_execstate *estate,
 
 	if (rec->rectypeid != RECORDOID)
 	{
+		/*
+		 * Make sure rec->rectypeid is up-to-date before using it.
+		 */
+		revalidate_rectypeid(rec);
+
 		/*
 		 * New record must be of desired type, but maybe srcerh has already
 		 * done all the same lookups.
@@ -7320,6 +7512,11 @@ exec_move_row_from_datum(PLpgSQL_execstate *estate,
 				return;
 
 			/*
+			 * Make sure rec->rectypeid is up-to-date before using it.
+			 */
+			revalidate_rectypeid(rec);
+
+			/*
 			 * If we have a R/W pointer, we're allowed to just commandeer
 			 * ownership of the expanded record.  If it's of the right type to
 			 * put into the record variable, do that.  (Note we don't accept
@@ -7530,6 +7727,9 @@ instantiate_empty_record_variable(PLpgSQL_execstate *estate, PLpgSQL_rec *rec)
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("record \"%s\" is not assigned yet", rec->refname),
 				 errdetail("The tuple structure of a not-yet-assigned record is indeterminate.")));
+
+	/* Make sure rec->rectypeid is up-to-date before using it */
+	revalidate_rectypeid(rec);
 
 	/* OK, do it */
 	rec->erh = make_expanded_record_from_typeid(rec->rectypeid, -1,
@@ -7790,6 +7990,10 @@ get_cast_hashentry(PLpgSQL_execstate *estate,
  * exec_simple_check_plan -		Check if a plan is simple enough to
  *								be evaluated by ExecEvalExpr() instead
  *								of SPI.
+ *
+ * Note: the refcount manipulations in this function assume that expr->plan
+ * is a "saved" SPI plan.  That's a bit annoying from the caller's standpoint,
+ * but it's otherwise difficult to avoid leaking the plan on failure.
  * ----------
  */
 static void
@@ -7872,7 +8076,8 @@ exec_simple_check_plan(PLpgSQL_execstate *estate, PLpgSQL_expr *expr)
 	 * OK, we can treat it as a simple plan.
 	 *
 	 * Get the generic plan for the query.  If replanning is needed, do that
-	 * work in the eval_mcontext.
+	 * work in the eval_mcontext.  (Note that replanning could throw an error,
+	 * in which case the expr is left marked "not simple", which is fine.)
 	 */
 	oldcontext = MemoryContextSwitchTo(get_eval_mcontext(estate));
 	cplan = SPI_plan_get_cached_plan(expr->plan);
@@ -8103,8 +8308,13 @@ plpgsql_create_econtext(PLpgSQL_execstate *estate)
 	 * one already in the current transaction.  The EState is made a child of
 	 * TopTransactionContext so it will have the right lifespan.
 	 *
-	 * Note that this path is never taken when executing a DO block; the
-	 * required EState was already made by plpgsql_inline_handler.
+	 * Note that this path is never taken when beginning a DO block; the
+	 * required EState was already made by plpgsql_inline_handler.  However,
+	 * if the DO block executes COMMIT or ROLLBACK, then we'll come here and
+	 * make a shared EState to use for the rest of the DO block.  That's OK;
+	 * see the comments for shared_simple_eval_estate.  (Note also that a DO
+	 * block will continue to use its private cast hash table for the rest of
+	 * the block.  That's okay for now, but it might cause problems someday.)
 	 */
 	if (estate->simple_eval_estate == NULL)
 	{
@@ -8176,7 +8386,9 @@ plpgsql_xact_cb(XactEvent event, void *arg)
 	 * expect the regular abort recovery procedures to release everything of
 	 * interest.
 	 */
-	if (event == XACT_EVENT_COMMIT || event == XACT_EVENT_PREPARE)
+	if (event == XACT_EVENT_COMMIT ||
+		event == XACT_EVENT_PARALLEL_COMMIT ||
+		event == XACT_EVENT_PREPARE)
 	{
 		simple_econtext_stack = NULL;
 
@@ -8184,7 +8396,8 @@ plpgsql_xact_cb(XactEvent event, void *arg)
 			FreeExecutorState(shared_simple_eval_estate);
 		shared_simple_eval_estate = NULL;
 	}
-	else if (event == XACT_EVENT_ABORT)
+	else if (event == XACT_EVENT_ABORT ||
+			 event == XACT_EVENT_PARALLEL_ABORT)
 	{
 		simple_econtext_stack = NULL;
 		shared_simple_eval_estate = NULL;

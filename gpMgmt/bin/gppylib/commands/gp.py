@@ -81,6 +81,32 @@ def getPostmasterPID(hostname, datadir):
     except:
         return -1
 
+
+"""
+Given the segment data directory and the hostname,
+return all the postgres processes associated
+with that segment as a list.
+Returns an empty list if there is any error.
+"""
+def get_postgres_segment_processes(datadir, host):
+    postmaster_pid = getPostmasterPID(host, datadir)
+    if postmaster_pid == -1:
+        return []
+
+    postgres_pids = [postmaster_pid]
+    cmd = Command("get children pids", ("pgrep -P {0}".format(postmaster_pid)), ctxt=REMOTE, remoteHost=host)
+    cmd.run()
+
+    if cmd.get_results().rc == 0:
+        pids = cmd.get_results().stdout.split()
+        for pid in pids:
+            try:
+                postgres_pids.append(int(pid))
+            except ValueError:
+                pass # Ignore any error while converting to int from str
+
+    return postgres_pids
+
 #-----------------------------------------------
 
 class CmdArgs(list):
@@ -1599,6 +1625,21 @@ def createTempDirectoryName(coordinatorDataDirectory, tempDirPrefix):
                                 tempDirPrefix,
                                 datetime.datetime.now().strftime('%m%d%Y'),
                                 os.getpid())
+
+"""
+Check if gprecoverseg process is running or not by
+reading the PID file inside gprecoverseg.lock directory.
+Returns True if the process is running or False otherwise.
+"""
+def is_gprecoverseg_running():
+    gprecoverseg_pidfile = os.path.join(get_coordinatordatadir(), 'gprecoverseg.lock', 'PID')
+    try:
+        with open(gprecoverseg_pidfile) as pidfile:
+            gprecoverseg_pid = pidfile.read()
+    except Exception:
+        return False
+
+    return check_pid(gprecoverseg_pid)
 
 #-------------------------------------------------------------------------
 class GpRecoverSeg(Command):

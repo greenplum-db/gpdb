@@ -14,7 +14,7 @@ The role name `gpadmin` is reserved. `gpadmin` is the default Greenplum Database
 
 In data files, the characters that delimit fields \(columns\) and rows have a special meaning. If they appear within the data you must escape them so that Greenplum Database treats them as data and not as delimiters. The backslash character \(`\`\) is the default escape character. See [Escaping](../admin_guide/load/topics/g-escaping.html#topic99) for details.
 
-See [SQL Syntax](https://www.postgresql.org/docs/9.4/sql-syntax.html) in the PostgreSQL documentation for more information about SQL identifiers, constants, operators, and expressions.
+See [SQL Syntax](https://www.postgresql.org/docs/12/sql-syntax.html) in the PostgreSQL documentation for more information about SQL identifiers, constants, operators, and expressions.
 
 ## <a id="keywords"></a>SQL Key Words 
 
@@ -197,6 +197,7 @@ Before studying the table, note the fact that a key word is not reserved does no
 |FULLSCAN|unreserved||
 |FUNCTION|unreserved|unreserved|
 |FUNCTIONS|unreserved|unreserved|
+|GENERATED|unreserved|unreserved|
 |GLOBAL|unreserved|unreserved|
 |GRANT|reserved|reserved|
 |GRANTED|unreserved|unreserved|
@@ -432,6 +433,7 @@ Before studying the table, note the fact that a key word is not reserved does no
 |STDIN|unreserved|unreserved|
 |STDOUT|unreserved|unreserved|
 |STORAGE|unreserved|unreserved|
+|STORED|unreserved|unreserved|
 |STRICT|unreserved|unreserved|
 |STRIP|unreserved|unreserved|
 |SUBPARTITION|unreserved||

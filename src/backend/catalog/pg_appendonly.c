@@ -17,6 +17,7 @@
 
 #include "postgres.h"
 
+#include "access/reloptions.h"
 #include "catalog/pg_am_d.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/pg_attribute_encoding.h"
@@ -41,26 +42,18 @@ static void SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2);
 
 /*
  * Adds an entry into the pg_appendonly catalog table. The entry
- * includes the new relfilenode of the appendonly relation that 
+ * includes the new relfilenode of the appendonly relation that
  * was just created and an initial eof and reltuples values of 0
  */
 void
-InsertAppendOnlyEntry(Oid relid, 
-					  int blocksize, 
-					  int safefswritesize, 
-					  int compresslevel,
-					  bool checksum,
-                      bool columnstore,
-					  char* compresstype,
+InsertAppendOnlyEntry(Oid relid,
 					  Oid segrelid,
 					  Oid blkdirrelid,
-					  Oid blkdiridxid,
 					  Oid visimaprelid,
-					  Oid visimapidxid)
+					  int16 version)
 {
 	Relation	pg_appendonly_rel;
 	HeapTuple	pg_appendonly_tuple = NULL;
-	NameData	compresstype_name;
 	bool	   *nulls;
 	Datum	   *values;
 	int			natts = 0;
@@ -74,29 +67,11 @@ InsertAppendOnlyEntry(Oid relid,
 	values = palloc0(sizeof(Datum) * natts);
 	nulls = palloc0(sizeof(bool) * natts);
 
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 *		Consider not storing the parsed values for blocksize, compresstype,
-	 *		compresslevel and checksum as those are also present in StdRdOptions
-	 *		of Relcache.
-	 */
-
-	if (compresstype)
-		namestrcpy(&compresstype_name, compresstype);
-	else
-		namestrcpy(&compresstype_name, "");
 	values[Anum_pg_appendonly_relid - 1] = ObjectIdGetDatum(relid);
-	values[Anum_pg_appendonly_blocksize - 1] = Int32GetDatum(blocksize);
-	values[Anum_pg_appendonly_safefswritesize - 1] = Int32GetDatum(safefswritesize);
-	values[Anum_pg_appendonly_compresslevel - 1] = Int32GetDatum(compresslevel);
-	values[Anum_pg_appendonly_checksum - 1] = BoolGetDatum(checksum);
-	values[Anum_pg_appendonly_compresstype - 1] = NameGetDatum(&compresstype_name);
-	values[Anum_pg_appendonly_columnstore - 1] = BoolGetDatum(columnstore);
 	values[Anum_pg_appendonly_segrelid - 1] = ObjectIdGetDatum(segrelid);
 	values[Anum_pg_appendonly_blkdirrelid - 1] = ObjectIdGetDatum(blkdirrelid);
-	values[Anum_pg_appendonly_blkdiridxid - 1] = ObjectIdGetDatum(blkdiridxid);
 	values[Anum_pg_appendonly_visimaprelid - 1] = ObjectIdGetDatum(visimaprelid);
-	values[Anum_pg_appendonly_visimapidxid - 1] = ObjectIdGetDatum(visimapidxid);
+	values[Anum_pg_appendonly_version - 1] = Int16GetDatum(version);
 
 	/*
 	 * form the tuple and insert it
@@ -121,104 +96,65 @@ InsertAppendOnlyEntry(Oid relid,
 void
 GetAppendOnlyEntryAttributes(Oid relid,
 							 int32 *blocksize,
-							 int32 *safefswritesize,
 							 int16 *compresslevel,
 							 bool *checksum,
 							 NameData *compresstype)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData	key[1];
-	SysScanDesc	scan;
+	Relation	ao_rel;
+	StdRdOptions *relopts;
 	HeapTuple	tuple;
-	Form_pg_appendonly	aoForm;
+	Datum reloptions;
+	bool		isNull;
 
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
+	ao_rel = table_open(relid, AccessShareLock);
 
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  NULL, 1, key);
-	tuple = systable_getnext(scan);
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
+		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
+								 &isNull);
+	if (isNull)
+		reloptions = (Datum) 0;
+
+	relopts = (StdRdOptions *) default_reloptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED);
+
 	if (blocksize != NULL)
-		*blocksize = aoForm->blocksize;
-
-	if (safefswritesize != NULL)
-		*safefswritesize = aoForm->safefswritesize;
-
-	if (compresslevel != NULL)
-		*compresslevel = aoForm->compresslevel;
-
-	if (checksum != NULL)
-		*checksum = aoForm->checksum;
+		*blocksize = relopts->blocksize;
 
 	if (compresstype != NULL)
-		namestrcpy(compresstype, NameStr(aoForm->compresstype));
+		namestrcpy(compresstype, relopts->compresstype);
 
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
+	if (compresslevel != NULL)
+		*compresslevel = relopts->compresslevel;
+
+	if (checksum != NULL)
+		*checksum = relopts->checksum;
+
+	ReleaseSysCache(tuple);
+	table_close(ao_rel, AccessShareLock);
 }
 
 /*
  * Get the OIDs of the auxiliary relations and their indexes for an appendonly
- * relation.
+ * relation. This should only be called on tables with pg_appendonly entries,
+ * which currently are just non-partitioned AO/CO tables.
  *
  * The OIDs will be retrieved only when the corresponding output variable is
  * not NULL.
- *
- * 'appendOnlyMetaDataSnapshot' can be passed as NULL, which means use the
- * latest snapshot, like in systable_beginscan.
  */
 void
-GetAppendOnlyEntryAuxOids(Oid relid,
-						  Snapshot appendOnlyMetaDataSnapshot,
+GetAppendOnlyEntryAuxOids(Relation rel,
 						  Oid *segrelid,
 						  Oid *blkdirrelid,
-						  Oid *blkdiridxid,
-						  Oid *visimaprelid,
-						  Oid *visimapidxid)
+						  Oid *visimaprelid)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData key[1];
-	SysScanDesc scan;
-	HeapTuple	tuple;
 	Form_pg_appendonly	aoForm;
 
-	/*
-	 * Check the pg_appendonly relation to be certain the ao table
-	 * is there.
-	 */
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
+	/* the relation has to be a non-partitioned AO/CO table */
+	Assert(RelationStorageIsAO(rel));
 
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  appendOnlyMetaDataSnapshot, 1, key);
-	tuple = systable_getnext(scan);
-	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
-
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
+	aoForm = rel->rd_appendonly;
 
 	if (segrelid != NULL)
 		*segrelid = aoForm->segrelid;
@@ -226,57 +162,28 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 	if (blkdirrelid != NULL)
 		*blkdirrelid = aoForm->blkdirrelid;
 
-	if (blkdiridxid != NULL)
-		*blkdiridxid = aoForm->blkdiridxid;
-
 	if (visimaprelid != NULL)
 		*visimaprelid = aoForm->visimaprelid;
-
-	if (visimapidxid != NULL)
-		*visimapidxid = aoForm->visimapidxid;
-
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
 }
 
+/*
+ * Get the pg_appendonly entry for the relation. This should only be called on 
+ * tables with pg_appendonly entries, which currently are just non-partitioned
+ * AO/CO tables. The pg_appendonly data is copied into the Form_pg_appendonly
+ * pointer which should be valid.
+ */
 void
-GetAppendOnlyEntry(Oid relid, Form_pg_appendonly aoEntry)
+GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry)
 {
-	Relation	pg_appendonly;
-	TupleDesc	tupDesc;
-	ScanKeyData key[1];
-	SysScanDesc scan;
-	HeapTuple	tuple;
 	Form_pg_appendonly	aoForm;
 
-	/*
-	 * Check the pg_appendonly relation to be certain the ao table
-	 * is there.
-	 */
-	pg_appendonly = table_open(AppendOnlyRelationId, AccessShareLock);
-	tupDesc = RelationGetDescr(pg_appendonly);
+	/* the relation has to be a non-partitioned AO/CO table and the aoEntry is valid */
+	Assert(RelationStorageIsAO(rel));
+	Assert(aoEntry);
 
-	ScanKeyInit(&key[0],
-				Anum_pg_appendonly_relid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
+	aoForm = rel->rd_appendonly;
 
-	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  NULL, 1, key);
-	tuple = systable_getnext(scan);
-	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_appendonly entry for relation \"%s\"",
-						get_rel_name(relid))));
-
-	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
 	memcpy(aoEntry, aoForm, APPENDONLY_TUPLE_SIZE);
-
-	/* Finish up scan and close pg_appendonly catalog. */
-	systable_endscan(scan);
-	table_close(pg_appendonly, AccessShareLock);
 }
 
 /*
@@ -287,9 +194,7 @@ void
 UpdateAppendOnlyEntryAuxOids(Oid relid,
 							 Oid newSegrelid,
 							 Oid newBlkdirrelid,
-							 Oid newBlkdiridxid,
-							 Oid newVisimaprelid,
-							 Oid newVisimapidxid)
+							 Oid newVisimaprelid)
 {
 	Relation	pg_appendonly;
 	ScanKeyData key[1];
@@ -335,23 +240,12 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 		newValues[Anum_pg_appendonly_blkdirrelid - 1] = newBlkdirrelid;
 	}
 	
-	if (OidIsValid(newBlkdiridxid))
-	{
-		replace[Anum_pg_appendonly_blkdiridxid - 1] = true;
-		newValues[Anum_pg_appendonly_blkdiridxid - 1] = newBlkdiridxid;
-	}
-	
 	if (OidIsValid(newVisimaprelid))
 	{
 		replace[Anum_pg_appendonly_visimaprelid - 1] = true;
 		newValues[Anum_pg_appendonly_visimaprelid - 1] = newVisimaprelid;
 	}
 	
-	if (OidIsValid(newVisimapidxid))
-	{
-		replace[Anum_pg_appendonly_visimapidxid - 1] = true;
-		newValues[Anum_pg_appendonly_visimapidxid - 1] = newVisimapidxid;
-	}
 	newTuple = heap_modify_tuple(tuple, RelationGetDescr(pg_appendonly),
 								 newValues, newNulls, replace);
 	CatalogTupleUpdate(pg_appendonly, &newTuple->t_self, newTuple);
@@ -414,7 +308,7 @@ RemoveAppendonlyEntry(Oid relid)
 	}
 
 	/* Piggyback here to remove gp_fastsequence entries */
-	RemoveFastSequenceEntry(aosegrelid);
+	RemoveFastSequenceEntry(relid, aosegrelid);
 
 	/*
 	 * Delete the appendonly table entry from the catalog (pg_appendonly).

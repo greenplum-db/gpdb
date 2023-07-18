@@ -7,11 +7,11 @@
       </dxl:Properties>
       <dxl:ProjList>
         <dxl:ProjElem ColId="3" Alias="pow">
-          <dxl:FuncExpr FuncId="0.1346.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
-            <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+          <dxl:FuncExpr FuncId="0.1346.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
+            <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
               <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
             </dxl:FuncExpr>
-            <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+            <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
               <dxl:Ident ColId="1" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:FuncExpr>
           </dxl:FuncExpr>

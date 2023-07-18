@@ -99,7 +99,7 @@ typedef struct AppendOnlyStorageAttributes
 			 * The level can be equally important on
 			 * decompression since it may specify which
 			 * sub-library to use for decompress
-			 * (e.g. QuickLZ).
+			 * (e.g. ZSTD).
 			 */
 	int					overflowSize;
 			/*
@@ -111,12 +111,6 @@ typedef struct AppendOnlyStorageAttributes
 			/*
  			 * When true, checksums protect the header
 			 * and content.  Otherwise, no checksums.
-			 */
-
-	int					safeFSWriteSize;
-			/*
-			 * The page round out with zero padding byte length.
-			 * When 0, do no zero pad.
 			 */
 
 } AppendOnlyStorageAttributes;

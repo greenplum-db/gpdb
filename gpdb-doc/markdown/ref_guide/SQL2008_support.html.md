@@ -202,7 +202,7 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |F191|Referential delete actions|NO| |
 |F200|`TRUNCATE TABLE` statement|YES| |
 |F201|`CAST` function|YES| |
-|F202|`TRUNCATE TABLE`: identity column restart option|NO| |
+|F202|`TRUNCATE TABLE`: identity column restart option|YES| |
 |F221|Explicit defaults|YES| |
 |F222|`INSERT` statement: `DEFAULT VALUES` clause|YES| |
 |F231|Privilege tables|YES| |
@@ -241,6 +241,8 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |F381-02|`ALTER TABLE` statement: `ADD CONSTRAINT` clause| | |
 |F381-03|`ALTER TABLE` statement: `DROP CONSTRAINT` clause| | |
 |F382|Alter column data type|YES|Some limitations on altering distribution key columns|
+|F384|Drop identity property clause|YES| |
+|F386|Set identity column generation clause|YES| |
 |F391|Long identifiers|YES| |
 |F392|Unicode escapes in identifiers|NO| |
 |F393|Unicode escapes in literals|NO| |
@@ -349,7 +351,7 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |S095|Array constructors by query|NO| |
 |S096|Optional array bounds|NO| |
 |S097|Array element assignment|NO| |
-|S098|`ARRAY_AGG`|Partially|Supported: Using array\_agg without a window specification; for example<br/><br/>SELECT array\_agg\(x\) FROM ...<br/><br/>SELECT array\_agg \(x order by y\) FROM ...<br/><br/>Not supported: Using array\_agg as an aggregate derived window function; for example<br/><br/>SELECT array\_agg\(x\) over \(ORDER BY y\) FROM ...<br/><br/>SELECT array\_agg\(x order by y\) over \(PARTITION BY z\) FROM ...<br/><br/>SELECT array\_agg\(x order by y\) over \(ORDER BY z\) FROM ...|
+|S098|`array_agg`|Partially|Supported: Using `array_agg` without a window specification, for example:<br/>`SELECT array_agg(x) FROM ...`,<br/>`SELECT array_agg (x order by y) FROM ...`<br/><br/>Not supported: Using `array_agg` as an aggregate derived window function, for example:<br/>`SELECT array_agg(x) over (ORDER BY y) FROM ...`,<br/>`SELECT array_agg(x order by y) over (PARTITION BY z) FROM ...`,<br/>`SELECT array_agg(x order by y) over (ORDER BY z) FROM ...`|
 |S111|`ONLY` in query expressions|YES| |
 |S151|Type predicate|NO| |
 |S161|Subtype treatment|NO| |
@@ -402,11 +404,11 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |T171|`LIKE` clause in table definition|YES| |
 |T172|`AS` subquery clause in table definition|YES| |
 |T173|Extended `LIKE` clause in table definition|YES| |
-|T174|Identity columns|NO| |
+|T174|Identity columns|YES| |
 |T175|Generated columns|NO| |
 |T176|Sequence generator support|NO| |
 |T177|Sequence generator support: simple restart option|NO| |
-|T178|Identity columns: simple restart option|NO| |
+|T178|Identity columns: simple restart option|YES| |
 |T191|Referential action `RESTRICT`|NO| |
 |T201|Comparable data types for referential constraints|NO| |
 |T211|Basic trigger capability|NO| |

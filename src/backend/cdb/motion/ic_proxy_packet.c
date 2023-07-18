@@ -82,6 +82,7 @@ void
 ic_proxy_message_init(ICProxyPkt *pkt, ICProxyMessageType type,
 					  const ICProxyKey *key)
 {
+	pkt->magicNumber = IC_PROXY_PKT_MAGIC_NUMBER;
 	pkt->type = type;
 	pkt->len = sizeof(*pkt);
 
@@ -97,30 +98,6 @@ ic_proxy_message_init(ICProxyPkt *pkt, ICProxyMessageType type,
 	pkt->dstContentId   = key->remoteContentId;
 	pkt->dstDbid        = key->remoteDbid;
 	pkt->dstPid         = key->remotePid;
-}
-
-/*
- * Build a new packet.
- *
- * The data will also be copied to the packet.
- *
- * The returned packet must be freed with the ic_proxy_pkt_cache_free()
- * function.
- */
-ICProxyPkt *
-ic_proxy_pkt_new(const ICProxyKey *key, const void *data, uint16 size)
-{
-	ICProxyPkt *pkt;
-
-	Assert(size + sizeof(*pkt) <= IC_PROXY_MAX_PKT_SIZE);
-
-	pkt = ic_proxy_pkt_cache_alloc(NULL);
-	ic_proxy_message_init(pkt, IC_PROXY_MESSAGE_DATA, key);
-
-	memcpy(((char *) pkt) + sizeof(*pkt), data, size);
-	pkt->len = sizeof(*pkt) + size;
-
-	return pkt;
 }
 
 /*
@@ -156,13 +133,14 @@ ic_proxy_pkt_to_str(const ICProxyPkt *pkt)
 	static char	buf[256];
 
 	snprintf(buf, sizeof(buf),
-			 "%s [con%d,cmd%d,slice[%hd->%hd] %hu bytes seg%hd:dbid%hu:p%d->seg%hd:dbid%hu:p%d]",
+			 "%s [con%d,cmd%d,slice[%hd->%hd] %hu bytes seg%hd:dbid%hu:p%d->seg%hd:dbid%hu:p%d magic%u]",
 			 ic_proxy_message_type_to_str(pkt->type),
 			 pkt->sessionId, pkt->commandId,
 			 pkt->sendSliceIndex, pkt->recvSliceIndex,
 			 pkt->len,
 			 pkt->srcContentId, pkt->srcDbid, pkt->srcPid,
-			 pkt->dstContentId, pkt->dstDbid, pkt->dstPid);
+			 pkt->dstContentId, pkt->dstDbid, pkt->dstPid,
+			 pkt->magicNumber);
 
 	return buf;
 }

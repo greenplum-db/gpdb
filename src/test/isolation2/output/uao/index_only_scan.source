@@ -1,0 +1,83 @@
+-- This test file verifies the correctness of Index Only Scans for AO/CO tables.
+
+SET enable_seqscan TO off;
+SET
+SET optimizer TO off;
+SET
+
+CREATE TABLE uao_index_only_scan_@amname@(i int, j int) USING @amname@;
+CREATE TABLE
+CREATE INDEX ON uao_index_only_scan_@amname@(i);
+CREATE INDEX
+
+-- Set 1: Insert (and commit) some rows
+INSERT INTO uao_index_only_scan_@amname@ SELECT i, 0 FROM generate_series(1, 3)i;
+INSERT 0 3
+
+-- Establish a transaction with repeatable read isolation and take a snapshot
+-- early
+1: SET enable_seqscan TO off;
+SET
+1: SET optimizer TO off;
+SET
+1: BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+1: EXPLAIN SELECT i FROM uao_index_only_scan_@amname@;
+ QUERY PLAN                                                                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.17..2265.67 rows=86100 width=4)                                                   
+   ->  Index Only Scan using uao_index_only_scan_@amname@_i_idx on uao_index_only_scan_@amname@  (cost=0.17..1117.67 rows=28700 width=4) 
+ Optimizer: Postgres query optimizer                                                                                                 
+(3 rows)
+-- We should see the rows from Set 1.
+1: SELECT i FROM uao_index_only_scan_@amname@;
+ i 
+---
+ 1 
+ 2 
+ 3 
+(3 rows)
+
+-- Set 2: Insert and then delete some rows
+INSERT INTO uao_index_only_scan_@amname@ SELECT i, 0 FROM generate_series(4, 6)i;
+INSERT 0 3
+DELETE FROM uao_index_only_scan_@amname@ WHERE i >= 4 AND i <= 6;
+DELETE 3
+
+-- Set 3: Insert some to-be-committed rows
+2: BEGIN;
+BEGIN
+2: INSERT INTO uao_index_only_scan_@amname@ SELECT i, 0 FROM generate_series(7, 9)i;
+INSERT 0 3
+
+-- Set 4: Insert some aborted rows
+BEGIN;
+BEGIN
+INSERT INTO uao_index_only_scan_@amname@ SELECT i, 0 FROM generate_series(10, 12)i;
+INSERT 0 3
+ABORT;
+ROLLBACK
+
+-- We should see rows from Set 1 only. Rows from other sets should be invisible.
+SELECT i FROM uao_index_only_scan_@amname@;
+ i 
+---
+ 2 
+ 3 
+ 1 
+(3 rows)
+
+2: COMMIT;
+COMMIT
+
+-- We should see rows from Set 1 only. Rows from other sets should be invisible
+-- (in spite of the rows from Set 3 now committing, due to RR semantics)
+1: SELECT i FROM uao_index_only_scan_@amname@;
+ i 
+---
+ 1 
+ 2 
+ 3 
+(3 rows)
+1: END;
+COMMIT

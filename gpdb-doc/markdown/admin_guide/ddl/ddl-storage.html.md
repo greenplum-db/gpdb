@@ -12,7 +12,7 @@ Greenplum Database supports several storage models and a mix of storage models. 
 -   [Altering a Table](#topic55)
 -   [Dropping a Table](#topic62)
 
-**Note:** To simplify the creation of database tables, you can specify the default values for some table storage options with the Greenplum Database server configuration parameter `gp_default_storage_options`.
+> **Note** To simplify the creation of database tables, you can specify the default values for some table storage options with the Greenplum Database server configuration parameter `gp_default_storage_options`.
 
 For information about the parameter, see "Server Configuration Parameters" in the *Greenplum Database Reference Guide*.
 
@@ -42,9 +42,9 @@ Use the `WITH` clause of the `CREATE TABLE` command to declare the table storage
     DISTRIBUTED BY (a);
 ```
 
-**Note:** You use the `appendoptimized=value` syntax to specify the append-optimized table storage type. `appendoptimized` is a thin alias for the `appendonly` legacy storage option. Greenplum Database stores `appendonly` in the catalog, and displays the same when listing storage options for append-optimized tables.
+> **Note** You use the `appendoptimized=value` syntax to specify the append-optimized table storage type. `appendoptimized` is a thin alias for the `appendonly` legacy storage option. Greenplum Database stores `appendonly` in the catalog, and displays the same when listing storage options for append-optimized tables.
 
-`UPDATE` and `DELETE` are not allowed on append-optimized tables in a repeatable read or serizalizable transaction and will cause the transaction to end prematurely. `DECLARE...FOR UPDATE` and triggers are not supported with append-optimized tables. `CLUSTER` on append-optimized tables is only supported over B-tree indexes.
+`UPDATE` and `DELETE` are not allowed on append-optimized tables in a repeatable read or serizalizable transaction and will cause the transaction to end prematurely. `DECLARE...FOR UPDATE` and triggers are not supported with append-optimized tables.  `CLUSTER` on append-optimized tables is only supported over B-tree indexes.
 
 ## <a id="topic39"></a>Choosing Row or Column-Oriented Storage 
 
@@ -101,27 +101,22 @@ The following table summarizes the available compression algorithms.
 
 |Table Orientation|Available Compression Types|Supported Algorithms|
 |-----------------|---------------------------|--------------------|
-|Row|Table|`ZLIB`, `ZSTD`, and `QUICKLZ`\*|
-|Column|Column and Table|`RLE_TYPE`, `ZLIB`, `ZSTD`, and `QUICKLZ`\*|
-
-**Note:** \*QuickLZ compression is not available in the open source version of Greenplum Database.
+|Row|Table|`ZLIB` and `ZSTD`|
+|Column|Column and Table|`RLE_TYPE`, `ZLIB`, and `ZSTD`|
 
 When choosing a compression type and level for append-optimized tables, consider these factors:
 
 -   CPU usage. Your segment systems must have the available CPU power to compress and uncompress the data.
 -   Compression ratio/disk size. Minimizing disk size is one factor, but also consider the time and CPU capacity required to compress and scan data. Find the optimal settings for efficiently compressing data without causing excessively long compression times or slow scan rates.
--   Speed of compression. QuickLZ compression generally uses less CPU capacity and compresses data faster at a lower compression ratio than zlib. zlib provides higher compression ratios at lower speeds.
-
-    For example, at compression level 1 \(`compresslevel=1`\), QuickLZ and zlib have comparable compression ratios, though at different speeds. Using zlib with `compresslevel=6` can significantly increase the compression ratio compared to QuickLZ, though with lower compression speed. Zstandard compression can provide for either good compression ratio or speed, depending on compression level, or a good compromise on both.
-
+-   Speed of compression. Higher compression levels can yield different compression ratios (always at the cost of speed). This varies by compression type: `ZLIB` versus `ZTSD`.
 -   Speed of decompression/scan rate. Performance with compressed append-optimized tables depends on hardware, query tuning settings, and other factors. Perform comparison testing to determine the actual performance in your environment.
 
-    **Note:** Do not create compressed append-optimized tables on file systems that use compression. If the file system on which your segment data directory resides is a compressed file system, your append-optimized table must not use compression.
+    > **Note** Do not create compressed append-optimized tables on file systems that use compression. If the file system on which your segment data directory resides is a compressed file system, your append-optimized table must not use compression.
 
 
 Performance with compressed append-optimized tables depends on hardware, query tuning settings, and other factors. You should perform comparison testing to determine the actual performance in your environment.
 
-**Note:** Zstd compression level can be set to values between 1 and 19. QuickLZ compression level can only be set to level 1; no other values are available. Compression level with zlib can be set to values from 1 - 9. Compression level with RLE can be set to values from 1 - 4.
+> **Note** `ZTSD` compression level can be set to values between 1 and 19. Compression level with `ZLIB` can be set to values from 1 - 9. Compression level with `RLE` can be set to values from 1 - 4.
 
 An `ENCODING` clause specifies compression type and level for individual columns. When an `ENCODING` clause conflicts with a `WITH` clause, the `ENCODING` clause has higher precedence than the `WITH` clause.
 
@@ -184,7 +179,7 @@ Greenplum Database supports Run-length Encoding \(RLE\) for column-level compres
 
 There are four levels of RLE compression available. The levels progressively increase the compression ratio, but decrease the compression speed.
 
-Greenplum Database versions 4.2.1 and later support column-oriented RLE compression. To backup a table with RLE compression that you intend to restore to an earlier version of Greenplum Database, alter the table to have no compression or a compression type supported in the earlier version \(`ZLIB` or `QUICKLZ`\) before you start the backup operation.
+Greenplum Database versions 4.2.1 and later support column-oriented RLE compression. To back up a table with RLE compression that you intend to restore to an earlier version of Greenplum Database, alter the table to have no compression or a compression type supported in the earlier version before you start the backup operation.
 
 Greenplum Database combines delta compression with RLE compression for data in columns of type `BIGINT`, `INTEGER`, `DATE`, `TIME`, or `TIMESTAMP`. The delta compression algorithm is based on the change between consecutive column values and is designed to improve compression when data is loaded in sorted order or when the compression is applied to data in sorted order.
 
@@ -215,8 +210,7 @@ The following table details the types of storage parameters and possible values 
               <td class="entry" headers="topic43__im198636__entry__2">Type of compression.</td>
               <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">zstd: </code>Zstandard
                     algorithm<p class="p"><code class="ph codeph">zlib: </code>deflate
-                      algorithm</p><p class="p"><code class="ph codeph">quicklz</code>: fast
-                    compression</p><p class="p"><code class="ph codeph">RLE_TYPE</code>: run-length encoding
+                      algorithm</p><p class="p"><code class="ph codeph">RLE_TYPE</code>: run-length encoding
                     </p><p class="p"><code class="ph codeph">none</code>: no compression</p></td>
               <td class="entry" headers="topic43__im198636__entry__4">Values are not case-sensitive.</td>
             </tr>
@@ -237,11 +231,6 @@ The following table details the types of storage parameters and possible values 
               <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the fastest method with the least
                 compression. <code class="ph codeph">1</code> is the default.<p class="p"><code class="ph codeph">19</code> is the slowest
                   method with the most compression.</p></td>
-            </tr>
-            <tr class="row">
-              <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">QuickLZ</code> compression:<p class="p"><code class="ph codeph">1</code> – use
-                  compression</p></td>
-              <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the default.</td>
             </tr>
             <tr class="row">
               <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">RLE_TYPE</code> compression: <code class="ph codeph">1</code> –
@@ -299,7 +288,7 @@ DEFAULT COLUMN ENCODING ( <storage_directive> [, … ] )
 *Example:*
 
 ```
-C1 char ENCODING (compresstype=quicklz, blocksize=65536) 
+C1 char ENCODING (compresstype=zstd, blocksize=65536) 
 
 ```
 
@@ -309,7 +298,7 @@ COLUMN C1 ENCODING (compresstype=zlib, compresslevel=6, blocksize=65536)
 ```
 
 ```
-DEFAULT COLUMN ENCODING (compresstype=quicklz)
+DEFAULT COLUMN ENCODING (compresstype=zlib)
 
 ```
 
@@ -327,7 +316,7 @@ Column compression settings are inherited from the type level to the table level
 -   Column compression settings specified for subpartitions override any compression settings at the partition, column or table levels.
 -   When an `ENCODING` clause conflicts with a `WITH` clause, the `ENCODING` clause has higher precedence than the `WITH` clause.
 
-**Note:** The `INHERITS` clause is not allowed in a table that contains a storage parameter or a column reference storage parameter.
+> **Note** The `INHERITS` clause is not allowed in a table that contains a storage parameter or a column reference storage parameter.
 
 Tables created using the `LIKE` clause ignore storage parameter and column reference storage parameters.
 
@@ -341,21 +330,21 @@ The following examples show the use of storage parameters in `CREATE TABLE` stat
 
 #### <a id="topic48"></a>Example 1 
 
-In this example, column `c1` is compressed using `zstd` and uses the block size defined by the system. Column `c2` is compressed with `quicklz`, and uses a block size of `65536`. Column `c3` is not compressed and uses the block size defined by the system.
+In this example, column `c1` is compressed using `zstd` and uses the block size defined by the system. Column `c2` is compressed with `zlib`, and uses a block size of `65536`. Column `c3` is not compressed and uses the block size defined by the system.
 
 ```
 CREATE TABLE T1 (c1 int ENCODING (compresstype=zstd),
-                  c2 char ENCODING (compresstype=quicklz, blocksize=65536),
+                  c2 char ENCODING (compresstype=zlib, blocksize=65536),
                   c3 char)    WITH (appendoptimized=true, orientation=column);
 ```
 
 #### <a id="topic49"></a>Example 2 
 
-In this example, column `c1` is compressed using `zlib` and uses the block size defined by the system. Column `c2` is compressed with `quicklz`, and uses a block size of `65536`. Column `c3` is compressed using `RLE_TYPE` and uses the block size defined by the system.
+In this example, column `c1` is compressed using `zlib` and uses the block size defined by the system. Column `c2` is compressed with `zstd`, and uses a block size of `65536`. Column `c3` is compressed using `RLE_TYPE` and uses the block size defined by the system.
 
 ```
 CREATE TABLE T2 (c1 int ENCODING (compresstype=zlib),
-                  c2 char ENCODING (compresstype=quicklz, blocksize=65536),
+                  c2 char ENCODING (compresstype=zstd, blocksize=65536),
                   c3 char,
                   COLUMN c3 ENCODING (compresstype=RLE_TYPE)
                   )
@@ -364,11 +353,11 @@ CREATE TABLE T2 (c1 int ENCODING (compresstype=zlib),
 
 #### <a id="topic50"></a>Example 3 
 
-In this example, column `c1` is compressed using `zlib` and uses the block size defined by the system. Column `c2` is compressed with `quicklz`, and uses a block size of `65536`. Column `c3` is compressed using `zlib` and uses the block size defined by the system. Note that column `c3` uses `zlib` \(not `RLE_TYPE`\) in the partitions, because the column storage in the partition clause has precedence over the storage parameter in the column definition for the table.
+In this example, column `c1` is compressed using `zlib` and uses the block size defined by the system. Column `c2` is compressed with `zstd`, and uses a block size of `65536`. Column `c3` is compressed using `zlib` and uses the block size defined by the system. Note that column `c3` uses `zlib` \(not `RLE_TYPE`\) in the partitions, because the column storage in the partition clause has precedence over the storage parameter in the column definition for the table.
 
 ```
 CREATE TABLE T3 (c1 int ENCODING (compresstype=zlib),
-                  c2 char ENCODING (compresstype=quicklz, blocksize=65536),
+                  c2 char ENCODING (compresstype=zstd, blocksize=65536),
                   c3 text, COLUMN c3 ENCODING (compresstype=RLE_TYPE) )
     WITH (appendoptimized=true, orientation=column)
     PARTITION BY RANGE (c3) (START ('1900-01-01'::DATE)          
@@ -378,7 +367,7 @@ CREATE TABLE T3 (c1 int ENCODING (compresstype=zlib),
 
 #### <a id="topic51"></a>Example 4 
 
-In this example, `CREATE TABLE` assigns the `zlib` `compresstype` storage parameter to `c1`. Column `c2` has no storage parameter and inherits the compression type \(`quicklz`\) and block size \(`65536`\) from the `DEFAULT COLUMN ENCODING` clause.
+In this example, `CREATE TABLE` assigns the `zlib` `compresstype` storage parameter to `c1`. Column `c2` has no storage parameter and inherits the compression type \(`zstd`\) and block size \(`65536`\) from the `DEFAULT COLUMN ENCODING` clause.
 
 Column `c3`'s `ENCODING` clause defines its compression type, `RLE_TYPE`. The `ENCODING` clause defined for a specific column overrides the `DEFAULT ENCODING` clause, so column `c3` uses the default block size, `32768`.
 
@@ -389,7 +378,7 @@ CREATE TABLE T4 (c1 int ENCODING (compresstype=zlib),
                   c2 char,
                   c3 text,
                   c4 smallint ENCODING (compresstype=none),
-                  DEFAULT COLUMN ENCODING (compresstype=quicklz,
+                  DEFAULT COLUMN ENCODING (compresstype=zstd,
                                              blocksize=65536),
                   COLUMN c3 ENCODING (compresstype=RLE_TYPE)
                   ) 
@@ -425,7 +414,7 @@ For an example showing how to add a compressed column to an existing table with 
 
 ### <a id="topic53"></a>Adding Compression in a TYPE Command 
 
-When you create a new type, you can define default compression attributes for the type. For example, the following `CREATE TYPE` command defines a type named `int33` that specifies `quicklz` compression.
+When you create a new type, you can define default compression attributes for the type. For example, the following `CREATE TYPE` command defines a type named `int33` that specifies `zlib` compression.
 
 First, you must define the input and output functions for the new type, `int33_in` and `int33_out`:
 
@@ -559,7 +548,7 @@ CREATE TABLE ccddl (i int, j int, k int, l int)
   SUBPARTITION template(
     SUBPARTITION sp1 values(1, 2, 3, 4, 5),
     COLUMN i ENCODING(compresstype=ZLIB),
-    COLUMN j ENCODING(compresstype=QUICKLZ),
+    COLUMN j ENCODING(compresstype=ZLIB),
     COLUMN k ENCODING(compresstype=ZLIB),
     COLUMN l ENCODING(compresstype=ZLIB))
   (PARTITION p1 START(1) END(10),

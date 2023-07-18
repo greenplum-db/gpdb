@@ -228,16 +228,6 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 			return TranslateDXLScalarSortGroupClauseToScalar(dxlnode,
 															 colid_var);
 		}
-#if 0
-		// GPDB_12_MERGE_FIXME: These were removed from the server with the v12 merge
-		// of upstream partitioning. Need something to replace? Need to rip out from GPORCA?
-		case EdxlopScalarPartDefault: { return TranslateDXLScalarPartDefaultToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartBound: { return TranslateDXLScalarPartBoundToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartBoundInclusion: { return TranslateDXLScalarPartBoundInclusionToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartBoundOpen: { return TranslateDXLScalarPartBoundOpenToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartListValues: { return TranslateDXLScalarPartListValuesToScalar(dxlnode, colid_var); }
-		case EdxlopScalarPartListNullTest: { return TranslateDXLScalarPartListNullTestToScalar(dxlnode, colid_var); }
-#endif
 	}
 }
 
@@ -588,7 +578,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			aggref->aggsplit = AGGSPLIT_INITIAL_SERIAL;
 			break;
 		case EdxlaggstageIntermediate:
-			aggref->aggsplit = AGGSPLIT_INTERNMEDIATE;
+			aggref->aggsplit = AGGSPLIT_INTERMEDIATE;
 			break;
 		case EdxlaggstageFinal:
 			aggref->aggsplit = AGGSPLIT_FINAL_DESERIAL;
@@ -767,6 +757,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarFuncExprToScalar(
 		CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
 	func_expr->args = TranslateScalarChildren(func_expr->args,
 											  scalar_func_expr_node, colid_var);
+	func_expr->funcvariadic = dxlop->IsFuncVariadic();
 
 	// GPDB_91_MERGE_FIXME: collation
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
@@ -1518,51 +1509,22 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCoerceExprToScalar(
 	CDXLScalarArrayCoerceExpr *dxlop =
 		CDXLScalarArrayCoerceExpr::Cast(scalar_coerce_node->GetOperator());
 
-	GPOS_ASSERT(1 == scalar_coerce_node->Arity());
+	GPOS_ASSERT(2 == scalar_coerce_node->Arity());
 	CDXLNode *child_dxl = (*scalar_coerce_node)[0];
+	CDXLNode *elemexpr_dxl = (*scalar_coerce_node)[1];
 
 	Expr *child_expr = TranslateDXLToScalar(child_dxl, colid_var);
+	Expr *elem_expr = TranslateDXLToScalar(elemexpr_dxl, colid_var);
 
 	ArrayCoerceExpr *coerce = MakeNode(ArrayCoerceExpr);
 
 	coerce->arg = child_expr;
-	Oid elemfuncid = CMDIdGPDB::CastMdid(dxlop->GetCoerceFuncMDid())->Oid();
+	coerce->elemexpr = elem_expr;
 	coerce->resulttype = CMDIdGPDB::CastMdid(dxlop->GetResultTypeMdId())->Oid();
 	coerce->resulttypmod = dxlop->TypeModifier();
-	// GPDB_91_MERGE_FIXME: collation
 	coerce->resultcollid = gpdb::TypeCollation(coerce->resulttype);
 	coerce->coerceformat = (CoercionForm) dxlop->GetDXLCoercionForm();
 	coerce->location = dxlop->GetLocation();
-	// GPDB_12_MERGE_FIXME: change the representation of
-	// CDXLScalarArrayCoerceExpr so that we can correctly roundtrip
-	CaseTestExpr *case_test_expr = MakeNode(CaseTestExpr);
-	Oid input_array_type = gpdb::ExprType((Node *) child_expr);
-	int32 input_array_elem_typmod = gpdb::ExprTypeMod((Node *) child_expr);
-	case_test_expr->typeId = gpdb::GetElementType(input_array_type);
-	case_test_expr->typeMod = input_array_elem_typmod;
-	if (elemfuncid != 0)
-	{
-		FuncExpr *func_expr = MakeNode(FuncExpr);
-		func_expr->funcid = elemfuncid;
-		func_expr->funcformat = COERCE_EXPLICIT_CAST;
-		// GPDB_12_MERGE_FIXME: shouldn't this come from the DXL as well?
-		func_expr->funcresulttype = gpdb::GetFuncRetType(elemfuncid);
-		// FIXME: this is a giant hack. We really should know the arity of the
-		//   function we're calling. Instead, we're jamming three arguments,
-		//   _always_
-		func_expr->args = gpdb::LPrepend(
-			case_test_expr, ListMake2(gpdb::MakeIntConst(dxlop->TypeModifier()),
-									  gpdb::MakeBoolConst(true, false)));
-		coerce->elemexpr = (Expr *) func_expr;
-	}
-	else
-	{
-		RelabelType *rt = MakeNode(RelabelType);
-		rt->resulttypmod = dxlop->TypeModifier();
-		rt->resulttype = gpdb::GetElementType(coerce->resulttype);
-		rt->arg = (Expr *) case_test_expr;
-		coerce->elemexpr = (Expr *) rt;
-	}
 
 	return (Expr *) coerce;
 }
@@ -2104,10 +2066,6 @@ CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar(
 
 	return (Expr *) values;
 }
-//
-// GPDB_12_MERGE_FIXME: ArrayRef was renamed in commit 558d77f20e4e9.
-// I've fixed the renamed type and fields but the wording "ArrayRef" is
-// still everywhere. Do we plan to rename them?
 
 //---------------------------------------------------------------------------
 //	@function:

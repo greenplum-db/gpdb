@@ -28,23 +28,26 @@
 
 ProtocolVersion FrontendProtocol;
 
-volatile sig_atomic_t InterruptPending = false;
-volatile sig_atomic_t QueryCancelPending = false;
-volatile sig_atomic_t QueryCancelCleanup = false;
-volatile sig_atomic_t QueryFinishPending = false;
-volatile sig_atomic_t ProcDiePending = false;
 volatile sig_atomic_t CheckClientConnectionPending = false;
 volatile sig_atomic_t ClientConnectionLost = false;
-volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;
-volatile sig_atomic_t IdleGangTimeoutPending = false;
 volatile sig_atomic_t ConfigReloadPending = false;
+volatile sig_atomic_t IdleGangTimeoutPending = false;
+volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;
+volatile sig_atomic_t InterruptPending = false;
+volatile sig_atomic_t LogMemoryContextPending = false;
+volatile sig_atomic_t ProcDiePending = false;
+volatile sig_atomic_t QueryCancelCleanup = false;
+volatile sig_atomic_t QueryCancelPending = false;
+volatile sig_atomic_t QueryFinishPending = false;
+
 /*
  * GPDB: Make these signed integers (instead of uint32) to detect garbage
  * negative values.
  */
+volatile int32 CritSectionCount = 0;
 volatile int32 InterruptHoldoffCount = 0;
 volatile int32 QueryCancelHoldoffCount = 0;
-volatile int32 CritSectionCount = 0;
+
 
 int			MyProcPid;
 pg_time_t	MyStartTime;
@@ -89,7 +92,7 @@ char		postgres_exec_path[MAXPGPATH];	/* full path to backend */
 
 BackendId	MyBackendId = InvalidBackendId;
 
-BackendId	ParallelMasterBackendId = InvalidBackendId;
+BackendId	ParallelLeaderBackendId = InvalidBackendId;
 
 Oid			MyDatabaseId = InvalidOid;
 
@@ -119,12 +122,12 @@ bool		IsUnderPostmaster = false;
 bool		IsBinaryUpgrade = false;
 bool		IsBackgroundWorker = false;
 
-/* Greenplum seeds the creation of a segment from a copy of the master segment
+/* Greenplum seeds the creation of a segment from a copy of the coordinator segment
  * directory.  However, the first time the segment starts up small adjustments
  * need to be made to complete the transformation to a segment directory, and
  * these changes will be triggered by this global.
  */
-bool		ConvertMasterDataDirToSegment = false;
+bool		ConvertCoordinatorDataDirToSegment = false;
 
 bool		ExitOnAnyError = false;
 
@@ -159,7 +162,7 @@ int			max_parallel_workers = 8;
 int			MaxBackends = 0;
 
 int			VacuumCostPageHit = 1;	/* GUC parameters for vacuum */
-int			VacuumCostPageMiss = 10;
+int			VacuumCostPageMiss = 2;
 int			VacuumCostPageDirty = 20;
 int			VacuumCostLimit = 200;
 double		VacuumCostDelay = 0;
@@ -188,3 +191,6 @@ int gp_vmem_protect_gang_cache_limit = 500;
 
 /* Parallel cursor concurrency limit */
 int	gp_max_parallel_cursors = -1;
+
+/* Utility mode restriction */
+bool should_reject_connection = false;

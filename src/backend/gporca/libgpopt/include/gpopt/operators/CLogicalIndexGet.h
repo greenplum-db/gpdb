@@ -56,7 +56,7 @@ private:
 	// order spec
 	COrderSpec *m_pos;
 
-	// distribution columns (empty for master only tables)
+	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
 public:

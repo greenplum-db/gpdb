@@ -4,9 +4,9 @@
 #
 
 from gppylib.commands.base import CommandResult
-from mock import patch
+from mock import patch, mock_open
 
-from gppylib.commands.gp import is_pid_postmaster, get_postmaster_pid_locally
+from gppylib.commands.gp import is_pid_postmaster, get_postmaster_pid_locally, get_postgres_segment_processes, is_gprecoverseg_running
 from test.unit.gp_unittest import GpTestCase, run_tests
 
 
@@ -157,6 +157,48 @@ class GpCommandTestCase(GpTestCase):
     @patch('gppylib.commands.gp.Command.run', return_value=CommandResult(0, b"", b"", True, False))
     def test_get_postmaster_pid_locally_empty(self, mock1):
         self.assertEqual(get_postmaster_pid_locally('/tmp'), -1)
+
+    @patch('gppylib.commands.gp.getPostmasterPID', return_value=-1)
+    def test_get_postgres_segment_processes_no_postmaster(self, mock1):
+        result = get_postgres_segment_processes('/data/primary/gpseg0', 'sdw1')
+        self.assertEqual(result, [])
+
+    @patch('gppylib.commands.gp.getPostmasterPID', return_value=1234)
+    @patch('gppylib.commands.gp.Command.run')
+    @patch('gppylib.commands.gp.Command.get_results', return_value=CommandResult(0, b"\n111\n222\n333", b"", True, False))
+    def test_get_postgres_segment_processes_succeeds(self, mock1, mock2, mock3):
+        result = get_postgres_segment_processes('/data/primary/gpseg0', 'sdw1')
+        self.assertEqual(result, [1234, 111, 222, 333])
+
+    @patch('gppylib.commands.gp.getPostmasterPID', return_value=1234)
+    @patch('gppylib.commands.gp.Command.run')
+    @patch('gppylib.commands.gp.Command.get_results', return_value=CommandResult(0, b"\n111\nabc\n222\n", b"", True, False))
+    def test_get_postgres_segment_processes_with_str_pgrep_output(self, mock1, mock2, mock3):
+        result = get_postgres_segment_processes('/data/primary/gpseg0', 'sdw1')
+        self.assertEqual(result, [1234, 111, 222])
+
+    @patch('gppylib.commands.gp.getPostmasterPID', return_value=1234)
+    @patch('gppylib.commands.gp.Command.run')
+    @patch('gppylib.commands.gp.Command.get_results', return_value=CommandResult(1, b"", b"", False, False))
+    def test_get_postgres_segment_processes_when_pgrep_fails(self, mock1, mock2, mock3):
+        result = get_postgres_segment_processes('/data/primary/gpseg0', 'sdw1')
+        self.assertEqual(result, [1234])
+
+    @patch('gppylib.commands.gp.check_pid', return_value=True)
+    @patch('gppylib.commands.gp.get_coordinatordatadir')
+    @patch("builtins.open", new_callable=mock_open, read_data="123")
+    def test_is_gprecoverseg_running_succeeds(self, mock_file, mock1, mock2):
+        result = is_gprecoverseg_running()
+        mock2.assert_called_once_with('123')
+        self.assertTrue(result)
+
+    @patch('gppylib.commands.gp.check_pid')
+    @patch('gppylib.commands.gp.get_coordinatordatadir', return_value='/invalid/path/')
+    def test_is_gprecoverseg_running_when_pidfile_does_not_exists(self, mock1, mock2):
+        result = is_gprecoverseg_running()
+        self.assertFalse(result)
+        self.assertFalse(mock2.called)
+
 
 if __name__ == '__main__':
     run_tests()

@@ -15,6 +15,7 @@
 
 #include "postgres.h"
 
+#include "access/appendonlywriter.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/htup_details.h"
@@ -35,25 +36,76 @@
 #include "utils/relcache.h"
 #include "utils/syscache.h"
 
+
+/*
+ * Transform the lastrownums int64 array into datum 
+ * to be stored in pg_attribute_encoding.
+ * Ignore the trailing 0's in the array to save space.
+ */
+Datum
+transform_lastrownums(int64 *lastrownums)
+{
+	Datum 		ret = (Datum) 0;
+	ArrayBuildState *astate = NULL;
+	int 		len = 0;
+
+	if (!lastrownums)
+		return ret;
+
+	/* build the lastrownums array */
+	for (int i = 0; i < MAX_AOREL_CONCURRENCY; i++)
+	{
+		/*
+		 * If we see a zero, all the rest should be 0, except for 
+		 * the initial gp_fastsequence entry for a table which has
+		 * 0 for segno=0.
+		 */
+		if (i != 0 && lastrownums[i] == 0)
+			continue;
+
+		len = i + 1;
+
+		astate = accumArrayResult(astate, Int64GetDatum(lastrownums[i]),
+									false, INT8OID,
+									CurrentMemoryContext);
+	}
+
+	if (astate != NULL)
+	{
+		Assert(astate->nelems == len);
+		ret = makeArrayResult(astate, CurrentMemoryContext);
+	}
+
+	return ret;
+}
+
 /*
  * Add a single attribute encoding entry.
  */
-static void
-add_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum attoptions)
+void
+add_attribute_encoding_entry(Oid relid, AttrNumber attnum, FileNumber filenum, Datum lastrownums, Datum attoptions)
 {
 	Relation	rel;
 	Datum values[Natts_pg_attribute_encoding];
 	bool nulls[Natts_pg_attribute_encoding];
 	HeapTuple tuple;
-	
+
 	Assert(attnum != InvalidAttrNumber);
+	Assert(filenum != InvalidFileNumber);
 
 	rel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
 
 	MemSet(nulls, 0, sizeof(nulls));
 	values[Anum_pg_attribute_encoding_attrelid - 1] = ObjectIdGetDatum(relid);
 	values[Anum_pg_attribute_encoding_attnum - 1] = Int16GetDatum(attnum);
+	values[Anum_pg_attribute_encoding_filenum - 1] = Int16GetDatum(filenum);
+	values[Anum_pg_attribute_encoding_lastrownums - 1] = lastrownums;
 	values[Anum_pg_attribute_encoding_attoptions - 1] = attoptions;
+
+	if (lastrownums == (Datum)0)
+		nulls[Anum_pg_attribute_encoding_lastrownums - 1] = true;
+	if (attoptions == (Datum)0)
+		nulls[Anum_pg_attribute_encoding_attoptions - 1] = true;
 
 	tuple = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
@@ -65,8 +117,12 @@ add_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum attoptions)
 	heap_close(rel, RowExclusiveLock);
 }
 
-static void
-update_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum newattoptions)
+/*
+ * Update a pg_attribute_encoding entry.
+ * Note that if the value is invalid, we'll skip setting the field instead of setting it to NULL.
+ */
+void
+update_attribute_encoding_entry(Oid relid, AttrNumber attnum, FileNumber newfilenum, Datum newlastrownums, Datum newattoptions)
 {
 	Relation 	rel;
 	SysScanDesc scan;
@@ -89,18 +145,34 @@ update_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum newattoption
 				ObjectIdGetDatum(relid));
 	ScanKeyInit(&skey[1],
 				Anum_pg_attribute_encoding_attnum,
-				BTEqualStrategyNumber, F_OIDEQ,
+				BTEqualStrategyNumber, F_INT2EQ,
 				Int16GetDatum(attnum));
 	scan = systable_beginscan(rel, AttributeEncodingAttrelidAttnumIndexId, true,
 							  NULL, 2, skey);
 
 	oldtup = systable_getnext(scan);
-	Assert(HeapTupleIsValid(oldtup));
+	if (!HeapTupleIsValid(oldtup))
+		elog(ERROR, "could not find tuple for attnum %d for relid %d during scan on pg_attribute_encoding", attnum, relid);
 
 	heap_deform_tuple(oldtup, RelationGetDescr(rel), values, nulls);
 
-	values[Anum_pg_attribute_encoding_attoptions - 1] = newattoptions;
-	repl[Anum_pg_attribute_encoding_attoptions - 1] = true;
+	if (newfilenum != InvalidFileNumber)
+	{
+		values[Anum_pg_attribute_encoding_filenum - 1] = newfilenum;
+		repl[Anum_pg_attribute_encoding_filenum - 1] = true;
+	}
+
+	if (newlastrownums)
+	{
+		values[Anum_pg_attribute_encoding_lastrownums - 1] = newlastrownums;
+		repl[Anum_pg_attribute_encoding_lastrownums - 1] = true;
+	}
+
+	if (newattoptions)
+	{
+		values[Anum_pg_attribute_encoding_attoptions - 1] = newattoptions;
+		repl[Anum_pg_attribute_encoding_attoptions - 1] = true;
+	}
 
 	newtup = heap_modify_tuple(oldtup, RelationGetDescr(rel), values, nulls, repl);
 
@@ -222,7 +294,10 @@ rel_get_column_encodings(Relation rel)
 
 /*
  * Add pg_attribute_encoding entries for newrelid. Make them identical to those
- * stored for oldrelid.
+ * stored for oldrelid except for lastrownums. 
+ * XXX: we are not copying lastrownums only because CloneAttributeEncodings is 
+ * currently only used for table rewrite, but lastrownums are not useful after a 
+ * table rewrite, so we would be clearing up the lastrownums field anyway. 
  */
 void
 CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_attno)
@@ -235,9 +310,58 @@ CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_attno)
 		if (DatumGetPointer(attoptions[n]) != NULL)
 			add_attribute_encoding_entry(newrelid,
 										 n + 1,
+										 n + 1,
+										 (Datum) 0,
 										 attoptions[n]);
 	}
-	CommandCounterIncrement();
+}
+
+/*
+ * Clear the lastrownum field (i.e. write NULL) for all the 
+ * pg_attribute_encoding entries of the given relation.
+ */
+void
+ClearAttributeEncodingLastrownums(Oid attrelid)
+{
+	Relation	encrel;
+	ScanKeyData 	skey;
+	SysScanDesc 	scan;
+	HeapTuple	oldtup;
+	HeapTuple	newtup;
+	Datum	   	values[Natts_pg_attribute_encoding];
+	bool	    	nulls[Natts_pg_attribute_encoding];
+	bool		repl[Natts_pg_attribute_encoding];
+
+	encrel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&skey,
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(attrelid));
+	scan = systable_beginscan(encrel, AttributeEncodingAttrelidIndexId, true,
+							  NULL, 1, &skey);
+	while (HeapTupleIsValid(oldtup = systable_getnext(scan)))
+	{
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, false, sizeof(nulls));
+		MemSet(repl, false, sizeof(repl));
+
+		Assert(HeapTupleIsValid(oldtup));
+
+		heap_deform_tuple(oldtup, RelationGetDescr(encrel), values, nulls);
+
+		repl[Anum_pg_attribute_encoding_lastrownums - 1] = true;
+		nulls[Anum_pg_attribute_encoding_lastrownums - 1] = true;
+
+		newtup = heap_modify_tuple(oldtup, RelationGetDescr(encrel), values, nulls, repl);
+
+		CatalogTupleUpdate(encrel, &oldtup->t_self, newtup);
+		heap_freetuple(newtup);
+	}
+
+	systable_endscan(scan);
+
+	heap_close(encrel, RowExclusiveLock);
 }
 
 void
@@ -273,9 +397,32 @@ UpdateAttributeEncodings(Oid relid, List *new_attr_encodings)
 											true,
 											false);
 
-		update_attribute_encoding_entry(relid, attnum, newattoptions);
+		update_attribute_encoding_entry(relid, attnum, InvalidFileNumber, 0/*lastrownums*/, newattoptions);
 	}
 	CommandCounterIncrement();
+}
+
+/*
+ * Similar to UpdateAttributeEncodings, but add the entry if it's not
+ * existed in pg_attribute_encoding.
+ */
+void
+UpdateOrAddAttributeEncodings(Relation rel, List *new_attr_encodings)
+{
+	ListCell 	*lc;
+	List 		*current_encodings;
+
+	/* get the current encoding options */
+	current_encodings = rel_get_column_encodings(rel);
+
+	foreach(lc, new_attr_encodings)
+	{
+		ColumnReferenceStorageDirective *c = lfirst(lc);
+		if (find_crsd(c->column, current_encodings))
+			UpdateAttributeEncodings(RelationGetRelid(rel), new_attr_encodings);
+		else
+			AddCOAttributeEncodings(RelationGetRelid(rel), new_attr_encodings);
+	}
 }
 
 List **
@@ -331,25 +478,51 @@ RelationGetAttributeOptions(Relation rel)
  *
  * Simply adds user specified ENCODING () clause information to
  * pg_attribute_encoding. Should be absolutely valid at this point.
+ *
+ * Note that we need to take dropped columns into consideration
+ * as well so we cannot use get_attnum().
  */
 void
-AddRelationAttributeEncodings(Oid relid, List *attr_encodings)
+AddCOAttributeEncodings(Oid relid, List *attr_encodings)
 {
 	ListCell *lc;
+	ListCell *lc_filenum;
+	List *filenums = NIL;
 
-	foreach(lc, attr_encodings)
+	if (attr_encodings)
+	{
+		filenums = GetNextNAvailableFilenums(relid, attr_encodings->length);
+
+		if (filenums->length != attr_encodings->length)
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("filenums exhausted for relid %u", relid),
+						errhint("recreate the table")));
+	}
+
+	forboth(lc, attr_encodings, lc_filenum, filenums)
 	{
 		Datum attoptions;
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 		List *encoding;
 		AttrNumber attnum;
+		HeapTuple	tuple;
+		Form_pg_attribute att_tup;
 
 		Assert(IsA(c, ColumnReferenceStorageDirective));
 
-		attnum = get_attnum(relid, c->column);
+		tuple = SearchSysCache2(ATTNAME,
+								ObjectIdGetDatum(relid),
+								CStringGetDatum(c->column));
 
-		if (attnum == InvalidAttrNumber)
+		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "column \"%s\" does not exist", c->column);
+
+		att_tup = (Form_pg_attribute) GETSTRUCT(tuple);
+		attnum = att_tup->attnum;
+		Assert(attnum != InvalidAttrNumber);
+
+		ReleaseSysCache(tuple);
 
 		if (attnum < 0)
 			elog(ERROR, "column \"%s\" is a system column", c->column);
@@ -366,8 +539,13 @@ AddRelationAttributeEncodings(Oid relid, List *attr_encodings)
 										 true,
 										 false);
 
-		add_attribute_encoding_entry(relid, attnum, attoptions);
+		add_attribute_encoding_entry(relid, 
+									attnum,
+									lfirst_int(lc_filenum), 
+									(Datum)0 /* lastrownums not used for CO tables */,
+									attoptions);
 	}
+	list_free(filenums);
 }
 
 void
@@ -394,4 +572,195 @@ RemoveAttributeEncodingsByRelid(Oid relid)
 	systable_endscan(scan);
 
 	heap_close(rel, RowExclusiveLock);
+
+	/* 
+	 * We might touch pg_attribute_encoding again. E.g. when we remove
+	 * gp_fastsequence entries, we need to clear the lastrownums field,
+	 * so make the change visible.
+	 */
+	CommandCounterIncrement();
+}
+
+/*
+ * Returns the filenum value for a relation/attnum entry in pg_attribute_encoding
+ */
+FileNumber
+GetFilenumForAttribute(Oid relid, AttrNumber attnum)
+{
+	Relation    rel;
+	SysScanDesc scan;
+	ScanKeyData skey[2];
+	HeapTuple	tup;
+	FileNumber  filenum;
+	bool        isnull;
+
+	Assert(OidIsValid(relid));
+	Assert(AttributeNumberIsValid(attnum));
+
+	rel = heap_open(AttributeEncodingRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_attribute_encoding_attnum,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(attnum));
+	scan = systable_beginscan(rel, AttributeEncodingAttrelidAttnumIndexId, true,
+							  NULL, 2, skey);
+
+	tup = systable_getnext(scan);
+	Assert(HeapTupleIsValid(tup));
+	filenum = heap_getattr(tup, Anum_pg_attribute_encoding_filenum,
+							  RelationGetDescr(rel), &isnull);
+	Assert(!isnull);
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
+	return filenum;
+}
+
+/*
+ * Rewriting a column happens on filenum pairs where
+ * one of the filenum value (i) is in the range 1 to MaxHeapAttributeNumber
+ * and other corresponding value is (i + MaxHeapAttributeNumber)
+ *
+ * Returns the corresponding pair filenum value for a relation/attnum entry
+ * in pg_attribute_encoding for rewriting the column.
+ */
+FileNumber
+GetFilenumForRewriteAttribute(Oid relid, AttrNumber attnum)
+{
+	FileNumber currentfilenum = GetFilenumForAttribute(relid, attnum);
+	if (currentfilenum <= MaxHeapAttributeNumber)
+		return currentfilenum + MaxHeapAttributeNumber;
+	else
+		return currentfilenum - MaxHeapAttributeNumber;
+}
+/*
+ * Returns a sorted list of first n unused filenums in pg_attribute_encoding
+ * for the relation
+ * Unused filenum means that both possible filenums in the pair (i or i + MaxHeapAttributeNumber)
+ * are unused by any current attnums
+ * In the outside chance that filenums have been exhausted,
+ * the list may contain < n unused filenums
+ */
+List *
+GetNextNAvailableFilenums(Oid relid, int n)
+{
+	Relation    rel;
+	SysScanDesc scan;
+	ScanKeyData skey[1];
+	HeapTuple	tup;
+	bool        isnull;
+	bool        used[MaxFileNumber];
+	List        *newfilenums = NIL;
+
+	if(n == 0)
+		return NIL;
+
+	Assert(OidIsValid(relid) && n > 0);
+
+	MemSet(used, false, sizeof(used));
+	rel = heap_open(AttributeEncodingRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	scan = systable_beginscan(rel, AttributeEncodingAttrelidIndexId, true,
+							  NULL, 1, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		FileNumber usedfilenum = heap_getattr(tup, Anum_pg_attribute_encoding_filenum,
+							   RelationGetDescr(rel), &isnull);
+		Assert(!isnull);
+		used[usedfilenum - 1] = true;
+	}
+
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
+
+	for (int i = 0; i < MaxHeapAttributeNumber; ++i)
+	{
+		if(! (used[i] || used[i + MaxHeapAttributeNumber]) )
+		{
+			newfilenums = lappend_int(newfilenums, i + 1);
+			if (newfilenums->length == n)
+				break;
+		}
+	}
+	return newfilenums;
+}
+
+/*
+ * From the pg_attribute_encoding entries, get the mapping from
+ * attnum to lastrownum for every possible segno. See comments of 
+ * AppendOnlyExecutorReadBlock_BindingInit() for the usage of the mapping.
+ *
+ * Return a palloc'ed array based on the number of attributes.
+ */
+int64 *
+GetAttnumToLastrownumMapping(Oid relid, int natts)
+{
+	int64 		*attnum_to_lastrownum = (int64*) palloc0(MAX_AOREL_CONCURRENCY * natts * sizeof(int64));
+	Relation    	rel;
+	SysScanDesc 	scan;
+	ScanKeyData 	skey[1];
+	HeapTuple	tup;
+	bool 		isnull;
+
+	Assert(OidIsValid(relid));
+
+	rel = heap_open(AttributeEncodingRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	scan = systable_beginscan(rel, AttributeEncodingAttrelidIndexId, true,
+							  NULL, 1, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		int 		attnum;
+		int 		i;
+		Datum 		col;
+		Datum 		*rownums;
+		int 		n;
+
+		attnum = heap_getattr(tup, Anum_pg_attribute_encoding_attnum,
+							   RelationGetDescr(rel), &isnull);
+		Assert(!isnull); /* have to have a valid attnum */
+		Assert(attnum <= natts); /* the attnum cannot be larger than the number of attributes */
+
+		col = heap_getattr(tup, Anum_pg_attribute_encoding_lastrownums,
+							   RelationGetDescr(rel), &isnull);
+		/* lastrownum is 0, if it's NULL in pg_attribute_encoding */
+		if (isnull)
+			continue;
+
+		deconstruct_array(DatumGetArrayTypeP(col),
+								INT8OID, 8, true, 'i',
+								&rownums, NULL, &n);
+		Assert(n <= MAX_AOREL_CONCURRENCY);
+
+		/* 
+		 * otherwise, put the mapping in the result array.
+		 * For all the segno that are not recorded in the entry, put 0.
+		 */
+		for (i = 0; i < MAX_AOREL_CONCURRENCY; i++)
+		{
+			if (i < n)
+				attnum_to_lastrownum[(attnum - 1) * MAX_AOREL_CONCURRENCY + i] = DatumGetInt64(rownums[i]);
+			else
+				attnum_to_lastrownum[(attnum - 1) * MAX_AOREL_CONCURRENCY + i] = 0;
+		}
+	}
+
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
+
+	return attnum_to_lastrownum;
 }

@@ -150,7 +150,6 @@ CreateProceduralLanguage_internal(CreatePLangStmt *stmt)
 									  InvalidOid,
 									  1,
 									  0,
-									  PRODATAACCESS_NONE,
 									  PROEXECLOCATION_ANY);
 			handlerOid = tmpAddr.objectId;
 		}
@@ -193,7 +192,6 @@ CreateProceduralLanguage_internal(CreatePLangStmt *stmt)
 										  InvalidOid,
 										  1,
 										  0,
-										  PRODATAACCESS_NONE,
 										  PROEXECLOCATION_ANY);
 				inlineOid = tmpAddr.objectId;
 			}
@@ -239,7 +237,6 @@ CreateProceduralLanguage_internal(CreatePLangStmt *stmt)
 										  InvalidOid,
 										  1,
 										  0,
-										  PRODATAACCESS_NONE,
 										  PROEXECLOCATION_ANY);
 				valOid = tmpAddr.objectId;
 			}

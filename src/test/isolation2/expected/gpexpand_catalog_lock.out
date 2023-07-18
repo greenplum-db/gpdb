@@ -1,12 +1,12 @@
 drop table if exists t20;
-DROP
+DROP TABLE
 drop table if exists t30;
-DROP
+DROP TABLE
 
 create table t20 (c1 int, c2 int) distributed by (c1);
-CREATE
+CREATE TABLE
 create table t30 (c1 int, c2 int) distributed by (c1);
-CREATE
+CREATE TABLE
 
 -- c10, c11 simulate gpexpand's catalog lock protection
 -- they will acquire the catalog lock in exclusive mode
@@ -34,7 +34,7 @@ BEGIN
 11&: select gp_expand_lock_catalog();  <waiting ...>
 
 10: end;
-END
+COMMIT
 
 -- c10 released the lock, c11 acquired it now
 11<:  <... completed>
@@ -43,7 +43,7 @@ END
                         
 (1 row)
 11: end;
-END
+COMMIT
 
 --
 -- client sessions do not block each other on catalog changes
@@ -56,14 +56,14 @@ BEGIN
 
 -- c20 and c30 both acquired the catalog lock in shared mode
 20: create table t21 (c1 int, c2 int) distributed by (c1);
-CREATE
+CREATE TABLE
 30: create table t31 (c1 int, c2 int) distributed by (c1);
-CREATE
+CREATE TABLE
 
 20: insert into t21 values (1,1);
-INSERT 1
+INSERT 0 1
 30: insert into t31 values (1,1);
-INSERT 1
+INSERT 0 1
 
 20: rollback;
 ROLLBACK
@@ -83,17 +83,17 @@ BEGIN
 
 -- c20 and c30 both acquired the catalog lock in shared mode
 20: create table t21 (c1 int, c2 int) distributed by (c1);
-CREATE
+CREATE TABLE
 30: create table t31 (c1 int, c2 int) distributed by (c1);
-CREATE
+CREATE TABLE
 
 -- c10 can not acquire the lock in exclusive mode ...
 10&: select gp_expand_lock_catalog();  <waiting ...>
 
 20: insert into t21 values (1,1);
-INSERT 1
+INSERT 0 1
 30: insert into t31 values (1,1);
-INSERT 1
+INSERT 0 1
 
 20: rollback;
 ROLLBACK
@@ -107,7 +107,7 @@ ROLLBACK
                         
 (1 row)
 10: end;
-END
+COMMIT
 
 --
 -- the catalog lock can be acquired in order
@@ -122,7 +122,7 @@ BEGIN
 
 -- c20 acquired the catalog lock in shared mode
 20: create table t21 (c1 int, c2 int) distributed by (c1);
-CREATE
+CREATE TABLE
 
 -- c10 has to wait for c20
 10&: select gp_expand_lock_catalog();  <waiting ...>
@@ -135,7 +135,7 @@ ROLLBACK
 
 -- c20 can still make catalog changes
 20: drop table t21;
-DROP
+DROP TABLE
 
 20: rollback;
 ROLLBACK
@@ -147,7 +147,7 @@ ROLLBACK
                         
 (1 row)
 10: end;
-END
+COMMIT
 
 --
 -- gpexpand does not block DMLs or readonly queries to catalogs
@@ -169,7 +169,7 @@ BEGIN
 
 -- c20 and c30 can still run DMLs
 20: insert into t20 values (1,1);
-INSERT 1
+INSERT 0 1
 20: select * from t20;
  c1 | c2 
 ----+----
@@ -181,7 +181,7 @@ UPDATE 1
 DELETE 1
 
 30: insert into t30 values (1,1);
-INSERT 1
+INSERT 0 1
 30: select * from t30;
  c1 | c2 
 ----+----
@@ -210,7 +210,7 @@ ROLLBACK
 ROLLBACK
 
 10: end;
-END
+COMMIT
 
 --
 -- catalog changes are disallowed when gpexpand is in progress
@@ -246,4 +246,4 @@ ROLLBACK
 ROLLBACK
 
 10: end;
-END
+COMMIT
