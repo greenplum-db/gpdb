@@ -89,7 +89,7 @@ DELETE FROM films
   WHERE producer_id IN (SELECT id FROM producers WHERE name = 'foo');
 ```
 
-XXX For a partitioned table, all the child tables are locked during the `DELETE` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf child tables are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
+For a partitioned table, all of the child tables are locked during the `DELETE` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf child tables are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 ## <a id="section7"></a>Examples 
 

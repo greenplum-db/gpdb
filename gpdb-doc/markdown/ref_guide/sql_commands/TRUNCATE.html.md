@@ -40,7 +40,7 @@ RESTRICT
 
 `TRUNCATE` will not fire any user-defined `ON DELETE` triggers that might exist for the tables.
 
-XXX `TRUNCATE` will not truncate any tables that inherit from the named table. Only the named table is truncated, not its child tables.
+`TRUNCATE` will not truncate any tables that inherit from the named table. Only the named table is truncated, not its child tables.
 
 `TRUNCATE` is not MVCC-safe. After truncation, the table will appear empty to concurrent transactions, if they are using a snapshot taken before the truncation occurred.
 

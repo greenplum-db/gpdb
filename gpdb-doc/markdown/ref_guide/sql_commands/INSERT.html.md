@@ -109,7 +109,7 @@ conflict\_target
 conflict\_action
 :   conflict\_action specifies an alternative `ON CONFLICT` action. It can be either `DO NOTHING`, or a `DO UPDATE` clause specifying the exact details of the `UPDATE` action to be performed in case of a conflict. The `SET` and `WHERE` clauses in `ON CONFLICT DO UPDATE` have access to the existing row using the table's name \(or an alias\), and to the row proposed for insertion using the special excluded table. `SELECT` privilege is required on any column in the target table where corresponding excluded columns are read.
 
-:   XXX Note that the effects of all per-row `BEFORE INSERT` triggers are reflected in excluded values, since those effects may have contributed to the row being excluded from insertion.
+:   Note that the effects of all per-row `BEFORE INSERT` triggers are reflected in excluded values, since those effects may have contributed to the row being excluded from insertion.
 
 index\_column\_name
 :   The name of a table\_name column. Used to infer arbiter indexes. Follows `CREATE INDEX` format. `SELECT` privilege on index\_column\_name is required.
@@ -156,7 +156,7 @@ If the `INSERT` command contains a `RETURNING` clause, the result will be simila
 
 If the specified table is a partitioned table, Greenplum Database routes each row to the appropriate partition and inserts into it. If the specified table is a partition, an error will occur if one of the input rows violates the partition constraint.
 
-XXX For a partitioned table, all the child tables are locked during the `INSERT` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf child tables are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
+For a partitioned table, all of the child tables are locked during the `INSERT` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf child tables are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 Greenplum Database supports a maximum of 127 concurrent `INSERT` transactions into a single append-optimized table.
 
