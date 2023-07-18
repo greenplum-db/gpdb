@@ -232,6 +232,20 @@ explain (costs off) select * from test_index_with_orderby_limit order by a NULLS
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
+-- order by desc with nulls last
+explain (costs off) select * from test_index_with_orderby_limit order by a desc NULLS LAST limit 10;
+                                    QUERY PLAN
+-----------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a DESC NULLS LAST
+                     ->  Index Scan using index_a on test_index_with_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
 -- order by as sum of two columns, uses SeqScan with Sort
 explain (costs off) select a, b from test_index_with_orderby_limit order by a+b, c limit 3;
                                QUERY PLAN

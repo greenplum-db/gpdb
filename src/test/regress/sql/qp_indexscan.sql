@@ -41,6 +41,8 @@ explain (costs off) select * from test_index_with_orderby_limit order by c offse
 explain (costs off) select * from test_index_with_orderby_limit order by a desc limit 10;
 -- order by opposite to nulls direction in index
 explain (costs off) select * from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
+-- order by desc with nulls last
+explain (costs off) select * from test_index_with_orderby_limit order by a desc NULLS LAST limit 10;
 -- order by as sum of two columns, uses SeqScan with Sort
 explain (costs off) select a, b from test_index_with_orderby_limit order by a+b, c limit 3;
 explain (costs off) select a+b as sum from test_index_with_orderby_limit order by sum limit 3;
