@@ -231,7 +231,6 @@ def gpdbAnsFile(fname):
     return os.path.splitext(fname)[0] + ext
 
 def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
-
     LMYD = os.path.abspath(os.path.dirname(__file__))
     if not os.access( f1, os.R_OK ):
         raise Exception( 'Error: cannot find file %s' % f1 )
@@ -239,23 +238,23 @@ def isFileEqual( f1, f2, optionalFlags = "", outputPath = "", myinitfile = ""):
         raise Exception( 'Error: cannot find file %s' % f2 )
     dfile = diffFile( f1, outputPath = outputPath )
     # Gets the suitePath name to add init_file
-    suitePath = f1[0:f1.rindex( os.sep )]
-    global_init_file = os.path.join(LMYD, "global_init_file")
-    init_file = os.path.join(suitePath, "init_file")
-    if os.path.exists(os.path.join(suitePath, "init_file")):
-        (ok, out) = run('gpdiff.pl -w ' + optionalFlags + \
-                              ' --gp_init_file=%s --gp_init_file=%s '
-                              '%s %s > %s 2>&1' % (global_init_file, init_file, f1, f2, dfile))
+    suitePath = f1[0:f1.rindex( "/" )]
+
+    gphome = os.environ['GPHOME']
+    if os.path.exists(suitePath + "/init_file"):
+        (ok, out) = run(gphome+'/lib/postgresql/pgxs/src/test/regress/gpdiff.pl -w ' + optionalFlags + \
+                              ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: -I DROP --gp_init_file=%s/global_init_file --gp_init_file=%s/init_file '
+                              '%s %s > %s 2>&1' % (LMYD, suitePath, f1, f2, dfile))
 
     else:
         if os.path.exists(myinitfile):
-            (ok, out) = run('gpdiff.pl -w ' + optionalFlags + \
-                                  ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=%s --gp_init_file=%s '
-                                  '%s %s > %s 2>&1' % (global_init_file, myinitfile, f1, f2, dfile))
+            (ok, out) = run(gphome+'/lib/postgresql/pgxs/src/test/regress/gpdiff.pl -w ' + optionalFlags + \
+                                  ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: -I DROP --gp_init_file=%s/global_init_file --gp_init_file=%s '
+                                  '%s %s > %s 2>&1' % (LMYD, myinitfile, f1, f2, dfile))
         else:
-            (ok, out) = run( 'gpdiff.pl -w ' + optionalFlags + \
-                              ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=%s '
-                              '%s %s > %s 2>&1' % ( global_init_file, f1, f2, dfile ) )
+            (ok, out) = run( gphome+'/lib/postgresql/pgxs/src/test/regress/gpdiff.pl -w ' + optionalFlags + \
+                              ' -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: -I DROP --gp_init_file=%s/global_init_file '
+                              '%s %s > %s 2>&1' % ( LMYD, f1, f2, dfile ) )
 
 
     if ok:
