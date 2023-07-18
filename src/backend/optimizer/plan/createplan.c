@@ -1002,6 +1002,16 @@ use_physical_tlist(PlannerInfo *root, Path *path, int flags)
 		}
 	}
 
+	/* 
+	 * Greenplum specific code: when generating scan plan in create_scan_plan(),
+	 * the upstream code prefer to generate a tlist containing all Vars in
+	 * order. For the AO-type storage, it would result into unnecessary
+	 * overhead and impact performance, so in this case we let the tlist apply
+	 * to the projection to avoid unnecessory column fetches.
+	 */
+	if (rel->relam == AO_ROW_TABLE_AM_OID || rel->relam == AO_COLUMN_TABLE_AM_OID)
+		return false;
+
 	return true;
 }
 
