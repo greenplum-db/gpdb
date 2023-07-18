@@ -14,7 +14,7 @@ import sys
 from gppylib.db import dbconn
 
 dbnames = ['funny\"db\'with\\\\quotes',    # from regress/dispatch
-           'funny copy\"db\'with\\\\quotes'# from regress/gpcopy
+           'funny_copy\"db\'with\\\\quotes'# from regress/gpcopy
 ]
 
 def test_connect_special_dbname(dbname):
