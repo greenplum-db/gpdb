@@ -713,11 +713,45 @@ cdbpathlocus_join(JoinType jointype, CdbPathLocus a, CdbPathLocus b)
 		return resultlocus;
 	}
 
+	/*
+	 * Could get here if Replicated join Entry and we Gather Replicated to SingleQE
+	 * with cte1 as (insert into rpt_table values (1, 2) returning *)
+	 *  select * from cte1 join gp_segment_configuration g on g.dbid = cte1.c1;
+	 * We return SingleQE to ensure not to be elided Motion.
+	 */
+	if ((CdbPathLocus_IsSingleQE(a) && CdbPathLocus_IsEntry(b)) ||
+		(CdbPathLocus_IsSingleQE(b) && CdbPathLocus_IsEntry(a)))
+	{
+		return CdbPathLocus_IsSingleQE(a) ? a : b;
+	}
+
 	if (CdbPathLocus_IsGeneral(a))
 		return b;
 
 	if (CdbPathLocus_IsGeneral(b))
 		return a;
+
+	/*
+	 * If one rel is SegmentGeneral, result stays with the other rel,
+	 * but need to ensure the result is on the common segments.
+	 * NB: the code check SegmentGeneral and Replicated is quite similar,
+	 * but we have to put check-segmentgeneral first here. Consider one
+	 * is SegmentGeneral and the other is Replicated, only by this order
+	 * we can be sure that this function return a locus of Replicated,
+	 * else if we return SegmentGeneral, plan will allocate gangs on only
+	 * one segment, which will insert/update/delelte rows on that segment
+	 * for a replicated tables.
+	 */
+	if (CdbPathLocus_IsSegmentGeneral(a))
+	{
+		b.numsegments = CdbPathLocus_CommonSegments(a, b);
+		return b;
+	}
+	if (CdbPathLocus_IsSegmentGeneral(b))
+	{
+		a.numsegments = CdbPathLocus_CommonSegments(a, b);
+		return a;
+	}
 
 	/*
 	 * If one rel is replicated, result stays with the other rel,
@@ -729,30 +763,6 @@ cdbpathlocus_join(JoinType jointype, CdbPathLocus a, CdbPathLocus b)
 		return b;
 	}
 	if (CdbPathLocus_IsReplicated(b))
-	{
-		a.numsegments = CdbPathLocus_CommonSegments(a, b);
-		return a;
-	}
-
-	/*
-	 * If one rel is segmentgeneral, result stays with the other rel,
-	 * but need to ensure the result is on the common segments.
-	 *
-	 * NB: the code check SegmentGeneral and replicated is quite similar,
-	 * but we have to put check-segmentgeneral below. Consider one
-	 * is segmentgeneral and the other is replicated, only by this order
-	 * we can be sure that this function never return a locus of
-	 * Replicated.
-	 * update a replicated table join with a partitioned locus table will
-	 * reach here.
-	 */
-
-	if (CdbPathLocus_IsSegmentGeneral(a))
-	{
-		b.numsegments = CdbPathLocus_CommonSegments(a, b);
-		return b;
-	}
-	if (CdbPathLocus_IsSegmentGeneral(b))
 	{
 		a.numsegments = CdbPathLocus_CommonSegments(a, b);
 		return a;
