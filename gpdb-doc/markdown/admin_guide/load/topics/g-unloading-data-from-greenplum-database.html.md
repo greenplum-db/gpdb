@@ -2,7 +2,7 @@
 title: Unloading Data from Greenplum Database 
 ---
 
-A writable external table allows you to select rows from other database tables and output the rows to files, named pipes, to applications, or as output targets for Greenplum parallel MapReduce calculations. You can define file-based and web-based writable external tables.
+A writable external table allows you to select rows from other database tables and output the rows to files, named pipes, to applications. You can define file-based and web-based writable external tables.
 
 This topic describes how to unload data from Greenplum Database using parallel unload \(writable external tables\) and non-parallel unload \(`COPY`\).
 
