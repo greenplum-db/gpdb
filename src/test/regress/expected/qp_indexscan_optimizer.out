@@ -561,7 +561,7 @@ explain (costs off) select b from test_index_with_orderby_limit order by b limit
          Merge Key: b
          ->  Limit
                ->  Index Only Scan using index_bda on test_index_with_orderby_limit
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 select b from test_index_with_orderby_limit order by b limit 10;

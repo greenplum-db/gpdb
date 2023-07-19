@@ -596,6 +596,13 @@ private:
 		CDXLTranslateContext *dxltrctxRight);
 
 	static Node *FixUpperExprMutatorProjectSet(Node *node, List *context);
+
+	// checks if index is used for Order by.
+	bool IsIndexForOrderBy(
+		CDXLTranslateContextBaseTable *base_table_context,
+		CDXLTranslationContextArray *ctxt_translation_prev_siblings,
+		CDXLTranslateContext *output_context,
+		CDXLNode *index_cond_list_dxlnode);
 };
 }  // namespace gpdxl
 

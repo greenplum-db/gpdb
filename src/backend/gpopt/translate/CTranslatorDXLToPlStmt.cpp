@@ -833,30 +833,17 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	List *index_strategy_list = NIL;
 	List *index_subtype_list = NIL;
 
-	const ULONG arity = index_cond_list_dxlnode->Arity();
-	// build colid->var mapping
-	CMappingColIdVarPlStmt colid_var_mapping(
-		m_mp, &base_table_context, ctxt_translation_prev_siblings,
-		output_context, m_dxl_to_plstmt_context);
-
-	// A bool Const expression is used as index condition if index column is used
-	// as part of ORDER BY clause. Because ORDER BY doesn't have any index conditions.
-	// If only a bool Const index condition exist, no need to translate index conditions.
-	if (arity >= 1)
+	// Translate Index Conditions if Index isn't used for order by.
+	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
+						   output_context, index_cond_list_dxlnode))
 	{
-		Expr *index_cond_expr =
-			m_translator_dxl_to_scalar->TranslateDXLToScalar(
-				(*index_cond_list_dxlnode)[0], &colid_var_mapping);
-		if (!IsA(index_cond_expr, Const))
-		{
-			TranslateIndexConditions(
-				index_cond_list_dxlnode,
-				physical_idx_scan_dxlop->GetDXLTableDescr(),
-				false,	// is_bitmap_index_probe
-				md_index, md_rel, output_context, &base_table_context,
-				ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
-				&index_strategy_list, &index_subtype_list);
-		}
+		TranslateIndexConditions(
+			index_cond_list_dxlnode,
+			physical_idx_scan_dxlop->GetDXLTableDescr(),
+			false,	// is_bitmap_index_probe
+			md_index, md_rel, output_context, &base_table_context,
+			ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+			&index_strategy_list, &index_subtype_list);
 	}
 
 	index_scan->indexqual = index_cond;
@@ -1020,12 +1007,18 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 	List *index_strategy_list = NIL;
 	List *index_subtype_list = NIL;
 
-	TranslateIndexConditions(
-		index_cond_list_dxlnode, physical_idx_scan_dxlop->GetDXLTableDescr(),
-		false,	// is_bitmap_index_probe
-		md_index, md_rel, output_context, &base_table_context,
-		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
-		&index_strategy_list, &index_subtype_list);
+	// Translate Index Conditions if Index isn't used for order by.
+	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
+						   output_context, index_cond_list_dxlnode))
+	{
+		TranslateIndexConditions(
+			index_cond_list_dxlnode,
+			physical_idx_scan_dxlop->GetDXLTableDescr(),
+			false,	// is_bitmap_index_probe
+			md_index, md_rel, output_context, &base_table_context,
+			ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+			&index_strategy_list, &index_subtype_list);
+	}
 
 	index_scan->indexqual = index_cond;
 	SetParamIds(plan);
@@ -6586,5 +6579,32 @@ CTranslatorDXLToPlStmt::TranslateNestLoopParamList(
 			gpdb::LAppend(nest_params_list, (void *) nest_params);
 	}
 	return nest_params_list;
+}
+
+// A bool Const expression is used as index condition if index column is used
+// as part of ORDER BY clause. Because ORDER BY doesn't have any index conditions.
+// This function checks if index is used for Order by.
+bool
+CTranslatorDXLToPlStmt::IsIndexForOrderBy(
+	CDXLTranslateContextBaseTable *base_table_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings,
+	CDXLTranslateContext *output_context, CDXLNode *index_cond_list_dxlnode)
+{
+	const ULONG arity = index_cond_list_dxlnode->Arity();
+	CMappingColIdVarPlStmt colid_var_mapping(
+		m_mp, base_table_context, ctxt_translation_prev_siblings,
+		output_context, m_dxl_to_plstmt_context);
+	if (arity == 1)
+	{
+		Expr *index_cond_expr =
+			m_translator_dxl_to_scalar->TranslateDXLToScalar(
+				(*index_cond_list_dxlnode)[0], &colid_var_mapping);
+		if (IsA(index_cond_expr, Const))
+		{
+			return true;
+		}
+		return false;
+	}
+	return false;
 }
 // EOF
