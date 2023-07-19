@@ -2081,10 +2081,10 @@ CHistogram::GetSampleRate(DOUBLE left, DOUBLE right, DOUBLE *sample_rate,
 		return;
 	}
 
-	sample_rate[index + 1] = (left + right) / 2;
+	sample_rate[index] = (left + right) / 2;
 
-	GetSampleRate(left, (left + right) / 2, sample_rate, index * 2);
-	GetSampleRate((left + right) / 2, right, sample_rate, index * 2 + 1);
+	GetSampleRate(left, (left + right) / 2, sample_rate, index * 2 - 1);
+	GetSampleRate((left + right) / 2, right, sample_rate, index * 2);
 }
 
 // estimate data skew by sampling histogram buckets,
@@ -2115,12 +2115,12 @@ CHistogram::ComputeSkew()
 
 	// generate a sample from histogram data, and compute sample mean
 	DOUBLE sample_mean = 0;
-	DOUBLE samples[GPOPT_SKEW_SAMPLE_SIZE];
-	DOUBLE sample_rate[GPOPT_SKEW_SAMPLE_SIZE];
+	DOUBLE *samples = GPOS_NEW_ARRAY(m_mp, DOUBLE, GPOPT_SKEW_SAMPLE_SIZE);
+	DOUBLE *sample_rate = GPOS_NEW_ARRAY(m_mp, DOUBLE, GPOPT_SKEW_SAMPLE_SIZE);
 	sample_rate[0] = 0;
 	sample_rate[1] = 1;
-	ULONG index = 1;
-	GetSampleRate(sample_rate[0], sample_rate[1], sample_rate, index);
+	// populate the sample rate array from the 3rd (index = 2) element onward
+	GetSampleRate(sample_rate[0], sample_rate[1], sample_rate, 2 /*index*/);
 
 	// start with the lowest frequency bucket
 	ULONG bucket_index = m_histogram_buckets->Size() - 1;
@@ -2157,6 +2157,10 @@ CHistogram::ComputeSkew()
 		num2 = num2 + pow((samples[ul] - sample_mean), 2.0);
 		num3 = num3 + pow((samples[ul] - sample_mean), 3.0);
 	}
+
+	GPOS_DELETE_ARRAY(samples);
+	GPOS_DELETE_ARRAY(sample_rate);
+
 	// second moment: variance
 	DOUBLE moment2 = (DOUBLE)(num2 / GPOPT_SKEW_SAMPLE_SIZE);
 	// third moment: a/symmetry
