@@ -895,7 +895,7 @@ Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently w
 
 ## <a id="gp_external_enable_exec"></a>gp\_external\_enable\_exec 
 
- Activates or deactivates  the use of external tables that run OS commands or scripts on the segment hosts \(`CREATE EXTERNAL TABLE EXECUTE` syntax\).
+ Activates or deactivates  the use of external tables that run OS commands or scripts on the segment hosts \(`CREATE EXTERNAL TABLE EXECUTE` syntax\). Must be enabled if using the VMware Greenplum Command Center.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
