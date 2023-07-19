@@ -6492,7 +6492,7 @@ OptSingleRowErrorHandling:
 					   (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						errmsg("invalid (ROWS) reject limit. Should be 2 or larger")));
 
-			$$ = lappend(NULL, makeDefElem("sreh", (Node *) n));
+			$$ = lappend(NULL, makeDefElem("sreh", (Node *) n, @1));
 		}
 		| /*EMPTY*/		{ $$ = NULL; }
 		;
