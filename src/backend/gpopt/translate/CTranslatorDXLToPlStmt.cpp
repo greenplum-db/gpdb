@@ -1099,8 +1099,6 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		Expr *index_cond_expr =
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
-
-
 		GPOS_ASSERT((IsA(index_cond_expr, OpExpr) ||
 					 IsA(index_cond_expr, ScalarArrayOpExpr)) &&
 					"expected OpExpr or ScalarArrayOpExpr in index qual");
@@ -1200,7 +1198,6 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			attno, index_cond_expr, original_index_cond_expr, strategy_num,
 			index_subtype_oid));
 	}
-
 
 	// the index quals much be ordered by attribute number
 	index_qual_info_array->Sort(CIndexQualInfo::IndexQualInfoCmp);
