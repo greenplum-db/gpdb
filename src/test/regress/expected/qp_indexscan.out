@@ -9,19 +9,34 @@ CREATE INDEX index_c on test_index_with_orderby_limit using hash(c);
 INSERT INTO test_index_with_orderby_limit select i, i-2, i/3, i+1 from generate_series(1,10000) i;
 ANALYZE test_index_with_orderby_limit;
 -- should use index scan
-explain (costs off) select * from test_index_with_orderby_limit order by a limit 10;
-                                 QUERY PLAN
------------------------------------------------------------------------------
+explain (costs off) select a from test_index_with_orderby_limit order by a limit 10;
+                                    QUERY PLAN
+----------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Index Scan using index_a on test_index_with_orderby_limit
+               ->  Index Only Scan using index_a on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
 
+select a from test_index_with_orderby_limit order by a limit 10;
+ a  
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+(10 rows)
+
 -- order by using a hash indexed column, should use SeqScan
-explain (costs off) select * from test_index_with_orderby_limit order by c limit 10;
+explain (costs off) select c from test_index_with_orderby_limit order by c limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -34,44 +49,104 @@ explain (costs off) select * from test_index_with_orderby_limit order by c limit
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select c from test_index_with_orderby_limit order by c limit 10;
+ c 
+---
+ 0
+ 0
+ 1
+ 1
+ 1
+ 2
+ 2
+ 2
+ 3
+ 3
+(10 rows)
+
 -- should use index scan
-explain (costs off) select * from test_index_with_orderby_limit order by b limit 10;
-                                  QUERY PLAN
--------------------------------------------------------------------------------
+explain (costs off) select b from test_index_with_orderby_limit order by b limit 10;
+                                     QUERY PLAN
+------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b
          ->  Limit
-               ->  Index Scan using index_bda on test_index_with_orderby_limit
+               ->  Index Only Scan using index_bda on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
 
+select b from test_index_with_orderby_limit order by b limit 10;
+ b  
+----
+ -1
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+(10 rows)
+
 -- should use index scan
-explain (costs off) select * from test_index_with_orderby_limit order by a, b limit 10;
-                                  QUERY PLAN
-------------------------------------------------------------------------------
+explain (costs off) select a, b from test_index_with_orderby_limit order by a, b limit 10;
+                                    QUERY PLAN
+-----------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a, b
          ->  Limit
-               ->  Index Scan using index_ab on test_index_with_orderby_limit
+               ->  Index Only Scan using index_ab on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
 
+select a, b from test_index_with_orderby_limit order by a, b limit 10;
+ a  | b  
+----+----
+  1 | -1
+  2 |  0
+  3 |  1
+  4 |  2
+  5 |  3
+  6 |  4
+  7 |  5
+  8 |  6
+  9 |  7
+ 10 |  8
+(10 rows)
+
 -- should use index scan
-explain (costs off) select * from test_index_with_orderby_limit order by b, d limit 10;
-                                  QUERY PLAN
--------------------------------------------------------------------------------
+explain (costs off) select b, d from test_index_with_orderby_limit order by b, d limit 10;
+                                     QUERY PLAN
+------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, d
          ->  Limit
-               ->  Index Scan using index_bda on test_index_with_orderby_limit
+               ->  Index Only Scan using index_bda on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
 
+select b, d from test_index_with_orderby_limit order by b, d limit 10;
+ b  | d  
+----+----
+ -1 |  2
+  0 |  3
+  1 |  4
+  2 |  5
+  3 |  6
+  4 |  7
+  5 |  8
+  6 |  9
+  7 | 10
+  8 | 11
+(10 rows)
+
 -- should use seq scan
-explain (costs off) select * from test_index_with_orderby_limit order by d, b limit 10;
+explain (costs off) select d, b from test_index_with_orderby_limit order by d, b limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -84,8 +159,23 @@ explain (costs off) select * from test_index_with_orderby_limit order by d, b li
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select d, b from test_index_with_orderby_limit order by d, b limit 10;
+ d  | b  
+----+----
+  2 | -1
+  3 |  0
+  4 |  1
+  5 |  2
+  6 |  3
+  7 |  4
+  8 |  5
+  9 |  6
+ 10 |  7
+ 11 |  8
+(10 rows)
+
 -- should use seq scan
-explain (costs off) select * from test_index_with_orderby_limit order by d, a limit 10;
+explain (costs off) select d, a from test_index_with_orderby_limit order by d, a limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -98,8 +188,23 @@ explain (costs off) select * from test_index_with_orderby_limit order by d, a li
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select d, a from test_index_with_orderby_limit order by d, a limit 10;
+ d  | a  
+----+----
+  2 |  1
+  3 |  2
+  4 |  3
+  5 |  4
+  6 |  5
+  7 |  6
+  8 |  7
+  9 |  8
+ 10 |  9
+ 11 | 10
+(10 rows)
+
 -- should use seq scan
-explain (costs off) select * from test_index_with_orderby_limit order by a, c limit 10;
+explain (costs off) select a, c from test_index_with_orderby_limit order by a, c limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -112,20 +217,50 @@ explain (costs off) select * from test_index_with_orderby_limit order by a, c li
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select a, c from test_index_with_orderby_limit order by a, c limit 10;
+ a  | c 
+----+---
+  1 | 0
+  2 | 0
+  3 | 1
+  4 | 1
+  5 | 1
+  6 | 2
+  7 | 2
+  8 | 2
+  9 | 3
+ 10 | 3
+(10 rows)
+
 -- should use index scan
-explain (costs off) select * from test_index_with_orderby_limit order by b, d, a limit 10;
-                                  QUERY PLAN
--------------------------------------------------------------------------------
+explain (costs off) select b, d, a from test_index_with_orderby_limit order by b, d, a limit 10;
+                                     QUERY PLAN
+------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, d, a
          ->  Limit
-               ->  Index Scan using index_bda on test_index_with_orderby_limit
+               ->  Index Only Scan using index_bda on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
 
+select b, d, a from test_index_with_orderby_limit order by b, d, a limit 10;
+ b  | d  | a  
+----+----+----
+ -1 |  2 |  1
+  0 |  3 |  2
+  1 |  4 |  3
+  2 |  5 |  4
+  3 |  6 |  5
+  4 |  7 |  6
+  5 |  8 |  7
+  6 |  9 |  8
+  7 | 10 |  9
+  8 | 11 | 10
+(10 rows)
+
 -- should use seq scan
-explain (costs off) select * from test_index_with_orderby_limit order by b, d, c limit 10;
+explain (costs off) select b, d, c from test_index_with_orderby_limit order by b, d, c limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -138,8 +273,23 @@ explain (costs off) select * from test_index_with_orderby_limit order by b, d, c
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select b, d, c from test_index_with_orderby_limit order by b, d, c limit 10;
+ b  | d  | c 
+----+----+---
+ -1 |  2 | 0
+  0 |  3 | 0
+  1 |  4 | 1
+  2 |  5 | 1
+  3 |  6 | 1
+  4 |  7 | 2
+  5 |  8 | 2
+  6 |  9 | 2
+  7 | 10 | 3
+  8 | 11 | 3
+(10 rows)
+
 -- should use seq scan
-explain (costs off) select * from test_index_with_orderby_limit order by c, b, a limit 10;
+explain (costs off) select c, b, a from test_index_with_orderby_limit order by c, b, a limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -152,19 +302,49 @@ explain (costs off) select * from test_index_with_orderby_limit order by c, b, a
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select c, b, a from test_index_with_orderby_limit order by c, b, a limit 10;
+ c | b  | a  
+---+----+----
+ 0 | -1 |  1
+ 0 |  0 |  2
+ 1 |  1 |  3
+ 1 |  2 |  4
+ 1 |  3 |  5
+ 2 |  4 |  6
+ 2 |  5 |  7
+ 2 |  6 |  8
+ 3 |  7 |  9
+ 3 |  8 | 10
+(10 rows)
+
 -- with offset and without limit
-explain (costs off) select * from test_index_with_orderby_limit order by a offset 10;
-                              QUERY PLAN
------------------------------------------------------------------------
+explain (costs off) select a  from test_index_with_orderby_limit order by a offset 9990;
+                                 QUERY PLAN
+----------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
-         ->  Index Scan using index_a on test_index_with_orderby_limit
+         ->  Index Only Scan using index_a on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (5 rows)
 
+select a  from test_index_with_orderby_limit order by a offset 9990;
+   a   
+-------
+  9991
+  9992
+  9993
+  9994
+  9995
+  9996
+  9997
+  9998
+  9999
+ 10000
+(10 rows)
+
 -- limit value in subquery
-explain (costs off) select * from test_index_with_orderby_limit order by a limit (select min(a) from test_index_with_orderby_limit);
+explain (costs off) select a from test_index_with_orderby_limit order by a limit (select min(a) from test_index_with_orderby_limit);
                                                          QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------------
  Limit
@@ -179,45 +359,75 @@ explain (costs off) select * from test_index_with_orderby_limit order by a limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: test_index_with_orderby_limit.a
          ->  Limit
-               ->  Index Scan using index_a on test_index_with_orderby_limit
+               ->  Index Only Scan using index_a on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (14 rows)
 
+select a from test_index_with_orderby_limit order by a limit (select min(a) from test_index_with_orderby_limit);
+ a 
+---
+ 1
+(1 row)
+
 -- offset value in a subquery
-explain (costs off) select * from test_index_with_orderby_limit order by c offset (select min(a) from test_index_with_orderby_limit);
-                                                         QUERY PLAN
-----------------------------------------------------------------------------------------------------------------------------
+explain (costs off) select c from test_index_with_orderby_limit order by c offset (select 9990);
+                         QUERY PLAN
+-------------------------------------------------------------
  Limit
-   InitPlan 2 (returns $1)  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Result
-           InitPlan 1 (returns $0)  (slice3)
-             ->  Limit
-                   ->  Gather Motion 3:1  (slice4; segments: 3)
-                         Merge Key: test_index_with_orderby_limit_1.a
-                         ->  Index Only Scan using index_a on test_index_with_orderby_limit test_index_with_orderby_limit_1
-                               Index Cond: (a IS NOT NULL)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: test_index_with_orderby_limit.c
          ->  Sort
                Sort Key: test_index_with_orderby_limit.c
                ->  Seq Scan on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
-(15 rows)
+(9 rows)
+
+select c from test_index_with_orderby_limit order by c offset (select 9990);
+  c   
+------
+ 3330
+ 3330
+ 3331
+ 3331
+ 3331
+ 3332
+ 3332
+ 3332
+ 3333
+ 3333
+(10 rows)
 
 -- order by opposite to index sort direction
-explain (costs off) select * from test_index_with_orderby_limit order by a desc limit 10;
-                                      QUERY PLAN
---------------------------------------------------------------------------------------
+explain (costs off) select a from test_index_with_orderby_limit order by a desc limit 10;
+                                        QUERY PLAN
+-------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Index Scan Backward using index_a on test_index_with_orderby_limit
+               ->  Index Only Scan Backward using index_a on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
 
+select a from test_index_with_orderby_limit order by a desc limit 10;
+   a   
+-------
+ 10000
+  9999
+  9998
+  9997
+  9996
+  9995
+  9994
+  9993
+  9992
+  9991
+(10 rows)
+
 -- order by opposite to nulls direction in index
-explain (costs off) select * from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
+explain (costs off) select a from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -230,8 +440,23 @@ explain (costs off) select * from test_index_with_orderby_limit order by a NULLS
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select a from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
+ a  
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+(10 rows)
+
 -- order by desc with nulls last
-explain (costs off) select * from test_index_with_orderby_limit order by a desc NULLS LAST limit 10;
+explain (costs off) select a from test_index_with_orderby_limit order by a desc NULLS LAST limit 10;
                             QUERY PLAN
 -------------------------------------------------------------------
  Limit
@@ -243,6 +468,21 @@ explain (costs off) select * from test_index_with_orderby_limit order by a desc 
                      ->  Seq Scan on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (8 rows)
+
+select a from test_index_with_orderby_limit order by a desc NULLS LAST limit 10;
+   a   
+-------
+ 10000
+  9999
+  9998
+  9997
+  9996
+  9995
+  9994
+  9993
+  9992
+  9991
+(10 rows)
 
 -- order by as sum of two columns, uses SeqScan with Sort
 explain (costs off) select a, b from test_index_with_orderby_limit order by a+b, c limit 3;
@@ -258,6 +498,14 @@ explain (costs off) select a, b from test_index_with_orderby_limit order by a+b,
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select a, b from test_index_with_orderby_limit order by a+b, c limit 3;
+ a | b  
+---+----
+ 1 | -1
+ 2 |  0
+ 3 |  1
+(3 rows)
+
 explain (costs off) select a+b as sum from test_index_with_orderby_limit order by sum limit 3;
                             QUERY PLAN
 -------------------------------------------------------------------
@@ -271,17 +519,33 @@ explain (costs off) select a+b as sum from test_index_with_orderby_limit order b
  Optimizer: Postgres query optimizer
 (8 rows)
 
+select a+b as sum from test_index_with_orderby_limit order by sum limit 3;
+ sum 
+-----
+   0
+   2
+   4
+(3 rows)
+
 -- order by using column number
-explain (costs off) select * from test_index_with_orderby_limit order by 1 limit 3;
-                                 QUERY PLAN
------------------------------------------------------------------------------
+explain (costs off) select a from test_index_with_orderby_limit order by 1 limit 3;
+                                    QUERY PLAN
+----------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Index Scan using index_a on test_index_with_orderby_limit
+               ->  Index Only Scan using index_a on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
+
+select a from test_index_with_orderby_limit order by 1 limit 3;
+ a 
+---
+ 1
+ 2
+ 3
+(3 rows)
 
 -- check if index-only scan is leveraged when required
 set optimizer_enable_indexscan to off;
@@ -296,5 +560,20 @@ explain (costs off) select b from test_index_with_orderby_limit order by b limit
                ->  Index Only Scan using index_bda on test_index_with_orderby_limit
  Optimizer: Postgres query optimizer
 (6 rows)
+
+select b from test_index_with_orderby_limit order by b limit 10;
+ b  
+----
+ -1
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+(10 rows)
 
 DROP TABLE test_index_with_orderby_limit;

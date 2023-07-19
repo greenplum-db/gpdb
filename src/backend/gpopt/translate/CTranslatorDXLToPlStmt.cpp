@@ -833,12 +833,31 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	List *index_strategy_list = NIL;
 	List *index_subtype_list = NIL;
 
-	TranslateIndexConditions(
-		index_cond_list_dxlnode, physical_idx_scan_dxlop->GetDXLTableDescr(),
-		false,	// is_bitmap_index_probe
-		md_index, md_rel, output_context, &base_table_context,
-		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
-		&index_strategy_list, &index_subtype_list);
+	const ULONG arity = index_cond_list_dxlnode->Arity();
+	// build colid->var mapping
+	CMappingColIdVarPlStmt colid_var_mapping(
+		m_mp, &base_table_context, ctxt_translation_prev_siblings,
+		output_context, m_dxl_to_plstmt_context);
+
+	// A bool Const expression is used as index condition if index column is used
+	// as part of ORDER BY clause. Because ORDER BY doesn't have any index conditions.
+	// If only a bool Const index condition exist, no need to translate index conditions.
+	if (arity >= 1)
+	{
+		Expr *index_cond_expr =
+			m_translator_dxl_to_scalar->TranslateDXLToScalar(
+				(*index_cond_list_dxlnode)[0], &colid_var_mapping);
+		if (!IsA(index_cond_expr, Const))
+		{
+			TranslateIndexConditions(
+				index_cond_list_dxlnode,
+				physical_idx_scan_dxlop->GetDXLTableDescr(),
+				false,	// is_bitmap_index_probe
+				md_index, md_rel, output_context, &base_table_context,
+				ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+				&index_strategy_list, &index_subtype_list);
+		}
+	}
 
 	index_scan->indexqual = index_cond;
 	index_scan->indexqualorig = index_orig_cond;
@@ -1076,7 +1095,6 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		m_mp, base_table_context, ctxt_translation_prev_siblings,
 		output_context, m_dxl_to_plstmt_context);
 
-	BOOL is_index_for_orderby = false;
 	const ULONG arity = index_cond_list_dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
@@ -1089,13 +1107,6 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
 
-		// A bool Const expression is used as index condition if index column is used
-		// as part of ORDER BY clause. Because ORDER BY doesn't have any index conditions.
-		if (IsA(index_cond_expr, Const))
-		{
-			is_index_for_orderby = true;
-			break;
-		}
 
 		GPOS_ASSERT((IsA(index_cond_expr, OpExpr) ||
 					 IsA(index_cond_expr, ScalarArrayOpExpr)) &&
@@ -1197,13 +1208,6 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			index_subtype_oid));
 	}
 
-	// index_qual_info_array is empty if index is used in ORDER BY. So release
-	// memory for it and return.
-	if (is_index_for_orderby)
-	{
-		index_qual_info_array->Release();
-		return;
-	}
 
 	// the index quals much be ordered by attribute number
 	index_qual_info_array->Sort(CIndexQualInfo::IndexQualInfoCmp);
