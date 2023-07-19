@@ -139,8 +139,6 @@ InitAppendOnlyWriter(void)
 				 errmsg("not enough shared memory for append only writer")));
 
 	ereport(DEBUG1, (errmsg("initialized append only writer")));
-
-	return;
 }
 
 /*
@@ -730,7 +728,6 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 	}
 
 	release_lightweight_lock();
-	return;
 }
 
 void
@@ -775,7 +772,6 @@ RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 	}
 
 	release_lightweight_lock();
-	return;
 }
 
 /*
