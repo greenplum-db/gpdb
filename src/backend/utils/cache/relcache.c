@@ -3432,7 +3432,6 @@ AtEOSubXact_cleanup(Relation relation, bool isCommit,
 	}
 }
 
-
 /*
  *		RelationBuildLocalRelation
  *			Build a relcache entry for an about-to-be-created relation,

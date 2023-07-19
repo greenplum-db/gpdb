@@ -958,6 +958,7 @@ _readAlteredTableInfo(void)
 
 	READ_STRING_FIELD(replicaIdentityIndex);
 	READ_STRING_FIELD(clusterOnIndex);
+	READ_NODE_FIELD(repack_cols);
 
 	READ_DONE();
 }

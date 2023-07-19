@@ -836,8 +836,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	QUEUE
 
-	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE
-	ROOTPARTITION
+	RANDOMLY READABLE READS REJECT_P REPACK REPLICATED
+	RESOURCE ROOTPARTITION
 
 	SCATTER SEGMENT SEGMENTS SPLIT SUBPARTITION
 
@@ -1112,6 +1112,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc RELEASE
 			%nonassoc RELOPT
 			%nonassoc RENAME
+			%nonassoc REPACK
 			%nonassoc REPEATABLE
 			%nonassoc REPLACE
 			%nonassoc RESET
@@ -3446,6 +3447,14 @@ alter_table_cmd:
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_NoForceRowSecurity;
+					$$ = (Node *)n;
+				}
+			/* ALTER TABLE <name> REPACK BY COLUMNS (...) */
+			| REPACK BY COLUMNS '(' sortby_list ')'
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_RepackTable;
+					n->def = (Node *) $5;
 					$$ = (Node *)n;
 				}
 			| alter_generic_options
@@ -18295,6 +18304,7 @@ unreserved_keyword:
 			| RELEASE
 			| RELOPT
 			| RENAME
+			| REPACK
 			| REPEATABLE
 			| REPLACE
 			| REPLICA
@@ -18620,6 +18630,7 @@ PartitionIdentKeyword: ABORT_P
 			| RELEASE
 			| RELOPT
 			| RENAME
+			| REPACK
 			| REPEATABLE
 			| REPLACE
 			| RESET

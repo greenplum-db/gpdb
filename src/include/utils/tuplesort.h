@@ -197,6 +197,12 @@ extern Tuplesortstate *tuplesort_begin_heap(TupleDesc tupDesc,
 											bool *nullsFirstFlags,
 											int workMem, SortCoordinate coordinate,
 											bool randomAccess);
+extern Tuplesortstate *tuplesort_begin_repack(TupleDesc tupDesc,
+											  int nkeys, AttrNumber *attNums,
+											  Oid *sortOperators, Oid *sortCollations,
+											  bool *nullsFirstFlags,
+											  int workMem, SortCoordinate coordinate,
+											  bool randomAccess);
 extern Tuplesortstate *tuplesort_begin_cluster(TupleDesc tupDesc,
 											   Relation indexRel, int workMem,
 											   SortCoordinate coordinate, bool randomAccess);

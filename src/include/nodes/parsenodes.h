@@ -56,7 +56,7 @@ typedef enum SortByDir
 	SORTBY_DEFAULT,
 	SORTBY_ASC,
 	SORTBY_DESC,
-	SORTBY_USING				/* not allowed in CREATE INDEX ... */
+	SORTBY_USING				/* not allowed in CREATE INDEX or AT REPACK */
 } SortByDir;
 
 typedef enum SortByNulls
@@ -2007,6 +2007,7 @@ typedef enum AlterTableType
 	AT_SetDistributedBy,		/* SET DISTRIBUTED BY */
 	AT_ExpandTable,          /* EXPAND DISTRIBUTED */
 	AT_ExpandPartitionTablePrepare,	/* EXPAND PARTITION PREPARE */
+	AT_RepackTable,				/* REPACK TABLE */
 
 	/* GPDB: Legacy commands to manipulate partitions */
 	AT_PartAdd,					/* Add */
