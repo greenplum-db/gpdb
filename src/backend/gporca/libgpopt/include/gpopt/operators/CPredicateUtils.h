@@ -68,20 +68,16 @@ private:
 								  CColRefSetArray *pdrgpcrsEquivClasses);
 
 	// helper to create index lookup comparison predicate with index key on left side
-	static CExpression *PexprIndexLookupKeyOnLeft(CMemoryPool *mp,
-												  CMDAccessor *md_accessor,
-												  CExpression *pexprScalar,
-												  const IMDIndex *pmdindex,
-												  CColRefArray *pdrgpcrIndex,
-												  CColRefSet *outer_refs);
+	static CExpression *PexprIndexLookupKeyOnLeft(
+		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprScalar,
+		const IMDIndex *pmdindex, CColRefArray *pdrgpcrIndex,
+		CColRefSet *outer_refs, BOOL allowArrayCmpIndexQual);
 
 	// helper to create index lookup comparison predicate with index key on right side
-	static CExpression *PexprIndexLookupKeyOnRight(CMemoryPool *mp,
-												   CMDAccessor *md_accessor,
-												   CExpression *pexprScalar,
-												   const IMDIndex *pmdindex,
-												   CColRefArray *pdrgpcrIndex,
-												   CColRefSet *outer_refs);
+	static CExpression *PexprIndexLookupKeyOnRight(
+		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprScalar,
+		const IMDIndex *pmdindex, CColRefArray *pdrgpcrIndex,
+		CColRefSet *outer_refs, BOOL allowArrayCmpIndexQual);
 
 	// for all columns that appear in the given expression and are members
 	// of the given set, replace these columns with NULL constants
@@ -206,6 +202,10 @@ public:
 
 	// is the given expression a comparison between a scalar ident and a constant array
 	static BOOL FCompareIdentToConstArray(CExpression *pexpr);
+
+	// is the given ScalarArrayCmp a valid index qual
+	static BOOL IsScalarArrayCmpValidIndexQual(CExpression *pexpr,
+											   CColRefArray *pdrgpcrIndex);
 
 	// is the given expression an AND
 	static BOOL
@@ -396,7 +396,7 @@ public:
 		CExpressionArray *pdrgpexprResidual,
 		CColRefSet *pcrsAcceptedOuterRefs =
 			NULL,  // outer refs that are acceptable in an index predicate
-		BOOL allowArrayCmpForBTreeIndexes = false);
+		BOOL allowArrayCmpIndexQual = false);
 
 	// return the inverse of given comparison expression
 	static CExpression *PexprInverseComparison(CMemoryPool *mp,
@@ -426,7 +426,7 @@ public:
 	static CExpression *PexprIndexLookup(
 		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexpPred,
 		const IMDIndex *pmdindex, CColRefArray *pdrgpcrIndex,
-		CColRefSet *outer_refs, BOOL allowArrayCmpForBTreeIndexes);
+		CColRefSet *outer_refs, BOOL allowArrayCmpIndexQual);
 
 	// split given scalar expression into two conjunctions; without and with outer references
 	static void SeparateOuterRefs(CMemoryPool *mp, CExpression *pexprScalar,

@@ -13688,6 +13688,7 @@ select * from sqall_t1 where a not in (
 
 reset optimizer_join_order;
 -- Make sure materialize projects child's tlist, not what is requested
+set optimizer_enable_indexscan to off;
 create table material_test(first_id int, second_id int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'first_id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -13766,6 +13767,7 @@ and first_id in (select first_id from mat_w);
         1
 (8 rows)
 
+reset optimizer_enable_indexscan;
 -- Test to ensure bitmapscan doesn't project recheck/scalar filter columns
 create table material_bitmapscan(i int, j int, k timestamp, l timestamp) with(appendonly=true) distributed replicated;
 create index material_bitmapscan_idx on material_bitmapscan using btree(k);

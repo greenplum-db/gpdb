@@ -380,6 +380,47 @@ EXPLAIN (COSTS OFF)
 SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3]);
 SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3]);
 
+--
+-- Test ORCA considers ScalarArrayOp in indexqual for partitioned table
+-- with multikey indexes only when predicate key is the first index key
+-- (similar test for non-partitioned tables in create_index)
+--
+CREATE TABLE pt_with_multikey_index (a int, key1 char(6), key2 char(1))
+PARTITION BY list(key2)
+(PARTITION p1 VALUES ('R'), PARTITION p2 VALUES ('G'), DEFAULT PARTITION other);
+
+CREATE INDEX multikey_idx on pt_with_multikey_index (key1, key2);
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'R' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'G' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'B' from generate_series(1,500)i;
+
+explain (costs off)
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+
 -- The following tests are to verify a fix that allows ORCA to
 -- choose the bitmap index scan alternative when the predicate
 -- is in the form of `value operator cast(column)`. The fix

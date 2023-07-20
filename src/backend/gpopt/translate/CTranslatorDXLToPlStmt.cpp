@@ -959,8 +959,10 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 					 IsA(index_cond_expr, ScalarArrayOpExpr)) &&
 					"expected OpExpr or ScalarArrayOpExpr in index qual");
 
+		// allow Index quals with scalar array only for bitmap and btree indexes
 		if (!is_bitmap_index_probe && IsA(index_cond_expr, ScalarArrayOpExpr) &&
-			IMDIndex::EmdindBitmap != index->IndexType())
+			!(IMDIndex::EmdindBitmap == index->IndexType() ||
+			  IMDIndex::EmdindBtree == index->IndexType()))
 		{
 			GPOS_RAISE(
 				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,

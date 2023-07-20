@@ -2915,6 +2915,7 @@ select * from sqall_t1 where a not in (
 reset optimizer_join_order;
 
 -- Make sure materialize projects child's tlist, not what is requested
+set optimizer_enable_indexscan to off;
 create table material_test(first_id int, second_id int);
 create index material_test_idx on material_test using btree (second_id);
 create table material_test2(first_id int, second_id int);
@@ -2946,6 +2947,7 @@ select first_id
 from material_test2
 where first_id in (select first_id from mat_w)
 and first_id in (select first_id from mat_w);
+reset optimizer_enable_indexscan;
 
 -- Test to ensure bitmapscan doesn't project recheck/scalar filter columns
 create table material_bitmapscan(i int, j int, k timestamp, l timestamp) with(appendonly=true) distributed replicated;
