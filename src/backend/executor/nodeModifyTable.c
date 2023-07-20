@@ -2389,7 +2389,7 @@ ExecModifyTable(PlanState *pstate)
 	 * external data via foreign tables.
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer &&
-		!resultRelInfo->ri_RelationDesc->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+		resultRelInfo->ri_RelationDesc->rd_rel->relkind != RELKIND_FOREIGN_TABLE)
 	{
 		/*
 		 * Current Greenplum MPP architecture only support one writer gang, and
