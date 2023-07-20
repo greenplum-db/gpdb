@@ -3511,6 +3511,12 @@ create table baz ( a varchar);
 explain select * from baz where baz.a::bpchar='b' or baz.a='c';
 drop table baz;
 
+-- Test that the preprocessor step where
+-- IN subquery is converted to EXIST subquery with a predicate,
+-- is not happening if inner sub query returns set
+explain (COSTS OFF) SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
