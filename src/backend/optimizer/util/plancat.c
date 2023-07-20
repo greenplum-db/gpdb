@@ -730,7 +730,13 @@ cdb_estimate_partitioned_numpages(Relation rel)
 	List	   *inheritors;
 	ListCell   *lc;
 
-	PageEstimate estimate = { .totalpages = 0, .totalallvisiblepages = 0};
+	PageEstimate estimate = {
+		.totalpages = rel->rd_rel->relpages,
+		.totalallvisiblepages = rel->rd_rel->relallvisible
+	};
+
+	if (estimate.totalpages > 0)
+		return estimate;
 
 	inheritors = find_all_inheritors(RelationGetRelid(rel),
 									 NoLock,
