@@ -148,7 +148,6 @@ COMMIT
 TRUNCATE TABLE
 
 
--- ORCA_FEATURE_NOT_SUPPORTED: dynamic index only scan
 -- Two concurrent transactions on partitioned table
 --    1) dynamic index only scan
 --    2) truncate
@@ -160,7 +159,7 @@ VACUUM
  QUERY PLAN                                         
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)           
-   ->  Dynamic Index Scan on idx on pt              
+   ->  Dynamic Index Only Scan on idx on pt         
          Index Cond: (a < 4)                        
          Number of partitions to scan: 2 (out of 5) 
  Optimizer: Pivotal Optimizer (GPORCA)              

@@ -64,7 +64,6 @@ VACUUM ANALYZE pt;
 2<:
 
 
--- ORCA_FEATURE_NOT_SUPPORTED: dynamic index only scan
 -- Two concurrent transactions on partitioned table
 --    1) dynamic index only scan
 --    2) truncate
