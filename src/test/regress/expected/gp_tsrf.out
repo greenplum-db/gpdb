@@ -251,7 +251,26 @@ select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
 (8 rows)
 
 drop table test_srf;
--- Below query giving incorrect output with ORCA.Works fine on planner.Github Issue #15644
+-- Test that the preprocessor step where
+-- IN subquery is converted to EXIST subquery with a predicate,
+-- is not happening if inner sub query is SRF
+-- Fixed as part of github issue #15644
+explain verbose SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Subquery Scan on s  (cost=0.00..11.35 rows=3 width=1)
+   Output: (SubPlan 1)
+   ->  ProjectSet  (cost=0.00..0.03 rows=3 width=4)
+         Output: generate_series(1, 3)
+         ->  Result  (cost=0.00..0.01 rows=1 width=0)
+   SubPlan 1
+     ->  ProjectSet  (cost=0.00..5.02 rows=1000 width=4)
+           Output: generate_series(1, s.a)
+           ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(11 rows)
+
 SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
  x 
 ---

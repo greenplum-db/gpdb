@@ -41,5 +41,9 @@ explain verbose select generate_series(1,a+1),b+generate_series(1,4),c from test
 select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
 drop table test_srf;
 
--- Below query giving incorrect output with ORCA.Works fine on planner.Github Issue #15644
+-- Test that the preprocessor step where
+-- IN subquery is converted to EXIST subquery with a predicate,
+-- is not happening if inner sub query is SRF
+-- Fixed as part of github issue #15644
+explain verbose SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
 SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
