@@ -93,7 +93,7 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## On these platforms, we do the full build including the server. On other
 ## platforms, we do a client-only build.
 ##
-SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 rhel8_x86_64 rocky8_x86_64 linux_x86_64 photon3_x86_64
+SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 rhel8_x86_64 rocky8_x86_64 linux_x86_64
 
 #---------------------------------------------------------------------
 # Compiler options
@@ -134,7 +134,6 @@ linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --wit
 ubuntu18.04_x86_64_CONFIGFLAGS=--with-quicklz --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
 ubuntu20.04_x86_64_CONFIGFLAGS=--with-quicklz --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
 sles12_x86_64_CONFIGFLAGS=--with-quicklz --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
-photon3_x86_64_CONFIGFLAGS=--with-quicklz --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy ${ORCA_CONFIG} --with-libxml --with-pythonsrc-ext --with-uuid=e2fs
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
 CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) $(BLD_DEPLOYMENT_SETTING))

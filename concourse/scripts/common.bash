@@ -34,10 +34,10 @@ function os_version() {
 function build_arch() {
 	local id=$(os_id)
 	local version=$(os_version)
-	# BLD_ARCH expects rhel{6,7,8}_x86_64 || rocky8_x86_64 || photon3_x86_64 || sles12_x86_64 || ubuntu20.04_x86_64
+	# BLD_ARCH expects rhel{6,7,8}_x86_64 || rocky8_x86_64 || sles12_x86_64 || ubuntu20.04_x86_64
 	# for oel7 and oel8 platform, the id will return centos
 	case ${id} in
-	photon | sles | rocky) version=$(os_version | cut -d. -f1) ;;
+	sles | rocky) version=$(os_version | cut -d. -f1) ;;
 	centos) id="rhel" ;;
 	*) ;;
 	esac

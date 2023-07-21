@@ -11,7 +11,6 @@ inputs:
 - name: bin_gpdb_centos6
 - name: bin_gpdb_centos7
 - name: bin_gpdb_ubuntu18.04
-- name: bin_gpdb_photon3
 - name: bin_gpdb_rhel8
 
 outputs:
@@ -29,5 +28,4 @@ run:
     cp bin_gpdb_centos6/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel6_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
     cp bin_gpdb_centos7/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel7_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
     cp bin_gpdb_ubuntu18.04/bin_gpdb.tar.gz "output/server-build-${server_version}-ubuntu18.04_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
-    cp bin_gpdb_photon3/bin_gpdb.tar.gz "output/server-build-${server_version}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
     cp bin_gpdb_rhel8/bin_gpdb.tar.gz "output/server-build-${server_version}-rhel8_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"

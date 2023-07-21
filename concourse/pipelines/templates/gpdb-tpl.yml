@@ -214,7 +214,6 @@ groups:
   {% endif %}
   {% if os_type == default_os_type %}
   - check_format
-  - compile_gpdb_photon3
   - compile_gpdb_sles12
   - test_gpdb_clients_sles12
   - compile_gpdb_clients_windows
@@ -316,7 +315,6 @@ groups:
   {% endif %}
   {% if os_type == default_os_type %}
   - check_format
-  - compile_gpdb_photon3
   - compile_gpdb_sles12
   - test_gpdb_clients_sles12
   - compile_gpdb_clients_windows
@@ -567,12 +565,6 @@ resources:
     repository: gcr.io/data-gpdb-public-images/gpdb6-[[ os_type ]]-test
     {% endif %}
 {% if os_type == default_os_type %}
-- name: gpdb6-photon3-build
-  type: registry-image
-  source:
-    repository: gcr.io/data-gpdb-public-images/gpdb6-photon3-build
-    tag: latest
-
 - name: gpdb6-sles12-build
   type: registry-image
   source:
@@ -638,26 +630,12 @@ resources:
 {% endif %}
 
 {% if os_type == default_os_type %}
-- name: bin_gpdb_photon3_rc
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-rc-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
-
 - name: bin_gpdb_clients_sles12_rc
   type: gcs
   source:
     bucket: ((gcs-bucket))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: clients/published/gpdb6/clients-rc-(.*)-sles12_x86_64((rc-build-type-gcs)).tar.gz
-
-- name: bin_gpdb_clients_photon3_rc
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: clients/published/gpdb6/clients-rc-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
 {% endif %}
@@ -730,14 +708,6 @@ resources:
 {% endif %}
 {% endif %}
 
-{% if os_type == default_os_type %}
-- name: gpdb_rpm_installer_photon3
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/greenplum-db-(.*)-photon3-x86_64((rc-build-type-gcs)).rpm
-{% endif %}
 {% endif %}
 
 
@@ -764,27 +734,6 @@ resources:
 {% endif %}
 
 {% if os_type == default_os_type %}
-- name: bin_gpdb_photon3
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_photon3/bin_gpdb.tar.gz
-
-- name: bin_gpdb_clients_photon3
-  type: gcs
-  source:
-    bucket: ((gcs-bucket-intermediates))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz
-
-- name: server-build-photon3
-  type: gcs
-  source:
-    bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
-    regexp: server/published/gpdb6/server-build-(.*)-photon3_x86_64((rc-build-type-gcs)).tar.gz
-
 - name: bin_gpdb_sles12
   type: gcs
   source:
@@ -1076,31 +1025,6 @@ jobs:
       file: gpdb_src/concourse/tasks/test_gpdb_clients.yml
 
 {% if os_type == default_os_type %}
-- name: compile_gpdb_photon3
-  plan:
-    - in_parallel:
-        steps:
-          - get: gpdb_src
-            trigger: true
-            passed:
-              - check_format
-          - get: gpdb6-photon3-build
-    - task: compile_gpdb
-      image: gpdb6-photon3-build
-      file: gpdb_src/concourse/tasks/compile_gpdb.yml
-      params:
-        CONFIGURE_FLAGS: ((configure_flags_with_extensions))
-        BLD_TARGETS: "clients"
-        RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
-    - in_parallel:
-        steps:
-          - put: bin_gpdb_photon3
-            params:
-              file: gpdb_artifacts/bin_gpdb.tar.gz
-          - put: bin_gpdb_clients_photon3
-            params:
-              file: gpdb_artifacts/bin_gpdb_clients.tar.gz
-
 - name: compile_gpdb_sles12
   plan:
     - in_parallel:
@@ -1217,15 +1141,6 @@ jobs:
         trigger: true
         passed:
         - compile_gpdb_[[ compile_platform ]]
-      {% if os_type == default_os_type %}
-        - compile_gpdb_photon3
-      - get: bin_gpdb_photon3
-        passed: [compile_gpdb_photon3]
-      - get: bin_gpdb_clients_photon3
-        passed: [compile_gpdb_photon3]
-        params:
-          skip_download: 'true'
-      {% endif %}
       - get: bin_gpdb
         passed: [compile_gpdb_[[ compile_platform ]]]
       - get: gpdb6-[[ os_type ]]-build
@@ -1236,9 +1151,6 @@ jobs:
       inputs:
         - name: gpdb_src
         - name: bin_gpdb
-        {% if os_type == default_os_type %}
-        - name: bin_gpdb_photon3
-        {% endif %}
       outputs:
         - name: output
       params:
@@ -1250,18 +1162,10 @@ jobs:
           - |
             server_version="$(./gpdb_src/getversion --short)"
             cp bin_gpdb/bin_gpdb.tar.gz "output/server-build-${server_version}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
-            {% if os_type == default_os_type %}
-            cp bin_gpdb_photon3/bin_gpdb.tar.gz "output/server-build-${server_version}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz"
-            {% endif %}
   - in_parallel:
     - put: server-build-[[ os_type ]]
       params:
         file: output/server-build-*-[[ dist ]]*.tar.gz
-    {% if os_type == default_os_type %}
-    - put: server-build-photon3
-      params:
-        file: output/server-build-*-photon3*.tar.gz
-    {% endif %}
 {% endif %}
 
 - name: gate_compile_end
@@ -1317,18 +1221,6 @@ jobs:
       passed: [compile_gpdb_[[ compile_platform ]]]
     {% endif %}
     {% if os_type == default_os_type %}
-    - get: server-build-photon3
-      params:
-        skip_download: 'true'
-      passed: [ Publish Server Builds ]
-    - get: bin_gpdb_photon3
-      params:
-        skip_download: 'true'
-      passed: [ Publish Server Builds ]
-    - get: bin_gpdb_clients_photon3
-      params:
-        skip_download: 'true'
-      passed: [ Publish Server Builds ]
     - get: bin_gpdb_sles12
       params:
         skip_download: 'true'
@@ -1383,14 +1275,6 @@ jobs:
       passed: [ gate_compile_end ]
     {% endif %}
     {% if os_type == default_os_type %}
-    - get: bin_gpdb_photon3
-      params:
-        skip_download: 'true'
-      passed: [ gate_compile_end ]
-    - get: bin_gpdb_clients_photon3
-      params:
-        skip_download: 'true'
-      passed: [ gate_compile_end ]
     - get: bin_gpdb_sles12
       params:
         skip_download: 'true'
@@ -1589,14 +1473,6 @@ jobs:
           skip_download: 'true'
         passed: [ gate_icw_start ]
       {% if os_type == default_os_type %}
-      - get: bin_gpdb_photon3
-        params:
-          skip_download: 'true'
-        passed: [ gate_icw_start ]
-      - get: bin_gpdb_clients_photon3
-        params:
-          skip_download: 'true'
-        passed: [ gate_icw_start ]
       - get: bin_gpdb_sles12
         params:
           skip_download: 'true'
@@ -1948,14 +1824,6 @@ jobs:
           skip_download: 'true'
         passed: [ unit_tests_gporca_[[ os_type ]] ]
       {% if os_type == default_os_type %}
-      - get: bin_gpdb_photon3
-        params:
-          skip_download: 'true'
-        passed: [ unit_tests_gporca_[[ os_type ]] ]
-      - get: bin_gpdb_clients_photon3
-        params:
-          skip_download: 'true'
-        passed: [ unit_tests_gporca_[[ os_type ]] ]
       - get: bin_gpdb_sles12
         params:
           skip_download: 'true'
@@ -2595,14 +2463,6 @@ jobs:
         - gate_icw_end
         {% endif %}
       {% if os_type == default_os_type %}
-      - get: bin_gpdb_photon3
-        params:
-          skip_download: 'true'
-        passed: [ gate_icw_end ]
-      - get: bin_gpdb_clients_photon3
-        params:
-          skip_download: 'true'
-        passed: [ gate_icw_end ]
       - get: bin_gpdb_sles12
         params:
           skip_download: 'true'
@@ -2630,10 +2490,6 @@ jobs:
       - get: bin_gpdb_clients
         passed: [gate_release_candidate_start]
       {% if os_type == default_os_type %}
-      - get: bin_gpdb_photon3
-        passed: [gate_release_candidate_start]
-      - get: bin_gpdb_clients_photon3
-        passed: [gate_release_candidate_start]
       - get: bin_gpdb_clients_windows
         passed: [gate_release_candidate_start]
       - get: bin_gpdb_sles12
@@ -2655,8 +2511,6 @@ jobs:
             - name: bin_gpdb
             - name: bin_gpdb_clients
             {% if os_type == default_os_type %}
-            - name: bin_gpdb_photon3
-            - name: bin_gpdb_clients_photon3
             - name: bin_gpdb_clients_windows
             - name: bin_gpdb_sles12
             - name: bin_gpdb_clients_sles12
@@ -2674,8 +2528,6 @@ jobs:
                 cp -v bin_gpdb/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 cp -v bin_gpdb_clients/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-[[ dist ]]_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 {% if os_type == default_os_type %}
-                cp -v bin_gpdb_photon3/bin_gpdb.tar.gz release_candidates/server-rc-${gpdb_semver}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
-                cp -v bin_gpdb_clients_photon3/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-photon3_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 cp -v bin_gpdb_clients_sles12/bin_gpdb_clients.tar.gz release_candidates/clients-rc-${gpdb_semver}-sles12_x86_64${RC_BUILD_TYPE_GCS}.tar.gz
                 pushd bin_gpdb_clients_windows
                 tar xzvf *.tar.gz
@@ -2706,15 +2558,9 @@ jobs:
         params:
           file: "release_candidates/clients-rc-*[[ dist ]]*.tar.gz"
       {% if os_type == default_os_type %}
-      - put: bin_gpdb_photon3_rc
-        params:
-          file: "release_candidates/server-rc-*photon3*.tar.gz"
       - put: bin_gpdb_clients_windows_rc
         params:
           file: "release_candidates/clients-rc-*-windows*.msi"
-      - put: bin_gpdb_clients_photon3_rc
-        params:
-          file: "release_candidates/clients-rc-*photon3*.tar.gz"
       - put: bin_gpdb_clients_sles12_rc
         params:
           file: "release_candidates/clients-rc-*sles12*.tar.gz"
@@ -2745,27 +2591,6 @@ jobs:
       - get: gpdb6-[[ os_type ]]-build
       - get: greenplum-database-release
       - get: license_file
-{% if os_type == default_os_type %}
-      - get: gpdb6-photon3-build
-      - get: bin_gpdb_photon3
-        {% if not build_test_rc_rpm %}
-        passed: [ gate_release_candidate_start ]
-        {% endif %}
-  - task: create_gpdb_rpm_package_photon3
-    file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
-    image: gpdb6-photon3-build
-    input_mapping:
-      bin_gpdb: bin_gpdb_photon3
-    output_mapping:
-      gpdb_rpm_installer: gpdb_rpm_photon3
-    params:
-      PLATFORM: "photon3"
-      GPDB_NAME: greenplum-db-6
-      GPDB_RELEASE: 1
-      GPDB_LICENSE: Pivotal Software EULA
-      GPDB_URL: https://github.com/greenplum-db/gpdb
-      GPDB_OSS: false
-{% endif %}
   - task: create_gpdb_rpm_package_[[ os_type ]]
     file: greenplum-database-release/ci/concourse/tasks/build-gpdb-rpm.yml
     image: gpdb6-[[ os_type ]]-build
@@ -2785,14 +2610,8 @@ jobs:
       inputs:
         - name: gpdb_src
         - name: gpdb_rpm_[[ os_type ]]
-        {% if os_type == default_os_type %}
-        - name: gpdb_rpm_photon3
-        {% endif %}
       outputs:
         - name: renamed_gpdb_rpm_[[ os_type ]]
-        {% if os_type == default_os_type %}
-        - name: renamed_gpdb_rpm_photon3
-        {% endif %}
       params:
         RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
       run:
@@ -2805,25 +2624,14 @@ jobs:
               # Uniquely name the rpm using the github username and test branch
               # to prevent filename collisions on GCS.
             cp -v gpdb_rpm_[[ os_type ]]/*.rpm renamed_gpdb_rpm_[[ os_type ]]/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-[[ dist ]]-x86_64${RC_BUILD_TYPE_GCS}.rpm
-            {% if os_type == default_os_type %}
-            cp -v gpdb_rpm_photon3/*.rpm renamed_gpdb_rpm_photon3/greenplum-db-[[ git_username ]]-[[ git_branch ]]-${gpdb_semver}-photon3-x86_64${RC_BUILD_TYPE_GCS}.rpm
-            {% endif %}
 {% else %}
             cp -v gpdb_rpm_[[ os_type ]]/*.rpm renamed_gpdb_rpm_[[ os_type ]]/greenplum-db-${gpdb_semver}-[[ dist ]]-x86_64${RC_BUILD_TYPE_GCS}.rpm
-            {% if os_type == default_os_type %}
-            cp -v gpdb_rpm_photon3/*.rpm renamed_gpdb_rpm_photon3/greenplum-db-${gpdb_semver}-photon3-x86_64${RC_BUILD_TYPE_GCS}.rpm
-            {% endif %}
 {% endif %}
   - in_parallel:
       steps:
       - put: gpdb_rpm_installer_[[ os_type ]]
         params:
           file: renamed_gpdb_rpm_[[ os_type ]]/*.rpm
-      {% if os_type == default_os_type %}
-      - put: gpdb_rpm_installer_photon3
-        params:
-          file: renamed_gpdb_rpm_photon3/*.rpm
-      {% endif %}
 {% endif %}
 {% endif %}
 {% endif %}
