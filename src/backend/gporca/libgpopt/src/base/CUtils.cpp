@@ -5007,26 +5007,31 @@ CUtils::AddExprs(CExpressionArrays *results_exprs,
 }
 
 BOOL
-CUtils::LogicalProjectReturnsSet(CExpression *pexprLogicalProject){
-    GPOS_ASSERT(nullptr != pexprLogicalProject);
-    CExpression *pexprProjectList = (*pexprLogicalProject)[1];
-    if(COperator::EopScalarProjectList != pexprProjectList->Pop()->Eopid())
-    {
-        return false;
-    }
-    CExpression *pexprScalarProjectElement = (*pexprProjectList)[0];
-    if(COperator::EopScalarProjectElement != pexprScalarProjectElement->Pop()->Eopid()){
-        return false;
-    }
-    CExpression *pexprScalarFunc = (*pexprScalarProjectElement)[0];
-    if(COperator::EopScalarFunc != pexprScalarFunc->Pop()->Eopid()){
-        return false;
-    }
-    CScalarFunc *popScalarFunc = CScalarFunc::PopConvert(pexprScalarFunc->Pop());
-    CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-    IMDId *func_mdid= popScalarFunc->FuncMdId();
-    const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(func_mdid);
-    return pmdfunc->ReturnsSet();
+CUtils::LogicalProjectReturnsSet(CExpression *pexprLogicalProject)
+{
+	GPOS_ASSERT(nullptr != pexprLogicalProject);
+	CExpression *pexprProjectList = (*pexprLogicalProject)[1];
+	if (COperator::EopScalarProjectList != pexprProjectList->Pop()->Eopid())
+	{
+		return false;
+	}
+	CExpression *pexprScalarProjectElement = (*pexprProjectList)[0];
+	if (COperator::EopScalarProjectElement !=
+		pexprScalarProjectElement->Pop()->Eopid())
+	{
+		return false;
+	}
+	CExpression *pexprScalarFunc = (*pexprScalarProjectElement)[0];
+	if (COperator::EopScalarFunc != pexprScalarFunc->Pop()->Eopid())
+	{
+		return false;
+	}
+	CScalarFunc *popScalarFunc =
+		CScalarFunc::PopConvert(pexprScalarFunc->Pop());
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	IMDId *func_mdid = popScalarFunc->FuncMdId();
+	const IMDFunction *pmdfunc = md_accessor->RetrieveFunc(func_mdid);
+	return pmdfunc->ReturnsSet();
 }
 
 // EOF
