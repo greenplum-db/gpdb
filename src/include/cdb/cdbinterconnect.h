@@ -236,6 +236,12 @@ struct MotionConn
 	/* position of message inside of buffer, "cursor" pointer */
 	uint8	   *msgPos;
 
+	/* size of the message in the buffer, if any. */
+	int32		rawMsgSize;
+
+	/* position of message inside of buffer, "cursor" pointer */
+	uint8	   *rawMsgPos;
+
 	/*
 	 * recv bytes: we can have more than one message/message fragment in recv
 	 * queue at once

@@ -524,6 +524,9 @@ get_eos_tuplechunklist(void)
 	return s_eos_chunk_data;
 }
 
+
+bool spin = true;
+
 /*
  * Sends a token to all peer Motion Nodes, indicating that this motion
  * node has no more tuples to send out.
@@ -534,6 +537,13 @@ SendEndOfStream(MotionLayerState *mlStates,
 				int motNodeID)
 {
 	MotionNodeEntry *pMNEntry;
+
+
+	// while (spin)
+	// {
+	// 	pg_usleep(1000000L);
+	// }
+	
 
 	/*
 	 * Pull up the motion node entry with the node's details.  This includes
