@@ -2775,13 +2775,13 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 		if (COperator::EopLogicalProject == pexprLogicalProject->Pop()->Eopid())
 		{
 			// bail out if subquery has an inner reference or does not have any outer reference Or
-            // if the project list returns set. As set can't be a valid operand of CScalarCmp (=) operator
+			// if the project list returns set. As set can't be a valid operand of CScalarCmp (=) operator
 			if (!CUtils::HasOuterRefs(pexprLogicalProject) ||
 				CUtils::FInnerRefInProjectList(pexprLogicalProject) ||
-                CUtils::LogicalProjectReturnsSet(pexprLogicalProject))
-            {
-                return pexprNew;
-            }
+				CUtils::LogicalProjectReturnsSet(pexprLogicalProject))
+			{
+				return pexprNew;
+			}
 		}
 		else
 		{
