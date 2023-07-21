@@ -1,5 +1,9 @@
 -- Tests for Dynamic Partition Elimination, or partition pruning in
 -- PostgreSQL terms, based on join quals.
+-- This test requires autovacuum to be disabled to guarantee a consistent state
+-- after vacuum. An inopportune autovacuum could cause an explicit vacuum to
+-- skip. That leads to stale relallvisible stats which may prevent picking index
+-- only scan plan shapes.
 -- start_matchsubs
 -- m/Memory Usage: \d+\w?B/
 -- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
@@ -65,6 +69,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dist'
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create index pt1_idx on pt using btree (pt1);
 create index ptid_idx on pt using btree (ptid);
+create index ptid_pt1_idx on pt using btree (ptid, pt1);
 insert into pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(0,53) i;
 insert into t select i, i % 6, 'hello' || i, 'bar' from generate_series(0,1) i;
 create table t1(dist int, tid int, t1 text, t2 text);
@@ -263,6 +268,33 @@ select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
    42 | hello42 | world | drop this |    0
    48 | hello48 | world | drop this |    0
 (18 rows)
+
+explain (costs off, timing off, summary off, analyze) select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
+   ->  Hash Semi Join (actual rows=1 loops=1)
+         Hash Cond: (pt.ptid = t.tid)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 524288 buckets.
+         ->  Dynamic Index Only Scan on ptid_pt1_idx on pt (actual rows=1 loops=1)
+               Index Cond: (pt1 = 'hello1'::text)
+               Heap Fetches: 0
+               Number of partitions to scan: 6 (out of 6)
+               Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
+         ->  Hash (actual rows=2 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
+                           ->  Seq Scan on t (actual rows=2 loops=1)
+                                 Filter: (t1 = ('hello'::text || (tid)::text))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
+ ptid 
+------
+    1
+(1 row)
 
 -- start_ignore
 -- Known_opt_diff: MPP-21320
@@ -963,12 +995,13 @@ explain (costs off, timing off, summary off, analyze) select count(*) from pt, p
                            Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                            ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-                                       ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=1)
+                                       ->  Dynamic Index Only Scan on ptid_pt1_idx on pt (actual rows=1 loops=1)
                                              Index Cond: (pt1 = 'hello0'::text)
+                                             Heap Fetches: 0
                                              Number of partitions to scan: 6 (out of 6)
                                              Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(19 rows)
 
 select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
  count 

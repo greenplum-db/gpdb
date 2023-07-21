@@ -64,6 +64,9 @@ public:
 	// Enforced Properties
 	//-------------------------------------------------------------------------------------
 
+	CPartitionPropagationSpec *PppsDerive(
+		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
+
 	// conversion function
 	static CPhysicalDynamicIndexOnlyScan *
 	PopConvert(COperator *pop)
