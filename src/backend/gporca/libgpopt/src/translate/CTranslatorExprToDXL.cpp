@@ -1534,8 +1534,11 @@ CTranslatorExprToDXL::PdxlnDynamicBitmapTableScan(
 //		CTranslatorExprToDXL::PdxlnDynamicIndexScan
 //
 //	@doc:
-//		Create a DXL dynamic index scan node from an optimizer
+//		Create a DXL dynamic [only] index scan node from an optimizer
 //		dynamic index scan node based on passed properties
+//
+//		Note: 'indexOnly' argument let's this method to handle both dynamic
+//		index scan and dynamic index only scan.
 //
 //---------------------------------------------------------------------------
 CDXLNode *

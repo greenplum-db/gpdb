@@ -360,7 +360,7 @@ private:
 		CDistributionSpecArray *pdrgpdsBaseTables, CExpression *pexprScalar,
 		CDXLPhysicalProperties *dxl_properties);
 
-	// translate a dynamic index scan based on passed properties
+	// translate a dynamic [only] index scan based on passed properties
 	CDXLNode *PdxlnDynamicIndexScan(CExpression *pexprDIS,
 									CColRefArray *colref_array,
 									CDXLPhysicalProperties *dxl_properties,

@@ -860,7 +860,7 @@ CParseHandlerFactory::CreateDynamicIdxScanParseHandler(
 													  parse_handler_root);
 }
 
-// creates a parse handler for parsing a dynamic index scan operator
+// creates a parse handler for parsing a dynamic index only scan operator
 CParseHandlerBase *
 CParseHandlerFactory::CreateDynamicIdxOnlyScanParseHandler(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

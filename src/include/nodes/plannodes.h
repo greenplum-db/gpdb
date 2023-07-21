@@ -680,7 +680,7 @@ typedef struct IndexOnlyScan
 */
 typedef struct DynamicIndexOnlyScan
 {
-	/* Fields shared with a normal IndexScan. Must be first! */
+	/* Fields shared with a normal IndexOnlyScan. Must be first! */
 	IndexOnlyScan	indexscan;
 
 	/*

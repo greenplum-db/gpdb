@@ -1676,7 +1676,7 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 
 	CDouble dRowsIndex = pci->Rows();
 
-	ULONG ulIndexKeys = 1;
+	ULONG ulIndexKeys;
 	IStatistics *stats = nullptr;
 
 	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
