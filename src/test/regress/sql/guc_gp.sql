@@ -422,12 +422,13 @@ SELECT count(nspname) FROM gp_dist_random('pg_namespace') WHERE nspname LIKE 'pg
 DROP TABLE just_a_temp_table;
 RESET search_path;
 
--- Test for resource management commands on log_statement='ddl'
+-- Test if GetCommandLogLevel has any missing cases. A warning will be shown if there is.
 -- Modify log_statement to 'ddl'.
 SET log_statement = 'ddl';
 -- We don't really modify resources config.
 ALTER RESOURCE GROUP default_group SET concurrency -1;
 ALTER RESOURCE QUEUE pg_default ACTIVE THRESHOLD -10;
+ALTER TYPE dummy_type SET DEFAULT encoding (compresstype=10);
 -- Reset
 RESET log_statement;
 
