@@ -463,11 +463,11 @@ AutoVacLauncherMain(int argc, char *argv[])
 	pqsignal(SIGQUIT, quickdie);
 	InitializeTimeouts();		/* establishes SIGALRM handler */
 
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, procsignal_sigusr1_handler);
 	pqsignal(SIGUSR2, avl_sigusr2_handler);
 	pqsignal(SIGFPE, FloatExceptionHandler);
-	pqsignal(SIGCHLD, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
 
 	/* Early initialization */
 	BaseInit();
@@ -1571,7 +1571,7 @@ AutoVacWorkerMain(int argc, char *argv[])
 	 * Currently, we don't pay attention to postgresql.conf changes that
 	 * happen during a single daemon iteration, so we can ignore SIGHUP.
 	 */
-	pqsignal(SIGHUP, SIG_IGN);
+	pqsignal(SIGHUP, PQ_SIG_IGN);
 
 	/*
 	 * SIGINT is used to signal canceling the current table's vacuum; SIGTERM
@@ -1582,11 +1582,11 @@ AutoVacWorkerMain(int argc, char *argv[])
 	pqsignal(SIGQUIT, quickdie);
 	InitializeTimeouts();		/* establishes SIGALRM handler */
 
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, procsignal_sigusr1_handler);
-	pqsignal(SIGUSR2, SIG_IGN);
+	pqsignal(SIGUSR2, PQ_SIG_IGN);
 	pqsignal(SIGFPE, FloatExceptionHandler);
-	pqsignal(SIGCHLD, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
 
 	/* Early initialization */
 	BaseInit();

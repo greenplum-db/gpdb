@@ -272,7 +272,7 @@ url_execute_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	 * allows "normal" SIGPIPE handling in the command pipeline.  Normal
 	 * for PG is to *ignore* SIGPIPE.
 	 */
-	save_SIGPIPE = pqsignal(SIGPIPE, SIG_DFL);
+	save_SIGPIPE = pqsignal(SIGPIPE, PQ_SIG_DFL);
 
 	/* execute the user command */
 	file->handle->pid = popen_with_stderr(file->handle->pipes,

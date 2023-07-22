@@ -286,7 +286,7 @@ static void vacuum_db(void);
 static void make_template0(void);
 static void make_postgres(void);
 static void fsync_pgdata(void);
-static void trapsig(int signum);
+static void trapsig(SIGNAL_ARGS);
 static void check_ok(void);
 static char *escape_quotes(const char *src);
 static int	locale_date_order(const char *locale);
@@ -2608,10 +2608,10 @@ fsync_pgdata(void)
  * So this will need some testing on Windows.
  */
 static void
-trapsig(int signum)
+trapsig(SIGNAL_ARGS)
 {
 	/* handle systems that reset the handler, like Windows (grr) */
-	pqsignal(signum, trapsig);
+	pqsignal(postgres_signal_arg, trapsig);
 	caught_signal = true;
 }
 
@@ -3472,12 +3472,12 @@ setup_signals(void)
 
 	/* Ignore SIGPIPE when writing to backend, so we can clean up */
 #ifdef SIGPIPE
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 #endif
 
 	/* Prevent SIGSYS so we can probe for kernel calls that might not work */
 #ifdef SIGSYS
-	pqsignal(SIGSYS, SIG_IGN);
+	pqsignal(SIGSYS, PQ_SIG_IGN);
 #endif
 }
 

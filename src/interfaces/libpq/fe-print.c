@@ -189,7 +189,7 @@ PQprint(FILE *fout, const PGresult *res, const PQprintOpt *po)
 					if (pq_block_sigpipe(&osigset, &sigpipe_pending) == 0)
 						sigpipe_masked = true;
 #else
-					oldsigpipehandler = pqsignal(SIGPIPE, SIG_IGN);
+					oldsigpipehandler = pqsignal(SIGPIPE, PQ_SIG_IGN);
 #endif   /* ENABLE_THREAD_SAFETY */
 #endif   /* WIN32 */
 				}

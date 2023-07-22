@@ -198,11 +198,11 @@ StartupProcessMain(void)
 	 * Properly accept or ignore signals the postmaster might send us.
 	 */
 	pqsignal(SIGHUP, StartupProcSigHupHandler); /* reload config file */
-	pqsignal(SIGINT, SIG_IGN);	/* ignore query cancel */
+	pqsignal(SIGINT, PQ_SIG_IGN);	/* ignore query cancel */
 	pqsignal(SIGTERM, StartupProcShutdownHandler);		/* request shutdown */
 	pqsignal(SIGQUIT, startupproc_quickdie);	/* hard crash time */
 	InitializeTimeouts();		/* establishes SIGALRM handler */
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, StartupProcSigUsr1Handler);
 	pqsignal(SIGUSR2, StartupProcTriggerHandler);
 
@@ -219,11 +219,11 @@ StartupProcessMain(void)
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
 	 */
-	pqsignal(SIGCHLD, SIG_DFL);
-	pqsignal(SIGTTIN, SIG_DFL);
-	pqsignal(SIGTTOU, SIG_DFL);
-	pqsignal(SIGCONT, SIG_DFL);
-	pqsignal(SIGWINCH, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
+	pqsignal(SIGTTIN, PQ_SIG_DFL);
+	pqsignal(SIGTTOU, PQ_SIG_DFL);
+	pqsignal(SIGCONT, PQ_SIG_DFL);
+	pqsignal(SIGWINCH, PQ_SIG_DFL);
 
 	/*
 	 * Register timeouts needed for standby mode

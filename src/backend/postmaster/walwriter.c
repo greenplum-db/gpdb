@@ -122,19 +122,19 @@ WalWriterMain(void)
 	pqsignal(SIGINT, WalShutdownHandler);		/* request shutdown */
 	pqsignal(SIGTERM, WalShutdownHandler);		/* request shutdown */
 	pqsignal(SIGQUIT, wal_quickdie);	/* hard crash time */
-	pqsignal(SIGALRM, SIG_IGN);
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGALRM, PQ_SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, walwriter_sigusr1_handler);
-	pqsignal(SIGUSR2, SIG_IGN); /* not used */
+	pqsignal(SIGUSR2, PQ_SIG_IGN); /* not used */
 
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
 	 */
-	pqsignal(SIGCHLD, SIG_DFL);
-	pqsignal(SIGTTIN, SIG_DFL);
-	pqsignal(SIGTTOU, SIG_DFL);
-	pqsignal(SIGCONT, SIG_DFL);
-	pqsignal(SIGWINCH, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
+	pqsignal(SIGTTIN, PQ_SIG_DFL);
+	pqsignal(SIGTTOU, PQ_SIG_DFL);
+	pqsignal(SIGCONT, PQ_SIG_DFL);
+	pqsignal(SIGWINCH, PQ_SIG_DFL);
 
 	/* We allow SIGQUIT (quickdie) at all times */
 	sigdelset(&BlockSig, SIGQUIT);

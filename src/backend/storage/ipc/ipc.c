@@ -98,7 +98,7 @@ static int	on_proc_exit_index,
 void
 proc_exit(int code)
 {
-	pqsignal(SIGALRM, SIG_IGN);
+	pqsignal(SIGALRM, PQ_SIG_IGN);
 
 	/* Clean up everything that must be cleaned up */
 	proc_exit_prepare(code);

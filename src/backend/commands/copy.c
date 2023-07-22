@@ -7975,7 +7975,7 @@ open_program_pipes(char *command, bool forwrite)
 	 * allows "normal" SIGPIPE handling in the command pipeline.  Normal
 	 * for PG is to *ignore* SIGPIPE.
 	 */
-	save_SIGPIPE = pqsignal(SIGPIPE, SIG_DFL);
+	save_SIGPIPE = pqsignal(SIGPIPE, PQ_SIG_DFL);
 
 	program_pipes->pid = popen_with_stderr(program_pipes->pipes, program_pipes->shexec, forwrite);
 

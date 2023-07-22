@@ -3500,6 +3500,10 @@ StatementCancelHandler(SIGNAL_ARGS)
 {
 	int			save_errno = errno;
 
+#ifdef HAVE_POSIX_SIGNALS
+	dump_signal_info(postgres_signal_info);
+#endif
+
 	/*
 	 * Don't joggle the elbow of proc_exit
 	 */
@@ -4799,16 +4803,16 @@ PostgresMain(int argc, char *argv[],
 		 * returns to outer loop.  This seems safer than forcing exit in the
 		 * midst of output during who-knows-what operation...
 		 */
-		pqsignal(SIGPIPE, SIG_IGN);
+		pqsignal(SIGPIPE, PQ_SIG_IGN);
 		pqsignal(SIGUSR1, procsignal_sigusr1_handler);
-		pqsignal(SIGUSR2, SIG_IGN);
+		pqsignal(SIGUSR2, PQ_SIG_IGN);
 		pqsignal(SIGFPE, FloatExceptionHandler);
 
 		/*
 		 * Reset some signals that are accepted by postmaster but not by
 		 * backend
 		 */
-		pqsignal(SIGCHLD, SIG_DFL);		/* system() requires this on some
+		pqsignal(SIGCHLD, PQ_SIG_DFL);		/* system() requires this on some
 										 * platforms */
 #ifndef _WIN32
 #ifdef SIGILL

@@ -232,21 +232,21 @@ CheckpointerMain(void)
 	pqsignal(SIGHUP, ChkptSigHupHandler);		/* set flag to read config
 												 * file */
 	pqsignal(SIGINT, ReqCheckpointHandler);		/* request checkpoint */
-	pqsignal(SIGTERM, SIG_IGN); /* ignore SIGTERM */
+	pqsignal(SIGTERM, PQ_SIG_IGN); /* ignore SIGTERM */
 	pqsignal(SIGQUIT, chkpt_quickdie);	/* hard crash time */
-	pqsignal(SIGALRM, SIG_IGN);
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGALRM, PQ_SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, chkpt_sigusr1_handler);
 	pqsignal(SIGUSR2, ReqShutdownHandler);		/* request shutdown */
 
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
 	 */
-	pqsignal(SIGCHLD, SIG_DFL);
-	pqsignal(SIGTTIN, SIG_DFL);
-	pqsignal(SIGTTOU, SIG_DFL);
-	pqsignal(SIGCONT, SIG_DFL);
-	pqsignal(SIGWINCH, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
+	pqsignal(SIGTTIN, PQ_SIG_DFL);
+	pqsignal(SIGTTOU, PQ_SIG_DFL);
+	pqsignal(SIGCONT, PQ_SIG_DFL);
+	pqsignal(SIGWINCH, PQ_SIG_DFL);
 
 	/* We allow SIGQUIT (quickdie) at all times */
 #ifdef HAVE_SIGPROCMASK

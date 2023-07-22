@@ -5565,19 +5565,19 @@ SegvBusIllName(int signal)
  * and write them to the pipe.
  */
 void
-StandardHandlerForSigillSigsegvSigbus_OnMainThread(char *processName, SIGNAL_ARGS)
+StandardHandlerForSigillSigsegvSigbus_OnMainThread(char *processName, PASS_SIGNAL_ARGS_DEF)
 {
 	PG_SETMASK(&BlockSig);
 
 	/* Unblock SEGV/BUS/ILL signals, and set them to their default settings. */
 #ifdef SIGILL
-	pqsignal(SIGILL, SIG_DFL);
+	pqsignal(SIGILL, PQ_SIG_DFL);
 #endif
 #ifdef SIGSEGV
-	pqsignal(SIGSEGV, SIG_DFL);
+	pqsignal(SIGSEGV, PQ_SIG_DFL);
 #endif
 #ifdef SIGBUS
-	pqsignal(SIGBUS, SIG_DFL);
+	pqsignal(SIGBUS, PQ_SIG_DFL);
 #endif
 
 	PipeProtoChunk buffer;
@@ -5639,3 +5639,58 @@ StandardHandlerForSigillSigsegvSigbus_OnMainThread(char *processName, SIGNAL_ARG
 	/* re-raise the signal to OS */
 	raise(postgres_signal_arg);
 }
+
+#ifdef HAVE_POSIX_SIGNALS
+void
+dump_signal_info(siginfo_t *postgres_signal_info)
+{
+#if defined(__linux__)
+	FILE *pid_proc_file = NULL;
+	char pid_proc_file_path[255];
+	char pid_cmdline[MAXPGPATH];
+	int i, len_wanted;
+	bool end_of_cmdline_found;
+
+	memset(pid_proc_file_path, 0, sizeof(pid_proc_file_path));
+	memset(pid_cmdline, 0, sizeof(pid_cmdline));
+
+	len_wanted = snprintf(pid_proc_file_path, sizeof(pid_proc_file_path),
+	                      "/proc/%d/cmdline", postgres_signal_info->si_pid);
+
+	if (len_wanted >= sizeof(pid_proc_file_path)) {
+		elog(WARNING, "proc file name is too long, wanted %d bytes", len_wanted);
+		goto print_log;
+	}
+
+	pid_proc_file = fopen(pid_proc_file_path, "rb");
+	if (pid_proc_file == NULL) {
+		elog(DEBUG1, "cmdline file not found");
+		goto print_log;
+	}
+
+	fread(pid_cmdline, 1, sizeof(pid_cmdline) - 1, pid_proc_file);
+
+	end_of_cmdline_found = false;
+	for (i = sizeof(pid_cmdline) - 2; i >= 0; i--) {
+		if (pid_cmdline[i] == '\0') {
+			if (end_of_cmdline_found) {
+				pid_cmdline[i] = ' ';
+			}
+		} else {
+			end_of_cmdline_found = true;
+		}
+	}
+
+print_log:
+	elog(DEBUG1, "StatementCancelHandler; requested by pid = %d, uid = %d, cmdline = [%.*s]",
+	             postgres_signal_info->si_pid,
+	             postgres_signal_info->si_uid,
+	             (int)sizeof(pid_cmdline),
+	             pid_cmdline);
+#else
+	elog(DEBUG1, "signal requested by pid = %d, uid = %d",
+	             postgres_signal_info->si_pid,
+	             postgres_signal_info->si_uid);
+#endif
+}
+#endif

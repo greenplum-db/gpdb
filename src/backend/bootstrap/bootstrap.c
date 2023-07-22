@@ -548,23 +548,23 @@ bootstrap_signals(void)
 		/*
 		 * Properly accept or ignore signals the postmaster might send us
 		 */
-		pqsignal(SIGHUP, SIG_IGN);
-		pqsignal(SIGINT, SIG_IGN);		/* ignore query-cancel */
+		pqsignal(SIGHUP, PQ_SIG_IGN);
+		pqsignal(SIGINT, PQ_SIG_IGN);		/* ignore query-cancel */
 		pqsignal(SIGTERM, die);
 		pqsignal(SIGQUIT, quickdie);
-		pqsignal(SIGALRM, SIG_IGN);
-		pqsignal(SIGPIPE, SIG_IGN);
-		pqsignal(SIGUSR1, SIG_IGN);
-		pqsignal(SIGUSR2, SIG_IGN);
+		pqsignal(SIGALRM, PQ_SIG_IGN);
+		pqsignal(SIGPIPE, PQ_SIG_IGN);
+		pqsignal(SIGUSR1, PQ_SIG_IGN);
+		pqsignal(SIGUSR2, PQ_SIG_IGN);
 
 		/*
 		 * Reset some signals that are accepted by postmaster but not here
 		 */
-		pqsignal(SIGCHLD, SIG_DFL);
-		pqsignal(SIGTTIN, SIG_DFL);
-		pqsignal(SIGTTOU, SIG_DFL);
-		pqsignal(SIGCONT, SIG_DFL);
-		pqsignal(SIGWINCH, SIG_DFL);
+		pqsignal(SIGCHLD, PQ_SIG_DFL);
+		pqsignal(SIGTTIN, PQ_SIG_DFL);
+		pqsignal(SIGTTOU, PQ_SIG_DFL);
+		pqsignal(SIGCONT, PQ_SIG_DFL);
+		pqsignal(SIGWINCH, PQ_SIG_DFL);
 
 		/*
 		 * Unblock signals (they were blocked when the postmaster forked us)

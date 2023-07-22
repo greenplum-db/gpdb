@@ -691,19 +691,19 @@ StartBackgroundWorker(void)
 	}
 	else
 	{
-		pqsignal(SIGINT, SIG_IGN);
+		pqsignal(SIGINT, PQ_SIG_IGN);
 		pqsignal(SIGUSR1, bgworker_sigusr1_handler);
-		pqsignal(SIGFPE, SIG_IGN);
+		pqsignal(SIGFPE, PQ_SIG_IGN);
 	}
 	pqsignal(SIGTERM, bgworker_die);
-	pqsignal(SIGHUP, SIG_IGN);
+	pqsignal(SIGHUP, PQ_SIG_IGN);
 
 	pqsignal(SIGQUIT, bgworker_quickdie);
 	InitializeTimeouts();		/* establishes SIGALRM handler */
 
-	pqsignal(SIGPIPE, SIG_IGN);
-	pqsignal(SIGUSR2, SIG_IGN);
-	pqsignal(SIGCHLD, SIG_DFL);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
+	pqsignal(SIGUSR2, PQ_SIG_IGN);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
 
 	/*
 	 * If an exception is encountered, processing resumes here.

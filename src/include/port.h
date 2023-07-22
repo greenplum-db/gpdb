@@ -482,7 +482,20 @@ extern int	pg_check_dir(const char *dir);
 extern int	pg_mkdir_p(char *path, int omode);
 
 /* port/pqsignal.c */
+#include <signal.h>
+
+#ifdef HAVE_POSIX_SIGNALS
+typedef void (*pqsigfunc) (int signo, siginfo_t *siginfo, void *ucontext);
+#define PQ_SIG_ERR  ((pqsigfunc) -1)
+#define PQ_SIG_DFL  ((pqsigfunc)  0)
+#define PQ_SIG_IGN  ((pqsigfunc)  1)
+#else
 typedef void (*pqsigfunc) (int signo);
+#define PQ_SIG_DFL SIG_DFL
+#define PQ_SIG_IGN SIG_IGN
+#define PQ_SIG_ERR SIG_ERR
+#endif
+
 extern pqsigfunc pqsignal(int signo, pqsigfunc func);
 
 /* port/quotes.c */

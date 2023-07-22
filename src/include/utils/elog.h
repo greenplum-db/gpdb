@@ -19,6 +19,7 @@
 #include "c.h"
 #include <sys/time.h>
 #include <setjmp.h>
+#include <signal.h>
 
 /* Error level codes */
 #define DEBUG5		10			/* Debugging messages, in categories of
@@ -644,6 +645,10 @@ extern char *stack_base_ptr;
 extern bool gp_log_stack_trace_lines;   /* session GUC, controls line info in stack traces */
 
 extern const char *SegvBusIllName(int signal);
-extern void StandardHandlerForSigillSigsegvSigbus_OnMainThread(char * processName, SIGNAL_ARGS);
+extern void StandardHandlerForSigillSigsegvSigbus_OnMainThread(char * processName, PASS_SIGNAL_ARGS_DEF);
+
+#ifdef HAVE_POSIX_SIGNALS
+extern void dump_signal_info(siginfo_t *postgres_signal_info);
+#endif
 
 #endif   /* ELOG_H */

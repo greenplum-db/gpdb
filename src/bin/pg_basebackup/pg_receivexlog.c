@@ -317,7 +317,7 @@ StreamLog(void)
 #ifndef WIN32
 
 static void
-sigint_handler(int signum)
+sigint_handler(SIGNAL_ARGS)
 {
 	time_to_abort = true;
 }

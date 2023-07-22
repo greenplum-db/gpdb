@@ -38,6 +38,12 @@
  * ------------------------------------------------------------------------
  */
 
+#ifndef FRONTEND
+#include "postgres.h"
+#else
+#include "postgres_fe.h"
+#endif
+
 #include "c.h"
 
 #include <signal.h>
@@ -52,22 +58,48 @@
 pqsigfunc
 pqsignal(int signo, pqsigfunc func)
 {
-#if !defined(HAVE_POSIX_SIGNALS)
+#ifndef HAVE_POSIX_SIGNALS
 	return signal(signo, func);
 #else
 	struct sigaction act,
-				oact;
+	                 oact;
 
-	act.sa_handler = func;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_RESTART;
+	if (func == PQ_SIG_DFL) {
+		act.sa_handler = SIG_DFL;
+	} else if (func == PQ_SIG_IGN) {
+		act.sa_handler = SIG_IGN;
+	} else {
+		act.sa_flags |= SA_SIGINFO;
+		act.sa_sigaction = func;
+	}
+
 #ifdef SA_NOCLDSTOP
 	if (signo == SIGCHLD)
 		act.sa_flags |= SA_NOCLDSTOP;
 #endif
-	if (sigaction(signo, &act, &oact) < 0)
-		return SIG_ERR;
-	return oact.sa_handler;
+
+	if (sigaction(signo, &act, &oact) < 0) {
+		return PQ_SIG_ERR;
+	}
+
+	if (oact.sa_flags & SA_SIGINFO) {
+		return oact.sa_sigaction;
+	} else {
+		if (oact.sa_handler == SIG_DFL) {
+			return PQ_SIG_DFL;
+		} else if (oact.sa_handler == SIG_IGN) {
+			return PQ_SIG_IGN;
+		} else {
+#ifndef FRONTEND
+			elog(FATAL, "unexpected signal handler");
+#else
+			printf("unexpected signal handler\n");
+#endif
+			return PQ_SIG_ERR;
+		}
+	}
 #endif   /* !HAVE_POSIX_SIGNALS */
 }
 

@@ -534,9 +534,9 @@ sigTermHandler(SIGNAL_ARGS)
 	 * signal handler.  That could muck up our attempt to send PQcancel, so
 	 * disable the signals that setup_cancel_handler enabled.
 	 */
-	pqsignal(SIGINT, SIG_IGN);
-	pqsignal(SIGTERM, SIG_IGN);
-	pqsignal(SIGQUIT, SIG_IGN);
+	pqsignal(SIGINT, PQ_SIG_IGN);
+	pqsignal(SIGTERM, PQ_SIG_IGN);
+	pqsignal(SIGQUIT, PQ_SIG_IGN);
 
 	/*
 	 * If we're in the master, forward signal to all workers.  (It seems best
@@ -1023,7 +1023,7 @@ ParallelBackupStart(ArchiveHandle *AH, RestoreOptions *ropt)
 	 * the workers to inherit this setting, though.
 	 */
 #ifndef WIN32
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 #endif
 
 	/*

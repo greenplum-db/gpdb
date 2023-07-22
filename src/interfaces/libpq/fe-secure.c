@@ -165,7 +165,7 @@ struct sigpipe_info
 #define DISABLE_SIGPIPE(conn, spinfo, failaction) \
 	do { \
 		if (!SIGPIPE_MASKED(conn)) \
-			spinfo = pqsignal(SIGPIPE, SIG_IGN); \
+			spinfo = pqsignal(SIGPIPE, PQ_SIG_IGN); \
 	} while (0)
 
 #define REMEMBER_EPIPE(spinfo, cond)

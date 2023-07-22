@@ -41,9 +41,9 @@ struct  {
 
 int64 gpmon_tick = 0;
 
-void gpmon_sig_handler(int sig);
+void gpmon_sig_handler(SIGNAL_ARGS);
 
-void gpmon_sig_handler(int sig) 
+void gpmon_sig_handler(SIGNAL_ARGS)
 {
 	gpmon_tick++;
 }
@@ -62,7 +62,7 @@ void gpmon_init(void)
 		return;
 #ifndef WIN32
 	sfunc = pqsignal(SIGVTALRM, gpmon_sig_handler);
-	if (sfunc == SIG_ERR) {
+	if (sfunc == PQ_SIG_ERR) {
 		elog(WARNING, "gpmon: unable to set signal handler for SIGVTALRM (%m)");
 	}
 	else if (sfunc == gpmon_sig_handler) {

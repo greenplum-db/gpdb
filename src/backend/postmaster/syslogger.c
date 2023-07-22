@@ -373,22 +373,22 @@ SysLoggerMain(int argc, char *argv[])
 	 */
 
 	pqsignal(SIGHUP, sigHupHandler);	/* set flag to read config file */
-	pqsignal(SIGINT, SIG_IGN);
-	pqsignal(SIGTERM, SIG_IGN);
-	pqsignal(SIGQUIT, SIG_IGN);
-	pqsignal(SIGALRM, SIG_IGN);
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGINT, PQ_SIG_IGN);
+	pqsignal(SIGTERM, PQ_SIG_IGN);
+	pqsignal(SIGQUIT, PQ_SIG_IGN);
+	pqsignal(SIGALRM, PQ_SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, sigUsr1Handler);	/* request log rotation */
-	pqsignal(SIGUSR2, SIG_IGN);
+	pqsignal(SIGUSR2, PQ_SIG_IGN);
 
 	/*
 	 * Reset some signals that are accepted by postmaster but not here
 	 */
-	pqsignal(SIGCHLD, SIG_DFL);
-	pqsignal(SIGTTIN, SIG_DFL);
-	pqsignal(SIGTTOU, SIG_DFL);
-	pqsignal(SIGCONT, SIG_DFL);
-	pqsignal(SIGWINCH, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
+	pqsignal(SIGTTIN, PQ_SIG_DFL);
+	pqsignal(SIGTTOU, PQ_SIG_DFL);
+	pqsignal(SIGCONT, PQ_SIG_DFL);
+	pqsignal(SIGWINCH, PQ_SIG_DFL);
 
 	PG_SETMASK(&UnBlockSig);
 

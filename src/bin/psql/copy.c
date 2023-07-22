@@ -366,7 +366,7 @@ do_copy(const char *args)
 				fflush(stderr);
 				errno = 0;
 #ifndef WIN32
-				pqsignal(SIGPIPE, SIG_IGN);
+				pqsignal(SIGPIPE, PQ_SIG_IGN);
 #endif
 				copystream = popen(options->file, PG_BINARY_W);
 			}
@@ -453,7 +453,7 @@ do_copy(const char *args)
 				success = false;
 			}
 #ifndef WIN32
-			pqsignal(SIGPIPE, SIG_DFL);
+			pqsignal(SIGPIPE, PQ_SIG_DFL);
 #endif
 		}
 		else

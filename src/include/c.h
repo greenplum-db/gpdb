@@ -115,6 +115,9 @@ extern "C" {
 #include "pg_config_os.h"
 #endif
 
+#ifdef HAVE_POSIX_SIGNALS
+#include <signal.h>
+#endif
 
 /* ----------------------------------------------------------------
  *				Section 1: compiler characteristics
@@ -1282,11 +1285,18 @@ extern unsigned long long strtoull(const char *str, char **endptr, int base);
  */
 
 #ifndef SIGNAL_ARGS
+#ifdef HAVE_POSIX_SIGNALS
+#define SIGNAL_ARGS  int postgres_signal_arg, \
+                     siginfo_t *postgres_signal_info, \
+                     void *postgres_signal_ucontext
+#else
 #define SIGNAL_ARGS  int postgres_signal_arg
+#endif
 #endif
 
 #ifndef PASS_SIGNAL_ARGS
 #define PASS_SIGNAL_ARGS postgres_signal_arg
+#define PASS_SIGNAL_ARGS_DEF int postgres_signal_arg
 #endif
 
 /*

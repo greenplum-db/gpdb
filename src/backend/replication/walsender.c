@@ -2857,21 +2857,21 @@ WalSndSignals(void)
 	/* Set up signal handlers */
 	pqsignal(SIGHUP, PostgresSigHupHandler);	/* set flag to read config
 												 * file */
-	pqsignal(SIGINT, SIG_IGN);	/* not used */
+	pqsignal(SIGINT, PQ_SIG_IGN);	/* not used */
 	pqsignal(SIGTERM, die);		/* request shutdown */
 	pqsignal(SIGQUIT, quickdie);	/* hard crash time */
 	InitializeTimeouts();		/* establishes SIGALRM handler */
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, procsignal_sigusr1_handler);
 	pqsignal(SIGUSR2, WalSndLastCycleHandler);	/* request a last cycle and
 												 * shutdown */
 
 	/* Reset some signals that are accepted by postmaster but not here */
-	pqsignal(SIGCHLD, SIG_DFL);
-	pqsignal(SIGTTIN, SIG_DFL);
-	pqsignal(SIGTTOU, SIG_DFL);
-	pqsignal(SIGCONT, SIG_DFL);
-	pqsignal(SIGWINCH, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
+	pqsignal(SIGTTIN, PQ_SIG_DFL);
+	pqsignal(SIGTTOU, PQ_SIG_DFL);
+	pqsignal(SIGCONT, PQ_SIG_DFL);
+	pqsignal(SIGWINCH, PQ_SIG_DFL);
 
 #ifdef SIGILL
 	pqsignal(SIGILL, WalSndCrashHandler);

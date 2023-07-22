@@ -714,16 +714,16 @@ PostmasterMain(int argc, char *argv[])
 	pqsignal(SIGINT, pmdie);	/* send SIGTERM and shut down */
 	pqsignal(SIGQUIT, pmdie);	/* send SIGQUIT and die */
 	pqsignal(SIGTERM, pmdie);	/* wait for children and shut down */
-	pqsignal(SIGALRM, SIG_IGN); /* ignored */
-	pqsignal(SIGPIPE, SIG_IGN); /* ignored */
+	pqsignal(SIGALRM, PQ_SIG_IGN); /* ignored */
+	pqsignal(SIGPIPE, PQ_SIG_IGN); /* ignored */
 	pqsignal(SIGUSR1, sigusr1_handler); /* message from child process */
 	pqsignal(SIGUSR2, dummy_handler);	/* unused, reserve for children */
 	pqsignal(SIGCHLD, reaper);	/* handle child termination */
-	pqsignal(SIGTTIN, SIG_IGN); /* ignored */
-	pqsignal(SIGTTOU, SIG_IGN); /* ignored */
+	pqsignal(SIGTTIN, PQ_SIG_IGN); /* ignored */
+	pqsignal(SIGTTOU, PQ_SIG_IGN); /* ignored */
 	/* ignore SIGXFSZ, so that ulimit violations work like disk full */
 #ifdef SIGXFSZ
-	pqsignal(SIGXFSZ, SIG_IGN); /* ignored */
+	pqsignal(SIGXFSZ, PQ_SIG_IGN); /* ignored */
 #endif
 
 	/*
@@ -1727,7 +1727,7 @@ checkPgDir(const char *dir)
 			elog(LOG, "System file or directory missing (%s), shutting down segment", dir);
 
 		/* quit all processes and exit */
-		pmdie(SIGQUIT);
+		pmdie(SIGQUIT, NULL, NULL);
 	}
 }
 

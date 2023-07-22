@@ -250,18 +250,18 @@ PgArchiverMain(int argc, char *argv[])
 	 * except for SIGHUP, SIGTERM, SIGUSR1, SIGUSR2, and SIGQUIT.
 	 */
 	pqsignal(SIGHUP, ArchSigHupHandler);
-	pqsignal(SIGINT, SIG_IGN);
+	pqsignal(SIGINT, PQ_SIG_IGN);
 	pqsignal(SIGTERM, ArchSigTermHandler);
 	pqsignal(SIGQUIT, pgarch_exit);
-	pqsignal(SIGALRM, SIG_IGN);
-	pqsignal(SIGPIPE, SIG_IGN);
+	pqsignal(SIGALRM, PQ_SIG_IGN);
+	pqsignal(SIGPIPE, PQ_SIG_IGN);
 	pqsignal(SIGUSR1, pgarch_waken);
 	pqsignal(SIGUSR2, pgarch_waken_stop);
-	pqsignal(SIGCHLD, SIG_DFL);
-	pqsignal(SIGTTIN, SIG_DFL);
-	pqsignal(SIGTTOU, SIG_DFL);
-	pqsignal(SIGCONT, SIG_DFL);
-	pqsignal(SIGWINCH, SIG_DFL);
+	pqsignal(SIGCHLD, PQ_SIG_DFL);
+	pqsignal(SIGTTIN, PQ_SIG_DFL);
+	pqsignal(SIGTTOU, PQ_SIG_DFL);
+	pqsignal(SIGCONT, PQ_SIG_DFL);
+	pqsignal(SIGWINCH, PQ_SIG_DFL);
 	PG_SETMASK(&UnBlockSig);
 
 	/*

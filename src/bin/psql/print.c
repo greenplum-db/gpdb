@@ -2242,14 +2242,14 @@ PageOutput(int lines, unsigned short int pager)
 					return stdout;
 			}
 #ifndef WIN32
-			pqsignal(SIGPIPE, SIG_IGN);
+			pqsignal(SIGPIPE, PQ_SIG_IGN);
 #endif
 			pagerpipe = popen(pagerprog, "w");
 			if (pagerpipe)
 				return pagerpipe;
 			/* if popen fails, silently proceed without pager */
 #ifndef WIN32
-			pqsignal(SIGPIPE, SIG_DFL);
+			pqsignal(SIGPIPE, PQ_SIG_DFL);
 #endif
 #ifdef TIOCGWINSZ
 		}
@@ -2282,7 +2282,7 @@ ClosePager(FILE *pagerpipe)
 
 		pclose(pagerpipe);
 #ifndef WIN32
-		pqsignal(SIGPIPE, SIG_DFL);
+		pqsignal(SIGPIPE, PQ_SIG_DFL);
 #endif
 	}
 }

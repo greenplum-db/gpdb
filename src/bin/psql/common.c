@@ -80,7 +80,7 @@ setQFout(const char *fname)
 
 	/* Direct signals */
 #ifndef WIN32
-	pqsignal(SIGPIPE, pset.queryFoutPipe ? SIG_IGN : SIG_DFL);
+	pqsignal(SIGPIPE, pset.queryFoutPipe ? PQ_SIG_IGN : PQ_SIG_DFL);
 #endif
 
 	return status;
