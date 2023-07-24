@@ -67,7 +67,7 @@ iolimit_config_string: tablespace_io_config
 					   }
 					 | iolimit_config_string IOLIMIT_CONFIG_DELIM tablespace_io_config
 					   {
-							(void) IOLIMIT_CONFIG_DELIM;
+							(void) $2;
 							$$ = lappend($1, $3);
 					   }
 
@@ -75,7 +75,7 @@ tablespace_name: ID  { $$ = $1; }
 
 tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 					  {
-							(void) TABLESPACE_IO_CONFIG_START;
+							(void) $2;
 
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
@@ -92,8 +92,8 @@ tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 					  }
 					| STAR TABLESPACE_IO_CONFIG_START ioconfigs
 					  {
-							(void) STAR;
-							(void) IOLIMIT_CONFIG_DELIM;
+							(void) $1;
+							(void) $2;
 
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
@@ -121,7 +121,7 @@ ioconfigs: ioconfig
 		   }
 		 | ioconfigs IOCONFIG_DELIM ioconfig
 		   {
-				(void) IOCONFIG_DELIM;
+				(void) $2;
 
 				uint64 *config_var = (uint64 *)$1;
 				*(config_var + $3->offset) = $3->value;
@@ -143,7 +143,7 @@ ioconfig: IO_KEY '=' io_value
 		  }
 
 io_value: VALUE { $$ = $1; }
-		| VALUE_MAX { (void) VALUE_MAX; $$ = 0; }
+		| VALUE_MAX { (void) $1; $$ = 0; }
 
 %%
 
