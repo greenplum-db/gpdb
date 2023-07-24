@@ -164,6 +164,7 @@ Doc Index
         - [ROLLBACK](./sql_commands/ROLLBACK.md)
         - [ROLLBACK TO SAVEPOINT](./sql_commands/ROLLBACK_TO_SAVEPOINT.md)
         - [SAVEPOINT](./sql_commands/SAVEPOINT.md)
+        - [SECURITY LABEL](./sql_commands/SECURITY_LABEL.md)
         - [SELECT](./sql_commands/SELECT.md)
         - [SELECT INTO](./sql_commands/SELECT_INTO.md)
         - [SET](./sql_commands/SET.md)
