@@ -64,7 +64,6 @@ OBJS        = CExpression.o \
               CLogicalMaxOneRow.o \
               CLogicalDynamicForeignGet.o \
               CLogicalNAryJoin.o \
-              CLogicalPartitionSelector.o \
               CLogicalProject.o \
               CLogicalRightOuterJoin.o \
               CLogicalSelect.o \

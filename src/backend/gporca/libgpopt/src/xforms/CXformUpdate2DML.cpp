@@ -14,7 +14,6 @@
 #include "gpos/base.h"
 
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/operators/CLogicalPartitionSelector.h"
 #include "gpopt/operators/CLogicalSplit.h"
 #include "gpopt/operators/CLogicalUpdate.h"
 #include "gpopt/operators/CPatternLeaf.h"

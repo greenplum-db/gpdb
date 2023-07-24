@@ -270,8 +270,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformLeftSemiApplyIn2LeftSemiJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLeftSemiApplyInWithExternalCorrs2InnerJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations(m_mp));
-	SkipUnused(1);
-	Add(GPOS_NEW(m_mp) CXformImplementPartitionSelector(m_mp));
+	SkipUnused(2);
 	Add(GPOS_NEW(m_mp) CXformMaxOneRow2Assert(m_mp));
 	SkipUnused(6);
 	Add(GPOS_NEW(m_mp) CXformGbAggWithMDQA2Join(m_mp));
