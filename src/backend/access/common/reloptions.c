@@ -17,6 +17,7 @@
 
 #include <float.h>
 
+#include "access/brin.h"
 #include "access/gist_private.h"
 #include "access/hash.h"
 #include "access/htup_details.h"
@@ -320,11 +321,17 @@ static relopt_int intRelOpts[] =
 	},
 	{
 		{
+			/*
+			 * GPDB: We use a sentinel value of BRIN_UNDEFINED_PAGES_PER_RANGE
+			 * to indicate that the default assigned in the relcache is AM
+			 * agnostic. The actual default will be determined later in
+			 * BrinGetPagesPerRange().
+			 */
 			"pages_per_range",
 			"Number of pages that each page range covers in a BRIN index",
 			RELOPT_KIND_BRIN,
 			AccessExclusiveLock
-		}, 128, 1, 131072
+		}, BRIN_UNDEFINED_PAGES_PER_RANGE, BRIN_UNDEFINED_PAGES_PER_RANGE, 131072
 	},
 	{
 		{

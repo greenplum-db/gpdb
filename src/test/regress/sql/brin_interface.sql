@@ -50,5 +50,85 @@ ALTER INDEX brin_interface_idx SET (autosummarize=false);
 -- Altering it to true should result in an error.
 ALTER INDEX brin_interface_idx SET (autosummarize=true);
 
+-- Test BRIN pages_per_range defaults
+CREATE TABLE brin_ppr_heap1(i int);
+CREATE INDEX ON brin_ppr_heap1 USING brin(i);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_heap1_i_idx', 0));
+
+CREATE UNLOGGED TABLE brin_ppr_heap2(i int);
+CREATE INDEX ON brin_ppr_heap2 USING brin(i);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_heap2_i_idx', 0));
+
+CREATE TABLE brin_ppr_heap3(i int);
+CREATE INDEX ON brin_ppr_heap3 USING brin(i) WITH (autosummarize=false);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_heap3_i_idx', 0));
+
+CREATE TABLE brin_ppr_ao_row1(i int) USING ao_row;
+CREATE INDEX ON brin_ppr_ao_row1 USING brin(i);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_row1_i_idx', 0));
+
+CREATE UNLOGGED TABLE brin_ppr_ao_row2(i int) USING ao_row;
+CREATE INDEX ON brin_ppr_ao_row2 USING brin(i);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_row2_i_idx', 0));
+
+CREATE TABLE brin_ppr_ao_row3(i int) USING ao_row;
+CREATE INDEX ON brin_ppr_ao_row3 USING brin(i) WITH (autosummarize=false);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_row3_i_idx', 0));
+
+CREATE TABLE brin_ppr_ao_column1(i int) USING ao_column;
+CREATE INDEX ON brin_ppr_ao_column1 USING brin(i);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_column1_i_idx', 0));
+
+CREATE UNLOGGED TABLE brin_ppr_ao_column2(i int) USING ao_column;
+CREATE INDEX ON brin_ppr_ao_column2 USING brin(i);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_column2_i_idx', 0));
+
+CREATE TABLE brin_ppr_ao_column3(i int) USING ao_column;
+CREATE INDEX ON brin_ppr_ao_column3 USING brin(i) WITH (autosummarize=false);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_column3_i_idx', 0));
+
+-- Test ALTERing pages_per_range
+-- Use REINDEX too as pages_per_range change won't go into effect until next reindex
+ALTER INDEX brin_ppr_heap1_i_idx SET (pages_per_range=16);
+REINDEX INDEX brin_ppr_heap1_i_idx;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_heap1_i_idx', 0));
+ALTER INDEX brin_ppr_heap1_i_idx RESET (pages_per_range);
+REINDEX INDEX brin_ppr_heap1_i_idx;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_heap1_i_idx', 0));
+
+ALTER INDEX brin_ppr_ao_row1_i_idx SET (pages_per_range=16);
+REINDEX INDEX brin_ppr_ao_row1_i_idx;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_row1_i_idx', 0));
+ALTER INDEX brin_ppr_ao_row1_i_idx RESET (pages_per_range);
+REINDEX INDEX brin_ppr_ao_row1_i_idx;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_row1_i_idx', 0));
+
+ALTER INDEX brin_ppr_ao_column1_i_idx SET (pages_per_range=16);
+REINDEX INDEX brin_ppr_ao_column1_i_idx;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_column1_i_idx', 0));
+ALTER INDEX brin_ppr_ao_column1_i_idx RESET (pages_per_range);
+REINDEX INDEX brin_ppr_ao_column1_i_idx;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_ao_column1_i_idx', 0));
+
+-- ALTERIng the ACCESS METHOD of the table should gracefully set the default
+-- pages_per_range for the associated BRIN index.
+CREATE TABLE brin_ppr_atsetam(i int) USING heap;
+CREATE INDEX ON brin_ppr_atsetam USING brin(i);
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_idx', 0));
+
+ALTER TABLE brin_ppr_atsetam SET ACCESS METHOD ao_row;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_idx', 0));
+
+ALTER TABLE brin_ppr_atsetam SET ACCESS METHOD heap;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_idx', 0));
+
+-- ALTERing the ACCESS METHOD of the table should NOT set the default
+-- pages_per_range if the index had a pages_per_range set.
+ALTER INDEX brin_ppr_atsetam_i_idx SET (pages_per_range=8);
+REINDEX INDEX brin_ppr_atsetam_i_idx;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_idx', 0));
+ALTER TABLE brin_ppr_atsetam SET ACCESS METHOD ao_row;
+SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_idx', 0));
+
 DROP EXTENSION pageinspect CASCADE;
 

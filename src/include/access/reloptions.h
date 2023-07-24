@@ -341,5 +341,4 @@ extern List *updateEncodingList(List *current_encodings,
 extern List *form_default_storage_directive(List *enc);
 extern bool is_storage_encoding_directive(char *name);
 extern void free_options_deep(relopt_value *options, int num_options);
-
 #endif							/* RELOPTIONS_H */

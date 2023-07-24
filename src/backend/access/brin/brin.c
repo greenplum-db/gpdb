@@ -896,7 +896,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	Assert(BufferGetBlockNumber(meta) == BRIN_METAPAGE_BLKNO);
 	LockBuffer(meta, BUFFER_LOCK_EXCLUSIVE);
 
-	brin_metapage_init(BufferGetPage(meta), BrinGetPagesPerRange(index),
+	brin_metapage_init(BufferGetPage(meta), BrinGetPagesPerRange(index, isAO),
 					   BRIN_CURRENT_VERSION, RelationStorageIsAO(heap));
 	MarkBufferDirty(meta);
 
@@ -907,7 +907,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 		Page		page;
 
 		xlrec.version = BRIN_CURRENT_VERSION;
-		xlrec.pagesPerRange = BrinGetPagesPerRange(index);
+		xlrec.pagesPerRange = BrinGetPagesPerRange(index, isAO);
 		xlrec.isAO          = isAO;
 
 		XLogBeginInsert();
@@ -968,7 +968,9 @@ void
 brinbuildempty(Relation index)
 {
 	Buffer		metabuf;
+	bool		isAO;
 
+	isAO = IsIndexOnAORel(index);
 	/* An empty BRIN index has a metapage only. */
 	metabuf =
 		ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
@@ -976,7 +978,7 @@ brinbuildempty(Relation index)
 
 	/* Initialize and xlog metabuffer. */
 	START_CRIT_SECTION();
-	brin_metapage_init(BufferGetPage(metabuf), BrinGetPagesPerRange(index),
+	brin_metapage_init(BufferGetPage(metabuf), BrinGetPagesPerRange(index, isAO),
 					   BRIN_CURRENT_VERSION, false);
 	MarkBufferDirty(metabuf);
 	log_newpage_buffer(metabuf, true);

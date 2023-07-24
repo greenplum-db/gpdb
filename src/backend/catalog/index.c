@@ -4277,3 +4277,22 @@ RestoreReindexState(void *reindexstate)
 	/* Note the worker has its own transaction nesting level */
 	reindexingNestLevel = GetCurrentTransactionNestLevel();
 }
+
+/*
+ * Is this index on an append-optimized table?
+ */
+bool
+IsIndexOnAORel(Relation idx)
+{
+	Oid relid;
+	Oid relam;
+
+	Assert(idx->rd_index);
+
+	relid = idx->rd_index->indrelid;
+	relam = get_rel_am(relid);
+
+	Assert(OidIsValid(relam));
+
+	return (relam == AO_ROW_TABLE_AM_OID || relam == AO_COLUMN_TABLE_AM_OID);
+}

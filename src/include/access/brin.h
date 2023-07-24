@@ -35,17 +35,33 @@ typedef struct BrinStatsData
 	BlockNumber revmapNumPages;
 } BrinStatsData;
 
+/*
+ * GPDB: We have different defaults for pages_per_range according to the type of
+ * the base relation. Please see brin/README for more details.
+ */
+#define BRIN_DEFAULT_PAGES_PER_RANGE		32
+#define BRIN_DEFAULT_PAGES_PER_RANGE_AO 	1
+#define BRIN_UNDEFINED_PAGES_PER_RANGE 		0
 
-#define BRIN_DEFAULT_PAGES_PER_RANGE	128
-#define BrinGetPagesPerRange(relation) \
-	((relation)->rd_options ? \
+/*
+ * GPDB: We use a sentinel value of BRIN_UNDEFINED_PAGES_PER_RANGE to indicate
+ * that the default assigned in the relcache is AM agnostic. The actual default
+ * will be determined later in BrinGetPagesPerRange().
+ */
+#define BrinIsPagesPerRangeDefined(rd_options) \
+	(rd_options && ((BrinOptions *) (rd_options))->pagesPerRange != BRIN_UNDEFINED_PAGES_PER_RANGE)
+
+#define BrinDefaultPagesPerRange(isAO) \
+	((isAO) ? BRIN_DEFAULT_PAGES_PER_RANGE_AO : BRIN_DEFAULT_PAGES_PER_RANGE)
+
+#define BrinGetPagesPerRange(relation, isAO) \
+	(BrinIsPagesPerRangeDefined((relation)->rd_options) ? \
 	 ((BrinOptions *) (relation)->rd_options)->pagesPerRange : \
-	  BRIN_DEFAULT_PAGES_PER_RANGE)
+	  (BrinDefaultPagesPerRange((isAO))))
 #define BrinGetAutoSummarize(relation) \
 	((relation)->rd_options ? \
 	 ((BrinOptions *) (relation)->rd_options)->autosummarize : \
 	  false)
-
 
 extern void brinGetStats(Relation index, BrinStatsData *stats);
 

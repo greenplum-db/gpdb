@@ -7446,8 +7446,10 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 		 * Assume default number of pages per range, and estimate the number
 		 * of ranges based on that.
 		 */
+		bool isAO = (baserel->relam == AO_ROW_TABLE_AM_OID ||
+						baserel->relam == AO_COLUMN_TABLE_AM_OID);
 		indexRanges = Max(ceil((double) baserel->pages /
-							   BRIN_DEFAULT_PAGES_PER_RANGE), 1.0);
+								BrinDefaultPagesPerRange(isAO)), 1.0);
 
 		statsData.pagesPerRange = BRIN_DEFAULT_PAGES_PER_RANGE;
 		statsData.revmapNumPages = (indexRanges / REVMAP_PAGE_MAXITEMS) + 1;
