@@ -1,7 +1,7 @@
 --
 -- PARALLEL
 --
--- GPDB_96_MERGE_FIXME: We don't support parallel query. These tests won't actually
+-- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We don't support parallel query. These tests won't actually
 -- generate any parallel plans. Should we pay attention to the parallel restrictions
 -- when creating MPP plans? For example, should we force parallel restricted functions
 -- to run in the QD?
