@@ -34,7 +34,8 @@
 	void io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message);
 }
 
-%token <str> ID IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START IOCONFIG_DELIM VALUE_MAX IO_KEY STAR
+%token IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START STAR IOCONFIG_DELIM VALUE_MAX
+%token <str> ID IO_KEY
 %token <integer> VALUE
 
 %type <str> tablespace_name
@@ -67,7 +68,6 @@ iolimit_config_string: tablespace_io_config
 					   }
 					 | iolimit_config_string IOLIMIT_CONFIG_DELIM tablespace_io_config
 					   {
-							(void) $2;
 							$$ = lappend($1, $3);
 					   }
 
@@ -75,7 +75,6 @@ tablespace_name: ID  { $$ = $1; }
 
 tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 					  {
-							(void) $2;
 
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
@@ -92,9 +91,6 @@ tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 					  }
 					| STAR TABLESPACE_IO_CONFIG_START ioconfigs
 					  {
-							(void) $1;
-							(void) $2;
-
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
 							if (context->normal_tablespce_cnt > 0 || context->star_tablespace_cnt > 0)
@@ -121,8 +117,6 @@ ioconfigs: ioconfig
 		   }
 		 | ioconfigs IOCONFIG_DELIM ioconfig
 		   {
-				(void) $2;
-
 				uint64 *config_var = (uint64 *)$1;
 				*(config_var + $3->offset) = $3->value;
 				$$ = $1;
@@ -143,7 +137,7 @@ ioconfig: IO_KEY '=' io_value
 		  }
 
 io_value: VALUE { $$ = $1; }
-		| VALUE_MAX { (void) $1; $$ = 0; }
+		| VALUE_MAX { $$ = 0; }
 
 %%
 
