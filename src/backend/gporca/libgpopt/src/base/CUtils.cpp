@@ -5006,6 +5006,9 @@ CUtils::AddExprs(CExpressionArrays *results_exprs,
 	GPOS_ASSERT(results_exprs->Size() >= input_exprs->Size());
 }
 
+// Check if input CLogicalProject expression has the child expression
+// of hierarchy CScalarProjectList -> CScalarProjectElement -> CScalarFunc
+// And CScalarFunc sub child returns set
 BOOL
 CUtils::LogicalProjectReturnsSet(CExpression *pexprLogicalProject)
 {
