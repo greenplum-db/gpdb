@@ -1815,7 +1815,8 @@ static void getconfig(void)
 	gpdb_get_master_data_dir(&hostname, &master_data_directory, pool);
 	if (ax.master_data_directory == NULL)
 	{
-		if (master_data_directory == NULL) {
+		if (master_data_directory == NULL) 
+		{
 			gpmon_fatalx(FLINE, rc, "Failed to create APR pool: failed to resolve master data directory\n");
 		}
 		ax.master_data_directory = strdup(master_data_directory);
