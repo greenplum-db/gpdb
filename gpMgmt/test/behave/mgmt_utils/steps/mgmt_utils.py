@@ -897,7 +897,6 @@ def impl(context, command, num):
 def impl(context, command, ret_code):
     check_return_code(context, ret_code)
 
-
 @given('the segments are synchronized')
 @when('the segments are synchronized')
 @then('the segments are synchronized')
@@ -1560,6 +1559,7 @@ def impl(context, content_ids, expected_status):
 
 @given('the cluster configuration has no segments where "{filter}"')
 @when('the cluster configuration has no segments where "{filter}"')
+@then('the cluster configuration has no segments where "{filter}"')
 def impl(context, filter):
     SLEEP_PERIOD = 5
     MAX_DURATION = 300

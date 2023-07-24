@@ -4,7 +4,7 @@ import socket
 
 from gppylib import gplog
 from gppylib.commands.base import Command, WorkerPool, REMOTE
-from gppylib.commands import base, gp, unix
+from gppylib.commands import base, gp, unix, pg
 from gppylib.operations.initstandby import create_standby_pg_hba_entries
 
 logger = gplog.get_default_logger()
@@ -49,7 +49,6 @@ def create_entries(primary_hostname, mirror_hostname, hba_hostnames):
     return entries
 
 def update_on_segments(update_cmds, batch_size):
-
     num_workers = min(batch_size, len(update_cmds))
     pool = WorkerPool(num_workers)
     for uc in update_cmds:
@@ -109,6 +108,7 @@ def update_pg_hba_on_segments(gpArray, hba_hostnames, batch_size,
                               contents_to_update=None):
     logger.info("Starting to create new pg_hba.conf on primary segments")
     update_cmds = []
+    primary_config = []
     unreachable_seg_hosts = []
 
     for segmentPair in gpArray.getSegmentList():
@@ -122,12 +122,15 @@ def update_pg_hba_on_segments(gpArray, hba_hostnames, batch_size,
             continue
 
         primary_hostname = segmentPair.primaryDB.getSegmentHostName()
+        primary_port = segmentPair.primaryDB.getSegmentPort()
         mirror_hostname = segmentPair.mirrorDB.getSegmentHostName()
 
         entries = create_entries(primary_hostname, mirror_hostname, hba_hostnames)
 
         update_cmds.append(SegUpdateHba(entries, segmentPair.primaryDB.datadir,
                                         remoteHost=primary_hostname))
+        host_port_tuple = (primary_hostname, primary_port)
+        primary_config.append(host_port_tuple)
 
     if unreachable_seg_hosts:
         logger.warning("Not updating pg_hba.conf for segments on unreachable hosts: %s."
@@ -140,6 +143,10 @@ def update_pg_hba_on_segments(gpArray, hba_hostnames, batch_size,
 
     update_on_segments(update_cmds, batch_size)
 
+    # killing the walsender processes on the primary segment to stop any existing walsender<->walreceiver
+    # connections and to force new replication connections to the new mirrors.
+    pg.kill_existing_walsenders_on_primary(primary_config)
+
     logger.info("Successfully modified pg_hba.conf on primary segments to allow replication connections")
 
 
@@ -149,6 +156,7 @@ def update_pg_hba_for_new_mirrors(PgHbaEntriesToUpdate, hba_hostnames, batch_siz
         entries = create_entries(primary_hostname, newMirror_hostname, hba_hostnames)
         update_cmds.append(SegUpdateHba(entries, primary_datadir,
                                         remoteHost=primary_hostname))
+
         logger.info("Updating pg_hba.conf entries on primary %s:%s with new mirror %s information"
                     % (primary_hostname, primary_datadir, newMirror_hostname))
 
@@ -157,3 +165,4 @@ def update_pg_hba_for_new_mirrors(PgHbaEntriesToUpdate, hba_hostnames, batch_siz
         return
 
     update_on_segments(update_cmds, batch_size)
+

@@ -408,8 +408,11 @@ Feature: Tests for gpmovemirrors
         Then verify the database has mirrors
         And all the segments are running
         And the segments are synchronized
+        And saving host IP address of "sdw3"
         # gpmovemirrors_input_group moves mirror on sdw3 to sdw2, corresponding primary should now have sdw2 entry
         And pg_hba file "/data/gpdata/primary/gpseg1/pg_hba.conf" on host "sdw1" contains entries for "sdw2"
+        And pg_hba file on primary of mirrors on "sdw2" with "1" contains no replication entries for "sdw3"
+        And verify that only replication connection primary has is to "sdw2"
         And verify that mirror segments are in "group" configuration
         And verify that mirrors are recognized after a restart
         And the information of a "mirror" segment on a remote host is saved
@@ -603,3 +606,21 @@ Feature: Tests for gpmovemirrors
         And the cluster is recovered in full and rebalanced
         And check segment conf: postgresql.conf
         And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
+
+    @concourse_cluster
+    Scenario: gpmovemirrors removes the stale replication entries from pg_hba when moving mirrors to another host
+        Given a working directory of the test as '/tmp/gpmovemirrors'
+        And the database is not running
+        And a cluster is created with "spread" segment mirroring on "cdw" and "sdw1, sdw2, sdw3"
+        And verify that mirror segments are in "spread" configuration
+        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
+        And create an input file to move mirrors on "sdw1" to "sdw3"
+        When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_sdw1_sdw3"
+        Then gpmovemirrors should return a return code of 0
+        Then verify the database has mirrors
+        And all the segments are running
+        And the segments are synchronized
+        And saving host IP address of "sdw1"
+        And pg_hba file on primary of mirrors on "sdw3" with "3,4" contains no replication entries for "sdw1"
+        And verify that only replication connection primary has is to "sdw3"
+

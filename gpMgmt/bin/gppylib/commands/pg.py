@@ -166,6 +166,22 @@ def killPgProc(db,procname,signal):
     cmd=Kill.remote("kill "+procname,procPID,signal,hostname)
     return (parentPID,procPID)
 
+def kill_existing_walsenders_on_primary(primary_config):
+    for host, port in primary_config:
+
+        logger.info("killing existing walsender process on primary {0}:{1} to refresh replication connection"
+                    .format(host, port))
+
+        with closing(dbconn.connect(dbconn.DbURL(dbname="template1", port=port, hostname=host), utility=True,
+                                    unsetSearchPath=False)) as conn:
+            try:
+                result = dbconn.querySingleton(conn, "select pg_terminate_backend(pid) from pg_stat_get_wal_senders();")
+                if result is False:
+                    logger.warning("Unable to kill walsender on primary host {0}:{1}", host, port)
+            except dbconn.UnexpectedRowsError:
+                # Query will return 0 rows if the primary doesn't have a walsender process running.
+                # in that case ignoring the UnexpectedRowsError
+                pass
 
 class PgReplicationSlot:
     """

@@ -2,7 +2,7 @@ import glob
 import os
 import tempfile
 from time import sleep
-
+from gppylib.commands import gp
 from contextlib import closing
 from gppylib.commands.base import Command, ExecutionError, REMOTE, WorkerPool
 from gppylib.db import dbconn
@@ -755,4 +755,80 @@ def get_host_address(hostname):
     host_address = cmd.get_stdout().strip().split(' ')
     return host_address[0]
 
+
+
+@then('pg_hba file on primary of mirrors on "{newhost}" with "{contents}" contains no replication entries for "{oldhost}"')
+@when('pg_hba file on primary of mirrors on "{newhost}" with "{contents}" contains no replication entries for "{oldhost}"')
+def impl(context, newhost, contents, oldhost):
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+
+    for seg in all_segments:
+        if newhost != "none" and seg.mirrorDB.getSegmentHostName() != newhost:
+            continue
+        if contents != "all":
+            for content_id in contents.split(','):
+                if seg.mirrorDB.getSegmentContentId() != int(content_id):
+                    continue
+                check_entry_present(context, seg, oldhost)
+        else:
+            check_entry_present(context, seg, oldhost)
+
+def check_entry_present(context, seg, oldhost):
+    for host in oldhost.split(','):
+        search_ip_addr = context.host_ip_list[host]
+        dbname = "template1"
+        ip_address = "','".join(search_ip_addr)
+        query = "SELECT count(*) FROM pg_hba_file_rules WHERE database='{{replication}}' AND (address='{0}' OR address IN ('{1}'))".format(
+            host, ip_address)
+        phost = seg.primaryDB.getSegmentHostName()
+        port = seg.primaryDB.getSegmentPort()
+
+        with closing(dbconn.connect(dbconn.DbURL(dbname=dbname, port=port, hostname=phost),
+                                    utility=True, unsetSearchPath=False)) as conn:
+            result = dbconn.querySingleton(conn, query)
+            if result != 0:
+                raise Exception("{0} replication entry for {1}, {2} still existing in pg_hba.conf of {3}:{4}"
+                                .format(result, host, search_ip_addr,phost, port))
+
+
+@then('verify that only replication connection primary has is to {new_mirror}')
+@when('verify that only replication connection primary has is to {new_mirror}')
+@given('verify that only replication connection primary has is to {new_mirror}')
+def impl(context, new_mirror):
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+
+    for seg in all_segments:
+        if seg.mirrorDB.getSegmentHostName() != new_mirror:
+            continue
+
+        dbname = "template1"
+        search_ip_addr = context.host_ip_list[new_mirror]
+        ip_address = "','".join(search_ip_addr)
+        query = """
+        SELECT
+          CASE
+            WHEN
+              (SELECT COUNT(*) FROM gp_stat_replication WHERE client_addr IN ('{1}')) =
+              (SELECT COUNT(*) FROM gp_stat_replication)
+            THEN TRUE
+            ELSE FALSE
+        END;""".format(ip_address)
+
+        phost = seg.primaryDB.getSegmentHostName()
+        port = seg.primaryDB.getSegmentPort()
+        with closing(dbconn.connect(dbconn.DbURL(dbname=dbname, port=port, hostname=phost),
+                                    utility=True, unsetSearchPath=False)) as conn:
+            result = dbconn.querySingleton(conn, query)
+            if result != 't':
+                raise Exception("{} replication connections are not updated.".format(phost))
+
+
+@given('saving host IP address of "{host}"')
+@then('saving host IP address of "{host}"')
+@when('saving host IP address of "{host}"')
+def impl(context, host):
+    context.host_ip_list = {}
+    for host_name in host.split(','):
+        if_addrs = gp.IfAddrs.list_addrs(host_name)
+        context.host_ip_list[host_name] = if_addrs
 
