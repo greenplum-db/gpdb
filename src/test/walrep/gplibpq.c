@@ -85,6 +85,9 @@ test_connect(PG_FUNCTION_ARGS)
 
 	oldcxt = MemoryContextSwitchTo(TopMemoryContext);
 	test_connection = walrcv_connect(conninfo, false, "walrcv_test", &err);
+	if (!test_connection)
+		ereport(ERROR,
+				(errmsg("could not connect to the primary server: %s", err)));
 	MemoryContextSwitchTo(oldcxt);
 
 	PG_RETURN_BOOL(true);
@@ -132,7 +135,9 @@ test_receive_and_verify(PG_FUNCTION_ARGS)
 	options.startpoint = startpoint;
 	/* for now hard-coding it to 1 */
 	options.proto.physical.startpointTLI = 1;
-	walrcv_startstreaming(test_connection, &options);
+	if (!walrcv_startstreaming(test_connection, &options))
+		ereport(ERROR,
+				(errmsg("could not start streaming successfully")));
 
 	for (int i=0; i < NUM_RETRIES; i++)
 	{
@@ -356,6 +361,9 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 		xrecoff = (uint32)startpoint;
 
 		conn = walrcv_connect(conninfo, false, "walrcv_test_ao_xlog", &err);
+		if (!conn)
+			ereport(ERROR,
+					(errmsg("could not connect to the primary server: %s", err)));
 		/* Get current timeline ID */
 		walrcv_identify_system(conn, &startpointTLI);
 

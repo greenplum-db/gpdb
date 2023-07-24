@@ -25,7 +25,7 @@ myseg INT;
 BEGIN
 	myseg := gp_execution_segment();
 	startpoint := startpoints[myseg + 1];
-	select 'port=' || setting INTO port from pg_settings where name = 'port';
+	select 'host=localhost port=' || setting INTO port from pg_settings where name = 'port';
 	RAISE DEBUG 'port %, startpoint % current_wal_lsn %',
 	port, startpoint, pg_current_wal_lsn();
 
