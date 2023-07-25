@@ -2948,8 +2948,7 @@ index_update_stats(Relation rel,
 		relpages = RelationGetNumberOfBlocks(rel);
 
 		/*
-		 * GPDB: In theory, it is possible to support index only scans with AO
-		 * tables, but disable them for now by setting relallvisible to 0.
+		 * GPDB: We don't maintain relallvisible for AO/CO tables.
 		 */
 		if (rd_rel->relkind != RELKIND_INDEX && !RelationStorageIsAO(rel))
 			visibilitymap_count(rel, &relallvisible, NULL);
