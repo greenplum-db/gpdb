@@ -26,6 +26,7 @@ import time
 import re
 import math
 import os
+import subprocess
 import sys
 
 try:
@@ -150,6 +151,7 @@ CREATE TABLE cal_brintest(id int,
 DISTRIBUTED BY (id);
 """
 
+
 _with_appendonly = """
 WITH (appendonly=true)
 """
@@ -166,6 +168,12 @@ DISTRIBUTED BY (dim_id);
                         """
 CREATE TABLE cal_bfv_dim (id integer, col2 integer) DISTRIBUTED BY (id);
 """]
+
+_create_indexonly_tables = [
+  "CREATE TABLE cal_widetest1(id int, sel int) %s",
+  "CREATE TABLE cal_widetest2(id int, sel int, col1 text, col2 text, col3 text) %s",
+  "CREATE TABLE cal_widetest3(id int, sel int, col1 text, col2 text, col3 text, col4 text, col5 text, col6 text) %s"
+]
 
 # insert into temp table. Parameters:
 # - integer stop value (suggested value is 10,000,000)
@@ -214,6 +222,18 @@ _insert_into_other_tables = """
 INSERT INTO cal_dim SELECT x, x, repeat('d', 100) FROM (SELECT * FROM generate_series(%d,%d)) T(x);
 """
 
+_insert_into_indexonly_tables = [
+"""
+INSERT INTO cal_widetest1 SELECT f_id, f_id%100 {} FROM (select row_number() over(order by f_rand) as ordered_id, f_id, f_rand from cal_temp_ids) src order by f_rand;
+""".format(','.join("repeat('a', 1024)" for i in range(1, 1))),
+"""
+INSERT INTO cal_widetest2 SELECT f_id, f_id%100, {} FROM (select row_number() over(order by f_rand) as ordered_id, f_id, f_rand from cal_temp_ids) src order by f_rand;
+""".format(','.join("repeat('a', 1024)" for i in range(1, 4))),
+"""
+INSERT INTO cal_widetest3 SELECT f_id, f_id%100, {} FROM (select row_number() over(order by f_rand) as ordered_id, f_id, f_rand from cal_temp_ids) src order by f_rand;
+""".format(','.join("repeat('a', 1024)" for i in range(1, 7))),
+]
+
 _create_index_arr = ["""
 CREATE INDEX cal_txtest_i_bitmap_10    ON cal_txtest USING bitmap(bitmap10);
 """,
@@ -225,6 +245,15 @@ CREATE INDEX cal_txtest_i_bitmap_1000  ON cal_txtest USING bitmap(bitmap1000);
 """,
                      """
 CREATE INDEX cal_txtest_i_bitmap_10000 ON cal_txtest USING bitmap(bitmap10000);
+""",
+                     """
+CREATE INDEX cal_widetext1_index ON cal_widetest1(sel);
+""",
+                     """
+CREATE INDEX cal_widetext4_index ON cal_widetest2(sel);
+""",
+                     """
+CREATE INDEX cal_widetext7_index ON cal_widetest3(sel);
 """,
                      ]
 
@@ -417,11 +446,11 @@ def select_version(conn):
         log_output(str(row[0]))
 
 
-def execute_sql(conn, sqlStr):
+def execute_sql(conn, sqlStr, autocommit=True):
     try:
         log_output("")
         log_output("Executing query: %s" % sqlStr)
-        dbconn.execSQL(conn, sqlStr)
+        dbconn.execSQL(conn, sqlStr, autocommit)
     except Exception as e:
         print("")
         print(("Error executing query: %s; Reason: %s" % (sqlStr, e)))
@@ -905,17 +934,40 @@ SELECT enable_xform('CXformGet2TableScan');
 """,
                             """
 SELECT enable_xform('CXformIndexGet2IndexScan');
+""",
+                            """
+SELECT enable_xform('CXformIndexGet2IndexOnlyScan');
 """ ]
 
 _force_sequential_scan = ["""
 SELECT disable_xform('CXformImplementBitmapTableGet');
+""",
+                            """
+SELECT disable_xform('CXformIndexGet2IndexScan');
+""",
+                            """
+SELECT disable_xform('CXformIndexGet2IndexOnlyScan');
 """]
 
 _force_index_scan = ["""
 SELECT disable_xform('CXformGet2TableScan');
+""",
+                            """
+SELECT disable_xform('CXformImplementBitmapTableGet');
+""",
+                            """
+SELECT disable_xform('CXformIndexGet2IndexOnlyScan');
+"""]
+
+_force_bitmap_scan = ["""
+SELECT disable_xform('CXformGet2TableScan');
+""",
+                            """
+SELECT disable_xform('CXformIndexGet2IndexOnlyScan');
 """]
 
 _force_index_only_scan = ["SELECT disable_xform('CXformGet2TableScan');",
+                          "SELECT disable_xform('CXformImplementBitmapTableGet');",
                           "SELECT disable_xform('CXformIndexGet2IndexScan');"]
 
 
@@ -1200,7 +1252,7 @@ def force_table_scan(conn):
 
 
 def force_bitmap_scan(conn):
-    execute_sql_arr(conn, _force_index_scan)
+    execute_sql_arr(conn, _force_bitmap_scan)
 
 
 def force_index_scan(conn):
@@ -1248,10 +1300,8 @@ def run_one_bitmap_join_test(conn, testTitle, paramValueLow, paramValueHigh, set
     print_results(testTitle, explainDict, execDict, errors, plan_ids, execute_n_times)
 
 def run_one_index_scan_test(conn, testTitle, paramValueLow, paramValueHigh, setup, parameterizeMethod,
-                             execute_n_times):
+                             execute_n_times, plan_ids, force_methods):
     log_output("Running index scan test " + testTitle)
-    plan_ids = [INDEX_SCAN, INDEX_ONLY_SCAN]
-    force_methods = [force_index_scan, force_index_only_scan]
     explainDict, execDict, errors = find_crossover(conn, paramValueLow, paramValueHigh, setup, parameterizeMethod,
                                                    explain_index_scan, reset_index_test, plan_ids, force_methods,
                                                    execute_n_times)
@@ -1268,35 +1318,54 @@ def run_one_brin_scan_test(conn, testTitle, paramValueLow, paramValueHigh, setup
     print_results(testTitle, explainDict, execDict, errors, plan_ids, execute_n_times)
 
 
+def disable_bitmapscan(func):
+    def inner(conn, *args, **kwargs):
+        execute_sql(conn, "set optimizer_enable_bitmapscan=off;")
+        func(conn, *args, **kwargs)
+        execute_sql(conn, "set optimizer_enable_bitmapscan=on;")
+    return inner
+
 # Main driver for the tests
 # -----------------------------------------------------------------------------
 
+@disable_bitmapscan
 def run_index_only_scan_tests(conn, execute_n_times):
-    def setup_wide_table(paramValue):
-        execute_sql_arr(conn, [
-            "DROP TABLE IF EXISTS cal_widetest;",
-            "CREATE TABLE cal_widetest(a int, {})".format(','.join('col' + str(i) + " text" for i in range(1, max(2, paramValue)))),
-            "CREATE INDEX cal_widetest_index ON cal_widetest(a);",
-            "TRUNCATE cal_widetest;",
-            "INSERT INTO cal_widetest SELECT i%50, {} FROM generate_series(1,100000)i;".format(','.join("repeat('a', 1024)" for i in range(1, max(2, paramValue)))),
-            "VACUUM ANALYZE cal_widetest;"
-        ])
-        return "select 1;"
+    plan_ids = [TABLE_SCAN, INDEX_ONLY_SCAN]
+    force_methods = [force_table_scan, force_index_only_scan]
+
+    for t in ["cal_widetest1", "cal_widetest2", "cal_widetest3"]:
+        def parameterized_selectivity_method(paramValue):
+            return """
+                SELECT count(sel)
+                FROM """ + t + """
+                WHERE sel BETWEEN 0 AND {sel};
+                """.format(sel=paramValue)
+        run_one_index_scan_test(conn,
+                                "Index Only Scan Test; " + t + " Varying Sel",
+                                1,
+                                20,
+                                noSetupRequired,
+                                parameterized_selectivity_method,
+                                execute_n_times,
+                                plan_ids,
+                                force_methods)
 
     def parameterized_method(paramValue):
         return """
-            SELECT count(a)
-            FROM cal_widetest
-            WHERE a<25;
-            """
+            SELECT count(sel)
+            FROM cal_widetest{column_width}
+            WHERE sel=25;
+            """.format(column_width=paramValue)
 
     run_one_index_scan_test(conn,
-                            "Index Scan Test; Wide table; Narrow index",
+                            "Index Only Scan Test; Wide table; Narrow index",
                             1,
-                            6,
-                            setup_wide_table,
+                            4,
+                            noSetupRequired,
                             parameterized_method,
-                            execute_n_times)
+                            execute_n_times,
+                            plan_ids,
+                            force_methods)
 
 
 def run_bitmap_index_scan_tests(conn, execute_n_times):
@@ -1593,7 +1662,7 @@ def run_brin_tests(conn, execute_n_times):
 # -----------------------------------------------------------------------------
 
 # create the table(s), as regular or AO table, and insert num_rows into the main table
-def createDB(conn, use_ao, num_rows):
+def createDB(conn, use_ao, num_rows, db_name):
     global glob_appendonly
 
     create_options = ""
@@ -1604,21 +1673,25 @@ def createDB(conn, use_ao, num_rows):
     create_bfv_table = _create_bfv_table % create_options
     create_ndv_table = _create_ndv_table % create_options
     create_brin_table = _create_brin_table % create_options
+    create_indexonly_tables = [table % create_options for table in _create_indexonly_tables]
     insert_into_temp_stmt = _insert_into_temp % num_rows
     insert_into_other_stmt = _insert_into_other_tables % (1, glob_dim_table_rows)
     insert_into_brin_table = _insert_into_brin_table.format(rows=num_rows)
+    insert_into_indexonly_tables = _insert_into_indexonly_tables
 
     execute_sql(conn, _drop_tables)
     execute_sql(conn, create_cal_table_stmt)
     execute_sql(conn, create_bfv_table)
     execute_sql(conn, create_ndv_table)
     execute_sql(conn, create_brin_table)
+    execute_sql_arr(conn, create_indexonly_tables)
     execute_sql_arr(conn, _create_other_tables)
     commit_db(conn)
     execute_and_commit_sql(conn, insert_into_temp_stmt)
     execute_and_commit_sql(conn, _insert_into_table)
     commit_db(conn)
     execute_and_commit_sql(conn, insert_into_brin_table)
+    execute_sql_arr(conn, insert_into_indexonly_tables)
     execute_and_commit_sql(conn, insert_into_other_stmt)
     commit_db(conn)
     execute_sql_arr(conn, _create_index_arr)
@@ -1628,6 +1701,11 @@ def createDB(conn, use_ao, num_rows):
     execute_sql_arr(conn, _create_btree_indexes_arr)
     execute_sql_arr(conn, _create_brin_index_arr)
     execute_sql(conn, _analyze_table)
+
+    # workaround dbconn.execSQL transaction interface that prevent running VACUUM
+    subprocess.run(["vacuumdb", "-d", db_name],
+                   stdout=subprocess.DEVNULL,
+                   stderr=subprocess.STDOUT)
     commit_db(conn)
 
 
@@ -1733,7 +1811,7 @@ def main():
     select_version(conn)
     if args.create:
         glob_rowcount = args.numRows
-        createDB(conn, args.appendOnly, args.numRows)
+        createDB(conn, args.appendOnly, args.numRows, args.dbName)
         smoothStatistics(conn, args.numRows)
     else:
         inspectExistingTables(conn)
