@@ -249,7 +249,14 @@ get_bdi_of_path(const char *ori_path)
 	if (access(sysfs_path_start, F_OK) == -1)
 		return make_bdi(maj, min);
 
-	realpath(sysfs_path, real_path);
+	res = realpath(sysfs_path, real_path);
+	if (res == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("io limit: cannot find realpath of %s, details: %m.", sysfs_path)));
+	}
+
 	dirname(real_path);
 
 	snprintf(real_path + strlen(real_path), sizeof(real_path) - strlen(real_path), "/dev");
@@ -264,7 +271,14 @@ get_bdi_of_path(const char *ori_path)
 
 	int parent_maj;
 	int parent_min;
-	fscanf(f, "%d:%d", &parent_maj, &parent_min);
+	int scan_result = fscanf(f, "%d:%d", &parent_maj, &parent_min);
+	if (scan_result < 2)
+	{
+		fclose(f);
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("io limit: cannot read block device id from %s, details: %m.", real_path)));
+	}
 	fclose(f);
 
 	return make_bdi(parent_maj, parent_min);
