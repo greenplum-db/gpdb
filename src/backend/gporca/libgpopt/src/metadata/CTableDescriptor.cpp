@@ -38,7 +38,7 @@ CTableDescriptor::CTableDescriptor(
 	CMemoryPool *mp, IMDId *mdid, const CName &name,
 	BOOL convert_hash_to_random, IMDRelation::Ereldistrpolicy rel_distr_policy,
 	IMDRelation::Erelstoragetype erelstoragetype, ULONG ulExecuteAsUser,
-	INT lockmode, INT acl_mode, ULONG assigned_query_id_for_target_rel)
+	INT lockmode, ULONG acl_mode, ULONG assigned_query_id_for_target_rel)
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_name(mp, name),

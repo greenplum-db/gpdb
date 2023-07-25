@@ -89,7 +89,7 @@ private:
 	INT m_lockmode;
 
 	// acl mode from the parser
-	INT m_acl_mode;
+	ULONG m_acl_mode;
 
 	// identifier of query to which current table belongs.
 	// This field is used for assigning current table entry with
@@ -105,7 +105,7 @@ public:
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
-					 ULONG ulExecuteAsUser, INT lockmode, INT acl_mode,
+					 ULONG ulExecuteAsUser, INT lockmode, ULONG acl_mode,
 					 ULONG assigned_query_id_for_target_rel);
 
 	// dtor
@@ -154,7 +154,7 @@ public:
 		return m_lockmode;
 	}
 
-	INT
+	ULONG
 	GetAclMode() const
 	{
 		return m_acl_mode;

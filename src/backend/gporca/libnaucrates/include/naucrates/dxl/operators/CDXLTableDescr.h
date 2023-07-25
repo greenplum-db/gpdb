@@ -20,6 +20,7 @@
 #include "naucrates/md/CMDName.h"
 #include "naucrates/md/IMDId.h"
 
+#define GPDXL_ACL_UNDEFINED (gpos::ulong_max)
 // default value for m_assigned_query_id_for_target_rel - no assigned query for table descriptor
 #define UNASSIGNED_QUERYID 0
 
@@ -54,7 +55,7 @@ private:
 	INT m_lockmode;
 
 	// acl mode from the parser
-	INT m_acl_mode;
+	ULONG m_acl_mode;
 
 	// identifier of query to which current table belongs.
 	// This field is used for assigning current table entry with
@@ -69,7 +70,7 @@ public:
 
 	// ctor/dtor
 	CDXLTableDescr(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
-				   ULONG ulExecuteAsUser, int lockmode, INT acl_mode,
+				   ULONG ulExecuteAsUser, int lockmode, ULONG acl_mode,
 				   ULONG assigned_query_id_for_target_rel = UNASSIGNED_QUERYID);
 
 	~CDXLTableDescr() override;
@@ -95,7 +96,7 @@ public:
 	INT LockMode() const;
 
 	// acl mode
-	INT GetAclMode() const;
+	ULONG GetAclMode() const;
 
 	// get the column descriptor at the given position
 	const CDXLColDescr *GetColumnDescrAt(ULONG idx) const;
