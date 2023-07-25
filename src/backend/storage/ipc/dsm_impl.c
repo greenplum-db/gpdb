@@ -229,7 +229,7 @@ dsm_impl_posix(dsm_op op, dsm_handle handle, Size request_size,
 	 * starts, so it is safe to use it here.
 	 *
 	 * However, this increases the length of the name to exceed
-	 * its max available length. For instance, on maxos, the
+	 * its max available length. For instance, on macos, the
 	 * name's max length is 31. Therefor, change the prefix from
 	 * PostgreSQL to GP , which can resolve the above issue.
 	 */
