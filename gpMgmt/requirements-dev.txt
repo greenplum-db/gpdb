@@ -1,5 +1,4 @@
-gsutil<=5.25
+gsutil
 behave~=1.2.6
 coverage~=4.5
 mock<=5.0.0
-urllib3>=1.21.1,<1.25
