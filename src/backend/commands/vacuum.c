@@ -2959,8 +2959,8 @@ vacuum_combine_stats(VacuumStatsContext *stats_context,
 	 * indexes. We parse this information, and compute the final stats
 	 * for the QD.
 	 *
-	 * For pg_class stats, we compute the maximum number of tuples and
-	 * maximum number of pages after processing the stats from each QE.
+	 * For pg_class stats, we compute the sum of tuples, number of pages and
+	 * allvisible pages after processing the stats from each QE.
 	 *
 	 */
 	for(result_no = 0; result_no < cdb_pgresults->numResults; result_no++)
