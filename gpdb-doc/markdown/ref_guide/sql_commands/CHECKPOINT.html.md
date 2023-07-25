@@ -1,6 +1,6 @@
 # CHECKPOINT 
 
-Forces a transaction log checkpoint.
+Forces a write-ahead log checkpoint.
 
 ## <a id="section2"></a>Synopsis 
 
@@ -10,7 +10,7 @@ CHECKPOINT
 
 ## <a id="section3"></a>Description 
 
-A checkpoint is a point in the transaction log sequence at which all data files have been updated to reflect the information in the log. All data files will be flushed to disk.
+A checkpoint is a point in the write-ahead log sequence at which all data files have been updated to reflect the information in the log. All data files will be flushed to disk.
 
 The `CHECKPOINT` command forces an immediate checkpoint when the command is issued, without waiting for a regular checkpoint scheduled by the system. `CHECKPOINT` is not intended for use during normal operation.
 
