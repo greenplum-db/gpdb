@@ -115,7 +115,7 @@ test: uao/cursor_before_update_row
 test: uao/cursor_withhold_row
 test: uao/cursor_withhold2_row
 test: uao/delete_while_vacuum_row
-test: uao/index_build_reltuples_row
+test: uao/index_build_relstats_row
 test: uao/index_only_scan_row
 test: uao/insert_policy_row
 test: uao/insert_while_vacuum_row
@@ -182,7 +182,7 @@ test: uao/cursor_before_update_column
 test: uao/cursor_withhold_column
 test: uao/cursor_withhold2_column
 test: uao/delete_while_vacuum_column
-test: uao/index_build_reltuples_column
+test: uao/index_build_relstats_column
 test: uao/index_only_scan_column
 test: uao/insert_policy_column
 test: uao/insert_while_vacuum_column

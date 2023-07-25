@@ -644,16 +644,16 @@ SELECT * FROM point_tbl WHERE NOT f1 ~= '(1e-300, -1e-300)' AND f1 IS NOT NULL O
 
 EXPLAIN (COSTS OFF)
 SELECT * FROM point_tbl WHERE NOT f1 ~= '(1e-300, -1e-300)' AND f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Result
-   ->  Sort
-         Sort Key: ((f1 <-> '(0,1)'::point))
-         ->  Result
-               ->  Gather Motion 3:1  (slice1; segments: 3)
-                     ->  Index Scan using gpointind on point_tbl
-                           Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
-                           Filter: ((f1 <> '(1e-300,-1e-300)'::point) AND (f1 <@ '(10,10),(-10,-10)'::box))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((f1 <-> '(0,1)'::point))
+         ->  Sort
+               Sort Key: ((f1 <-> '(0,1)'::point))
+               ->  Index Scan using gpointind on point_tbl
+                     Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
+                     Filter: ((f1 <> '(1e-300,-1e-300)'::point) AND (f1 <@ '(10,10),(-10,-10)'::box))
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
@@ -732,16 +732,16 @@ SET enable_indexscan = OFF;
 SET enable_bitmapscan = ON;
 EXPLAIN (COSTS OFF)
 SELECT * FROM point_tbl WHERE NOT f1 ~= '(1e-300, -1e-300)' AND f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Result
-   ->  Sort
-         Sort Key: ((f1 <-> '(0,1)'::point))
-         ->  Result
-               ->  Gather Motion 3:1  (slice1; segments: 3)
-                     ->  Index Scan using gpointind on point_tbl
-                           Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
-                           Filter: ((f1 <> '(1e-300,-1e-300)'::point) AND (f1 <@ '(10,10),(-10,-10)'::box))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((f1 <-> '(0,1)'::point))
+         ->  Sort
+               Sort Key: ((f1 <-> '(0,1)'::point))
+               ->  Index Scan using gpointind on point_tbl
+                     Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
+                     Filter: ((f1 <> '(1e-300,-1e-300)'::point) AND (f1 <@ '(10,10),(-10,-10)'::box))
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 

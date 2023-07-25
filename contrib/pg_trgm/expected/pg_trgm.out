@@ -3715,27 +3715,23 @@ create index test2_idx_gist on test2 using gist (t gist_trgm_ops);
 set enable_seqscan=off;
 explain (costs off)
   select * from test2 where t like '%BCD%';
-                   QUERY PLAN                    
--------------------------------------------------
+                   QUERY PLAN                   
+------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on test2
-         Recheck Cond: (t ~~ '%BCD%'::text)
-         ->  Bitmap Index Scan on test2_idx_gist
-               Index Cond: (t ~~ '%BCD%'::text)
+   ->  Index Scan using test2_idx_gist on test2
+         Index Cond: (t ~~ '%BCD%'::text)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 explain (costs off)
   select * from test2 where t ilike '%BCD%';
-                   QUERY PLAN                    
--------------------------------------------------
+                   QUERY PLAN                   
+------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on test2
-         Recheck Cond: (t ~~* '%BCD%'::text)
-         ->  Bitmap Index Scan on test2_idx_gist
-               Index Cond: (t ~~* '%BCD%'::text)
+   ->  Index Scan using test2_idx_gist on test2
+         Index Cond: (t ~~* '%BCD%'::text)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 select * from test2 where t like '%BCD%';
  t 
@@ -3780,27 +3776,23 @@ select * from test2 where t like '  z foo%';
 
 explain (costs off)
   select * from test2 where t ~ '[abc]{3}';
-                    QUERY PLAN                    
---------------------------------------------------
+                   QUERY PLAN                   
+------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on test2
-         Recheck Cond: (t ~ '[abc]{3}'::text)
-         ->  Bitmap Index Scan on test2_idx_gist
-               Index Cond: (t ~ '[abc]{3}'::text)
+   ->  Index Scan using test2_idx_gist on test2
+         Index Cond: (t ~ '[abc]{3}'::text)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 explain (costs off)
   select * from test2 where t ~* 'DEF';
-                   QUERY PLAN                    
--------------------------------------------------
+                   QUERY PLAN                   
+------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on test2
-         Recheck Cond: (t ~* 'DEF'::text)
-         ->  Bitmap Index Scan on test2_idx_gist
-               Index Cond: (t ~* 'DEF'::text)
+   ->  Index Scan using test2_idx_gist on test2
+         Index Cond: (t ~* 'DEF'::text)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 select * from test2 where t ~ '[abc]{3}';
    t    

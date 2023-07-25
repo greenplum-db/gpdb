@@ -42,6 +42,7 @@
 #include "commands/progress.h"
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
+#include "commands/vacuum.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -110,7 +111,7 @@ static void ReindexPartitions(Oid relid, int options, bool concurrent, bool isTo
 static void ReindexMultipleInternal(List *relids, int options, bool concurrent);
 static void reindex_error_callback(void *args);
 static void update_relispartition(Oid relationId, bool newval);
-static void dispatch_define_index(IndexStmt *stmt, Oid root_save_userid,
+static void dispatch_create_index(IndexStmt *stmt, Oid root_save_userid,
 								  int root_save_sec_context);
 
 
@@ -1681,7 +1682,7 @@ DefineIndex(Oid relationId,
 		if (shouldDispatch)
 		{
 			stmt->tableSpace = get_tablespace_name(tablespaceId);
-			dispatch_define_index(stmt, root_save_userid, root_save_sec_context);
+			dispatch_create_index(stmt, root_save_userid, root_save_sec_context);
 		}
 
 		/*
@@ -1699,7 +1700,7 @@ DefineIndex(Oid relationId,
 	stmt->idxname = indexRelationName;
 	if (shouldDispatch)
 	{
-		dispatch_define_index(stmt, root_save_userid, root_save_sec_context);
+		dispatch_create_index(stmt, root_save_userid, root_save_sec_context);
 
 		/* Set indcheckxmin in the coordinator, if it was set on any segment */
 		if (!indexInfo->ii_BrokenHotChain)
@@ -1922,11 +1923,13 @@ DefineIndex(Oid relationId,
  * Helper to dispatch a CREATE INDEX command to QEs.
  */
 static void
-dispatch_define_index(IndexStmt *stmt, Oid root_save_userid,
+dispatch_create_index(IndexStmt *stmt, Oid root_save_userid,
 					  int root_save_sec_context)
 {
 	Oid			save_userid;
 	int			save_sec_context;
+	struct CdbPgResults cdb_pgresults;
+	VacuumStatsContext stats_context;
 
 	/* make sure the QE uses the same index name that we chose */
 	stmt->oldNode = InvalidOid;
@@ -1944,8 +1947,17 @@ dispatch_define_index(IndexStmt *stmt, Oid root_save_userid,
 								DF_WITH_SNAPSHOT |
 								DF_NEED_TWO_PHASE,
 								GetAssignedOidsForDispatch(),
-								NULL);
+								&cdb_pgresults);
 	SetUserIdAndSecContext(save_userid, save_sec_context);
+	/*
+	 * XXX: Reuse vacuum stats combine function to aggregate post CREATE INDEX
+	 * relstats from QEs. We use vac_send_relstats_to_qd() for reporting these
+	 * stats (see index_update_stats()).
+	 */
+	stats_context.updated_stats = NIL;
+	vacuum_combine_stats(&stats_context, &cdb_pgresults, CurrentMemoryContext);
+	vac_update_relstats_from_list(&stats_context);
+	list_free(stats_context.updated_stats);
 }
 
 /*

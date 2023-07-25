@@ -62,3 +62,68 @@ ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, k);
 
 DROP TABLE tbl_create_index;
 
+-- Coverage to ensure that reltuples, relpages and relallvisible are updated
+-- correctly upon an index build (i.e. CREATE INDEX) on heap tables.
+-- Note: relallvisible is not maintained for indexes.
+
+CREATE TABLE index_build_relstats_heap(a int);
+INSERT INTO index_build_relstats_heap SELECT generate_series(1, 10);
+
+CREATE INDEX ON index_build_relstats_heap(a);
+
+-- Validate QEs
+SELECT gp_segment_id, count(*) FROM index_build_relstats_heap
+GROUP BY gp_segment_id ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples, relpages, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap' ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples, relpages, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap_a_idx' ORDER BY gp_segment_id;
+-- Validate on QD
+SELECT reltuples, relpages, relallvisible FROM pg_class WHERE relname='index_build_relstats_heap';
+SELECT reltuples, relpages, relallvisible FROM pg_class WHERE relname='index_build_relstats_heap_a_idx';
+
+-- Run VACUUM to populate relallvisible.
+VACUUM index_build_relstats_heap;
+
+-- Validate QEs
+SELECT gp_segment_id, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap' ORDER BY gp_segment_id;
+SELECT gp_segment_id, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap_a_idx' ORDER BY gp_segment_id;
+-- Validate on QD
+SELECT relallvisible FROM pg_class WHERE relname='index_build_relstats_heap';
+SELECT relallvisible FROM pg_class WHERE relname='index_build_relstats_heap_a_idx';
+
+-- Now drop the index and re-build.
+DROP INDEX index_build_relstats_heap_a_idx;
+CREATE INDEX ON index_build_relstats_heap(a);
+
+-- Now check that relallvisible remains the same on QEs and QDs.
+-- Validate QEs
+SELECT gp_segment_id, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap' ORDER BY gp_segment_id;
+SELECT gp_segment_id, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap_a_idx' ORDER BY gp_segment_id;
+-- Validate on QD
+SELECT relallvisible FROM pg_class WHERE relname='index_build_relstats_heap';
+SELECT relallvisible FROM pg_class WHERE relname='index_build_relstats_heap_a_idx';
+
+-- Limitation: If even one QE is empty in terms of reltuples, we will not update
+-- the relstats on the QD, even though they are updated on the QEs.
+CREATE TABLE index_build_relstats_heap_skew(a int);
+CREATE INDEX ON index_build_relstats_heap_skew(a);
+
+-- Segs 0 and 2 will be empty
+INSERT INTO index_build_relstats_heap SELECT 1 FROM generate_series(1, 10) i;
+
+-- Validate QEs
+SELECT gp_segment_id, count(*) FROM index_build_relstats_heap
+GROUP BY gp_segment_id ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples, relpages, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap_skew' ORDER BY gp_segment_id;
+SELECT gp_segment_id, reltuples, relpages, relallvisible FROM gp_dist_random('pg_class')
+WHERE relname='index_build_relstats_heap_skew_a_idx' ORDER BY gp_segment_id;
+
+-- Validate on QD
+SELECT reltuples, relpages, relallvisible FROM pg_class WHERE relname='index_build_relstats_heap_skew';
+SELECT reltuples, relpages, relallvisible FROM pg_class WHERE relname='index_build_relstats_heap_skew_a_idx';

@@ -54,11 +54,11 @@ CREATE INDEX i_bmtest2_b ON bmscantest2 USING BITMAP(b);
 CREATE INDEX i_bmtest2_c ON bmscantest2(c);
 CREATE INDEX i_bmtest2_d ON bmscantest2(d);
 
-EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 
-EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest2 WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
 
@@ -73,12 +73,12 @@ CREATE INDEX i_bmtest_ao_b ON bmscantest_ao USING BITMAP(b);
 CREATE INDEX i_bmtest_ao_c ON bmscantest_ao(c);
 CREATE INDEX i_bmtest_ao_d ON bmscantest_ao(d);
 
-EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
 EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 
-EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
 EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
 SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
@@ -94,14 +94,14 @@ CREATE INDEX i_bmtest_aocs_b ON bmscantest_aocs USING BITMAP(b);
 CREATE INDEX i_bmtest_aocs_c ON bmscantest_aocs(c);
 CREATE INDEX i_bmtest_aocs_d ON bmscantest_aocs(d);
 
-EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
 EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
 
-EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
-EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
 SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
 
 

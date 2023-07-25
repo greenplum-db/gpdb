@@ -62,6 +62,7 @@
 #include "commands/progress.h"
 #include "commands/tablecmds.h"
 #include "commands/trigger.h"
+#include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -2979,6 +2980,38 @@ index_update_stats(Relation rel,
 	{
 		heap_inplace_update(pg_class, tuple);
 		/* the above sends a cache inval message */
+
+		if (reltuples > 0 &&
+			Gp_role == GP_ROLE_EXECUTE &&
+			!IsSystemClass(rd_rel->oid, rd_rel) &&
+			!isTempOrTempToastNamespace(rd_rel->relnamespace))
+		{
+			/*
+			 * Send the updated relstats to the QD for aggregation. But do this
+			 * only for non-empty relations. Sending it for empty relations
+			 * breaks the detection mechanism for whether an empty table has
+			 * already been analyzed/vacuumed in vac_update_relstats() on the
+			 * QD side. Plus, we save on overhead.
+			 *
+			 * PS: Empty index builds can have the index rel's relpages = 1
+			 * even if reltuples = 0 (for meta-page) and won't have their
+			 * relpages updated on QD. This is what we desire. The index
+			 * meta-page is usually disregarded for planning decisions anyway.
+			 *
+			 * XXX: The detection mechanism, among other stats infrastructure
+			 * will have to change when we absorb upstream commit 3d351d916b2,
+			 * which includes reltuples=-1 to indicate vacuum/analyze on
+			 * empty relations.
+			 *
+			 * Current limitation: If even one QE has reltuples = 0, we will
+			 * fail to update the relstats on the QD. See comment in
+			 * vacuum_combine_stats().
+			 */
+			vac_send_relstats_to_qd(rd_rel->oid,
+									rd_rel->relpages,
+									rd_rel->reltuples,
+									rd_rel->relallvisible);
+		}
 	}
 	else
 	{
