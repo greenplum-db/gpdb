@@ -738,6 +738,11 @@ cdb_estimate_partitioned_numpages(Relation rel)
 	if (estimate.totalpages > 0)
 		return estimate;
 
+	// To avoid blocking concurrent transactions on leaf partitions
+	// throughout the entire transition, we refrain from acquiring locks on
+	// the leaf partitions. Instead, we acquire locks only on the
+	// partitions that need to be scanned when ORCA writes the plan,
+	// although it may lead to less accurate stats.
 	inheritors = find_all_inheritors(RelationGetRelid(rel),
 									 NoLock,
 									 NULL);
@@ -750,6 +755,11 @@ cdb_estimate_partitioned_numpages(Relation rel)
 			childrel = RelationIdGetRelation(childid);
 		else
 			childrel = rel;
+
+		// If childrel is NULL, continue by assuming the child relation
+		// has 0 pages.
+		if (childrel == NULL)
+			continue;
 
 		estimate.totalpages += childrel->rd_rel->relpages;
 		estimate.totalallvisiblepages += childrel->rd_rel->relallvisible;
