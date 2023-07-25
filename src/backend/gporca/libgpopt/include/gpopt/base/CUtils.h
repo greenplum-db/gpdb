@@ -1009,10 +1009,6 @@ public:
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
 
 	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
-
-	// Check if a CLogicalProject expression has a
-	// CScalarFunc as it's sub child which returns set
-	static BOOL LogicalProjectReturnsSet(CExpression *pexprLogicalProject);
 };	// class CUtils
 
 // hash set from expressions
