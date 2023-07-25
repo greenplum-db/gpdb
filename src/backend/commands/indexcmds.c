@@ -110,6 +110,9 @@ static void ReindexPartitions(Oid relid, int options, bool concurrent, bool isTo
 static void ReindexMultipleInternal(List *relids, int options, bool concurrent);
 static void reindex_error_callback(void *args);
 static void update_relispartition(Oid relationId, bool newval);
+static void dispatch_define_index(IndexStmt *stmt, Oid root_save_userid,
+								  int root_save_sec_context);
+
 
 /*
  * callback argument type for RangeVarCallbackForReindexIndex()
@@ -1677,26 +1680,8 @@ DefineIndex(Oid relationId,
 		stmt->idxname = indexRelationName;
 		if (shouldDispatch)
 		{
-			Oid			save_userid;
-			int			save_sec_context;
-			/* make sure the QE uses the same index name that we chose */
-			stmt->oldNode = InvalidOid;
-			Assert(stmt->relation != NULL);
-
 			stmt->tableSpace = get_tablespace_name(tablespaceId);
-			/*
-			 * Switch to login user, so that the connection to QEs use the
-			 * same user as the connection to QD.
-			 */
-			GetUserIdAndSecContext(&save_userid, &save_sec_context);
-			SetUserIdAndSecContext(root_save_userid, root_save_sec_context);
-			CdbDispatchUtilityStatement((Node *) stmt,
-										DF_CANCEL_ON_ERROR |
-										DF_WITH_SNAPSHOT |
-										DF_NEED_TWO_PHASE,
-										GetAssignedOidsForDispatch(),
-										NULL);
-			SetUserIdAndSecContext(save_userid, save_sec_context);
+			dispatch_define_index(stmt, root_save_userid, root_save_sec_context);
 		}
 
 		/*
@@ -1714,24 +1699,7 @@ DefineIndex(Oid relationId,
 	stmt->idxname = indexRelationName;
 	if (shouldDispatch)
 	{
-		Oid			save_userid;
-		int			save_sec_context;
-		/* make sure the QE uses the same index name that we chose */
-		stmt->oldNode = InvalidOid;
-		Assert(stmt->relation != NULL);
-		/*
-		 * Switch to login user, so that the connection to QEs use the
-		 * same user as the connection to QD.
-		 */
-		GetUserIdAndSecContext(&save_userid, &save_sec_context);
-		SetUserIdAndSecContext(root_save_userid, root_save_sec_context);
-		CdbDispatchUtilityStatement((Node *) stmt,
-									DF_CANCEL_ON_ERROR |
-									DF_WITH_SNAPSHOT |
-									DF_NEED_TWO_PHASE,
-									GetAssignedOidsForDispatch(),
-									NULL);
-		SetUserIdAndSecContext(save_userid, save_sec_context);
+		dispatch_define_index(stmt, root_save_userid, root_save_sec_context);
 
 		/* Set indcheckxmin in the coordinator, if it was set on any segment */
 		if (!indexInfo->ii_BrokenHotChain)
@@ -1950,6 +1918,35 @@ DefineIndex(Oid relationId,
 	return address;
 }
 
+/*
+ * Helper to dispatch a CREATE INDEX command to QEs.
+ */
+static void
+dispatch_define_index(IndexStmt *stmt, Oid root_save_userid,
+					  int root_save_sec_context)
+{
+	Oid			save_userid;
+	int			save_sec_context;
+
+	/* make sure the QE uses the same index name that we chose */
+	stmt->oldNode = InvalidOid;
+	Assert(RelationIsValid(stmt->relation));
+	Assert(IS_QUERY_DISPATCHER());
+
+	/*
+	 * Switch to login user, so that the connection to QEs use the
+	 * same user as the connection to QD.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(root_save_userid, root_save_sec_context);
+	CdbDispatchUtilityStatement((Node *) stmt,
+								DF_CANCEL_ON_ERROR |
+								DF_WITH_SNAPSHOT |
+								DF_NEED_TWO_PHASE,
+								GetAssignedOidsForDispatch(),
+								NULL);
+	SetUserIdAndSecContext(save_userid, save_sec_context);
+}
 
 /*
  * CheckMutability
