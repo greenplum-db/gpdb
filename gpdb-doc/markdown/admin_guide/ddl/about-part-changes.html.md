@@ -22,7 +22,7 @@ The following partitioning-related features are *new* in Greenplum 7:
     - Support for multi-column range partitioning.
     - Support for specifying an expression in the partition key.
     - A partitioned table may have zero partitions.
-    - Support for a heterogeneous partition hierarchy that allows child partitions of different levels and allows for different partitioning strategies amonst the child partitions.
+    - Support for a heterogeneous partition hierarchy that allows child partitions of different levels and allows for different partitioning strategies amongst the child partitions.
 - Less restrictive locking in `ATTACH PARTITION`. You can now attach a partition to a partition hierarchy without disrupting many normal query executions on the partition.
 - `GRANT ... ONLY` and `REVOKE ... ONLY` syntaxes that direct Greenplum to apply the operation to the named table only (does not recurse the operation to child tables).
 - `ALTER TABLE ONLY` syntax that directs Greenplum to apply the operation to the named table only (does not recurse the operation to child tables).
@@ -102,7 +102,7 @@ The following items describe the Greenplum 7 *changes* to classic partitioning s
     - The partitions created from a `SPLIT PARTITION` inherit the properties of the split child.
     - An attached partition maintains its original properties.
 
-- The Greenplum Query Planner (GPORCA) does not support multi-level partitioned tables.
+> **Note** The Greenplum Query Planner (GPORCA) does not support multi-level partitioned tables.
 
 ## <a id="other"></a>Additional Considerations
 
