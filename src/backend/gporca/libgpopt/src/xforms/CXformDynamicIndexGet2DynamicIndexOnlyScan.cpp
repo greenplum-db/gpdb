@@ -81,7 +81,8 @@ CXformDynamicIndexGet2DynamicIndexOnlyScan::Transform(
 	CIndexDescriptor *pindexdesc = popIndexGet->Pindexdesc();
 	CColRefArray *pdrgpcrOutput = popIndexGet->PdrgpcrOutput();
 
-	if (!CXformUtils::FCoverIndex(mp, pindexdesc, ptabdesc, pdrgpcrOutput))
+	if (pexprIndexCond->DeriveHasSubquery() ||
+		!CXformUtils::FCoverIndex(mp, pindexdesc, ptabdesc, pdrgpcrOutput))
 	{
 		return;
 	}

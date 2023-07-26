@@ -33,7 +33,7 @@
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
-#include "executor/execDynamic.h"
+#include "executor/execDynamicIndexes.h"
 #include "executor/nodeBitmapIndexscan.h"
 #include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeDynamicBitmapIndexscan.h"

@@ -22,7 +22,7 @@
 
 #include "catalog/partition.h"
 #include "executor/executor.h"
-#include "executor/execDynamic.h"
+#include "executor/execDynamicIndexes.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
 #include "executor/execPartition.h"

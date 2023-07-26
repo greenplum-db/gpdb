@@ -42,7 +42,7 @@ OBJS += nodeMotion.o \
        nodeTupleSplit.o \
        nodePartitionSelector.o
 
-OBJS += execDynamic.o \
+OBJS += execDynamicIndexes.o \
         nodeDynamicSeqscan.o \
         nodeDynamicIndexscan.o \
         nodeDynamicIndexOnlyscan.o \

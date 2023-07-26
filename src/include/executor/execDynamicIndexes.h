@@ -1,16 +1,15 @@
 /*--------------------------------------------------------------------
- * execPartition.h
- *		POSTGRES partitioning executor interface
+ * execDynamicIndexes.h
  *
  * Copyright (C) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
  *
  * IDENTIFICATION
- *		src/include/executor/execPartition.h
+ *		src/include/executor/execDynamicIndexes.h
  *--------------------------------------------------------------------
  */
 
-#ifndef EXECDYNAMIC_H
-#define EXECDYNAMIC_H
+#ifndef EXECDYNAMICINDEXES_H
+#define EXECDYNAMICINDEXES_H
 
 #include "nodes/execnodes.h"
 
@@ -19,4 +18,4 @@ extern TupleTableSlot *ExecNextDynamicIndexScan(DynamicIndexScanState *node);
 extern void ExecEndDynamicIndexScan(DynamicIndexScanState *node);
 extern void ExecReScanDynamicIndex(DynamicIndexScanState *node);
 
-#endif							/* EXECDYNAMIC_H */
+#endif							/* EXECDYNAMICINDEXES_H */

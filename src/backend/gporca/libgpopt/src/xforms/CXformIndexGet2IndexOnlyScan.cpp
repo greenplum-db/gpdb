@@ -99,12 +99,8 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 
 	// extract components
 	CExpression *pexprIndexCond = (*pexpr)[0];
-	if (pexprIndexCond->DeriveHasSubquery())
-	{
-		return;
-	}
-
-	if (!CXformUtils::FCoverIndex(mp, pindexdesc, ptabdesc, pdrgpcrOutput))
+	if (pexprIndexCond->DeriveHasSubquery() ||
+		!CXformUtils::FCoverIndex(mp, pindexdesc, ptabdesc, pdrgpcrOutput))
 	{
 		return;
 	}

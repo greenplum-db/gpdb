@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * nodeDynamicIndexscan.c
+ * nodeDynamicIndexOnlyscan.c
  *	  Support routines for scanning one or more indexes that are
  *	  determined at runtime.
  *
@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	    src/backend/executor/nodeDynamicIndexscan.c
+ *	    src/backend/executor/nodeDynamicIndexOnlyscan.c
  *
  *-------------------------------------------------------------------------
  */
@@ -21,7 +21,7 @@
 
 #include "catalog/partition.h"
 #include "executor/executor.h"
-#include "executor/execDynamic.h"
+#include "executor/execDynamicIndexes.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
 #include "executor/execPartition.h"

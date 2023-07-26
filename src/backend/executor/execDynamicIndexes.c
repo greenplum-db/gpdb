@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * execDynamic.c
+ * execDynamicIndexes.c
  *	  Common support routines for scanning one or more indexes that are
  *	  determined at runtime.
  *
@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	    src/backend/executor/execDynamic.c
+ *	    src/backend/executor/execDynamicIndexes.c
  *
  *-------------------------------------------------------------------------
  */
@@ -21,7 +21,7 @@
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
-#include "executor/execDynamic.h"
+#include "executor/execDynamicIndexes.h"
 #include "executor/execPartition.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/nodeIndexonlyscan.h"
