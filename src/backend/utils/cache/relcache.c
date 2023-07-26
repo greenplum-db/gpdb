@@ -2275,12 +2275,23 @@ RelationClose(Relation relation)
 	/* Note: no locking manipulations needed */
 	RelationDecrementReferenceCount(relation);
 
+	/*
+	 * Foreign tables' policy depends on the foreign server even the
+	 * wrapper's options, don't use relation and its policy in the cache.
+	 *
+	 * FIXME: refactor to avoid performance loss.
+	 */
+	if (
 #ifdef RELCACHE_FORCE_RELEASE
-	if (RelationHasReferenceCountZero(relation) &&
-		relation->rd_createSubid == InvalidSubTransactionId &&
-		relation->rd_newRelfilenodeSubid == InvalidSubTransactionId)
-		RelationClearRelation(relation, false);
+		true ||
 #endif
+		(relation->rd_rel->relkind == RELKIND_FOREIGN_TABLE))
+	{
+		if (RelationHasReferenceCountZero(relation) &&
+			relation->rd_createSubid == InvalidSubTransactionId &&
+			relation->rd_newRelfilenodeSubid == InvalidSubTransactionId)
+			RelationClearRelation(relation, false);
+	}
 }
 
 /*
