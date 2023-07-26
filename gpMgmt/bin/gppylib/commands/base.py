@@ -19,7 +19,7 @@ for executing this set of commands.
 
 from queue import Queue, Empty
 from threading import Thread
-
+from collections import OrderedDict
 import os
 import signal
 import subprocess
@@ -652,8 +652,8 @@ def findCmdInPath(cmd):
         CMDPATH.append(GPHOME)
 
     # remove duplicate paths
-    seen = set()
-    CMDPATH = [p for p in CMDPATH if (p not in seen or seen.add(p))]
+    unique_paths = OrderedDict.fromkeys(CMDPATH)
+    CMDPATH = list(unique_paths.keys())
 
     if cmd not in CMD_CACHE:
         for p in CMDPATH:
