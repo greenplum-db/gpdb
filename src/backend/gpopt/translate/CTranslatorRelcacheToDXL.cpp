@@ -1028,6 +1028,8 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	bool index_partitioned = false;
 	ULongPtrArray *index_key_cols_array = nullptr;
 	ULONG *attno_mapping = nullptr;
+    ULongPtrArray *index_key_cols_nulls_order = nullptr;
+    ULongPtrArray *index_key_cols_sort_order = nullptr;
 
 	if (!IsIndexSupported(index_rel.get()))
 	{
@@ -1086,6 +1088,8 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	// extract the position of the key columns
 	index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
 	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
+    index_key_cols_nulls_order = GPOS_NEW(mp) ULongPtrArray(mp);
+    index_key_cols_sort_order = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
@@ -1105,6 +1109,24 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
 		}
 	}
+
+    if (index_type == IMDIndex::EmdindBtree){
+        for (int i = 0; i < form_pg_index->indnkeyatts; i++)
+        {
+            index_key_cols_sort_order->Append(GPOS_NEW(mp) ULONG(0));
+            index_key_cols_nulls_order->Append(GPOS_NEW(mp) ULONG(0));
+            ULONG rel_indoption = index_rel->rd_indoption[i];
+            if (rel_indoption & 2) {
+                // Nulls first
+                //index_key_cols_nulls_order->Append(GPOS_NEW(mp) ULONG(1));
+                index_key_cols_nulls_order->Replace(i, GPOS_NEW(mp) ULONG(1));
+            }
+            if (rel_indoption & 1) {
+                // Descending
+                index_key_cols_sort_order->Replace(i,GPOS_NEW(mp) ULONG(1));
+            }
+        }
+    }
 	mdid_rel->Release();
 
 	mdid_index->AddRef();
@@ -1124,8 +1146,9 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	CMDIndexGPDB *index = GPOS_NEW(mp)
 		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
-					 index_type, mdid_item_type, index_key_cols_array,
-					 included_cols, op_families_mdids, child_index_oids);
+                     index_type, mdid_item_type, index_key_cols_array,
+                     included_cols, op_families_mdids, child_index_oids,
+                     index_key_cols_sort_order, index_key_cols_nulls_order);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;

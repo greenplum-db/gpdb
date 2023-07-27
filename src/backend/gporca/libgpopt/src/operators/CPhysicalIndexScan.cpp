@@ -31,11 +31,12 @@ using namespace gpopt;
 CPhysicalIndexScan::CPhysicalIndexScan(
 	CMemoryPool *mp, CIndexDescriptor *pindexdesc, CTableDescriptor *ptabdesc,
 	ULONG ulOriginOpId, const CName *pnameAlias, CColRefArray *pdrgpcrOutput,
-	COrderSpec *pos)
+	COrderSpec *pos, EIndexScanDirection m_scan_direction)
 	: CPhysicalScan(mp, pnameAlias, ptabdesc, pdrgpcrOutput),
 	  m_pindexdesc(pindexdesc),
 	  m_ulOriginOpId(ulOriginOpId),
-	  m_pos(pos)
+	  m_pos(pos),
+      m_scan_direction(m_scan_direction)
 {
 	GPOS_ASSERT(nullptr != pindexdesc);
 	GPOS_ASSERT(nullptr != pos);

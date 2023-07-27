@@ -15,6 +15,7 @@
 #include "gpos/base.h"
 
 #include "gpopt/xforms/CXformExploration.h"
+#include "gpopt/operators/CPhysicalScan.h"
 namespace gpopt
 {
 using namespace gpos;
@@ -33,9 +34,14 @@ private:
 	// helper function to validate if index is applicable, given OrderSpec
 	// and index columns. This function checks if ORDER BY columns are prefix of
 	// the index columns.
-	static BOOL FIndexApplicableForOrderBy(COrderSpec *pos,
+	static BOOL FIndexApplicableForOrderBy(CMemoryPool *mp, COrderSpec *pos,
 										   CColRefArray *pdrgpcrIndexColumns,
 										   const IMDIndex *pmdindex);
+
+    static EIndexScanDirection FGetIndexScanDirection(COrderSpec *pos,
+                                                      const IMDIndex *pmdindex);
+
+    static BOOL FAreIndicesCommutative(CBitVector *index1, CBitVector *index2, ULONG size);
 
 public:
 	CXformLimit2IndexGet(const CXformLimit2IndexGet &) = delete;

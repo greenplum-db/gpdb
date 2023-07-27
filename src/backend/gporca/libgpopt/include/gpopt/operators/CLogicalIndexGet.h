@@ -16,6 +16,7 @@
 #include "gpopt/base/COrderSpec.h"
 #include "gpopt/metadata/CIndexDescriptor.h"
 #include "gpopt/operators/CLogical.h"
+#include "gpopt/operators/CPhysicalScan.h"
 
 
 namespace gpopt
@@ -59,6 +60,8 @@ private:
 	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
+    EIndexScanDirection m_scan_direction;
+
 public:
 	CLogicalIndexGet(const CLogicalIndexGet &) = delete;
 
@@ -67,7 +70,8 @@ public:
 
 	CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 					 CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
-					 const CName *pnameAlias, CColRefArray *pdrgpcrOutput);
+					 const CName *pnameAlias, CColRefArray *pdrgpcrOutput,
+                     EIndexScanDirection m_scan_direction);
 
 	// dtor
 	~CLogicalIndexGet() override;
@@ -141,6 +145,12 @@ public:
 	{
 		return m_pos;
 	}
+
+    EIndexScanDirection
+    PscanDirection() const
+    {
+        return m_scan_direction;
+    }
 
 	// operator specific hash function
 	ULONG HashValue() const override;

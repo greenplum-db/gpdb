@@ -73,5 +73,157 @@ set optimizer_enable_indexscan to off;
 -- project only columns in the Index
 explain (costs off) select b from test_index_with_orderby_limit order by b limit 10;
 select b from test_index_with_orderby_limit order by b limit 10;
-
+-- re-enable indexscan
+set optimizer_enable_indexscan to on;
 DROP TABLE test_index_with_orderby_limit;
+
+-- Tests for queries with order by and limit considering sort & null directions.
+CREATE TABLE test_index_with_sort_directions_on_orderby_limit (a int, b text, c float, d int, e text, f int);
+-- single col index with default order
+CREATE INDEX dir_index_a on test_index_with_sort_directions_on_orderby_limit using btree(a);
+-- single col index with reverse order
+CREATE INDEX dir_index_b on test_index_with_sort_directions_on_orderby_limit using btree(b desc);
+-- single col index with opp nulls direction
+CREATE INDEX dir_index_c on test_index_with_sort_directions_on_orderby_limit using btree(c nulls first);
+-- multi col index all with asc
+CREATE INDEX dir_index_bcd on test_index_with_sort_directions_on_orderby_limit using btree(b,c,d);
+-- multi col index all with desc
+CREATE INDEX dir_index_fde on test_index_with_sort_directions_on_orderby_limit using btree(f desc,d desc,e desc);
+-- multi col index mixed case
+CREATE INDEX dir_index_eda on test_index_with_sort_directions_on_orderby_limit using btree(e, d desc nulls last,a);
+-- Covering index
+CREATE INDEX dir_covering_index_eb ON test_index_with_sort_directions_on_orderby_limit(e desc) INCLUDE (b);
+INSERT INTO test_index_with_sort_directions_on_orderby_limit select i, CONCAT('col_b', i)::text, i/3.2, i+1, CONCAT('col_e', i)::text, i+3 from generate_series(1,10000) i;
+INSERT INTO test_index_with_sort_directions_on_orderby_limit values (null, null, null, null, null);
+ANALYZE test_index_with_sort_directions_on_orderby_limit;
+
+-- should use Forward IndexScan
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a limit 3;
+select a from test_index_with_sort_directions_on_orderby_limit order by a limit 3;
+-- should use Backward IndexScan
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a desc limit 3;
+select a from test_index_with_sort_directions_on_orderby_limit order by a desc limit 3;
+-- should use SeqScan with Sort
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a nulls first limit 3;
+select a from test_index_with_sort_directions_on_orderby_limit order by a nulls first limit 3;
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a desc nulls last limit 3;
+select a from test_index_with_sort_directions_on_orderby_limit order by a desc nulls last limit 3;
+
+-- should use Forward IndexScan
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+-- should use Backward IndexScan
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+-- should use SeqScan with Sort
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b nulls first limit 3;
+select b from test_index_with_sort_directions_on_orderby_limit order by b nulls first limit 3;
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc nulls last limit 3;
+select b from test_index_with_sort_directions_on_orderby_limit order by b desc nulls last limit 3;
+
+-- should use Forward IndexScan
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+-- should use Backward IndexScan
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+-- should use SeqScan with Sort
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c limit 3;
+select c from test_index_with_sort_directions_on_orderby_limit order by c  limit 3;
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc limit 3;
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc limit 3;
+
+-- should use Forward IndexScan
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
+-- should use Backward IndexScan
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
+-- should use SeqScan with Sort
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c desc,d desc limit 3;
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c desc,d desc limit 3;
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c ,d desc limit 3;
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c ,d desc limit 3;
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc, c ,d desc limit 3;
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc, c ,d desc limit 3;
+
+-- should use Forward IndexScan
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
+-- should use Backward IndexScan
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
+-- should use SeqScan with Sort
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d desc,e desc limit 3;
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d desc,e desc limit 3;
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d ,e desc limit 3;
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d ,e desc limit 3;
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc, d ,e desc limit 3;
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc, d ,e desc limit 3;
+
+-- should use Forward IndexScan
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+-- should use Backward IndexScan
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+explain (costs off) select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+-- should use SeqScan with Sort
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc,a desc limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc,a desc limit 3;
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d desc,a desc limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d desc,a desc limit 3;
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
+
+-- order by on a non-index columns, should use SeqScan
+explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+explain (costs off) select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e limit 3;
+select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e limit 3;
+explain (costs off) select d,a from test_index_with_sort_directions_on_orderby_limit order by d,a desc limit 3;
+select d,a from test_index_with_sort_directions_on_orderby_limit order by d,a desc limit 3;
+explain (costs off) select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc,c limit 3;
+select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc,c limit 3;
+
+-- order by on covering index, should use Backward IndexScan
+explain (costs off) select e from test_index_with_sort_directions_on_orderby_limit order by e desc limit 3;
+select e from test_index_with_sort_directions_on_orderby_limit order by e desc limit 3;
+
+-- order by on covering index with included column, should use SeqScan
+explain (costs off) select e,b from test_index_with_sort_directions_on_orderby_limit order by e, b limit 3;
+select e,b from test_index_with_sort_directions_on_orderby_limit order by e,b limit 3;
+
+-- check if IndexOnlyScan Forward/Backward is picked when required
+set optimizer_enable_indexscan to off;
+-- should use IndexOnlyScan Forward
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+-- should use IndexOnlyScan Backward
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+-- reset index scan
+set optimizer_enable_indexscan to on;
+DROP TABLE test_index_with_sort_directions_on_orderby_limit;
+
+-- check if DynamicSeqScan is used for partition tables.
+CREATE TABLE test_partition_table(a int, b int, c float) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(100) every(20));
+CREATE INDEX part_index_a ON test_partition_table using btree(a);
+INSERT INTO test_partition_table SELECT i, i+3, i/4.2 from generate_series(1,99) i;
+ANALYZE test_partition_table;
+
+explain (costs off) select a from test_partition_table order by a limit 3;
+select a from test_partition_table order by a limit 3;

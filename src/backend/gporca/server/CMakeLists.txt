@@ -106,7 +106,10 @@ BTreeIndex-Against-InList BTreeIndex-Against-InListLarge BTreeIndex-Against-Scal
 IndexScan-AOTable IndexScan-DroppedColumns IndexScan-BoolTrue IndexScan-BoolFalse
 IndexScan-Relabel IndexGet-OuterRefs LogicalIndexGetDroppedCols
 IndexScan-ORPredsNonPart IndexScan-ORPredsAOPart IndexScan-AndedIn SubqInIndexPred Hash-IndexScan
-IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols IndexScan-OrderBy-on-NonIndexCol;
+IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols IndexScan-OrderBy-on-NonIndexCol
+Forward-IndexScan-OrderBy-on-Single-IndexCol Backward-IndexScan-OrderBy-on-Single-IndexCol
+Forward-IndexScan-OrderBy-on-Multi-IndexCol Backward-IndexScan-OrderBy-on-Multi-IndexCol
+IndexScan-OrderBy-on-Multi-NonIndexCol;
 
 CBitmapScanTest:
 IndexedNLJBitmap BitmapIndex-ChooseHashJoin BitmapTableScan-AO-Btree-PickOnlyHighNDV

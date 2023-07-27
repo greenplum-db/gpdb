@@ -186,7 +186,7 @@ private:
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-		BOOL indexForOrderBy = false);
+		BOOL indexForOrderBy = false, EIndexScanDirection indexScanDirection=EisdForward);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
@@ -208,10 +208,10 @@ private:
 	PopStaticBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
 									 CTableDescriptor *ptabdesc,
 									 ULONG ulOriginOpId, CName *pname,
-									 CColRefArray *pdrgpcrOutput)
+									 CColRefArray *pdrgpcrOutput, EIndexScanDirection indexScanDirection)
 	{
 		return GPOS_NEW(mp) CLogicalIndexGet(
-			mp, pmdindex, ptabdesc, ulOriginOpId, pname, pdrgpcrOutput);
+			mp, pmdindex, ptabdesc, ulOriginOpId, pname, pdrgpcrOutput, indexScanDirection);
 	}
 
 	//	produce an expression representing a new btree index path
@@ -446,11 +446,11 @@ public:
 						 CExpressionArray *pdrgpexprConds,
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-						 BOOL indexForOrderBy = false)
+						 BOOL indexForOrderBy = false, EIndexScanDirection indexScanDirection=EisdForward)
 	{
 		return PexprBuildBtreeIndexPlan(
 			mp, md_accessor, pexprGet, ulOriginOpId, pdrgpexprConds,
-			pcrsScalarExpr, outer_refs, pmdindex, pmdrel, indexForOrderBy);
+			pcrsScalarExpr, outer_refs, pmdindex, pmdrel, indexForOrderBy, indexScanDirection);
 	}
 
 	// helper for creating bitmap bool op expressions

@@ -401,17 +401,15 @@ select c from test_index_with_orderby_limit order by c offset (select 9990);
 
 -- order by opposite to index sort direction
 explain (costs off) select a from test_index_with_orderby_limit order by a desc limit 10;
-                            QUERY PLAN
--------------------------------------------------------------------
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Sort
-                     Sort Key: a DESC
-                     ->  Seq Scan on test_index_with_orderby_limit
+               ->  Index Scan Backward using index_a on test_index_with_orderby_limit
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(6 rows)
 
 select a from test_index_with_orderby_limit order by a desc limit 10;
    a   
@@ -459,15 +457,15 @@ select a from test_index_with_orderby_limit order by a NULLS FIRST limit 10;
 
 -- order by desc with nulls last
 explain (costs off) select a from test_index_with_orderby_limit order by a desc NULLS LAST limit 10;
-                                    QUERY PLAN
------------------------------------------------------------------------------------
+                            QUERY PLAN
+-------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
                ->  Sort
                      Sort Key: a DESC NULLS LAST
-                     ->  Index Scan using index_a on test_index_with_orderby_limit
+                     ->  Seq Scan on test_index_with_orderby_limit
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
@@ -579,4 +577,918 @@ select b from test_index_with_orderby_limit order by b limit 10;
   8
 (10 rows)
 
+-- re-enable indexscan
+set optimizer_enable_indexscan to on;
 DROP TABLE test_index_with_orderby_limit;
+-- Tests for queries with order by and limit considering sort & null directions.
+CREATE TABLE test_index_with_sort_directions_on_orderby_limit (a int, b text, c float, d int, e text, f int);
+-- single col index with default order
+CREATE INDEX dir_index_a on test_index_with_sort_directions_on_orderby_limit using btree(a);
+-- single col index with reverse order
+CREATE INDEX dir_index_b on test_index_with_sort_directions_on_orderby_limit using btree(b desc);
+-- single col index with opp nulls direction
+CREATE INDEX dir_index_c on test_index_with_sort_directions_on_orderby_limit using btree(c nulls first);
+-- multi col index all with asc
+CREATE INDEX dir_index_bcd on test_index_with_sort_directions_on_orderby_limit using btree(b,c,d);
+-- multi col index all with desc
+CREATE INDEX dir_index_fde on test_index_with_sort_directions_on_orderby_limit using btree(f desc,d desc,e desc);
+-- multi col index mixed case
+CREATE INDEX dir_index_eda on test_index_with_sort_directions_on_orderby_limit using btree(e, d desc nulls last,a);
+-- Covering index
+CREATE INDEX dir_covering_index_eb ON test_index_with_sort_directions_on_orderby_limit(e desc) INCLUDE (b);
+INSERT INTO test_index_with_sort_directions_on_orderby_limit select i, CONCAT('col_b', i)::text, i/3.2, i+1, CONCAT('col_e', i)::text, i+3 from generate_series(1,10000) i;
+INSERT INTO test_index_with_sort_directions_on_orderby_limit values (null, null, null, null, null);
+ANALYZE test_index_with_sort_directions_on_orderby_limit;
+-- should use Forward IndexScan
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a limit 3;
+                                             QUERY PLAN
+----------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Index Scan using dir_index_a on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select a from test_index_with_sort_directions_on_orderby_limit order by a limit 3;
+ a 
+---
+ 1
+ 2
+ 3
+(3 rows)
+
+-- should use Backward IndexScan
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a desc limit 3;
+                                                 QUERY PLAN
+-------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Index Scan Backward using dir_index_a on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select a from test_index_with_sort_directions_on_orderby_limit order by a desc limit 3;
+   a   
+-------
+      
+ 10000
+  9999
+(3 rows)
+
+-- should use SeqScan with Sort
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a nulls first limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a NULLS FIRST
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select a from test_index_with_sort_directions_on_orderby_limit order by a nulls first limit 3;
+ a 
+---
+  
+ 1
+ 2
+(3 rows)
+
+explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a desc nulls last limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a DESC NULLS LAST
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select a from test_index_with_sort_directions_on_orderby_limit order by a desc nulls last limit 3;
+   a   
+-------
+ 10000
+  9999
+  9998
+(3 rows)
+
+-- should use Forward IndexScan
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+                                             QUERY PLAN
+----------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Index Scan using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+     b     
+-----------
+ 
+ col_b9999
+ col_b9998
+(3 rows)
+
+-- should use Backward IndexScan
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+                                                 QUERY PLAN
+-------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Index Scan Backward using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+    b     
+----------
+ col_b1
+ col_b10
+ col_b100
+(3 rows)
+
+-- should use SeqScan with Sort
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b nulls first limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Sort
+                     Sort Key: b NULLS FIRST
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select b from test_index_with_sort_directions_on_orderby_limit order by b nulls first limit 3;
+    b    
+---------
+ 
+ col_b1
+ col_b10
+(3 rows)
+
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc nulls last limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Sort
+                     Sort Key: b DESC NULLS LAST
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select b from test_index_with_sort_directions_on_orderby_limit order by b desc nulls last limit 3;
+     b     
+-----------
+ col_b9999
+ col_b9998
+ col_b9997
+(3 rows)
+
+-- should use Forward IndexScan
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+                                             QUERY PLAN
+----------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Index Scan using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+   c    
+--------
+       
+ 0.3125
+  0.625
+(3 rows)
+
+-- should use Backward IndexScan
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+                                                 QUERY PLAN
+-------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Index Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+     c     
+-----------
+      3125
+ 3124.6875
+  3124.375
+(3 rows)
+
+-- should use SeqScan with Sort
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Sort
+                     Sort Key: c
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c  limit 3;
+   c    
+--------
+ 0.3125
+  0.625
+ 0.9375
+(3 rows)
+
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Sort
+                     Sort Key: c DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc limit 3;
+     c     
+-----------
+          
+      3125
+ 3124.6875
+(3 rows)
+
+-- should use Forward IndexScan
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
+                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Index Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
+    b     |   c    |  d  
+----------+--------+-----
+ col_b1   | 0.3125 |   2
+ col_b10  |  3.125 |  11
+ col_b100 |  31.25 | 101
+(3 rows)
+
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
+                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c
+         ->  Limit
+               ->  Index Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
+    b     |   c    
+----------+--------
+ col_b1   | 0.3125
+ col_b10  |  3.125
+ col_b100 |  31.25
+(3 rows)
+
+-- should use Backward IndexScan
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Index Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
+     b     |     c     |   d   
+-----------+-----------+-------
+           |           |      
+ col_b9999 | 3124.6875 | 10000
+ col_b9998 |  3124.375 |  9999
+(3 rows)
+
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c
+         ->  Limit
+               ->  Index Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
+     b     |     c     
+-----------+-----------
+           |          
+ col_b9999 | 3124.6875
+ col_b9998 |  3124.375
+(3 rows)
+
+-- should use SeqScan with Sort
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c desc,d desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Sort
+                     Sort Key: b, c DESC, d DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c desc,d desc limit 3;
+    b     |   c    |  d  
+----------+--------+-----
+ col_b1   | 0.3125 |   2
+ col_b10  |  3.125 |  11
+ col_b100 |  31.25 | 101
+(3 rows)
+
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c ,d desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Sort
+                     Sort Key: b, c, d DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c ,d desc limit 3;
+    b     |   c    |  d  
+----------+--------+-----
+ col_b1   | 0.3125 |   2
+ col_b10  |  3.125 |  11
+ col_b100 |  31.25 | 101
+(3 rows)
+
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc, c ,d desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Sort
+                     Sort Key: b DESC, c, d DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc, c ,d desc limit 3;
+     b     |     c     |   d   
+-----------+-----------+-------
+           |           |      
+ col_b9999 | 3124.6875 | 10000
+ col_b9998 |  3124.375 |  9999
+(3 rows)
+
+-- should use Forward IndexScan
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Index Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+   f   |   d   |     e      
+-------+-------+------------
+       |       | 
+ 10003 | 10001 | col_e10000
+ 10002 | 10000 | col_e9999
+(3 rows)
+
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
+                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d
+         ->  Limit
+               ->  Index Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
+   f   |   d   
+-------+-------
+       |      
+ 10003 | 10001
+ 10002 | 10000
+(3 rows)
+
+-- should use Backward IndexScan
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Index Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
+ f | d |   e    
+---+---+--------
+ 4 | 2 | col_e1
+ 5 | 3 | col_e2
+ 6 | 4 | col_e3
+(3 rows)
+
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d
+         ->  Limit
+               ->  Index Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
+ f | d 
+---+---
+ 4 | 2
+ 5 | 3
+ 6 | 4
+(3 rows)
+
+-- should use SeqScan with Sort
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d desc,e desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Sort
+                     Sort Key: f, d DESC, e DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d desc,e desc limit 3;
+ f | d |   e    
+---+---+--------
+ 4 | 2 | col_e1
+ 5 | 3 | col_e2
+ 6 | 4 | col_e3
+(3 rows)
+
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d ,e desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Sort
+                     Sort Key: f, d, e DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d ,e desc limit 3;
+ f | d |   e    
+---+---+--------
+ 4 | 2 | col_e1
+ 5 | 3 | col_e2
+ 6 | 4 | col_e3
+(3 rows)
+
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc, d ,e desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Sort
+                     Sort Key: f DESC, d, e DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc, d ,e desc limit 3;
+   f   |   d   |     e      
+-------+-------+------------
+       |       | 
+ 10003 | 10001 | col_e10000
+ 10002 | 10000 | col_e9999
+(3 rows)
+
+-- should use Forward IndexScan
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
+                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Index Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
+    e     |  d  |  a  
+----------+-----+-----
+ col_e1   |   2 |   1
+ col_e10  |  11 |  10
+ col_e100 | 101 | 100
+(3 rows)
+
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d
+         ->  Limit
+               ->  Index Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+    e     |  d  |  a  
+----------+-----+-----
+ col_e1   |   2 |   1
+ col_e10  |  11 |  10
+ col_e100 | 101 | 100
+(3 rows)
+
+-- should use Backward IndexScan
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Index Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+     e     |   d   |  a   
+-----------+-------+------
+           |       |     
+ col_e9999 | 10000 | 9999
+ col_e9998 |  9999 | 9998
+(3 rows)
+
+explain (costs off) select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d
+         ->  Limit
+               ->  Index Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+     e     |   d   
+-----------+-------
+           |      
+ col_e9999 | 10000
+ col_e9998 |  9999
+(3 rows)
+
+-- should use SeqScan with Sort
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc,a desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Sort
+                     Sort Key: e, d DESC, a DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc,a desc limit 3;
+    e     |  d  |  a  
+----------+-----+-----
+ col_e1   |   2 |   1
+ col_e10  |  11 |  10
+ col_e100 | 101 | 100
+(3 rows)
+
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d desc,a desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Sort
+                     Sort Key: e DESC, d DESC, a DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d desc,a desc limit 3;
+     e     |   d   |  a   
+-----------+-------+------
+           |       |     
+ col_e9999 | 10000 | 9999
+ col_e9998 |  9999 | 9998
+(3 rows)
+
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Sort
+                     Sort Key: e, d, a
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
+    e     |  d  |  a  
+----------+-----+-----
+ col_e1   |   2 |   1
+ col_e10  |  11 |  10
+ col_e100 | 101 | 100
+(3 rows)
+
+-- order by on a non-index columns, should use SeqScan
+explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: d
+         ->  Limit
+               ->  Sort
+                     Sort Key: d
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+ d 
+---
+ 2
+ 3
+ 4
+(3 rows)
+
+explain (costs off) select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a, e
+         ->  Limit
+               ->  Sort
+                     Sort Key: a, e
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e limit 3;
+ a |   e    
+---+--------
+ 1 | col_e1
+ 2 | col_e2
+ 3 | col_e3
+(3 rows)
+
+explain (costs off) select d,a from test_index_with_sort_directions_on_orderby_limit order by d,a desc limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: d, a
+         ->  Limit
+               ->  Sort
+                     Sort Key: d, a DESC
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select d,a from test_index_with_sort_directions_on_orderby_limit order by d,a desc limit 3;
+ d | a 
+---+---
+ 2 | 1
+ 3 | 2
+ 4 | 3
+(3 rows)
+
+explain (costs off) select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc,c limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: d, c
+         ->  Limit
+               ->  Sort
+                     Sort Key: d DESC, c
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc,c limit 3;
+   d   |     c     
+-------+-----------
+       |          
+ 10001 |      3125
+ 10000 | 3124.6875
+(3 rows)
+
+-- order by on covering index, should use Backward IndexScan
+explain (costs off) select e from test_index_with_sort_directions_on_orderby_limit order by e desc limit 3;
+                                                  QUERY PLAN
+--------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e
+         ->  Limit
+               ->  Index Scan using dir_covering_index_eb on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select e from test_index_with_sort_directions_on_orderby_limit order by e desc limit 3;
+     e     
+-----------
+ 
+ col_e9999
+ col_e9998
+(3 rows)
+
+-- order by on covering index with included column, should use SeqScan
+explain (costs off) select e,b from test_index_with_sort_directions_on_orderby_limit order by e, b limit 3;
+                                      QUERY PLAN
+--------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, b
+         ->  Limit
+               ->  Sort
+                     Sort Key: e, b
+                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select e,b from test_index_with_sort_directions_on_orderby_limit order by e,b limit 3;
+    e     |    b     
+----------+----------
+ col_e1   | col_b1
+ col_e10  | col_b10
+ col_e100 | col_b100
+(3 rows)
+
+-- check if IndexOnlyScan Forward/Backward is picked when required
+set optimizer_enable_indexscan to off;
+-- should use IndexOnlyScan Forward
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Index Only Scan using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+     b     
+-----------
+ 
+ col_b9999
+ col_b9998
+(3 rows)
+
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d
+         ->  Limit
+               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+    e     |  d  |  a  
+----------+-----+-----
+ col_e1   |   2 |   1
+ col_e10  |  11 |  10
+ col_e100 | 101 | 100
+(3 rows)
+
+-- should use IndexOnlyScan Backward
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+     e     |   d   |  a   
+-----------+-------+------
+           |       |     
+ col_e9999 | 10000 | 9999
+ col_e9998 |  9999 | 9998
+(3 rows)
+
+-- reset index scan
+set optimizer_enable_indexscan to on;
+DROP TABLE test_index_with_sort_directions_on_orderby_limit;
+-- check if DynamicSeqScan is used for partition tables.
+CREATE TABLE test_partition_table(a int, b int, c float) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(100) every(20));
+CREATE INDEX part_index_a ON test_partition_table using btree(a);
+INSERT INTO test_partition_table SELECT i, i+3, i/4.2 from generate_series(1,99) i;
+ANALYZE test_partition_table;
+explain (costs off) select a from test_partition_table order by a limit 3;
+                              QUERY PLAN
+----------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a
+                     ->  Dynamic Seq Scan on test_partition_table
+                           Number of partitions to scan: 5 (out of 5)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select a from test_partition_table order by a limit 3;
+ a 
+---
+ 1
+ 2
+ 3
+(3 rows)
+

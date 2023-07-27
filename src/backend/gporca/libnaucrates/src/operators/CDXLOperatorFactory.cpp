@@ -3721,4 +3721,51 @@ CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
 	return IMDIndex::EmdindSentinel;
 }
 
+ULONG
+CDXLOperatorFactory::ParseSortandNullsOrder(const XMLCh *xml_str_order, bool extract_sort) {
+    if (extract_sort) {
+        return (0 == XMLString::compareString(
+                xml_str_order, CDXLTokens::XmlstrToken(EdxltokenIndexKeyColSortASC)))? 0: 1;
+    }
+    else {
+        return (0 == XMLString::compareString(
+                xml_str_order, CDXLTokens::XmlstrToken(EdxltokenIndexKeyColNullLast)))? 0: 1;
+    }
+
+}
+
+ULongPtrArray *
+CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
+        CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val, bool extract_sort, ULONG num_of_keys)
+{
+    CMemoryPool *mp = dxl_memory_manager->Pmp();
+
+    ULongPtrArray *ulong_array = GPOS_NEW(mp) ULongPtrArray (mp);
+
+	if (xml_val== nullptr) {
+		for (ULONG ul = 0; ul < num_of_keys; ul++) {
+			ulong_array->Append(GPOS_NEW(mp) ULONG(0));
+		}
+		return ulong_array;
+	}
+
+    XMLStringTokenizer commma_sep_str_components(
+            xml_val, CDXLTokens::XmlstrToken(EdxltokenComma));
+    const ULONG num_tokens = commma_sep_str_components.countTokens();
+
+    if (num_tokens == 0) {
+        return ulong_array;
+    }
+
+    for (ULONG ul = 0; ul < num_tokens; ul++)
+    {
+        XMLCh *current_str = commma_sep_str_components.nextToken();
+        GPOS_ASSERT(nullptr != current_str);
+        ULONG value = ParseSortandNullsOrder(current_str, extract_sort);
+        ulong_array->Append(GPOS_NEW(mp) ULONG(value));
+    }
+    return ulong_array;
+}
+
+
 // EOF

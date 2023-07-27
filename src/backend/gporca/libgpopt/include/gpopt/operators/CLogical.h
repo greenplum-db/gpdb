@@ -31,7 +31,13 @@ class IStatistics;
 namespace gpopt
 {
 using namespace gpos;
-
+enum EIndexScanDirection
+{
+	EisdBackward = 0,
+	EisdForward,
+	EisdNoMovement,
+	EisdSentinel
+};
 // forward declaration
 class CColRefSet;
 class CKeyCollection;
@@ -156,7 +162,7 @@ protected:
 	// compute order spec based on an index
 	static COrderSpec *PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 									CColRefArray *colref_array,
-									const CTableDescriptor *ptabdesc);
+									const CTableDescriptor *ptabdesc, EIndexScanDirection scandirection=EisdForward);
 
 	// derive function properties using data access property of scalar child
 	static CFunctionProp *PfpDeriveFromScalar(CMemoryPool *mp,

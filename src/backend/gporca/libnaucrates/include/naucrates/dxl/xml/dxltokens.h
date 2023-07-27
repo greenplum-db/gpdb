@@ -521,6 +521,12 @@ enum Edxltoken
 	EdxltokenIndexTypeGist,
 	EdxltokenIndexTypeGin,
 	EdxltokenIndexItemType,
+    EdxltokenIndexKeyColsSortOrder,
+    EdxltokenIndexKeyColsNullsOrder,
+	EdxltokenIndexKeyColSortASC,
+    EdxltokenIndexKeyColSortDESC,
+	EdxltokenIndexKeyColNullFirst,
+	EdxltokenIndexKeyColNullLast,
 
 	EdxltokenOpfamily,
 	EdxltokenOpfamilies,
