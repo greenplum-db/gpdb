@@ -12,6 +12,7 @@ $node_master->init(
 	has_archiving    => 1,
 	allows_streaming => 1);
 my $backup_name = 'my_backup';
+my $master_connstr = $node_master->connstr;
 
 # Start it
 $node_master->start;
@@ -22,7 +23,7 @@ $node_master->backup($backup_name);
 # Initialize standby node from backup, fetching WAL from archives
 my $node_standby = get_new_node('standby');
 $node_standby->init_from_backup($node_master, $backup_name,
-has_streaming => 1, has_restoring => 1);
+	has_restoring => 1);
 # GPDB: this GUC is not yet supported
 # $node_standby->append_conf('postgresql.conf',
 # 	"wal_retrieve_retry_interval = '100ms'");
@@ -50,6 +51,9 @@ $node_standby->poll_query_until('postgres', $caughtup_query)
 my $result =
   $node_standby->safe_psql('postgres', "SELECT count(*) FROM tab_int");
 is($result, qq(1000), 'check content from archives');
+
+$node_standby->append_conf('recovery.conf', qq(primary_conninfo='$master_connstr'));
+$node_standby->restart;
 
 ###################### partial wal file tests ############################
 # Test the following scenario:
