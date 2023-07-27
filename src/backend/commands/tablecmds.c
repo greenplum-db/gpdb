@@ -20103,6 +20103,25 @@ ATExecAttachPartition(List **wqueue, Relation rel, PartitionCmd *cmd)
 						   RelationGetRelationName(rel),
 						   RelationGetRelationName(attachrel))));
 
+	/* GPDB: some error checking for writable external tables. This is to keep same behavior as pre-7X. */
+	if (attachrel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+	{
+		ExtTableEntry *exttable = GetExtTableEntryIfExists(attachrel->rd_id);
+		/* writable external table not allowed to be attached/exchanged */
+		if (exttable && exttable->iswritable)
+			ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					 errmsg("cannot attach a WRITABLE external table")));
+
+		/* readable external table: throw a warning about no validation (only printed for coordinator/utility mode) */
+		else if (exttable && !exttable->iswritable && Gp_role != GP_ROLE_EXECUTE)
+			ereport(NOTICE,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					 errmsg("partition constraints are not validated when attaching a readable external table")));
+		if (exttable)
+			pfree(exttable);
+	}
+
 	/* If the parent is permanent, so must be all of its partitions. */
 	if (rel->rd_rel->relpersistence != RELPERSISTENCE_TEMP &&
 		attachrel->rd_rel->relpersistence == RELPERSISTENCE_TEMP)

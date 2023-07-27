@@ -422,6 +422,7 @@ format 'csv';
 alter table exchange_sub_partition
 alter partition for (integer '2')
 exchange partition for (integer '2') with table exchange_external_table;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 select * from exchange_sub_partition;
  a | b 
 ---+---

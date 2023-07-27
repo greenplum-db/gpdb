@@ -1434,6 +1434,7 @@ COPY 26
 CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t21.00\n"' ON COORDINATOR FORMAT 'text';
 CREATE EXTERNAL TABLE
 ALTER TABLE sales EXCHANGE PARTITION dec17 WITH TABLE ext_dec17;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 ALTER TABLE
 DROP TABLE ext_dec17;
 DROP TABLE

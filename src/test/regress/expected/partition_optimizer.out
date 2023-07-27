@@ -594,6 +594,7 @@ ERROR:  cannot EXCHANGE PARTITION for relation "sto_ao_ao" -- partition has chil
 create table foo_p (i int, j int) distributed by (i) partition by range(j) (start(1) end(10) every(2));
 create readable external table bar_p(i int, j int) location ('gpfdist://host.invalid:8000/file') format 'text';
 alter table foo_p exchange partition for(3) with table bar_p;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 truncate foo_p;
 ERROR:  "foo_p_1_prt_2" is not a table
 drop table foo_p;
