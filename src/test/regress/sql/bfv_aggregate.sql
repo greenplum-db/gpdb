@@ -1479,6 +1479,16 @@ SELECT MIN(tx.c1) FROM tx GROUP BY (tx.c1)::VARCHAR;
 SELECT MIN(tx.c1) FROM tx GROUP BY (tx.c1)::VARCHAR;
 drop table tx;
 
+-- Eliminate unuseful columns of targetlist in multistage-agg
+create table ex1(a int, b int, c int);
+create table ex2(a int, b int, c int);
+insert into ex1 select i,i,i from generate_series(1, 10) i;
+insert into ex2 select i,i,i from generate_series(1, 10) i;
+explain (verbose on, costs off) select ex2.b/2, sum(ex1.a) from ex1, (select a, coalesce(b, 1) b from ex2) ex2 where ex1.a = ex2.a group by ex2.b/2;
+select ex2.b/2, sum(ex1.a) from ex1, (select a, coalesce(b, 1) b from ex2) ex2 where ex1.a = ex2.a group by ex2.b/2;
+explain (verbose on, costs off) SELECT b/2, sum(b) * (b/2) FROM ex1  GROUP BY b/2;
+SELECT b/2, sum(b) * (b/2) FROM ex1  GROUP BY b/2;
+
 -- ORCA should pick singlestage-agg plan when multistage-agg guc is true
 -- and distribution type is universal/replicated
 

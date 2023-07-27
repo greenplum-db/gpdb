@@ -155,6 +155,12 @@ typedef struct
 	AggStrategy strat;
 } split_rollup_data;
 
+typedef struct
+{
+	PathTarget *partial_target;
+	List *grps_tlist;
+} deconstruct_expr_context;
+
 /* Local functions */
 static Node *preprocess_expression(PlannerInfo *root, Node *expr, int kind);
 static void preprocess_qual_conditions(PlannerInfo *root, Node *jtnode);
@@ -5741,6 +5747,93 @@ create_scatter_path(PlannerInfo *root, List *scatterClause, Path *path)
 	return path;
 }
 
+/*
+ * Function: deconstruct_expr_walker
+ *
+ * Work for deconstruct_expr.
+ */
+static bool
+deconstruct_expr_walker(Node *node, deconstruct_expr_context *ctx)
+{
+	ListCell *lc;
+
+	if (node == NULL)
+	{
+		return false;
+	}
+	else if (IsA(node, Var))
+	{
+		if (((Var *) node)->varlevelsup != 0)
+			elog(ERROR, "Upper-level Var found where not expected");
+
+		add_new_column_to_pathtarget(ctx->partial_target, (Expr *)node);
+		return false;
+	}
+	else if (IsA(node, PlaceHolderVar))
+	{
+		if (((PlaceHolderVar *) node)->phlevelsup != 0)
+			elog(ERROR, "Upper-level PlaceHolderVar found where not expected");
+
+		add_new_column_to_pathtarget(ctx->partial_target, (Expr *)node);
+		return false;
+	}
+	else if (IsA(node, Aggref))
+	{
+		if (((Aggref *) node)->agglevelsup != 0)
+			elog(ERROR, "Upper-level Aggref found where not expected");
+
+		add_new_column_to_pathtarget(ctx->partial_target, (Expr *)node);
+		return false;
+	}
+	else if (IsA(node, GroupId))
+	{
+		if (((GroupId *) node)->agglevelsup != 0)
+			elog(ERROR, "Upper-level GROUP_ID found where not expected");
+
+		add_new_column_to_pathtarget(ctx->partial_target, (Expr *)node);
+		return false;
+	}
+	else if (IsA(node, GroupingFunc))
+	{
+		if (((GroupingFunc *) node)->agglevelsup != 0)
+			elog(ERROR, "Upper-level GROUPING found where not expected");
+
+		add_new_column_to_pathtarget(ctx->partial_target, (Expr *)node);
+		return false;
+	}
+	else
+	{
+		foreach(lc, ctx->grps_tlist)
+		{
+			Expr *grp_expr = (Expr *)lfirst(lc);
+
+			/* just return if node equal to group column */
+			if (equal(node, grp_expr))
+			{
+				return false;
+			}
+		}
+	}
+
+	return expression_tree_walker(node, deconstruct_expr_walker, (void *) ctx);
+}
+
+/*
+ * Function: deconstruct_expr
+ *
+ * Prepare an expression for execution within 2-stage aggregation.
+ * This involves adding targets as needed to the target list of the
+ * first (partial) aggregation.
+ */
+static bool
+deconstruct_expr(Expr *expr, PathTarget *partial_target, List *grps_tlist)
+{
+	deconstruct_expr_context ctx;
+	ctx.partial_target = partial_target;
+	ctx.grps_tlist = grps_tlist;
+
+	return deconstruct_expr_walker((Node *) expr, &ctx);
+}
 
 /*
  * make_group_input_target
@@ -5863,15 +5956,13 @@ make_partial_grouping_target(PlannerInfo *root,
 {
 	Query	   *parse = root->parse;
 	PathTarget *partial_target;
-	List	   *non_group_cols;
-	List	   *non_group_exprs;
-	int			i;
+	List	   *non_group_cols = NULL;
+	List	   *grps_tlist = NULL;
+	int			i = 0;
 	ListCell   *lc;
 
 	partial_target = create_empty_pathtarget();
-	non_group_cols = NIL;
 
-	i = 0;
 	foreach(lc, grouping_target->exprs)
 	{
 		Expr	   *expr = (Expr *) lfirst(lc);
@@ -5885,6 +5976,7 @@ make_partial_grouping_target(PlannerInfo *root,
 			 * (This allows the upper agg step to repeat the grouping calcs.)
 			 */
 			add_column_to_pathtarget(partial_target, expr, sgref);
+			grps_tlist = lappend(grps_tlist, expr);
 		}
 		else
 		{
@@ -5911,12 +6003,11 @@ make_partial_grouping_target(PlannerInfo *root,
 	 * be present already.)  Note this includes Vars used in resjunk items, so
 	 * we are covering the needs of ORDER BY and window specifications.
 	 */
-	non_group_exprs = pull_var_clause((Node *) non_group_cols,
-									  PVC_INCLUDE_AGGREGATES |
-									  PVC_RECURSE_WINDOWFUNCS |
-									  PVC_INCLUDE_PLACEHOLDERS);
-
-	add_new_columns_to_pathtarget(partial_target, non_group_exprs);
+	foreach(lc, non_group_cols)
+	{
+		Expr *expr = (Expr *) lfirst(lc);
+		deconstruct_expr(expr, partial_target, grps_tlist);
+	}
 
 	/*
 	 * Adjust Aggrefs to put them in partial mode.  At this point all Aggrefs
@@ -5946,7 +6037,6 @@ make_partial_grouping_target(PlannerInfo *root,
 	}
 
 	/* clean up cruft */
-	list_free(non_group_exprs);
 	list_free(non_group_cols);
 
 	/* XXX this causes some redundant cost calculation ... */
