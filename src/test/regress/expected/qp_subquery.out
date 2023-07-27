@@ -1754,5 +1754,148 @@ where xx='dd';
 ----+---
 (0 rows)
 
+-- Check that IN subquery is converted to EXISTS subquery with a predicate if possible
+CREATE TABLE t_outer (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO t_outer SELECT i, i+1 FROM generate_series(1,3) as i;
+CREATE TABLE t_inner (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO t_inner SELECT i, i+1 FROM generate_series(1,3) as i;
+-- Conversion happens when inner subquery's project list(t_outer.b+1) refers to outer table
+-- And inner subquery's project list doesn't refer to inner table.
+SELECT * FROM t_outer WHERE t_outer.a IN (SELECT t_outer.b-1 FROM t_inner);
+ a | b 
+---+---
+ 2 | 3
+ 3 | 4
+ 1 | 2
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer WHERE t_outer.a IN (SELECT t_outer.b-1 FROM t_inner);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t_outer.a, t_outer.b
+   ->  Nested Loop Semi Join
+         Output: t_outer.a, t_outer.b
+         ->  Seq Scan on qp_subquery.t_outer
+               Output: t_outer.a, t_outer.b
+               Filter: (t_outer.a = (t_outer.b - 1))
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on qp_subquery.t_inner
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(12 rows)
+
+SELECT t_outer.a IN (SELECT t_outer.a FROM generate_series(1, 1)) FROM t_outer;
+ ?column? 
+----------
+ t
+ t
+ t
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT t_outer.a IN (SELECT t_outer.a FROM generate_series(1, 1)) FROM t_outer;
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ((SubPlan 1))
+   ->  Seq Scan on qp_subquery.t_outer
+         Output: (SubPlan 1)
+         SubPlan 1
+           ->  Function Scan on pg_catalog.generate_series
+                 Output: t_outer.a
+                 Function Call: generate_series(1, 1)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(10 rows)
+
+-- Conversion doesn't happen when inner subquery's project list(t_inner.b+t_outer.b) refers to inner table
+SELECT * FROM t_outer WHERE t_outer.b*2 IN (SELECT t_inner.b+t_outer.b FROM t_inner);
+ a | b 
+---+---
+ 1 | 2
+ 2 | 3
+ 3 | 4
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer WHERE t_outer.b*2 IN (SELECT t_inner.b+t_outer.b FROM t_inner);
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t_outer.a, t_outer.b
+   ->  Nested Loop Semi Join
+         Output: t_outer.a, t_outer.b
+         Join Filter: ((t_inner.b + t_outer.b) = (t_outer.b * 2))
+         ->  Seq Scan on qp_subquery.t_outer
+               Output: t_outer.a, t_outer.b
+         ->  Materialize
+               Output: t_inner.b
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     Output: t_inner.b
+                     ->  Seq Scan on qp_subquery.t_inner
+                           Output: t_inner.b
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(15 rows)
+
+-- Conversion doesn't happen when inner subquery's project list(3) doesn't refer to outer table
+SELECT * FROM t_outer WHERE t_outer.b IN (SELECT 3 FROM t_inner);
+ a | b 
+---+---
+ 2 | 3
+(1 row)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer WHERE t_outer.b IN (SELECT 3 FROM t_inner);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t_outer.a, t_outer.b
+   ->  Nested Loop Semi Join
+         Output: t_outer.a, t_outer.b
+         ->  Seq Scan on qp_subquery.t_outer
+               Output: t_outer.a, t_outer.b
+               Filter: (t_outer.b = 3)
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on qp_subquery.t_inner
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(12 rows)
+
+-- Conversion will not happen when inner subquery's project list returns a set
+-- even when reference conditions satisfy
+SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b));
+ a | b 
+---+---
+ 1 | 2
+ 2 | 3
+ 3 | 4
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b));
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t_outer.a, t_outer.b
+   ->  Seq Scan on qp_subquery.t_outer
+         Output: t_outer.a, t_outer.b
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  ProjectSet
+                 Output: generate_series(1, t_outer.b)
+                 ->  Result
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(11 rows)
+
 set client_min_messages='warning';
 drop schema qp_subquery cascade;
