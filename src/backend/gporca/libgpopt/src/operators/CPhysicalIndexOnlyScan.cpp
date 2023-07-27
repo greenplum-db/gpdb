@@ -36,7 +36,7 @@ CPhysicalIndexOnlyScan::CPhysicalIndexOnlyScan(
 	  m_pindexdesc(pindexdesc),
 	  m_ulOriginOpId(ulOriginOpId),
 	  m_pos(pos),
-      m_scan_direction(m_scan_direction)
+	  m_scan_direction(m_scan_direction)
 {
 	GPOS_ASSERT(nullptr != pindexdesc);
 	GPOS_ASSERT(nullptr != pos);

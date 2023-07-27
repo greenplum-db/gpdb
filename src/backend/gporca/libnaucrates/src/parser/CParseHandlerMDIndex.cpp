@@ -35,16 +35,16 @@ CParseHandlerMDIndex::CParseHandlerMDIndex(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 	: CParseHandlerMetadataObject(mp, parse_handler_mgr, parse_handler_root),
-      m_mdid(nullptr),
-      m_mdname(nullptr),
-      m_clustered(false),
-      m_index_type(IMDIndex::EmdindSentinel),
-      m_mdid_item_type(nullptr),
-      m_index_key_cols_array(nullptr),
-      m_included_cols_array(nullptr),
-      m_index_key_cols_sort_order(nullptr),
-      m_index_key_cols_nulls_order(nullptr),
-      m_child_indexes_parse_handler(nullptr)
+	  m_mdid(nullptr),
+	  m_mdname(nullptr),
+	  m_clustered(false),
+	  m_index_type(IMDIndex::EmdindSentinel),
+	  m_mdid_item_type(nullptr),
+	  m_index_key_cols_array(nullptr),
+	  m_included_cols_array(nullptr),
+	  m_index_key_cols_sort_order(nullptr),
+	  m_index_key_cols_nulls_order(nullptr),
+	  m_child_indexes_parse_handler(nullptr)
 {
 }
 
@@ -135,25 +135,32 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 		m_parse_handler_mgr->GetDXLMemoryManager(), xmlszIndexIncludedCols,
 		EdxltokenIndexIncludedCols, EdxltokenIndex);
 
-  if (m_index_type == gpmd::IMDIndex::EmdindBtree) {
-      const XMLCh *xmlszIndexKeyColsSortOrder = CDXLOperatorFactory::ExtractAttrValue(
-              attrs, EdxltokenIndexKeyColsSortOrder, EdxltokenIndex, true);
-      m_index_key_cols_sort_order = CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
-              m_parse_handler_mgr->GetDXLMemoryManager(), xmlszIndexKeyColsSortOrder,
-              true, m_index_key_cols_array->Size());
+	if (m_index_type == gpmd::IMDIndex::EmdindBtree)
+	{
+		const XMLCh *xmlszIndexKeyColsSortOrder =
+			CDXLOperatorFactory::ExtractAttrValue(
+				attrs, EdxltokenIndexKeyColsSortOrder, EdxltokenIndex, true);
+		m_index_key_cols_sort_order =
+			CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
+				m_parse_handler_mgr->GetDXLMemoryManager(),
+				xmlszIndexKeyColsSortOrder, true,
+				m_index_key_cols_array->Size());
 
-      const XMLCh *xmlszIndexKeyColsNullsOrder = CDXLOperatorFactory::ExtractAttrValue(
-              attrs, EdxltokenIndexKeyColsNullsOrder, EdxltokenIndex, true);
-      m_index_key_cols_nulls_order = CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
-              m_parse_handler_mgr->GetDXLMemoryManager(), xmlszIndexKeyColsNullsOrder,
-		  false, m_index_key_cols_array->Size());
-
-  }
-  else {
-      CMemoryPool *mp = m_parse_handler_mgr->GetDXLMemoryManager()->Pmp();
-      m_index_key_cols_sort_order = GPOS_NEW(mp) ULongPtrArray (mp);
-      m_index_key_cols_nulls_order = GPOS_NEW(mp) ULongPtrArray (mp);
-  }
+		const XMLCh *xmlszIndexKeyColsNullsOrder =
+			CDXLOperatorFactory::ExtractAttrValue(
+				attrs, EdxltokenIndexKeyColsNullsOrder, EdxltokenIndex, true);
+		m_index_key_cols_nulls_order =
+			CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
+				m_parse_handler_mgr->GetDXLMemoryManager(),
+				xmlszIndexKeyColsNullsOrder, false,
+				m_index_key_cols_array->Size());
+	}
+	else
+	{
+		CMemoryPool *mp = m_parse_handler_mgr->GetDXLMemoryManager()->Pmp();
+		m_index_key_cols_sort_order = GPOS_NEW(mp) ULongPtrArray(mp);
+		m_index_key_cols_nulls_order = GPOS_NEW(mp) ULongPtrArray(mp);
+	}
 	// parse handler for operator class list
 	CParseHandlerBase *opfamilies_list_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
@@ -204,9 +211,10 @@ CParseHandlerMDIndex::EndElement(const XMLCh *const,  // element_uri,
 	}
 
 	m_imd_obj = GPOS_NEW(m_mp) CMDIndexGPDB(
-            m_mp, m_mdid, m_mdname, m_clustered, is_partitioned, m_index_type,
-            m_mdid_item_type, m_index_key_cols_array, m_included_cols_array,
-            mdid_opfamilies_array, child_indexes, m_index_key_cols_sort_order, m_index_key_cols_nulls_order);
+		m_mp, m_mdid, m_mdname, m_clustered, is_partitioned, m_index_type,
+		m_mdid_item_type, m_index_key_cols_array, m_included_cols_array,
+		mdid_opfamilies_array, child_indexes, m_index_key_cols_sort_order,
+		m_index_key_cols_nulls_order);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

@@ -2399,7 +2399,8 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
 	ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 	CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-	const IMDIndex *pmdindex, const IMDRelation *pmdrel, BOOL indexForOrderBy, EIndexScanDirection indexscanDirection)
+	const IMDIndex *pmdindex, const IMDRelation *pmdrel, BOOL indexForOrderBy,
+	EIndexScanDirection indexscanDirection)
 {
 	GPOS_ASSERT(nullptr != pexprGet);
 	GPOS_ASSERT(nullptr != pdrgpexprConds);
@@ -2528,7 +2529,8 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	{
 		popLogicalGet = PopStaticBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput, indexscanDirection);
+			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
+			indexscanDirection);
 	}
 
 	// clean up

@@ -42,7 +42,7 @@ private:
 	// order
 	COrderSpec *m_pos;
 
-    EIndexScanDirection m_scan_direction;
+	EIndexScanDirection m_scan_direction;
 
 public:
 	CPhysicalIndexOnlyScan(const CPhysicalIndexOnlyScan &) = delete;
@@ -51,7 +51,8 @@ public:
 	CPhysicalIndexOnlyScan(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 						   CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
 						   const CName *pnameAlias, CColRefArray *colref_array,
-						   COrderSpec *pos, EIndexScanDirection m_scan_direction);
+						   COrderSpec *pos,
+						   EIndexScanDirection m_scan_direction);
 
 	// dtor
 	~CPhysicalIndexOnlyScan() override;
@@ -85,10 +86,11 @@ public:
 		return m_ulOriginOpId;
 	}
 
-    EIndexScanDirection PIndexScanDirection() const
-    {
-        return m_scan_direction;
-    }
+	EIndexScanDirection
+	PIndexScanDirection() const
+	{
+		return m_scan_direction;
+	}
 
 	// operator specific hash function
 	ULONG HashValue() const override;

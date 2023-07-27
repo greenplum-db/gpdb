@@ -131,12 +131,14 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		COrderSpec *pos = popLimit->Pos();
 		if (FIndexApplicableForOrderBy(mp, pos, pdrgpcrIndexColumns, pmdindex))
 		{
-            // get IndexScan direction
-            EIndexScanDirection scandirection = FGetIndexScanDirection(pos, pmdindex);
+			// get IndexScan direction
+			EIndexScanDirection scandirection =
+				FGetIndexScanDirection(pos, pmdindex);
 			// build IndexGet expression
 			CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 				mp, md_accessor, pexprUpdtdRltn, popLimit->UlOpId(), pdrgpexpr,
-				pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel, true, scandirection);
+				pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel, true,
+				scandirection);
 
 			if (pexprIndexGet != nullptr)
 			{
@@ -173,8 +175,8 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //		the index columns.
 //---------------------------------------------------------------------------
 BOOL
-CXformLimit2IndexGet::FIndexApplicableForOrderBy(CMemoryPool *mp,
-	COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
+CXformLimit2IndexGet::FIndexApplicableForOrderBy(
+	CMemoryPool *mp, COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
 	const IMDIndex *pmdindex)
 {
 	// Ordered IndexScan is only applicable for BTree index
@@ -189,10 +191,12 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(CMemoryPool *mp,
 		return false;
 	}
 	BOOL indexApplicable = true;
-    CBitVector *req_sort_order = GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
-    CBitVector *derived_sort_order = GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
-    CBitVector *req_nulls_order = GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
-    CBitVector *derived_nulls_order = GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
+	CBitVector *req_sort_order = GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
+	CBitVector *derived_sort_order =
+		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
+	CBitVector *req_nulls_order = GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
+	CBitVector *derived_nulls_order =
+		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
 
 
 	for (ULONG i = 0; i < totalOrderByCols; i++)
@@ -200,34 +204,42 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(CMemoryPool *mp,
 		// Index is not applicable if either
 		// 1. Order By Column do not match with index key OR
 		// 2. NULLs are not Last in the specified Order by Clause.
-        const CColRef *colref = pos->Pcr(i);
+		const CColRef *colref = pos->Pcr(i);
 		if (!CColRef::Equals(colref, (*pdrgpcrIndexColumns)[i]))
 		{
 			indexApplicable = false;
 			break;
 		}
-        // ASC - 0 DESC - 1
-        // NULLS LAST - 0 NULLS FIRST - 1
-        //IMDId *less_than_mdid = colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
-        IMDId *greater_than_mdid = colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
-        if (greater_than_mdid->Equals(pos->GetMdIdSortOp(i))) {
-            req_sort_order->ExchangeSet(i);
-        }
-        if (pmdindex->KeySortOrderAt(i) == 1) {
-            derived_sort_order->ExchangeSet(i);
-        }
-        if (pos->Ent(i) == COrderSpec::EntFirst) {
-            req_nulls_order->ExchangeSet(i);
-        }
-        if (pmdindex->KeyNullOrderAt(i) == 1) {
-            derived_nulls_order->ExchangeSet(i);
-        }
+		// ASC - 0 DESC - 1
+		// NULLS LAST - 0 NULLS FIRST - 1
+		//IMDId *less_than_mdid = colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
+		IMDId *greater_than_mdid =
+			colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
+		if (greater_than_mdid->Equals(pos->GetMdIdSortOp(i)))
+		{
+			req_sort_order->ExchangeSet(i);
+		}
+		if (pmdindex->KeySortOrderAt(i) == 1)
+		{
+			derived_sort_order->ExchangeSet(i);
+		}
+		if (pos->Ent(i) == COrderSpec::EntFirst)
+		{
+			req_nulls_order->ExchangeSet(i);
+		}
+		if (pmdindex->KeyNullOrderAt(i) == 1)
+		{
+			derived_nulls_order->ExchangeSet(i);
+		}
 
-        if (!(req_sort_order->Equals(derived_sort_order) && req_nulls_order->Equals(derived_nulls_order)) &&
-            !(FAreIndicesCommutative(req_sort_order, derived_sort_order, i) && FAreIndicesCommutative(req_nulls_order, derived_nulls_order, i))) {
-            indexApplicable = false;
-            break;
-        }
+		if (!(req_sort_order->Equals(derived_sort_order) &&
+			  req_nulls_order->Equals(derived_nulls_order)) &&
+			!(FAreIndicesCommutative(req_sort_order, derived_sort_order, i) &&
+			  FAreIndicesCommutative(req_nulls_order, derived_nulls_order, i)))
+		{
+			indexApplicable = false;
+			break;
+		}
 	}
 
 	GPOS_DELETE(req_sort_order);
@@ -239,23 +251,31 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(CMemoryPool *mp,
 }
 
 
-EIndexScanDirection CXformLimit2IndexGet::FGetIndexScanDirection(COrderSpec *pos,
-                                                  const IMDIndex *pmdindex)
+EIndexScanDirection
+CXformLimit2IndexGet::FGetIndexScanDirection(COrderSpec *pos,
+											 const IMDIndex *pmdindex)
 {
-    const CColRef *colref = pos->Pcr(0);
-    IMDId *greater_than_mdid = colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
-    IMDId *pos_mdid = pos->GetMdIdSortOp(0);
+	const CColRef *colref = pos->Pcr(0);
+	IMDId *greater_than_mdid =
+		colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
+	IMDId *pos_mdid = pos->GetMdIdSortOp(0);
 
-	return (pos_mdid->Equals(greater_than_mdid) && pmdindex->KeySortOrderAt(0) == 1)
-				   || (!pos_mdid->Equals(greater_than_mdid) && pmdindex->KeySortOrderAt(0) == 0)
+	return (pos_mdid->Equals(greater_than_mdid) &&
+			pmdindex->KeySortOrderAt(0) == 1) ||
+				   (!pos_mdid->Equals(greater_than_mdid) &&
+					pmdindex->KeySortOrderAt(0) == 0)
 			   ? EisdForward
 			   : EisdBackward;
 }
 //
-BOOL CXformLimit2IndexGet::FAreIndicesCommutative(CBitVector *index1, CBitVector *index2, ULONG size) {
+BOOL
+CXformLimit2IndexGet::FAreIndicesCommutative(CBitVector *index1,
+											 CBitVector *index2, ULONG size)
+{
 	for (ULONG i = 0; i <= size; i++)
 	{
-		if (index1->Get(i) == index2->Get(i)) {
+		if (index1->Get(i) == index2->Get(i))
+		{
 			return false;
 		}
 	}

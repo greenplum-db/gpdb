@@ -45,7 +45,7 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp)
 	  m_pcrsOutput(nullptr),
 	  m_pos(nullptr),
 	  m_pcrsDist(nullptr),
-      m_scan_direction(EisdForward)
+	  m_scan_direction(EisdForward)
 {
 	m_fPattern = true;
 }
@@ -62,7 +62,8 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp)
 CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 								   CTableDescriptor *ptabdesc,
 								   ULONG ulOriginOpId, const CName *pnameAlias,
-								   CColRefArray *pdrgpcrOutput, EIndexScanDirection scanDirection)
+								   CColRefArray *pdrgpcrOutput,
+								   EIndexScanDirection scanDirection)
 	: CLogical(mp),
 	  m_pindexdesc(nullptr),
 	  m_ptabdesc(ptabdesc),
@@ -71,7 +72,7 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 	  m_pdrgpcrOutput(pdrgpcrOutput),
 	  m_pcrsOutput(nullptr),
 	  m_pcrsDist(nullptr),
-      m_scan_direction(scanDirection)
+	  m_scan_direction(scanDirection)
 {
 	GPOS_ASSERT(nullptr != pmdindex);
 	GPOS_ASSERT(nullptr != ptabdesc);
@@ -82,7 +83,8 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 	m_pindexdesc = CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
 
 	// compute the order spec
-	m_pos = PosFromIndex(m_mp, pmdindex, m_pdrgpcrOutput, ptabdesc, m_scan_direction);
+	m_pos = PosFromIndex(m_mp, pmdindex, m_pdrgpcrOutput, ptabdesc,
+						 m_scan_direction);
 
 	// create a set representation of output columns
 	m_pcrsOutput = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrOutput);
@@ -172,12 +174,13 @@ CLogicalIndexGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	}
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
 
-    EIndexScanDirection indexScanDirection = m_scan_direction;
+	EIndexScanDirection indexScanDirection = m_scan_direction;
 
 	m_ptabdesc->AddRef();
 
-	return GPOS_NEW(mp) CLogicalIndexGet(
-		mp, pmdindex, m_ptabdesc, m_ulOriginOpId, pnameAlias, pdrgpcrOutput, indexScanDirection);
+	return GPOS_NEW(mp)
+		CLogicalIndexGet(mp, pmdindex, m_ptabdesc, m_ulOriginOpId, pnameAlias,
+						 pdrgpcrOutput, indexScanDirection);
 }
 
 //---------------------------------------------------------------------------

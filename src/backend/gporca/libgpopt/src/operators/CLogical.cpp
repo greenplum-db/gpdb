@@ -146,7 +146,8 @@ CLogical::PdrgpdrgpcrCreatePartCols(CMemoryPool *mp, CColRefArray *colref_array,
 COrderSpec *
 CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 					   CColRefArray *colref_array,
-					   const CTableDescriptor *ptabdesc, EIndexScanDirection scandirection)
+					   const CTableDescriptor *ptabdesc,
+					   EIndexScanDirection scandirection)
 {
 	// compute the order spec after getting the current position of the index key
 	// from the table descriptor. Index keys are relative to the
@@ -188,22 +189,30 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 
 		IMDId *mdid = nullptr;
 		COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
-		if (scandirection == EisdForward) {
-
-			mdid = (pmdindex->KeySortOrderAt(ul) == 0)? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL)
-													   :colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
-			ent = (pmdindex->KeyNullOrderAt(ul) == 0)? COrderSpec::EntLast: COrderSpec::EntFirst;
-
+		if (scandirection == EisdForward)
+		{
+			mdid =
+				(pmdindex->KeySortOrderAt(ul) == 0)
+					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL)
+					: colref->RetrieveType()->GetMdidForCmpType(
+						  IMDType::EcmptG);
+			ent = (pmdindex->KeyNullOrderAt(ul) == 0) ? COrderSpec::EntLast
+													  : COrderSpec::EntFirst;
 		}
-		else if(scandirection == EisdBackward) {
-			mdid = (pmdindex->KeySortOrderAt(ul) == 0)? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG)
-													   :colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
+		else if (scandirection == EisdBackward)
+		{
+			mdid =
+				(pmdindex->KeySortOrderAt(ul) == 0)
+					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG)
+					: colref->RetrieveType()->GetMdidForCmpType(
+						  IMDType::EcmptL);
 
-			ent = (pmdindex->KeyNullOrderAt(ul) == 0)? COrderSpec::EntFirst: COrderSpec::EntLast;
+			ent = (pmdindex->KeyNullOrderAt(ul) == 0) ? COrderSpec::EntFirst
+													  : COrderSpec::EntLast;
 		}
-//        IMDId *mdid =
-//                colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
-//        mdid->AddRef();
+		//        IMDId *mdid =
+		//                colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
+		//        mdid->AddRef();
 		mdid->AddRef();
 
 		// TODO:  March 27th 2012; we hard-code NULL treatment

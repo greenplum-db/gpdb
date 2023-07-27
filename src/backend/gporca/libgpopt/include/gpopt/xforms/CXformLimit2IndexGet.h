@@ -14,8 +14,8 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/xforms/CXformExploration.h"
 #include "gpopt/operators/CPhysicalScan.h"
+#include "gpopt/xforms/CXformExploration.h"
 namespace gpopt
 {
 using namespace gpos;
@@ -38,10 +38,11 @@ private:
 										   CColRefArray *pdrgpcrIndexColumns,
 										   const IMDIndex *pmdindex);
 
-    static EIndexScanDirection FGetIndexScanDirection(COrderSpec *pos,
-                                                      const IMDIndex *pmdindex);
+	static EIndexScanDirection FGetIndexScanDirection(COrderSpec *pos,
+													  const IMDIndex *pmdindex);
 
-    static BOOL FAreIndicesCommutative(CBitVector *index1, CBitVector *index2, ULONG size);
+	static BOOL FAreIndicesCommutative(CBitVector *index1, CBitVector *index2,
+									   ULONG size);
 
 public:
 	CXformLimit2IndexGet(const CXformLimit2IndexGet &) = delete;

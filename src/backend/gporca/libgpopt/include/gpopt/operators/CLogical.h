@@ -160,9 +160,10 @@ protected:
 							CMaxCard maxcard);
 
 	// compute order spec based on an index
-	static COrderSpec *PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
-									CColRefArray *colref_array,
-									const CTableDescriptor *ptabdesc, EIndexScanDirection scandirection=EisdForward);
+	static COrderSpec *PosFromIndex(
+		CMemoryPool *mp, const IMDIndex *pmdindex, CColRefArray *colref_array,
+		const CTableDescriptor *ptabdesc,
+		EIndexScanDirection scandirection = EisdForward);
 
 	// derive function properties using data access property of scalar child
 	static CFunctionProp *PfpDeriveFromScalar(CMemoryPool *mp,

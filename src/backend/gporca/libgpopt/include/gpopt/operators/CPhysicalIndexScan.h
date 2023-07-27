@@ -44,7 +44,7 @@ private:
 	// order
 	COrderSpec *m_pos;
 
-    EIndexScanDirection m_scan_direction;
+	EIndexScanDirection m_scan_direction;
 
 public:
 	CPhysicalIndexScan(const CPhysicalIndexScan &) = delete;
@@ -87,10 +87,11 @@ public:
 		return m_ulOriginOpId;
 	}
 
-    EIndexScanDirection PIndexScanDirection() const
-    {
-        return m_scan_direction;
-    }
+	EIndexScanDirection
+	PIndexScanDirection() const
+	{
+		return m_scan_direction;
+	}
 
 	// operator specific hash function
 	ULONG HashValue() const override;

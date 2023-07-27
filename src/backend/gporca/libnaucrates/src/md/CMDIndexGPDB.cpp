@@ -38,22 +38,22 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 						   ULongPtrArray *included_cols_array,
 						   IMdIdArray *mdid_opfamilies_array,
 						   IMdIdArray *child_index_oids,
-                           ULongPtrArray *index_key_cols_sort_order,
-                           ULongPtrArray *index_key_cols_null_order)
+						   ULongPtrArray *index_key_cols_sort_order,
+						   ULongPtrArray *index_key_cols_null_order)
 
 	: m_mp(mp),
-      m_mdid(mdid),
-      m_mdname(mdname),
-      m_clustered(is_clustered),
-      m_partitioned(is_partitioned),
-      m_index_type(index_type),
-      m_mdid_item_type(mdid_item_type),
-      m_index_key_cols_array(index_key_cols_array),
-      m_included_cols_array(included_cols_array),
-      m_mdid_opfamilies_array(mdid_opfamilies_array),
-      m_child_index_oids(child_index_oids),
-      m_index_key_cols_sort_order(index_key_cols_sort_order),
-      m_index_key_cols_nulls_order(index_key_cols_null_order)
+	  m_mdid(mdid),
+	  m_mdname(mdname),
+	  m_clustered(is_clustered),
+	  m_partitioned(is_partitioned),
+	  m_index_type(index_type),
+	  m_mdid_item_type(mdid_item_type),
+	  m_index_key_cols_array(index_key_cols_array),
+	  m_included_cols_array(included_cols_array),
+	  m_mdid_opfamilies_array(mdid_opfamilies_array),
+	  m_child_index_oids(child_index_oids),
+	  m_index_key_cols_sort_order(index_key_cols_sort_order),
+	  m_index_key_cols_nulls_order(index_key_cols_null_order)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(IMDIndex::EmdindSentinel > index_type);
@@ -70,8 +70,8 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	GPOS_ASSERT_IMP(IMDIndex::EmdindBitmap == index_type,
 					nullptr != mdid_item_type && mdid_item_type->IsValid());
 	GPOS_ASSERT(nullptr != mdid_opfamilies_array);
-    GPOS_ASSERT(nullptr != index_key_cols_sort_order);
-    GPOS_ASSERT(nullptr != index_key_cols_null_order);
+	GPOS_ASSERT(nullptr != index_key_cols_sort_order);
+	GPOS_ASSERT(nullptr != index_key_cols_null_order);
 }
 
 //---------------------------------------------------------------------------
@@ -95,8 +95,8 @@ CMDIndexGPDB::~CMDIndexGPDB()
 	m_included_cols_array->Release();
 	m_mdid_opfamilies_array->Release();
 	CRefCount::SafeRelease(m_child_index_oids);
-    m_index_key_cols_sort_order->Release();
-    m_index_key_cols_nulls_order->Release();
+	m_index_key_cols_sort_order->Release();
+	m_index_key_cols_nulls_order->Release();
 }
 
 const CWStringDynamic *
@@ -263,14 +263,14 @@ CMDIndexGPDB::IncludedColAt(ULONG pos) const
 ULONG
 CMDIndexGPDB::KeySortOrderAt(ULONG pos) const
 {
-    return *((*m_index_key_cols_sort_order)[pos]);
+	return *((*m_index_key_cols_sort_order)[pos]);
 }
 
 
 ULONG
 CMDIndexGPDB::KeyNullOrderAt(ULONG pos) const
 {
-    return *((*m_index_key_cols_nulls_order)[pos]);
+	return *((*m_index_key_cols_nulls_order)[pos]);
 }
 //---------------------------------------------------------------------------
 //	@function:
@@ -343,21 +343,23 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		available_cols_str);
 	GPOS_DELETE(available_cols_str);
 
-    if (m_index_type == EmdindBtree) {
-        CWStringDynamic *index_key_cols_sort_order_str = SerializeSortAndNullsOrder
-                (m_mp, m_index_key_cols_sort_order, true);
-        xml_serializer->AddAttribute(
-                CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColsSortOrder),
-                index_key_cols_sort_order_str);
-        GPOS_DELETE(index_key_cols_sort_order_str);
+	if (m_index_type == EmdindBtree)
+	{
+		CWStringDynamic *index_key_cols_sort_order_str =
+			SerializeSortAndNullsOrder(m_mp, m_index_key_cols_sort_order, true);
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColsSortOrder),
+			index_key_cols_sort_order_str);
+		GPOS_DELETE(index_key_cols_sort_order_str);
 
-        CWStringDynamic *index_key_cols_nulls_order_str = SerializeSortAndNullsOrder
-                (m_mp, m_index_key_cols_nulls_order, false);
-        xml_serializer->AddAttribute(
-                CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColsNullsOrder),
-                index_key_cols_nulls_order_str);
-        GPOS_DELETE(index_key_cols_nulls_order_str);
-    }
+		CWStringDynamic *index_key_cols_nulls_order_str =
+			SerializeSortAndNullsOrder(m_mp, m_index_key_cols_nulls_order,
+									   false);
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColsNullsOrder),
+			index_key_cols_nulls_order_str);
+		GPOS_DELETE(index_key_cols_nulls_order_str);
+	}
 
 	// serialize operator class information
 	SerializeMDIdList(xml_serializer, m_mdid_opfamilies_array,
@@ -482,46 +484,54 @@ CMDIndexGPDB::ChildIndexMdids() const
 
 
 CWStringDynamic *
-CMDIndexGPDB::SerializeSortAndNullsOrder(CMemoryPool *mp, ULongPtrArray *dynamic_ptr_array, bool serialize_Sort) const
+CMDIndexGPDB::SerializeSortAndNullsOrder(CMemoryPool *mp,
+										 ULongPtrArray *dynamic_ptr_array,
+										 bool serialize_Sort) const
 {
-    CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
+	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
 
-    if (nullptr == dynamic_ptr_array)
-    {
-        return string_var.Reset();
-    }
+	if (nullptr == dynamic_ptr_array)
+	{
+		return string_var.Reset();
+	}
 
-    ULONG length = dynamic_ptr_array->Size();
-    for (ULONG ul = 0; ul < length; ul++)
-    {
-        ULONG value = *((*dynamic_ptr_array)[ul]);
-        const CWStringConst *string_repr = GetSortAndNullsString(value, serialize_Sort);
-        if (ul == length - 1)
-        {
-            // last element: do not print a comma
-            string_var->AppendFormat(string_repr->GetBuffer());
-        }
-        else
-        {
-            string_var->AppendFormat(
-                    GPOS_WSZ_LIT("%ls%ls"), string_repr->GetBuffer(),
-                    CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
-        }
-    }
+	ULONG length = dynamic_ptr_array->Size();
+	for (ULONG ul = 0; ul < length; ul++)
+	{
+		ULONG value = *((*dynamic_ptr_array)[ul]);
+		const CWStringConst *string_repr =
+			GetSortAndNullsString(value, serialize_Sort);
+		if (ul == length - 1)
+		{
+			// last element: do not print a comma
+			string_var->AppendFormat(string_repr->GetBuffer());
+		}
+		else
+		{
+			string_var->AppendFormat(
+				GPOS_WSZ_LIT("%ls%ls"), string_repr->GetBuffer(),
+				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
+		}
+	}
 
-    return string_var.Reset();
+	return string_var.Reset();
 }
 
 const CWStringConst *
-CMDIndexGPDB::GetSortAndNullsString(ULONG value, bool serialize_Sort) const {
-    if(serialize_Sort) {
-        return (value == 1)?  CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColSortDESC) :CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColSortASC);
-
-    }
-    else {
-        return (value == 1)?  CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColNullFirst) :CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColNullLast);
-    }
-
+CMDIndexGPDB::GetSortAndNullsString(ULONG value, bool serialize_Sort) const
+{
+	if (serialize_Sort)
+	{
+		return (value == 1)
+				   ? CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColSortDESC)
+				   : CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColSortASC);
+	}
+	else
+	{
+		return (value == 1)
+				   ? CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColNullFirst)
+				   : CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyColNullLast);
+	}
 }
 
 // EOF

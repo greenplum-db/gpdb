@@ -16,8 +16,8 @@
 
 #include "gpos/base.h"
 
-#include "naucrates/md/IMDIndex.h"
 #include "gpopt/base/COrderSpec.h"
+#include "naucrates/md/IMDIndex.h"
 
 namespace gpmd
 {
@@ -74,11 +74,11 @@ private:
 	// Child index oids
 	IMdIdArray *m_child_index_oids;
 
-    // index key's Sort Order
-    ULongPtrArray *m_index_key_cols_sort_order;
+	// index key's Sort Order
+	ULongPtrArray *m_index_key_cols_sort_order;
 
-    // index key's NULLs Order
-    ULongPtrArray *m_index_key_cols_nulls_order;
+	// index key's NULLs Order
+	ULongPtrArray *m_index_key_cols_nulls_order;
 
 public:
 	CMDIndexGPDB(const CMDIndexGPDB &) = delete;
@@ -91,8 +91,8 @@ public:
 				 ULongPtrArray *included_cols_array,
 				 IMdIdArray *mdid_opfamilies_array,
 				 IMdIdArray *child_index_oids,
-                 ULongPtrArray *m_index_key_cols_sort_order,
-                 ULongPtrArray *m_index_key_cols_nulls_order);
+				 ULongPtrArray *m_index_key_cols_sort_order,
+				 ULongPtrArray *m_index_key_cols_nulls_order);
 
 	// dtor
 	~CMDIndexGPDB() override;
@@ -127,11 +127,11 @@ public:
 	// return the n-th included column
 	ULONG IncludedColAt(ULONG pos) const override;
 
-    // return the n-th included column
-    ULONG KeySortOrderAt(ULONG pos) const override;
+	// return the n-th included column
+	ULONG KeySortOrderAt(ULONG pos) const override;
 
-    // return the n-th included column
-    ULONG KeyNullOrderAt(ULONG pos) const override;
+	// return the n-th included column
+	ULONG KeyNullOrderAt(ULONG pos) const override;
 
 	// return the position of the included column
 	ULONG GetIncludedColPos(ULONG column) const override;
@@ -153,19 +153,18 @@ public:
 	// child index oids
 	IMdIdArray *ChildIndexMdids() const override;
 
-    CWStringDynamic *
-    SerializeSortAndNullsOrder(CMemoryPool *mp,
-                                      ULongPtrArray *dynamic_ptr_array, bool serialize_Sort) const;
+	CWStringDynamic *SerializeSortAndNullsOrder(
+		CMemoryPool *mp, ULongPtrArray *dynamic_ptr_array,
+		bool serialize_Sort) const;
 
-    const CWStringConst *
-    GetSortAndNullsString(ULONG value, bool serialize_Sort) const;
+	const CWStringConst *GetSortAndNullsString(ULONG value,
+											   bool serialize_Sort) const;
 
 #ifdef GPOS_DEBUG
 	// debug print of the MD index
 	void DebugPrint(IOstream &os) const override;
 #endif
-
-    };
+};
 }  // namespace gpmd
 
 #endif	// !GPMD_CMDIndexGPDB_H

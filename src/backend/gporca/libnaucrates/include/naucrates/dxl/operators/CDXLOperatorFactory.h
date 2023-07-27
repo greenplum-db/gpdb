@@ -658,13 +658,14 @@ public:
 	// parse index type
 	static IMDIndex::EmdindexType ParseIndexType(const Attributes &attrs);
 
-//    // parse a comma-separated list of strings into a dynamic array
-//    // will raise an exception if list is not well-formed
-    static ULongPtrArray *
-    ExtractSortAndNullsToULongArray(
-            CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val, bool extract_sort, ULONG num_of_keys);
+	//    // parse a comma-separated list of strings into a dynamic array
+	//    // will raise an exception if list is not well-formed
+	static ULongPtrArray *ExtractSortAndNullsToULongArray(
+		CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
+		bool extract_sort, ULONG num_of_keys);
 
-    static ULONG ParseSortandNullsOrder(const XMLCh *xml_str_order, bool extract_sort);
+	static ULONG ParseSortandNullsOrder(const XMLCh *xml_str_order,
+										bool extract_sort);
 };
 
 // parse a comma-separated list of integers numbers into a dynamic array

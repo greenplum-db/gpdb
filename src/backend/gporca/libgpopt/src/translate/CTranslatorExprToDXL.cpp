@@ -813,7 +813,9 @@ CTranslatorExprToDXL::PdxlnIndexScan(CExpression *pexprIndexScan,
 
 	// TODO: vrgahavan; we assume that the index are always forward access.
 	// create the physical index scan operator
-    EdxlIndexScanDirection scandirection = (popIs->PIndexScanDirection() == EisdForward)? EdxlisdForward: EdxlisdBackward;
+	EdxlIndexScanDirection scandirection =
+		(popIs->PIndexScanDirection() == EisdForward) ? EdxlisdForward
+													  : EdxlisdBackward;
 	CDXLPhysicalIndexScan *dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexScan(
 		m_mp, table_descr, dxl_index_descr, scandirection);
 	CDXLNode *pdxlnIndexScan = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
@@ -917,7 +919,9 @@ CTranslatorExprToDXL::PdxlnIndexOnlyScan(CExpression *pexprIndexOnlyScan,
 		GPOS_NEW(m_mp) CDXLIndexDescr(pmdidIndex, pmdnameIndex);
 
 	// TODO: vrgahavan; we assume that the index are always forward access.
-    EdxlIndexScanDirection scandirection = (popIs->PIndexScanDirection() == EisdForward)? EdxlisdForward: EdxlisdBackward;
+	EdxlIndexScanDirection scandirection =
+		(popIs->PIndexScanDirection() == EisdForward) ? EdxlisdForward
+													  : EdxlisdBackward;
 	// create the physical index scan operator
 	CDXLPhysicalIndexOnlyScan *dxl_op =
 		GPOS_NEW(m_mp) CDXLPhysicalIndexOnlyScan(
