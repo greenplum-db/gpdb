@@ -520,6 +520,45 @@ SELECT groupname,cpu_max_percent,cpuset FROM gp_toolkit.gp_resgroup_config WHERE
 DROP RESOURCE GROUP rg_test_group;
 DROP RESOURCE GROUP
 
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=10, concurrency=5);
+CREATE RESOURCE GROUP
+CREATE ROLE rg_test_role RESOURCE GROUP rg_test_group;
+CREATE ROLE
+SET ROLE rg_test_role;
+SET
+CREATE TABLE rg_test_group_table(a int);
+CREATE TABLE
+SELECT count(*) FROM rg_test_group_table;
+ count 
+-------
+ 0     
+(1 row)
+SELECT is_session_in_group(pg_backend_pid(), 'rg_test_group');
+ is_session_in_group 
+---------------------
+ t                   
+(1 row)
+RESET ROLE;
+RESET
+SELECT count(*) FROM rg_test_group_table;
+ count 
+-------
+ 0     
+(1 row)
+SELECT is_session_in_group(pg_backend_pid(), 'admin_group');
+ is_session_in_group 
+---------------------
+ t                   
+(1 row)
+DROP TABLE rg_test_group_table;
+DROP TABLE
+DROP ROLE rg_test_role;
+DROP ROLE
+DROP RESOURCE GROUP rg_test_group;
+DROP RESOURCE GROUP
+
+
+
 -- test set cpu_max_percent to high value when gp_resource_group_cpu_limit is low
 -- start_ignore
 !\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.5;
