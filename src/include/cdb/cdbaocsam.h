@@ -315,17 +315,6 @@ typedef struct IndexFetchAOCOData
 	bool                *proj;
 } IndexFetchAOCOData;
 
-/*
- * GPDB_12_MERGE_FIXME:
- * Descriptor for fetches from table via bitmap. In upstream the code goes
- * through table_beginscan() and it should be the same struct in all cases.
- * However in GPDB extra info is needed which should not be initialized or
- * computed for all scan calls. A new method has been added (with a MERGE_FIXME)
- * which is only used for bitmap scans. Take advantage of it and create a new
- * struct to contain only the information needed. 
- */
-
-
 typedef struct AOCSHeaderScanDescData
 {
 	Oid   relid;  /* relid of the relation */
