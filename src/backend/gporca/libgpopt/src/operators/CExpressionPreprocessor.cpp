@@ -2781,8 +2781,7 @@ CExpressionPreprocessor::PexprExistWithPredFromINSubq(CMemoryPool *mp,
 			{
 				return pexprNew;
 			}
-			// also bail out if the project list returns set,
-			// as set can't be a valid operand of CScalarCmp (=) operator
+			// also bail out if the project list returns set
 			CExpression *pexprProjectList = (*pexprLogicalProject)[1];
 			if (pexprProjectList->DeriveSetReturningFunctionColumns()->Size() >
 				0)
