@@ -499,3 +499,32 @@ EXIT WHEN curtid > upto; /* in func */
 END LOOP; /* in func */
 END; $$ /* in func */
     LANGUAGE PLPGSQL;
+
+-- Check if autovacuum is enabled/disabled by inspecting the av launcher.
+CREATE or REPLACE FUNCTION check_autovacuum (enabled boolean) RETURNS bool AS
+$$
+declare
+	retries int; /* in func */
+	expected_count int; /* in func */
+begin
+	retries := 1200; /* in func */
+	if enabled then
+		/* (1 for each primary and 1 for the coordinator) */
+		expected_count := 4; /* in func */
+	else
+		expected_count := 0; /* in func */
+	end if; /* in func */
+	loop
+		if (select count(*) = expected_count from gp_stat_activity
+			where backend_type = 'autovacuum launcher') then
+			return true; /* in func */
+		end if; /* in func */
+		if retries <= 0 then
+			return false; /* in func */
+		end if; /* in func */
+		perform pg_sleep(0.1); /* in func */
+		retries := retries - 1; /* in func */
+	end loop; /* in func */
+end; /* in func */
+$$
+language plpgsql;
