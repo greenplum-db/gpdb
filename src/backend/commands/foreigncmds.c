@@ -13,6 +13,7 @@
  */
 #include "postgres.h"
 
+#include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/reloptions.h"
 #include "access/table.h"
@@ -39,12 +40,15 @@
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
 
 #include "catalog/oid_dispatch.h"
 
+/* Same as MAXNUMMESSAGES in sinvaladt.c */
+#define MAX_RELCACHE_INVAL_MSGS 4096
 
 typedef struct
 {
@@ -1142,6 +1146,63 @@ AlterForeignServer(AlterForeignServerStmt *stmt)
 									DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE,
 									GetAssignedOidsForDispatch(),
 									NULL);
+	}
+
+	if (stmt->options)
+	{
+		ListCell *optcell;
+		foreach(optcell, stmt->options)
+		{
+			DefElem *od = lfirst(optcell);
+
+			/*
+			 * Foreign tables' policy depends on the foreign server's option,
+			 * to force update the cached policy, if the option would impact,
+			 * invalidate the relcache of this server's every foreign table.
+			 */
+			if (strcmp(od->defname, "mpp_execute") == 0 ||
+				strcmp(od->defname, "num_segments") == 0)
+			{
+				Relation relation_rel;
+				TableScanDesc scan;
+				HeapTuple tuple;
+				List *relids = NIL;
+				int num_tables = 0;
+
+				relation_rel = table_open(ForeignTableRelationId, AccessShareLock);
+
+				scan = table_beginscan_catalog(relation_rel, 0, NULL);
+
+				while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+				{
+					Form_pg_foreign_table ftbl = (Form_pg_foreign_table)GETSTRUCT(tuple);
+
+					if (ftbl->ftserver == srvId)
+					{
+						relids = lappend_oid(relids, ftbl->ftrelid);
+						num_tables++;
+						if (num_tables >= MAX_RELCACHE_INVAL_MSGS)
+							break;
+					}
+				}
+
+				if (num_tables >= MAX_RELCACHE_INVAL_MSGS)
+					CacheInvalidateRelcacheAll();
+				else
+				{
+					ListCell *lc;
+					foreach(lc, relids)
+					{
+						CacheInvalidateRelcacheByRelid(lfirst_oid(lc));
+					}
+				}
+
+				table_endscan(scan);
+				table_close(relation_rel, AccessShareLock);
+
+				break;
+			}
+		}
 	}
 
 	table_close(rel, RowExclusiveLock);
