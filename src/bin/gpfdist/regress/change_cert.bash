@@ -18,7 +18,7 @@ if [ "$1" = "gpfdist" ]; then
 fi
 
 # Clear gpdb client and root CA certification.
-if [ "$1" = "clear" ]; then
+if [ "$1" = "clear_gpdb_client_root" ]; then
 	for dir in $(find $COORDINATOR_DATA_DIRECTORY/../../.. -name pg_hba.conf)
 		do
 		if [ -d $(dirname $dir)/gpfdists ]; then
@@ -29,14 +29,56 @@ if [ "$1" = "clear" ]; then
 	done
 fi
 
+# Clear gpdb root CA certification.
+if [ "$1" = "clear_gpdb_root" ]; then
+	for dir in $(find $COORDINATOR_DATA_DIRECTORY/../../.. -name pg_hba.conf)
+		do
+		if [ -d $(dirname $dir)/gpfdists ]; then
+			mv $(dirname $dir)/gpfdists/root.crt $(dirname $dir)/gpfdists/root.crt.bak
+		fi
+	done
+fi
+
+# Clear gpdb client CA certification.
+if [ "$1" = "clear_gpdb_client" ]; then
+	for dir in $(find $COORDINATOR_DATA_DIRECTORY/../../.. -name pg_hba.conf)
+		do
+		if [ -d $(dirname $dir)/gpfdists ]; then
+			mv $(dirname $dir)/gpfdists/client.crt $(dirname $dir)/gpfdists/client.crt.bak
+			mv $(dirname $dir)/gpfdists/client.key $(dirname $dir)/gpfdists/client.key.bak
+		fi
+	done
+fi
+
 # Reset gpdb client and root CA certification.
-if [ "$1" = "recover" ]; then
+if [ "$1" = "recover_gpdb_client_root" ]; then
 	for dir in $(find $COORDINATOR_DATA_DIRECTORY/../../.. -name pg_hba.conf)
 		do
 		if [ -d $(dirname $dir)/gpfdists ]; then
 			mv $(dirname $dir)/gpfdists/client.crt.bak $(dirname $dir)/gpfdists/client.crt
 			mv $(dirname $dir)/gpfdists/client.key.bak $(dirname $dir)/gpfdists/client.key
 			mv $(dirname $dir)/gpfdists/root.crt.bak $(dirname $dir)/gpfdists/root.crt
+		fi
+	done
+fi
+
+# Reset gpdb root CA certification.
+if [ "$1" = "recover_gpdb_root" ]; then
+	for dir in $(find $COORDINATOR_DATA_DIRECTORY/../../.. -name pg_hba.conf)
+		do
+		if [ -d $(dirname $dir)/gpfdists ]; then
+			mv $(dirname $dir)/gpfdists/root.crt.bak $(dirname $dir)/gpfdists/root.crt
+		fi
+	done
+fi
+
+# Reset gpdb root CA certification.
+if [ "$1" = "recover_gpdb_client" ]; then
+	for dir in $(find $COORDINATOR_DATA_DIRECTORY/../../.. -name pg_hba.conf)
+		do
+		if [ -d $(dirname $dir)/gpfdists ]; then
+			mv $(dirname $dir)/gpfdists/client.crt.bak $(dirname $dir)/gpfdists/client.crt
+			mv $(dirname $dir)/gpfdists/client.key.bak $(dirname $dir)/gpfdists/client.key
 		fi
 	done
 fi

@@ -36,12 +36,12 @@ on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_start_ca_verify (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log --ssl_server_verify </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log --ssl_verify_peer on </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_start_no_ca_verify (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log --ssl_verify_peer off </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 
@@ -197,13 +197,13 @@ SELECT * FROM tbl;
 -- start_ignore
 select * from gpfdist_ssl_stop;
 select * from gpfdist_ssl_start_no_ca_verify;
-\! bash change_cert.bash clear
+\! bash change_cert.bash clear_gpdb_client_root
 -- end_ignore
 
 SELECT * FROM tbl;
 
 -- start_ignore
-\! bash change_cert.bash recover
+\! bash change_cert.bash recover_gpdb_client_root
 -- end_ignore
 
 -- start_ignore
