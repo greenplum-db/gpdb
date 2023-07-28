@@ -217,7 +217,7 @@ This table lists the versions of the Greenplum Extensions that are compatible wi
 </tr>
 <tr class="row">
 <td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/postGIS.html">PostGIS Spatial and Geographic Objects</a></td>
-<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e686 ">2.5.4+pivotal.7.build.1, 2.1.5+pivotal.3.build.3</td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e686 ">3.3.2</td>
 <td class="entry cellrowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
 </tr>
 </tbody>

@@ -194,6 +194,7 @@ Doc Index
         - [fuzzystrmatch](./modules/fuzzystrmatch.md)
         - [gp\_legacy\_string\_agg](./modules/gp_legacy_string_agg.md)
         - [gp\_sparse\_vector](./modules/gp_sparse_vector.md)
+        - [greenplum_fdw](./modules/greenplum_fdw.md)
         - [hstore](./modules/hstore.md)
         - [ip4r](./modules/ip4r.md)
         - [ltree](./modules/ltree.md)
