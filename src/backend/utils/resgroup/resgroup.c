@@ -3561,19 +3561,7 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 				   sessionId,
 				   quote_literal_cstr(groupName));
 
-	PG_TRY();
-	{
-		CdbDispatchCommand(cmd, 0, NULL);
-	}
-	PG_CATCH();
-	{
-		/*
-		 * we don't have proper mechanics to cancel group move, so just warn
-		 * about something wrong on dispatching stage
-		 */
-		elog(WARNING, "cannot dispatch group move command");
-	}
-	PG_END_TRY();
+	CdbDispatchCommand(cmd, 0, NULL);
 }
 
 /*
