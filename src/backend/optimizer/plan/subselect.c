@@ -370,11 +370,15 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		config->gp_cte_sharing = IsSubqueryCorrelated(subquery) ||
-				!(subLinkType == ROWCOMPARE_SUBLINK ||
-				 subLinkType == ARRAY_SUBLINK ||
-				 subLinkType == EXPR_SUBLINK ||
-				 subLinkType == EXISTS_SUBLINK);
+		/*
+		 * Disable CTE sharing in subplan.
+		 *
+		 * If a Shared Scan is in a subplan we should disuse it and
+		 * back to the normal scan, then CTE hang issue in subplan
+		 * could be avoided. For more details see issue:
+		 * https://github.com/greenplum-db/gpdb/issues/15827
+		 */
+		config->gp_cte_sharing = false;
 	}
 	/*
 	 * Strictly speaking, the order of rows in a subquery doesn't matter.

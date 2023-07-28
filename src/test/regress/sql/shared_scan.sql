@@ -48,12 +48,14 @@ SET statement_timeout = '15s';
 
 RESET statement_timeout;
 
-SELECT *,
+-- If a Shared Scan is in Subplan, then disuse it and back to normal scan.
+SELECT COUNT(*)
+FROM (SELECT *,
         (
         WITH cte AS (SELECT * FROM jazz WHERE jazz.e = bar.c)
         SELECT 1 FROM cte c1, cte c2
         )
-        FROM bar;
+      FROM bar) as s;
 
 CREATE TABLE t1 (a int, b int);
 CREATE TABLE t2 (a int);
@@ -93,3 +95,31 @@ $$;
 
 -- This should only ERROR and should not SIGSEGV
 SELECT col_mismatch_func2();
+
+-- planner didn't support shared scan under subplan
+create table sisc1(a int, b int);
+create table sisc2(a int, b int);
+create table sisc3(a int, b int);
+
+explain (COSTS OFF)
+with cte1 as (select * from sisc1),
+cte2 as (select * from sisc2),
+cte3 as (select * from sisc3)
+select * from cte1 where ( EXISTS ( select cte2.a from cte2 left join cte3 on (EXISTS ( select cte1.b from cte2))));
+
+with cte1 as (select * from sisc1),
+cte2 as (select * from sisc2),
+cte3 as (select * from sisc3)
+select * from cte1 where ( EXISTS ( select cte2.a from cte2 left join cte3 on (EXISTS ( select cte1.b from cte2))));
+
+set gp_cte_sharing = on;
+
+with cte1 as (select * from sisc1),
+cte2 as (select * from sisc2),
+cte3 as (select * from sisc3)
+select * from cte1 where ( EXISTS ( select cte2.a from cte2 left join cte3 on (EXISTS ( select cte1.b from cte2))));
+
+reset gp_cte_sharing;
+drop table sisc1;
+drop table sisc2;
+drop table sisc3;
