@@ -798,6 +798,19 @@ AlterForeignDataWrapper(AlterFdwStmt *stmt)
 	 */
 	if (stmt->options)
 	{
+		ListCell *optcell;
+		foreach(optcell, stmt->options)
+		{
+			DefElem *od = lfirst(optcell);
+
+			if (strcmp(od->defname, "mpp_execute") == 0)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("\"%s\" of foreign data wrapper is not allowed to be altered", od->defname)));
+			}
+		}
+
 		/* Extract the current options */
 		datum = SysCacheGetAttr(FOREIGNDATAWRAPPEROID,
 								tp,
