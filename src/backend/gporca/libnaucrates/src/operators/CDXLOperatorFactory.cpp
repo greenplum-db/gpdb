@@ -3721,28 +3721,13 @@ CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
 	return IMDIndex::EmdindSentinel;
 }
 
-ULONG
-CDXLOperatorFactory::ParseSortandNullsOrder(const XMLCh *xml_str_order,
-											bool extract_sort)
-{
-	if (extract_sort)
-	{
-		return (0 == XMLString::compareString(
-						 xml_str_order,
-						 CDXLTokens::XmlstrToken(EdxltokenIndexKeyColSortASC)))
-				   ? 0
-				   : 1;
-	}
-	else
-	{
-		return (0 == XMLString::compareString(
-						 xml_str_order,
-						 CDXLTokens::XmlstrToken(EdxltokenIndexKeyColNullLast)))
-				   ? 0
-				   : 1;
-	}
-}
-
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLOperatorFactory::ExtractSortAndNullsToULongArray
+//
+//	@doc:
+//		Parse index keys sort and nulls directions.
+//---------------------------------------------------------------------------
 ULongPtrArray *
 CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
 	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
@@ -3752,6 +3737,8 @@ CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
 
 	ULongPtrArray *ulong_array = GPOS_NEW(mp) ULongPtrArray(mp);
 
+	// Only B-tree indices have sort and nulls directions in dxl
+	// For any other index type, return empty array
 	if (xml_val == nullptr)
 	{
 		for (ULONG ul = 0; ul < num_of_keys; ul++)
@@ -3774,11 +3761,27 @@ CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
 	{
 		XMLCh *current_str = commma_sep_str_components.nextToken();
 		GPOS_ASSERT(nullptr != current_str);
-		ULONG value = ParseSortandNullsOrder(current_str, extract_sort);
+		ULONG value;
+		if (extract_sort)
+		{
+			value =
+				(0 == XMLString::compareString(
+						  current_str,
+						  CDXLTokens::XmlstrToken(EdxltokenIndexKeySortASC)))
+					? 0
+					: 1;
+		}
+		else
+		{
+			value =
+				(0 == XMLString::compareString(
+						  current_str,
+						  CDXLTokens::XmlstrToken(EdxltokenIndexKeyNullsLast)))
+					? 0
+					: 1;
+		}
 		ulong_array->Append(GPOS_NEW(mp) ULONG(value));
 	}
 	return ulong_array;
 }
-
-
 // EOF

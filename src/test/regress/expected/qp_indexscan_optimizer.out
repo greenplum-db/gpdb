@@ -1274,6 +1274,70 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d
  col_e100 | 101 | 100
 (3 rows)
 
+-- Backward indexscan with offset and without limit
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9990;
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Index Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9997;
+     e     |  d   |  a   
+-----------+------+------
+ col_e1000 | 1001 | 1000
+ col_e100  |  101 |  100
+ col_e10   |   11 |   10
+ col_e1    |    2 |    1
+(4 rows)
+
+-- Backward indexscan with offset value in subquery
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Limit
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Result
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
+         ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+   c    
+--------
+ 0.9375
+  0.625
+ 0.3125
+       
+(4 rows)
+
+-- Backward indexscan with limit value in subquery
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+                                                    QUERY PLAN
+------------------------------------------------------------------------------------------------------------------
+ Limit
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Result
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+     c     
+-----------
+      3125
+ 3124.6875
+  3124.375
+(3 rows)
+
 -- order by on a non-index columns, should use SeqScan
 explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
                                       QUERY PLAN

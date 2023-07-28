@@ -187,7 +187,8 @@ private:
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
 		BOOL indexForOrderBy = false,
-		EIndexScanDirection indexScanDirection = EisdForward);
+		EIndexScanDirection indexScanDirection =
+			EisdForward /*Default direction if unspecified*/);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
@@ -206,11 +207,11 @@ private:
 
 	//	create a static operator for a btree index plan
 	static CLogical *
-	PopStaticBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
-									 CTableDescriptor *ptabdesc,
-									 ULONG ulOriginOpId, CName *pname,
-									 CColRefArray *pdrgpcrOutput,
-									 EIndexScanDirection indexScanDirection)
+	PopStaticBtreeIndexOpConstructor(
+		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
+		ULONG ulOriginOpId, CName *pname, CColRefArray *pdrgpcrOutput,
+		EIndexScanDirection indexScanDirection =
+			EisdForward /*Default direction if unspecified*/)
 	{
 		return GPOS_NEW(mp)
 			CLogicalIndexGet(mp, pmdindex, ptabdesc, ulOriginOpId, pname,
@@ -450,7 +451,8 @@ public:
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
 						 BOOL indexForOrderBy = false,
-						 EIndexScanDirection indexScanDirection = EisdForward)
+						 EIndexScanDirection indexScanDirection =
+							 EisdForward /*Default direction if unspecified*/)
 	{
 		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
 										pdrgpexprConds, pcrsScalarExpr,

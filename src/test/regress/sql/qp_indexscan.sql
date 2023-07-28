@@ -187,6 +187,16 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e de
 explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
 select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
 
+-- Backward indexscan with offset and without limit
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9990;
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9997;
+-- Backward indexscan with offset value in subquery
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+-- Backward indexscan with limit value in subquery
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+
 -- order by on a non-index columns, should use SeqScan
 explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
 select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;

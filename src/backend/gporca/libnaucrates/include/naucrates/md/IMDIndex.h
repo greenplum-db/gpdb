@@ -49,12 +49,6 @@ public:
 		EmdindSentinel
 	};
 
-	// index sorting direction
-	//    enum EmdindexSortDir {
-	//        EmdindSortASC,
-	//        EmdindSortDESC
-	//    };
-
 	// object type
 	Emdtype
 	MDType() const override
@@ -86,11 +80,11 @@ public:
 	// return the n-th included column
 	virtual ULONG IncludedColAt(ULONG pos) const = 0;
 
-	// return the n-th included column
-	virtual ULONG KeySortOrderAt(ULONG pos) const = 0;
+	// return the n-th column sort direction
+	virtual ULONG KeySortDirectionAt(ULONG pos) const = 0;
 
-	// return the n-th included column
-	virtual ULONG KeyNullOrderAt(ULONG pos) const = 0;
+	// return the n-th column nulls direction
+	virtual ULONG KeyNullsDirectionAt(ULONG pos) const = 0;
 
 	// return the position of the included column
 	virtual ULONG GetIncludedColPos(ULONG column) const = 0;

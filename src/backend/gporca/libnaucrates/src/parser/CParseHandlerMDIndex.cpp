@@ -42,8 +42,8 @@ CParseHandlerMDIndex::CParseHandlerMDIndex(
 	  m_mdid_item_type(nullptr),
 	  m_index_key_cols_array(nullptr),
 	  m_included_cols_array(nullptr),
-	  m_index_key_cols_sort_order(nullptr),
-	  m_index_key_cols_nulls_order(nullptr),
+	  m_sort_direction(nullptr),
+	  m_nulls_direction(nullptr),
 	  m_child_indexes_parse_handler(nullptr)
 {
 }
@@ -127,40 +127,28 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 		m_parse_handler_mgr->GetDXLMemoryManager(), xmlszIndexKeys,
 		EdxltokenIndexKeyCols, EdxltokenIndex);
 
-
-
 	const XMLCh *xmlszIndexIncludedCols = CDXLOperatorFactory::ExtractAttrValue(
 		attrs, EdxltokenIndexIncludedCols, EdxltokenIndex);
 	m_included_cols_array = CDXLOperatorFactory::ExtractIntsToUlongArray(
 		m_parse_handler_mgr->GetDXLMemoryManager(), xmlszIndexIncludedCols,
 		EdxltokenIndexIncludedCols, EdxltokenIndex);
 
-	if (m_index_type == gpmd::IMDIndex::EmdindBtree)
-	{
-		const XMLCh *xmlszIndexKeyColsSortOrder =
-			CDXLOperatorFactory::ExtractAttrValue(
-				attrs, EdxltokenIndexKeyColsSortOrder, EdxltokenIndex, true);
-		m_index_key_cols_sort_order =
-			CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
-				m_parse_handler_mgr->GetDXLMemoryManager(),
-				xmlszIndexKeyColsSortOrder, true,
-				m_index_key_cols_array->Size());
+	// extract index keys sort directions
+	const XMLCh *xmlszIndexKeysSortDirections =
+		CDXLOperatorFactory::ExtractAttrValue(
+			attrs, EdxltokenIndexKeysSortDirection, EdxltokenIndex, true);
+	m_sort_direction = CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
+		m_parse_handler_mgr->GetDXLMemoryManager(),
+		xmlszIndexKeysSortDirections, true, m_index_key_cols_array->Size());
 
-		const XMLCh *xmlszIndexKeyColsNullsOrder =
-			CDXLOperatorFactory::ExtractAttrValue(
-				attrs, EdxltokenIndexKeyColsNullsOrder, EdxltokenIndex, true);
-		m_index_key_cols_nulls_order =
-			CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
-				m_parse_handler_mgr->GetDXLMemoryManager(),
-				xmlszIndexKeyColsNullsOrder, false,
-				m_index_key_cols_array->Size());
-	}
-	else
-	{
-		CMemoryPool *mp = m_parse_handler_mgr->GetDXLMemoryManager()->Pmp();
-		m_index_key_cols_sort_order = GPOS_NEW(mp) ULongPtrArray(mp);
-		m_index_key_cols_nulls_order = GPOS_NEW(mp) ULongPtrArray(mp);
-	}
+	// extract index keys nulls directions
+	const XMLCh *xmlszIndexKeysNullsDirections =
+		CDXLOperatorFactory::ExtractAttrValue(
+			attrs, EdxltokenIndexKeysNullsDirection, EdxltokenIndex, true);
+	m_nulls_direction = CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
+		m_parse_handler_mgr->GetDXLMemoryManager(),
+		xmlszIndexKeysNullsDirections, false, m_index_key_cols_array->Size());
+
 	// parse handler for operator class list
 	CParseHandlerBase *opfamilies_list_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
@@ -210,11 +198,11 @@ CParseHandlerMDIndex::EndElement(const XMLCh *const,  // element_uri,
 		child_indexes->AddRef();
 	}
 
-	m_imd_obj = GPOS_NEW(m_mp) CMDIndexGPDB(
-		m_mp, m_mdid, m_mdname, m_clustered, is_partitioned, m_index_type,
-		m_mdid_item_type, m_index_key_cols_array, m_included_cols_array,
-		mdid_opfamilies_array, child_indexes, m_index_key_cols_sort_order,
-		m_index_key_cols_nulls_order);
+	m_imd_obj = GPOS_NEW(m_mp)
+		CMDIndexGPDB(m_mp, m_mdid, m_mdname, m_clustered, is_partitioned,
+					 m_index_type, m_mdid_item_type, m_index_key_cols_array,
+					 m_included_cols_array, mdid_opfamilies_array,
+					 child_indexes, m_sort_direction, m_nulls_direction);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

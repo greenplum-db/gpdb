@@ -147,7 +147,7 @@ COrderSpec *
 CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 					   CColRefArray *colref_array,
 					   const CTableDescriptor *ptabdesc,
-					   EIndexScanDirection scandirection)
+					   EIndexScanDirection scan_direction)
 {
 	// compute the order spec after getting the current position of the index key
 	// from the table descriptor. Index keys are relative to the
@@ -189,34 +189,39 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 
 		IMDId *mdid = nullptr;
 		COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
-		if (scandirection == EisdForward)
+		// if scan direction is forward, order spec computed should match the index's
+		// sort and nulls order.
+		if (scan_direction == EisdForward)
 		{
+			// if sort direction of key is 0(ASC), choose MDID for less than type and vice-versa
 			mdid =
-				(pmdindex->KeySortOrderAt(ul) == 0)
+				(pmdindex->KeySortDirectionAt(ul) == 0)
 					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL)
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptG);
-			ent = (pmdindex->KeyNullOrderAt(ul) == 0) ? COrderSpec::EntLast
-													  : COrderSpec::EntFirst;
+
+			// if nulls direction of key is 0(LAST), choose ENTLast and vice-versa
+			ent = (pmdindex->KeyNullsDirectionAt(ul) == 0)
+					  ? COrderSpec::EntLast
+					  : COrderSpec::EntFirst;
 		}
-		else if (scandirection == EisdBackward)
+		// if scan direction is backward, order spec computed should be commutative to index's
+		// sort and nulls order.
+		else if (scan_direction == EisdBackward)
 		{
+			// if sort order of key is 0(ASC), choose MDID for greater than type and vice-versa
 			mdid =
-				(pmdindex->KeySortOrderAt(ul) == 0)
+				(pmdindex->KeySortDirectionAt(ul) == 0)
 					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG)
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptL);
 
-			ent = (pmdindex->KeyNullOrderAt(ul) == 0) ? COrderSpec::EntFirst
-													  : COrderSpec::EntLast;
+			// if nulls direction of key is 0(LAST), choose ENTFirst and vice-versa
+			ent = (pmdindex->KeyNullsDirectionAt(ul) == 0)
+					  ? COrderSpec::EntFirst
+					  : COrderSpec::EntLast;
 		}
-		//        IMDId *mdid =
-		//                colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
-		//        mdid->AddRef();
 		mdid->AddRef();
-
-		// TODO:  March 27th 2012; we hard-code NULL treatment
-		// need to revisit
 		pos->Append(mdid, colref, ent);
 	}
 

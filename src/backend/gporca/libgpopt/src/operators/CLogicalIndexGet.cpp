@@ -63,7 +63,7 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 								   CTableDescriptor *ptabdesc,
 								   ULONG ulOriginOpId, const CName *pnameAlias,
 								   CColRefArray *pdrgpcrOutput,
-								   EIndexScanDirection scanDirection)
+								   EIndexScanDirection scan_direction)
 	: CLogical(mp),
 	  m_pindexdesc(nullptr),
 	  m_ptabdesc(ptabdesc),
@@ -72,7 +72,7 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 	  m_pdrgpcrOutput(pdrgpcrOutput),
 	  m_pcrsOutput(nullptr),
 	  m_pcrsDist(nullptr),
-	  m_scan_direction(scanDirection)
+	  m_scan_direction(scan_direction)
 {
 	GPOS_ASSERT(nullptr != pmdindex);
 	GPOS_ASSERT(nullptr != ptabdesc);
@@ -174,13 +174,11 @@ CLogicalIndexGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	}
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
 
-	EIndexScanDirection indexScanDirection = m_scan_direction;
-
 	m_ptabdesc->AddRef();
 
 	return GPOS_NEW(mp)
 		CLogicalIndexGet(mp, pmdindex, m_ptabdesc, m_ulOriginOpId, pnameAlias,
-						 pdrgpcrOutput, indexScanDirection);
+						 pdrgpcrOutput, m_scan_direction);
 }
 
 //---------------------------------------------------------------------------
@@ -305,6 +303,9 @@ CLogicalIndexGet::OsPrint(IOstream &os) const
 	os << ", Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "]";
+	os << ", Index ScanDirection: (";
+	(m_scan_direction == EisdForward) ? os << "Forward" : os << "Backward";
+	os << ")";
 
 	return os;
 }

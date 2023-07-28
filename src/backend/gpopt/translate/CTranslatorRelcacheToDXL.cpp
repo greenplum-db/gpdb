@@ -1028,8 +1028,8 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	bool index_partitioned = false;
 	ULongPtrArray *index_key_cols_array = nullptr;
 	ULONG *attno_mapping = nullptr;
-	ULongPtrArray *index_key_cols_nulls_order = nullptr;
-	ULongPtrArray *index_key_cols_sort_order = nullptr;
+	ULongPtrArray *sort_direction = nullptr;
+	ULongPtrArray *nulls_direction = nullptr;
 
 	if (!IsIndexSupported(index_rel.get()))
 	{
@@ -1088,8 +1088,6 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	// extract the position of the key columns
 	index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
 	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
-	index_key_cols_nulls_order = GPOS_NEW(mp) ULongPtrArray(mp);
-	index_key_cols_sort_order = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
@@ -1110,23 +1108,32 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		}
 	}
 
+	// extract sort and nulls direction of the key columns
+	sort_direction = GPOS_NEW(mp) ULongPtrArray(mp);
+	nulls_direction = GPOS_NEW(mp) ULongPtrArray(mp);
+
+	// No other index type except B-tree support sort and nulls direction for key columns.
 	if (index_type == IMDIndex::EmdindBtree)
 	{
 		for (int i = 0; i < form_pg_index->indnkeyatts; i++)
 		{
-			index_key_cols_sort_order->Append(GPOS_NEW(mp) ULONG(0));
-			index_key_cols_nulls_order->Append(GPOS_NEW(mp) ULONG(0));
+			// ASC: represented by 0 and DESC with 1
+			sort_direction->Append(GPOS_NEW(mp) ULONG(0));
+			// NULLS LAST: represented by 0 and NULLS FIRST with 1
+			nulls_direction->Append(GPOS_NEW(mp) ULONG(0));
+			// indoption value represents sort and nulls direction using 2 bits
 			ULONG rel_indoption = index_rel->rd_indoption[i];
-			if (rel_indoption & 2)
-			{
-				// Nulls first
-				//index_key_cols_nulls_order->Append(GPOS_NEW(mp) ULONG(1));
-				index_key_cols_nulls_order->Replace(i, GPOS_NEW(mp) ULONG(1));
-			}
+			// First bit being set represents Sort DESC and unset represents Sort ASC
 			if (rel_indoption & 1)
 			{
-				// Descending
-				index_key_cols_sort_order->Replace(i, GPOS_NEW(mp) ULONG(1));
+				// Sort DESC
+				sort_direction->Replace(i, GPOS_NEW(mp) ULONG(1));
+			}
+			// Second bit being set represents Nulls FIRST and unset represents Nulls LAST
+			if (rel_indoption & 2)
+			{
+				// Nulls FIRST
+				nulls_direction->Replace(i, GPOS_NEW(mp) ULONG(1));
 			}
 		}
 	}
@@ -1147,11 +1154,10 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		child_index_oids = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 
-	CMDIndexGPDB *index = GPOS_NEW(mp)
-		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
-					 index_type, mdid_item_type, index_key_cols_array,
-					 included_cols, op_families_mdids, child_index_oids,
-					 index_key_cols_sort_order, index_key_cols_nulls_order);
+	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
+		mp, mdid_index, mdname, index_clustered, index_partitioned, index_type,
+		mdid_item_type, index_key_cols_array, included_cols, op_families_mdids,
+		child_index_oids, sort_direction, nulls_direction);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;

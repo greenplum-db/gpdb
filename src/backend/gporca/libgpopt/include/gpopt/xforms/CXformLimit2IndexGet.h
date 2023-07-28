@@ -14,7 +14,7 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/operators/CPhysicalScan.h"
+#include "gpopt/operators/CLogical.h"
 #include "gpopt/xforms/CXformExploration.h"
 namespace gpopt
 {
@@ -32,17 +32,21 @@ class CXformLimit2IndexGet : public CXformExploration
 {
 private:
 	// helper function to validate if index is applicable, given OrderSpec
-	// and index columns. This function checks if ORDER BY columns are prefix of
-	// the index columns.
+	// and index columns. This function checks if
+	// 1. ORDER BY columns are prefix of the index columns
+	// 2. Sort and Nulls Direction of ORDER BY columns is either equal or commutative to the index columns
 	static BOOL FIndexApplicableForOrderBy(CMemoryPool *mp, COrderSpec *pos,
 										   CColRefArray *pdrgpcrIndexColumns,
 										   const IMDIndex *pmdindex);
 
+	// function to determine index scan direction given required order spec and index information.
 	static EIndexScanDirection FGetIndexScanDirection(COrderSpec *pos,
 													  const IMDIndex *pmdindex);
 
-	static BOOL FAreIndicesCommutative(CBitVector *index1, CBitVector *index2,
-									   ULONG size);
+	// function to validate if indices sort and nulls direction are commutative.
+	static BOOL FAreIndicesCommutative(CBitVector *first_index_props,
+									   CBitVector *second_index_props,
+									   ULONG keys_size);
 
 public:
 	CXformLimit2IndexGet(const CXformLimit2IndexGet &) = delete;

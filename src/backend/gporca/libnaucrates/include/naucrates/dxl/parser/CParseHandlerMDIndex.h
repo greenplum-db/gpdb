@@ -58,11 +58,11 @@ private:
 	// included columns
 	ULongPtrArray *m_included_cols_array;
 
-	// index key's Sort Order
-	ULongPtrArray *m_index_key_cols_sort_order;
+	// index key's sort direction
+	ULongPtrArray *m_sort_direction;
 
-	// index key's NULLs Order
-	ULongPtrArray *m_index_key_cols_nulls_order;
+	// index key's NULLS direction
+	ULongPtrArray *m_nulls_direction;
 
 	// child index oids parse handler
 	CParseHandlerBase *m_child_indexes_parse_handler;

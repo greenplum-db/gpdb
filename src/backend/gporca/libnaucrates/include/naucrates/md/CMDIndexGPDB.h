@@ -74,11 +74,11 @@ private:
 	// Child index oids
 	IMdIdArray *m_child_index_oids;
 
-	// index key's Sort Order
-	ULongPtrArray *m_index_key_cols_sort_order;
+	// index key's sort direction
+	ULongPtrArray *m_sort_direction;
 
-	// index key's NULLs Order
-	ULongPtrArray *m_index_key_cols_nulls_order;
+	// index key's NULLs direction
+	ULongPtrArray *m_nulls_direction;
 
 public:
 	CMDIndexGPDB(const CMDIndexGPDB &) = delete;
@@ -90,9 +90,8 @@ public:
 				 ULongPtrArray *index_key_cols_array,
 				 ULongPtrArray *included_cols_array,
 				 IMdIdArray *mdid_opfamilies_array,
-				 IMdIdArray *child_index_oids,
-				 ULongPtrArray *m_index_key_cols_sort_order,
-				 ULongPtrArray *m_index_key_cols_nulls_order);
+				 IMdIdArray *child_index_oids, ULongPtrArray *sort_direction,
+				 ULongPtrArray *nulls_direction);
 
 	// dtor
 	~CMDIndexGPDB() override;
@@ -127,11 +126,11 @@ public:
 	// return the n-th included column
 	ULONG IncludedColAt(ULONG pos) const override;
 
-	// return the n-th included column
-	ULONG KeySortOrderAt(ULONG pos) const override;
+	// return the n-th column sort direction
+	ULONG KeySortDirectionAt(ULONG pos) const override;
 
-	// return the n-th included column
-	ULONG KeyNullOrderAt(ULONG pos) const override;
+	// return the n-th column nulls direction
+	ULONG KeyNullsDirectionAt(ULONG pos) const override;
 
 	// return the position of the included column
 	ULONG GetIncludedColPos(ULONG column) const override;
@@ -153,12 +152,10 @@ public:
 	// child index oids
 	IMdIdArray *ChildIndexMdids() const override;
 
-	CWStringDynamic *SerializeSortAndNullsOrder(
+	// serialize index keys sort and nulls direction
+	CWStringDynamic *SerializeSortAndNullsDirection(
 		CMemoryPool *mp, ULongPtrArray *dynamic_ptr_array,
 		bool serialize_Sort) const;
-
-	const CWStringConst *GetSortAndNullsString(ULONG value,
-											   bool serialize_Sort) const;
 
 #ifdef GPOS_DEBUG
 	// debug print of the MD index

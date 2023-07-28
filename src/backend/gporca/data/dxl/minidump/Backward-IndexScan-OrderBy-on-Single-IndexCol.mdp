@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
+  <dxl:Comment><![CDATA[
+
+              Objective of this test is to ensure if Backward IndexScan is being picked when order by clause has columns that match
+              prefix of any existing btree indices and sort, nulls direction is commutative. This is for queries with both order by and limit.
+
+              Testcase: Test with single order by column utilizing a single-index column in the plan.
+
+              create table test_index_with_sort_directions_on_orderby_limit(a int, b text, c int, d float, e text);
+              create index index_c on test_index_with_sort_directions_on_orderby_limit using btree(c desc nulls last);
+              create index index_dbea on test_index_with_sort_directions_on_orderby_limit using btree(d, b desc, e nulls first, a desc);
+              ANALYZE test_index_with_sort_directions_on_orderby_limit;
+
+              Query: explain select * from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+
+              Plan:
+                                                                                QUERY PLAN
+                  --------------------------------------------------------------------------------------------------------------------------------------
+                   Limit  (cost=0.00..6.00 rows=1 width=32)
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=32)
+                           Merge Key: c
+                           ->  Index Scan Backward using index_c on test_index_with_sort_directions_on_orderby_limit  (cost=0.00..6.00 rows=1 width=32)
+                   Optimizer: Pivotal Optimizer (GPORCA)
+                  (5 rows)
+  ]]>
+  </dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>

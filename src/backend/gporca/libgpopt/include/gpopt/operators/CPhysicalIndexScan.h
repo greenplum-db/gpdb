@@ -44,6 +44,7 @@ private:
 	// order
 	COrderSpec *m_pos;
 
+	// index scan direction
 	EIndexScanDirection m_scan_direction;
 
 public:
@@ -53,7 +54,7 @@ public:
 	CPhysicalIndexScan(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 					   CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
 					   const CName *pnameAlias, CColRefArray *colref_array,
-					   COrderSpec *pos, EIndexScanDirection m_scan_direction);
+					   COrderSpec *pos, EIndexScanDirection scan_direction);
 
 	// dtor
 	~CPhysicalIndexScan() override;
@@ -87,6 +88,7 @@ public:
 		return m_ulOriginOpId;
 	}
 
+	// index scan direction
 	EIndexScanDirection
 	PIndexScanDirection() const
 	{

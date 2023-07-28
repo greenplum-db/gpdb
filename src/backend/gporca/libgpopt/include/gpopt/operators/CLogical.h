@@ -31,6 +31,8 @@ class IStatistics;
 namespace gpopt
 {
 using namespace gpos;
+
+// Scan direction of the index
 enum EIndexScanDirection
 {
 	EisdBackward = 0,
@@ -163,7 +165,7 @@ protected:
 	static COrderSpec *PosFromIndex(
 		CMemoryPool *mp, const IMDIndex *pmdindex, CColRefArray *colref_array,
 		const CTableDescriptor *ptabdesc,
-		EIndexScanDirection scandirection = EisdForward);
+		EIndexScanDirection scan_direction = EisdForward);
 
 	// derive function properties using data access property of scalar child
 	static CFunctionProp *PfpDeriveFromScalar(CMemoryPool *mp,
