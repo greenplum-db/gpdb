@@ -18,6 +18,7 @@ import traceback
 from collections import defaultdict
 from time import strftime, sleep
 import psycopg2
+from psycopg2 import DatabaseError, OperationalError
 from psycopg2 import extras
 try:
     from gppylib.commands.unix import *
@@ -1030,7 +1031,7 @@ class gpexpand:
         try:
             conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
             max_connections = int(catalog.getSessionGUC(conn, 'max_connections'))
-        except psycopg2.DatabaseError as ex:
+        except DatabaseError as ex:
             if self.options.verbose:
                 logger.exception(ex)
             logger.error('Failed to check max_connections GUC')
@@ -1878,7 +1879,7 @@ class gpexpand:
                 expansionStopped)
             dbconn.execSQL(self.conn, sql)
             self.conn.close()
-        except psycopg2.OperationalError:
+        except OperationalError:
             pass
         except Exception:
             # schema doesn't exist.  Cancel or error during setup
@@ -2172,7 +2173,7 @@ class ExpandCommand(SQLCommand):
         try:
             status_conn = dbconn.connect(self.status_url, encoding='UTF8')
             table_conn = dbconn.connect(self.table_url, encoding='UTF8', cursorFactory=psycopg2.extras.NamedTupleCursor)
-        except psycopg2.DatabaseError as ex:
+        except DatabaseError as ex:
             if self.options.verbose:
                 logger.exception(ex)
             logger.error(ex.__str__().strip())
@@ -2467,7 +2468,7 @@ def main(options, args, parser):
         # Get array configuration
         try:
             gparray = GpArray.initFromCatalog(dburl, utility=True)
-        except psycopg2.DatabaseError as ex:
+        except DatabaseError as ex:
             logger.error('Failed to connect to database.  Make sure the')
             logger.error('Greenplum instance you wish to expand is running')
             logger.error('and that your environment is correct, then rerun')

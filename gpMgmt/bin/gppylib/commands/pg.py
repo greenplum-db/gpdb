@@ -14,7 +14,7 @@ from .base import *
 from .unix import *
 from gppylib.commands.base import *
 from gppylib.commands.gp import RECOVERY_REWIND_APPNAME
-import psycopg2
+from psycopg2 import DatabaseError
 
 logger = get_default_logger()
 
@@ -223,7 +223,7 @@ class PgReplicationSlot:
             dburl = dbconn.DbURL(hostname=self.host, port=self.port)
             with closing(dbconn.connect(dburl, utility=True, encoding='UTF8')) as conn:
                 dbconn.query(conn, sql)
-        except psycopg2.DatabaseError as e:
+        except DatabaseError as e:
             # one of the case can be where slot is present but currently in active state
             logger.exception("Failed to query pg_drop_replication_slot for host:{}, port:{}: {}".
                              format(self.host, self.port, str(e)))
@@ -268,7 +268,7 @@ class PgReplicationSlot:
             dburl = dbconn.DbURL(hostname=self.host, port=self.port)
             with closing(dbconn.connect(dburl, utility=True, encoding='UTF8')) as conn:
                 dbconn.query(conn, sql)
-        except psycopg2.DatabaseError as e:
+        except DatabaseError as e:
             logger.exception("Failed to query pg_create_physical_replication_slot for host:{}, port:{}: {}".
                              format(self.host, self.port, str(e)))
             return False

@@ -144,7 +144,7 @@ class GPCatalog():
             curs = self._query(version_query)
         except Exception as e:
             raise GPCatalogException("Error reading database version: " + str(e))
-        self._version = GpVersion(curs.fetchall()[0][0])
+        self._version = GpVersion(curs.fetchone()[0])
 
         # Read the list of catalog tables from the database
         try:

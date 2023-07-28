@@ -10,7 +10,7 @@ import os
 import sys
 import signal
 import itertools
-import psycopg2
+from psycopg2 import DatabaseError
 try:
     from gppylib.commands.unix import *
     from gppylib.commands.gp import *
@@ -333,7 +333,7 @@ try:
     # Get array configuration
     try:
         gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
-    except psycopg2.DatabaseError as ex:
+    except DatabaseError as ex:
         logger.error('Failed to connect to database.  Make sure the')
         logger.error('Greenplum instance is running, and that')
         logger.error('your environment is correct, then rerun')

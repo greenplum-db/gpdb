@@ -7,7 +7,7 @@ import unittest
 from mock import call, Mock, patch, MagicMock
 from gppylib.commands import pg
 from test.unit.gp_unittest import GpTestCase, run_tests
-import psycopg2
+from psycopg2 import DatabaseError
 
 from gppylib.test.unit.gp_unittest import GpTestCase
 from gppylib.commands.base import CommandResult
@@ -70,7 +70,7 @@ class TestUnitPgReplicationSlot(GpTestCase):
         self.assertTrue('Failed to drop replication slot for host:bar, port:1234' in str(ex.exception))
 
     @patch('gppylib.db.dbconn.connect', autospec=True)
-    @patch('gppylib.db.dbconn.query', side_effect=psycopg2.DatabaseError("DatabaseError Exception"))
+    @patch('gppylib.db.dbconn.query', side_effect=DatabaseError("DatabaseError Exception"))
     def test_drop_slot_db_error_exception(self, mock1, mock2):
         self.pg_replication_slot.drop_slot()
         self.assertEqual(1, self.mock_logger.debug.call_count)
@@ -100,7 +100,7 @@ class TestUnitPgReplicationSlot(GpTestCase):
         self.assertTrue('Failed to create replication slot for host:bar, port:1234' in str(ex.exception))
 
     @patch('gppylib.db.dbconn.connect', autospec=True)
-    @patch('gppylib.db.dbconn.query', side_effect=psycopg2.DatabaseError("DatabaseError Exception"))
+    @patch('gppylib.db.dbconn.query', side_effect=DatabaseError("DatabaseError Exception"))
     def test_create_slot_db_error_exception(self, mock1, mock2):
         self.pg_replication_slot.create_slot()
         self.assertEqual(1, self.mock_logger.debug.call_count)
