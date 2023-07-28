@@ -557,8 +557,6 @@ DROP ROLE
 DROP RESOURCE GROUP rg_test_group;
 DROP RESOURCE GROUP
 
-
-
 -- test set cpu_max_percent to high value when gp_resource_group_cpu_limit is low
 -- start_ignore
 !\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.5;
