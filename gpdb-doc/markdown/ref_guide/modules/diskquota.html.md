@@ -47,7 +47,7 @@ Before you can use the module, you must perform these steps:
     $ psql -d testdb -c "CREATE EXTENSION diskquota"
     ```
 
-4.  If you register the `diskquota` extension in a database that already contains data, you must initialize the `diskquota` table size data by running the `diskquota.init_table_size_table()` UDF in the database. In a database with many files, this can take some time. The `diskquota` module cannot be used until the initialization is complete.
+4.  Run the `diskquota.init_table_size_table()` UDF in the database. In a database with many files, this can take some time. The `diskquota` module cannot be used until the initialization is complete.
 
     ```
     =# SELECT diskquota.init_table_size_table();
