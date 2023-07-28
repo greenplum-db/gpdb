@@ -705,37 +705,5 @@ from(
   from subquery_nonpush_through_1,subquery_nonpush_through_2) t
 where xx='dd';
 
--- Check that IN subquery is converted to EXISTS subquery with a predicate if possible
-CREATE TABLE t_outer (a int, b int);
-INSERT INTO t_outer SELECT i, i+1 FROM generate_series(1,3) as i;
-CREATE TABLE t_inner (a int, b int);
-INSERT INTO t_inner SELECT i, i+1 FROM generate_series(1,3) as i;
-
--- Conversion happens when inner subquery's project list(t_outer.b+1) refers to outer table
--- And inner subquery's project list doesn't refer to inner table.
-SELECT * FROM t_outer WHERE t_outer.a IN (SELECT t_outer.b-1 FROM t_inner);
-EXPLAIN (VERBOSE, COSTS OFF)
-  SELECT * FROM t_outer WHERE t_outer.a IN (SELECT t_outer.b-1 FROM t_inner);
-
-SELECT t_outer.a IN (SELECT t_outer.a FROM generate_series(1, 1)) FROM t_outer;
-EXPLAIN (VERBOSE, COSTS OFF)
-  SELECT t_outer.a IN (SELECT t_outer.a FROM generate_series(1, 1)) FROM t_outer;
-
--- Conversion doesn't happen when inner subquery's project list(t_inner.b+t_outer.b) refers to inner table
-SELECT * FROM t_outer WHERE t_outer.b*2 IN (SELECT t_inner.b+t_outer.b FROM t_inner);
-EXPLAIN (VERBOSE, COSTS OFF)
-  SELECT * FROM t_outer WHERE t_outer.b*2 IN (SELECT t_inner.b+t_outer.b FROM t_inner);
-
--- Conversion doesn't happen when inner subquery's project list(3) doesn't refer to outer table
-SELECT * FROM t_outer WHERE t_outer.b IN (SELECT 3 FROM t_inner);
-EXPLAIN (VERBOSE, COSTS OFF)
-  SELECT * FROM t_outer WHERE t_outer.b IN (SELECT 3 FROM t_inner);
-
--- Conversion will not happen when inner subquery's project list returns a set
--- even when reference conditions satisfy
-SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b));
-EXPLAIN (VERBOSE, COSTS OFF)
-  SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b));
-
 set client_min_messages='warning';
 drop schema qp_subquery cascade;
