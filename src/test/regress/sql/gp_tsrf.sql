@@ -53,9 +53,9 @@ SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a
 EXPLAIN (VERBOSE, COSTS OFF)
   SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
 
-CREATE TABLE t_outer (a int, b int);
+CREATE TABLE t_outer (a int, b int) DISTRIBUTED BY (a);
 INSERT INTO t_outer SELECT i, i+1 FROM generate_series(1,3) as i;  
-CREATE TABLE t_inner (a int, b int);
+CREATE TABLE t_inner (a int, b int) DISTRIBUTED BY (a);
 INSERT INTO t_inner SELECT i, i+1 FROM generate_series(1,3) as i;
 
 SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b) FROM t_inner);
