@@ -1,587 +1,587 @@
 @gprecoverseg
 Feature: gprecoverseg tests
 
-    Scenario Outline: <scenario> recovery works with tablespaces
-        Given the database is running
-          And a tablespace is created with data
-          And user stops all primary processes
-          And user can start transactions
-         When the user runs "gprecoverseg <args>"
-         Then gprecoverseg should return a return code of 0
-          And the segments are synchronized
-          And verify replication slot internal_wal_replication_slot is available on all the segments
-          And the tablespace is valid
-          And the database segments are in execute mode
-
-        Given another tablespace is created with data
-         When the user runs "gprecoverseg -ra"
-         Then gprecoverseg should return a return code of 0
-          And the segments are synchronized
-          And verify replication slot internal_wal_replication_slot is available on all the segments
-          And the tablespace is valid
-          And the other tablespace is valid
-          And the database segments are in execute mode
-      Examples:
-        | scenario     | args               |
-        | incremental  | -a                 |
-        | differential | -a --differential  |
-        | full         | -aF                |
-
-
-    @demo_cluster
-    @concourse_cluster
-    Scenario: differential recovery runs successfully
-        Given the database is running
-          And the segments are synchronized
-          And verify replication slot internal_wal_replication_slot is available on all the segments
-          And user stops all primary processes
-          And user can start transactions
-         When the user runs "gprecoverseg -av --differential"
-         Then gprecoverseg should return a return code of 0
-          And gprecoverseg should print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
-          And gprecoverseg should print "Successfully created replication slot internal_wal_replication_slot" to stdout
-          And gprecoverseg should print "Segments successfully recovered" to stdout
-          And verify that mirror on content 0,1,2 is up
-          And verify replication slot internal_wal_replication_slot is available on all the segments
-          And the segments are synchronized
-          And the cluster is rebalanced
-
-
-    Scenario: differential recovery shows error message if run with the wrong argument
-      Given the database is running
-        And user stops all primary processes
-        And user can start transactions
-        And a gprecoverseg directory under '/tmp' with mode '0700' is created
-        And a gprecoverseg input file is created
-       When the user runs "gprecoverseg -a --differential -F"
-       Then gprecoverseg should return a return code of 2
-        And gprecoverseg should print "Only one of -F and --differential may be specified" to stdout
-       When the user runs "gprecoverseg -a --differential -p localhost"
-       Then gprecoverseg should return a return code of 2
-        And gprecoverseg should print "Only one of -i, -p, -r and --differential may be specified" to stdout
-       When the user runs gprecoverseg with input file and additional args "-a --differential"
-       Then gprecoverseg should return a return code of 2
-        And gprecoverseg should print "Only one of -i, -p, -r and --differential may be specified" to stdout
-       When the user runs "gprecoverseg -a --differential -o outputConfigFile"
-       Then gprecoverseg should return a return code of 2
-        And gprecoverseg should print "Invalid -o provided with --differential argument" to stdout
-       When the user runs "gprecoverseg -a --differential"
-       Then gprecoverseg should return a return code of 0
-        And the segments are synchronized
-        And the cluster is rebalanced
-
-
-    @demo_cluster
-    @concourse_cluster
-    Scenario: Differential recovery succeeds if previous incremental recovery failed
-        Given the database is running
-          And user stops all primary processes
-          And user can start transactions
-          And all files in pg_wal directory are deleted from data directory of preferred primary of content 0,1,2
-         When the user runs "gprecoverseg -a"
-         Then gprecoverseg should return a return code of 1
-          And user can start transactions
-          And verify that mirror on content 0,1,2 is down
-         When the user runs "gprecoverseg -a --differential"
-         Then gprecoverseg should return a return code of 0
-          And verify that mirror on content 0,1,2 is up
-          And verify replication slot internal_wal_replication_slot is available on all the segments
-          And the cluster is rebalanced
-
-    @demo_cluster
-    @concourse_cluster
-    Scenario: Differential recovery succeeds if previous full recovery failed
-        Given the database is running
-          And user stops all primary processes
-          And user can start transactions
-          And a gprecoverseg directory under '/tmp' with mode '0700' is created
-          And a gprecoverseg input file is created
-          And edit the input file to recover mirror with content 0 incremental
-          And edit the input file to recover mirror with content 1 full inplace
-          And edit the input file to recover mirror with content 2 to a new directory on remote host with mode 0000
-         When the user runs gprecoverseg with input file and additional args "-a"
-         Then gprecoverseg should return a return code of 1
-          And user can start transactions
-          And verify that mirror on content 0,1 is up
-          And verify that mirror on content 2 is down
-         When the user runs "gprecoverseg -a --differential"
-         Then gprecoverseg should return a return code of 0
-          And verify that mirror on content 0,1,2 is up
-          And verify replication slot internal_wal_replication_slot is available on all the segments
-          And the cluster is rebalanced
-
-    Scenario Outline: full recovery limits number of parallel processes correctly
-        Given the database is running
-        And 2 gprecoverseg directory under '/tmp/recoverseg' with mode '0700' is created
-        And a good gprecoverseg input file is created for moving 2 mirrors
-        When the user runs gprecoverseg with input file and additional args "-a -v <args>"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
-        And check if gprecoverseg ran "$GPHOME/sbin/gpsegsetuprecovery.py" 1 times with args "-b <segHost_workers>"
-        And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b <segHost_workers>"
-        And gpsegsetuprecovery should only spawn up to <segHost_workers> workers in WorkerPool
-        And gpsegrecovery should only spawn up to <segHost_workers> workers in WorkerPool
-        And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
-        And the segments are synchronized
-        And check segment conf: postgresql.conf
-
-      Examples:
-        | args      | coordinator_workers | segHost_workers |
-        | -B 1 -b 1 |  1                  |  1              |
-        | -B 2 -b 1 |  2                  |  1              |
-        | -B 1 -b 2 |  1                  |  2              |
-
-    Scenario: Differential recovery limits number of parallel processes correctly
-        Given the database is running
-        And user immediately stops all primary processes for content 0,1,2
-        And user can start transactions
-        When the user runs "gprecoverseg -av --differential -B 1 -b 2"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should only spawn up to 1 workers in WorkerPool
-        And check if gprecoverseg ran "$GPHOME/sbin/gpsegsetuprecovery.py" 1 times with args "-b 2"
-        And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b 2"
-        And gpsegsetuprecovery should only spawn up to 2 workers in WorkerPool
-        And gpsegrecovery should only spawn up to 2 workers in WorkerPool
-        And the segments are synchronized
-        And check segment conf: postgresql.conf
-        And the cluster is rebalanced
-
-    Scenario Outline: Rebalance correctly limits the number of concurrent processes
-      Given the database is running
-      And user stops all primary processes
-      And user can start transactions
-      And the user runs "gprecoverseg -a -v <args>"
-      And gprecoverseg should return a return code of 0
-      And the segments are synchronized
-      When the user runs "gprecoverseg -ra -v <args>"
-      Then gprecoverseg should return a return code of 0
-      And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
-      And gpsegsetuprecovery should only spawn up to <segHost_workers> workers in WorkerPool
-      And gpsegrecovery should only spawn up to <segHost_workers> workers in WorkerPool
-      And check if gprecoverseg ran "$GPHOME/sbin/gpsegsetuprecovery.py" 1 times with args "-b <segHost_workers>"
-      And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b <segHost_workers>"
-      And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
-      And the segments are synchronized
-      And check segment conf: postgresql.conf
-
-    Examples:
-      | args      | coordinator_workers | segHost_workers |
-      | -B 1 -b 1 |  1                  |  1              |
-      | -B 2 -b 1 |  2                  |  1              |
-      | -B 1 -b 2 |  1                  |  2              |
-
-    Scenario: gprecoverseg should not output bootstrap error on success
-        Given the database is running
-        And user immediately stops all primary processes
-        And user can start transactions
-        When the user runs "gprecoverseg -a"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
-        And gprecoverseg should print "pg_rewind: Done!" to stdout for each mirror
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And the segments are synchronized
-        When the user runs "gprecoverseg -ra"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-	    And the segments are synchronized
-
-    Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And user stops all mirror processes
-        When user can start transactions
-        And the user runs "gprecoverseg -F -a -s"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for each mirror
-        And gprecoverseg should print "Segments successfully recovered" to stdout
-        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
-        And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
-        And gpAdminLogs directory has "gpsegrecovery*" files
-        And gpAdminLogs directory has "gpsegsetuprecovery*" files
-        And all the segments are running
-        And the segments are synchronized
-        And check segment conf: postgresql.conf
-
-
-    Scenario Outline: gprecoverseg <scenario> recovery displays pg_controldata success info
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And user stops all mirror processes
-        When user can start transactions
-        And the user runs "gprecoverseg <args>"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Successfully finished pg_controldata.* for dbid.*" to stdout
-        And the segments are synchronized
-        And verify replication slot internal_wal_replication_slot is available on all the segments
-        And check segment conf: postgresql.conf
-
-      Examples:
-        | scenario     | args               |
-        | incremental  | -a                 |
-        | differential | -a --differential  |
-        | full         | -aF                |
-
-    Scenario: gprecoverseg mixed recovery displays pg_basebackup and rewind progress to the user
-      Given the database is running
-      And all the segments are running
-      And the segments are synchronized
-      And all files in gpAdminLogs directory are deleted
-      And user immediately stops all primary processes
-      And user can start transactions
-      And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
-      And the "test_recoverseg" table row count in "postgres" is saved
-      And a gprecoverseg directory under '/tmp' with mode '0700' is created
-      And a gprecoverseg input file is created
-      And edit the input file to recover mirror with content 0 to a new directory with mode 0700
-      And edit the input file to recover mirror with content 1 full inplace
-      And edit the input file to recover mirror with content 2 incremental
-      When the user runs gprecoverseg with input file and additional args "-av"
-      Then gprecoverseg should return a return code of 0
-      And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for mirrors with content 0,1
-      And gprecoverseg should print "pg_rewind: Done!" to stdout for mirrors with content 2
-      And gprecoverseg should print "Segments successfully recovered" to stdout
-      And check if gprecoverseg ran gpsegsetuprecovery.py 1 times with the expected args
-      And check if gprecoverseg ran gpsegrecovery.py 1 times with the expected args
-      And gpAdminLogs directory has no "pg_basebackup*" files
-      And gpAdminLogs directory has no "pg_rewind*" files
-      And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
-      And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
-      And the old data directories are cleaned up for content 0
-
-      And all the segments are running
-      And the segments are synchronized
-      And the user runs "gprecoverseg -ar"
-      And gprecoverseg should return a return code of 0
-      And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
-
-    Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted
-        And user immediately stops all primary processes
-        And user can start transactions
-        When the user runs "gprecoverseg -a -s"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "pg_rewind: Done!" to stdout for each mirror
-        And gpAdminLogs directory has no "pg_rewind*" files
-        And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
-        And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
-
-        And all the segments are running
-        And the segments are synchronized
-        And the cluster is rebalanced
-
-    Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And user stops all mirror processes
-        When user can start transactions
-        And the user runs "gprecoverseg -F -a --no-progress"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
-        And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
-        And gpAdminLogs directory has no "pg_basebackup*" files
-        And all the segments are running
-        And the segments are synchronized
-
-    Scenario: gprecoverseg differential recovery displays rsync progress to the user
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And user stops all mirror processes
-        When user can start transactions
-        And the user runs "gprecoverseg --differential -a -s"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
-        And gprecoverseg should print "total size" to stdout for each mirror
-        And gprecoverseg should print "Segments successfully recovered" to stdout
-        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
-        And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
-        And gpAdminLogs directory has no "rsync*" files on all segment hosts
-        And gpAdminLogs directory has "gpsegrecovery*" files
-        And gpAdminLogs directory has "gpsegsetuprecovery*" files
-        And all the segments are running
-        And the segments are synchronized
-        And verify replication slot internal_wal_replication_slot is available on all the segments
-        And check segment conf: postgresql.conf
-
-    Scenario: gprecoverseg does not display rsync progress to the user when --no-progress option is specified
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And user stops all mirror processes
-        When user can start transactions
-        And the user runs "gprecoverseg --differential -a -s --no-progress"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
-        And gprecoverseg should not print "total size is .*  speedup is .*" to stdout
-        And gprecoverseg should print "Segments successfully recovered" to stdout
-        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
-        And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
-        And gpAdminLogs directory has no "rsync*" files on all segment hosts
-        And gpAdminLogs directory has "gpsegrecovery*" files
-        And gpAdminLogs directory has "gpsegsetuprecovery*" files
-        And all the segments are running
-        And the segments are synchronized
-        And check segment conf: postgresql.conf
-
-    Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And the "primary" segment information is saved
-        When the postmaster.pid file on "primary" segment is saved
-        And user stops all primary processes
-        When user can start transactions
-        And we run a sample background script to generate a pid on "primary" segment
-        And we generate the postmaster.pid file with the background pid on "primary" segment
-        And the user runs "gprecoverseg -a"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
-        And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each mirror
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And all the segments are running
-        And the segments are synchronized
-        When the user runs "gprecoverseg -ra"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And the segments are synchronized
-        And the backup pid file is deleted on "primary" segment
-        And the background pid is killed on "primary" segment
-
-    Scenario: Pid does not correspond to any running process
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And the "primary" segment information is saved
-        When the postmaster.pid file on "primary" segment is saved
-        And user stops all primary processes
-        When user can start transactions
-        And we generate the postmaster.pid file with a non running pid on the same "primary" segment
-        And the user runs "gprecoverseg -a"
-        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
-        And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each mirror
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And all the segments are running
-        And the segments are synchronized
-        When the user runs "gprecoverseg -ra"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
-        And the segments are synchronized
-        And the backup pid file is deleted on "primary" segment
-
-    Scenario: pg_isready functions on recovered segments
-        Given the database is running
-          And all the segments are running
-          And the segments are synchronized
-         When user stops all primary processes
-          And user can start transactions
-
-         When the user runs "gprecoverseg -a"
-         Then gprecoverseg should return a return code of 0
-          And the segments are synchronized
-
-         When the user runs "gprecoverseg -ar"
-         Then gprecoverseg should return a return code of 0
-          And all the segments are running
-          And the segments are synchronized
-          And pg_isready reports all primaries are accepting connections
-
-    Scenario: gprecoverseg incremental recovery displays status for mirrors after pg_rewind call
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And user stops all mirror processes
-        And user can start transactions
-        When the user runs "gprecoverseg -a -s"
-        And gprecoverseg should print "skipping pg_rewind on mirror as standby.signal is present" to stdout
-        Then gprecoverseg should return a return code of 0
-        And gpAdminLogs directory has no "pg_rewind*" files
-        And all the segments are running
-        And the segments are synchronized
-        And the cluster is rebalanced
-
-    Scenario: gprecoverseg should drop existing slot on full recovery
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And verify replication slot internal_wal_replication_slot is available on all the segments
-        And user stops all mirror processes
-        And user can start transactions
-        And the user waits until mirror on content 0,1,2 is down
-        When the user runs "gprecoverseg -a -F -v"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
-        And gprecoverseg should print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
-        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
-        And gprecoverseg should print "Segments successfully recovered" to stdout
-        And verify that mirror on content 0,1,2 is up
-        And verify replication slot internal_wal_replication_slot is available on all the segments
-        And all the segments are running
-        And the segments are synchronized
-        And the cluster is rebalanced
-
-    Scenario Outline: <scenario> recovery should not try to drop slot if slot does not exist
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And verify replication slot internal_wal_replication_slot is available on all the segments
-        And the mirror on content 0 is stopped
-        And user can start transactions
-        And the status of the mirror on content 0 should be "d"
-        And the user runs sql "select pg_drop_replication_slot('internal_wal_replication_slot');" in "postgres" on first primary segment
-        When the user runs "gprecoverseg <args>"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
-        And gprecoverseg should print "Slot internal_wal_replication_slot does not exist" to stdout
-        And gprecoverseg should not print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
-        And gprecoverseg should print "Segments successfully recovered" to stdout
-        And verify that mirror on content 0 is up
-        And verify replication slot internal_wal_replication_slot is available on all the segments
-        And all the segments are running
-        And the segments are synchronized
-        And the cluster is rebalanced
-
-      Examples:
-        | scenario     | args                |
-        | differential | -av --differential  |
-        | full         | -avF                |
-
-    @backup_restore_bashrc
-    Scenario: gprecoverseg should not return error when banner configured on host
-        Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        When the user sets banner on host
-        And user stops all mirror processes
-        And user can start transactions
-        When the user runs "gprecoverseg -a"
-        Then gprecoverseg should return a return code of 0
-        And all the segments are running
-        And the segments are synchronized
-        And the cluster is rebalanced
-
-
-########################### @concourse_cluster tests ###########################
-# The @concourse_cluster tag denotes the scenario that requires a remote cluster
-    @demo_cluster
-    @concourse_cluster
-    Scenario Outline: <scenario> recovery skips unreachable segments
-      Given the database is running
-      And all the segments are running
-      And the segments are synchronized
-
-      And the primary on content 0 is stopped
-      And user can start transactions
-      And the primary on content 1 is stopped
-      And user can start transactions
-      And the status of the primary on content 0 should be "d"
-      And the status of the primary on content 1 should be "d"
-
-      And the host for the primary on content 1 is made unreachable
-
-      And the user runs psql with "-c 'CREATE TABLE IF NOT EXISTS test_recoverseg (i int)'" against database "postgres"
-      And the user runs psql with "-c 'INSERT INTO test_recoverseg SELECT generate_series(1, 10000)'" against database "postgres"
-
-      When the user runs "gprecoverseg <args>"
-      Then gprecoverseg should print "One or more hosts are not reachable via SSH." to stdout
-      And gprecoverseg should print "Host invalid_host is unreachable" to stdout
-      And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
-      And the status of the primary on content 0 should be "u"
-      And the status of the primary on content 1 should be "d"
-
-      # Rebalance all possible segments and skip unreachable segment pairs.
-      When the user runs "gprecoverseg -ar"
-      Then gprecoverseg should return a return code of 0
-      And gprecoverseg should print "Not rebalancing primary segment dbid \d with its mirror dbid \d because one is either down, unreachable, or not synchronized" to stdout
-      And content 0 is balanced
-      And content 1 is unbalanced
-
-      And the user runs psql with "-c 'DROP TABLE test_recoverseg'" against database "postgres"
-      And the cluster is returned to a good state
-
-      Examples:
-        | scenario     | args               |
-        | incremental  | -a                 |
-        | differential | -a --differential  |
-        | full         | -aF                |
-
-  @concourse_cluster
-  Scenario Outline: <scenario> recovery works with tablespaces on a multi-host environment
-    Given the database is running
-    And a tablespace is created with data
-    And user stops all primary processes
-    And user can start transactions
-    When the user runs "gprecoverseg <args>"
-    Then gprecoverseg should return a return code of 0
-    And the segments are synchronized
-    And the tablespace is valid
-    And the database segments are in execute mode
-
-    Given another tablespace is created with data
-    When the user runs "gprecoverseg -ra"
-    Then gprecoverseg should return a return code of 0
-    And the segments are synchronized
-    And verify replication slot internal_wal_replication_slot is available on all the segments
-    And the tablespace is valid
-    And the other tablespace is valid
-    And the database segments are in execute mode
-
-    Examples:
-        | scenario     | args               |
-        | incremental  | -a                 |
-        | differential | -a --differential  |
-        | full         | -aF                |
-
-  @concourse_cluster
-  Scenario: recovering a host with tablespaces succeeds
-    Given the database is running
-
-        # Add data including tablespaces
-    And a tablespace is created with data
-    And database "gptest" exists
-    And the user connects to "gptest" with named connection "default"
-    And the user runs psql with "-c 'CREATE TABLE public.before_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
-    And the user runs psql with "-c 'INSERT INTO public.before_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
-    And the "public.before_host_is_down" table row count in "gptest" is saved
-
-        # Stop one of the nodes as if for hardware replacement and remove any traces as if it was a new node.
-        # Recoverseg requires the host being restored have the same hostname.
-    And the user runs "gpstop -a --host sdw1"
-    And gpstop should return a return code of 0
-    And the user runs remote command "rm -rf /data/gpdata/*" on host "sdw1"
-    And user can start transactions
-
-        # Add data after one of the nodes is down for maintenance
-    And database "gptest" exists
-    And the user connects to "gptest" with named connection "default"
-    And the user runs psql with "-c 'CREATE TABLE public.after_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
-    And the user runs psql with "-c 'INSERT INTO public.after_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
-    And the "public.after_host_is_down" table row count in "gptest" is saved
-
-        # restore the down node onto a node with the same hostname
-    When the user runs "gprecoverseg -a -p sdw1"
-    Then gprecoverseg should return a return code of 0
-    And all the segments are running
-    And user can start transactions
-    And the user runs "gprecoverseg -ra"
-    And gprecoverseg should return a return code of 0
-    And all the segments are running
-    And the segments are synchronized
-    And user can start transactions
-
-        # verify the data
-    And the tablespace is valid
-    And the row count from table "public.before_host_is_down" in "gptest" is verified against the saved data
-    And the row count from table "public.after_host_is_down" in "gptest" is verified against the saved data
+##     Scenario Outline: <scenario> recovery works with tablespaces
+##         Given the database is running
+##           And a tablespace is created with data
+##           And user stops all primary processes
+##           And user can start transactions
+##          When the user runs "gprecoverseg <args>"
+##          Then gprecoverseg should return a return code of 0
+##           And the segments are synchronized
+##           And verify replication slot internal_wal_replication_slot is available on all the segments
+##           And the tablespace is valid
+##           And the database segments are in execute mode
+## 
+##         Given another tablespace is created with data
+##          When the user runs "gprecoverseg -ra"
+##          Then gprecoverseg should return a return code of 0
+##           And the segments are synchronized
+##           And verify replication slot internal_wal_replication_slot is available on all the segments
+##           And the tablespace is valid
+##           And the other tablespace is valid
+##           And the database segments are in execute mode
+##       Examples:
+##         | scenario     | args               |
+##         | incremental  | -a                 |
+##         | differential | -a --differential  |
+##         | full         | -aF                |
+## 
+## 
+##     @demo_cluster
+##     @concourse_cluster
+##     Scenario: differential recovery runs successfully
+##         Given the database is running
+##           And the segments are synchronized
+##           And verify replication slot internal_wal_replication_slot is available on all the segments
+##           And user stops all primary processes
+##           And user can start transactions
+##          When the user runs "gprecoverseg -av --differential"
+##          Then gprecoverseg should return a return code of 0
+##           And gprecoverseg should print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
+##           And gprecoverseg should print "Successfully created replication slot internal_wal_replication_slot" to stdout
+##           And gprecoverseg should print "Segments successfully recovered" to stdout
+##           And verify that mirror on content 0,1,2 is up
+##           And verify replication slot internal_wal_replication_slot is available on all the segments
+##           And the segments are synchronized
+##           And the cluster is rebalanced
+## 
+## 
+##     Scenario: differential recovery shows error message if run with the wrong argument
+##       Given the database is running
+##         And user stops all primary processes
+##         And user can start transactions
+##         And a gprecoverseg directory under '/tmp' with mode '0700' is created
+##         And a gprecoverseg input file is created
+##        When the user runs "gprecoverseg -a --differential -F"
+##        Then gprecoverseg should return a return code of 2
+##         And gprecoverseg should print "Only one of -F and --differential may be specified" to stdout
+##        When the user runs "gprecoverseg -a --differential -p localhost"
+##        Then gprecoverseg should return a return code of 2
+##         And gprecoverseg should print "Only one of -i, -p, -r and --differential may be specified" to stdout
+##        When the user runs gprecoverseg with input file and additional args "-a --differential"
+##        Then gprecoverseg should return a return code of 2
+##         And gprecoverseg should print "Only one of -i, -p, -r and --differential may be specified" to stdout
+##        When the user runs "gprecoverseg -a --differential -o outputConfigFile"
+##        Then gprecoverseg should return a return code of 2
+##         And gprecoverseg should print "Invalid -o provided with --differential argument" to stdout
+##        When the user runs "gprecoverseg -a --differential"
+##        Then gprecoverseg should return a return code of 0
+##         And the segments are synchronized
+##         And the cluster is rebalanced
+## 
+## 
+##     @demo_cluster
+##     @concourse_cluster
+##     Scenario: Differential recovery succeeds if previous incremental recovery failed
+##         Given the database is running
+##           And user stops all primary processes
+##           And user can start transactions
+##           And all files in pg_wal directory are deleted from data directory of preferred primary of content 0,1,2
+##          When the user runs "gprecoverseg -a"
+##          Then gprecoverseg should return a return code of 1
+##           And user can start transactions
+##           And verify that mirror on content 0,1,2 is down
+##          When the user runs "gprecoverseg -a --differential"
+##          Then gprecoverseg should return a return code of 0
+##           And verify that mirror on content 0,1,2 is up
+##           And verify replication slot internal_wal_replication_slot is available on all the segments
+##           And the cluster is rebalanced
+## 
+##     @demo_cluster
+##     @concourse_cluster
+##     Scenario: Differential recovery succeeds if previous full recovery failed
+##         Given the database is running
+##           And user stops all primary processes
+##           And user can start transactions
+##           And a gprecoverseg directory under '/tmp' with mode '0700' is created
+##           And a gprecoverseg input file is created
+##           And edit the input file to recover mirror with content 0 incremental
+##           And edit the input file to recover mirror with content 1 full inplace
+##           And edit the input file to recover mirror with content 2 to a new directory on remote host with mode 0000
+##          When the user runs gprecoverseg with input file and additional args "-a"
+##          Then gprecoverseg should return a return code of 1
+##           And user can start transactions
+##           And verify that mirror on content 0,1 is up
+##           And verify that mirror on content 2 is down
+##          When the user runs "gprecoverseg -a --differential"
+##          Then gprecoverseg should return a return code of 0
+##           And verify that mirror on content 0,1,2 is up
+##           And verify replication slot internal_wal_replication_slot is available on all the segments
+##           And the cluster is rebalanced
+## 
+##     Scenario Outline: full recovery limits number of parallel processes correctly
+##         Given the database is running
+##         And 2 gprecoverseg directory under '/tmp/recoverseg' with mode '0700' is created
+##         And a good gprecoverseg input file is created for moving 2 mirrors
+##         When the user runs gprecoverseg with input file and additional args "-a -v <args>"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
+##         And check if gprecoverseg ran "$GPHOME/sbin/gpsegsetuprecovery.py" 1 times with args "-b <segHost_workers>"
+##         And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b <segHost_workers>"
+##         And gpsegsetuprecovery should only spawn up to <segHost_workers> workers in WorkerPool
+##         And gpsegrecovery should only spawn up to <segHost_workers> workers in WorkerPool
+##         And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
+##         And the segments are synchronized
+##         And check segment conf: postgresql.conf
+## 
+##       Examples:
+##         | args      | coordinator_workers | segHost_workers |
+##         | -B 1 -b 1 |  1                  |  1              |
+##         | -B 2 -b 1 |  2                  |  1              |
+##         | -B 1 -b 2 |  1                  |  2              |
+## 
+##     Scenario: Differential recovery limits number of parallel processes correctly
+##         Given the database is running
+##         And user immediately stops all primary processes for content 0,1,2
+##         And user can start transactions
+##         When the user runs "gprecoverseg -av --differential -B 1 -b 2"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should only spawn up to 1 workers in WorkerPool
+##         And check if gprecoverseg ran "$GPHOME/sbin/gpsegsetuprecovery.py" 1 times with args "-b 2"
+##         And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b 2"
+##         And gpsegsetuprecovery should only spawn up to 2 workers in WorkerPool
+##         And gpsegrecovery should only spawn up to 2 workers in WorkerPool
+##         And the segments are synchronized
+##         And check segment conf: postgresql.conf
+##         And the cluster is rebalanced
+## 
+##     Scenario Outline: Rebalance correctly limits the number of concurrent processes
+##       Given the database is running
+##       And user stops all primary processes
+##       And user can start transactions
+##       And the user runs "gprecoverseg -a -v <args>"
+##       And gprecoverseg should return a return code of 0
+##       And the segments are synchronized
+##       When the user runs "gprecoverseg -ra -v <args>"
+##       Then gprecoverseg should return a return code of 0
+##       And gprecoverseg should only spawn up to <coordinator_workers> workers in WorkerPool
+##       And gpsegsetuprecovery should only spawn up to <segHost_workers> workers in WorkerPool
+##       And gpsegrecovery should only spawn up to <segHost_workers> workers in WorkerPool
+##       And check if gprecoverseg ran "$GPHOME/sbin/gpsegsetuprecovery.py" 1 times with args "-b <segHost_workers>"
+##       And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b <segHost_workers>"
+##       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
+##       And the segments are synchronized
+##       And check segment conf: postgresql.conf
+## 
+##     Examples:
+##       | args      | coordinator_workers | segHost_workers |
+##       | -B 1 -b 1 |  1                  |  1              |
+##       | -B 2 -b 1 |  2                  |  1              |
+##       | -B 1 -b 2 |  1                  |  2              |
+## 
+##     Scenario: gprecoverseg should not output bootstrap error on success
+##         Given the database is running
+##         And user immediately stops all primary processes
+##         And user can start transactions
+##         When the user runs "gprecoverseg -a"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+##         And gprecoverseg should print "pg_rewind: Done!" to stdout for each mirror
+##         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+##         And the segments are synchronized
+##         When the user runs "gprecoverseg -ra"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+## 	    And the segments are synchronized
+## 
+##     Scenario: gprecoverseg full recovery displays pg_basebackup progress to the user
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+##         And user stops all mirror processes
+##         When user can start transactions
+##         And the user runs "gprecoverseg -F -a -s"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for each mirror
+##         And gprecoverseg should print "Segments successfully recovered" to stdout
+##         And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
+##         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
+##         And gpAdminLogs directory has "gpsegrecovery*" files
+##         And gpAdminLogs directory has "gpsegsetuprecovery*" files
+##         And all the segments are running
+##         And the segments are synchronized
+##         And check segment conf: postgresql.conf
+## 
+## 
+##     Scenario Outline: gprecoverseg <scenario> recovery displays pg_controldata success info
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And user stops all mirror processes
+##         When user can start transactions
+##         And the user runs "gprecoverseg <args>"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Successfully finished pg_controldata.* for dbid.*" to stdout
+##         And the segments are synchronized
+##         And verify replication slot internal_wal_replication_slot is available on all the segments
+##         And check segment conf: postgresql.conf
+## 
+##       Examples:
+##         | scenario     | args               |
+##         | incremental  | -a                 |
+##         | differential | -a --differential  |
+##         | full         | -aF                |
+## 
+##     Scenario: gprecoverseg mixed recovery displays pg_basebackup and rewind progress to the user
+##       Given the database is running
+##       And all the segments are running
+##       And the segments are synchronized
+##       And all files in gpAdminLogs directory are deleted
+##       And user immediately stops all primary processes
+##       And user can start transactions
+##       And sql "DROP TABLE if exists test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
+##       And the "test_recoverseg" table row count in "postgres" is saved
+##       And a gprecoverseg directory under '/tmp' with mode '0700' is created
+##       And a gprecoverseg input file is created
+##       And edit the input file to recover mirror with content 0 to a new directory with mode 0700
+##       And edit the input file to recover mirror with content 1 full inplace
+##       And edit the input file to recover mirror with content 2 incremental
+##       When the user runs gprecoverseg with input file and additional args "-av"
+##       Then gprecoverseg should return a return code of 0
+##       And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for mirrors with content 0,1
+##       And gprecoverseg should print "pg_rewind: Done!" to stdout for mirrors with content 2
+##       And gprecoverseg should print "Segments successfully recovered" to stdout
+##       And check if gprecoverseg ran gpsegsetuprecovery.py 1 times with the expected args
+##       And check if gprecoverseg ran gpsegrecovery.py 1 times with the expected args
+##       And gpAdminLogs directory has no "pg_basebackup*" files
+##       And gpAdminLogs directory has no "pg_rewind*" files
+##       And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
+##       And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+##       And the old data directories are cleaned up for content 0
+## 
+##       And all the segments are running
+##       And the segments are synchronized
+##       And the user runs "gprecoverseg -ar"
+##       And gprecoverseg should return a return code of 0
+##       And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
+## 
+##     Scenario: gprecoverseg incremental recovery displays pg_rewind progress to the user
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And all files in gpAdminLogs directory are deleted
+##         And user immediately stops all primary processes
+##         And user can start transactions
+##         When the user runs "gprecoverseg -a -s"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "pg_rewind: Done!" to stdout for each mirror
+##         And gpAdminLogs directory has no "pg_rewind*" files
+##         And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
+##         And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+## 
+##         And all the segments are running
+##         And the segments are synchronized
+##         And the cluster is rebalanced
+## 
+##     Scenario: gprecoverseg does not display pg_basebackup progress to the user when --no-progress option is specified
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And user stops all mirror processes
+##         When user can start transactions
+##         And the user runs "gprecoverseg -F -a --no-progress"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+##         And gprecoverseg should not print "pg_basebackup: base backup completed" to stdout
+##         And gpAdminLogs directory has no "pg_basebackup*" files
+##         And all the segments are running
+##         And the segments are synchronized
+## 
+##     Scenario: gprecoverseg differential recovery displays rsync progress to the user
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+##         And user stops all mirror processes
+##         When user can start transactions
+##         And the user runs "gprecoverseg --differential -a -s"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+##         And gprecoverseg should print "total size" to stdout for each mirror
+##         And gprecoverseg should print "Segments successfully recovered" to stdout
+##         And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
+##         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
+##         And gpAdminLogs directory has no "rsync*" files on all segment hosts
+##         And gpAdminLogs directory has "gpsegrecovery*" files
+##         And gpAdminLogs directory has "gpsegsetuprecovery*" files
+##         And all the segments are running
+##         And the segments are synchronized
+##         And verify replication slot internal_wal_replication_slot is available on all the segments
+##         And check segment conf: postgresql.conf
+## 
+##     Scenario: gprecoverseg does not display rsync progress to the user when --no-progress option is specified
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+##         And user stops all mirror processes
+##         When user can start transactions
+##         And the user runs "gprecoverseg --differential -a -s --no-progress"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+##         And gprecoverseg should not print "total size is .*  speedup is .*" to stdout
+##         And gprecoverseg should print "Segments successfully recovered" to stdout
+##         And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
+##         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
+##         And gpAdminLogs directory has no "rsync*" files on all segment hosts
+##         And gpAdminLogs directory has "gpsegrecovery*" files
+##         And gpAdminLogs directory has "gpsegsetuprecovery*" files
+##         And all the segments are running
+##         And the segments are synchronized
+##         And check segment conf: postgresql.conf
+## 
+##     Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And the "primary" segment information is saved
+##         When the postmaster.pid file on "primary" segment is saved
+##         And user stops all primary processes
+##         When user can start transactions
+##         And we run a sample background script to generate a pid on "primary" segment
+##         And we generate the postmaster.pid file with the background pid on "primary" segment
+##         And the user runs "gprecoverseg -a"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+##         And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each mirror
+##         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+##         And all the segments are running
+##         And the segments are synchronized
+##         When the user runs "gprecoverseg -ra"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+##         And the segments are synchronized
+##         And the backup pid file is deleted on "primary" segment
+##         And the background pid is killed on "primary" segment
+## 
+##     Scenario: Pid does not correspond to any running process
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And the "primary" segment information is saved
+##         When the postmaster.pid file on "primary" segment is saved
+##         And user stops all primary processes
+##         When user can start transactions
+##         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
+##         And the user runs "gprecoverseg -a"
+##         And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+##         And gprecoverseg should print "pg_rewind: no rewind required" to stdout for each mirror
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+##         And all the segments are running
+##         And the segments are synchronized
+##         When the user runs "gprecoverseg -ra"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+##         And the segments are synchronized
+##         And the backup pid file is deleted on "primary" segment
+## 
+##     Scenario: pg_isready functions on recovered segments
+##         Given the database is running
+##           And all the segments are running
+##           And the segments are synchronized
+##          When user stops all primary processes
+##           And user can start transactions
+## 
+##          When the user runs "gprecoverseg -a"
+##          Then gprecoverseg should return a return code of 0
+##           And the segments are synchronized
+## 
+##          When the user runs "gprecoverseg -ar"
+##          Then gprecoverseg should return a return code of 0
+##           And all the segments are running
+##           And the segments are synchronized
+##           And pg_isready reports all primaries are accepting connections
+## 
+##     Scenario: gprecoverseg incremental recovery displays status for mirrors after pg_rewind call
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And user stops all mirror processes
+##         And user can start transactions
+##         When the user runs "gprecoverseg -a -s"
+##         And gprecoverseg should print "skipping pg_rewind on mirror as standby.signal is present" to stdout
+##         Then gprecoverseg should return a return code of 0
+##         And gpAdminLogs directory has no "pg_rewind*" files
+##         And all the segments are running
+##         And the segments are synchronized
+##         And the cluster is rebalanced
+## 
+##     Scenario: gprecoverseg should drop existing slot on full recovery
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And verify replication slot internal_wal_replication_slot is available on all the segments
+##         And user stops all mirror processes
+##         And user can start transactions
+##         And the user waits until mirror on content 0,1,2 is down
+##         When the user runs "gprecoverseg -a -F -v"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
+##         And gprecoverseg should print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
+##         And gprecoverseg should print "pg_basebackup: base backup completed" to stdout
+##         And gprecoverseg should print "Segments successfully recovered" to stdout
+##         And verify that mirror on content 0,1,2 is up
+##         And verify replication slot internal_wal_replication_slot is available on all the segments
+##         And all the segments are running
+##         And the segments are synchronized
+##         And the cluster is rebalanced
+## 
+##     Scenario Outline: <scenario> recovery should not try to drop slot if slot does not exist
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         And verify replication slot internal_wal_replication_slot is available on all the segments
+##         And the mirror on content 0 is stopped
+##         And user can start transactions
+##         And the status of the mirror on content 0 should be "d"
+##         And the user runs sql "select pg_drop_replication_slot('internal_wal_replication_slot');" in "postgres" on first primary segment
+##         When the user runs "gprecoverseg <args>"
+##         Then gprecoverseg should return a return code of 0
+##         And gprecoverseg should print "Checking if slot internal_wal_replication_slot exists" to stdout
+##         And gprecoverseg should print "Slot internal_wal_replication_slot does not exist" to stdout
+##         And gprecoverseg should not print "Successfully dropped replication slot internal_wal_replication_slot" to stdout
+##         And gprecoverseg should print "Segments successfully recovered" to stdout
+##         And verify that mirror on content 0 is up
+##         And verify replication slot internal_wal_replication_slot is available on all the segments
+##         And all the segments are running
+##         And the segments are synchronized
+##         And the cluster is rebalanced
+## 
+##       Examples:
+##         | scenario     | args                |
+##         | differential | -av --differential  |
+##         | full         | -avF                |
+## 
+##     @backup_restore_bashrc
+##     Scenario: gprecoverseg should not return error when banner configured on host
+##         Given the database is running
+##         And all the segments are running
+##         And the segments are synchronized
+##         When the user sets banner on host
+##         And user stops all mirror processes
+##         And user can start transactions
+##         When the user runs "gprecoverseg -a"
+##         Then gprecoverseg should return a return code of 0
+##         And all the segments are running
+##         And the segments are synchronized
+##         And the cluster is rebalanced
+## 
+## 
+## ########################### @concourse_cluster tests ###########################
+## # The @concourse_cluster tag denotes the scenario that requires a remote cluster
+##     @demo_cluster
+##     @concourse_cluster
+##     Scenario Outline: <scenario> recovery skips unreachable segments
+##       Given the database is running
+##       And all the segments are running
+##       And the segments are synchronized
+## 
+##       And the primary on content 0 is stopped
+##       And user can start transactions
+##       And the primary on content 1 is stopped
+##       And user can start transactions
+##       And the status of the primary on content 0 should be "d"
+##       And the status of the primary on content 1 should be "d"
+## 
+##       And the host for the primary on content 1 is made unreachable
+## 
+##       And the user runs psql with "-c 'CREATE TABLE IF NOT EXISTS test_recoverseg (i int)'" against database "postgres"
+##       And the user runs psql with "-c 'INSERT INTO test_recoverseg SELECT generate_series(1, 10000)'" against database "postgres"
+## 
+##       When the user runs "gprecoverseg <args>"
+##       Then gprecoverseg should print "One or more hosts are not reachable via SSH." to stdout
+##       And gprecoverseg should print "Host invalid_host is unreachable" to stdout
+##       And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+##       And the status of the primary on content 0 should be "u"
+##       And the status of the primary on content 1 should be "d"
+## 
+##       # Rebalance all possible segments and skip unreachable segment pairs.
+##       When the user runs "gprecoverseg -ar"
+##       Then gprecoverseg should return a return code of 0
+##       And gprecoverseg should print "Not rebalancing primary segment dbid \d with its mirror dbid \d because one is either down, unreachable, or not synchronized" to stdout
+##       And content 0 is balanced
+##       And content 1 is unbalanced
+## 
+##       And the user runs psql with "-c 'DROP TABLE test_recoverseg'" against database "postgres"
+##       And the cluster is returned to a good state
+## 
+##       Examples:
+##         | scenario     | args               |
+##         | incremental  | -a                 |
+##         | differential | -a --differential  |
+##         | full         | -aF                |
+## 
+##   @concourse_cluster
+##   Scenario Outline: <scenario> recovery works with tablespaces on a multi-host environment
+##     Given the database is running
+##     And a tablespace is created with data
+##     And user stops all primary processes
+##     And user can start transactions
+##     When the user runs "gprecoverseg <args>"
+##     Then gprecoverseg should return a return code of 0
+##     And the segments are synchronized
+##     And the tablespace is valid
+##     And the database segments are in execute mode
+## 
+##     Given another tablespace is created with data
+##     When the user runs "gprecoverseg -ra"
+##     Then gprecoverseg should return a return code of 0
+##     And the segments are synchronized
+##     And verify replication slot internal_wal_replication_slot is available on all the segments
+##     And the tablespace is valid
+##     And the other tablespace is valid
+##     And the database segments are in execute mode
+## 
+##     Examples:
+##         | scenario     | args               |
+##         | incremental  | -a                 |
+##         | differential | -a --differential  |
+##         | full         | -aF                |
+## 
+##   @concourse_cluster
+##   Scenario: recovering a host with tablespaces succeeds
+##     Given the database is running
+## 
+##         # Add data including tablespaces
+##     And a tablespace is created with data
+##     And database "gptest" exists
+##     And the user connects to "gptest" with named connection "default"
+##     And the user runs psql with "-c 'CREATE TABLE public.before_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
+##     And the user runs psql with "-c 'INSERT INTO public.before_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
+##     And the "public.before_host_is_down" table row count in "gptest" is saved
+## 
+##         # Stop one of the nodes as if for hardware replacement and remove any traces as if it was a new node.
+##         # Recoverseg requires the host being restored have the same hostname.
+##     And the user runs "gpstop -a --host sdw1"
+##     And gpstop should return a return code of 0
+##     And the user runs remote command "rm -rf /data/gpdata/*" on host "sdw1"
+##     And user can start transactions
+## 
+##         # Add data after one of the nodes is down for maintenance
+##     And database "gptest" exists
+##     And the user connects to "gptest" with named connection "default"
+##     And the user runs psql with "-c 'CREATE TABLE public.after_host_is_down (i int) DISTRIBUTED BY (i)'" against database "gptest"
+##     And the user runs psql with "-c 'INSERT INTO public.after_host_is_down SELECT generate_series(1, 10000)'" against database "gptest"
+##     And the "public.after_host_is_down" table row count in "gptest" is saved
+## 
+##         # restore the down node onto a node with the same hostname
+##     When the user runs "gprecoverseg -a -p sdw1"
+##     Then gprecoverseg should return a return code of 0
+##     And all the segments are running
+##     And user can start transactions
+##     And the user runs "gprecoverseg -ra"
+##     And gprecoverseg should return a return code of 0
+##     And all the segments are running
+##     And the segments are synchronized
+##     And user can start transactions
+## 
+##         # verify the data
+##     And the tablespace is valid
+##     And the row count from table "public.before_host_is_down" in "gptest" is verified against the saved data
+##     And the row count from table "public.after_host_is_down" in "gptest" is verified against the saved data
 
   @demo_cluster
   @concourse_cluster
