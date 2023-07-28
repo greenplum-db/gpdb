@@ -201,12 +201,12 @@ static struct
 	const char* c; /* config file */
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
-	bool		signature_auth; /* enable SSL certificate authentication on the GPDB side */
+	const char*	ssl_verify; /* enable SSL certificate authentication on the GPDB side */
 	int			w; /* The time used for session timeout in seconds */
 	int 		k; /* The time used to clean up sessions in seconds */
 	int			compress; /* The flag to indicate whether comopression transmission is open */
 	int			multi_thread; /* The number of working threads for compression transmission */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, false, 0, 300, 0, 0};
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, "on", 0, 300, 0, 0};
 
 #define START_BUFFER_SIZE (1 << 20) /* 1M as start size */
 #define MAXIMUM_BUFFER_SIZE (1 << 30) /* 1G as Maximum size */
@@ -690,7 +690,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ NULL, 'S', 0, "use O_SYNC when opening files for write" },
 	{ NULL, 'z', 1, "internal - queue size for listen call" },
 	{ "ssl", 257, 1, "ssl - certificates files under this directory" },
-	{ "ssl_server_verify", 260, 0, "ssl_server_verify - enable the certification for gpdb identity" },
+	{ "ssl_verify_peer", 260, 1, "ssl_server_verify - enable the certification for gpdb identity" },
 #ifdef GPFXDIST
 	{ NULL, 'c', 1, "transform configuration file" },
 #endif
@@ -775,7 +775,7 @@ static void parse_command_line(int argc, const char* const argv[],
 			opt.ssl = arg;
 			break;
 		case 260:
-			opt.signature_auth = true;
+			opt.ssl_verify = arg;
 			break;
 #else
 		case 257:
@@ -4616,7 +4616,7 @@ static SSL_CTX *initialize_ctx(void)
 	 * Set the verification flags for ctx
 	 * We always require client certificate
 	 */
-	if (opt.signature_auth) {
+	if (!strcmp(opt.ssl_verify, "on")) {
 		/* Copy the path + the filename */
 		snprintf(fileName,stringSize,"%s%c%s",opt.ssl,slash,TrustedCaFilename);
 
@@ -4635,8 +4635,11 @@ static SSL_CTX *initialize_ctx(void)
 		
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, 0);
 	}
-	else {
+	else if (!strcmp(opt.ssl_verify, "off")) {
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, 0); 
+	}
+	else {
+		gfatal(NULL, "Invalid parameter for --ssl_verify_peer");
 	}
 
 	/* 
@@ -4781,10 +4784,8 @@ static void free_SSL_resources(const request_t *r)
 static void handle_ssl_error(SOCKET sock, BIO *sbio, SSL *ssl)
 {
 	gwarning(NULL, "SSL accept failed");
-	if (opt.v)
-	{
-		ERR_print_errors(gcb.bio_err);
-	}
+	
+	ERR_print_errors(gcb.bio_err);
 
 	SSL_shutdown(ssl);
 	SSL_free(ssl);
