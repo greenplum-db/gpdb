@@ -144,7 +144,7 @@ recovery_target_time = '$recovery_time'");
 my $res = run_log(
 	[
 		'pg_ctl',               '-D', $node_standby->data_dir, '-l',
-		$node_standby->logfile, 'start'
+		$node_standby->logfile,  '-o', "-c gp_role=utility", 'start'
 	]);
 ok(!$res, 'invalid recovery startup fails');
 
