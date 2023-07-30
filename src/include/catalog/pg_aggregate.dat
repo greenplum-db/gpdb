@@ -676,6 +676,10 @@
   aggtransfn => 'gp_hyperloglog_add_item_agg_default',
   aggfinalfn => 'gp_hyperloglog_comp', aggcombinefn => 'gp_hyperloglog_merge',
   aggtranstype => 'gp_hyperloglog_estimator' },
+{ aggfnoid => 'gp_hyperloglog_merge(gp_hyperloglog_estimator)',
+  aggtransfn => 'gp_hyperloglog_merge',
+  aggfinalfn => 'gp_hyperloglog_comp', aggcombinefn => 'gp_hyperloglog_merge',
+  aggtranstype => 'gp_hyperloglog_estimator' },
 
 # GPDB: additional variants of percentile_cont and percentile_disc
 { aggfnoid => 'gp_percentile_cont(float8,float8,int8,int8)',

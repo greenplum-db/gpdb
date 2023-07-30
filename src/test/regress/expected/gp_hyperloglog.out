@@ -97,3 +97,30 @@ SELECT gp_hyperloglog_get_estimate('8gYCAP////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 -- b) Test convert an invalid hloglog counter.
 SELECT gp_hyperloglog_get_estimate('blah');
 ERROR:  ERROR: The stored counter is version 161 while the library is version 2. Please change library version or use upgrade function to upgrade the counter (gp_hyperloglog.c:970)
+
+-- 5. Test gp_hyperloglog_merge as aggregate function
+-- a) Test aggregate three rows
+SELECT gp_hyperloglog_get_estimate(gp_hyperloglog_merge(c)) FROM (
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 10000) i
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 100) i
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 10) i
+) T;
+ gp_hyperloglog_get_estimate
+-----------------------------
+            9998.40103485189
+(1 row)
+
+-- b) Test aggregate with nulls
+SELECT gp_hyperloglog_get_estimate(gp_hyperloglog_merge(c)) FROM (
+    SELECT NULL c
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 100) i
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 10) i
+) T;
+ gp_hyperloglog_get_estimate
+-----------------------------
+             100.30560977271
+(1 row)
