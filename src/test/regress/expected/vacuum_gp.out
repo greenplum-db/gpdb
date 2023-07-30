@@ -418,7 +418,6 @@ VACUUM FULL pg_authid, pg_database;
 -- Test that VACUUM FREEZE should leave no unfrozen rows in pg_stat_last_operation and pg_stat_last_shoperation
 drop table if exists vacfrzt;
 drop database if exists vacfrzdb;
-create extension if not exists pageinspect;
 -- autovacuum needs to be turned off for this test
 show autovacuum;
  autovacuum 

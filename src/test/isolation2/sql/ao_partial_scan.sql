@@ -5,8 +5,6 @@
 -- varblocks get scanned and verify it against the range of block directory
 -- entries that should be involved.
 
-CREATE EXTENSION pageinspect;
-
 --------------------------------------------------------------------------------
 ----                            ao_row tables
 --------------------------------------------------------------------------------
@@ -521,5 +519,3 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan4_i_idx', 2), 'aoco_partial_scan4_i_idx');
-
-DROP EXTENSION pageinspect;
