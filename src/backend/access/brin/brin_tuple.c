@@ -394,6 +394,52 @@ brin_form_placeholder_tuple(BrinDesc *brdesc, BlockNumber blkno, Size *size)
 }
 
 /*
+ * Generate a new on-disk tuple with no data values and with the empty range
+ * mask set. This is similar to brin_form_placeholder_tuple().
+ */
+BrinTuple *
+brin_form_empty_tuple(BrinDesc *brdesc, BlockNumber blkno, Size *size)
+{
+	Size		len;
+	Size		hoff;
+	BrinTuple  *rettuple;
+	int			keyno;
+	bits8	   *bitP;
+	int			bitmask;
+
+	/* compute total space needed: always add nulls */
+	len = SizeOfBrinTuple;
+	len += BITMAPLEN(brdesc->bd_tupdesc->natts * 2);
+	len = hoff = MAXALIGN(len);
+
+	rettuple = palloc0(len);
+	rettuple->bt_blkno = blkno;
+	rettuple->bt_info = hoff;
+	rettuple->bt_info |= BRIN_NULLS_MASK | BRIN_EMPTY_RANGE_MASK;
+
+	bitP = ((bits8 *) ((char *) rettuple + SizeOfBrinTuple)) - 1;
+	bitmask = HIGHBIT;
+	/* set allnulls true for all attributes */
+	for (keyno = 0; keyno < brdesc->bd_tupdesc->natts; keyno++)
+	{
+		if (bitmask != HIGHBIT)
+			bitmask <<= 1;
+		else
+		{
+			bitP += 1;
+			*bitP = 0x0;
+			bitmask = 1;
+		}
+
+		*bitP |= bitmask;
+	}
+	/* no need to set hasnulls */
+
+	*size = len;
+	return rettuple;
+}
+
+/*
  * Free a tuple created by brin_form_tuple
  */
 void
