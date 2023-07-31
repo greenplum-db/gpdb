@@ -34,6 +34,10 @@ CREATE VIEW cancel_all AS
     FROM pg_stat_activity
     WHERE query LIKE 'SELECT * FROM busy%';
 
+-- The test cases for the value of gp_resource_group_cpu_limit equals 0.9, 
+-- do not change it during the test.
+show gp_resource_group_cpu_limit;
+
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0');
 CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
 
@@ -100,7 +104,8 @@ select * from cancel_all;
 select pg_sleep(5);
 
 11: BEGIN;
-11: select max(cpu_usage)::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where groupname='rg1_cpuset_test';
+11: select max(cpu_usage)::float >= 65 * 0.9 
+from gp_toolkit.gp_resgroup_status_per_host where groupname='rg1_cpuset_test';
 -- cancel the transaction
 -- start_ignore
 select * from cancel_all;

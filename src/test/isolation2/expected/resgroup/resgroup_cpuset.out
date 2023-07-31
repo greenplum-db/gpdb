@@ -21,6 +21,14 @@ CREATE VIEW
 CREATE VIEW cancel_all AS SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE query LIKE 'SELECT * FROM busy%';
 CREATE VIEW
 
+-- The test cases for the value of gp_resource_group_cpu_limit equals 0.9,
+-- do not change it during the test.
+show gp_resource_group_cpu_limit;
+ gp_resource_group_cpu_limit 
+-----------------------------
+ 0.9                         
+(1 row)
+
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0');
 CREATE RESOURCE GROUP
 CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
@@ -149,7 +157,7 @@ select pg_sleep(5);
 
 11: BEGIN;
 BEGIN
-11: select max(cpu_usage)::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where groupname='rg1_cpuset_test';
+11: select max(cpu_usage)::float >= 65 * 0.9 from gp_toolkit.gp_resgroup_status_per_host where groupname='rg1_cpuset_test';
  ?column? 
 ----------
  t        
