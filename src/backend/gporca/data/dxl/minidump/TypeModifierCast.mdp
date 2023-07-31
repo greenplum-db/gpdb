@@ -191,7 +191,7 @@ EXPLAIN SELECT b::varchar(40) FROM tab1;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000079" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000078" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="9" Alias="b">
@@ -206,7 +206,7 @@ EXPLAIN SELECT b::varchar(40) FROM tab1;
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="b">
-              <dxl:FuncExpr FuncId="0.669.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" TypeModifier="44">
+              <dxl:FuncExpr FuncId="0.669.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" FuncVariadic="false" TypeModifier="44">
                 <dxl:Ident ColId="1" ColName="b" TypeMdid="0.1043.1.0" TypeModifier="14"/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="44"/>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

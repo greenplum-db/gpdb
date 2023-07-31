@@ -278,13 +278,13 @@ select j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t;
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="j">
-                <dxl:FuncExpr FuncId="0.1397.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                <dxl:FuncExpr FuncId="0.1397.1.0" FuncRetSet="false" TypeMdid="0.23.1.0" FuncVariadic="false">
                   <dxl:Ident ColId="0" ColName="d" TypeMdid="0.23.1.0"/>
                 </dxl:FuncExpr>
               </dxl:ProjElem>
               <dxl:ProjElem ColId="9" Alias="i">
-                <dxl:FuncExpr FuncId="0.3240.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
-                  <dxl:FuncExpr FuncId="0.394.1.0" FuncRetSet="false" TypeMdid="0.1009.1.0">
+                <dxl:FuncExpr FuncId="0.3240.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
+                  <dxl:FuncExpr FuncId="0.394.1.0" FuncRetSet="false" TypeMdid="0.1009.1.0" FuncVariadic="false">
                     <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                       <dxl:Ident ColId="1" ColName="c" TypeMdid="0.1042.1.0"/>
                     </dxl:Cast>
@@ -297,7 +297,7 @@ select j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t;
             <dxl:OneTimeFilter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000024" Rows="1.000000" Width="15"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="15"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="d">

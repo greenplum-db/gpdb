@@ -576,7 +576,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:DMLUpdate Columns="0,1" ActionCol="9" CtidCol="2" SegmentIdCol="8" IsSplitUpdate="true">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="436.737037" Rows="100.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="436.737110" Rows="100.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -602,7 +602,7 @@
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.007870" Rows="200.000000" Width="22"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.007943" Rows="200.000000" Width="22"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -630,7 +630,7 @@
           </dxl:HashExprList>
           <dxl:Split DeleteColumns="0,1" InsertColumns="1,0" ActionCol="9" CtidCol="2" SegmentIdCol="8">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.003279" Rows="200.000000" Width="22"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.003353" Rows="200.000000" Width="22"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -651,7 +651,7 @@
             </dxl:ProjList>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000697" Rows="100.000000" Width="18"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000770" Rows="100.000000" Width="18"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

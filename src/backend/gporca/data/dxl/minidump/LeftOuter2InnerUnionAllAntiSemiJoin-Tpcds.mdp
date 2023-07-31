@@ -11536,7 +11536,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
     <dxl:Plan Id="0" SpaceSize="85902">
       <dxl:Limit>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="5904.512295" Rows="5.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="5904.083129" Rows="5.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11548,7 +11548,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         </dxl:ProjList>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="5904.512255" Rows="5.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="5904.083089" Rows="5.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11562,7 +11562,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
           <dxl:SortingColumnList/>
           <dxl:Limit>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="5904.512075" Rows="5.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="5904.082910" Rows="5.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11574,7 +11574,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
             </dxl:ProjList>
             <dxl:HashJoin JoinType="Right">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="5904.512055" Rows="34588120.393257" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="5904.082890" Rows="34588120.393257" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="95" Alias="i_item_sk">
@@ -11594,7 +11594,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
               </dxl:HashCondList>
               <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1938.035901" Rows="34571856.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1938.034443" Rows="34571856.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="124" Alias="ss_item_sk">
@@ -11610,7 +11610,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                 </dxl:HashExprList>
                 <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1721.616083" Rows="34571856.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1721.614624" Rows="34571856.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="124" Alias="ss_item_sk">
@@ -11647,20 +11647,20 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                   </dxl:TableScan>
                   <dxl:Materialize Eager="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.002855" Rows="24.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.001397" Rows="24.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
                     <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.002843" Rows="24.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.001385" Rows="24.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList/>
                       <dxl:Filter/>
                       <dxl:SortingColumnList/>
                       <dxl:TableScan>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.002518" Rows="12.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.001059" Rows="12.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>
@@ -11683,7 +11683,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
               </dxl:RedistributeMotion>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="434.067693" Rows="17877.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="433.639986" Rows="17877.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="95" Alias="i_item_sk">

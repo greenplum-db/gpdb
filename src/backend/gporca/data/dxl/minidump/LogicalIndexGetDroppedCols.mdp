@@ -1437,7 +1437,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.001520" Rows="1.774224" Width="88"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.001822" Rows="1.774224" Width="88"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="some_id">
@@ -1514,7 +1514,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         <dxl:SortingColumnList/>
         <dxl:IndexScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000841" Rows="1.774224" Width="88"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.001144" Rows="1.774224" Width="88"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="some_id">
@@ -1598,7 +1598,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
-	<dxl:Partitions/>
+          <dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.30058.1.0" IndexName="solo_idx"/>
           <dxl:TableDescriptor Mdid="6.30044.1.0" TableName="solo">
             <dxl:Columns>

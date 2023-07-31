@@ -2403,7 +2403,7 @@
     <dxl:Plan Id="0" SpaceSize="32">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="568384082185.659546" Rows="1000.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="568384082954.615234" Rows="1000.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -2417,7 +2417,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="568384082185.629761" Rows="1000.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="568384082954.585449" Rows="1000.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -2440,7 +2440,7 @@
               </dxl:ParamList>
               <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="555052642.433707" Rows="1201201.200000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="555052643.184640" Rows="1201201.200000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="a">
@@ -2519,7 +2519,7 @@
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
                         <dxl:HashExprList>
-                          <dxl:HashExpr TypeMdid="0.23.1.0">
+                          <dxl:HashExpr>
                             <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
                           </dxl:HashExpr>
                         </dxl:HashExprList>
@@ -2566,7 +2566,7 @@
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
                         <dxl:HashExprList>
-                          <dxl:HashExpr TypeMdid="0.23.1.0">
+                          <dxl:HashExpr>
                             <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
                           </dxl:HashExpr>
                         </dxl:HashExprList>
@@ -2603,7 +2603,7 @@
                 </dxl:Materialize>
                 <dxl:Materialize Eager="true">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.085047" Rows="3000.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.085780" Rows="3000.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="27" Alias="a">
@@ -2613,7 +2613,7 @@
                   <dxl:Filter/>
                   <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.081047" Rows="3000.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.081780" Rows="3000.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="27" Alias="a">
@@ -2624,7 +2624,7 @@
                     <dxl:SortingColumnList/>
                     <dxl:TableScan>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.006967" Rows="1000.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.007700" Rows="1000.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="27" Alias="a">

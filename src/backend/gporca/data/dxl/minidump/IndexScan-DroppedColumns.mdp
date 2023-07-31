@@ -187,7 +187,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000239" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000253" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -201,7 +201,7 @@
         <dxl:SortingColumnList/>
         <dxl:IndexScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000152" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000167" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -218,7 +218,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
-	<dxl:Partitions/>
+          <dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.567205.1.0" IndexName="r_c"/>
           <dxl:TableDescriptor Mdid="6.567182.1.1" TableName="r">
             <dxl:Columns>

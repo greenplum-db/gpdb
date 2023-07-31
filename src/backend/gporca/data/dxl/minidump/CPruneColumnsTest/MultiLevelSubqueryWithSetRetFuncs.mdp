@@ -326,7 +326,7 @@ select count(*) from (select (select unnest(string_to_array(c, '|')) ii from foo
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000078" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000079" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="22" Alias="ColRef_0022">
@@ -357,8 +357,8 @@ select count(*) from (select (select unnest(string_to_array(c, '|')) ii from foo
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="20" Alias="j">
-                  <dxl:FuncExpr FuncId="0.3240.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
-                    <dxl:FuncExpr FuncId="0.394.1.0" FuncRetSet="false" TypeMdid="0.1009.1.0">
+                  <dxl:FuncExpr FuncId="0.3240.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
+                    <dxl:FuncExpr FuncId="0.394.1.0" FuncRetSet="false" TypeMdid="0.1009.1.0" FuncVariadic="false">
                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                         <dxl:Ident ColId="1" ColName="c" TypeMdid="0.1042.1.0"/>
                       </dxl:Cast>

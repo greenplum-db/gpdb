@@ -402,7 +402,7 @@ where a=1 and b=0;
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.010614" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.010714" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -419,7 +419,7 @@ where a=1 and b=0;
         <dxl:SortingColumnList/>
         <dxl:IndexScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.010560" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.010660" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -444,7 +444,7 @@ where a=1 and b=0;
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
-	<dxl:Partitions/>
+          <dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.1962926.1.0" IndexName="sc_idx_b"/>
           <dxl:TableDescriptor Mdid="6.1962900.1.1" TableName="dd_singlecol_idx">
             <dxl:Columns>

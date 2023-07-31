@@ -998,7 +998,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.759648" Rows="800.000000" Width="143"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.742598" Rows="800.000000" Width="143"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="p_partkey">
@@ -1033,7 +1033,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.245992" Rows="800.000000" Width="143"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.228942" Rows="800.000000" Width="143"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="p_partkey">

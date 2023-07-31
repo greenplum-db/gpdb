@@ -1457,7 +1457,7 @@
     <dxl:Plan Id="0" SpaceSize="11">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="888838.913054" Rows="42.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="888839.078233" Rows="42.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c">
@@ -1483,7 +1483,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="888838.909298" Rows="42.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="888839.074476" Rows="42.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c">
@@ -1520,7 +1520,7 @@
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.001150" Rows="3.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.001165" Rows="3.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">
@@ -1537,7 +1537,7 @@
             <dxl:SortingColumnList/>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000484" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000498" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="a">
@@ -1557,7 +1557,7 @@
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
-	<dxl:Partitions/>
+              <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.98318.1.0" IndexName="foo_idx"/>
               <dxl:TableDescriptor Mdid="6.98304.1.0" TableName="foo">
                 <dxl:Columns>
@@ -1577,7 +1577,7 @@
           </dxl:BroadcastMotion>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000770" Rows="100.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000917" Rows="100.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="c">

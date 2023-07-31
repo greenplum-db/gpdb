@@ -533,7 +533,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
     <dxl:Plan Id="0" SpaceSize="24">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3017.014692" Rows="30.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="3017.014696" Rows="30.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -553,7 +553,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="3017.012903" Rows="30.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="3017.012907" Rows="30.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -725,7 +725,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
           <dxl:OneTimeFilter/>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1293.001624" Rows="30.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="1293.001629" Rows="30.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -789,7 +789,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
             </dxl:BroadcastMotion>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="6.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000046" Rows="6.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="i">

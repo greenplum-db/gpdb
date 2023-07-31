@@ -390,10 +390,6 @@
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.504088.1.1.8" Name="c_first_name" Width="21.000000">
         <dxl:StatsBucket Frequency="0.038462" DistinctValues="112.192308">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1042.1.0" Value="AAAAGEFhcm9uICAgICAgICAgICAgICAg" LintValue="570426164"/>
-          <dxl:UpperBound Closed="false" TypeMdid="0.1042.1.0" Value="AAAAGEFuZ2VsYSAgICAgICAgICAgICAg" LintValue="570426164"/>
-        </dxl:StatsBucket>
-        <dxl:StatsBucket Frequency="0.038462" DistinctValues="112.192308">
           <dxl:LowerBound Closed="true" TypeMdid="0.1042.1.0" Value="AAAAGEFuZ2VsYSAgICAgICAgICAgICAg" LintValue="570426164"/>
           <dxl:UpperBound Closed="false" TypeMdid="0.1042.1.0" Value="AAAAGEJlbml0byAgICAgICAgICAgICAg" LintValue="35652518"/>
         </dxl:StatsBucket>
@@ -1865,7 +1861,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1074.205091" Rows="998707.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1064.867190" Rows="998707.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="25" Alias="sale_type">
@@ -1876,7 +1872,7 @@
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1038.331535" Rows="998707.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1028.993634" Rows="998707.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="25" Alias="sale_type">
@@ -1886,7 +1882,7 @@
           <dxl:Filter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="517.168354" Rows="998706.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="512.499403" Rows="998706.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="25" Alias="sale_type">
@@ -1902,7 +1898,7 @@
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="500.739640" Rows="998706.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="496.070689" Rows="998706.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="25" Alias="sale_type">
@@ -1913,7 +1909,7 @@
               <dxl:OneTimeFilter/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="495.816019" Rows="998706.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="491.147069" Rows="998706.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:Filter/>
@@ -1934,7 +1930,7 @@
           </dxl:Result>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="517.168354" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="512.499403" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="51" Alias="sale_type">
@@ -1950,7 +1946,7 @@
             <dxl:OneTimeFilter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="500.739640" Rows="998706.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="496.070689" Rows="998706.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="51" Alias="sale_type">
@@ -1961,7 +1957,7 @@
               <dxl:OneTimeFilter/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="495.816019" Rows="998706.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="491.147069" Rows="998706.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:Filter/>

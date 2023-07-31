@@ -249,7 +249,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Window PartitionColumns="">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.001178" Rows="10.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.001189" Rows="10.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="cn">
@@ -264,7 +264,7 @@
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.001098" Rows="10.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.001109" Rows="10.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="cn">
@@ -277,7 +277,7 @@
           </dxl:SortingColumnList>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000739" Rows="10.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000750" Rows="10.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="cn">
@@ -292,7 +292,7 @@
             <dxl:LimitOffset/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000137" Rows="10.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000149" Rows="10.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="cn">
@@ -320,7 +320,7 @@
             <dxl:SortingColumnList>
               <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
             </dxl:SortingColumnList>
-            <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls">
+            <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
               <dxl:TrailingEdge TrailingBoundary="BoundedPreceding">
                 <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAA8D8=" DoubleValue="1.000000"/>
               </dxl:TrailingEdge>

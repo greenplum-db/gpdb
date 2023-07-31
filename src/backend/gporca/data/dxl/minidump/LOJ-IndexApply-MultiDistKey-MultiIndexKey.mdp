@@ -355,7 +355,7 @@
     <dxl:Plan Id="0" SpaceSize="15">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="461.001661" Rows="5.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="461.002161" Rows="5.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -381,7 +381,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="461.001214" Rows="5.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="461.001714" Rows="5.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -466,7 +466,7 @@
           </dxl:RedistributeMotion>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="30.000923" Rows="0.200000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="30.001423" Rows="0.200000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="d">
@@ -495,7 +495,7 @@
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
-	<dxl:Partitions/>
+            <dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.93456.1.0" IndexName="idx_bar_de"/>
             <dxl:TableDescriptor Mdid="6.90070.1.0" TableName="bar">
               <dxl:Columns>

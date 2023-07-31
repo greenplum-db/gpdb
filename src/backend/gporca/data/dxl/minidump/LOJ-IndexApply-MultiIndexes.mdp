@@ -382,7 +382,7 @@ set optimizer_enable_hashjoin = off;
     <dxl:Plan Id="0" SpaceSize="6">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="868.122115" Rows="3.000000" Width="48"/>
+          <dxl:Cost StartupCost="0" TotalCost="868.122315" Rows="3.000000" Width="48"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -408,7 +408,7 @@ set optimizer_enable_hashjoin = off;
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="868.121579" Rows="3.000000" Width="48"/>
+            <dxl:Cost StartupCost="0" TotalCost="868.121779" Rows="3.000000" Width="48"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -436,7 +436,7 @@ set optimizer_enable_hashjoin = off;
           </dxl:JoinFilter>
           <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.000482" Rows="2.000000" Width="32"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000682" Rows="2.000000" Width="32"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -505,7 +505,7 @@ set optimizer_enable_hashjoin = off;
             </dxl:RedistributeMotion>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000143" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000343" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="a">
@@ -543,7 +543,7 @@ set optimizer_enable_hashjoin = off;
                   </dxl:Cast>
                 </dxl:Comparison>
               </dxl:IndexCondList>
-	      <dxl:Partitions/>
+              <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.32784.1.0" IndexName="bar_idx_a"/>
               <dxl:TableDescriptor Mdid="6.32768.1.0" TableName="bar">
                 <dxl:Columns>

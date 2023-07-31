@@ -272,7 +272,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:DMLUpdate Columns="0,11,2,3" ActionCol="12" CtidCol="4" SegmentIdCol="10" IsSplitUpdate="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.050903" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.050911" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -306,7 +306,7 @@
         </dxl:TableDescriptor>
         <dxl:Assert ErrorCode="23514">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000121" Rows="1.000000" Width="26"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000130" Rows="1.000000" Width="26"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -350,7 +350,7 @@
           </dxl:AssertConstraintList>
           <dxl:Assert ErrorCode="23502">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="26"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000117" Rows="1.000000" Width="26"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -383,7 +383,7 @@
             </dxl:AssertConstraintList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000095" Rows="1.000000" Width="26"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000104" Rows="1.000000" Width="26"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="11" Alias="b">
@@ -409,7 +409,7 @@
               <dxl:OneTimeFilter/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000082" Rows="1.000000" Width="26"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000091" Rows="1.000000" Width="26"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">

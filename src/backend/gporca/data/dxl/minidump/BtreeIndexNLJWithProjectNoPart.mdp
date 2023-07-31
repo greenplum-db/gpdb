@@ -1262,7 +1262,7 @@
     <dxl:Plan Id="0" SpaceSize="9">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6431.358825" Rows="1000.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="6431.458825" Rows="1000.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="dist_e">
@@ -1291,7 +1291,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6431.239572" Rows="1000.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="6431.339572" Rows="1000.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="dist_e">
@@ -1353,7 +1353,7 @@
           </dxl:TableScan>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6000.184663" Rows="0.200000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6000.284663" Rows="0.200000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="empty_col">
@@ -1373,7 +1373,7 @@
             <dxl:OneTimeFilter/>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6000.184661" Rows="0.200000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="6000.284661" Rows="0.200000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="dist_a">
@@ -1406,7 +1406,7 @@
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
-	<dxl:Partitions/>
+              <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.33097.1.0" IndexName="t1_idx_ac"/>
               <dxl:TableDescriptor Mdid="6.33087.1.0" TableName="t1" ExecuteAsUser="10">
                 <dxl:Columns>

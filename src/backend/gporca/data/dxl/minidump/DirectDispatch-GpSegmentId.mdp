@@ -275,7 +275,7 @@ select * from foo where gp_segment_id=2;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000607" Rows="6.666667" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000622" Rows="6.666667" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -289,7 +289,7 @@ select * from foo where gp_segment_id=2;
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000408" Rows="6.666667" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000423" Rows="6.666667" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

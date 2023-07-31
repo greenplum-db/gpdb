@@ -697,7 +697,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
     <dxl:Plan Id="0" SpaceSize="24">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1294.018798" Rows="1002.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="1294.033465" Rows="1002.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -711,7 +711,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.973989" Rows="1002.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.988655" Rows="1002.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -735,7 +735,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.166860" Rows="3.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.174194" Rows="3.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="count">
@@ -746,14 +746,14 @@ explain select * from n1 where a in (1, (select count(*) from n1));
             <dxl:SortingColumnList/>
             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.166431" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.173764" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:GroupingColumns/>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="18" Alias="count">
                   <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                     <dxl:ValuesList ParamType="aggargs">
-                    <dxl:Ident ColId="19" ColName="ColRef_0019" TypeMdid="0.20.1.0"/>
+                      <dxl:Ident ColId="19" ColName="ColRef_0019" TypeMdid="0.20.1.0"/>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>
@@ -764,7 +764,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
               <dxl:Filter/>
               <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.166430" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.173763" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="19" Alias="ColRef_0019">
@@ -775,7 +775,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
                 <dxl:SortingColumnList/>
                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.166400" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.173733" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
@@ -791,7 +791,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
                   <dxl:Filter/>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.154000" Rows="20000.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.161333" Rows="20000.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
@@ -814,7 +814,7 @@ explain select * from n1 where a in (1, (select count(*) from n1));
           </dxl:BroadcastMotion>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.154000" Rows="20000.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.161333" Rows="20000.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">

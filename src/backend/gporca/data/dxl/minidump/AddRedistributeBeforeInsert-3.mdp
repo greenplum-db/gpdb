@@ -344,7 +344,7 @@
     <dxl:Plan Id="0" SpaceSize="10">
       <dxl:DMLInsert Columns="0,1" ActionCol="11" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="882688.190319" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="882688.191445" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -370,7 +370,7 @@
         </dxl:TableDescriptor>
         <dxl:RandomMotion InputSegments="0,1" OutputSegments="0,1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="882688.166881" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="882688.168008" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -387,7 +387,7 @@
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="882688.166863" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="882688.167989" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -404,7 +404,7 @@
             <dxl:OneTimeFilter/>
             <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="882688.166857" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="882688.167983" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -423,7 +423,7 @@
               </dxl:JoinFilter>
               <dxl:DynamicTableScan SelectorIds="">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">

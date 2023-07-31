@@ -672,7 +672,7 @@ WHERE t1.id1 = t2.id1;
     <dxl:Plan Id="0" SpaceSize="17">
       <dxl:DMLUpdate Columns="0,1" ActionCol="27" CtidCol="2" SegmentIdCol="8" IsSplitUpdate="true">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="4755.378785" Rows="60001.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="4755.510788" Rows="60001.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -698,7 +698,7 @@ WHERE t1.id1 = t2.id1;
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1317.821494" Rows="120002.000000" Width="22"/>
+            <dxl:Cost StartupCost="0" TotalCost="1317.953496" Rows="120002.000000" Width="22"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id1">
@@ -726,7 +726,7 @@ WHERE t1.id1 = t2.id1;
           </dxl:HashExprList>
           <dxl:Split DeleteColumns="0,1" InsertColumns="10,1" ActionCol="27" CtidCol="2" SegmentIdCol="8">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1315.067048" Rows="120002.000000" Width="22"/>
+              <dxl:Cost StartupCost="0" TotalCost="1315.199050" Rows="120002.000000" Width="22"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="id1">
@@ -747,7 +747,7 @@ WHERE t1.id1 = t2.id1;
             </dxl:ProjList>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1314.187033" Rows="60001.000000" Width="22"/>
+                <dxl:Cost StartupCost="0" TotalCost="1314.319035" Rows="60001.000000" Width="22"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="id1">
@@ -776,7 +776,7 @@ WHERE t1.id1 = t2.id1;
               </dxl:HashCondList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.418007" Rows="60001.000000" Width="18"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.462008" Rows="60001.000000" Width="18"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="id1">
@@ -809,7 +809,7 @@ WHERE t1.id1 = t2.id1;
               </dxl:TableScan>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="871.231994" Rows="60001.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="871.319995" Rows="60001.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="id1">
@@ -829,7 +829,7 @@ WHERE t1.id1 = t2.id1;
                 </dxl:HashCondList>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.418007" Rows="60001.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.462008" Rows="60001.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="id1">
@@ -856,7 +856,7 @@ WHERE t1.id1 = t2.id1;
                 </dxl:TableScan>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.418007" Rows="60001.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.462008" Rows="60001.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="18" Alias="id1">

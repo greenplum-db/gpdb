@@ -222,7 +222,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.001265" Rows="10.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.001287" Rows="10.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="9" Alias="lead">
@@ -236,7 +236,7 @@
         <dxl:OneTimeFilter/>
         <dxl:Window PartitionColumns="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.001265" Rows="10.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.001287" Rows="10.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="lead">
@@ -254,7 +254,7 @@
           <dxl:Filter/>
           <dxl:Window PartitionColumns="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.001145" Rows="10.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.001167" Rows="10.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="lead">
@@ -269,7 +269,7 @@
             <dxl:Filter/>
             <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.001065" Rows="10.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.001087" Rows="10.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -282,7 +282,7 @@
               </dxl:SortingColumnList>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000706" Rows="10.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000728" Rows="10.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">
@@ -297,7 +297,7 @@
                 <dxl:LimitOffset/>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000105" Rows="10.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000127" Rows="10.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="a">
@@ -325,7 +325,7 @@
                 <dxl:SortingColumnList>
                   <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                 </dxl:SortingColumnList>
-                <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="None">
+                <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="None" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
                   <dxl:TrailingEdge TrailingBoundary="BoundedFollowing">
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                   </dxl:TrailingEdge>
@@ -341,7 +341,7 @@
               <dxl:SortingColumnList>
                 <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
               </dxl:SortingColumnList>
-              <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="None">
+              <dxl:WindowFrame FrameSpec="Row" ExclusionStrategy="None" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
                 <dxl:TrailingEdge TrailingBoundary="BoundedPreceding">
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                 </dxl:TrailingEdge>

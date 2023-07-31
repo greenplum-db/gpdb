@@ -176,7 +176,7 @@ select b from tab1;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000052" Rows="1.000000" Width="10"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000051" Rows="1.000000" Width="10"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="b">

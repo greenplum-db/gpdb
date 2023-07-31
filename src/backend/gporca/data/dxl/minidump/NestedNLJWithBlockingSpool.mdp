@@ -494,7 +494,7 @@
     <dxl:Plan Id="0" SpaceSize="31">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324038.333744" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324038.322738" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="23" Alias="p_partkey">
@@ -505,7 +505,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324038.333729" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324038.322723" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="23" Alias="p_partkey">
@@ -518,7 +518,7 @@
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324032.333425" Rows="3.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324032.322537" Rows="3.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="l_partkey">
@@ -529,7 +529,7 @@
             <dxl:SortingColumnList/>
             <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.333282" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324032.322393" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="l_partkey">
@@ -545,7 +545,7 @@
               </dxl:JoinFilter>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000028" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="l_partkey">
@@ -570,7 +570,7 @@
               </dxl:TableScan>
               <dxl:Materialize Eager="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000190" Rows="3.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000184" Rows="3.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="40" Alias="l_partkey">
@@ -580,7 +580,7 @@
                 <dxl:Filter/>
                 <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000182" Rows="3.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000176" Rows="3.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="40" Alias="l_partkey">
@@ -591,7 +591,7 @@
                   <dxl:SortingColumnList/>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000028" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="40" Alias="l_partkey">
@@ -620,7 +620,7 @@
           </dxl:BroadcastMotion>
           <dxl:IndexOnlyScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000292" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000175" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="23" Alias="p_partkey">
@@ -634,7 +634,7 @@
                 <dxl:Ident ColId="1" ColName="l_partkey" TypeMdid="0.20.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
-	<dxl:Partitions/>
+            <dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.98326.1.0" IndexName="part_pkey"/>
             <dxl:TableDescriptor Mdid="6.98306.1.0" TableName="part">
               <dxl:Columns>

@@ -263,14 +263,14 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.073406" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.087706" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="23" Alias="avg_1">
             <dxl:AggFunc AggMdid="0.109010.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="3" ColName="four" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="3" ColName="four" TypeMdid="0.23.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>
@@ -281,7 +281,7 @@
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.072510" Rows="1000.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.086810" Rows="1000.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="3" Alias="four">
@@ -292,7 +292,7 @@
           <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.029150" Rows="1000.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.043450" Rows="1000.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="3" Alias="four">

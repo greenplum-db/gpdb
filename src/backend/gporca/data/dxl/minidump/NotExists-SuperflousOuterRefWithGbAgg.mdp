@@ -357,7 +357,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
     <dxl:Plan Id="0" SpaceSize="32">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001220" Rows="2.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001230" Rows="2.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -371,7 +371,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="LeftAntiSemiJoin">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.001160" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.001170" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -391,7 +391,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000035" Rows="5.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="5.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -418,7 +418,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
           </dxl:TableScan>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000212" Rows="9.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000218" Rows="9.000000" Width="4"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="9"/>
@@ -427,7 +427,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
               <dxl:ProjElem ColId="18" Alias="sum">
                 <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="9" ColName="i" TypeMdid="0.23.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -441,7 +441,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000193" Rows="9.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000199" Rows="9.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="i">
@@ -456,7 +456,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
               <dxl:LimitOffset/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="9.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="9.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="i">

@@ -382,7 +382,7 @@ Optimizer status: PQO version 2.67.0
     <dxl:Plan Id="0" SpaceSize="9">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="166192.837038" Rows="4994000.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="166192.849863" Rows="4994000.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="k">
@@ -396,7 +396,7 @@ Optimizer status: PQO version 2.67.0
               </dxl:ParamList>
               <dxl:Limit>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="164733.638531" Rows="1.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="164733.639631" Rows="1.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="22" Alias="k">
@@ -405,7 +405,7 @@ Optimizer status: PQO version 2.67.0
                 </dxl:ProjList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="164733.638530" Rows="500.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="164733.639630" Rows="500.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="22" Alias="k">
@@ -421,7 +421,7 @@ Optimizer status: PQO version 2.67.0
                   <dxl:OneTimeFilter/>
                   <dxl:Materialize Eager="true">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.038530" Rows="500.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.039630" Rows="500.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="20" Alias="i">
@@ -434,7 +434,7 @@ Optimizer status: PQO version 2.67.0
                     <dxl:Filter/>
                     <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.036530" Rows="500.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.037630" Rows="500.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="20" Alias="i">
@@ -448,7 +448,7 @@ Optimizer status: PQO version 2.67.0
                       <dxl:SortingColumnList/>
                       <dxl:TableScan>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.010450" Rows="500.000000" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.011550" Rows="500.000000" Width="4"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="20" Alias="i">
@@ -490,7 +490,7 @@ Optimizer status: PQO version 2.67.0
         <dxl:OneTimeFilter/>
         <dxl:HashJoin JoinType="Left">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="933.324563" Rows="4994000.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="933.336288" Rows="4994000.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="2" Alias="k">
@@ -510,7 +510,7 @@ Optimizer status: PQO version 2.67.0
           </dxl:HashCondList>
           <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.121621" Rows="4994.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.128945" Rows="4994.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="j">
@@ -524,7 +524,7 @@ Optimizer status: PQO version 2.67.0
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.034792" Rows="4994.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.042116" Rows="4994.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="j">
@@ -553,7 +553,7 @@ Optimizer status: PQO version 2.67.0
           </dxl:GatherMotion>
           <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.125220" Rows="1000.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.129620" Rows="1000.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="i">
@@ -567,7 +567,7 @@ Optimizer status: PQO version 2.67.0
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.020900" Rows="1000.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.025300" Rows="1000.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="i">

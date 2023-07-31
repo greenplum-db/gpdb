@@ -384,7 +384,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
     <dxl:Plan Id="0" SpaceSize="2170">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1724.002274" Rows="1.000000" Width="64"/>
+          <dxl:Cost StartupCost="0" TotalCost="1724.002299" Rows="1.000000" Width="64"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -440,7 +440,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1724.002036" Rows="1.000000" Width="64"/>
+            <dxl:Cost StartupCost="0" TotalCost="1724.002060" Rows="1.000000" Width="64"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -502,7 +502,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
           </dxl:HashCondList>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000827" Rows="1.000000" Width="32"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000838" Rows="1.000000" Width="32"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -540,7 +540,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
             </dxl:HashCondList>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000032" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -575,7 +575,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000088" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000092" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="33" Alias="a">
@@ -616,7 +616,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
           </dxl:HashJoin>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000794" Rows="1.000000" Width="32"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000807" Rows="1.000000" Width="32"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="a">
@@ -654,7 +654,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
             </dxl:HashCondList>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000032" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="11" Alias="a">
@@ -689,7 +689,7 @@ explain select * from t1 left join t2 on t1.a=t2.a left join t3 on t2.a=t3.a lef
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000032" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="22" Alias="a">

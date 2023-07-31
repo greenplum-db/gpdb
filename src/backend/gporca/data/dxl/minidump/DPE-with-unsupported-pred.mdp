@@ -2277,7 +2277,7 @@
     <dxl:Plan Id="0" SpaceSize="75">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324807.970884" Rows="2844.444444" Width="28"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324814.731536" Rows="2844.444444" Width="28"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -2306,7 +2306,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324807.674075" Rows="2844.444444" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324814.434728" Rows="2844.444444" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -2337,7 +2337,7 @@
               <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
                 <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
-                  <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                  <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                     <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
                     <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                   </dxl:FuncExpr>
@@ -2346,7 +2346,7 @@
               <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
                 <dxl:CoerceViaIO TypeMdid="0.23.1.0" CoercionForm="1" Location="0">
-                  <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                  <dxl:FuncExpr FuncId="0.1773.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                     <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
                     <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABzk5OQ==" LintValue="724274224"/>
                   </dxl:FuncExpr>
@@ -2362,7 +2362,7 @@
           </dxl:HashCondList>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324373.657858" Rows="9000.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324380.418511" Rows="9000.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="d">
@@ -2384,7 +2384,7 @@
             </dxl:JoinFilter>
             <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000465" Rows="3.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000468" Rows="3.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="19" Alias="f">
@@ -2398,7 +2398,7 @@
               <dxl:SortingColumnList/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="19" Alias="f">
@@ -2426,7 +2426,7 @@
             </dxl:BroadcastMotion>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.062700" Rows="9000.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.069300" Rows="9000.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="d">

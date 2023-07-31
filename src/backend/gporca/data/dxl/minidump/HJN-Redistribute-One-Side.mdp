@@ -4513,7 +4513,7 @@
     <dxl:Plan Id="0" SpaceSize="32">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="11941.357050" Rows="1.000000" Width="275"/>
+          <dxl:Cost StartupCost="0" TotalCost="11908.740323" Rows="1.000000" Width="275"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="l_orderkey">
@@ -4596,7 +4596,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="11941.355816" Rows="1.000000" Width="275"/>
+            <dxl:Cost StartupCost="0" TotalCost="11908.739088" Rows="1.000000" Width="275"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="l_orderkey">
@@ -4688,7 +4688,7 @@
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
               <dxl:Ident ColId="3" ColName="l_linenumber" TypeMdid="0.23.1.0"/>
-              <dxl:FuncExpr FuncId="0.819.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+              <dxl:FuncExpr FuncId="0.819.1.0" FuncRetSet="false" TypeMdid="0.23.1.0" FuncVariadic="false">
                 <dxl:Ident ColId="25" ColName="o_orderstatus" TypeMdid="0.1042.1.0"/>
               </dxl:FuncExpr>
             </dxl:Comparison>
@@ -4701,7 +4701,7 @@
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="708.350104" Rows="6003249.000000" Width="138"/>
+              <dxl:Cost StartupCost="0" TotalCost="686.888489" Rows="6003249.000000" Width="138"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="l_orderkey">
@@ -4784,7 +4784,7 @@
           </dxl:TableScan>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1013.116567" Rows="1502372.000000" Width="137"/>
+              <dxl:Cost StartupCost="0" TotalCost="1001.961455" Rows="1502372.000000" Width="137"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="23" Alias="o_orderkey">
@@ -4824,7 +4824,7 @@
             </dxl:HashExprList>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="499.583282" Rows="1502372.000000" Width="137"/>
+                <dxl:Cost StartupCost="0" TotalCost="488.428170" Rows="1502372.000000" Width="137"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="23" Alias="o_orderkey">

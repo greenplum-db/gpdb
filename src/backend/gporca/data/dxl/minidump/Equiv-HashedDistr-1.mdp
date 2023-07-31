@@ -1900,7 +1900,7 @@
     <dxl:Plan Id="0" SpaceSize="66">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="34972.709569" Rows="19097.637457" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="34964.661307" Rows="19097.637457" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="35" Alias="ps_suppkey">
@@ -1911,7 +1911,7 @@
         <dxl:SortingColumnList/>
         <dxl:Sequence>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="34972.366576" Rows="19097.637457" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="34964.318313" Rows="19097.637457" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="35" Alias="ps_suppkey">
@@ -1920,7 +1920,7 @@
           </dxl:ProjList>
           <dxl:CTEProducer CTEId="0" Columns="24">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="34110.198135" Rows="9548.818729" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="34102.149872" Rows="9548.818729" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="24" Alias="ps_suppkey">
@@ -1929,7 +1929,7 @@
             </dxl:ProjList>
             <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="34110.193360" Rows="9548.818729" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="34102.145098" Rows="9548.818729" Width="4"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="24"/>
@@ -1942,7 +1942,7 @@
               <dxl:Filter/>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="5232.137626" Rows="479510577.526431" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="5224.089363" Rows="479510577.526431" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="24" Alias="ps_suppkey">
@@ -1959,7 +1959,7 @@
                 </dxl:HashCondList>
                 <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="776.434405" Rows="6001814.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="784.686899" Rows="6001814.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="2" Alias="l_suppkey">
@@ -1975,7 +1975,7 @@
                   </dxl:HashExprList>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="716.536301" Rows="6001814.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="724.788795" Rows="6001814.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="2" Alias="l_suppkey">
@@ -2000,7 +2000,7 @@
                 </dxl:RedistributeMotion>
                 <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="493.844024" Rows="801020.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="477.543267" Rows="801020.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="24" Alias="ps_suppkey">
@@ -2016,7 +2016,7 @@
                   </dxl:HashExprList>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="485.849845" Rows="801020.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="469.549087" Rows="801020.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="24" Alias="ps_suppkey">

@@ -198,7 +198,7 @@ SELECT (SELECT a) FROM foo;
     <dxl:Plan Id="0" SpaceSize="6">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="882695.357090" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="882695.359343" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="11" Alias="a">
@@ -209,7 +209,7 @@ SELECT (SELECT a) FROM foo;
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="882695.357075" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="882695.359328" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="11" Alias="a">
@@ -249,7 +249,7 @@ SELECT (SELECT a) FROM foo;
           <dxl:OneTimeFilter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="882695.357074" Rows="1000.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="882695.359327" Rows="1000.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">

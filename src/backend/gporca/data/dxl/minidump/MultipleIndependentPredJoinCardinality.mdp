@@ -5726,7 +5726,7 @@ explain select * from t1, t2, t3 where t1.a = t2.a and t2.a = t3.a and t1.b = t3
     <dxl:Plan Id="0" SpaceSize="29">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.651422" Rows="1000.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.652155" Rows="1000.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -5752,7 +5752,7 @@ explain select * from t1, t2, t3 where t1.a = t2.a and t2.a = t3.a and t1.b = t3
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.561982" Rows="1000.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.562715" Rows="1000.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -5788,7 +5788,7 @@ explain select * from t1, t2, t3 where t1.a = t2.a and t2.a = t3.a and t1.b = t3
           </dxl:HashCondList>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.206755" Rows="1579.155152" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.207488" Rows="1579.155152" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -5841,7 +5841,7 @@ explain select * from t1, t2, t3 where t1.a = t2.a and t2.a = t3.a and t1.b = t3
             </dxl:TableScan>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.006967" Rows="1000.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.007700" Rows="1000.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="a">

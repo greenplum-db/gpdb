@@ -918,7 +918,7 @@
     <dxl:Plan Id="1" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000413" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000513" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -932,7 +932,7 @@
         <dxl:SortingColumnList/>
         <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000377" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000477" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

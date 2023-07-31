@@ -1805,7 +1805,7 @@
     <dxl:Plan Id="0" SpaceSize="96">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1327430.353032" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1327430.353132" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="c2">
@@ -1816,7 +1816,7 @@
         <dxl:SortingColumnList/>
         <dxl:Append IsTarget="false" IsZapped="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1327430.353017" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="1327430.353117" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="c2">
@@ -1939,7 +1939,7 @@
           </dxl:NestedLoopJoin>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="true">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.000609" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000709" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="c2">
@@ -1987,7 +1987,7 @@
             </dxl:BroadcastMotion>
             <dxl:IndexScan IndexScanDirection="Forward">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000352" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000452" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="c1">

@@ -777,7 +777,7 @@ select * from x, y where (x.i > y.j);
     <dxl:Plan Id="3" SpaceSize="4">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="437.001512" Rows="1.000000" Width="44"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.001540" Rows="1.000000" Width="44"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -809,7 +809,7 @@ select * from x, y where (x.i > y.j);
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="437.001348" Rows="1.000000" Width="44"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.001376" Rows="1.000000" Width="44"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -843,7 +843,7 @@ select * from x, y where (x.i > y.j);
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.001137" Rows="3.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.001145" Rows="3.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -863,7 +863,7 @@ select * from x, y where (x.i > y.j);
             <dxl:SortingColumnList/>
             <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">
@@ -903,7 +903,7 @@ select * from x, y where (x.i > y.j);
           </dxl:BroadcastMotion>
           <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000111" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000131" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="i">

@@ -411,7 +411,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000192" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000236" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -431,7 +431,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
         <dxl:SortingColumnList/>
         <dxl:IndexScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000132" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000166" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -447,20 +447,19 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
               <dxl:Ident ColId="3" ColName="d" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:Filter>
-            <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
-              <dxl:Ident ColId="3" ColName="d" TypeMdid="0.23.1.0"/>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
-            </dxl:Comparison>
-          </dxl:Filter>
+          <dxl:Filter/>
           <dxl:IndexCondList>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
               <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             </dxl:Comparison>
+            <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
+              <dxl:Ident ColId="3" ColName="d" TypeMdid="0.23.1.0"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
+            </dxl:Comparison>
           </dxl:IndexCondList>
-	<dxl:Partitions/>
-          <dxl:IndexDescriptor Mdid="0.828057.1.0" IndexName="idx_p1_cd"/>
+          <dxl:Partitions/>
+          <dxl:IndexDescriptor Mdid="0.828029.1.0" IndexName="idx_root_cd_1_prt_p1"/>
           <dxl:TableDescriptor Mdid="6.827971.1.0" TableName="foo_1_prt_p1">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
