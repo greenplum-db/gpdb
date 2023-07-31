@@ -130,6 +130,12 @@ Collect logs from host `sdw2.gpdb.local` between 2016-03-21 and 2016-03-23:
 gpsupport gp_log_collector -failed-segs -start 2016-03-21 -end 2016-03-21
 ```
 
+Collect logs from host `sdw2.gpdb.local` between 2023-06-07 07:21 and 2023-06-07 07:24:
+
+```
+ gpsupport gp_log_collector -start 2023-06-07 07:21 -end 2023-06-07 07:24
+```
+
 Collect only GPText logs for all segments, without any Greenplum logs:
 
 ```
