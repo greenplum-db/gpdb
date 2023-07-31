@@ -71,6 +71,27 @@ typedef struct IOLimitScannerState
 	void *scanner;
 } IOLimitScannerState;
 
+typedef struct IOStatItems
+{
+	uint64 rbytes;
+	uint64 wbytes;
+	uint64 rios;
+	uint64 wios;
+} IOStatItems;
+
+typedef struct IOStat
+{
+	Oid groupid;
+	Oid tablespace;
+	IOStatItems items;
+} IOStat;
+
+typedef struct IOStatHashEntry
+{
+	bdi_t id;
+	IOStatItems items;
+} IOStatHashEntry;
+
 extern void io_limit_scanner_begin(IOLimitScannerState *state, const char *limit_str);
 extern void io_limit_scanner_finish(IOLimitScannerState *state);
 
@@ -79,7 +100,10 @@ extern bdi_t get_bdi_of_path(const char *ori_path);
 extern int fill_bdi_list(TblSpcIOLimit *io_limit);
 
 extern List *io_limit_parse(const char *limit_str);
+extern void io_limit_free(List *limit_list);
 extern void io_limit_validate(List *limit_list);
 
+extern int  get_iostat(Oid groupid, List *io_limit, IOStat *result);
+extern int  compare_iostat(const void *a, const void *b);
 
 #endif

@@ -1886,6 +1886,34 @@ GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_host TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
+--              gp_toolkit.gp_resgroup_iostats_per_host
+--
+-- @doc:
+--              Resource group disk io speed calculated by cgroup
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_resgroup_iostats_per_host AS
+    WITH iostats AS (
+        select * from
+        (select (pg_resgroup_get_iostats()).* from gp_id union all select (pg_resgroup_get_iostats()).* from gp_dist_random('gp_id')) as stats
+        join
+        (select content,hostname from gp_segment_configuration) as segs
+        on stats.segindex = segs.content
+    )
+    select rsgname,
+           hostname,
+           tablespace,
+           avg("rbps (MB_read/s)")::bigint "rbps (MB_read/s)",
+           avg("wbps (MB_wrtn/s)")::bigint "wbps (MB_wrtn/s)",
+           avg("riops (r/s)")::bigint "riops (r/s)",
+           avg("wiops (w/s)")::bigint "wiops (w/s)"
+    from iostats group by (hostname, rsgname, tablespace);
+
+GRANT SELECT ON gp_toolkit.gp_resgroup_iostats_per_host TO public;
+
+--------------------------------------------------------------------------------
+-- @view:
 --              gp_toolkit.gp_resgroup_status_per_segment
 --
 -- @doc:

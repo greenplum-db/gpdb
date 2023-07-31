@@ -1,14 +1,25 @@
 #include "postgres.h"
+#include "fmgr.h"
 #include "port.h"
 #include "access/heapam.h"
+#include "access/htup.h"
 #include "access/relscan.h"
+#include "access/genam.h"
 #include "access/table.h"
 #include "access/tableam.h"
+#include "commands/resgroupcmds.h"
 #include "commands/tablespace.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_tablespace_d.h"
+#include "catalog/pg_resgroup_d.h"
+#include "catalog/pg_resgroupcapability_d.h"
+#include "catalog/indexing.h"
+#include "utils/fmgroids.h"
+#include "utils/hsearch.h"
 #include "utils/relcache.h"
 #include "utils/cgroup_io_limit.h"
+#include "utils/cgroup.h"
+#include "utils/resgroup.h"
 
 #include <limits.h>
 #include <sys/stat.h>
@@ -329,4 +340,175 @@ get_tablespace_path(Oid spcid)
 	}
 
 	return psprintf("pg_tblspc/%u", spcid);
+}
+
+void
+io_limit_free(List *limit_list)
+{
+	ListCell *cell;
+
+	foreach (cell, limit_list)
+	{
+		TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
+		list_free_deep(limit->bdi_list);
+		pfree(limit->ioconfig);
+	}
+
+	list_free_deep(limit_list);
+}
+
+/*
+ * Get content from io.stat of cgroup.
+ *
+ * Use group oid to find the cgroup path, and then use
+ * parsed io limit objects to collect data for tablespaces.
+ *
+ * params:
+ *	groupid: resource group oid
+ *	io_limit: parsed io_limit str objects
+ *	result: array of IOStat to save statistics
+ *
+ * Return the count of result IOStat
+ *
+ */
+int
+get_iostat(Oid groupid, List *io_limit, IOStat *result)
+{
+#define MAX_LINE 1024
+
+	int count = 0;
+
+	HTAB *io_stat_hash = NULL;
+	HASHCTL ctl;
+
+	char io_stat_path[PATH_MAX];
+	char tmp_line[MAX_LINE] = {};
+	ListCell *cell;
+	List *lines = NIL;
+	StringInfo line = makeStringInfo();
+	FILE *f;
+
+
+	buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.stat", io_stat_path, sizeof(io_stat_path));
+	f = fopen(io_stat_path, "r");
+	if (f == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("io limit: cannot read %s, details: %m.", io_stat_path)));
+	}
+
+	/*
+	 * read all lines at a time
+	 */
+	while (fgets(tmp_line, MAX_LINE, f))
+	{
+		appendStringInfoString(line, tmp_line);
+		if (tmp_line[strlen(tmp_line) - 1] == '\n')
+		{
+			lines = lappend(lines, line->data);
+			initStringInfo(line);
+		}
+	}
+	fclose(f);
+
+	/*
+	 * parse file content.
+	 * content example:
+	 * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
+	 */
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(bdi_t);
+	ctl.entrysize = sizeof(IOStatHashEntry);
+	ctl.hcxt = CurrentMemoryContext;
+	io_stat_hash = hash_create("hash table for bdi -> io stat", list_length(io_limit),
+							  &ctl, HASH_ELEM | HASH_CONTEXT);
+	foreach(cell, lines)
+	{
+		uint64 maj, min, wbytes = 0, rbytes = 0, rios = 0, wios = 0;
+		bdi_t bdi;
+		IOStatHashEntry *entry;
+
+		char *str = (char *) lfirst(cell);
+		int res = sscanf(str, "%lu:%lu rbytes=%lu wbytes=%lu rios=%lu wios=%lu",
+			   &maj, &min, &rbytes, &wbytes, &rios, &wios);
+
+		if (res == EOF)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					errmsg("io limit: cannot parse content from '%s', details: %m.", str)));
+		}
+
+		bdi = make_bdi(maj, min);
+		entry = hash_search(io_stat_hash, (void *) &bdi, HASH_ENTER, NULL);
+		if (entry == NULL)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					errmsg("io limit: cannot insert into hash table")));
+		}
+
+		entry->id = bdi;
+		entry->items.rbytes = rbytes;
+		entry->items.wbytes = wbytes;
+		entry->items.rios = rios;
+		entry->items.wios = wios;
+	}
+
+	/* construct result list */
+	foreach(cell, io_limit)
+	{
+		ListCell *bdi_cell;
+		IOStat *stat = result + count;
+
+		TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
+		fill_bdi_list(limit);
+		stat->tablespace = limit->tablespace_oid;
+		stat->groupid = groupid;
+
+		foreach(bdi_cell, limit->bdi_list)
+		{
+			bdi_t *bdi = (bdi_t *) lfirst(bdi_cell);
+			IOStatHashEntry *entry = hash_search(io_stat_hash, (void *) bdi, HASH_FIND, NULL);
+
+			if (entry != NULL)
+			{
+				stat->items.wbytes += entry->items.wbytes;
+				stat->items.rbytes += entry->items.rbytes;
+				stat->items.rios += entry->items.rios;
+				stat->items.wios += entry->items.wios;
+			}
+		}
+
+		count++;
+	}
+
+	hash_destroy(io_stat_hash);
+	io_limit_free(io_limit);
+	list_free_deep(lines);
+
+	return count;
+}
+
+int
+compare_iostat(const void *x, const void *y)
+{
+	IOStat *a = (IOStat *)x;
+	IOStat *b = (IOStat *)y;
+	if (a->groupid != b->groupid)
+	{
+		 if (a->groupid < b->groupid)
+			 return -1;
+		 return 1;
+	}
+
+	if (a->tablespace != b->tablespace)
+	{
+		 if (a->tablespace < b->tablespace)
+			 return -1;
+		 return 1;
+	}
+
+	return 0;
 }

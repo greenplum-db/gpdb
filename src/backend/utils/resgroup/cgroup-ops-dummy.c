@@ -236,6 +236,13 @@ freeio_dummy(List *limit_list)
 	unsupported_system();
 }
 
+static int
+getiostat_dummy(Oid group, List *io_limit, void *result)
+{
+	unsupported_system();
+	return 0;
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineDummy = {
 		.getcgroupname = getcgroupname_dummy,
 
@@ -263,6 +270,7 @@ static CGroupOpsRoutine cGroupOpsRoutineDummy = {
 		.parseio = parseio_dummy,
 		.setio = setio_dummy,
 		.freeio = freeio_dummy,
+		.getiostat = getiostat_dummy
 };
 
 CGroupOpsRoutine *get_cgroup_routine_dummy(void)

@@ -57,6 +57,11 @@ SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE group
 
 SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 
+-- view
+-- start_ignore
+SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
+-- end_ignore
+
 -- clean
 DROP RESOURCE GROUP rg_test_group1;
 DROP RESOURCE GROUP rg_test_group2;

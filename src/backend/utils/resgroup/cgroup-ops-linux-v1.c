@@ -174,6 +174,7 @@ static float convertcpuusage_v1(int64 usage, int64 duration);
 static List *parseio_v1(const char *io_limit);
 static void setio_v1(Oid group, List *limit_list);
 static void freeio_v1(List *limit_list);
+static int getiostat_v1(Oid group, List *io_limit, void *result);
 
 /*
  * Detect gpdb cgroup component dirs.
@@ -1132,6 +1133,15 @@ freeio_v1(List *limit_list)
 			 errmsg("resource group io limit only can be used in cgroup v2.")));
 }
 
+static int
+getiostat_v1(Oid group, List *io_limit, void *result)
+{
+	ereport(WARNING,
+			(errcode(ERRCODE_SYSTEM_ERROR),
+			 errmsg("resource group io limit only can be used in cgroup v2.")));
+	return 0;
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.getcgroupname = getcgroupname_v1,
 		.probecgroup = probecgroup_v1,
@@ -1160,6 +1170,7 @@ static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.parseio = parseio_v1,
 		.setio = setio_v1,
 		.freeio = freeio_v1,
+		.getiostat = getiostat_v1
 };
 
 CGroupOpsRoutine *get_group_routine_v1(void)
