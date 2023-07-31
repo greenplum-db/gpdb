@@ -271,7 +271,7 @@ DROP RESOURCE GROUP rg_test_group;
 0: ALTER RESOURCE GROUP rg_test_group SET cpu_max_percent 100;
 0: DROP RESOURCE GROUP rg_test_group;
 -- start_ignore
-!\retcode gpconfig -c gp_resource_group_cpu_limit -v 1; 
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.9;
 !\retcode gpstop -ari;
 -- end_ignore
 
