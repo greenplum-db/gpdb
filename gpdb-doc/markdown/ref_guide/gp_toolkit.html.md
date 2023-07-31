@@ -908,7 +908,7 @@ By default, the views identified in this section are available to `PUBLIC`.
 
 ### <a id="mf_orphaned"></a>gp_check_orphaned_files
 
-The `gp_check_orphaned_files` view scans the default and user-defined tablespaces for orphaned data files. Greenplum Database considers both normal data files and extended numbered files (files that contain a `.<N>` in the name) in this check.
+The `gp_check_orphaned_files` view scans the default and user-defined tablespaces for orphaned data files. Greenplum Database considers both normal data files and extended numbered files (files that contain a `.<N>` in the name) in this check. `gp_check_orphaned_files` gathers results from the Greenplum Database coordinator and all segments.
 
 |Column|Description|
 |------|-----------|
@@ -916,11 +916,10 @@ The `gp_check_orphaned_files` view scans the default and user-defined tablespace
 | tablespace | The identifier of the tablespace in which the orphaned file resides. |
 | filename | The file name of the orphaned data file. |
 
-`gp_check_orphaned_files` gathers results from the Greenplum Database coordinator and all segments.
 
 ### <a id="mf_missing"></a>gp_check_missing_files
 
-The `gp_check_missing_files` view scans heap and append-optimized, column-oriented tables for missing data files. Greenplum considers only normal data files (files that do not contain a `.` in the name) in this check.
+The `gp_check_missing_files` view scans heap and append-optimized, column-oriented tables for missing data files. Greenplum considers only normal data files (files that do not contain a `.` in the name) in this check. `gp_check_missing_files` gathers results from the Greenplum Database coordinator and all segments.
 
 |Column|Description|
 |------|-----------|
@@ -929,11 +928,10 @@ The `gp_check_missing_files` view scans heap and append-optimized, column-orient
 | relname | The name of the table that has a missing data file(s). |
 | filename | The file name of the missing data file. |
 
-`gp_check_missing_files` gathers results from the Greenplum Database coordinator and all segments.
 
 ### <a id="mf_missing_ext"></a>gp_check_missing_files_ext
 
-The `gp_check_missing_files_ext` view scans only append-optimized, column-oriented tables for missing extended data files. Greenplum Database considers both normal data files and extended numbered files (files that contain a `.<N>` in the name) in this check.
+The `gp_check_missing_files_ext` view scans only append-optimized, column-oriented tables for missing extended data files. Greenplum Database considers both normal data files and extended numbered files (files that contain a `.<N>` in the name) in this check. `gp_check_missing_files_ext` gathers results from the Greenplum Database segments only.
 
 |Column|Description|
 |------|-----------|
@@ -942,7 +940,6 @@ The `gp_check_missing_files_ext` view scans only append-optimized, column-orient
 | relname | The name of the table that has a missing extended data file(s). |
 | filename | The file name of the missing extended data file. |
 
-`gp_check_missing_files_ext` gathers results from the Greenplum Database segments only.
 
 ## <a id="topic49"></a>Checking for Uneven Data Distribution 
 
