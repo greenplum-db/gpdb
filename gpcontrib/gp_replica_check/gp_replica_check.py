@@ -39,8 +39,7 @@ import threading
 import pipes  # for shell-quoting, pipes.quote()
 import os
 from collections import defaultdict
-from pg import DB
-
+import psycopg2
 
 def run_sql(sql, host=None, port=None,
             dbname="postgres", is_query=True,
@@ -51,10 +50,12 @@ def run_sql(sql, host=None, port=None,
         port = int(os.getenv("PGPORT"))
     opt = "-c gp_role=utility" if is_utility else None
     try:
-        with DB(dbname=dbname, host=host, port=port, opt=opt) as db:
-            r = db.query(sql)
-            if is_query:
-                return r.getresult()
+        with psycopg2.connect(dbname=dbname, host=host, port=port, options=opt) as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                if is_query:
+                    resultList = cur.fetchall()
+                    return resultList
     except Exception as e:
         print('Exception: %s while running query %s dbname = %s' % (e, sql, dbname))
 

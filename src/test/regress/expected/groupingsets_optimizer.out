@@ -972,28 +972,28 @@ explain (costs off)
                                           QUERY PLAN                                          
 ----------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Merge Key: (NULL::integer)
+   Merge Key: share0_ref2.a
    ->  Sort
-         Sort Key: (NULL::integer)
+         Sort Key: share0_ref2.a
          ->  Sequence
                ->  Shared Scan (share slice:id 1:0)
                      ->  Seq Scan on gstest2
-               ->  Redistribute Motion 1:3  (slice2)
-                     ->  Append
+               ->  Append
+                     ->  GroupAggregate
+                           Group Key: share0_ref2.a
+                           ->  Sort
+                                 Sort Key: share0_ref2.a
+                                 ->  Result
+                                       Filter: (share0_ref2.a IS DISTINCT FROM 1)
+                                       ->  Shared Scan (share slice:id 1:0)
+                     ->  Result
+                           Filter: ((NULL::integer) IS DISTINCT FROM 1)
                            ->  Result
-                                 Filter: ((NULL::integer) IS DISTINCT FROM 1)
-                                 ->  Finalize Aggregate
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)
-                                             ->  Partial Aggregate
-                                                   ->  Shared Scan (share slice:id 3:0)
-                           ->  Gather Motion 3:1  (slice4; segments: 3)
-                                 ->  GroupAggregate
-                                       Group Key: share0_ref3.a
-                                       ->  Sort
-                                             Sort Key: share0_ref3.a
-                                             ->  Result
-                                                   Filter: (share0_ref3.a IS DISTINCT FROM 1)
-                                                   ->  Shared Scan (share slice:id 4:0)
+                                 ->  Redistribute Motion 1:3  (slice2)
+                                       ->  Finalize Aggregate
+                                             ->  Gather Motion 3:1  (slice3; segments: 3)
+                                                   ->  Partial Aggregate
+                                                         ->  Shared Scan (share slice:id 3:0)
  Optimizer: Pivotal Optimizer (GPORCA)
 (24 rows)
 

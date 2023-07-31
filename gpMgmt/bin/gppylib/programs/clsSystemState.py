@@ -10,7 +10,7 @@ from optparse import OptionGroup
 import sys, os
 import re
 import collections
-import pgdb
+import psycopg2
 from contextlib import closing
 from gppylib import gparray, gplog
 from gppylib.commands import base, gp
@@ -1028,7 +1028,7 @@ class GpSystemStateProgram:
                         wal_sync_bytes_out = 'Unknown'
                         unsync_segs.append(s)
                         data.addValue(VALUE__REPL_SYNC_REMAINING_BYTES, wal_sync_bytes_out)
-            except pgdb.InternalError:
+            except (psycopg2.InternalError, psycopg2.OperationalError):
                 logger.warning('could not query segment {} ({}:{})'.format(
                     s.dbid, s.hostname, s.port
                 ))
@@ -1100,7 +1100,7 @@ class GpSystemStateProgram:
 
                     cursor.close()
 
-        except pgdb.InternalError:
+        except (psycopg2.InternalError, psycopg2.OperationalError):
             logger.warning('could not query segment {} ({}:{})'.format(
                     primary.dbid, primary.hostname, primary.port
             ))

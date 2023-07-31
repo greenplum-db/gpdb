@@ -28,7 +28,8 @@ extern void cdb_create_multistage_grouping_paths(PlannerInfo *root,
 												 const AggClauseCosts *agg_final_costs,
 												 List *rollups,
 												 List *new_rollups,
-												 AggStrategy strat);
+												 AggStrategy strat,
+												 GroupPathExtraData *extra);
 
 
 extern void cdb_create_twostage_distinct_paths(PlannerInfo *root,

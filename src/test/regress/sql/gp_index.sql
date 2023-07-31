@@ -1,3 +1,13 @@
+-- start_matchsubs
+
+-- Note: In init_file there is a regex which will remove any line including
+-- "Distributed by", so we cannot check the result e.g. "Distributed by (i)".
+-- This regex is to overwrite the regex.
+-- m/Distributed by/
+-- s/Distributed by/Distributedby/
+
+-- end_matchsubs
+
 --
 -- Greenplum disallows concurrent index creation. It allows concurrent index
 -- drops, so we want to test for it. Though, due to this difference with
@@ -61,6 +71,32 @@ ALTER TABLE tbl_create_index ADD CONSTRAINT PKEY PRIMARY KEY(i, k);
 \d tbl_create_index
 
 DROP TABLE tbl_create_index;
+
+-- create partition table with dist keys (a,b,c)
+CREATE TABLE foo1 (a int, b int, c int)  DISTRIBUTED BY (a,b,c) PARTITION BY RANGE(a)
+(PARTITION p1 START (1) END (10000) INCLUSIVE,
+PARTITION p2 START (10001) END (100000) INCLUSIVE,
+PARTITION p3 START (100001) END (1000000) INCLUSIVE);
+
+-- create unique index with same keys but different order (a,c,b)
+create unique index acb_idx on public.foo1 using btree(a,c,b);
+
+-- alter table by add partition
+alter table public.foo1 add partition p4 START (1000001) END (2000000) INCLUSIVE;
+
+-- check the status of the new partition: new dist keys should be consistent
+-- to the parent table
+\d+ foo1_1_prt_p4
+
+-- alter table by split partition
+alter table public.foo1 split partition p1 at(500) into (partition p1_0, partition p1_1);
+
+-- check the status of the split partitions: new dist keys should be consistent
+-- to the parent table
+\d+ foo1_1_prt_p1_0
+\d+ foo1_1_prt_p1_1
+
+DROP TABLE foo1;
 
 -- Coverage to ensure that reltuples, relpages and relallvisible are updated
 -- correctly upon an index build (i.e. CREATE INDEX) on heap tables.

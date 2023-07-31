@@ -11,7 +11,8 @@
 -- Scenario: User table without hll flag
 --------------------------------------------------------------------------------
 
-create table minirepro_foo(a int) partition by range(a);
+create sequence minirepro_foo_b_seq cache 1;
+create table minirepro_foo(a int, b int default nextval('minirepro_foo_b_seq'::regclass), c serial) partition by range(a);
 create table minirepro_foo_1 partition of minirepro_foo for values from (1) to (5);
 insert into minirepro_foo values(1);
 analyze minirepro_foo;
@@ -25,6 +26,7 @@ analyze minirepro_foo;
 
 -- Run minirepro
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
+drop sequence minirepro_foo_b_seq;
 
 -- start_ignore
 \! psql -Xf data/minirepro.sql regression
@@ -65,6 +67,7 @@ from pg_statistic where starelid IN ('minirepro_foo'::regclass, 'minirepro_foo_1
 
 -- Cleanup
 drop table minirepro_foo;
+drop sequence minirepro_foo_b_seq;
 
 --------------------------------------------------------------------------------
 -- Scenario: User table with hll flag

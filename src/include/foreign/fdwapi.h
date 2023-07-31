@@ -180,6 +180,8 @@ typedef List *(*ReparameterizeForeignPathByChild_function) (PlannerInfo *root,
 															List *fdw_private,
 															RelOptInfo *child_rel);
 
+typedef int (*IsMPPPlanNeeded_function) ();
+
 /*
  * FdwRoutine is the struct returned by a foreign-data wrapper's handler
  * function.  It provides pointers to the callback functions needed by the
@@ -268,6 +270,9 @@ typedef struct FdwRoutine
 	 */
 	AcquireSampleRowsFunc AcquireSampleRowsOnSegment;
 	ForeignTableSize_function GetRelationSizeOnSegment;
+
+	/* Functions for MPP plan generation */
+	IsMPPPlanNeeded_function IsMPPPlanNeeded;
 } FdwRoutine;
 
 

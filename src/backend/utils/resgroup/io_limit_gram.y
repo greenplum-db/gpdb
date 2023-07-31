@@ -34,7 +34,8 @@
 	void io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message);
 }
 
-%token <str> ID IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START IOCONFIG_DELIM VALUE_MAX IO_KEY STAR
+%token IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START STAR IOCONFIG_DELIM VALUE_MAX
+%token <str> ID IO_KEY
 %token <integer> VALUE
 
 %type <str> tablespace_name
@@ -74,6 +75,7 @@ tablespace_name: ID  { $$ = $1; }
 
 tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 					  {
+
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
 							if (context->star_tablespace_cnt > 0)

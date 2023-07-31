@@ -447,7 +447,7 @@ class Rsync(Command):
     def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False,
                  verbose=True, archive_mode=True, checksum=False, delete=False, progress=False,
                  stats=False, dry_run=False, bwlimit=None, exclude_list=[], ctxt=LOCAL,
-                 remoteHost=None, compress=False, progress_file=None):
+                 remoteHost=None, compress=False, progress_file=None, ignore_times=False, whole_file=False):
 
         """
             rsync options:
@@ -465,6 +465,8 @@ class Rsync(Command):
                 dry_run: perform a trial run with no changes made
                 compress: compress file data during the transfer
                 progress: to show the progress of rsync execution, like % transferred
+                ignore_times: Not skip files that match modification time and size
+                whole_file: Copy file without rsync's delta-transfer algorithm
         """
 
         cmd_tokens = [findCmdInPath('rsync')]
@@ -481,6 +483,14 @@ class Rsync(Command):
         # To skip the files based on checksum, not modification time and size
         if checksum:
             cmd_tokens.append('-c')
+
+        # To not skip files that match modification time and size
+        if ignore_times:
+            cmd_tokens.append('--ignore-times')
+
+        # Copy file without rsync's delta-transfer algorithm
+        if whole_file:
+            cmd_tokens.append('--whole-file')
 
         if progress:
             cmd_tokens.append('--progress')

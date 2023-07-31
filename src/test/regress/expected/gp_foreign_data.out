@@ -1,8 +1,10 @@
 --
 -- Test foreign-data wrapper and server management. Greenplum MPP specific
 --
-CREATE FOREIGN DATA WRAPPER dummy;
+CREATE FOREIGN DATA WRAPPER dummy OPTIONS (mpp_execute 'coordinator');;
 COMMENT ON FOREIGN DATA WRAPPER dummy IS 'useless';
+ALTER FOREIGN DATA WRAPPER dummy OPTIONS (SET mpp_execute 'all segments');
+ERROR:  "mpp_execute" of foreign data wrapper is not allowed to be altered
 -- CREATE FOREIGN TABLE
 CREATE SERVER s0 FOREIGN DATA WRAPPER dummy;
 CREATE FOREIGN TABLE ft2 (

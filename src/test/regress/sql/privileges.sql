@@ -6,6 +6,10 @@
 -- s/DETAIL:  Failing row contains \(.*\) = \(.*\)/DETAIL:  Failing row contains (#####)/
 -- end_matchsubs
 
+-- We use "discard plans" to reset the plan cache, to re-plan
+-- prepared statements and log ORCA fallbacks. This should help
+-- prevent flakes when we create multiple views.
+
 set optimizer_trace_fallback = on;
 set enable_nestloop=on;
 set optimizer_enable_nljoin = on;
@@ -177,6 +181,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
 
 -- This should also be a nestloop, but the security barrier forces the inner
 -- scan to be materialized
+discard plans;
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
 
 -- Check if regress_priv_user2 can break security.
@@ -194,7 +199,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 WHERE a >>> 0;
 -- These plans should continue to use a nestloop, since they execute with the
 -- privileges of the view owner.
 EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y WHERE x.a = y.b;
--- reset the plan cache, sometimes it would re-plan these prepared statements and log ORCA fallbacks
+
 discard plans;
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
 
@@ -203,6 +208,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y
   WHERE x.a = y.b and abs(y.a) <<< 5;
 
 -- But a security barrier view isolates the leaky operator.
+discard plans;
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y
   WHERE x.a = y.b and abs(y.a) <<< 5;
 

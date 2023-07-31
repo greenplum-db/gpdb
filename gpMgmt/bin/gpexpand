@@ -17,10 +17,10 @@ import signal
 import traceback
 from collections import defaultdict
 from time import strftime, sleep
-
+import psycopg2
+from psycopg2 import DatabaseError, OperationalError
+from psycopg2 import extras
 try:
-    import pg, pgdb
-
     from gppylib.commands.unix import *
     from gppylib.commands.gp import *
     from gppylib.gparray import GpArray, MODE_NOT_SYNC, STATUS_DOWN
@@ -32,7 +32,6 @@ try:
     from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
     from gppylib.system import configurationInterface, configurationImplGpdb
     from gppylib.system.environment import GpCoordinatorEnvironment
-    from pgdb import DatabaseError
     from gppylib.gpcatalog import COORDINATOR_ONLY_TABLES
     from gppylib.operations.package import SyncPackages
     from gppylib.programs.clsRecoverSegment_triples import get_segments_with_running_basebackup
@@ -460,7 +459,9 @@ class GpExpandStatus():
         cpCmd = Rsync('gpexpand copying status file to coordinator mirror',
                     srcFile=self._status_filename,
                     dstFile=self._status_standby_filename,
-                    dstHost=self._coordinator_mirror.getSegmentHostName())
+                    dstHost=self._coordinator_mirror.getSegmentHostName(),
+                    ignore_times=True,
+                    whole_file=True)
         cpCmd.run(validateAfter=True)
 
     def set_status(self, status, status_info=None, force=False):
@@ -530,7 +531,9 @@ class GpExpandStatus():
             cpCmd = Rsync('gpexpand copying segment configuration backup file to coordinator mirror',
                         srcFile=self._gp_segment_configuration_backup,
                         dstFile=self._segment_configuration_standby_filename,
-                        dstHost=self._coordinator_mirror.getSegmentHostName())
+                        dstHost=self._coordinator_mirror.getSegmentHostName(),
+                        ignore_times=True,
+                        whole_file=True)
             cpCmd.run(validateAfter=True)
 
     def get_temp_dir(self):
@@ -775,7 +778,9 @@ class SegmentTemplate:
             cpCmd = Rsync(name='gpexpand distribute tar file to new hosts',
                         srcFile=self.schema_tar_file,
                         dstFile=self.segTarDir,
-                        dstHost=host)
+                        dstHost=host,
+                        ignore_times=True,
+                        whole_file=True)
             self.pool.addCommand(cpCmd)
 
         self.pool.join()
@@ -863,7 +868,7 @@ class SegmentTemplate:
                   % (self.srcSegHostname, self.srcSegDataDir)
         cpCmd = Rsync(name=cmdName, srcFile=self.srcSegDataDir + '/postgresql.conf',
             dstFile=self.tempDir, dstHost=localHostname, ctxt=REMOTE,
-            remoteHost=self.srcSegHostname)
+            remoteHost=self.srcSegHostname, ignore_times=True, whole_file=True)
         cpCmd.run(validateAfter=True)
 
         self.logger.info('Copying pg_hba.conf from existing segment into template')
@@ -871,7 +876,7 @@ class SegmentTemplate:
                   % (self.srcSegHostname, self.srcSegDataDir)
         cpCmd = Rsync(name=cmdName, srcFile=self.srcSegDataDir + '/pg_hba.conf',
                     dstFile=self.tempDir, dstHost=localHostname,ctxt=REMOTE,
-                    remoteHost=self.srcSegHostname)
+                    remoteHost=self.srcSegHostname, ignore_times=True, whole_file=True)
         cpCmd.run(validateAfter=True)
 
     def _tar_template(self):
@@ -1880,7 +1885,7 @@ class gpexpand:
                 expansionStopped)
             dbconn.execSQL(self.conn, sql)
             self.conn.close()
-        except pgdb.OperationalError:
+        except OperationalError:
             pass
         except Exception:
             # schema doesn't exist.  Cancel or error during setup
@@ -1932,7 +1937,7 @@ class gpexpand:
     def connect_database(self, dbname):
         test_url = copy.deepcopy(self.dburl)
         test_url.pgdb = dbname
-        c = dbconn.connect(test_url, encoding='UTF8', allowSystemTableMods=True)
+        c = dbconn.connect(test_url, encoding='UTF8', allowSystemTableMods=True, cursorFactory=psycopg2.extras.NamedTupleCursor)
         return c
 
     def sync_packages(self):
@@ -2173,7 +2178,7 @@ class ExpandCommand(SQLCommand):
 
         try:
             status_conn = dbconn.connect(self.status_url, encoding='UTF8')
-            table_conn = dbconn.connect(self.table_url, encoding='UTF8')
+            table_conn = dbconn.connect(self.table_url, encoding='UTF8', cursorFactory=psycopg2.extras.NamedTupleCursor)
         except DatabaseError as ex:
             if self.options.verbose:
                 logger.exception(ex)

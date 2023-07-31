@@ -37,13 +37,6 @@ except ImportError:
 import platform
 import psycopg2
 from psycopg2 import extras
-
-def Escape(query_str):
-    return psycopg2.extensions.QuotedString(query_str).getquoted()[1:-1].decode()
-
-def escape_string(string):
-    return Escape(string)
-
 import hashlib
 import datetime,getpass,os,signal,socket,threading,time,traceback,re
 import subprocess
@@ -555,6 +548,8 @@ def is_keyword(tab):
     else:
         return False
 
+def escape_string(string):
+    return psycopg2.extensions.QuotedString(string).getquoted()[1:-1].decode()
 
 def caseInsensitiveDictLookup(key, dictionary):
     """

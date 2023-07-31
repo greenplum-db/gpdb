@@ -5,9 +5,6 @@
 -- varblocks get scanned and verify it against the range of block directory
 -- entries that should be involved.
 
-CREATE EXTENSION pageinspect;
-CREATE EXTENSION
-
 --------------------------------------------------------------------------------
 ----                            ao_row tables
 --------------------------------------------------------------------------------
@@ -1657,6 +1654,3 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
  2          | 33554433 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (2 rows)
-
-DROP EXTENSION pageinspect;
-DROP EXTENSION

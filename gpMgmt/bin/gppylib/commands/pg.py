@@ -14,7 +14,7 @@ from .base import *
 from .unix import *
 from gppylib.commands.base import *
 from gppylib.commands.gp import RECOVERY_REWIND_APPNAME
-from pgdb import DatabaseError
+from psycopg2 import DatabaseError
 
 logger = get_default_logger()
 

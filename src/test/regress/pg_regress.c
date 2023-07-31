@@ -2622,6 +2622,11 @@ create_database(const char *dbname)
 	 * relied heavily. So let's just load gp_toolkit here.
 	 */
 	add_stringlist_item(&loadextension, "gp_toolkit");
+	/*
+	 * GPDB: We rely heavily on pageinspect for many tests, especially for BRIN,
+	 * so load it here.
+	 */
+	add_stringlist_item(&loadextension, "pageinspect");
 	for (sl = loadextension; sl != NULL; sl = sl->next)
 	{
 		header(_("installing %s"), sl->str);

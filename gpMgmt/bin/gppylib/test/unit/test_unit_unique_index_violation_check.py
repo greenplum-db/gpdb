@@ -9,33 +9,37 @@ class UniqueIndexViolationCheckTestCase(GpTestCase):
         self.subject = UniqueIndexViolationCheck()
 
         self.index_query_result = Mock()
-        self.index_query_result.getresult.return_value = [
+        self.index_query_result.fetchall.return_value = [
             (9001, 'index1', 'table1', ['index1_column1','index1_column2']),
             (9001, 'index2', 'table1', ['index2_column1','index2_column2'])
         ]
 
-        self.violated_segments_query_result = Mock()
-
-        self.db_connection = Mock(spec=['query'])
-        self.db_connection.query.side_effect = self.mock_query_return_value
-
-    def mock_query_return_value(self, query_string):
-        if query_string == UniqueIndexViolationCheck.unique_indexes_query:
-            return self.index_query_result
-        else:
-            return self.violated_segments_query_result
+        self.db_connection = Mock(spec=['cursor'])
+        self.db_connection.cursor.return_value.__enter__ = Mock(return_value=Mock(spec=['fetchall', 'execute']))
+        self.db_connection.cursor.return_value.__exit__ = Mock(return_value=False)
 
     def test_run_check__when_there_are_no_issues(self):
-        self.violated_segments_query_result.getresult.return_value = []
+        self.db_connection.cursor.return_value.__enter__.return_value.fetchall.side_effect = [
+            [
+                (9001, 'index1', 'table1', ['index1_column1','index1_column2']),
+                (9001, 'index2', 'table1', ['index2_column1','index2_column2'])
+            ],
+            [],
+            [],
+        ]
 
         violations = self.subject.runCheck(self.db_connection)
 
         self.assertEqual(len(violations), 0)
 
     def test_run_check__when_index_is_violated(self):
-        self.violated_segments_query_result.getresult.side_effect = [
+        self.db_connection.cursor.return_value.__enter__.return_value.fetchall.side_effect = [
+            [
+                (9001, 'index1', 'table1', ['index1_column1','index1_column2']),
+                (9001, 'index2', 'table1', ['index2_column1','index2_column2'])
+            ],
             [(-1,), (0,), (1,)],
-            [(-1,)]
+            [(-1,)],
         ]
 
         violations = self.subject.runCheck(self.db_connection)

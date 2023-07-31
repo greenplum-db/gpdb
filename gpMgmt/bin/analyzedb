@@ -25,16 +25,15 @@ from contextlib import closing
 import pipes  # for shell-quoting, pipes.quote()
 import fcntl
 import itertools
-
+import psycopg2
 try:
-    import pg
-
     from gppylib import gplog, pgconf, userinput
     from gppylib.commands.base import Command, WorkerPool, Worker
     from gppylib.operations import Operation
     from gppylib.gpversion import GpVersion
     from gppylib.db import dbconn
     from gppylib.operations.unix import CheckDir, CheckFile, MakeDir
+    from gppylib.utils import escape_string
 
 except ImportError as e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -166,7 +165,7 @@ def validate_schema_exists(pg_port, dbname, schema):
     try:
         dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
         conn = dbconn.connect(dburl)
-        count = dbconn.querySingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % pg.escape_string(schema))
+        count = dbconn.querySingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % escape_string(schema))
         if count == 0:
             raise ExceptionNoStackTraceNeeded("Schema %s does not exist in database %s." % (schema, dbname))
     finally:
@@ -213,7 +212,7 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
             try:
                 modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from gp_dist_random('%s.%s')" % (catalog_schema, tupletable)
                 modcount = dbconn.querySingleton(conn, modcount_sql)
-            except pg.DatabaseError as e:
+            except psycopg2.DatabaseError as e:
                 if "does not exist" in str(e):
                     logger.info("Table %s.%s (%s) no longer exists and will not be analyzed", schemaname, partition_name, tupletable)
                 else:
@@ -971,7 +970,7 @@ def get_oid_str(table_list):
 def regclass_schema_tbl(schema, tbl):
     schema_tbl = "%s.%s" % (escape_identifier(schema), escape_identifier(tbl))
 
-    return "to_regclass('%s')" % (pg.escape_string(schema_tbl))
+    return "to_regclass('%s')" % (escape_string(schema_tbl))
 
 
 # Escape double-quotes in a string, so that the resulting string is suitable for
@@ -1239,7 +1238,7 @@ def validate_tables(conn, tablenames):
     while curr_batch < nbatches:
         batch = tablenames[curr_batch * batch_size:(curr_batch + 1) * batch_size]
 
-        oid_str = ','.join(map((lambda x: "('%s')" % pg.escape_string(x)), batch))
+        oid_str = ','.join(map((lambda x: "('%s')" % escape_string(x)), batch))
         if not oid_str:
             break
 
@@ -1255,7 +1254,7 @@ def get_include_cols_from_exclude(conn, schema, table, exclude_cols):
     """
     Given a list of excluded columns of a table, get the list of included columns
     """
-    quoted_exclude_cols = ','.join(["'%s'" % pg.escape_string(x) for x in exclude_cols])
+    quoted_exclude_cols = ','.join(["'%s'" % escape_string(x) for x in exclude_cols])
 
     oid_str = regclass_schema_tbl(schema, table)
     cols = run_sql(conn, GET_INCLUDED_COLUMNS_FROM_EXCLUDE_SQL % (oid_str, quoted_exclude_cols))
@@ -1271,7 +1270,7 @@ def validate_columns(conn, schema, table, column_list):
         return
 
     sql = VALIDATE_COLUMN_NAMES_SQL % (regclass_schema_tbl(schema, table),
-                                       ','.join(["'%s'" % pg.escape_string(x) for x in column_list]))
+                                       ','.join(["'%s'" % escape_string(x) for x in column_list]))
     valid_col_count = dbconn.querySingleton(conn, sql)
 
     if int(valid_col_count) != len(column_list):

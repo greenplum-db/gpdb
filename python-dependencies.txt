@@ -1,3 +1,4 @@
 psutil==5.7.0
 pygresql==5.2
 pyyaml==5.3.1
+psycopg2==2.9.6

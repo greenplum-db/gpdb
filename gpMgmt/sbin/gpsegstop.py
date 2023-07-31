@@ -23,7 +23,6 @@ from gppylib.commands import unix
 from gppylib.commands import gp
 from gppylib.commands.gp import SEGMENT_STOP_TIMEOUT_DEFAULT, DEFAULT_SEGHOST_NUM_WORKERS
 from gppylib.commands import pg
-from gppylib.db import dbconn
 from gppylib import pgconf
 from gppylib.commands.gp import is_pid_postmaster
 

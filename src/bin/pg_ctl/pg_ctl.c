@@ -72,6 +72,28 @@ typedef enum
 	RUN_AS_SERVICE_COMMAND
 } CtlCommand;
 
+typedef enum
+{
+	IS_COORDINATOR, /* starting GPDB coordinator in distributed mode */
+	IS_STANDBY_COORDINATOR, /* starting GPDB standby coordinator in distributed mode */
+	IS_PRIMARY, /* starting GPDB primary segment */
+	IS_MIRROR, /* starting GPDB mirror segment */
+	IS_UTILITY /* starting a segment in utility mode */
+} PMStartMode;
+
+static const char *const pmReadyStatuses[] = {
+	/* IS_COORDINATOR */
+	PM_STATUS_DTM_RECOVERED,
+	/* IS_STANDBY_COORDINATOR */
+	PM_STATUS_WALRECV_STARTED_STREAMING,
+	/* IS_PRIMARY */
+	PM_STATUS_READY,
+	/* IS_MIRROR */
+	PM_STATUS_WALRECV_STARTED_STREAMING,
+	/* IS_UTILITY - multiple statuses apply, won't be used */
+	NULL
+};
+
 #define DEFAULT_WAIT	60
 
 #define USEC_PER_SEC	1000000
@@ -632,11 +654,32 @@ static WaitPMResult
 wait_for_postmaster_start(pgpid_t pm_pid, bool do_checkpoint)
 {
 	int			i;
-	bool		is_coordinator;
+	PMStartMode pmStartMode;
 
-	/* check if starting GPDB coordinator in distributed mode */
-	is_coordinator = strstr(post_opts, "gp_role=dispatch") != NULL
-                        && !is_secondary_instance(pg_data);
+	if (strstr(post_opts, "gp_role=dispatch") != NULL)
+	{
+		if (is_secondary_instance(pg_data))
+			pmStartMode = IS_STANDBY_COORDINATOR;
+		else
+			pmStartMode = IS_COORDINATOR;
+	}
+	else if (strstr(post_opts, "gp_role=execute") != NULL)
+	{
+		if (is_secondary_instance(pg_data))
+			pmStartMode = IS_MIRROR;
+		else
+			pmStartMode = IS_PRIMARY;
+	}
+	else if (strstr(post_opts, "gp_role=utility") != NULL)
+	{
+		pmStartMode = IS_UTILITY;
+	}
+	else
+	{
+		write_stderr(_("Invalid/unspecified gp_role for starting postmaster, options: %s\n"),
+			post_opts);
+		exit(1);
+	}
 
 	for (i = 0; i < wait_seconds * WAITS_PER_SEC; i++)
 	{
@@ -678,16 +721,28 @@ wait_for_postmaster_start(pgpid_t pm_pid, bool do_checkpoint)
 				 */
 				char	   *pmstatus = optlines[LOCK_FILE_LINE_PM_STATUS - 1];
 
-				/*
-				 * The READY status for coordinator is `dtmready`, while the READY
-				 * status is really ready for other nodes.
-				 */
-				if (strcmp(pmstatus, is_coordinator ? PM_STATUS_DTM_RECOVERED : PM_STATUS_READY) == 0 ||
-					strcmp(pmstatus, PM_STATUS_STANDBY) == 0)
+				if (pmStartMode == IS_UTILITY)
 				{
-					/* postmaster is done starting up */
-					free_readfile(optlines);
-					return POSTMASTER_READY;
+					/* utility mode, same as PG except that
+					 * a standby w/ walreceiver could also have the
+					 * GPDB-only status PM_STATUS_WALRECV_STARTED_STREAMING */
+					if (strcmp(pmstatus, PM_STATUS_READY) == 0 ||
+						strcmp(pmstatus, PM_STATUS_STANDBY) == 0 ||
+						strcmp(pmstatus, PM_STATUS_WALRECV_STARTED_STREAMING) == 0)
+					{
+						/* postmaster is done starting up */
+						free_readfile(optlines);
+						return POSTMASTER_READY;
+					}
+				}
+				else /* I'm one of coordinator, standby-coor, primary, mirror */
+				{
+					if (strcmp(pmstatus, pmReadyStatuses[pmStartMode]) == 0)
+					{
+						/* postmaster is done starting up */
+						free_readfile(optlines);
+						return POSTMASTER_READY;
+					}
 				}
 			}
 		}

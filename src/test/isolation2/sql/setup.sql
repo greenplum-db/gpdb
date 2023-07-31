@@ -160,10 +160,12 @@ $$ language plpython3u;
 --   datadir: data directory of process to target with `pg_ctl`
 --   port: which port the server should start on
 --
-create or replace function pg_ctl_start(datadir text, port int)
+create or replace function pg_ctl_start(datadir text, port int, should_wait bool default true)
 returns text as $$
     import subprocess
     cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
+    if not should_wait:
+        cmd = cmd + ' -W '
     opts = '-p %d' % (port)
     opts = opts + ' -c gp_role=execute'
     cmd = cmd + '-o "%s" start' % opts

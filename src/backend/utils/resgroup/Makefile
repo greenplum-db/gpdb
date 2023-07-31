@@ -23,14 +23,24 @@ OBJS += io_limit_scanner.o
 OBJS += io_limit_gram.o
 OBJS += cgroup_io_limit.o
 
+include $(top_srcdir)/src/backend/common.mk
+
 io_limit_gram.h: io_limit_gram.c
 	touch $@
 
 io_limit_gram.c: BISONFLAGS += -d
 
-io_limit_gram.o io_limit_lex.o cgroup-ops-linux-v2.o: io_limit_gram.h
+io_limit_scanner.c: FLEXFLAGS = -CF -p -p
+io_limit_scanner.c: FLEX_NO_BACKUP=yes
+io_limit_scanner.c: FLEX_FIX_WARNING=yes
+
+io_limit_gram.o io_limit_scanner.o cgroup-ops-linux-v2.o: io_limit_gram.h
 else
 OBJS += cgroup-ops-dummy.o
-endif
 
 include $(top_srcdir)/src/backend/common.mk
+
+endif
+
+clean distclean maintainer-clean:
+	rm -f lex.backup

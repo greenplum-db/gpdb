@@ -51,8 +51,6 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-# run separately, because checks for reltuples and results vary in-presence of concurrent transactions
-test: cluster_gp
 test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
 test: gp_lock
@@ -151,6 +149,8 @@ test: aocs
 test: ic
 
 test: disable_autovacuum
+# run separately, because checks for reltuples and results vary in-presence of concurrent transactions
+test: cluster_gp
 # Check for shmem leak for instrumentation slots before gpdb restart
 test: instr_in_shmem_verify
 # 'partition_locking' gets confused if other backends run concurrently and

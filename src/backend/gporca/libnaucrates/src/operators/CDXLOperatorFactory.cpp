@@ -1527,9 +1527,9 @@ CDXLOperatorFactory::MakeDXLTableDescr(CDXLMemoryManager *dxl_memory_manager,
 		dxl_memory_manager, attrs, EdxltokenLockMode, EdxltokenTableDescr,
 		true /* is_optional */, -1);
 
-	INT acl_mode = ExtractConvertAttrValueToInt(
+	ULONG acl_mode = ExtractConvertAttrValueToUlong(
 		dxl_memory_manager, attrs, EdxltokenAclMode, EdxltokenTableDescr,
-		true /* is_optional */, -1);
+		true /* is_optional */, GPDXL_ACL_UNDEFINED);
 
 	if (nullptr != execute_as_user_xml)
 	{

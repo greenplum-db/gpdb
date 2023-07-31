@@ -6,8 +6,6 @@
 
 """
 import copy
-
-import pg
 import os
 from contextlib import closing
 from gppylib import gplog

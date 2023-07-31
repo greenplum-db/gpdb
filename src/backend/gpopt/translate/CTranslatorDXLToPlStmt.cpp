@@ -5210,7 +5210,7 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 		(void) base_table_context->InsertMapping(dxl_col_descr->Id(), attno);
 	}
 
-	INT acl_mode = table_descr->GetAclMode();
+	ULONG acl_mode = table_descr->GetAclMode();
 	GPOS_ASSERT(acl_mode >= 0 &&
 				acl_mode <= std::numeric_limits<AclMode>::max());
 	AclMode required_perms = static_cast<AclMode>(acl_mode);

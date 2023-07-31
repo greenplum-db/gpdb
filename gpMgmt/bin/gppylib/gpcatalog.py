@@ -144,7 +144,7 @@ class GPCatalog():
             curs = self._query(version_query)
         except Exception as e:
             raise GPCatalogException("Error reading database version: " + str(e))
-        self._version = GpVersion(curs.getresult()[0][0])
+        self._version = GpVersion(curs.fetchone()[0])
 
         # Read the list of catalog tables from the database
         try:
@@ -154,7 +154,7 @@ class GPCatalog():
 
         # Construct our internal representation of the catalog
         
-        for [oid, relname, relisshared] in curs.getresult():
+        for [oid, relname, relisshared] in curs.fetchall():
             self._tables[relname] = GPCatalogTable(self, relname)
             # Note: stupid API returns t/f for boolean value
             self._tables[relname]._setShared(relisshared == 't')
@@ -193,7 +193,9 @@ class GPCatalog():
         """
         Simple wrapper around querying the database connection
         """
-        return self._dbConnection.query(qry)
+        cur = self._dbConnection.cursor()
+        cur.execute(qry)
+        return cur
 
     def _markCoordinatorOnlyTables(self):
         """
@@ -483,10 +485,10 @@ class GPCatalogTable():
             # exist.
             raise GPCatalogException("Catalog table %s does not exist" % name)
 
-        if cur.ntuples() == 0:
+        if cur.rowcount == 0:
             raise GPCatalogException("Catalog table %s does not exist" % name)
 
-        for row in cur.getresult():
+        for row in cur.fetchall():
             (attname, atttype, typname) = row
 
             # Mark if the catalog has an oid column
@@ -522,7 +524,7 @@ class GPCatalogTable():
             WHERE attrelid = 'pg_catalog.{catname}'::regclass
             """.format(catname=name)
             cur = parent._query(qry)
-            self._pkey = [row[0] for row in cur.getresult()]
+            self._pkey = [row[0] for row in cur.fetchall()]
 
         # Primary key must be in the column list
         for k in self._pkey:

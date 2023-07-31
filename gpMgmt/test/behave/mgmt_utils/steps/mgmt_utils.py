@@ -19,7 +19,8 @@ from behave import given, when, then
 from datetime import datetime, timedelta
 from os import path
 from contextlib import closing
-
+import psycopg2
+from psycopg2 import extras
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
 from gppylib.commands import gp, unix
@@ -3055,31 +3056,41 @@ def impl(context, table_name):
     dbname = 'gptest'
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)
     context.long_run_select_only_conn = conn
+    cursor = conn.cursor()
+    context.long_run_select_only_cursor = cursor
+
+    # Start a readonly transaction.
+    cursor.execute("BEGIN")
 
     query = """SELECT gp_segment_id, * from %s order by 1, 2""" % table_name
-    data_result = dbconn.query(conn, query).fetchall()
+    cursor.execute(query)
+    data_result = cursor.fetchall()
+
     context.long_run_select_only_data_result = data_result
 
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
     context.long_run_select_only_xid = xid
 
 @then('verify that long-run read-only transaction still exists on {table_name}')
 def impl(context, table_name):
     dbname = 'gptest'
-    conn = context.long_run_select_only_conn
+    cursor = context.long_run_select_only_cursor
 
     query = """SELECT gp_segment_id, * from %s order by 1, 2""" % table_name
-    data_result = dbconn.query(conn, query).fetchall()
+    cursor.execute(query)
+    data_result = cursor.fetchall()
 
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
 
     if (xid != context.long_run_select_only_xid or
         data_result != context.long_run_select_only_data_result):
         error_str = "Incorrect xid or select result of long run read-only transaction: \
-                xid(before %s, after %), result(before %s, after %s)"
-        raise Exception(error_str % (context.long_run_select_only_xid, xid, context.long_run_select_only_data_result, data_result))
+                xid(before {}, after {}), result(before {}, after {})"
+        raise Exception(error_str.format(context.long_run_select_only_xid, xid, context.long_run_select_only_data_result, data_result))
 
 @given('a long-run transaction starts')
 def impl(context):
@@ -3087,30 +3098,36 @@ def impl(context):
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)
     context.long_run_conn = conn
 
+    cursor = conn.cursor()
+    context.long_run_cursor = cursor
+
+    cursor.execute("BEGIN")
+
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
     context.long_run_xid = xid
 
 @then('verify that long-run transaction aborted for changing the catalog by creating table {table_name}')
 def impl(context, table_name):
-    dbname = 'gptest'
-    conn = context.long_run_conn
+    cursor = context.long_run_cursor
 
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
     if context.long_run_xid != xid:
         raise Exception("Incorrect xid of long run transaction: before %s, after %s" %
                         (context.long_run_xid, xid));
 
     query = """CREATE TABLE %s (a INT)""" % table_name
     try:
-        data_result = dbconn.query(conn, query)
-    except Exception as msg:
-        key_msg = "FATAL:  cluster is expanded"
-        if key_msg not in msg.__str__():
-            raise Exception("transaction not abort correctly, errmsg:%s" % msg)
+        cursor.execute(query)
+    except Exception as e:
+        key_msg = "cluster is expanded from"
+        if key_msg not in str(e):
+            raise Exception("transaction not abort correctly, errmsg:%s" % str(e))
     else:
-        raise Exception("transaction not abort, result:%s" % data_result)
+        raise Exception("transaction not abort")
 
 @when('verify that the cluster has {num_of_segments} new segments')
 @then('verify that the cluster has {num_of_segments} new segments')
@@ -3728,7 +3745,7 @@ def impl(context):
 
 @then('the database locales are saved')
 def impl(context):
-    with closing(dbconn.connect(dbconn.DbURL())) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(), cursorFactory=psycopg2.extras.NamedTupleCursor)) as conn:
         rows = dbconn.query(conn, "SELECT name, setting FROM pg_settings WHERE name LIKE 'lc_%'").fetchall()
         context.database_locales = {row.name: row.setting for row in rows}
 
