@@ -122,7 +122,7 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
         curs = db_connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         curs.execute(self.orphaned_toast_tables_query)
         orphaned_toast_tables = curs.fetchall()
-        if len(orphaned_toast_tables) == 0:
+        if curs.rowcount == 0:
             return True
 
         for row in orphaned_toast_tables:
