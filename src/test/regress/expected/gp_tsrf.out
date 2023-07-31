@@ -333,3 +333,4 @@ EXPLAIN (VERBOSE, COSTS OFF)
  Settings: optimizer = 'off'
 (13 rows)
 
+DROP TABLE t_outer, t_inner;

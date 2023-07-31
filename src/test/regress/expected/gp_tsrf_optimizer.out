@@ -335,3 +335,4 @@ EXPLAIN (VERBOSE, COSTS OFF)
  Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
 
+DROP TABLE t_outer, t_inner;

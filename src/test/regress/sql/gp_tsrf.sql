@@ -61,3 +61,4 @@ INSERT INTO t_inner SELECT i, i+1 FROM generate_series(1,3) as i;
 SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b) FROM t_inner);
 EXPLAIN (VERBOSE, COSTS OFF)
   SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b)  FROM t_inner);
+DROP TABLE t_outer, t_inner;
