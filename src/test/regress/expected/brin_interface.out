@@ -1,5 +1,4 @@
 -- Additional tests that exercise the BRIN user interface
-CREATE EXTENSION pageinspect;
 CREATE TABLE brin_interface(i int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -338,5 +337,3 @@ SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_id
              8
 (1 row)
 
-DROP EXTENSION pageinspect CASCADE;
-NOTICE:  drop cascades to view revmap_page1

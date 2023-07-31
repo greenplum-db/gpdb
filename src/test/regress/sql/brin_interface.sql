@@ -1,6 +1,4 @@
 -- Additional tests that exercise the BRIN user interface
-CREATE EXTENSION pageinspect;
-
 CREATE TABLE brin_interface(i int);
 INSERT INTO brin_interface SELECT * FROM generate_series(1, 5000);
 CREATE INDEX ON brin_interface USING brin(i) WITH (pages_per_range=1);
@@ -129,6 +127,3 @@ REINDEX INDEX brin_ppr_atsetam_i_idx;
 SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_idx', 0));
 ALTER TABLE brin_ppr_atsetam SET ACCESS METHOD ao_row;
 SELECT pagesperrange FROM brin_metapage_info(get_raw_page('brin_ppr_atsetam_i_idx', 0));
-
-DROP EXTENSION pageinspect CASCADE;
-

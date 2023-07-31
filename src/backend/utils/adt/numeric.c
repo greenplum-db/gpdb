@@ -300,48 +300,6 @@ typedef struct
 } NumericSortSupport;
 
 
-/* ----------
- * Fast sum accumulator.
- *
- * NumericSumAccum is used to implement SUM(), and other standard aggregates
- * that track the sum of input values.  It uses 32-bit integers to store the
- * digits, instead of the normal 16-bit integers (with NBASE=10000).  This
- * way, we can safely accumulate up to NBASE - 1 values without propagating
- * carry, before risking overflow of any of the digits.  'num_uncarried'
- * tracks how many values have been accumulated without propagating carry.
- *
- * Positive and negative values are accumulated separately, in 'pos_digits'
- * and 'neg_digits'.  This is simpler and faster than deciding whether to add
- * or subtract from the current value, for each new value (see sub_var() for
- * the logic we avoid by doing this).  Both buffers are of same size, and
- * have the same weight and scale.  In accum_sum_final(), the positive and
- * negative sums are added together to produce the final result.
- *
- * When a new value has a larger ndigits or weight than the accumulator
- * currently does, the accumulator is enlarged to accommodate the new value.
- * We normally have one zero digit reserved for carry propagation, and that
- * is indicated by the 'have_carry_space' flag.  When accum_sum_carry() uses
- * up the reserved digit, it clears the 'have_carry_space' flag.  The next
- * call to accum_sum_add() will enlarge the buffer, to make room for the
- * extra digit, and set the flag again.
- *
- * To initialize a new accumulator, simply reset all fields to zeros.
- *
- * The accumulator does not handle NaNs.
- * ----------
- */
-typedef struct NumericSumAccum
-{
-	int			ndigits;
-	int			weight;
-	int			dscale;
-	int			num_uncarried;
-	bool		have_carry_space;
-	int32	   *pos_digits;
-	int32	   *neg_digits;
-} NumericSumAccum;
-
-
 /*
  * We define our own macros for packing and unpacking abbreviated-key
  * representations for numeric values in order to avoid depending on
@@ -3834,23 +3792,11 @@ numeric_float4(PG_FUNCTION_ARGS)
  * ----------------------------------------------------------------------
  */
 
-typedef struct NumericAggState
-{
-	bool		calcSumX2;		/* if true, calculate sumX2 */
-	MemoryContext agg_context;	/* context we're calculating in */
-	int64		N;				/* count of processed numbers */
-	NumericSumAccum sumX;		/* sum of processed numbers */
-	NumericSumAccum sumX2;		/* sum of squares of processed numbers */
-	int			maxScale;		/* maximum scale seen so far */
-	int64		maxScaleCount;	/* number of values seen with maximum scale */
-	int64		NaNcount;		/* count of NaN values (not included in N!) */
-} NumericAggState;
-
 /*
  * Prepare state data for a numeric aggregate function that needs to compute
  * sum, count and optionally sum of squares of the input.
  */
-static NumericAggState *
+NumericAggState *
 makeNumericAggState(FunctionCallInfo fcinfo, bool calcSumX2)
 {
 	NumericAggState *state;
@@ -3878,7 +3824,7 @@ makeNumericAggState(FunctionCallInfo fcinfo, bool calcSumX2)
  * Like makeNumericAggState(), but allocate the state in the current memory
  * context.
  */
-static NumericAggState *
+NumericAggState *
 makeNumericAggStateCurrentContext(bool calcSumX2)
 {
 	NumericAggState *state;
@@ -3893,7 +3839,7 @@ makeNumericAggStateCurrentContext(bool calcSumX2)
 /*
  * Accumulate a new input value for numeric aggregate functions.
  */
-static void
+void
 do_numeric_accum(NumericAggState *state, Numeric newval)
 {
 	NumericVar	X;
@@ -4525,19 +4471,12 @@ numeric_accum_inv(PG_FUNCTION_ARGS)
  */
 
 #ifdef HAVE_INT128
-typedef struct Int128AggState
-{
-	bool		calcSumX2;		/* if true, calculate sumX2 */
-	int64		N;				/* count of processed numbers */
-	int128		sumX;			/* sum of processed numbers */
-	int128		sumX2;			/* sum of squares of processed numbers */
-} Int128AggState;
 
 /*
  * Prepare state data for a 128-bit aggregate function that needs to compute
  * sum, count and optionally sum of squares of the input.
  */
-static Int128AggState *
+Int128AggState *
 makeInt128AggState(FunctionCallInfo fcinfo, bool calcSumX2)
 {
 	Int128AggState *state;
@@ -4562,7 +4501,7 @@ makeInt128AggState(FunctionCallInfo fcinfo, bool calcSumX2)
  * Like makeInt128AggState(), but allocate the state in the current memory
  * context.
  */
-static Int128AggState *
+Int128AggState *
 makeInt128AggStateCurrentContext(bool calcSumX2)
 {
 	Int128AggState *state;
@@ -4598,14 +4537,6 @@ do_int128_discard(Int128AggState *state, int128 newval)
 	state->sumX -= newval;
 	state->N--;
 }
-
-typedef Int128AggState PolyNumAggState;
-#define makePolyNumAggState makeInt128AggState
-#define makePolyNumAggStateCurrentContext makeInt128AggStateCurrentContext
-#else
-typedef NumericAggState PolyNumAggState;
-#define makePolyNumAggState makeNumericAggState
-#define makePolyNumAggStateCurrentContext makeNumericAggStateCurrentContext
 #endif
 
 Datum
@@ -5788,12 +5719,6 @@ int8_sum(PG_FUNCTION_ARGS)
  * operating in moving-aggregate mode, since for correct inverse transitions
  * we need to count the inputs.
  */
-
-typedef struct Int8TransTypeData
-{
-	int64		count;
-	int64		sum;
-} Int8TransTypeData;
 
 Datum
 int2_avg_accum(PG_FUNCTION_ARGS)

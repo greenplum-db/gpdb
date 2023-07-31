@@ -2766,7 +2766,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_resource_group_bypass", PGC_SUSET, RESOURCES,
+		{"gp_resource_group_bypass", PGC_USERSET, RESOURCES,
 			gettext_noop("If the value is true, the query in this session will not be limited by resource group."),
 			NULL
 		},
@@ -4414,7 +4414,7 @@ struct config_string ConfigureNamesString_gp[] =
 			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
 			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
-		&gp_role_string,
+		&gp_session_role_string,
 		"undefined",
 		check_gp_role, assign_gp_role, show_gp_role
 	},

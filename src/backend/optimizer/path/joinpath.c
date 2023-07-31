@@ -359,9 +359,15 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 */
 	if (joinrel->fdwroutine &&
 		joinrel->fdwroutine->GetForeignJoinPaths)
-		joinrel->fdwroutine->GetForeignJoinPaths(root, joinrel,
-												 outerrel, innerrel,
-												 jointype, &extra);
+	{
+		if(joinrel->exec_location != FTEXECLOCATION_ALL_SEGMENTS ||
+		   !joinrel->fdwroutine->IsMPPPlanNeeded || joinrel->fdwroutine->IsMPPPlanNeeded() == 0)
+		{
+			joinrel->fdwroutine->GetForeignJoinPaths(root, joinrel,
+													 outerrel, innerrel,
+													 jointype, &extra);
+		}
+	}
 
 	/*
 	 * 6. Finally, give extensions a chance to manipulate the path list.
