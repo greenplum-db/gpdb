@@ -60,10 +60,10 @@ Libraries provided in the R Data Science package include:
 <p class="p">ggplot2</p>
 <p class="p">glmnet</p>
 <p class="p">glue</p>
-<p class="p">gower</p>
-<p class="p">gplots</p>
 </td>
 <td style="vertical-align:top;" class="stentry">
+<p class="p">gower</p>
+<p class="p">gplots</p>
 <p class="p">gss</p>
 <p class="p">gtable</p>
 <p class="p">gtools</p>
@@ -102,11 +102,10 @@ Libraries provided in the R Data Science package include:
 <p class="p">prodlim</p>
 <p class="p">purrr</p>
 <p class="p">quadprog</p>
-<p class="p">quantmod</p>
-<p class="p">quantreg</p>
-<p class="p">R2jags</p>
 </td>
 <td style="vertical-align:top;" class="stentry">
+<p class="p">quantmod</p>
+<p class="p">quantreg</p>
 <p class="p">R2WinBUGS</p>
 <p class="p">R6</p>
 <p class="p">randomForest</p>
@@ -117,7 +116,6 @@ Libraries provided in the R Data Science package include:
 <p class="p">readr</p>
 <p class="p">recipes</p>
 <p class="p">reshape2</p>
-<p class="p">rjags</p>
 <p class="p">rlang</p>
 <p class="p">RobustRankAggreg</p>
 <p class="p">ROCR</p>
@@ -180,14 +178,6 @@ The Greenplum Database R Data Science Modules are installed in the following dir
 
 ```
 $GPHOME/ext/DataScienceR/library
-```
-
-> **Note** `rjags` libraries are installed in the `$GPHOME/ext/DataScienceR/extlib/lib` directory. If you want to use `rjags` and your `$GPHOME` is not `/usr/local/greenplum-db`, you must perform additional configuration steps to create a symbolic link from `$GPHOME` to `/usr/local/greenplum-db` on each node in your Greenplum Database cluster. For example:
-
-```
-$ gpssh -f all_hosts -e 'ln -s $GPHOME /usr/local/greenplum-db'
-$ gpssh -f all_hosts -e 'chown -h gpadmin /usr/local/greenplum-db'
-
 ```
 
 ## <a id="topic_removepdsl"></a>Uninstalling the R Data Science Library Package 
