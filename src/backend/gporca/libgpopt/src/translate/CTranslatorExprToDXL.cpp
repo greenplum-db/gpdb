@@ -1658,6 +1658,7 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 }
 
 
+//---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorExprToDXL::PdxlnDynamicIndexOnlyScan
 //
