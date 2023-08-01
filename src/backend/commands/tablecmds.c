@@ -5080,6 +5080,22 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			pass = AT_PASS_DROP;
 			break;
 		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
+			/*
+			 * GPDB: We want alteration of access method to be a no-op for
+			 * foreign tables, especially for ones which are part of partition
+			 * hierarchies. For e.g. if we have a hybrid hierarchy containing
+			 * heap tables and foreign tables, and we wanted to change the
+			 * access method for all heap tables in the hierarchy, we wouldn't
+			 * want to fail the entire command on the first foreign table
+			 * encountered.
+			 */
+			if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+			{
+				ereport((Gp_role == GP_ROLE_EXECUTE) ? DEBUG1 : NOTICE,
+						errmsg("skipping foreign table \"%s\" for ALTER operation",
+							   RelationGetRelationName(rel)));
+				return;
+			}
 			ATSimplePermissions(rel, ATT_TABLE | ATT_MATVIEW);
 
 			/* check if another access method change was already requested */
@@ -5107,6 +5123,21 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_SetRelOptions:	/* SET (...) */
 		case AT_ResetRelOptions:	/* RESET (...) */
 		case AT_ReplaceRelOptions:	/* reset them all, then set just these */
+			/*
+			 * GPDB: We want alteration of relation options to be a no-op for
+			 * foreign tables, especially for ones which are part of partition
+			 * hierarchies. For e.g. if we have a hybrid hierarchy containing
+			 * heap tables and foreign tables, and we wanted to change the
+			 * reloptions for all heap tables in the hierarchy, we wouldn't want
+			 * to fail the entire command on the first foreign table encountered.
+			 */
+			if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+			{
+				ereport((Gp_role == GP_ROLE_EXECUTE) ? DEBUG1 : NOTICE,
+						errmsg("skipping foreign table \"%s\" for ALTER operation",
+							   RelationGetRelationName(rel)));
+				return;
+			}
 			ATSimplePermissions(rel, ATT_TABLE | ATT_VIEW | ATT_MATVIEW | ATT_INDEX);
 			/* GPDB: recurse when setting reloptions of root partition w/o 'ONLY' keyword. */
 			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
@@ -6786,8 +6817,10 @@ ATSimpleRecursion(List **wqueue, Relation rel,
 			 * GPDB: for now we disallow setting reloptions of the entire partition
 			 * hierarchy, if some child tables have different access method than the
 			 * root. We check it here so that we can print pretty error message.
+			 * (We make an exception for foreign tables: those result in no-ops)
 			 */
 			if ((cmd->subtype == AT_SetRelOptions || cmd->subtype == AT_ReplaceRelOptions) 
+					&& childrel->rd_rel->relkind != RELKIND_FOREIGN_TABLE
 					&& rel->rd_rel->relam != childrel->rd_rel->relam)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
