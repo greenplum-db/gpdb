@@ -1947,16 +1947,10 @@ class gpexpand:
         """
         try:
             logger.info('Syncing Greenplum Database extensions')
-            new_segment_list = self.gparray.getExpansionSegDbList()
-            new_host_set = set([h.getSegmentHostName() for h in new_segment_list])
-            operations = [SyncPackages(host) for host in new_host_set]
-            ParallelOperation(operations, self.numworkers).run()
-            # introspect outcomes
-            for operation in operations:
-                operation.get_ret()
+            SyncPackages().run()
         except Exception:
             logger.exception('Syncing of Greenplum Database extensions has failed.')
-            logger.warning('Please run `gppkg install --force <package>` to re-install gppkg packages after successful expansion.')
+            logger.warning('Please run `gppkg sync` after successful expansion.')
 
     def validate_heap_checksums(self):
         num_workers = min(len(self.gparray.get_hostlist()), MAX_PARALLEL_EXPANDS)

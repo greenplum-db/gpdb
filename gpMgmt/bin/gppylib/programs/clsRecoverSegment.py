@@ -117,14 +117,10 @@ class GpRecoverSegmentProgram:
         # synchronization of packages. We should *not* disturb the user's attempts to recover.
         try:
             self.logger.info('Syncing Greenplum Database extensions')
-            operations = [SyncPackages(host) for host in new_hosts]
-            ParallelOperation(operations, self.__options.parallelDegree).run()
-            # introspect outcomes
-            for operation in operations:
-                operation.get_ret()
+            SyncPackages().run()
         except:
             self.logger.exception('Syncing of Greenplum Database extensions has failed.')
-            self.logger.warning('Please run `gppkg install --force <package>` to re-install gppkg packages after successful segment recovery.')
+            self.logger.warning('Please run `gppkg sync` after successful segment recovery.')
 
     def displayRecovery(self, mirrorBuilder, gpArray):
         self.logger.info('Greenplum instance recovery parameters')

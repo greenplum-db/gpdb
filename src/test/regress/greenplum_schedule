@@ -310,10 +310,6 @@ test: autovacuum-ao-aux
 # gpexpand introduce the partial tables, check them if they can run correctly
 test: gangsize gang_reuse
 
-# some utilities do not work while doing gpexpand, check them can print correct message
-## FIXME: We should enable this test after gppkg being integrated into gpdb.
-## test: run_utility_gpexpand_phase1
-
 # check correct error message when create extension error on segment
 test: create_extension_fail
 
