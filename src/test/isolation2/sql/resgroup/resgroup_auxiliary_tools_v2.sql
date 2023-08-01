@@ -345,9 +345,9 @@ $$ LANGUAGE plpython3u;
     try:
         shutil.rmtree(dirname)
     except Exception as e:
-        os.close(f)
         plpy.error("cannot remove dir {}".format(e))
     else:
-        os.close(f)
         return True
+    finally:
+        os.close(f)
 $$ LANGUAGE plpython3u;

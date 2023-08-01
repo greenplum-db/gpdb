@@ -145,5 +145,5 @@ CREATE FUNCTION
 try: f = os.open(dirname, os.O_RDONLY) except FileNotFoundError: return True 
 fcntl.flock(f, fcntl.LOCK_EX) 
 if not os.path.exists(dirname): os.close(f) return True 
-try: shutil.rmtree(dirname) except Exception as e: os.close(f) plpy.error("cannot remove dir {}".format(e)) else: os.close(f) return True $$ LANGUAGE plpython3u;
+try: shutil.rmtree(dirname) except Exception as e: plpy.error("cannot remove dir {}".format(e)) else: return True finally: os.close(f) $$ LANGUAGE plpython3u;
 CREATE FUNCTION
