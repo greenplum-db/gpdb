@@ -365,7 +365,7 @@ LIKE source\_table \[like\_option `...`\]
     :   Indexes, `PRIMARY KEY`, `UNIQUE`, and `EXCLUDE` constraints on the original table will be created on the new table. Names for the new indexes and constraints are chosen according to the default rules, regardless of how the originals were named. (This behavior avoids possible duplicate-name failures for the new indexes.)
 
     INCLUDING RELOPT
-    :   Copies relation storage options from the original table. For append-optimized and append-optimized, column-oriented tables, copies the `blocksize`, `compresslevel`, and `compresstype.` For heap tables, copies the `fillfactor`. XXX more general reloptions XXX.
+    :   Copies relation storage options from the original table. For append-optimized and append-optimized, column-oriented tables, copies the `blocksize`, `compresslevel`, and `compresstype.` For heap tables, copies the `fillfactor`. You can also specify relation [storage parameters](#storage_parameters).
     : When you include `RELOPT` options, you must not explicitly specify relation storage options for the new table using the `WITH` clause.
 
     INCLUDING STATISTICS
