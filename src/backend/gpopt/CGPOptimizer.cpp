@@ -269,9 +269,29 @@ InitGPOPT()
 	}
 	GPOS_CATCH_EX(ex)
 	{
+		// rethrow GPDB exceptions
 		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
 		{
 			PG_RE_THROW();
+		}
+		// For Orca excpetions, need to create a GPDB exception
+		else
+		{
+			if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
+			{
+				if (errstart(ERROR, TEXTDOMAIN))
+				{
+					errcode(ERRCODE_INTERNAL_ERROR);
+					errmsg("No available memory to initialize GPORCA");
+					errfinish(ex.Filename(), ex.Line(), nullptr);
+				}
+			}
+			if (errstart(ERROR, TEXTDOMAIN))
+			{
+				errcode(ERRCODE_INTERNAL_ERROR);
+				errmsg("Failed to initialize GPORCA");
+				errfinish(ex.Filename(), ex.Line(), nullptr);
+			}
 		}
 	}
 	GPOS_CATCH_END;
