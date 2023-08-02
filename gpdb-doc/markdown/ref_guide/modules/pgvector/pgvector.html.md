@@ -7,16 +7,16 @@ The Greenplum Database `pgvector` module is equivalent to version 0.4.4 of the `
 
 ## <a id="topic_reg"></a>Installing and Registering the Module
 
-The `pgvector` module is installed when you install Greenplum Database. Before you can use the data type and index access method defined in the module, you must register the `pgvector` extension in each database in which you want to use these:
+The `pgvector` module is installed when you install Greenplum Database. Before you can use the data type and index access method defined in the module, you must register the `vector` extension in each database in which you want to use these:
 
 ```
-CREATE EXTENSION pgvector;
+CREATE EXTENSION vector;
 ```
 
 Refer to [Installing Additional Supplied Modules](../../../install_guide/install_modules.html) for more information.
 
 
-## <a id="using"></a>About the pgvector Types, Operators, and Functions
+## <a id="using"></a>About the vector Types, Operators, and Functions
 
 `pgvector` provides a `vector` data type and an index access method named `ivfflat`. This type and method and the supporting functions and operators provided by the module enable you to to perform exact and approximate neighbor search on, and determine L2, inner product, and cosine distance between, embeddings. You can also use the module to store and query embeddings.
 
