@@ -26,7 +26,7 @@ where action is one of:
 -   **ALTER COLUMN TYPE** — Changes the data type of a table column.
 -   **OWNER** — Changes the owner of the external table to the specified user.
 
-Use the [ALTER TABLE](ALTER_TABLE.html) command to perform these actions on an external table.
+Use the [ALTER TABLE](ALTER_TABLE.html) command to perform these actions on an external table:
 
 -   Set \(change\) the table schema.
 -   Rename the table.
@@ -35,9 +35,9 @@ Use the [ALTER TABLE](ALTER_TABLE.html) command to perform these actions on an e
 
 You must own the external table to use `ALTER EXTERNAL TABLE` or `ALTER TABLE`. To change the schema of an external table, you must also have `CREATE` privilege on the new schema. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have `CREATE` privilege on the external table's schema. A superuser has these privileges automatically.
 
-Changes to the external table definition with either `ALTER EXTERNAL TABLE` or `ALTER TABLE` do not affect the external data.
+Changes that you make to an external table definition with either `ALTER EXTERNAL TABLE` or `ALTER TABLE` do not affect the external data.
 
-The `ALTER EXTERNAL TABLE` and `ALTER TABLE` commands cannot modify the type external table \(read, write, web\), the table `FORMAT` information, or the location of the external data. To modify this information, you must drop and recreate the external table definition.
+The `ALTER EXTERNAL TABLE` and `ALTER TABLE` commands cannot modify the type of the external table \(read, write, web\), the table `FORMAT` information, or the location of the external data. To modify this information, you must drop and recreate the external table definition.
 
 ## <a id="section4"></a>Parameters 
 
