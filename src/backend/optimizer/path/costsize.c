@@ -327,7 +327,7 @@ cost_seqscan(Path *path, PlannerInfo *root,
 		path->rows = baserel->rows;
 
 	if (!enable_seqscan)
-		startup_cost += disable_cost;
+		path->is_disabled = true;
 
 	/* fetch estimated page cost for tablespace containing table */
 	get_tablespace_page_costs(baserel->reltablespace,
@@ -517,7 +517,7 @@ cost_gather_merge(GatherMergePath *path, PlannerInfo *root,
 		path->path.rows = rel->rows;
 
 	if (!enable_gathermerge)
-		startup_cost += disable_cost;
+		path->path.is_disabled = true;
 
 	/*
 	 * Add one to the number of workers to account for the leader.  This might
@@ -631,7 +631,7 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	}
 
 	if (!enable_indexscan)
-		startup_cost += disable_cost;
+		path->path.is_disabled = true;
 	/* we don't need to check enable_indexonlyscan; indxpath.c does that */
 
 	/*
@@ -1117,7 +1117,7 @@ cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel_orig,
 		path->rows = baserel->rows;
 
 	if (!enable_bitmapscan)
-		startup_cost += disable_cost;
+		path->is_disabled = true;
 
 	pages_fetched = compute_bitmap_pages(root, baserel_orig, bitmapqual,
 										 loop_count, &indexTotalCost,
@@ -1385,11 +1385,10 @@ cost_tidscan(Path *path, PlannerInfo *root,
 	 */
 	if (isCurrentOf)
 	{
-		Assert(baserel->orig->baserestrictcost.startup >= disable_cost);
-		startup_cost -= disable_cost;
+		path->is_disabled = false;
 	}
 	else if (!enable_tidscan)
-		startup_cost += disable_cost;
+		path->is_disabled = true;
 
 	/*
 	 * The TID qual expressions will be computed once, any other baserestrict
@@ -1911,7 +1910,7 @@ cost_sort(Path *path, PlannerInfo *root,
 	long		sort_mem_bytes = (long) global_work_mem(root);
 
 	if (!enable_sort)
-		startup_cost += disable_cost;
+		path->is_disabled = true;
 
 	path->rows = tuples;
 
@@ -2422,8 +2421,7 @@ cost_agg(Path *path, PlannerInfo *root,
 		total_cost = input_total_cost;
 		if (aggstrategy == AGG_MIXED && !enable_hashagg)
 		{
-			startup_cost += disable_cost;
-			total_cost += disable_cost;
+			path->is_disabled = true;
 		}
 		/* calcs phrased this way to match HASHED case, see note above */
 		total_cost += aggcosts->transCost.startup;
@@ -2436,8 +2434,7 @@ cost_agg(Path *path, PlannerInfo *root,
 
 		if (!enable_groupagg)
 		{
-			startup_cost += disable_cost;
-			total_cost += disable_cost;
+			path->is_disabled = true;
 		}
 	}
 	else
@@ -2445,7 +2442,7 @@ cost_agg(Path *path, PlannerInfo *root,
 		/* must be AGG_HASHED */
 		startup_cost = input_total_cost;
 		if (!enable_hashagg)
-			startup_cost += disable_cost;
+			path->is_disabled = true;
 		startup_cost += aggcosts->transCost.startup;
 		startup_cost += aggcosts->transCost.per_tuple * input_tuples;
 		/* cost of computing hash value */
@@ -2882,7 +2879,7 @@ final_cost_nestloop(PlannerInfo *root, NestPath *path,
 	 * disabled, which doesn't seem like the way to bet.
 	 */
 	if (!enable_nestloop)
-		startup_cost += disable_cost;
+		path->path.is_disabled = true;
 
 	/* cost of inner-relation source data (we already dealt with outer rel) */
 
@@ -3342,7 +3339,7 @@ final_cost_mergejoin(PlannerInfo *root, MergePath *path,
 	 * disabled, which doesn't seem like the way to bet.
 	 */
 	if (!enable_mergejoin)
-		startup_cost += disable_cost;
+		path->jpath.path.is_disabled = true;
 
 	/*
 	 * Compute cost of the mergequals and qpquals (other restriction clauses)
@@ -3773,7 +3770,7 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 	 * disabled, which doesn't seem like the way to bet.
 	 */
 	if (!enable_hashjoin)
-		startup_cost += disable_cost;
+		path->jpath.path.is_disabled = true;
 
 	/* mark the path with estimated # of batches */
 	path->num_batches = numbatches;
@@ -3943,7 +3940,7 @@ final_cost_hashjoin(PlannerInfo *root, HashPath *path,
 	if (relation_byte_size(clamp_row_est(inner_path_rows * innermcvfreq),
 						   inner_path->pathtarget->width) >
 		(work_mem * 1024L))
-		startup_cost += disable_cost;
+		path->jpath.path.is_disabled = true;
 
 	/*
 	 * Compute cost of the hashquals and qpquals (other restriction clauses)

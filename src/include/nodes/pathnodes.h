@@ -1382,6 +1382,7 @@ typedef struct Path
 	 * optimizations.
 	 */
 	Relids		sameslice_relids;
+	bool		is_disabled;
 } Path;
 
 /* 
