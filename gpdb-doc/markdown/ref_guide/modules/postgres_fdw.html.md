@@ -17,9 +17,11 @@ You can use a foreign table that you create with `postgres_fdw` to access data t
 | Option Name | Description | Value |
 |-------------|-----|-------------|
 | mpp_execute | Greenplum Database option that identifies the host(s) from which `postgres_fdw` reads or writes data. | Set to `'all segments'`, which, when specified for `postgres_fdw`, translates to all remote PostgreSQL servers specified in `multi_hosts`. |
-| num_segments | Greenplum Database option that identifies the number of query executors that Greenplum spawns on the source Greenplum cluster. | Set to the number of remote PostgreSQL servers. If this option is not set, defaults to the number of segments in the local Greenplum cluster.|
+| num_segments<sup>1</sup> | Greenplum Database option that identifies the number of query executors that Greenplum spawns on the source Greenplum cluster. | Set to the number of remote PostgreSQL servers. If this option is not set, defaults to the number of segments in the local Greenplum cluster.|
 | multi_hosts | Space-separated list of remote PostgreSQL server host names. | You must specify exactly `num_segments` number of hosts in the list. |
 | multi_ports | Space-separated list of port numbers for the PostgreSQL servers. | You must specify exactly one port number for each host specified in `multi_hosts`, in order. |
+
+<sup>1</sup> The Greenplum Query Optimizer (GPORCA) can not plan and optimize queries when `num_segments` is larger than the number of segments in the local Greenplum cluster; such queries always fall back to the Postgres Planner.
 
 Setting these options instructs `postgres_fdw` to treat a foreign table that you create that specifes this `SERVER` as a *distributed* foreign table. That is, a foreign table whose underlying data is stored on multiple remote PostgreSQL servers. `postgres_fdw` directs a query on such a foreign table to each PostgreSQL server specified in `multi_hosts`.
 
@@ -27,11 +29,13 @@ Setting these options instructs `postgres_fdw` to treat a foreign table that you
 
 `postgres_fdw` supports partial aggregate pushdown for a *distributed* query under the following conditions:
 
-- The aggregate contains no `DISTINCT`, `FILTER`, or `ORDER BY` clauses.
-- The aggregate does not contain a `GROUP BY` clause with an expression.
+- The aggregate contains no `DISTINCT` or `ORDER BY` clauses.
+- The aggregate does not contain a `FILTER` or `GROUP BY` clause with an expression.
 - The aggregate does not contain `HAVING` clause.
 - The aggregate function is not `array_agg()`.
 - The query contains no `LIMIT` or `JOIN` clauses.
+
+> **Note** `postgres_fdw` does not support partial aggregate pushdown when the Greenplum Query Optimizer (GPORCA) is enabled for a query.
 
 
 ## <a id="topic_gp_limit"></a>Limitations 
