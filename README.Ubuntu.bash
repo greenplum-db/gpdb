@@ -36,7 +36,6 @@ sudo apt-get install -y \
 	python3-dev \
 	python3-pip \
 	python3-psutil \
-	python3-pygresql \
 	python3-yaml \
 	zlib1g-dev
 

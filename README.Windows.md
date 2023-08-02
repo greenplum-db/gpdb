@@ -142,12 +142,9 @@ cmake --build . --config Release --target ALL_BUILD
 cmake --build . --config Release --target INSTALL
 ```
 
-4. Build pygresql, needed by gpload
+4. Build psycopg2, needed by gpload
 ```
-cd <path\to\gpdb>\gpMgmt\bin\pythonSrc\PyGreSQL
-mkdir build
-cd build
-cmake -DCMAKE_PREFIX_PATH=C:\greenplum-db-devel -DCMAKE_INSTALL_PREFIX:PATH=C:\greenplum-db-devel -G "Visual Studio 15 2017 Win64" ..
-cmake --build . --config Release --target ALL_BUILD
-cmake --build . --config Release --target INSTALL
+1. Ensure that a 64-bit version of Python 3 is installed on your system. Refer to [Python Releases for Windows](https://www.python.org/downloads/windows/) or the source of your choice for Python download and install instructions.
+2. Add the Python directory to your `PATH`.
+3. Use `pip` to install the following `gpload` dependencies: pip install psycopg2 pyyaml
 ```

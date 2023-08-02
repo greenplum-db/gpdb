@@ -5,11 +5,10 @@ import shlex
 import shutil
 import sys
 import tempfile
-
+from psycopg2 import DatabaseError
 from gppylib.gparray import Segment, GpArray, SegmentPair
 from gpconfig_modules.parse_guc_metadata import ParseGuc
 import errno
-from pg import DatabaseError
 
 from .gp_unittest import *
 from unittest.mock import *

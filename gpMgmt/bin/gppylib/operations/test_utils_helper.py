@@ -1,4 +1,5 @@
 from gppylib.operations import Operation
+import psycopg2
 
 """
 These objects needed for gppylib.operations.test.test_utils are pulled out of said file for
@@ -37,5 +38,4 @@ class ExceptionWithArgsUnsafe(Exception):
 
 class RaiseOperation_Unpicklable(Operation):
     def execute(self):
-        import pg
-        raise pg.DatabaseError()
+        raise psycopg2.DatabaseError()

@@ -197,7 +197,7 @@ select b from foo_bool group by b;
     <dxl:Plan Id="0" SpaceSize="10">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="436.242410" Rows="3.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="436.167622" Rows="3.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="b">
@@ -208,7 +208,7 @@ select b from foo_bool group by b;
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="436.242321" Rows="3.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="436.167533" Rows="3.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="1"/>
@@ -221,7 +221,7 @@ select b from foo_bool group by b;
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="436.242308" Rows="3.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="436.167520" Rows="3.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="b">
@@ -236,7 +236,7 @@ select b from foo_bool group by b;
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="436.242308" Rows="3.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="436.167520" Rows="3.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="b">
@@ -252,7 +252,7 @@ select b from foo_bool group by b;
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="436.242283" Rows="3.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="436.167495" Rows="3.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="1"/>

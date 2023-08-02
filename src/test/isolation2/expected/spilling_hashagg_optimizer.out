@@ -41,18 +41,16 @@ SET
 CREATE TABLE test_hashagg_off AS SELECT a, COUNT(DISTINCT b) AS b FROM test_src_tbl GROUP BY a;
 SELECT 100
 EXPLAIN (costs off) SELECT a, COUNT(DISTINCT b) AS b FROM test_src_tbl GROUP BY a;
- QUERY PLAN                                       
---------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)         
-   ->  GroupAggregate                             
-         Group Key: a                             
-         ->  GroupAggregate                       
-               Group Key: a, b                    
-               ->  Sort                           
-                     Sort Key: a, b               
-                     ->  Seq Scan on test_src_tbl 
- Optimizer: Pivotal Optimizer (GPORCA)            
-(9 rows)
+ QUERY PLAN                                 
+--------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)   
+   ->  GroupAggregate                       
+         Group Key: a                       
+         ->  Sort                           
+               Sort Key: a                  
+               ->  Seq Scan on test_src_tbl 
+ Optimizer: Pivotal Optimizer (GPORCA)      
+(7 rows)
 
 -- Results should match
 SELECT (n_total=n_matches) AS match FROM ( SELECT COUNT(*) n_total, SUM(CASE WHEN t1.b = t2.b THEN 1 ELSE 0 END) n_matches FROM test_hashagg_on t1 JOIN test_hashagg_off t2 ON t1.a = t2.a) t;

@@ -37,13 +37,12 @@ $$ LANGUAGE plpython3u;
 -- return true if the practical value is close to the expected value.
 CREATE OR REPLACE FUNCTION verify_cpu_usage(groupname TEXT, expect_cpu_usage INT, err_rate INT)
 RETURNS BOOL AS $$
-    import json
-    import functools
-
     all_info = plpy.execute('''
         SELECT sample::json->'{name}' AS cpu FROM cpu_usage_samples
     '''.format(name=groupname))
-    usage = float(all_info[0]['cpu'])
+
+    results = [float(_['cpu']) for _ in all_info]
+    usage = sum(results) / len(results)
 
     return abs(usage - expect_cpu_usage) <= err_rate
 $$ LANGUAGE plpython3u;
@@ -71,6 +70,10 @@ CREATE VIEW cancel_all AS
     SELECT pg_cancel_backend(pid)
     FROM pg_stat_activity
     WHERE query LIKE 'SELECT * FROM % WHERE busy%';
+
+-- The test cases for the value of gp_resource_group_cpu_limit equals 0.9, 
+-- do not change it during the test.
+show gp_resource_group_cpu_limit;
 
 -- create two resource groups
 CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_max_percent=-1, cpu_weight=100);
@@ -273,7 +276,7 @@ ALTER RESOURCE GROUP rg2_cpu_test set cpu_max_percent 20;
 -- a group should not burst to use all the cpu usage
 -- when it's the only one with running queries.
 --
--- so the cpu usage shall be 10%
+-- so the cpu usage shall be 0.9 * 10%
 --
 
 10&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;
@@ -308,7 +311,7 @@ ALTER RESOURCE GROUP rg2_cpu_test set cpu_max_percent 20;
 -- end_ignore
 
 -- verify it
-1:SELECT verify_cpu_usage('rg1_cpu_test', 10, 2);
+1:SELECT verify_cpu_usage('rg1_cpu_test', 9, 2);
 
 -- start_ignore
 1:SELECT * FROM cancel_all;
@@ -338,8 +341,8 @@ ALTER RESOURCE GROUP rg2_cpu_test set cpu_max_percent 20;
 --
 -- rg1_cpu_test:rg2_cpu_test is 10:20, so:
 --
--- - rg1_cpu_test gets 10%;
--- - rg2_cpu_test gets 20%;
+-- - rg1_cpu_test gets 0.9 * 10%;
+-- - rg2_cpu_test gets 0.9 * 20%;
 --
 
 10&: SELECT * FROM gp_dist_random('gp_id') WHERE busy() IS NULL;
@@ -379,8 +382,8 @@ ALTER RESOURCE GROUP rg2_cpu_test set cpu_max_percent 20;
 1:SELECT pg_sleep(1.7);
 -- end_ignore
 
-1:SELECT verify_cpu_usage('rg1_cpu_test', 10, 2);
-1:SELECT verify_cpu_usage('rg2_cpu_test', 20, 2);
+1:SELECT verify_cpu_usage('rg1_cpu_test', 9, 2);
+1:SELECT verify_cpu_usage('rg2_cpu_test', 18, 2);
 
 -- start_ignore
 1:SELECT * FROM cancel_all;

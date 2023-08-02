@@ -1086,6 +1086,7 @@ IpcSemaphoreId
 IpcSemaphoreKey
 IsForeignRelUpdatable_function
 IsForeignScanParallelSafe_function
+IsMPPPlanNeeded_function
 IspellDict
 Item
 ItemId

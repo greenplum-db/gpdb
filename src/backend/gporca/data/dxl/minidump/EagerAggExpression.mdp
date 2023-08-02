@@ -3328,7 +3328,7 @@
     <dxl:Plan Id="0" SpaceSize="44">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="13815.579946" Rows="999.999998" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="13734.880549" Rows="999.999998" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="20" Alias="min">
@@ -3339,7 +3339,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="13815.565040" Rows="999.999998" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="13734.865642" Rows="999.999998" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="20" Alias="min">
@@ -3350,7 +3350,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="13815.565040" Rows="999.999998" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="13734.865642" Rows="999.999998" Width="4"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="1"/>
@@ -3359,7 +3359,7 @@
               <dxl:ProjElem ColId="20" Alias="min">
                 <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
+                    <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -3373,7 +3373,7 @@
             <dxl:Filter/>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="11548.062944" Rows="56476687.387047" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="11467.363547" Rows="56476687.387047" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="g1">
@@ -3393,7 +3393,7 @@
               </dxl:HashCondList>
               <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="10223.579128" Rows="5615437.486519" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="10142.879731" Rows="5615437.486519" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="j1">
@@ -3415,7 +3415,7 @@
                 </dxl:HashExprList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="10153.273851" Rows="5615437.486519" Width="12"/>
+                    <dxl:Cost StartupCost="0" TotalCost="10072.574453" Rows="5615437.486519" Width="12"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="j1">
@@ -3432,7 +3432,7 @@
                   <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="10153.273851" Rows="5615437.486519" Width="12"/>
+                      <dxl:Cost StartupCost="0" TotalCost="10072.574453" Rows="5615437.486519" Width="12"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="0"/>
@@ -3442,10 +3442,10 @@
                       <dxl:ProjElem ColId="21" Alias="ColRef_0021">
                         <dxl:AggFunc AggMdid="0.2132.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:OpExpr OperatorName="%" OperatorMdid="0.530.1.0" OperatorType="0.23.1.0">
-                            <dxl:Ident ColId="2" ColName="s1" TypeMdid="0.23.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                          </dxl:OpExpr>
+                            <dxl:OpExpr OperatorName="%" OperatorMdid="0.530.1.0" OperatorType="0.23.1.0">
+                              <dxl:Ident ColId="2" ColName="s1" TypeMdid="0.23.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+                            </dxl:OpExpr>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>

@@ -51,8 +51,6 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-# run separately, because checks for reltuples and results vary in-presence of concurrent transactions
-test: cluster_gp
 test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
 test: gp_lock
@@ -151,6 +149,8 @@ test: aocs
 test: ic
 
 test: disable_autovacuum
+# run separately, because checks for reltuples and results vary in-presence of concurrent transactions
+test: cluster_gp
 # Check for shmem leak for instrumentation slots before gpdb restart
 test: instr_in_shmem_verify
 # 'partition_locking' gets confused if other backends run concurrently and
@@ -160,6 +160,7 @@ test: vacuum_gp
 # background analyze may affect pgstat
 test: pg_stat
 test: bfv_partition qp_misc_rio
+test: bfv_partition_plans
 # 'gp_covering_index' concurrent vacuum (e.g. autovacuum) can effect plan due
 # to race-condition fetching relallvisible.
 test: gp_covering_index
@@ -180,7 +181,7 @@ test: trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_st
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types interrupt_holdoff_count
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache part_external_table
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache part_external_table
 # Run minirepro separately to avoid concurrent deletes erroring out the internal pg_dump call
 test: minirepro
 
@@ -202,7 +203,7 @@ test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions_in_contexts_setup
 test: qp_misc_rio_join_small qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with correlated_subquery
 
-test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_orca_fallback gp_sync_lc_gucs
+test: qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_orca_fallback gp_sync_lc_gucs
 
 test: olap_setup
 test: qp_olap_group qp_olap_group2
@@ -280,6 +281,7 @@ test: vacuum_ao_aux_only
 test: instr_in_shmem_verify
 # check autostats
 test: autostats
+test: dpe
 test: enable_autovacuum
 
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics

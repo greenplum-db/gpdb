@@ -28,7 +28,7 @@ def create_cluster(context, with_mirrors=True):
     cd ../gpAux/gpdemo; \
         export DEMO_PORT_BASE={port_base} && \
         export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
-        export WITH_MIRRORS={with_mirrors} && \A
+        export WITH_MIRRORS={with_mirrors} && \
         ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
         ./demo_cluster.sh
     """.format(port_base=os.getenv('PORT_BASE', 15432),
@@ -108,18 +108,17 @@ def step_impl(context):
 def step_impl(context):
     result_cursor = query_sql(
         "postgres",
-        "select pg_get_replication_slots() from gp_dist_random('gp_id') order by gp_segment_id"
+        "select (pg_get_replication_slots()).* from gp_dist_random('gp_id') order by gp_segment_id"
     )
 
     if result_cursor.rowcount != context.current_cluster_size:
         raise Exception("expected all %d primaries to have replication slots, only %d have slots" % (context.current_cluster_size, results.rowcount))
 
-    for content_id, result in enumerate(result_cursor.fetchall()):
-        pg_rep_slot = result[0]
-        if (pg_rep_slot[0], pg_rep_slot[2], pg_rep_slot[4]) != ('internal_wal_replication_slot','physical','f') :
+    for content_id, pg_rep_slot in enumerate(result_cursor.fetchall()):
+        if (pg_rep_slot[0], pg_rep_slot[2], pg_rep_slot[4]) != ('internal_wal_replication_slot', 'physical', False) :
             raise Exception(
                 "expected replication slot to be active for content id %d, got %s" %
-                (content_id, result[0])
+                (content_id, pg_rep_slot)
             )
 
 @then('the mirrors should not have replication slots')

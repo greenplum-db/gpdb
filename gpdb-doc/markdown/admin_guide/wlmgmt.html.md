@@ -15,10 +15,10 @@ The following table summarizes some of the differences between resource queues a
 |Concurrency|Managed at the query level|Managed at the transaction level|
 |CPU|Specify query priority|Specify percentage of CPU resources or the specific number of CPU cores; uses Linux Control Groups|
 |Memory|Managed at the queue and operator level; users can over-subscribe|Managed at the transaction level, with enhanced allocation and tracking; users can over-subscribe|
-|Memory Isolation|None|Memory is isolated between resource groups and between transactions within the same resource group|
-|Users|Limits are applied only to non-admin users|Limits are applied to `SUPERUSER` and non-admin users and system processes of non-user classes|
-|Queueing|Queue only when no slot available|Queue when no slot is available or not enough available memory|
-|Query Failure|Query may fail immediately if not enough memory|Query may fail after reaching transaction fixed memory limit when no shared resource group memory exists and the transaction requests more memory|
+|Memory Isolation|None|None|
+|Users|Limits are applied only to non-admin users|Limits are applied to `SUPERUSER`, non-admin users, and system processes of non-user classes|
+|Queueing|Queue when no slot available or not enough available memory|Queue only when no slot is available|
+|Query Failure|Query may fail immediately if the allocated memory for the query surpasses the available system memory and spill limits|Query may fail if the allocated memory for the query surpasses the available system memory and spill limits|
 |Limit Bypass|Limits are not enforced for `SUPERUSER` roles and certain operators and functions|Limits are not enforced on `SET`, `RESET`, and `SHOW` commands. Additionally, certain queries may be configured to bypass the concurrency limit|
 |External Components|None|None|
 

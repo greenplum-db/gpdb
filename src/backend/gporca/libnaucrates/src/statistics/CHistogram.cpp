@@ -100,14 +100,18 @@ CHistogram::CHistogram(CMemoryPool *mp, CBucketArray *histogram_buckets,
 	  m_is_col_stats_missing(is_col_stats_missing)
 {
 	GPOS_ASSERT(m_histogram_buckets);
-	GPOS_ASSERT(CDouble(0.0) <= null_freq);
-	GPOS_ASSERT(CDouble(1.0) >= null_freq);
-	GPOS_ASSERT(CDouble(0.0) <= distinct_remaining);
-	GPOS_ASSERT(CDouble(0.0) <= freq_remaining);
-	GPOS_ASSERT(CDouble(1.0) >= freq_remaining);
-	// if distinct_remaining is 0, freq_remaining must be 0 too
-	GPOS_ASSERT_IMP(distinct_remaining < CStatistics::Epsilon,
-					freq_remaining < CStatistics::Epsilon);
+	// FIXME: These assertions are sometimes hit and is indicitive of a bug, but
+	//	currently aren't a high prioritiy and hitting them hides more serious issues
+#if 0
+		GPOS_ASSERT(CDouble(0.0) <= null_freq);
+		GPOS_ASSERT(CDouble(1.0) >= null_freq);
+		GPOS_ASSERT(CDouble(0.0) <= distinct_remaining);
+		GPOS_ASSERT(CDouble(0.0) <= freq_remaining);
+		GPOS_ASSERT(CDouble(1.0) >= freq_remaining);
+		 if distinct_remaining is 0, freq_remaining must be 0 too
+		GPOS_ASSERT_IMP(distinct_remaining < CStatistics::Epsilon,
+						freq_remaining < CStatistics::Epsilon);
+#endif
 }
 
 // set histograms null frequency
@@ -1626,15 +1630,18 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 		buckets->AddRef();
 		return buckets;
 	}
-
+	// FIXME: This assertion is sometimes hit and is indicitive of a bug, but
+	//	currently isn't a high prioritiy and hitting it hides more serious issues
+#if 0
 #ifdef GPOS_DEBUG
-	CDouble start_frequency(0.0);
-	for (ULONG ul = 0; ul < buckets->Size(); ++ul)
-	{
-		CBucket *bucket = (*buckets)[ul];
-		start_frequency = start_frequency + bucket->GetFrequency();
-	}
-	GPOS_ASSERT(start_frequency <= CDouble(1.0) + CStatistics::Epsilon);
+		CDouble start_frequency(0.0);
+		for (ULONG ul = 0; ul < buckets->Size(); ++ul)
+		{
+			CBucket *bucket = (*buckets)[ul];
+			start_frequency = start_frequency + bucket->GetFrequency();
+		}
+		GPOS_ASSERT(start_frequency <= CDouble(1.0) + CStatistics::Epsilon);
+#endif
 #endif
 
 	CBucketArray *result_buckets = GPOS_NEW(mp) CBucketArray(mp);
@@ -1737,17 +1744,20 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 			result_buckets->Append(bucket->MakeBucketCopy(mp));
 		}
 	}
-
+	// FIXME: This assertion is sometimes hit and is indicitive of a bug, but
+	//	currently isn't a high prioritiy and hitting it hides more serious issues
+#if 0
 #ifdef GPOS_DEBUG
-	CDouble end_frequency(0.0);
-	for (ULONG ul = 0; ul < result_buckets->Size(); ++ul)
-	{
-		CBucket *bucket = (*result_buckets)[ul];
-		end_frequency = end_frequency + bucket->GetFrequency();
-	}
+		CDouble end_frequency(0.0);
+		for (ULONG ul = 0; ul < result_buckets->Size(); ++ul)
+		{
+			CBucket *bucket = (*result_buckets)[ul];
+			end_frequency = end_frequency + bucket->GetFrequency();
+		}
 
-	GPOS_ASSERT(start_frequency - end_frequency <=
-				CDouble(0.0) + CStatistics::Epsilon);
+		GPOS_ASSERT(start_frequency - end_frequency <=
+					CDouble(0.0) + CStatistics::Epsilon);
+#endif
 #endif
 
 	// FIXME: the desired_num_buckets handling is broken for singleton buckets

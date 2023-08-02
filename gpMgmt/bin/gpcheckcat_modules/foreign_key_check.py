@@ -2,6 +2,7 @@
 
 from gppylib.gplog import *
 from gppylib.gpcatalog import *
+from contextlib import closing
 import re
 
 class ForeignKeyCheck:
@@ -105,25 +106,25 @@ class ForeignKeyCheck:
     def _validate_relation(self, catname, fkeystr, pkcatname, pkeystr, qry):
         issue_list = []
         try:
-            curs = self.db_connection.query(qry)
-            nrows = curs.ntuples()
-
-            if nrows == 0:
-                self.logger.info('[OK] Foreign key check for %s(%s) referencing %s(%s)' %
-                                 (catname, fkeystr, pkcatname, pkeystr))
-            else:
-                self.logger.info('[FAIL] Foreign key check for %s(%s) referencing %s(%s)' %
-                                 (catname, fkeystr, pkcatname, pkeystr))
-                self.logger.error('  %s has %d issue(s): entry has NULL reference of %s(%s)' %
-                                  (catname, nrows, pkcatname, pkeystr))
-
-                fields = curs.listfields()
-                log_literal(self.logger, logging.ERROR, "    " + " | ".join(fields))
-                for row in curs.getresult():
-                    log_literal(self.logger, logging.ERROR, "    " + " | ".join(map(str, row)))
-                results = curs.getresult()
-                issue_list.append((pkcatname, fields, results))
-
+            with closing(self.db_connection.cursor()) as curs:
+                curs.execute(qry)
+                nrows = curs.rowcount
+                
+                if nrows == 0:
+                    self.logger.info('[OK] Foreign key check for %s(%s) referencing %s(%s)' %
+                                     (catname, fkeystr, pkcatname, pkeystr))
+                else:
+                    self.logger.info('[FAIL] Foreign key check for %s(%s) referencing %s(%s)' %
+                                     (catname, fkeystr, pkcatname, pkeystr))
+                    self.logger.error('  %s has %d issue(s): entry has NULL reference of %s(%s)' %
+                                      (catname, nrows, pkcatname, pkeystr))
+                
+                    fields = [desc[0] for desc in curs.description]
+                    log_literal(self.logger, logging.ERROR, "    " + " | ".join(fields))
+                    results = curs.fetchall()
+                    for row in results:
+                        log_literal(self.logger, logging.ERROR, "    " + " | ".join(map(str, row)))
+                    issue_list.append((pkcatname, fields, results))
         except Exception as e:
             err_msg = '[ERROR] executing: Foreign key check for catalog table {0}. Query : \n {1}\n'.format(catname, qry)
             err_msg += str(e)

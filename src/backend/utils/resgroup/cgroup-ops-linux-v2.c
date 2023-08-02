@@ -671,7 +671,7 @@ setcpulimit_v2(Oid group, int cpu_hard_limit)
 	if (cpu_hard_limit > 0)
 	{
 		writeInt64(group, BASEDIR_GPDB, component, "cpu.max",
-				   system_cfs_quota_us * cpu_hard_limit / 100);
+				   system_cfs_quota_us * cpu_hard_limit * gp_resource_group_cpu_limit / 100);
 	}
 	else
 	{

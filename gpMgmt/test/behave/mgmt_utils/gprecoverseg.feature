@@ -759,7 +759,7 @@ Feature: gprecoverseg tests
 
   @demo_cluster
   @concourse_cluster
-  Scenario:  SIGHUP on gprecoverseg should not display progress in gpstate -e
+  Scenario:  SIGKILL on gprecoverseg should not display progress in gpstate -e
     Given the database is running
     And all the segments are running
     And the segments are synchronized
@@ -773,7 +773,7 @@ Feature: gprecoverseg tests
     Then verify if the gprecoverseg.lock directory is present in coordinator_data_directory
     When the user runs "gpstate -e"
     Then gpstate should print "Segments in recovery" to stdout
-    When the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    When the user asynchronously sets up to end gprecoverseg process with SIGKILL
     And the user waits until saved async process is completed
     When the user runs "gpstate -e"
     Then gpstate should not print "Segments in recovery" to stdout
@@ -1060,7 +1060,7 @@ Feature: gprecoverseg tests
     And verify that mirror on content 2 is down
     And verify that mirror on content 0,1 is up
     And pg_rewind is killed on mirror with content 2
-    And the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    And the user asynchronously sets up to end gprecoverseg process with SIGKILL
     And the gprecoverseg lock directory is removed
     And verify that mirror on content 2 is down
     And the user runs "gprecoverseg -a"
@@ -1092,7 +1092,7 @@ Feature: gprecoverseg tests
     And verify that mirror on content 2,3 is down
     And verify that mirror on content 0,1 is up
     And pg_rewind is killed on mirror with content 2,3
-    And the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    And the user asynchronously sets up to end gprecoverseg process with SIGKILL
     And the gprecoverseg lock directory is removed
     And verify that mirror on content 2,3 is down
     And the user runs "gprecoverseg -a"
@@ -1120,7 +1120,7 @@ Feature: gprecoverseg tests
     And gprecoverseg should print "Found pg_rewind running for segments with contentIds [0, 1, 2, 3], skipping recovery of these segments" to logfile
     And verify that mirror on content 0,1,2,3 is down
     And pg_rewind is killed on mirror with content 0,1,2,3
-    And the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    And the user asynchronously sets up to end gprecoverseg process with SIGKILL
     And the gprecoverseg lock directory is removed
     And verify that mirror on content 0,1,2,3 is down
     And "SUSPEND_PG_REWIND" environment variable should be restored
@@ -1159,7 +1159,7 @@ Feature: gprecoverseg tests
     And verify that mirror on content 2,3 is up
     And verify that mirror on content 0,1 is down
     And pg_rewind is killed on mirror with content 0,1
-    And the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    And the user asynchronously sets up to end gprecoverseg process with SIGKILL
     And the gprecoverseg lock directory is removed
     And verify that mirror on content 0,1 is down
     And the user runs "gprecoverseg -a"
@@ -1193,7 +1193,7 @@ Feature: gprecoverseg tests
     And gprecoverseg should print "Found pg_rewind running for segments with contentIds [0, 1, 2, 3], skipping recovery of these segments" to logfile
     And verify that mirror on content 0,1,2,3 is down
     And pg_rewind is killed on mirror with content 0,1,2,3
-    And the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    And the user asynchronously sets up to end gprecoverseg process with SIGKILL
     And the gprecoverseg lock directory is removed
     And verify that mirror on content 0,1,2,3 is down
     Then "SUSPEND_PG_REWIND" environment variable should be restored
@@ -1719,6 +1719,360 @@ Feature: gprecoverseg tests
           And all the segments are running
           And the segments are synchronized
 
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should not terminate on SIGINT when user selects No in the prompt
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    And the user suspend the walsender on the primary on content 0
+    And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,10000) AS a;" is executed in "postgres" db
+    And the "test_recoverseg" table row count in "postgres" is saved
+    When the user would run "gprecoverseg -aF" and terminate the process with SIGINT and selects "n" without delay
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print "[WARNING]:-Recieved SIGINT signal, terminating gprecoverseg" escaped to stdout
+    And gprecoverseg should print "Continue terminating gprecoverseg" to stdout
+    And gprecoverseg should print "Segments successfully recovered" to stdout
+    And the user waits until mirror on content 0 is up
+    And the segments are synchronized
+    And the cluster is rebalanced
+    And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should terminate on SIGINT when user selects Yes in the prompt
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    And the user suspend the walsender on the primary on content 0
+    When the user would run "gprecoverseg -aF" and terminate the process with SIGINT and selects "y" without delay
+    Then gprecoverseg should return a return code of 1
+    And gprecoverseg should print "[WARNING]:-Recieved SIGINT signal, terminating gprecoverseg" escaped to stdout
+    And gprecoverseg should print "Continue terminating gprecoverseg" to stdout
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." escaped to stdout
+    And gprecoverseg should print "[ERROR]:-gprecoverseg failed. Please check the output for more details." escaped to stdout
+    And gprecoverseg should print "full" errors to logfile for content 0
+    And the user reset the walsender on the primary on content 0
+    And verify that pg_basebackup is not running for content 0
+    And verify that mirror on content 0 is down
+    And recovery_progress.file should not exist in gpAdminLogs
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario Outline: gprecoverseg should terminate gracefully on SIGTERM for <scenario> of the segments
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content <content>
+    And user can start transactions
+    And the user suspend the walsender on the primary on content <content>
+    When the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    Then verify that pg_basebackup is running for content <content>
+    Then verify that pg_rewind is not running for content <content>
+    And the user asynchronously sets up to end gprecoverseg process with SIGTERM
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg failed. Please check the output for more details." to logfile
+    And gprecoverseg should print "full" errors to logfile for content <content>
+    And the user reset the walsender on the primary on content <content>
+    And verify that pg_basebackup is not running for content <content>
+    And verify that mirror on content <content> is down
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+  Examples:
+    | scenario  | content  |
+    | one       | 0        |
+    | some      | 0,1      |
+    | all       | 0,1,2    |
+
+
+  @concourse_cluster
+  Scenario: gprecoverseg should terminate for mixed recovery of mirrors
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1
+    And user can start transactions
+    And the user suspend the walsender on the primary on content 1
+    And the environment variable "SUSPEND_PG_REWIND" is set to "600"
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover mirror with content 0 incremental
+    And edit the input file to recover mirror with content 1 full inplace
+    When the user asynchronously runs gprecoverseg with input file and additional args "-a" and the process is saved
+    Then verify that pg_basebackup is running for content 1
+    And verify that pg_rewind is running for content 0
+    And the user asynchronously sets up to end gprecoverseg process with SIGTERM
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." to logfile
+    And gprecoverseg should print "incremental" errors to logfile for content 0
+    And gprecoverseg should print "full" errors to logfile for content 1
+    And the user reset the walsender on the primary on content 1
+    And "SUSPEND_PG_REWIND" environment variable should be restored
+    And verify that pg_basebackup is not running for content 1
+    And verify that pg_rewind is not running for content 0
+    And verify that mirror on content 0,1 is down
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should terminate gracefully on SIGTERM when running differential recovery
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    When the user asynchronously runs "gprecoverseg -a --differential" and the process is saved
+    Then verify that differential is running for content 0
+    And the user asynchronously sets up to end gprecoverseg process with SIGTERM
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg differential recovery failed. Please check the gpsegrecovery.py log file and rsync log file for more details." to logfile
+    And gprecoverseg should print "differential" errors to logfile for content 0
+    And verify that mirror on content 0 is down
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @concourse_cluster
+  Scenario: gprecoverseg should revert catalog changes upon termination
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And the information of contents 0,1,2 is saved
+    And all files in gpAdminLogs directory are deleted on hosts cdw,sdw1,sdw2
+    And the "primary" segment information is saved
+
+    And the primary on content 0 is stopped
+    And user can start transactions
+    And the status of the primary on content 0 should be "d"
+    And user can start transactions
+    And the user suspend the walsender on the primary on content 0
+
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover mirror with content 0 to a new directory on remote host with mode 0700
+    When the user asynchronously runs gprecoverseg with input file and additional args "-a" and the process is saved
+    Then verify that pg_basebackup is running for content 0
+    And the user asynchronously sets up to end gprecoverseg process with SIGTERM
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." to logfile
+    And gprecoverseg should print "full" errors to logfile for content 0
+
+    Then the contents 0,1,2 should have their original data directory in the system configuration
+    And the gp_configuration_history table should contain a backout entry for the primary segment for contents 0
+    And the user reset the walsender on the primary on content 0
+    And verify that pg_basebackup is not running for content 0
+    And verify that mirror on content 0 is down
+
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should ignore SIGHUP and continue recovery
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    And the user suspend the walsender on the primary on content 0
+    When the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    Then the user just waits until recovery_progress.file is created in gpAdminLogs
+    And the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    And the user reset the walsender on the primary on content 0
+    And the user waits until saved async process is completed
+    And gprecoverseg should print "Segments successfully recovered" to logfile
+    And verify that mirror on content 0 is up
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should terminate gracefully when parallelism is limited
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And user can start transactions
+    And the user suspend the walsender on the primary on content 0,1,2
+    When the user asynchronously runs "gprecoverseg -aF -b 1 -B 1" and the process is saved
+    Then verify that pg_basebackup is running for content 0
+    And the user asynchronously sets up to end gprecoverseg process with SIGTERM
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg failed. Please check the output for more details." to logfile
+    And gprecoverseg should print "full" errors to logfile for content 0,1,2
+    And the user reset the walsender on the primary on content 0,1,2
+    And verify that pg_basebackup is not running for content 0,1,2
+    And verify that mirror on content 0,1,2 is down
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should only terminate the remaining recoveries if some of them are completed
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And user can start transactions
+    And the user suspend the walsender on the primary on content 1,2
+    When the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    And the user waits until mirror on content 0 is up
+    And the user asynchronously sets up to end gprecoverseg process with SIGTERM
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg failed. Please check the output for more details." to logfile
+    And gprecoverseg should print "full" errors to logfile for content 1,2
+    And the user reset the walsender on the primary on content 1,2
+    And verify that pg_basebackup is not running for content 1,2
+    And verify that mirror on content 0 is up
+    And verify that mirror on content 1,2 is down
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should show appropriate log when recovery has been completed before termination happens
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    When the user would run "gprecoverseg -aF" and terminate the process with SIGINT and selects "y" with delay
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print "[WARNING]:-Recieved SIGINT signal, terminating gprecoverseg" escaped to stdout
+    And gprecoverseg should print "Continue terminating gprecoverseg" to stdout
+    And gprecoverseg should print "[INFO]:-Not able to terminate the recovery process since it has been completed successfully" escaped to stdout
+    And verify that mirror on content 0 is up
+    And recovery_progress.file should not exist in gpAdminLogs
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg should terminate when interrupted during setup recovery process
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0
+    And user can start transactions
+    And the user runs psql with "-c "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"" against database "postgres"
+    And the user runs psql with "-c "SELECT gp_inject_fault('checkpoint', 'sleep', '', '', '', 1, -1, 3600, dbid) FROM gp_segment_configuration where content=0 and role='p'"" against database "postgres"
+    When the user asynchronously runs "gprecoverseg -a" and the process is saved
+    And the user asynchronously sets up to end gprecoverseg process when "Setting up the required segments for recovery" is printed in the logs
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    Then gprecoverseg should print "[ERROR]:-Unable to parse recovery error" to logfile
+    And the user runs psql with "-c "SELECT gp_inject_fault('checkpoint', 'reset', '', '', '', 1, -1, 3600, dbid) FROM gp_segment_configuration where content=0 and role='p'"" against database "postgres"
+    And verify that mirror on content 0 is down
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
+
+
+  @concourse_cluster
+  Scenario: gprecoverseg rebalance should be able to terminate gracefully when interrupted by the user
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1
+    And user can start transactions
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    Given the environment variable "SUSPEND_PG_REWIND" is set to "600"
+    When the user asynchronously runs "gprecoverseg -ar" and the process is saved
+    And the user just waits until recovery_progress.file is created in gpAdminLogs
+    Then verify that pg_rewind is running for content 0
+    When the user asynchronously sets up to end gprecoverseg process with SIGTERM
+    And the user waits until saved async process is completed
+    Then gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg process was interrupted by the user." to logfile
+    And gprecoverseg should print "[ERROR]:-gprecoverseg failed. Please check the output for more details." to logfile
+    And gprecoverseg should print "[ERROR]:-Failed to start the synchronization step of the segment rebalance" to logfile
+    And gprecoverseg should print "incremental" errors to logfile for content 0,1
+    And "SUSPEND_PG_REWIND" environment variable should be restored
+    And verify that pg_rewind is not running for content 0,1
+    And verify that mirror on content 0,1 is down
+    When the user runs "gprecoverseg -aF"
+    Then gprecoverseg should return a return code of 0
+    And user can start transactions
+    And all the segments are running
+    And the segments are synchronized
+    And the cluster is rebalanced
 
 
   @concourse_cluster

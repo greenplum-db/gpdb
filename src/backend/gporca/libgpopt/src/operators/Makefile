@@ -89,6 +89,7 @@ OBJS        = CExpression.o \
               CPhysicalConstTableGet.o \
               CPhysicalDML.o \
               CPhysicalDynamicBitmapTableScan.o \
+              CPhysicalDynamicIndexOnlyScan.o \
               CPhysicalDynamicIndexScan.o \
               CPhysicalDynamicScan.o \
               CPhysicalDynamicTableScan.o \

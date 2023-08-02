@@ -18,6 +18,7 @@
 #include "naucrates/dxl/parser/CParseHandlerIndexScan.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexOnlyScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexOnlyScan.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
@@ -232,6 +233,16 @@ CParseHandlerIndexScan::EndElementHelper(const XMLCh *const element_local_name,
 	{
 		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexScan(
 			m_mp, dxl_table_descr, dxl_index_descr, m_index_scan_dir);
+		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
+	}
+	else if (EdxltokenPhysicalDynamicIndexOnlyScan == token_type)
+	{
+		IMdIdArray *mdid_partitions_array =
+			partition_mdids_parse_handler->GetMdIdArray();
+		mdid_partitions_array->AddRef();
+		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalDynamicIndexOnlyScan(
+			m_mp, dxl_table_descr, dxl_index_descr, m_index_scan_dir,
+			mdid_partitions_array, selector_ids);
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
 	else

@@ -6,7 +6,8 @@
 import unittest
 from mock import call, Mock, patch, MagicMock
 from gppylib.commands import pg
-from pgdb import DatabaseError
+from test.unit.gp_unittest import GpTestCase, run_tests
+from psycopg2 import DatabaseError
 
 from gppylib.test.unit.gp_unittest import GpTestCase
 from gppylib.commands.base import CommandResult

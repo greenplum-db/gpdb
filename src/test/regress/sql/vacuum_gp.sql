@@ -295,7 +295,6 @@ VACUUM FULL pg_authid, pg_database;
 
 drop table if exists vacfrzt;
 drop database if exists vacfrzdb;
-create extension if not exists pageinspect;
 -- autovacuum needs to be turned off for this test
 show autovacuum;
 

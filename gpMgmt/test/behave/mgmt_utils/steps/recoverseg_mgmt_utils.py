@@ -7,6 +7,8 @@ from contextlib import closing
 from gppylib.commands.base import Command, ExecutionError, REMOTE, WorkerPool
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
+from gppylib.programs.clsRecoverSegment_triples import get_segments_with_running_basebackup, is_pg_rewind_running
+from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
 from test.behave_utils.utils import *
 import platform, shutil
 from behave import given, when, then
@@ -215,9 +217,9 @@ def impl(context, utility, output, segment_type):
         expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
         check_stdout_msg(context, expected)
 
-@then('{utility} should print "{recovery_type}" errors to stdout for content {content_ids}')
-@when('{utility} should print "{recovery_type}" errors to stdout for content {content_ids}')
-def impl(context, utility, recovery_type, content_ids):
+@then('{utility} should print "{recovery_type}" errors to {output} for content {content_ids}')
+@when('{utility} should print "{recovery_type}" errors to {output} for content {content_ids}')
+def impl(context, utility, recovery_type, output, content_ids):
     if content_ids == "None":
         return
     if recovery_type not in ("incremental", "full", "differential","start"):
@@ -239,6 +241,12 @@ def impl(context, utility, recovery_type, content_ids):
         elif recovery_type == 'start':
             expected = r'hostname: {}; port: {}; datadir: {}'.format(segment.getSegmentHostName(), segment.getSegmentPort(),
                                                                      segment.getSegmentDataDirectory())
+        if output == "logfile":
+            context.execute_steps('''
+            Then {0} should print "{1}" regex to logfile
+            '''.format(utility, expected))
+            return
+
         check_stdout_msg(context, expected)
 
 
@@ -355,8 +363,8 @@ def impl(context, host):
     content_id_str = ','.join(str(i) for i in content_ids_on_host)
     recovery_fail_check(context, recovery_type='full', content_ids=content_id_str)
 
-@then('check if moving the mirrors from {original_host} to {new_host} failed')
-def impl(context, original_host, new_host):
+@then('check if moving the mirrors from {original_host} to {new_host} failed {user_termination} user termination')
+def impl(context, original_host, new_host, user_termination):
     all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
     segments = filter(lambda seg: seg.getSegmentRole() == ROLE_MIRROR and
                                   seg.getSegmentHostName() == original_host, all_segments)
@@ -367,12 +375,16 @@ def impl(context, original_host, new_host):
     Then gprecoverseg should return a return code of 1
     And user can start transactions
     And gprecoverseg should print "Initiating segment recovery." to stdout
-    And gprecoverseg should print "pg_basebackup: error: could not access directory" to stdout for mirrors with content {content_ids}
     And gprecoverseg should print "Failed to recover the following segments" to stdout
     And verify that mirror on content {content_ids} is down
     And gprecoverseg should print "gprecoverseg failed. Please check the output" to stdout
     And gprecoverseg should not print "Segments successfully recovered" to stdout
     '''.format(content_ids=content_id_str))
+
+    if user_termination == "without":
+        context.execute_steps('''
+        Then gprecoverseg should print "pg_basebackup: error: could not access directory" to stdout for mirrors with content {content_ids}
+        '''.format(content_ids=content_id_str))
 
     #TODO add this step
     #And gpAdminLogs directory has "pg_basebackup*" files on {new_host} only for content {content_ids}
@@ -832,3 +844,72 @@ def impl(context, host):
         if_addrs = gp.IfAddrs.list_addrs(host_name)
         context.host_ip_list[host_name] = if_addrs
 
+
+
+@then('verify that pg_basebackup {action} running for content {content_ids}')
+def impl(context, action, content_ids):
+    attempt = 0
+    num_retries = 600
+    content_ids_to_check = [int(c) for c in content_ids.split(',')]
+
+    while attempt < num_retries:
+        attempt += 1
+        content_ids_running_basebackup = get_segments_with_running_basebackup()
+
+        if action == "is not":
+            if not any(content in content_ids_running_basebackup for content in content_ids_to_check):
+                return
+
+        if action == "is":
+            if all(content in content_ids_running_basebackup for content in content_ids_to_check):
+                return
+
+        time.sleep(0.1)
+        if attempt == num_retries:
+            raise Exception('Timed out after {} retries'.format(num_retries))
+
+
+@then('verify that pg_rewind {action} running for content {content_ids}')
+def impl(context, action, content_ids):
+    qry = "SELECT hostname, port FROM gp_segment_configuration WHERE status='u' AND role='p' AND content IN ({0})".format(content_ids)
+    rows = getRows('postgres', qry)
+
+    attempt = 0
+    num_retries = 600
+    while attempt < num_retries:
+        attempt += 1
+
+        if action == "is not":
+            if not any(is_pg_rewind_running(row[0], row[1]) for row in rows):
+                return
+
+        if action == "is":
+            if all(is_pg_rewind_running(row[0], row[1]) for row in rows):
+                return
+
+        time.sleep(0.1)
+        if attempt == num_retries:
+            raise Exception('Timed out after {} retries'.format(num_retries))
+
+
+@then('verify that differential {action} running for content {content_ids}')
+def impl(context, action, content_ids):
+    qry = "SELECT hostname, port FROM gp_segment_configuration WHERE status='u' AND role='p' AND content IN ({0})".format(content_ids)
+    rows = getRows('postgres', qry)
+
+    attempt = 0
+    num_retries = 600
+    while attempt < num_retries:
+        attempt += 1
+
+        if action == "is not":
+            if not any(is_seg_in_backup_mode(row[0], row[1]) for row in rows):
+                return
+
+        if action == "is":
+            if all(is_seg_in_backup_mode(row[0], row[1]) for row in rows):
+                return
+
+        time.sleep(0.1)
+        if attempt == num_retries:
+            raise Exception('Timed out after {} retries'.format(num_retries))

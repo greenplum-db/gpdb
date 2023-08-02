@@ -10,10 +10,8 @@ import os
 import sys
 import signal
 import itertools
-
+from psycopg2 import DatabaseError
 try:
-    import pg
-
     from gppylib.commands.unix import *
     from gppylib.commands.gp import *
     from gppylib.commands.pg import PgControlData
@@ -23,7 +21,6 @@ try:
     from gppylib.db import dbconn
     from gppylib.userinput import *
     from gppylib.operations.startSegments import *
-    from pgdb import DatabaseError
     from gppylib import gparray, gplog, pgconf, userinput, utils
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
     from gppylib.operations.segment_tablespace_locations import get_tablespace_locations

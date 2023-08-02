@@ -60,6 +60,7 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalDML.o \
               CDXLPhysicalDynamicBitmapTableScan.o \
               CDXLPhysicalDynamicIndexScan.o \
+              CDXLPhysicalDynamicIndexOnlyScan.o \
               CDXLPhysicalDynamicTableScan.o \
               CDXLPhysicalForeignScan.o \
               CDXLPhysicalGatherMotion.o \

@@ -15,7 +15,7 @@
 import os
 import sys
 import re
-
+from psycopg2 import DatabaseError
 try:
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import GpArray
@@ -25,7 +25,6 @@ try:
     from gppylib.commands.gp import *
     from gppylib.db import dbconn
     from gppylib.userinput import *
-    from pg import DatabaseError
     from gpconfig_modules.segment_guc import SegmentGuc
     from gpconfig_modules.database_segment_guc import DatabaseSegmentGuc
     from gpconfig_modules.file_segment_guc import FileSegmentGuc

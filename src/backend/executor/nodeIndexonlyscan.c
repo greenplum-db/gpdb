@@ -503,8 +503,22 @@ ExecIndexOnlyRestrPos(IndexOnlyScanState *node)
 IndexOnlyScanState *
 ExecInitIndexOnlyScan(IndexOnlyScan *node, EState *estate, int eflags)
 {
-	IndexOnlyScanState *indexstate;
 	Relation	currentRelation;
+
+	/*
+	 * open the scan relation
+	 */
+	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
+
+	return ExecInitIndexOnlyScanForPartition(node, estate, eflags,
+											 currentRelation, node->indexid);
+}
+
+IndexOnlyScanState *
+ExecInitIndexOnlyScanForPartition(IndexOnlyScan *node, EState *estate, int eflags,
+								  Relation currentRelation, Oid indexid)
+{
+	IndexOnlyScanState *indexstate;
 	LOCKMODE	lockmode;
 	TupleDesc	tupDesc;
 
@@ -522,11 +536,6 @@ ExecInitIndexOnlyScan(IndexOnlyScan *node, EState *estate, int eflags)
 	 * create expression context for node
 	 */
 	ExecAssignExprContext(estate, &indexstate->ss.ps);
-
-	/*
-	 * open the scan relation
-	 */
-	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
 
 	indexstate->ss.ss_currentRelation = currentRelation;
 	indexstate->ss.ss_currentScanDesc = NULL;	/* no heap scan here */
@@ -579,7 +588,7 @@ ExecInitIndexOnlyScan(IndexOnlyScan *node, EState *estate, int eflags)
 
 	/* Open the index relation. */
 	lockmode = exec_rt_fetch(node->scan.scanrelid, estate)->rellockmode;
-	indexstate->ioss_RelationDesc = index_open(node->indexid, lockmode);
+	indexstate->ioss_RelationDesc = index_open(indexid, lockmode);
 
 	/*
 	 * Initialize index-specific scan state

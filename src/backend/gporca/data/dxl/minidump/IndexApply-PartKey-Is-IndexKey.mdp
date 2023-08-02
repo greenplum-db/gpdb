@@ -864,7 +864,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="15">
+    <dxl:Plan Id="0" SpaceSize="17">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="12.001227" Rows="1.000000" Width="4"/>
@@ -903,7 +903,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
             </dxl:ProjList>
             <dxl:Filter/>
             <dxl:SortingColumnList/>
-            <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="6.000319" Rows="1.000000" Width="12"/>
               </dxl:Properties>
@@ -941,7 +941,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
               </dxl:TableDescriptor>
             </dxl:DynamicIndexScan>
           </dxl:BroadcastMotion>
-          <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="2" SelectorIds="">
+          <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="6.000152" Rows="1.000000" Width="8"/>
             </dxl:Properties>

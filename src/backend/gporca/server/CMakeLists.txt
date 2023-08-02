@@ -143,6 +143,9 @@ DynamicIndexScan-Heterogenous-PartSelectEquality
 DynamicIndexScan-Heterogenous-PartSelectRange DynamicIndexScan-OpenEndedPartitions
 DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols;
 
+CDynamicIndexOnlyScanTest:
+DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin;
+
 CIndexScanOnLeafTest:
 IndexOnLeaf-AddNewPartitionToRootTableContainingHeterogenousIndex
 IndexOnLeaf-AddPartitionToRootWithHomogenousIndex IndexOnLeaf-AddPartitionToRootWithHomogenousIndex
@@ -237,7 +240,8 @@ PartTbl-DPE PartTbl-DPE-GroupBy PartTbl-DPE-Limit
 DPE-with-unsupported-pred DPE-SemiJoin DPE-IN DPE-NOT-IN HJN-DPE-Bitmap-Outer-Child
 NLJ-Broadcast-DPE-Outer-Child PartTbl-MultiWayJoinWithDPE PartTbl-MultiWayJoinWithDPE-2
 PartTbl-LeftOuterHashJoin-DPE-IsNull PartTbl-LeftOuterNLJoin-DPE-IsNull
-PartTbl-List-DPE-Int-Predicates JoinOrderDPE PartTbl-DPE-Opfamily;
+PartTbl-List-DPE-Int-Predicates JoinOrderDPE PartTbl-DPE-Opfamily
+PartTbl-DPE-DynamicIndexOnlyScan-Range;
 
 CPartTblSPETest:
 PartTbl-SPE-DynamicTableScan-Range-Cost1 PartTbl-SPE-DynamicTableScan-Range-Cost2

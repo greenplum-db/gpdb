@@ -1130,6 +1130,10 @@ CTranslatorUtils::CreateGroupingSetsForRollup(CMemoryPool *mp,
 	CBitSetArray *col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
 	ListCell *lc = nullptr;
 	CBitSet *current_result = GPOS_NEW(mp) CBitSet(mp);
+	// Maintaining the order of grouping sets is essential because the
+	// UnionAll operator matches each child's distribution with the
+	// distribution of the first child
+	col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp));
 	ForEach(lc, grouping_set->content)
 	{
 		GroupingSet *gs_current = (GroupingSet *) lfirst(lc);
@@ -1142,8 +1146,6 @@ CTranslatorUtils::CreateGroupingSetsForRollup(CMemoryPool *mp,
 		bset->Release();
 		col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp, *current_result));
 	}
-	// add an empty set
-	col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp));
 	current_result->Release();
 	return col_attnos_arr;
 }

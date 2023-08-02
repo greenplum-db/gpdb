@@ -1,8 +1,6 @@
 -- Tests for BRIN chaining for AO/CO tables
 -- These are in a separate file as they take longer and deal with more data.
 
-CREATE EXTENSION pageinspect;
-
 -- All tests insert rows into content=1.
 
 -- We create an append-optimized table with the following characteristics:
@@ -59,5 +57,3 @@ SET enable_seqscan TO off;
 SET optimizer TO off;
 EXPLAIN SELECT count(*) FROM brin_chain_@amname@ WHERE i > '1' and i < '3';
 SELECT count(*) FROM brin_chain_@amname@ WHERE i > '1' and i < '3';
-
-DROP EXTENSION pageinspect;
