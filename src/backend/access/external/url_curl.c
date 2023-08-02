@@ -1393,7 +1393,10 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 			snprintf(extssl_cer_full, MAXPGPATH, "%s/%s", DataDir, extssl_cert);
 
 			if (!is_file_exists(extssl_cer_full))
+			{
 				elog(LOG, "could not open certificate file \"%s\": %m", extssl_cer_full);
+				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLCERT, NULL);
+			}
 			else
 				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLCERT, extssl_cer_full);
 		}
@@ -1411,7 +1414,10 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 			snprintf(extssl_key_full, MAXPGPATH, "%s/%s", DataDir, extssl_key);
 
 			if (!is_file_exists(extssl_key_full))
+			{
 				elog(LOG, "could not open private key file \"%s\": %m", extssl_key_full);
+				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLKEY, NULL);
+			}
 			else
 				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLKEY, extssl_key_full);
 		}
@@ -1423,7 +1429,10 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 			snprintf(extssl_cas_full, MAXPGPATH, "%s/%s", DataDir, extssl_ca);
 
 			if (!is_file_exists(extssl_cas_full))
+			{
 				elog(LOG, "could not open private key file \"%s\": %m", extssl_cas_full);
+				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_CAINFO, NULL);
+			}
 			else
 				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_CAINFO, extssl_cas_full);
 		}

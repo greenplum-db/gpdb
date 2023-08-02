@@ -11,11 +11,11 @@ execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/dat
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_start_ca_verify (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log --ssl_server_verify </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log --ssl_verify_peer on </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_start_no_ca_verify (x text)
-execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_server_no_verify -l /tmp/gpfdist_certs_matching.log --ssl_verify_peer off </dev/null >/dev/null 2>&1 &);  sleep 5;  ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE gpfdist_ssl_not_matching_start (x text)
@@ -265,56 +265,32 @@ SELECT * FROM tbl;
  jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
 (10 rows)
 
--- start_ignore
-select * from gpfdist_ssl_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from gpfdist_ssl_start;
-       x       
----------------
- 21621 gpfdist
-(1 row)
-
--- end_ignore
-SELECT * FROM tbl;
- s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
------+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
- aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
- jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
-(10 rows)
-
--- start_ignore
-select * from gpfdist_ssl_stop;
-      x      
--------------
- stopping...
-(1 row)
-
-select * from gpfdist_ssl_start;
-       x       
----------------
- 21621 gpfdist
-(1 row)
-
-SET verify_gpfdists_cert=on;
--- end_ignore
 -- gpfdist_ssl case 7
+-- start_ignore
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from gpfdist_ssl_start_no_ca_verify;
+       x       
+---------------
+ 21621 gpfdist
+(1 row)
+
+-- end_ignore
 DROP EXTERNAL TABLE IF EXISTS tbl;
 CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
 LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg1 slice1 127.0.0.1:7001 pid=6426)
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
  s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
 -----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
  aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
@@ -330,6 +306,200 @@ SELECT * FROM tbl;
 (10 rows)
 
 -- start_ignore
+\! bash change_cert.bash recover_gpdb_root
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_client
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+\! bash change_cert.bash gpfdist_replace_root
+\! bash change_cert.bash clear_gpdb_root
+\! bash change_cert.bash clear_gpdb_client
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from gpfdist_ssl_start_no_ca_verify;
+       x       
+---------------
+ 28725 gpfdist
+(1 row)
+
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg1 slice1 127.0.0.1:7001 pid=28366)
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_root
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_client
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- gpfdist_ssl case 8
+-- start_ignore
+\! bash change_cert.bash gpfdist_reset_root
+root.crt server.crt server.key
 select * from gpfdist_ssl_stop;
       x      
 -------------
@@ -339,12 +509,144 @@ select * from gpfdist_ssl_stop;
 select * from gpfdist_ssl_start_ca_verify;
        x       
 ---------------
- 21669 gpfdist
+  1777 gpfdist
 (1 row)
 
+SET verify_gpfdists_cert=on; 
 -- end_ignore
 SELECT * FROM tbl;
-ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; Peer does not recognize and trust the CA that issued your certificate.  (seg1 slice1 127.0.0.1:7001 pid=23257)
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+\! bash change_cert.bash clear_gpdb_root
+client.crt client.key root.crt.bak server.crt server.key
+client.crt client.key root.crt.bak server.crt server.key
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg0 slice1 127.0.0.1:7000 pid=1504)
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
+-----+------+--------+--------------------------+----+-----+--------+-------+---------+---------+------------
+ aaa | twoa | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ bbb | twob | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ccc | twoc | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ddd | twod | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ eee | twoe | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ fff | twof | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ ggg | twog | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ hhh | twoh | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ iii | twoi | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+ jjj | twoj | shpits | Wed Jun 01 12:30:30 2011 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789
+(10 rows)
+
+-- start_ignore
+\! bash change_cert.bash clear_gpdb_client
+client.crt.bak client.key.bak root.crt.bak server.crt server.key
+client.crt.bak client.key.bak root.crt.bak server.crt server.key
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg0 slice1 127.0.0.1:7000 pid=1504)
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; error:14094410:SSL routines:ssl3_read_bytes:sslv3 alert handshake failure  (seg0 slice1 127.0.0.1:7000 pid=1504)
+-- start_ignore
+\! bash change_cert.bash gpfdist_replace_root
+Generating a RSA private key
+.......++++
+.........................................................................................................++++
+writing new private key to 'privkey.pem'
+-----
+root.crt root.crt.bak server.crt server.key
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from gpfdist_ssl_start_ca_verify;
+       x       
+---------------
+  1777 gpfdist
+(1 row)
+
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg0 slice1 127.0.0.1:7000 pid=1504)
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; error:14094410:SSL routines:ssl3_read_bytes:sslv3 alert handshake failure  (seg0 slice1 127.0.0.1:7000 pid=1504)
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_root
+client.crt.bak client.key.bak root.crt server.crt server.key
+client.crt.bak client.key.bak root.crt server.crt server.key
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; error:14094410:SSL routines:ssl3_read_bytes:sslv3 alert handshake failure  (seg0 slice1 127.0.0.1:7000 pid=1504)
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; error:14094410:SSL routines:ssl3_read_bytes:sslv3 alert handshake failure  (seg0 slice1 127.0.0.1:7000 pid=1504)
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_client
+client.crt client.key root.crt server.crt server.key
+client.crt client.key root.crt server.crt server.key
+SET verify_gpfdists_cert=on;
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; error:14094418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca  (seg0 slice1 127.0.0.1:7000 pid=19723)
+-- start_ignore
+SET verify_gpfdists_cert=off;
+WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
+-- end_ignore
+SELECT * FROM tbl;
+ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; error:14094418:SSL routines:ssl3_read_bytes:tlsv1 alert unknown ca  (seg0 slice1 127.0.0.1:7000 pid=19723)
 -- start_ignore
 select * from gpfdist_ssl_stop;
       x      

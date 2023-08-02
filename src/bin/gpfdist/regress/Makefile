@@ -20,6 +20,8 @@ REGRESS_OPTS = --init-file=init_file
 installcheck: watchdog ipv4v6_ports
 ifeq ($(enable_gpfdist),yes)
 ifeq ($(with_openssl),yes)
+	rm -rf data/gpfdist_ssl/certs_server_no_verify
+	mkdir data/gpfdist_ssl/certs_server_no_verify
 	rm -rf data/gpfdist_ssl/certs_matching
 	mkdir data/gpfdist_ssl/certs_matching
 	cp -rf $(COORDINATOR_DATA_DIRECTORY)/gpfdists/* data/gpfdist_ssl/certs_matching

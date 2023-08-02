@@ -194,35 +194,177 @@ SELECT * FROM tbl;
 SET verify_gpfdists_cert=off; 
 SELECT * FROM tbl;
 
--- start_ignore
-select * from gpfdist_ssl_stop;
-select * from gpfdist_ssl_start_no_ca_verify;
-\! bash change_cert.bash clear_gpdb_client_root
--- end_ignore
-
-SELECT * FROM tbl;
-
--- start_ignore
-\! bash change_cert.bash recover_gpdb_client_root
--- end_ignore
-
--- start_ignore
-select * from gpfdist_ssl_stop;
-select * from gpfdist_ssl_start_no_ca_verify;
-SET verify_gpfdists_cert=on; 
-\! bash change_cert.bash gpfdist
--- end_ignore
-
 -- gpfdist_ssl case 7
+-- start_ignore
+\! bash change_cert.bash gpfdist_create
+\! bash change_cert.bash clear_gpdb_root
+\! bash change_cert.bash clear_gpdb_client
+select * from gpfdist_ssl_stop;
+select * from gpfdist_ssl_start_no_ca_verify;
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
 DROP EXTERNAL TABLE IF EXISTS tbl;
 CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, n2 integer, n3 bigint, n4 decimal, n5 numeric, n6 real, n7 double precision)
 LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
+
 SELECT * FROM tbl;
 
 -- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_root
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_client
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash gpfdist_replace_root
+\! bash change_cert.bash clear_gpdb_root
+\! bash change_cert.bash clear_gpdb_client
+select * from gpfdist_ssl_stop;
+select * from gpfdist_ssl_start_no_ca_verify;
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_root
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_client
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- gpfdist_ssl case 8
+-- start_ignore
+\! bash change_cert.bash gpfdist_reset_root
 select * from gpfdist_ssl_stop;
 select * from gpfdist_ssl_start_ca_verify;
+SET verify_gpfdists_cert=on; 
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash clear_gpdb_root
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash clear_gpdb_client
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash gpfdist_replace_root
+select * from gpfdist_ssl_stop;
+select * from gpfdist_ssl_start_ca_verify;
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_root
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+\! bash change_cert.bash recover_gpdb_client
+SET verify_gpfdists_cert=on;
+-- end_ignore
+
+SELECT * FROM tbl;
+
+-- start_ignore
+SET verify_gpfdists_cert=off;
 -- end_ignore
 
 SELECT * FROM tbl;
