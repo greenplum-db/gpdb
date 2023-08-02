@@ -30,7 +30,6 @@ Setting these options instructs `postgres_fdw` to treat a foreign table that you
 `postgres_fdw` supports partial aggregate pushdown for a *distributed* query under the following conditions:
 
 - The aggregate contains no `DISTINCT` or `ORDER BY` clauses.
-- The aggregate does not contain a `FILTER` or `GROUP BY` clause with an expression.
 - The aggregate does not contain `HAVING` clause.
 - The aggregate function is not `array_agg()`.
 - The query contains no `LIMIT` or `JOIN` clauses.
