@@ -1,5 +1,5 @@
 -- start_ignore
-\! gpconfig -c shared_preload_libraries -v 'auto_explain';
+\! gpconfig -c shared_preload_libraries -v "$(gpconfig -s shared_preload_libraries | grep value: | head -n 1 | awk -F ': ' '{print $2}'),auto_explain"
 \! gpconfig -c auto_explain.log_min_duration -v 0 --skipvalidation;
 \! gpconfig -c auto_explain.log_analyze -v true --skipvalidation;
 \! gpstop -raiq;
@@ -27,6 +27,6 @@ DROP TABLE t2;
 -- start_ignore
 \! gpconfig -r auto_explain.log_min_duration;
 \! gpconfig -r auto_explain.log_analyze;
-\! gpconfig -r shared_preload_libraries;
+\! gpconfig -c shared_preload_libraries -v "$(gpconfig -s shared_preload_libraries | grep value: | head -n 1 | awk -F ': ' '{print $2}' | awk -F ',' -v OFS=, 'NF-=1')"
 \! gpstop -raiq;
 -- end_ignore
