@@ -22,19 +22,15 @@ EXPLAIN (costs off)
   CREATE MATERIALIZED VIEW IF NOT EXISTS mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
                          QUERY PLAN                         
 ------------------------------------------------------------
- Finalize GroupAggregate
+ GroupAggregate
    Group Key: type
    ->  Sort
          Sort Key: type
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: type
-               ->  Partial GroupAggregate
-                     Group Key: type
-                     ->  Sort
-                           Sort Key: type
-                           ->  Seq Scan on mvtest_t
+               ->  Seq Scan on mvtest_t
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(8 rows)
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS mvtest_tm AS SELECT type, sum(amt) AS totamt FROM mvtest_t GROUP BY type WITH NO DATA distributed by(type);
 SELECT relispopulated FROM pg_class WHERE oid = 'mvtest_tm'::regclass;
@@ -72,19 +68,15 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
    ->  Sort
          Sort Key: type
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               ->  Finalize GroupAggregate
+               ->  GroupAggregate
                      Group Key: type
                      ->  Sort
                            Sort Key: type
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                  Hash Key: type
-                                 ->  Partial GroupAggregate
-                                       Group Key: type
-                                       ->  Sort
-                                             Sort Key: type
-                                             ->  Seq Scan on mvtest_t
+                                 ->  Seq Scan on mvtest_t
  Optimizer: Pivotal Optimizer (GPORCA)
-(16 rows)
+(12 rows)
 
 CREATE MATERIALIZED VIEW mvtest_tvm AS SELECT * FROM mvtest_tv ORDER BY type;
 SELECT * FROM mvtest_tvm;
@@ -111,19 +103,15 @@ EXPLAIN (costs off)
          ->  Finalize Aggregate
                ->  Gather Motion 3:1  (slice2; segments: 3)
                      ->  Partial Aggregate
-                           ->  Finalize GroupAggregate
+                           ->  GroupAggregate
                                  Group Key: type
                                  ->  Sort
                                        Sort Key: type
                                        ->  Redistribute Motion 3:3  (slice3; segments: 3)
                                              Hash Key: type
-                                             ->  Partial GroupAggregate
-                                                   Group Key: type
-                                                   ->  Sort
-                                                         Sort Key: type
-                                                         ->  Seq Scan on mvtest_t
+                                             ->  Seq Scan on mvtest_t
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(13 rows)
 
 CREATE MATERIALIZED VIEW mvtest_tvvm AS SELECT * FROM mvtest_tvv;
 CREATE VIEW mvtest_tvvmv AS SELECT * FROM mvtest_tvvm;

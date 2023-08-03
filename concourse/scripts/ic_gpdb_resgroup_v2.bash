@@ -22,6 +22,7 @@ enable_cgroup_subtree_control() {
         echo "+cpu" >> $basedir/cgroup.subtree_control
         echo "+cpuset" >> $basedir/cgroup.subtree_control
         echo "+memory" >> $basedir/cgroup.subtree_control
+        echo "+io" >> $basedir/cgroup.subtree_control
         mkdir $basedir/gpdb
         chmod -R 777 $basedir/gpdb
 EOF

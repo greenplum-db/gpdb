@@ -2771,10 +2771,22 @@ readIndexScanFields(IndexScan *local_node)
 /*
  * _readIndexOnlyScan
  */
+static void readIndexOnlyScanFields(IndexOnlyScan *local_node);
+
 static IndexOnlyScan *
 _readIndexOnlyScan(void)
 {
-	READ_LOCALS(IndexOnlyScan);
+	READ_LOCALS_NO_FIELDS(IndexOnlyScan);
+
+	readIndexOnlyScanFields(local_node);
+
+	READ_DONE();
+}
+
+static void
+readIndexOnlyScanFields(IndexOnlyScan *local_node)
+{
+	READ_TEMP_LOCALS();
 
 	ReadCommonScan(&local_node->scan);
 
@@ -2784,7 +2796,18 @@ _readIndexOnlyScan(void)
 	READ_NODE_FIELD(indexorderby);
 	READ_NODE_FIELD(indextlist);
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
+}
 
+static DynamicIndexOnlyScan *
+_readDynamicIndexOnlyScan(void)
+{
+	READ_LOCALS(DynamicIndexOnlyScan);
+
+	/* DynamicIndexScan has some content from IndexScan. */
+	readIndexOnlyScanFields(&local_node->indexscan);
+	READ_NODE_FIELD(partOids);
+	READ_NODE_FIELD(part_prune_info);
+	READ_NODE_FIELD(join_prune_paramids);
 	READ_DONE();
 }
 
@@ -4607,6 +4630,8 @@ parseNodeString(void)
 		return_value = _readIndexScan();
 	else if (MATCH("DYNAMICINDEXSCAN", 16))
 		return_value = _readDynamicIndexScan();
+	else if (MATCH("DYNAMICINDEXONLYSCAN", 20))
+		return_value = _readDynamicIndexOnlyScan();
 	else if (MATCH("INDEXONLYSCAN", 13))
 		return_value = _readIndexOnlyScan();
 	else if (MATCH("BITMAPINDEXSCAN", 15))

@@ -676,7 +676,7 @@
     <dxl:Plan Id="0" SpaceSize="1960">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1724.004114" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1724.004123" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="30" Alias="s1">
@@ -693,7 +693,7 @@
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1724.004025" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="1724.004034" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="30"/>
@@ -714,7 +714,7 @@
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1724.003996" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="1724.004005" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="s1">
@@ -737,7 +737,7 @@
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1724.003996" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="1724.004005" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="30" Alias="s1">
@@ -765,7 +765,7 @@
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1724.003959" Rows="1.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1724.003968" Rows="1.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="30"/>
@@ -882,16 +882,16 @@
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="30" Alias="s1">
-                              <dxl:FuncExpr FuncId="0.669.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" TypeModifier="54">
+                              <dxl:FuncExpr FuncId="0.669.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" FuncVariadic="false" TypeModifier="54">
                                 <dxl:Cast TypeMdid="0.1043.1.0" FuncId="0.0.0.0">
                                   <dxl:Coalesce TypeMdid="0.25.1.0">
-                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                         <dxl:Ident ColId="10" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                       </dxl:Cast>
                                     </dxl:FuncExpr>
-                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
-                                      <dxl:FuncExpr FuncId="0.877.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
+                                      <dxl:FuncExpr FuncId="0.877.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                         <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                           <dxl:Ident ColId="0" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                         </dxl:Cast>
@@ -906,9 +906,9 @@
                               </dxl:FuncExpr>
                             </dxl:ProjElem>
                             <dxl:ProjElem ColId="31" Alias="s2">
-                              <dxl:FuncExpr FuncId="0.669.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" TypeModifier="259">
+                              <dxl:FuncExpr FuncId="0.669.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" FuncVariadic="false" TypeModifier="259">
                                 <dxl:Cast TypeMdid="0.1043.1.0" FuncId="0.0.0.0">
-                                  <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                  <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                     <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                       <dxl:Ident ColId="11" ColName="descr" TypeMdid="0.1042.1.0" TypeModifier="179"/>
                                     </dxl:Cast>
@@ -943,7 +943,7 @@
                             <dxl:JoinFilter/>
                             <dxl:HashCondList>
                               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                                <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                   <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                     <dxl:Ident ColId="10" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                   </dxl:Cast>
@@ -970,8 +970,8 @@
                               <dxl:JoinFilter/>
                               <dxl:HashCondList>
                                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                                  <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
-                                    <dxl:FuncExpr FuncId="0.877.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                  <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
+                                    <dxl:FuncExpr FuncId="0.877.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                         <dxl:Ident ColId="0" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                       </dxl:Cast>
@@ -979,7 +979,7 @@
                                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
                                     </dxl:FuncExpr>
                                   </dxl:FuncExpr>
-                                  <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                  <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                     <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                       <dxl:Ident ColId="10" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                     </dxl:Cast>
@@ -999,8 +999,8 @@
                                 <dxl:SortingColumnList/>
                                 <dxl:HashExprList>
                                   <dxl:HashExpr>
-                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
-                                      <dxl:FuncExpr FuncId="0.877.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
+                                      <dxl:FuncExpr FuncId="0.877.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                         <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                           <dxl:Ident ColId="0" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                         </dxl:Cast>
@@ -1022,7 +1022,7 @@
                                   <dxl:Filter>
                                     <dxl:And>
                                       <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
-                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                             <dxl:Coalesce TypeMdid="0.1042.1.0">
                                               <dxl:Ident ColId="2" ColName="att" TypeMdid="0.1042.1.0" TypeModifier="5"/>
@@ -1033,7 +1033,7 @@
                                         <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABVk=" LintValue="3870055082"/>
                                       </dxl:Comparison>
                                       <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
-                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                             <dxl:Ident ColId="0" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                           </dxl:Cast>
@@ -1073,7 +1073,7 @@
                                 <dxl:SortingColumnList/>
                                 <dxl:HashExprList>
                                   <dxl:HashExpr>
-                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                         <dxl:Ident ColId="10" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                       </dxl:Cast>
@@ -1095,7 +1095,7 @@
                                   <dxl:Filter>
                                     <dxl:And>
                                       <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
-                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                             <dxl:Coalesce TypeMdid="0.1042.1.0">
                                               <dxl:Ident ColId="12" ColName="att" TypeMdid="0.1042.1.0" TypeModifier="5"/>
@@ -1106,7 +1106,7 @@
                                         <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABVk=" LintValue="3870055082"/>
                                       </dxl:Comparison>
                                       <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
-                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                             <dxl:Ident ColId="10" ColName="id" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                           </dxl:Cast>
@@ -1149,7 +1149,7 @@
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="29" Alias="btrim">
-                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                    <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                       <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                         <dxl:Ident ColId="20" ColName="id2" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                       </dxl:Cast>
@@ -1170,7 +1170,7 @@
                                   <dxl:Filter>
                                     <dxl:And>
                                       <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
-                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                             <dxl:Coalesce TypeMdid="0.1042.1.0">
                                               <dxl:Ident ColId="21" ColName="att2" TypeMdid="0.1042.1.0" TypeModifier="5"/>
@@ -1181,7 +1181,7 @@
                                         <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABVk=" LintValue="3870055082"/>
                                       </dxl:Comparison>
                                       <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.531.1.0">
-                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                                        <dxl:FuncExpr FuncId="0.885.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                                           <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                                             <dxl:Ident ColId="20" ColName="id2" TypeMdid="0.1042.1.0" TypeModifier="11"/>
                                           </dxl:Cast>

@@ -11021,7 +11021,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
     <dxl:Plan Id="0" SpaceSize="98">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="458.857269" Rows="3.941034" Width="127"/>
+          <dxl:Cost StartupCost="0" TotalCost="458.857409" Rows="3.941034" Width="127"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -11038,7 +11038,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="458.855022" Rows="3.941034" Width="127"/>
+            <dxl:Cost StartupCost="0" TotalCost="458.855162" Rows="3.941034" Width="127"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="1"/>
@@ -11059,7 +11059,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
           <dxl:Filter/>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="458.854088" Rows="3.941034" Width="127"/>
+              <dxl:Cost StartupCost="0" TotalCost="458.854228" Rows="3.941034" Width="127"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="i_item_id">
@@ -11087,7 +11087,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
             </dxl:HashExprList>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="458.853304" Rows="3.941034" Width="127"/>
+                <dxl:Cost StartupCost="0" TotalCost="458.853445" Rows="3.941034" Width="127"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="1"/>
@@ -11241,7 +11241,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                       <dxl:Ident ColId="0" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
-	<dxl:Partitions/>
+                  <dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.673571.1.0" IndexName="store_sales_pkey"/>
                   <dxl:TableDescriptor Mdid="6.673545.1.1" TableName="store_sales">
                     <dxl:Columns>

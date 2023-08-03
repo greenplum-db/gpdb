@@ -122,11 +122,13 @@ SELECT gp_inject_fault('appendonly_insert', 'reset', dbid) FROM gp_segment_confi
  Success:        
  Success:        
 (3 rows)
-SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
-(1 row)
+ Success:                      
+ Success:                      
+(3 rows)
 -- After compacting all segfiles we expect 50000 dead tuples
 select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum where gp_segment_id = 1;
  relname                | phase                    | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
@@ -154,11 +156,13 @@ SELECT gp_inject_fault('vacuum_ao_after_compact', 'reset', dbid) FROM gp_segment
  Success:        
  Success:        
 (3 rows)
-SELECT gp_wait_until_triggered_fault('vacuum_ao_post_cleanup_end', 1, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_wait_until_triggered_fault('vacuum_ao_post_cleanup_end', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
-(1 row)
+ Success:                      
+ Success:                      
+(3 rows)
 -- We should have skipped recycling the awaiting drop segment because the segment was still visible to the SELECT gp_wait_until_triggered_fault query.
 select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum where gp_segment_id = 1;
  relname                | phase                         | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
@@ -296,19 +300,6 @@ SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuu
 -- Current behavior is it will clear previous compact phase num_dead_tuples in post-cleanup
 -- phase (at injecting point vacuum_ao_post_cleanup_end), which is different from above case
 -- in which vacuum worker isn't changed.
-ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period to 10;
-ALTER SYSTEM
-ALTER SYSTEM SET gp_fts_probe_interval to 10;
-ALTER SYSTEM
-SELECT gp_segment_id, pg_reload_conf() FROM gp_id UNION SELECT gp_segment_id, pg_reload_conf() FROM gp_dist_random('gp_id');
- gp_segment_id | pg_reload_conf 
----------------+----------------
- 2             | t              
- 1             | t              
- 0             | t              
- -1            | t              
-(4 rows)
-
 DROP TABLE IF EXISTS vacuum_progress_ao_row;
 DROP TABLE
 CREATE TABLE vacuum_progress_ao_row(i int, j int);
@@ -352,7 +343,7 @@ DELETE 50000
 SET
 1&: vacuum vacuum_progress_ao_row;  <waiting ...>
 
-2: SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 3, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+2: SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
@@ -514,15 +505,3 @@ reset Debug_appendonly_print_compaction;
 RESET
 reset default_table_access_method;
 RESET
-ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
-ALTER SYSTEM
-ALTER SYSTEM RESET gp_fts_probe_interval;
-ALTER SYSTEM
-SELECT gp_segment_id, pg_reload_conf() FROM gp_id UNION SELECT gp_segment_id, pg_reload_conf() FROM gp_dist_random('gp_id');
- gp_segment_id | pg_reload_conf 
----------------+----------------
- 2             | t              
- 1             | t              
- 0             | t              
- -1            | t              
-(4 rows)

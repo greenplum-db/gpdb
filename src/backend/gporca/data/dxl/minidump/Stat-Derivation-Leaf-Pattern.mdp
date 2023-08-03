@@ -822,7 +822,7 @@ AND
     <dxl:Plan Id="0" SpaceSize="692">
       <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1373.906987" Rows="512.000000" Width="106"/>
+          <dxl:Cost StartupCost="0" TotalCost="1373.907573" Rows="512.000000" Width="106"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="rolname">
@@ -949,7 +949,7 @@ AND
         </dxl:JoinFilter>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="511.683613" Rows="64.000000" Width="82"/>
+            <dxl:Cost StartupCost="0" TotalCost="511.684199" Rows="64.000000" Width="82"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>
@@ -1110,7 +1110,7 @@ AND
           <dxl:Filter/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="511.679624" Rows="10.240000" Width="102"/>
+              <dxl:Cost StartupCost="0" TotalCost="511.680210" Rows="10.240000" Width="102"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="0"/>
@@ -1599,7 +1599,7 @@ AND
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="88" Alias="role_name">
                         <dxl:CoerceToDomain TypeMdid="0.10689.1.0" CoercionForm="1" Location="0">
-                          <dxl:FuncExpr FuncId="0.1401.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0">
+                          <dxl:FuncExpr FuncId="0.1401.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" FuncVariadic="false">
                             <dxl:Ident ColId="63" ColName="rolname" TypeMdid="0.19.1.0"/>
                           </dxl:FuncExpr>
                         </dxl:CoerceToDomain>
@@ -1617,7 +1617,7 @@ AND
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter>
-                        <dxl:FuncExpr FuncId="0.2710.1.0" FuncRetSet="false" TypeMdid="0.16.1.0">
+                        <dxl:FuncExpr FuncId="0.2710.1.0" FuncRetSet="false" TypeMdid="0.16.1.0" FuncVariadic="false">
                           <dxl:Ident ColId="81" ColName="oid" TypeMdid="0.26.1.0"/>
                           <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACVVTQUdF" LintValue="34644846"/>
                         </dxl:FuncExpr>
@@ -1712,7 +1712,7 @@ AND
                         </dxl:Cast>
                       </dxl:Comparison>
                     </dxl:IndexCondList>
-	<dxl:Partitions/>
+                    <dxl:Partitions/>
                     <dxl:IndexDescriptor Mdid="0.2676.1.0" IndexName="pg_authid_rolname_index"/>
                     <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid">
                       <dxl:Columns>
@@ -1815,7 +1815,7 @@ AND
                       <dxl:Ident ColId="18" ColName="oid" TypeMdid="0.26.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
-	<dxl:Partitions/>
+                  <dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.2677.1.0" IndexName="pg_authid_oid_index"/>
                   <dxl:TableDescriptor Mdid="6.1260.1.1" TableName="pg_authid">
                     <dxl:Columns>

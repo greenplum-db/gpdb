@@ -304,7 +304,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
     <dxl:Plan Id="0" SpaceSize="696">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.001535" Rows="11.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001552" Rows="11.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -315,7 +315,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.001371" Rows="11.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.001388" Rows="11.000000" Width="4"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>
@@ -328,7 +328,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1293.001348" Rows="11.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="1293.001365" Rows="11.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -343,7 +343,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1293.001192" Rows="11.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.001209" Rows="11.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -359,7 +359,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.001146" Rows="11.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.001163" Rows="11.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="0"/>

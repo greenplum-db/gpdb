@@ -37,6 +37,22 @@ When enabled, Greenplum Database starts up the autovacuum daemon, which operates
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, system, restart|
 
+## <a id="autovacuum_analyze_scale_factor"></a>autovacuum_analyze_scale_factor
+
+Specifies a fraction of the table size to add to `autovacuum_analyze_threshold` when deciding whether or not to trigger an `ANALYZE`. The default is 0.1 (10% of table size). This parameter may be set only in the `postgresql.conf file` or on the server command line; but the setting can be overridden for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|0.1|coordinator, system, restart|
+
+## <a id="autovacuum_analyze_threshold"></a>autovacuum_analyze_threshold
+
+Specifies the minimum number of inserted, updated or deleted tuples needed to trigger an `ANALYZE` in any one table. The default is 50 tuples. This parameter may be set only in the `postgresql.conf` file or on the server command line; but the setting can be overridden for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|50|coordinator, system, restart|
+
 ## <a id="autovacuum_freeze_max_age"></a>autovacuum_freeze_max_age
 
 Specifies the maximum age at which to automatically vacuum a table to prevent transaction ID wraparound. Note that the system will launch autovacuum processes to prevent wraparound even when `autovacuum=off`. The default value is 200 million transactions. 
@@ -44,6 +60,24 @@ Specifies the maximum age at which to automatically vacuum a table to prevent tr
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |100000 < integer < 2000000000|200000000|local, system, restart|
+
+## <a id="autovacuum_max_workers"></a>autovacuum_max_workers
+
+Specifies the maximum number of autovacuum processes (other than the autovacuum launcher) that may be running at any one time. The default is three. This parameter may be set only at server start.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|3|coordinator, system, restart|
+
+## <a id="autovacuum_multixact_freeze_max_age"></a>autovacuum_multixact_freeze_max_age
+
+Specifies the maximum age (in multixacts) that a table's `pg_class.relminmxid` field can attain before a `VACUUM` operation is forced to prevent multixact ID wraparound within the table. Note that the system will launch autovacuum processes to prevent wraparound even when autovacuum is otherwise disabled.
+
+Vacuuming multixacts also allows removal of old files from the `pg_multixact/members` and `pg_multixact/offsets subdirectories`, which is why the default is a relatively low 400 million multixacts. This parameter may be set only at server start, but the setting can be reduced for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|400000000|coordinator, system, restart|
 
 ## <a id="autovacuum_naptime"></a>autovacuum\_naptime
 
@@ -66,6 +100,14 @@ A value without units is taken to be milliseconds. The default is 2 milliseconds
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 | floating point < 100 | 2 |local, system, reload|
+
+## <a id="autovacuum_vacuum_cost_limit"></a>autovacuum_vacuum_cost_limit
+
+Specifies the cost limit value that will be used in automatic `VACUUM` operations. If -1 is specified (which is the default), the regular `vacuum_cost_limit` value will be used. Note that the value is distributed proportionally among the running autovacuum workers, if there is more than one, so that the sum of the limits for each worker does not exceed the value of this variable. This parameter may be set only in the `postgresql.conf` file or on the server command line; but the setting can be overridden for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| Integer | -1 |local, system, reload|
 
 ## <a id="autovacuum_vacuum_scale_factor"></a>autovacuum_vacuum_scale_factor
 
@@ -2780,6 +2822,16 @@ If the number of segment files does not exceed the value, Greenplum Database blo
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |0 - 64|1|coordinator, system, reload, superuser|
+
+## <a id="wal_compression"></a>wal_compression
+
+Enables compression of full page writes in a WAL file. This parameter can only be changed by superusers.
+
+> **Note** `wal_compression` can reduce the WAL volume without increasing the risk of unrecoverable data corruption, but at the cost of some extra CPU spent on the compression during WAL logging and on the decompression during WAL replay.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|local, session, reload, superuser|
 
 ## <a id="replication_timeout"></a>wal\_sender\_timeout 
 

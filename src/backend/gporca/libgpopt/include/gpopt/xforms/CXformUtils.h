@@ -572,6 +572,10 @@ public:
 		CMemoryPool *mp, CExpression *lowerPartOfExpr, CExpression *topOfStack,
 		CExpression *exclusiveBottomOfStack);
 
+	static BOOL FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
+							CTableDescriptor *ptabdesc,
+							CColRefArray *pdrgpcrOutput);
+
 };	// class CXformUtils
 
 

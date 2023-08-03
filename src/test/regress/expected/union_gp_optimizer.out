@@ -241,36 +241,31 @@ union
 explain (SELECT 'test1' as branch, id FROM test1 LIMIT 1)
 union
 (SELECT 'test2' as branch, id FROM test2);
-                                                                     QUERY PLAN                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..984.96 rows=1125 width=12)
-   ->  HashAggregate  (cost=0.00..984.91 rows=375 width=12)
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..983.66 rows=1125 width=12)
+   ->  HashAggregate  (cost=0.00..983.61 rows=375 width=12)
          Group Key: ('test1'::text), test1.id
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..984.83 rows=334 width=12)
-               Hash Key: ('test1'::text), test1.id
-               ->  Streaming HashAggregate  (cost=0.00..984.81 rows=334 width=12)
-                     Group Key: ('test1'::text), test1.id
-                     ->  Redistribute Motion 1:3  (slice3)  (cost=0.00..984.73 rows=334 width=12)
-                           ->  Result  (cost=0.00..984.70 rows=1001 width=12)
-                                 ->  Append  (cost=0.00..984.70 rows=1001 width=12)
-                                       ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
-                                             Group Key: ('test1'::text), test1.id
-                                             ->  Sort  (cost=0.00..431.00 rows=1 width=12)
-                                                   Sort Key: ('test1'::text), test1.id
-                                                   ->  Limit  (cost=0.00..431.00 rows=1 width=12)
-                                                         ->  Result  (cost=0.00..431.00 rows=1 width=12)
-                                                               ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                                                     ->  Seq Scan on test1  (cost=0.00..431.00 rows=1 width=4)
-                                       ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..553.69 rows=1000 width=12)
-                                             ->  HashAggregate  (cost=0.00..553.64 rows=334 width=12)
-                                                   Group Key: ('test2'::text), id
-                                                   ->  Redistribute Motion 3:3  (slice6; segments: 3)  (cost=0.00..553.56 rows=334 width=12)
-                                                         Hash Key: ('test2'::text), id
-                                                         ->  Streaming HashAggregate  (cost=0.00..553.55 rows=334 width=12)
-                                                               Group Key: 'test2'::text, id
-                                                               ->  Result  (cost=0.00..471.53 rows=333334 width=12)
-                                                                     ->  Redistribute Motion 1:3  (slice7)  (cost=0.00..467.53 rows=333334 width=4)
-                                                                           ->  Foreign Scan on test2  (cost=0.00..449.70 rows=1000000 width=4)
+         ->  Append  (cost=0.00..983.53 rows=334 width=12)
+               ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=12)
+                     Hash Key: ('test1'::text), test1.id
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                           Group Key: ('test1'::text), test1.id
+                           ->  Sort  (cost=0.00..431.00 rows=1 width=12)
+                                 Sort Key: ('test1'::text), test1.id
+                                 ->  Limit  (cost=0.00..431.00 rows=1 width=12)
+                                       ->  Result  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                   ->  Seq Scan on test1  (cost=0.00..431.00 rows=1 width=4)
+               ->  HashAggregate  (cost=0.00..552.53 rows=334 width=12)
+                     Group Key: ('test2'::text), id
+                     ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..552.44 rows=334 width=12)
+                           Hash Key: ('test2'::text), id
+                           ->  Streaming HashAggregate  (cost=0.00..552.43 rows=334 width=12)
+                                 Group Key: 'test2'::text, id
+                                 ->  Result  (cost=0.00..471.53 rows=333334 width=12)
+                                       ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..467.53 rows=333334 width=4)
+                                             ->  Foreign Scan on test2  (cost=0.00..449.70 rows=1000000 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (24 rows)
 

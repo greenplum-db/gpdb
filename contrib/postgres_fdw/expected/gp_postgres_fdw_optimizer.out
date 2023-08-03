@@ -1397,13 +1397,9 @@ explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any w
                                  ->  Sort
                                        Sort Key: a
                                        ->  Result
-                                             ->  GroupAggregate
-                                                   Group Key: a
-                                                   ->  Sort
-                                                         Sort Key: a
-                                                         ->  Foreign Scan on gp_any
+                                             ->  Foreign Scan on gp_any
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(17 rows)
 
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);
                                           QUERY PLAN                                           

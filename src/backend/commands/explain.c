@@ -1428,6 +1428,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 		case T_WorkTableScan:
 		case T_DynamicSeqScan:
 		case T_DynamicIndexScan:
+		case T_DynamicIndexOnlyScan:
 		case T_ShareInputScan:
 			*rels_used = bms_add_member(*rels_used,
 										((Scan *) plan)->scanrelid);
@@ -1602,6 +1603,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_DynamicIndexScan:
 			pname = sname = "Dynamic Index Scan";
+			break;
+		case T_DynamicIndexOnlyScan:
+			pname = sname = "Dynamic Index Only Scan";
 			break;
 		case T_IndexOnlyScan:
 			pname = sname = "Index Only Scan";
@@ -1992,6 +1996,21 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				ExplainScanTarget((Scan *) plan, es);
 			}
 			break;
+		case T_DynamicIndexOnlyScan:
+			{
+				DynamicIndexOnlyScan *dynamicIndexScan = (DynamicIndexOnlyScan *) plan;
+				Oid indexoid = dynamicIndexScan->indexscan.indexid;
+				const char *indexname =
+						explain_get_index_name(indexoid);
+
+				if (es->format == EXPLAIN_FORMAT_TEXT)
+					appendStringInfo(es->str, " on %s", indexname);
+				else
+					ExplainPropertyText("Index Name", indexname, es);
+
+				ExplainScanTarget((Scan *) plan, es);
+			}
+			break;
 		case T_DynamicBitmapIndexScan:
 			{
 				BitmapIndexScan *bitmapindexscan = (BitmapIndexScan *) plan;
@@ -2264,6 +2283,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			}
 			break;
 		case T_IndexOnlyScan:
+		case T_DynamicIndexOnlyScan:
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
 						   "Index Cond", planstate, ancestors, es);
 			if (((IndexOnlyScan *) plan)->recheckqual)
@@ -2278,6 +2298,18 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			if (es->analyze)
 				ExplainPropertyFloat("Heap Fetches", NULL,
 									 planstate->instrument->ntuples2, 0, es);
+			if (IsA(plan, DynamicIndexOnlyScan)) {
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicIndexOnlyScan *)plan)
+						->indexscan.scan.scanrelid,
+						es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
+				ExplainPropertyInteger(
+						"Number of partitions to scan", buf,
+						list_length(((DynamicIndexOnlyScan *)plan)->partOids),
+						es);
+			}
 			break;
 		case T_BitmapIndexScan:
 		case T_DynamicBitmapIndexScan:
@@ -4001,6 +4033,7 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 		case T_SampleScan:
 		case T_IndexScan:
 		case T_DynamicIndexScan:
+		case T_DynamicIndexOnlyScan:
 		case T_IndexOnlyScan:
 		case T_BitmapHeapScan:
 		case T_DynamicBitmapHeapScan:

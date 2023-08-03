@@ -292,10 +292,11 @@ SELECT count(*) FROM tenk_aocs3;
 SELECT count(*) FROM tenk_aocs4;
 
 -- Issue #15904
+set optimizer = off;
 EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aocs1;
 CREATE TABLE tenk_aorow WITH(appendonly=true, orientation=row) AS SELECT * FROM tenk_heap_for_aocs;
 EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aorow;
-
+reset optimizer;
 -- LIKE
 -- Should not copy storage options if not specified
 CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);

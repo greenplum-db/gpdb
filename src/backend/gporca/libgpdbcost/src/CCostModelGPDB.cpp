@@ -23,6 +23,7 @@
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalDynamicIndexOnlyScan.h"
 #include "gpopt/operators/CPhysicalDynamicIndexScan.h"
 #include "gpopt/operators/CPhysicalHashAgg.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
@@ -31,6 +32,7 @@
 #include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
+#include "gpopt/operators/CPhysicalStreamAgg.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
@@ -618,14 +620,33 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 < dHashAggOutputTupWidthCostUnit);
 	GPOS_ASSERT(0 < dTupDefaultProcCostUnit);
 
-	DOUBLE num_rows_outer = pci->PdRows()[0];
+	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
-	// streamAgg cost is correlated with rows and width of input tuples and rows and width of output tuples
-	CCost costLocal =
-		CCost(pci->NumRebinds() *
-			  (num_rows_outer * dWidthOuter * dTupDefaultProcCostUnit +
-			   pci->Rows() * pci->Width() * dHashAggOutputTupWidthCostUnit));
+	// In order to handle worst-case scenarios where grouping key tuples
+	// are distributed across segments, and to maintain accurate
+	// cardinality for local stream agg, it is crucial to ensure that the
+	// local stream agg's cardinality does not exceed the NDV of the
+	// grouping key in global agg (upper bound for the number of output
+	// rows). This is achieved by multiplying the global agg's cardinality
+	// of the grouping key with the number of segments. It can helps to
+	// maintain the cardinality for local stream agg in both best and
+	// worst-case scenarios.
+
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
+	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
+	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
+		popAgg->FGeneratesDuplicates())
+	{
+		num_output_rows = num_output_rows * pcmgpdb->UlHosts();
+	}
+
+	// streamAgg cost is correlated with num_input_rows and width of input
+	// tuples and num_output_rows and width of output tuples CCost
+	CCost costLocal = CCost(
+		pci->NumRebinds() *
+		(num_input_rows * dWidthOuter * dTupDefaultProcCostUnit +
+		 num_output_rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 	return costLocal + costChild;
@@ -780,25 +801,35 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				COperator::EopPhysicalHashAggDeduplicate == op_id);
 #endif	// GPOS_DEBUG
 
-	DOUBLE num_rows_outer = pci->PdRows()[0];
+	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 
-	// A local hash agg may stream partial aggregates to global agg when it's hash table is full to avoid spilling.
-	// This is dertermined by the order of tuples received by local agg. In the worst case, the local hash agg may
-	// see a tuple from each different group until its hash table fills up all available memory, and hence it produces
-	// tuples as many as its input size. On the other hand, in the best case, the local agg may receive tuples sorted
-	// by grouping columns, which allows it to complete all local aggregation in memory and produce exactly tuples as
-	// the number of groups.
+	// A local hash agg may stream partial aggregates to global agg when
+	// it's hash table is full to avoid spilling.  This is dertermined by
+	// the order of tuples received by local agg. In the worst case, the
+	// local hash agg may see a tuple from each different group until its
+	// hash table fills up all available memory, and hence it produces
+	// tuples as many as its input size. On the other hand, in the best
+	// case, the local agg may receive tuples sorted by grouping columns,
+	// which allows it to complete all local aggregation in memory and
+	// produce exactly tuples as the number of groups.
 	//
-	// Since we do not know the order of tuples received by local hash agg, we assume the number of output rows from local
-	// agg is the average between input and output rows
+	// Considering the tuples of local hash agg fit within memory. To
+	// handle worst-case scenarios where the tuples of the grouping key are
+	// distributed across segments. To maintain accurate cardinality for
+	// local hash agg, its crucial to ensure that the cardinality of the
+	// local hash agg does not exceed the NDV of the grouping key in global
+	// aggs (upper bound for the number of output rows).  So we are
+	// achieving this by multiplying the global agg's cardinality of grouping
+	// key with the number of segments. It can help's to maintain the
+	// cardinality for local hash agg across both best and worst-case
+	// scenarios.
 
-	// the cardinality out as (rows + num_rows_outer)/2 to increase the local hash agg cost
-	DOUBLE rows = pci->Rows();
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalHashAgg *popAgg = CPhysicalHashAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
 		popAgg->FGeneratesDuplicates())
 	{
-		rows = (rows + num_rows_outer) / 2.0;
+		num_output_rows = num_output_rows * pcmgpdb->UlHosts();
 	}
 
 	// get the number of grouping columns
@@ -823,15 +854,18 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 < dHashAggOutputTupWidthCostUnit);
 
 	// hashAgg cost contains three parts: build hash table, aggregate tuples, and output tuples.
-	// 1. build hash table is correlated with the number of rows and width of input tuples and the number of columns used.
-	// 2. cost of aggregate tuples depends on the complexity of aggregation algorithm and thus is ignored.
-	// 3. cost of output tuples is correlated with rows and width of returning tuples.
-	CCost costLocal =
-		CCost(pci->NumRebinds() *
-			  (num_rows_outer * ulGrpCols * dHashAggInputTupColumnCostUnit +
-			   num_rows_outer * ulGrpCols * pci->Width() *
-				   dHashAggInputTupWidthCostUnit +
-			   rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
+	// 1. build hash table is correlated with the number of num_input_rows
+	// and width of input tuples and the number of columns used.
+	// 2. cost of aggregate tuples depends on the complexity of aggregation
+	// algorithm and thus is ignored.
+	// 3. cost of output tuples is correlated with num_output_rows and
+	// width of returning tuples.
+	CCost costLocal = CCost(
+		pci->NumRebinds() *
+		(num_input_rows * ulGrpCols * dHashAggInputTupColumnCostUnit +
+		 num_input_rows * ulGrpCols * pci->Width() *
+			 dHashAggInputTupWidthCostUnit +
+		 num_output_rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 
@@ -1647,7 +1681,8 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	GPOS_ASSERT(nullptr != pci);
 
 	COperator *pop = exprhdl.Pop();
-	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid());
+	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid() ||
+				COperator::EopPhysicalDynamicIndexOnlyScan == pop->Eopid());
 
 	const CDouble dTableWidth =
 		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
@@ -1674,17 +1709,34 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 
 	CDouble dRowsIndex = pci->Rows();
 
-	ULONG ulIndexKeys =
-		CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->Keys();
-	IStatistics *stats =
-		CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+	ULONG ulIndexKeys;
+	IStatistics *stats = nullptr;
 
 	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
 	// cost per index row. Account for that cost in dCostPerIndexRow.
-	CColumnDescriptorArray *indexIncludedArray =
-		CPhysicalIndexOnlyScan::PopConvert(pop)
-			->Pindexdesc()
-			->PdrgpcoldescIncluded();
+	CColumnDescriptorArray *indexIncludedArray = nullptr;
+
+	if (COperator::EopPhysicalIndexOnlyScan == pop->Eopid())
+	{
+		ulIndexKeys =
+			CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->Keys();
+		stats = CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+		indexIncludedArray = CPhysicalIndexOnlyScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
+	}
+	else
+	{
+		ulIndexKeys = CPhysicalDynamicIndexOnlyScan::PopConvert(pop)
+						  ->Pindexdesc()
+						  ->Keys();
+		stats =
+			CPhysicalDynamicIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+		indexIncludedArray = CPhysicalDynamicIndexOnlyScan::PopConvert(pop)
+								 ->Pindexdesc()
+								 ->PdrgpcoldescIncluded();
+	}
+
 	ULONG ulIncludedColWidth = 0;
 	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
 	{
@@ -2115,6 +2167,7 @@ CCostModelGPDB::Cost(
 			return CostFilter(m_mp, exprhdl, this, pci);
 		}
 
+		case COperator::EopPhysicalDynamicIndexOnlyScan:
 		case COperator::EopPhysicalIndexOnlyScan:
 		{
 			return CostIndexOnlyScan(m_mp, exprhdl, this, pci);

@@ -124,6 +124,7 @@
 #include "cdb/ml_ipc.h"			/* interconnect context */
 #include "executor/nodeAssertOp.h"
 #include "executor/nodeDynamicIndexscan.h"
+#include "executor/nodeDynamicIndexOnlyscan.h"
 #include "executor/nodeDynamicSeqscan.h"
 #include "executor/nodeDynamicForeignscan.h"
 #include "executor/nodeMotion.h"
@@ -299,6 +300,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 		case T_DynamicIndexScan:
 			result = (PlanState *) ExecInitDynamicIndexScan((DynamicIndexScan *) node,
+													estate, eflags);
+			break;
+
+		case T_DynamicIndexOnlyScan:
+			result = (PlanState *) ExecInitDynamicIndexOnlyScan((DynamicIndexOnlyScan *) node,
 													estate, eflags);
 			break;
 
@@ -859,6 +865,7 @@ ExecEndNode(PlanState *node)
 			break;
 
 		case T_DynamicIndexScanState:
+		case T_DynamicIndexOnlyScanState:
 			ExecEndDynamicIndexScan((DynamicIndexScanState *) node);
 			break;
 

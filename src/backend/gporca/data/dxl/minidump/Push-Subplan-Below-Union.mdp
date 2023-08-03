@@ -651,7 +651,7 @@ union
     <dxl:Plan Id="0" SpaceSize="146760864">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="7327.003324" Rows="2.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="7327.003353" Rows="2.000000" Width="36"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="35" Alias="district_pop">
@@ -674,7 +674,7 @@ union
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="7327.003001" Rows="2.000000" Width="36"/>
+            <dxl:Cost StartupCost="0" TotalCost="7327.003030" Rows="2.000000" Width="36"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="35" Alias="population">
@@ -697,7 +697,7 @@ union
           <dxl:OneTimeFilter/>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="7327.003001" Rows="2.000000" Width="36"/>
+              <dxl:Cost StartupCost="0" TotalCost="7327.003030" Rows="2.000000" Width="36"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="35" Alias="population">
@@ -872,7 +872,7 @@ union
             </dxl:CTEProducer>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6034.002603" Rows="2.000000" Width="36"/>
+                <dxl:Cost StartupCost="0" TotalCost="6034.002632" Rows="2.000000" Width="36"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="35"/>
@@ -909,7 +909,7 @@ union
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6034.002531" Rows="2.000000" Width="52"/>
+                  <dxl:Cost StartupCost="0" TotalCost="6034.002560" Rows="2.000000" Width="52"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="35" Alias="population">
@@ -948,7 +948,7 @@ union
                 <dxl:LimitOffset/>
                 <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="6034.002531" Rows="2.000000" Width="52"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6034.002560" Rows="2.000000" Width="52"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="35" Alias="population">
@@ -1000,7 +1000,7 @@ union
                   </dxl:HashExprList>
                   <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="6034.002368" Rows="2.000000" Width="52"/>
+                      <dxl:Cost StartupCost="0" TotalCost="6034.002397" Rows="2.000000" Width="52"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="35"/>

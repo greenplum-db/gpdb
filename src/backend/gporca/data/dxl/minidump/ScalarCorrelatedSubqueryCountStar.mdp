@@ -304,10 +304,10 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
       </dxl:LogicalGet>
     </dxl:LogicalProject>
   </dxl:Query>
-  <dxl:Plan Id="0" SpaceSize="20">
+  <dxl:Plan Id="0" SpaceSize="100">
     <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
       <dxl:Properties>
-        <dxl:Cost StartupCost="0" TotalCost="862.000673" Rows="1.000000" Width="8"/>
+        <dxl:Cost StartupCost="0" TotalCost="862.000718" Rows="1.000000" Width="8"/>
       </dxl:Properties>
       <dxl:ProjList>
         <dxl:ProjElem ColId="19" Alias="?column?">
@@ -318,7 +318,7 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
       <dxl:SortingColumnList/>
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000643" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000688" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="19" Alias="?column?">
@@ -332,7 +332,7 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
         <dxl:OneTimeFilter/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000640" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000685" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="20" Alias="ColRef_0020">
@@ -343,7 +343,7 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="Left">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000635" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000680" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="count">
@@ -383,15 +383,17 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
             </dxl:TableScan>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000084" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="9"/>
               </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="18" Alias="count">
-                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
-                    <dxl:ValuesList ParamType="aggargs"/>
+                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                    <dxl:ValuesList ParamType="aggargs">
+                      <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.20.1.0"/>
+                    </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>
                     <dxl:ValuesList ParamType="aggdistinct"/>
@@ -404,11 +406,14 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000028" Rows="1.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000066" Rows="1.000000" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="c">
                     <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="21" Alias="ColRef_0021">
+                    <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.20.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
@@ -417,29 +422,114 @@ EXPLAIN SELECT (SELECT count(*) FROM bar where c = a) FROM foo;
                 </dxl:SortingColumnList>
                 <dxl:LimitCount/>
                 <dxl:LimitOffset/>
-                <dxl:TableScan>
+                <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000066" Rows="1.000000" Width="12"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="c">
                       <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
+                    <dxl:ProjElem ColId="21" Alias="ColRef_0021">
+                      <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.20.1.0"/>
+                    </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="6.16423.1.1" TableName="bar">
-                    <dxl:Columns>
-                      <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                      <dxl:Column ColId="12" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="13" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="14" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                      <dxl:Column ColId="15" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                      <dxl:Column ColId="16" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                      <dxl:Column ColId="17" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                    </dxl:Columns>
-                  </dxl:TableDescriptor>
-                </dxl:TableScan>
+                  <dxl:SortingColumnList/>
+                  <dxl:HashExprList>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                  </dxl:HashExprList>
+                  <dxl:Result>
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="1.000000" Width="12"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="9" Alias="c">
+                        <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                      </dxl:ProjElem>
+                      <dxl:ProjElem ColId="21" Alias="ColRef_0021">
+                        <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.20.1.0"/>
+                      </dxl:ProjElem>
+                    </dxl:ProjList>
+                    <dxl:Filter/>
+                    <dxl:OneTimeFilter/>
+                    <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="1.000000" Width="12"/>
+                      </dxl:Properties>
+                      <dxl:GroupingColumns>
+                        <dxl:GroupingColumn ColId="9"/>
+                      </dxl:GroupingColumns>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="21" Alias="ColRef_0021">
+                          <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                            <dxl:ValuesList ParamType="aggargs"/>
+                            <dxl:ValuesList ParamType="aggdirectargs"/>
+                            <dxl:ValuesList ParamType="aggorder"/>
+                            <dxl:ValuesList ParamType="aggdistinct"/>
+                          </dxl:AggFunc>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="9" Alias="c">
+                          <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:Sort SortDiscardDuplicates="false">
+                        <dxl:Properties>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="4"/>
+                        </dxl:Properties>
+                        <dxl:ProjList>
+                          <dxl:ProjElem ColId="9" Alias="c">
+                            <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                          </dxl:ProjElem>
+                        </dxl:ProjList>
+                        <dxl:Filter/>
+                        <dxl:SortingColumnList>
+                          <dxl:SortingColumn ColId="9" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        </dxl:SortingColumnList>
+                        <dxl:LimitCount/>
+                        <dxl:LimitOffset/>
+                        <dxl:RandomMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+                          <dxl:Properties>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="4"/>
+                          </dxl:Properties>
+                          <dxl:ProjList>
+                            <dxl:ProjElem ColId="9" Alias="c">
+                              <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                          </dxl:ProjList>
+                          <dxl:Filter/>
+                          <dxl:SortingColumnList/>
+                          <dxl:TableScan>
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="4"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="9" Alias="c">
+                                <dxl:Ident ColId="9" ColName="c" TypeMdid="0.23.1.0"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                            <dxl:Filter/>
+                            <dxl:TableDescriptor Mdid="6.16423.1.1" TableName="bar">
+                              <dxl:Columns>
+                                <dxl:Column ColId="9" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
+                                <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                <dxl:Column ColId="12" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                <dxl:Column ColId="13" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                <dxl:Column ColId="14" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                <dxl:Column ColId="15" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                <dxl:Column ColId="16" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                <dxl:Column ColId="17" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                              </dxl:Columns>
+                            </dxl:TableDescriptor>
+                          </dxl:TableScan>
+                        </dxl:RandomMotion>
+                      </dxl:Sort>
+                    </dxl:Aggregate>
+                  </dxl:Result>
+                </dxl:RedistributeMotion>
               </dxl:Sort>
             </dxl:Aggregate>
           </dxl:HashJoin>

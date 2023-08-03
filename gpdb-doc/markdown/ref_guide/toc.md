@@ -202,6 +202,7 @@ Doc Index
         - [pageinspect](./modules/pageinspect.md)
         - [pg\_trgm](./modules/pg_trgm.md)
         - [pgcrypto](./modules/pgcrypto.md)
+        - [pgvector](./modules/pgvector/pgvector.md)
         - [postgres\_fdw](./modules/postgres_fdw.md)
         - [postgresql-hll](./modules/postgresql-hll.md)
         - [sslinfo](./modules/sslinfo.md)

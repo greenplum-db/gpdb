@@ -30,6 +30,7 @@
 #include "gpopt/xforms/CXformDifferenceAll2LeftAntiSemiJoin.h"
 #include "gpopt/xforms/CXformDynamicForeignGet2DynamicForeignScan.h"
 #include "gpopt/xforms/CXformDynamicGet2DynamicTableScan.h"
+#include "gpopt/xforms/CXformDynamicIndexGet2DynamicIndexOnlyScan.h"
 #include "gpopt/xforms/CXformDynamicIndexGet2DynamicIndexScan.h"
 #include "gpopt/xforms/CXformEagerAgg.h"
 #include "gpopt/xforms/CXformExpandDynamicGetWithForeignPartitions.h"

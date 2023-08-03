@@ -395,11 +395,27 @@ plan_tree_mutator(Node *node,
 			break;
 
 		case T_IndexOnlyScan:
+		case T_DynamicIndexOnlyScan:
 			{
 				IndexOnlyScan  *idxonlyscan = (IndexOnlyScan *) node;
 				IndexOnlyScan  *newidxonlyscan;
 
-				FLATCOPY(newidxonlyscan, idxonlyscan, IndexOnlyScan);
+				if (IsA(node, DynamicIndexOnlyScan))
+				{
+					/*
+					 * A DynamicIndexOnlyScan is identical to IndexOnlyScan,
+					 * except for additional fields. This convoluted coding is
+					 * to avoid copy-pasting this code and risking bugs of
+					 * omission if new fields are added to IndexScan in
+					 * upstream.
+					 */
+					DynamicIndexOnlyScan *newdioscan;
+
+					FLATCOPY(newdioscan, idxonlyscan, DynamicIndexOnlyScan);
+					newidxonlyscan = (IndexOnlyScan *) newdioscan;
+				}
+				else
+					FLATCOPY(newidxonlyscan, idxonlyscan, IndexOnlyScan);
 				SCANMUTATE(newidxonlyscan, idxonlyscan);
 				newidxonlyscan->indexid = idxonlyscan->indexid;
 				/* MUTATE(newidxonlyscan->indexid, idxonlyscan->indexid, List *); */

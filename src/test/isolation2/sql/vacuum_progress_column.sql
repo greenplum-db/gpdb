@@ -102,10 +102,6 @@ SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuu
 -- Current behavior is it will clear previous compact phase num_dead_tuples in post-cleanup
 -- phase (at injecting point vacuum_ao_post_cleanup_end), which is different from above case
 -- in which vacuum worker isn't changed.
-ALTER SYSTEM SET gp_fts_mark_mirror_down_grace_period to 10;
-ALTER SYSTEM SET gp_fts_probe_interval to 10;
-SELECT gp_segment_id, pg_reload_conf() FROM gp_id UNION SELECT gp_segment_id, pg_reload_conf() FROM gp_dist_random('gp_id');
-
 DROP TABLE IF EXISTS vacuum_progress_ao_column;
 CREATE TABLE vacuum_progress_ao_column(i int, j int);
 CREATE INDEX on vacuum_progress_ao_column(i);
@@ -128,7 +124,7 @@ DELETE FROM vacuum_progress_ao_column where j % 2 = 0;
 1: set debug_appendonly_print_compaction to on;
 1&: vacuum vacuum_progress_ao_column;
 
-2: SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 3, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+2: SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 -- Non-zero progressing data num_dead_tuples is showed up.
 select gp_segment_id, relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum where gp_segment_id > -1;
@@ -149,14 +145,14 @@ select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, he
 -- initializes a new vacrelstats at the beginning of post-cleanup phase.
 -- Also all segments should reach to the same "vacuum_worker_changed" point
 -- due to FTS version being changed.
-2: SELECT gp_wait_until_triggered_fault('vacuum_worker_changed', 3, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+2: SELECT gp_wait_until_triggered_fault('vacuum_worker_changed', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 -- now seg1's mirror is marked as down
 2: SELECT content, role, preferred_role, mode, status FROM gp_segment_configuration WHERE content > -1;
 
 -- Resume execution and entering post_cleaup phase, suspend at the end of it.
 2: SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'suspend', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 2: SELECT gp_inject_fault('vacuum_worker_changed', 'reset', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
-2: SELECT gp_wait_until_triggered_fault('vacuum_ao_post_cleanup_end', 3, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+2: SELECT gp_wait_until_triggered_fault('vacuum_ao_post_cleanup_end', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
 
 -- The previous collected num_dead_tuples in compact phase is zero.
 select gp_segment_id, relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum where gp_segment_id > -1;
@@ -176,6 +172,3 @@ select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, he
 SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration;
 reset Debug_appendonly_print_compaction;
 reset default_table_access_method;
-ALTER SYSTEM RESET gp_fts_mark_mirror_down_grace_period;
-ALTER SYSTEM RESET gp_fts_probe_interval;
-SELECT gp_segment_id, pg_reload_conf() FROM gp_id UNION SELECT gp_segment_id, pg_reload_conf() FROM gp_dist_random('gp_id');

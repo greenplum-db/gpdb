@@ -1020,6 +1020,8 @@ select gp_inject_fault('simulate_bitmap_and', 'skip', dbid) from gp_segment_conf
 (1 row)
 
 explain (costs off) select count(*) from bmunion where a = 53 and b < 3;
+NOTICE:  One or more columns in the following table(s) do not have statistics: bmunion
+HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
                              QUERY PLAN                             
 --------------------------------------------------------------------
  Finalize Aggregate

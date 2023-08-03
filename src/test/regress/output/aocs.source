@@ -536,6 +536,7 @@ SELECT count(*) FROM tenk_aocs4;
 (1 row)
 
 -- Issue #15904
+set optimizer = off;
 EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aocs1;
                    QUERY PLAN                    
 -------------------------------------------------
@@ -548,7 +549,8 @@ EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aocs1;
                ->  Seq Scan on public.tenk_aocs1
                      Output: unique1
  Optimizer: Postgres query optimizer
-(9 rows)
+ Settings: optimizer = 'off'
+(10 rows)
 
 CREATE TABLE tenk_aorow WITH(appendonly=true, orientation=row) AS SELECT * FROM tenk_heap_for_aocs;
 EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aorow;
@@ -563,8 +565,10 @@ EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aorow;
                ->  Seq Scan on public.tenk_aorow
                      Output: unique1
  Optimizer: Postgres query optimizer
-(9 rows)
+ Settings: optimizer = 'off'
+(10 rows)
 
+reset optimizer;
 -- LIKE
 -- Should not copy storage options if not specified
 CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);

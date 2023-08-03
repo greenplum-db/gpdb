@@ -9,8 +9,16 @@
 --      index-only scan.
 
 -- start_matchsubs
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
 -- m/Memory: \d+kB/
 -- s/Memory: \d+kB/Memory: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Hash chain length \d+\.\d+ avg, \d+ max/
+-- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 
 set optimizer_trace_fallback=on;
@@ -241,7 +249,6 @@ INSERT INTO test_cover_index_on_pt SELECT i+i, i%4 FROM generate_series(1, 10)i;
 VACUUM ANALYZE test_cover_index_on_pt;
 
 -- KEYS: [a]    INCLUDED: [b]
--- ORCA_FEATURE_NOT_SUPPORTED: dynamic index only scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
 
@@ -253,6 +260,20 @@ SELECT a, b, c FROM test_cover_index_on_pt WHERE a<10;
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c FROM test_cover_index_on_pt WHERE b<10;
+
+-- Expect static eliminated partitions due to predicate on column 'b'
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a, b FROM test_cover_index_on_pt WHERE a<10 and b=2;
+
+-- Expect both sides of join to perform index only scan
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
+
+-- Expect both sides of join to perform index only scan
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
 
 CREATE TABLE leaf_part(a int, b int, c int) DISTRIBUTED BY (a);
 -- without explicit index declared on leaf_part

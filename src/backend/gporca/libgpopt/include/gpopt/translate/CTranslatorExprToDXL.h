@@ -360,17 +360,29 @@ private:
 		CDistributionSpecArray *pdrgpdsBaseTables, CExpression *pexprScalar,
 		CDXLPhysicalProperties *dxl_properties);
 
-	// translate a dynamic index scan based on passed properties
+	// translate a dynamic [only] index scan based on passed properties
 	CDXLNode *PdxlnDynamicIndexScan(CExpression *pexprDIS,
 									CColRefArray *colref_array,
 									CDXLPhysicalProperties *dxl_properties,
-									CReqdPropPlan *prpp);
+									CReqdPropPlan *prpp, BOOL indexOnly);
 
 	// translate a dynamic index scan
 	CDXLNode *PdxlnDynamicIndexScan(CExpression *pexprDIS,
 									CColRefArray *colref_array,
 									CDistributionSpecArray *pdrgpdsBaseTables,
 									ULONG *pulNonGatherMotions, BOOL *pfDML);
+
+	// translate a dynamic index scan based on passed properties
+	CDXLNode *PdxlnDynamicIndexOnlyScan(CExpression *pexprDIS,
+										CColRefArray *colref_array,
+										CDXLPhysicalProperties *dxl_properties,
+										CReqdPropPlan *prpp);
+
+	// translate a dynamic index scan
+	CDXLNode *PdxlnDynamicIndexOnlyScan(
+		CExpression *pexprDIS, CColRefArray *colref_array,
+		CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
+		BOOL *pfDML);
 
 	// translate a const table get into a result node
 	CDXLNode *PdxlnResultFromConstTableGet(

@@ -1695,11 +1695,13 @@ where q2 = 456;
 create temp table parttbl (a integer primary key) partition by range (a);
 create temp table parttbl1 partition of parttbl for values from (1) to (100);
 insert into parttbl values (11), (12);
+set optimizer_enable_dynamicindexonlyscan=off;
 explain (costs off)
 select * from
   (select *, 12 as phv from parttbl) as ss
   right join int4_tbl on true
 where ss.a = ss.phv and f1 = 0;
+reset optimizer_enable_dynamicindexonlyscan;
 
 select * from
   (select *, 12 as phv from parttbl) as ss

@@ -53,9 +53,6 @@ query [<package_name_string>] [<query_option>] [<command_options>]
 remove <package_name> [<command_options>]
 :    Uninstall the specified package from the cluster. 
 
-upgrade <package_name> [<command_options>]
-:    Upgrade an existing package. Do a fresh install if the package does not exist.
-
 sync [<command_options>]
 :    Reconcile the package state of the cluster to match the state of the master host. Running this option after a failed or partial install/uninstall ensures that the package installation state is consistent across the cluster.
 

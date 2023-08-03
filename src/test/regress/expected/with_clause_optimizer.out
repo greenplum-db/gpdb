@@ -2286,16 +2286,15 @@ SELECT count(a1.i)
                            ->  Hash
                                  ->  Shared Scan (share slice:id 1:1)
                      ->  Redistribute Motion 1:3  (slice2)
-                           ->  Finalize Aggregate
+                           ->  Aggregate
                                  ->  Gather Motion 3:1  (slice3; segments: 3)
-                                       ->  Partial Aggregate
-                                             ->  Hash Join
-                                                   Hash Cond: (share0_ref3.i = share1_ref3.i)
-                                                   ->  Shared Scan (share slice:id 3:0)
-                                                   ->  Hash
-                                                         ->  Shared Scan (share slice:id 3:1)
+                                       ->  Hash Join
+                                             Hash Cond: (share0_ref3.i = share1_ref3.i)
+                                             ->  Shared Scan (share slice:id 3:0)
+                                             ->  Hash
+                                                   ->  Shared Scan (share slice:id 3:1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(22 rows)
 
 -- Another cross-slice ShareInputScan test. There is one producing slice,
 -- and two consumers in second slice. Make sure the Share Input Scan
@@ -2333,12 +2332,8 @@ UNION ALL
                            Sort Key: ('a'::text), share0_ref2.j
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                  Hash Key: ('a'::text), share0_ref2.j
-                                 ->  GroupAggregate
-                                       Group Key: ('a'::text), share0_ref2.j
-                                       ->  Sort
-                                             Sort Key: ('a'::text), share0_ref2.j
-                                             ->  Result
-                                                   ->  Shared Scan (share slice:id 2:0)
+                                 ->  Result
+                                       ->  Shared Scan (share slice:id 2:0)
                ->  Hash Join
                      Hash Cond: (share0_ref4.i = share0_ref3.i)
                      ->  Shared Scan (share slice:id 1:0)
@@ -2352,7 +2347,7 @@ UNION ALL
                ->  Result
                      ->  Shared Scan (share slice:id 1:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(30 rows)
+(26 rows)
 
 WITH cte AS (SELECT * FROM foo)
   (SELECT DISTINCT 'a' as branch, j FROM cte)
