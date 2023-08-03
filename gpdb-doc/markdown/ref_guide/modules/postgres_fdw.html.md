@@ -12,7 +12,7 @@ The `postgres_fdw` module is installed when you install Greenplum Database. Befo
 
 ## <a id="using_mrs"></a>Using postgres_fdw to Access Multiple Remote PostgreSQL Servers
 
-Before you create a foreign table using the `postgres_fdw` foreign-data wrapper, you must configure a server with the [CREATE SERVER](../sql_commands/CREATE_SERVER.html) command. You can use a `postgres_fdw` foreign table to access data that is distributed across multiple remote PostgreSQL servers when you set certain Greenplum and `postgres_fdw`-specific options on the `CREATE SERVER` command:
+Before you [create a foreign table](../sql_commands/CREATE_FOREIGN_TABLE.html) using the `postgres_fdw` foreign-data wrapper, you must configure a server with the [CREATE SERVER](../sql_commands/CREATE_SERVER.html) command. You can use a `postgres_fdw` foreign table to access data that is distributed across multiple remote PostgreSQL servers when you set certain Greenplum and `postgres_fdw`-specific options on the `CREATE SERVER` command:
 
 | Option Name | Description | Value |
 |-------------|-----|-------------|
@@ -71,7 +71,9 @@ When you use the foreign-data wrapper to access Greenplum Database, `postgres_fd
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 
-Refer to the [postgres\_fdw](https://www.postgresql.org/docs/12/postgres-fdw.html) PostgreSQL documentation for detailed information about this module.
+For more information about using foreign tables in Greenplum Database, see [Accessing External Data with Foreign Tables](../../admin_guide/external/g-foreign.html).
+
+For detailed information about this module, refer to the [postgres\_fdw](https://www.postgresql.org/docs/12/postgres-fdw.html) PostgreSQL documentation.
 
 The `postgres_fdw` foreign-data wrapper is included in the Greenplum Database open source github repository. You can view the [source code](https://github.com/greenplum-db/gpdb/tree/main/contrib/postgres_fdw) for the module which is located in the `contrib/` directory.
 
