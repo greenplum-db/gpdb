@@ -179,7 +179,8 @@ test: resource_group_gucs
 test: trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco expand_table_regression
 
 # direct dispatch tests
-test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types interrupt_holdoff_count
+test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
+test: interrupt_holdoff_count
 
 test: bfv_catalog bfv_index bfv_olap bfv_aggregate DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache part_external_table
 # Run minirepro separately to avoid concurrent deletes erroring out the internal pg_dump call
