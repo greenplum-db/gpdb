@@ -250,7 +250,7 @@ select i, j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000135" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000134" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="9" Alias="i">
@@ -264,7 +264,7 @@ select i, j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000090" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000089" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="i">
@@ -287,7 +287,7 @@ select i, j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t
           <dxl:OneTimeFilter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="15"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000024" Rows="1.000000" Width="15"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="d">

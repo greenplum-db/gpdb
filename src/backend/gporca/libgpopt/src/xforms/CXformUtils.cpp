@@ -2472,15 +2472,25 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	CColRefArray *pdrgppcrIndexCols =
 		PdrgpcrIndexKeys(mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CExpressionArray *pdrgpexprIndex = GPOS_NEW(mp) CExpressionArray(mp);
+
+	// pdrgpexprResidual holds all the predicate conditions that can't leverage
+	// indexing (either don't refer to index keys at all, or,
+	// refer to index keys but can't make use of indexing)
 	CExpressionArray *pdrgpexprResidual = GPOS_NEW(mp) CExpressionArray(mp);
+
+	// Count of predicates which don't refer to index keys at all.
+	// This, count is used in costing index scans.
+	// Eg: Table : foo (a,b,c,d); Index keys: a,b; Predicate on: a,c,d; here:
+	// UnindexedPredCol =c,d and ulUnindexedPredColCount - 2
+	ULONG ulUnindexedPredColCount = 0;
+
 	CPredicateUtils::ExtractIndexPredicates(
 		mp, md_accessor, pdrgpexprConds, pmdindex, pdrgppcrIndexCols,
-		pdrgpexprIndex, pdrgpexprResidual, outer_refs);
+		pdrgpexprIndex, pdrgpexprResidual, ulUnindexedPredColCount, outer_refs);
 	CColRefSet *outer_refs_in_index_get =
 		CUtils::PcrsExtractColumns(mp, pdrgpexprIndex);
 	outer_refs_in_index_get->Intersection(outer_refs);
 
-	ULONG ulResidualPredicateSize = pdrgpexprResidual->Size();
 	// exit early if:
 	// (1) there are no index-able predicates or
 	// (2) there are no outer references in index-able predicates
@@ -2533,13 +2543,14 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 		popLogicalGet = PopDynamicBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
 			GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex, pdrgpcrOutput,
-			pdrgpdrgpcrPart, partition_mdids, ulResidualPredicateSize);
+			pdrgpdrgpcrPart, partition_mdids, ulUnindexedPredColCount);
 	}
 	else
 	{
 		popLogicalGet = PopStaticBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput, ulResidualPredicateSize, indexscanDirection);
+			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
+			ulUnindexedPredColCount, indexscanDirection);
 	}
 
 	// clean up
@@ -2846,6 +2857,8 @@ CXformUtils::PexprBitmapSelectBestIndex(
 	}
 
 	const ULONG ulIndexes = pmdrel->IndexCount();
+	ULONG ulUnsupportedPredCount = 0;
+
 	for (ULONG ul = 0; ul < ulIndexes; ul++)
 	{
 		const IMDIndex *pmdindex =
@@ -2867,8 +2880,8 @@ CXformUtils::PexprBitmapSelectBestIndex(
 
 			CPredicateUtils::ExtractIndexPredicates(
 				mp, md_accessor, pdrgpexprScalar, pmdindex, pdrgpcrIndexCols,
-				pdrgpexprIndex, pdrgpexprResidual, pcrsOuterRefs,
-				considerBitmapAltForArrayCmp);
+				pdrgpexprIndex, pdrgpexprResidual, ulUnsupportedPredCount,
+				pcrsOuterRefs, considerBitmapAltForArrayCmp);
 
 			pdrgpexprScalar->Release();
 

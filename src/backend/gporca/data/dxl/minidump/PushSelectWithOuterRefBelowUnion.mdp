@@ -5286,7 +5286,7 @@
     <dxl:Plan Id="0" SpaceSize="8208">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="25983.151933" Rows="60175000.000000" Width="14"/>
+          <dxl:Cost StartupCost="0" TotalCost="25984.123228" Rows="60175000.000000" Width="14"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="15" Alias="l_shipmode">
@@ -5300,7 +5300,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="22200.551433" Rows="60175000.000000" Width="14"/>
+            <dxl:Cost StartupCost="0" TotalCost="22201.522728" Rows="60175000.000000" Width="14"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="15" Alias="l_shipmode">
@@ -5322,7 +5322,7 @@
           </dxl:JoinFilter>
           <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="433.631152" Rows="60175.000000" Width="14"/>
+              <dxl:Cost StartupCost="0" TotalCost="433.846277" Rows="60175.000000" Width="14"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="13" Alias="l_receiptdate">
@@ -5358,7 +5358,7 @@
           </dxl:DynamicTableScan>
           <dxl:Materialize Eager="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.638119" Rows="2000.000000" Width="5"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.665817" Rows="2000.000000" Width="5"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="34" Alias="month_number">
@@ -5371,7 +5371,7 @@
             <dxl:Filter/>
             <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.633119" Rows="2000.000000" Width="5"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.660817" Rows="2000.000000" Width="5"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="34" Alias="month_number">
@@ -5385,7 +5385,7 @@
               <dxl:SortingColumnList/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.502244" Rows="1000.000000" Width="5"/>
+                  <dxl:Cost StartupCost="0" TotalCost="862.529942" Rows="1000.000000" Width="5"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="34" Alias="month_number">
@@ -5399,7 +5399,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="862.502244" Rows="1000.000000" Width="5"/>
+                    <dxl:Cost StartupCost="0" TotalCost="862.529942" Rows="1000.000000" Width="5"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="57" Alias="ColRef_0057">
@@ -5537,7 +5537,7 @@
                   <dxl:OneTimeFilter/>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="862.499744" Rows="1000.000000" Width="5"/>
+                      <dxl:Cost StartupCost="0" TotalCost="862.527442" Rows="1000.000000" Width="5"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="34" Alias="month_number">

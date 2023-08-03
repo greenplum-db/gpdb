@@ -498,7 +498,7 @@ explain select * from A,B where A.j=B.j;
     <dxl:Plan Id="0" SpaceSize="12">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.541138" Rows="10000.000000" Width="14"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.541395" Rows="10000.000000" Width="14"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -528,7 +528,7 @@ explain select * from A,B where A.j=B.j;
         </dxl:HashCondList>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.003721" Rows="100.000000" Width="7"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.003849" Rows="100.000000" Width="7"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -542,7 +542,7 @@ explain select * from A,B where A.j=B.j;
           <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000678" Rows="100.000000" Width="7"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000807" Rows="100.000000" Width="7"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -570,7 +570,7 @@ explain select * from A,B where A.j=B.j;
         </dxl:GatherMotion>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.003721" Rows="100.000000" Width="7"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.003849" Rows="100.000000" Width="7"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="i">
@@ -584,7 +584,7 @@ explain select * from A,B where A.j=B.j;
           <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000678" Rows="100.000000" Width="7"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000807" Rows="100.000000" Width="7"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="i">

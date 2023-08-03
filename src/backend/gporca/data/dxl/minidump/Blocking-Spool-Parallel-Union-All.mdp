@@ -741,7 +741,7 @@
     <dxl:Plan Id="0" SpaceSize="8">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1356745006.104781" Rows="3002438.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="1356745003.797162" Rows="3002438.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -758,7 +758,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1356744871.835753" Rows="3002438.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="1356744869.528135" Rows="3002438.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -777,7 +777,7 @@
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000156" Rows="3.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000155" Rows="3.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -791,7 +791,7 @@
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000008" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000007" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -819,7 +819,7 @@
           </dxl:BroadcastMotion>
           <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324032.481775" Rows="3002438.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324032.479522" Rows="3002438.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="a">
@@ -829,7 +829,7 @@
             <dxl:Filter/>
             <dxl:Materialize Eager="true">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.481775" Rows="11.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324032.479522" Rows="11.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="a">
@@ -839,7 +839,7 @@
               <dxl:Filter/>
               <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324032.481761" Rows="11.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324032.479508" Rows="11.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="a">
@@ -855,7 +855,7 @@
                 </dxl:HashExprList>
                 <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1324032.481761" Rows="11.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1324032.479508" Rows="11.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="a">
@@ -868,7 +868,7 @@
                   </dxl:JoinFilter>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="9" Alias="a">

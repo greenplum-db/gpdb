@@ -298,7 +298,7 @@
     <dxl:Plan Id="0" SpaceSize="7">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="437.000349" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.000401" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="p">
@@ -309,7 +309,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="437.000319" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.000371" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="p">
@@ -322,7 +322,7 @@
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000157" Rows="3.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000160" Rows="3.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="p">
@@ -333,7 +333,7 @@
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000009" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="11" Alias="p">
@@ -358,7 +358,7 @@
           </dxl:BroadcastMotion>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000148" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000197" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="p">

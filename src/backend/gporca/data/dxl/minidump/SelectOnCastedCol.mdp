@@ -2027,7 +2027,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="502.310248" Rows="48656.716292" Width="258"/>
+          <dxl:Cost StartupCost="0" TotalCost="503.926109" Rows="48656.716292" Width="258"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="ca_address_sk">
@@ -2074,7 +2074,7 @@
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="445.945335" Rows="48656.716292" Width="258"/>
+            <dxl:Cost StartupCost="0" TotalCost="447.561196" Rows="48656.716292" Width="258"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="ca_address_sk">

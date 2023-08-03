@@ -308,7 +308,7 @@ where t.a in (select count(s.i) from s);
     <dxl:Plan Id="0" SpaceSize="18">
       <dxl:HashJoin JoinType="In">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000738" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000729" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -330,7 +330,7 @@ where t.a in (select count(s.i) from s);
         </dxl:HashCondList>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000155" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000151" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -344,7 +344,7 @@ where t.a in (select count(s.i) from s);
           <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -372,7 +372,7 @@ where t.a in (select count(s.i) from s);
         </dxl:GatherMotion>
         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000078" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000073" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns/>
           <dxl:ProjList>
@@ -390,7 +390,7 @@ where t.a in (select count(s.i) from s);
           <dxl:Filter/>
           <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000077" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000073" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="23" Alias="ColRef_0023">
@@ -401,7 +401,7 @@ where t.a in (select count(s.i) from s);
             <dxl:SortingColumnList/>
             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:GroupingColumns/>
               <dxl:ProjList>
@@ -419,7 +419,7 @@ where t.a in (select count(s.i) from s);
               <dxl:Filter/>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="i">

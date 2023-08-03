@@ -13562,7 +13562,7 @@
     <dxl:Plan Id="0" SpaceSize="10">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="3208.571223" Rows="716144.000000" Width="402"/>
+          <dxl:Cost StartupCost="0" TotalCost="3209.039368" Rows="716144.000000" Width="402"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="ws_sold_date_sk">
@@ -14005,7 +14005,7 @@
         </dxl:GatherMotion>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="498.561194" Rows="53633.712524" Width="206"/>
+            <dxl:Cost StartupCost="0" TotalCost="499.029339" Rows="53633.712524" Width="206"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="41" Alias="c_customer_sk">
@@ -14067,7 +14067,7 @@
           <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="448.953228" Rows="53633.712524" Width="206"/>
+              <dxl:Cost StartupCost="0" TotalCost="449.421373" Rows="53633.712524" Width="206"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="41" Alias="c_customer_sk">

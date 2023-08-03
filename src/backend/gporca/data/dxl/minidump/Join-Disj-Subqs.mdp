@@ -918,7 +918,7 @@ OR
     <dxl:Plan Id="0" SpaceSize="269692">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="9921.832276" Rows="521.833333" Width="246"/>
+          <dxl:Cost StartupCost="0" TotalCost="9921.832259" Rows="521.833333" Width="246"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="rolname">
@@ -1054,7 +1054,7 @@ OR
         </dxl:HashCondList>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="8624.683768" Rows="1000.000000" Width="144"/>
+            <dxl:Cost StartupCost="0" TotalCost="8624.683750" Rows="1000.000000" Width="144"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="rolname">
@@ -1363,7 +1363,7 @@ OR
           </dxl:Result>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="1.000000" Width="32"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="1.000000" Width="32"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="50" Alias="fdwname">

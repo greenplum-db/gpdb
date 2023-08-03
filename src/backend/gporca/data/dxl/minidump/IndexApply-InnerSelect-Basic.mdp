@@ -408,7 +408,7 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="437.001839" Rows="1.000000" Width="82"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.001766" Rows="1.000000" Width="82"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c1">
@@ -458,7 +458,7 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="437.001534" Rows="1.000000" Width="82"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.001461" Rows="1.000000" Width="82"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c1">
@@ -510,7 +510,7 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000775" Rows="3.000000" Width="41"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000772" Rows="3.000000" Width="41"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="c1">
@@ -539,7 +539,7 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000016" Rows="1.000000" Width="41"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="1.000000" Width="41"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="c1">
@@ -587,7 +587,7 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
           </dxl:BroadcastMotion>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000638" Rows="1.000000" Width="41"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000569" Rows="1.000000" Width="41"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="14" Alias="c1">

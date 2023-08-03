@@ -1733,7 +1733,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
     <dxl:Plan Id="0" SpaceSize="197120">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2155.368545" Rows="100.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="2155.369590" Rows="100.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="11" Alias="m8">
@@ -1747,7 +1747,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2155.365563" Rows="100.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="2155.366608" Rows="100.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="11" Alias="m8">
@@ -1767,7 +1767,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
           </dxl:HashCondList>
           <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1724.285040" Rows="100.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="1724.286085" Rows="100.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="4" Alias="m1">
@@ -1789,7 +1789,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
             </dxl:HashExprList>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1724.283788" Rows="100.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="1724.284833" Rows="100.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="4" Alias="m1">
@@ -1812,7 +1812,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
               </dxl:HashCondList>
               <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.202716" Rows="100.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.203761" Rows="100.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="4" Alias="m1">
@@ -1837,7 +1837,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                 </dxl:HashExprList>
                 <dxl:HashJoin JoinType="Inner">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1293.201047" Rows="100.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1293.202092" Rows="100.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="4" Alias="m1">
@@ -1863,7 +1863,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                   </dxl:HashCondList>
                   <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="862.119428" Rows="100.000000" Width="20"/>
+                      <dxl:Cost StartupCost="0" TotalCost="862.120473" Rows="100.000000" Width="20"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="4" Alias="m1">
@@ -1891,7 +1891,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                     </dxl:HashExprList>
                     <dxl:HashJoin JoinType="Inner">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="862.117341" Rows="100.000000" Width="20"/>
+                        <dxl:Cost StartupCost="0" TotalCost="862.118386" Rows="100.000000" Width="20"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="4" Alias="m1">
@@ -1959,7 +1959,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                       </dxl:TableScan>
                       <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.009076" Rows="300.000000" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.010121" Rows="300.000000" Width="4"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="24" Alias="i1">
@@ -1970,7 +1970,7 @@ INNER JOIN  (SELECT FOO10.i1 AS i1
                         <dxl:SortingColumnList/>
                         <dxl:TableScan>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.001916" Rows="100.000000" Width="4"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.002961" Rows="100.000000" Width="4"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="24" Alias="i1">

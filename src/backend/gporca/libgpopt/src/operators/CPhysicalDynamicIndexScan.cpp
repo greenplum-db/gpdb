@@ -40,7 +40,7 @@ CPhysicalDynamicIndexScan::CPhysicalDynamicIndexScan(
 	ULONG scan_id, CColRef2dArray *pdrgpdrgpcrPart, COrderSpec *pos,
 	IMdIdArray *partition_mdids,
 	ColRefToUlongMapArray *root_col_mapping_per_part,
-	ULONG ulResidualPredicateSize)
+	ULONG ulUnindexedPredColCount)
 	: CPhysicalDynamicScan(mp, ptabdesc, ulOriginOpId, pnameAlias, scan_id,
 						   pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
 						   root_col_mapping_per_part),
@@ -50,7 +50,7 @@ CPhysicalDynamicIndexScan::CPhysicalDynamicIndexScan(
 	GPOS_ASSERT(nullptr != pindexdesc);
 	GPOS_ASSERT(nullptr != pos);
 
-	m_ulResidualPredicateSize = ulResidualPredicateSize;
+	m_ulUnindexedPredColCount = ulUnindexedPredColCount;
 }
 
 

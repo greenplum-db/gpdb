@@ -324,7 +324,7 @@ explain select * from t;
         <dxl:SortingColumnList/>
         <dxl:DynamicTableScan SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000008" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000007" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

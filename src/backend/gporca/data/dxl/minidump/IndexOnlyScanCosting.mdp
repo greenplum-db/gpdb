@@ -2,21 +2,21 @@
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
   <dxl:Comment><![CDATA[
        Objective: Test index only scan costing when there is a missing index column in predicate
-         --case : Missing index column in predicate.
-          --Eg: index idx_abc, pred : a
+       Observe that idx_foo_abc is selected in the plan.
 
        create table foo (a int , b int, c int) distributed by (a);
        CREATE INDEX idx_foo_abc ON foo USING btree(a,b,c);
-       analyze foo;
+       CREATE INDEX idx_foo_cba ON foo USING btree(c,b,a);
+       vacuum analyze foo;
        set optimizer_enable_indexscan to off;
        explain  select * from foo where a=1;
 
                                             QUERY PLAN
         -----------------------------------------------------------------------------------
-         Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=12)
-           ->  Index Only Scan using idx_foo_abc on foo  (cost=0.00..6.00 rows=1 width=12)
-                 Index Cond: (a = 1)
-         Optimizer: Pivotal Optimizer (GPORCA)
+        Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=12)
+          ->  Index Only Scan using idx_foo_abc on foo  (cost=0.00..6.00 rows=1 width=12)
+                Index Cond: (a = 1)
+        Optimizer: GPORCA
         (4 rows)
 
   ]]>
@@ -33,7 +33,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="20" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10" XformBindThreshold="0" SkewFactor="0"/>
-      <dxl:TraceFlags Value="101013,102001,102002,102003,102005,102043,102074,102120,102144,102162,102163,103001,103014,103015,103022,103026,103027,103029,103033,103038,103040,104002,104003,104004,104005,106000"/>
+      <dxl:TraceFlags Value="101013,102001,102002,102003,102005,102043,102074,102120,102144,102162,102163,103001,103014,103022,103026,103027,103029,103033,103038,103040,104002,104003,104004,104005,106000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
@@ -140,58 +140,45 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="7.45980.1.0" Name="idx_foo_abc" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="7.17438.1.0" Name="idx_foo_cba" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2,1,0" IncludedColumns="" ReturnableColumns="2,1,0" SortDirection="ASC,ASC,ASC" NullsDirection="LAST,LAST,LAST">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:RelationStatistics Mdid="2.45976.1.0" Name="foo" Rows="0.000000" RelPages="1" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.45976.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Index Mdid="7.17437.1.0" Name="idx_foo_abc" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2" SortDirection="ASC,ASC,ASC" NullsDirection="LAST,LAST,LAST">
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:Index>
+      <dxl:RelationStatistics Mdid="2.17434.1.0" Name="foo" Rows="0.000000" RelPages="1" RelAllVisible="0" EmptyRelation="true"/>
+      <dxl:Relation Mdid="6.17434.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
-          <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
-          <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
-          </dxl:Column>
+          <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
+          <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
+          <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
+          <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6"/>
+          <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4"/>
+          <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4"/>
+          <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4"/>
+          <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4"/>
+          <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4"/>
+          <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4"/>
         </dxl:Columns>
         <dxl:IndexInfoList>
-          <dxl:IndexInfo Mdid="7.45980.1.0" IsPartial="false"/>
+          <dxl:IndexInfo Mdid="7.17437.1.0" IsPartial="false"/>
+          <dxl:IndexInfo Mdid="7.17438.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
         <dxl:DistrOpfamilies>
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:ColumnStatistics Mdid="1.45976.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:ColumnStatistics Mdid="1.45976.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:RelationExtendedStatistics Mdid="10.45976.1.0" Name="foo"/>
+      <dxl:RelationExtendedStatistics Mdid="10.17434.1.0" Name="foo"/>
+      <dxl:ColumnStatistics Mdid="1.17434.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.23.1.0"/>
         <dxl:RightType Mdid="0.23.1.0"/>
@@ -209,7 +196,6 @@
           <dxl:Opfamily Mdid="0.10009.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:ColumnStatistics Mdid="1.45976.1.0.2" Name="c" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
     </dxl:Metadata>
     <dxl:Query>
       <dxl:OutputColumns>
@@ -224,7 +210,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
-          <dxl:TableDescriptor Mdid="6.45976.1.0" TableName="foo" LockMode="1" AclMode="2">
+          <dxl:TableDescriptor Mdid="6.17434.1.0" TableName="foo" LockMode="1" AclMode="2">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="2" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -244,7 +230,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000268" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000568" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -261,7 +247,7 @@
         <dxl:SortingColumnList/>
         <dxl:IndexOnlyScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000216" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000516" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -282,8 +268,8 @@
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:Partitions/>
-          <dxl:IndexDescriptor Mdid="7.45980.1.0" IndexName="idx_foo_abc"/>
-          <dxl:TableDescriptor Mdid="6.45976.1.0" TableName="foo" LockMode="1" AclMode="2">
+          <dxl:IndexDescriptor Mdid="7.17437.1.0" IndexName="idx_foo_abc"/>
+          <dxl:TableDescriptor Mdid="6.17434.1.0" TableName="foo" LockMode="1" AclMode="2">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
               <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>

@@ -2112,7 +2112,7 @@ CPredicateUtils::ExtractIndexPredicates(
 	CMemoryPool *mp, CMDAccessor *md_accessor,
 	CExpressionArray *pdrgpexprPredicate, const IMDIndex *pmdindex,
 	CColRefArray *pdrgpcrIndex, CExpressionArray *pdrgpexprIndex,
-	CExpressionArray *pdrgpexprResidual,
+	CExpressionArray *pdrgpexprResidual, ULONG &ulUnindexedPredColCount,
 	CColRefSet *
 		pcrsAcceptedOuterRefs,	// outer refs that are acceptable in an index predicate
 	BOOL allowArrayCmpIndexQual)
@@ -2142,6 +2142,7 @@ CPredicateUtils::ExtractIndexPredicates(
 		if (!fSubset)
 		{
 			pdrgpexprResidual->Append(pexprCond);
+			ulUnindexedPredColCount = ulUnindexedPredColCount + 1;
 			continue;
 		}
 
@@ -2180,7 +2181,17 @@ CPredicateUtils::ExtractIndexPredicates(
 			}
 			else
 			{
-				// not a supported predicate
+				// Not a supported predicate, eg:
+				// create table j1 (a1 int, b1 int, primary key(a1,b1));
+				// create table j2 (a2 int, b2 int, primary key(a2,b2));
+				// explain (costs off) select * from j1
+				// inner join j2 on j1.a1 = j2.a2 and j1.b1 = j2.b2
+				// where j1.a1 % 1000 = 1 and j2.a2 % 1000 = 2;
+				// here both the conditions in the 'where' clause are -
+				// 'not supported index predicate'.
+				// For table J1 :
+				// Supported predicate condition : j1.a1 = j2.a2 and j1.b1 = j2.b2
+				// Unsupported predicate condition :  j1.a1 % 1000 = 1
 				pdrgpexprTarget = pdrgpexprResidual;
 			}
 		}
@@ -2189,6 +2200,16 @@ CPredicateUtils::ExtractIndexPredicates(
 	}
 
 	pcrsIndex->Release();
+
+	// In a case, where there is no predicate on the index columns but
+	// still an Index scan is created, (Eg: Order by some index columns)
+	// then ulUnindexedPredColCount is not valid for costing.
+	// eg: explain select a from foo order by a limit 10; {idx_a on table},
+	// ulUnindexedPredColCount = 1, but (pdrgpexprIndex->Size()=0)
+	if (pdrgpexprIndex->Size() == 0)
+	{
+		ulUnindexedPredColCount = 0;
+	}
 }
 
 // split given scalar expression into two conjunctions; without outer

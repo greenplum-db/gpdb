@@ -270,7 +270,7 @@ Union-OuterRefs-Output Union-OuterRefs-Casting-Output
 Union-OuterRefs-InnerChild;
 
 CSetop3Test:
-UnionWithOuterRefs
+UnionWithOuterRefs UnionAll
 Union-Distributed-Table-With-Const-Table ExceptAllCompatibleDataType
 UnionAllCompatibleDataType UnionOfDQAQueries Union-Volatile-Func
 Intersect-Volatile-Func Except-Volatile-Func UnionWithCTE ExceptHashCompatibleRange

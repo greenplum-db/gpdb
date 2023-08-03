@@ -165,6 +165,7 @@ test: bfv_partition_plans
 # to race-condition fetching relallvisible.
 test: gp_covering_index
 test: qp_indexscan
+test: gp_index_costing
 test: pgstat_qd_tabstat
 # dispatch should always run seperately from other cases.
 test: dispatch
@@ -204,7 +205,7 @@ test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions_in_contexts_setup
 test: qp_misc_rio_join_small qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with correlated_subquery
 
-test: qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_orca_fallback gp_sync_lc_gucs gp_index_costing
+test: qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_orca_fallback gp_sync_lc_gucs
 
 test: olap_setup
 test: qp_olap_group qp_olap_group2

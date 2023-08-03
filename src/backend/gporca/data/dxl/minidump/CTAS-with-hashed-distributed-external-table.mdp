@@ -227,7 +227,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="0,1,2" VarTypeModList="-1,-1,-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="31732.166667" Rows="1000000.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="31731.433333" Rows="1000000.000000" Width="20"/>
         </dxl:Properties>
         <dxl:DistrOpclasses>
           <dxl:DistrOpclass Mdid="0.10027.1.0"/>
@@ -251,7 +251,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
         </dxl:ProjList>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="482.166667" Rows="1000000.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="481.433333" Rows="1000000.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -271,7 +271,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
           <dxl:OneTimeFilter/>
           <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="474.166667" Rows="1000000.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="473.433333" Rows="1000000.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -293,7 +293,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
             </dxl:HashExprList>
             <dxl:ForeignScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="440.900000" Rows="1000000.000000" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="440.166667" Rows="1000000.000000" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

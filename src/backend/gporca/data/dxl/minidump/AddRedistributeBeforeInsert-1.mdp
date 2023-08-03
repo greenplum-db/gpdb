@@ -226,7 +226,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLInsert Columns="0,1" ActionCol="9" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.023482" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.023480" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -252,7 +252,7 @@
         </dxl:TableDescriptor>
         <dxl:RandomMotion InputSegments="0,1" OutputSegments="0,1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000043" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -269,7 +269,7 @@
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000024" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -286,7 +286,7 @@
             <dxl:OneTimeFilter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000013" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

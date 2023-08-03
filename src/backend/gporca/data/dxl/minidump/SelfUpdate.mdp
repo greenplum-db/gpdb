@@ -207,7 +207,7 @@ update t1 set b = c;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:DMLUpdate Columns="0,2,2" ActionCol="10" CtidCol="3" SegmentIdCol="9" IsSplitUpdate="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.023465" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.023462" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -237,7 +237,7 @@ update t1 set b = c;
         </dxl:TableDescriptor>
         <dxl:Assert ErrorCode="23502">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="18"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="18"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -267,7 +267,7 @@ update t1 set b = c;
           </dxl:AssertConstraintList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="18"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000008" Rows="1.000000" Width="18"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">

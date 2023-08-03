@@ -407,7 +407,7 @@ select  *
     <dxl:Plan Id="0" SpaceSize="44">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001299" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001307" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c_cust_id">
@@ -421,7 +421,7 @@ select  *
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.001254" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.001263" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c_cust_id">
@@ -470,7 +470,7 @@ select  *
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.001210" Rows="1.000000" Width="28"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.001219" Rows="1.000000" Width="28"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="0"/>
@@ -515,7 +515,7 @@ select  *
             <dxl:Filter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.001187" Rows="2.000000" Width="27"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.001196" Rows="2.000000" Width="27"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="19" Alias="ColRef_0019">
@@ -554,7 +554,7 @@ select  *
               <dxl:OneTimeFilter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.001169" Rows="2.000000" Width="31"/>
+                  <dxl:Cost StartupCost="0" TotalCost="862.001178" Rows="2.000000" Width="31"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="c_cust_id">
@@ -587,7 +587,7 @@ select  *
                 <dxl:LimitOffset/>
                 <dxl:HashJoin JoinType="Left">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="862.000817" Rows="2.000000" Width="31"/>
+                    <dxl:Cost StartupCost="0" TotalCost="862.000826" Rows="2.000000" Width="31"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="c_cust_id">
@@ -623,7 +623,7 @@ select  *
                   </dxl:HashCondList>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="22"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="22"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="c_cust_id">
@@ -656,7 +656,7 @@ select  *
                   </dxl:TableScan>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000045" Rows="1.000000" Width="9"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000049" Rows="1.000000" Width="9"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="17" Alias="ColRef_0017">
@@ -670,7 +670,7 @@ select  *
                     <dxl:OneTimeFilter/>
                     <dxl:TableScan>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="9" Alias="i_item_id">

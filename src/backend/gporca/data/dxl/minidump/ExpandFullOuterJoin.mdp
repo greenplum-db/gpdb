@@ -202,7 +202,7 @@ select * from t full join s on t1 = s1;
     <dxl:Plan Id="0" SpaceSize="227">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2586.001795" Rows="3.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="2586.001789" Rows="3.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="11" Alias="s2">
@@ -216,7 +216,7 @@ select * from t full join s on t1 = s1;
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2586.001580" Rows="3.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="2586.001573" Rows="3.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="11" Alias="s2">
@@ -230,7 +230,7 @@ select * from t full join s on t1 = s1;
           <dxl:OneTimeFilter/>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2586.001580" Rows="3.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="2586.001573" Rows="3.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="t3">
@@ -242,7 +242,7 @@ select * from t full join s on t1 = s1;
             </dxl:ProjList>
             <dxl:CTEProducer CTEId="0" Columns="20,21,22,23,24,25,26,27,28">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000051" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="20" Alias="t1">
@@ -275,7 +275,7 @@ select * from t full join s on t1 = s1;
               </dxl:ProjList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="42"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="1.000000" Width="42"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="20" Alias="t1">
@@ -324,7 +324,7 @@ select * from t full join s on t1 = s1;
             </dxl:CTEProducer>
             <dxl:Sequence>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="2155.001501" Rows="3.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="2155.001498" Rows="3.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="2" Alias="t3">
@@ -336,7 +336,7 @@ select * from t full join s on t1 = s1;
               </dxl:ProjList>
               <dxl:CTEProducer CTEId="1" Columns="30,31,32,33,34,35,36,37,38">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000051" Rows="1.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="30" Alias="s1">
@@ -369,7 +369,7 @@ select * from t full join s on t1 = s1;
                 </dxl:ProjList>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000015" Rows="1.000000" Width="42"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="1.000000" Width="42"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="30" Alias="s1">

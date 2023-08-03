@@ -2603,7 +2603,7 @@
     <dxl:Plan Id="0" SpaceSize="10">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="9093.396827" Rows="11530621.000000" Width="123"/>
+          <dxl:Cost StartupCost="0" TotalCost="9093.176214" Rows="11530621.000000" Width="123"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="inv_date_sk">
@@ -2769,7 +2769,7 @@
         </dxl:GatherMotion>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="435.377333" Rows="361.043926" Width="107"/>
+            <dxl:Cost StartupCost="0" TotalCost="435.156720" Rows="361.043926" Width="107"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="11" Alias="d_date_sk">
@@ -2861,7 +2861,7 @@
           <dxl:SortingColumnList/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="435.203877" Rows="361.043926" Width="107"/>
+              <dxl:Cost StartupCost="0" TotalCost="434.983264" Rows="361.043926" Width="107"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="d_date_sk">

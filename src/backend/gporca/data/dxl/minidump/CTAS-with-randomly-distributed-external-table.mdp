@@ -216,7 +216,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_ext DISTRIBUTED RANDOMLY;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="0,1,2" VarTypeModList="-1,-1,-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="31736.340000" Rows="1000000.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="31735.606667" Rows="1000000.000000" Width="20"/>
         </dxl:Properties>
         <dxl:DistrOpclasses/>
         <dxl:Columns>
@@ -238,7 +238,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_ext DISTRIBUTED RANDOMLY;
         </dxl:ProjList>
         <dxl:RandomMotion InputSegments="0,1,2" OutputSegments="0,1,2">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="486.340000" Rows="1000000.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="485.606667" Rows="1000000.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -258,7 +258,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_ext DISTRIBUTED RANDOMLY;
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="461.300000" Rows="1000000.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="460.566667" Rows="1000000.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -278,7 +278,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_ext DISTRIBUTED RANDOMLY;
             <dxl:OneTimeFilter/>
             <dxl:ForeignScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="440.900000" Rows="1000000.000000" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="440.166667" Rows="1000000.000000" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

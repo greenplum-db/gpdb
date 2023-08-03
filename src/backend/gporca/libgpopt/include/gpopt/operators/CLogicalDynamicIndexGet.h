@@ -45,8 +45,8 @@ private:
 	// order spec
 	COrderSpec *m_pos;
 
-	// count of number of predicate not applicable on the index
-	ULONG m_ulResidualPredicateSize;
+	// Number of predicate not applicable on the index
+	ULONG m_ulUnindexedPredColCount;
 
 public:
 	CLogicalDynamicIndexGet(const CLogicalDynamicIndexGet &) = delete;
@@ -60,7 +60,7 @@ public:
 							CColRefArray *pdrgpcrOutput,
 							CColRef2dArray *pdrgpdrgpcrPart,
 							IMdIdArray *partition_mdids,
-							ULONG ulResidualPredicateSize);
+							ULONG ulUnindexedPredColCount);
 
 	// dtor
 	~CLogicalDynamicIndexGet() override;
@@ -136,7 +136,7 @@ public:
 	ULONG
 	ResidualPredicateSize() const
 	{
-		return m_ulResidualPredicateSize;
+		return m_ulUnindexedPredColCount;
 	}
 
 	//-------------------------------------------------------------------------------------

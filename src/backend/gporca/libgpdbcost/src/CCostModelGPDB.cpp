@@ -1583,100 +1583,129 @@ CCostModelGPDB::CostSequenceProject(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CCostModelGPDB::ComputeAdditionalMissingIndexWeight
+//		CCostModelGPDB::ComputeUnusedIndexWeight
 //
 //	@doc:
-//		Compute additional column weight for Index & Index only scan due
-//		to mismatch in columns used in the index and the predicate
+//		Compute weight of unused index column for Index & Index only scans
+//		due to mismatch in columns used in the index and the predicate
 //
 //---------------------------------------------------------------------------
 CDouble
-CCostModelGPDB::ComputeAdditionalMissingIndexWeight(
-	CMemoryPool *mp, CExpressionHandle &exprhdl,
-	CColRefArray *pdrgpcrIndexColumns, IStatistics *stats)
+CCostModelGPDB::ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
+										 CColRefArray *pdrgpcrIndexColumns,
+										 IStatistics *stats)
 
 {
 	GPOS_ASSERT(nullptr != stats);
 
-	CDouble dCummulativeMissingIndexWeight = 0;
+	CDouble dCummulativeUnusedIndexWeight = 0;
 	CDouble dNdv(1.0);
 
-	ULONG ulNoOfColumnsInIndex = pdrgpcrIndexColumns->Size();
-
-	// Finding predicate columns
+	// Finding used predicate columns
 	CExpression *pexprIndexCond = exprhdl.PexprScalarRepChild(0);
 	CColRefSet *pcrsUsedPredicate = pexprIndexCond->DeriveUsedColumns();
 
-	// Find all the columns of index which are not present in the predicate.
-	// Eg- index : a,b,c  Predicate: c,d; so Missing index column = a,b
-	CColRefSet *pcrsIndexKeys =
-		GPOS_NEW(mp) CColRefSet(mp, pdrgpcrIndexColumns);
-	pcrsIndexKeys->Difference(pcrsUsedPredicate);
+	ULONG ulNoOfColumnsInPredicate = pcrsUsedPredicate->Size();
+	ULONG ulNoOfColumnsInIndex = pdrgpcrIndexColumns->Size();
 
-	// Checking if we have any missing index column and
-	// also if we have any condition in the predicate
-	if (pcrsIndexKeys->Size() > 0 && pcrsUsedPredicate->Size() > 0)
+	if (ulNoOfColumnsInIndex > 0 && ulNoOfColumnsInPredicate > 0)
 	{
-		CColRefSetIter iter(*pcrsIndexKeys);
-		while (iter.Advance())
+		// Iterate through all the index columns to find, any unused
+		// index column in the predicate
+		// Eg- index : a,b,c  Predicate: c,d
+		// Unused index columns - a,b
+		// Used index column -	c
+		// Indexed Predicate column - c (in the expHandle we have information of
+		// only those predicate columns, which are applicable on the index)
+		for (ULONG ulIndexColPos = 0; ulIndexColPos < ulNoOfColumnsInIndex;
+			 ulIndexColPos++)
 		{
-			// Extracting columns of the index on which we don't
-			// have any condition in the predicate (Missing index columns).
-			CColRef *colrefIndexColsNoPredCondn = iter.Pcr();
+			CColRef *colrefIndexColumn = (*pdrgpcrIndexColumns)[ulIndexColPos];
 
-			CDouble dMissingIndexColWeight = 0;
+			CDouble dUnusedIndexColWeight = 0;
+			bool fIndexPredColMatchFound = false;
 
-			// For every missing index column, we are checking its position
-			// in the index, to compute its weight.
-			for (ULONG ul = 0; ul < ulNoOfColumnsInIndex; ul++)
+			// For every index column, we check if it is present in the
+			// predicate columns
+			fIndexPredColMatchFound =
+				pcrsUsedPredicate->FMember(colrefIndexColumn);
+
+			// if no match is found, it implies, index column is not present
+			// in the used predicate. We use this column for costing.
+			if (!fIndexPredColMatchFound)
 			{
-				// For evey missing index column, we check its position in
-				// the index. Based on the position, we compute an additional
-				// cost.
+				// Adjusting the weight for the unused index (ulNoOfColumnsInIndex-ul)
+				// For index idx_abc, if column 'a' is unused, then since
+				// it is the most significant index column, so it should have
+				// more weightage.
+				dUnusedIndexColWeight = (ulNoOfColumnsInIndex - ulIndexColPos);
 
-				// Extracting columns in the index, these come out here in the
-				// as they are present in the index, i.e. Most significant column
-				// comes first. For eg. for index idx_cba, for ul=0, column 'c'
-				// will come out.
-				CColRef *colrefIndexColumns = (*pdrgpcrIndexColumns)[ul];
+				// Finding NDV of the unused column
+				dNdv =
+					CStatistics::CastStats(stats)->GetNDVs(colrefIndexColumn);
 
-				if (CColRef::Equals(colrefIndexColsNoPredCondn,
-									colrefIndexColumns))
-				{
-					// Adjusting the weight for the missing index (ulNoOfColumnsInIndex-ul)
-					// For index idx_abc, if column 'a' is missing, then since
-					// it is the most significant index column, so it should have
-					// more weightage.
-					dMissingIndexColWeight = (ulNoOfColumnsInIndex - ul);
+				CDouble dTableRows = CStatistics::CastStats(stats)->Rows();
 
-					// Finding NDV of the missing column
-					dNdv = CStatistics::CastStats(stats)->GetNDVs(
-						colrefIndexColumns);
+				GPOS_ASSERT(0 != dTableRows);
 
-					CDouble dTableRows = CStatistics::CastStats(stats)->Rows();
+				// we multiply by ratio - (dNdv/dTableRows), to adjust
+				// the weight of column for distinct/duplicate values in it.
+				// For eg- for index idx_abc, if unused column is 'b' and if
+				// all of its value are distinct, then it's weightage should be high
+				// compared to if all of its values are same.
+				dUnusedIndexColWeight =
+					dUnusedIndexColWeight * (dNdv / dTableRows);
 
-					// Checking if total number of rows in the table are non-zero
-					GPOS_ASSERT(0 != dTableRows);
-
-					// we multiply by ratio - (dNdv/dTableRows), to adjust
-					// the weight of column for distinct/duplicate values in it.
-					// For eg- for index idx_abc, if missing column is 'b' and if
-					// all of its value are distinct, then it's weightage should be high
-					// compared to if all of its values are same.
-					dMissingIndexColWeight =
-						dMissingIndexColWeight * (dNdv / dTableRows);
-
-					dCummulativeMissingIndexWeight =
-						dCummulativeMissingIndexWeight + dMissingIndexColWeight;
-
-					break;
-				}
+				dCummulativeUnusedIndexWeight =
+					dCummulativeUnusedIndexWeight + dUnusedIndexColWeight;
 			}
 		}
 	}
-	pcrsIndexKeys->Release();
+	return dCummulativeUnusedIndexWeight;
+}
 
-	return dCummulativeMissingIndexWeight;
+//---------------------------------------------------------------------------
+//	@function:
+//		CCostModelGPDB::GetCommonIndexData
+//
+//	@doc:
+// 		Get count of index keys, width of included col, array of index columns
+// 		and table statistics for Index Scan, Index only scan, Dynamic Index scan
+// 		& Dynamic Index only scan
+//
+//		'pdrgpcrIndexColumns' & 'stats' are passed by reference.
+//		The calling function is responsible to release the allocated memory.
+//---------------------------------------------------------------------------
+template <typename T>
+void
+CCostModelGPDB::GetCommonIndexData(T *ptr, ULONG &ulIndexKeys,
+								   ULONG &ulIncludedColWidth,
+								   CColRefArray *&pdrgpcrIndexColumns,
+								   IStatistics *&stats,
+								   CMDAccessor *md_accessor, CMemoryPool *mp)
+{
+	CColumnDescriptorArray *indexIncludedArray = nullptr;
+
+	ulIndexKeys = ptr->Pindexdesc()->Keys();
+
+	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
+	// cost per index row. Account for that cost in dCostPerIndexRow.
+	indexIncludedArray = ptr->Pindexdesc()->PdrgpcoldescIncluded();
+	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
+	{
+		ulIncludedColWidth += (*indexIncludedArray)[ul]->Width();
+	}
+
+	const IMDRelation *pmdrel =
+		md_accessor->RetrieveRel(ptr->Ptabdesc()->MDId());
+
+	const IMDIndex *pmdindex =
+		md_accessor->RetrieveIndex(ptr->Pindexdesc()->MDId());
+
+	pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
+		mp, ptr->PdrgpcrOutput(), pmdindex, pmdrel);
+
+	stats = ptr->PstatsBaseTable();
 }
 
 //---------------------------------------------------------------------------
@@ -1726,70 +1755,32 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *mp GPOS_UNUSED,
 
 	CDouble dRowsIndex = pci->Rows();
 
-	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
-	// cost per index row. Account for that cost in dCostPerIndexRow.
-	CColumnDescriptorArray *indexIncludedArray = nullptr;
 	ULONG ulIndexKeys = 1;
+	ULONG ulIncludedColWidth = 0;
 
 	// Getting Meta Data Accessor  ----------------------------
 	const COptCtxt *poctxt = COptCtxt::PoctxtFromTLS();
 	CMDAccessor *md_accessor = poctxt->Pmda();
 	CColRefArray *pdrgpcrIndexColumns = nullptr;
-	ULONG ulCummulativeMissingPredWeight = 0;
+	ULONG ulUnindexedPredCount = 0;
 	IStatistics *stats = nullptr;
+
 	if (COperator::EopPhysicalIndexScan == op_id)
 	{
 		// For Index Scan
-
-		ulIndexKeys = CPhysicalIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
-		indexIncludedArray = CPhysicalIndexScan::PopConvert(pop)
-								 ->Pindexdesc()
-								 ->PdrgpcoldescIncluded();
-		const IMDRelation *pmdrel = md_accessor->RetrieveRel(
-			CPhysicalIndexScan::PopConvert(pop)->Ptabdesc()->MDId());
-
-		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(
-			CPhysicalIndexScan::PopConvert(pop)->Pindexdesc()->MDId());
-
-		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
-			mp, CPhysicalIndexScan::PopConvert(pop)->PdrgpcrOutput(), pmdindex,
-			pmdrel);
-
-		ulCummulativeMissingPredWeight =
-			CPhysicalIndexScan::PopConvert(pop)->ResidualPredicateSize();
-
-		stats = CPhysicalIndexScan::PopConvert(pop)->PstatsBaseTable();
+		CPhysicalIndexScan *ptr = CPhysicalIndexScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
+		ulUnindexedPredCount = ptr->ResidualPredicateSize();
 	}
 	else
 	{
 		// For Dynamic Index Scan
-
-		ulIndexKeys =
-			CPhysicalDynamicIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
-		indexIncludedArray = CPhysicalDynamicIndexScan::PopConvert(pop)
-								 ->Pindexdesc()
-								 ->PdrgpcoldescIncluded();
-
-		const IMDRelation *pmdrel = md_accessor->RetrieveRel(
-			CPhysicalDynamicIndexScan::PopConvert(pop)->Ptabdesc()->MDId());
-
-		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(
-			CPhysicalDynamicIndexScan::PopConvert(pop)->Pindexdesc()->MDId());
-
-		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
-			mp, CPhysicalDynamicIndexScan::PopConvert(pop)->PdrgpcrOutput(),
-			pmdindex, pmdrel);
-
-		ulCummulativeMissingPredWeight =
-			CPhysicalDynamicIndexScan::PopConvert(pop)->ResidualPredicateSize();
-
-		stats = CPhysicalDynamicIndexScan::PopConvert(pop)->PstatsBaseTable();
-	}
-
-	ULONG ulIncludedColWidth = 0;
-	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
-	{
-		ulIncludedColWidth += (*indexIncludedArray)[ul]->Width();
+		CPhysicalDynamicIndexScan *ptr =
+			CPhysicalDynamicIndexScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
+		ulUnindexedPredCount = ptr->ResidualPredicateSize();
 	}
 
 	// TODO: 2014-02-01
@@ -1808,15 +1799,11 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *mp GPOS_UNUSED,
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexCostConversionFactor)
 			->Get();
 
-	CDouble dTotalAdditionalMissingPredCost =
-		ulCummulativeMissingPredWeight * dIndexCostConversionFactor;
-	CDouble dTotalAdditionalMissingIndexCost =
-		ComputeAdditionalMissingIndexWeight(mp, exprhdl, pdrgpcrIndexColumns,
-											stats) *
+	CDouble dUnindexedPredCost =
+		ulUnindexedPredCount * dIndexCostConversionFactor;
+	CDouble dUnusedIndexCost =
+		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats) *
 		dIndexCostConversionFactor;
-
-	CDouble dTotalAdditionalCost =
-		dTotalAdditionalMissingPredCost + dTotalAdditionalMissingIndexCost;
 
 	pdrgpcrIndexColumns->Release();
 
@@ -1825,7 +1812,7 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *mp GPOS_UNUSED,
 							   ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
 	return CCost(pci->NumRebinds() *
 				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor +
-				  dTotalAdditionalCost));
+				  dUnindexedPredCost + dUnusedIndexCost));
 }
 
 
@@ -1899,6 +1886,7 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	CDouble dRowsIndex = pci->Rows();
 
 	ULONG ulIndexKeys;
+	ULONG ulIncludedColWidth = 0;
 	IStatistics *stats = nullptr;
 
 	const COptCtxt *poctxt = COptCtxt::PoctxtFromTLS();
@@ -1906,61 +1894,24 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 
 	CColRefArray *pdrgpcrIndexColumns = nullptr;
 
-	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
-	// cost per index row. Account for that cost in dCostPerIndexRow.
-	CColumnDescriptorArray *indexIncludedArray = nullptr;
-
 	if (COperator::EopPhysicalIndexOnlyScan == pop->Eopid())
 	{
-		ulIndexKeys =
-			CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->Keys();
-		stats = CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
-		indexIncludedArray = CPhysicalIndexOnlyScan::PopConvert(pop)
-								 ->Pindexdesc()
-								 ->PdrgpcoldescIncluded();
-		const IMDRelation *pmdrel = md_accessor->RetrieveRel(
-			CPhysicalIndexOnlyScan::PopConvert(pop)->Ptabdesc()->MDId());
-
-		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(
-			CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->MDId());
-
-		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
-			mp, CPhysicalIndexOnlyScan::PopConvert(pop)->PdrgpcrOutput(),
-			pmdindex, pmdrel);
+		CPhysicalIndexOnlyScan *ptr = CPhysicalIndexOnlyScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
 	}
 	else
 	{
-		ulIndexKeys = CPhysicalDynamicIndexOnlyScan::PopConvert(pop)
-						  ->Pindexdesc()
-						  ->Keys();
-		stats =
-			CPhysicalDynamicIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
-		indexIncludedArray = CPhysicalDynamicIndexOnlyScan::PopConvert(pop)
-								 ->Pindexdesc()
-								 ->PdrgpcoldescIncluded();
-		const IMDRelation *pmdrel = md_accessor->RetrieveRel(
-			CPhysicalDynamicIndexOnlyScan::PopConvert(pop)->Ptabdesc()->MDId());
-
-		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(
-			CPhysicalDynamicIndexOnlyScan::PopConvert(pop)
-				->Pindexdesc()
-				->MDId());
-
-		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
-			mp, CPhysicalDynamicIndexOnlyScan::PopConvert(pop)->PdrgpcrOutput(),
-			pmdindex, pmdrel);
-	}
-
-	ULONG ulIncludedColWidth = 0;
-	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
-	{
-		ulIncludedColWidth += (*indexIncludedArray)[ul]->Width();
+		CPhysicalDynamicIndexOnlyScan *ptr =
+			CPhysicalDynamicIndexOnlyScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
 	}
 
 
-	// 1. Total additional cost only includes cost component of 'Missing Index'
-	// columns in the predicate.
-	// 2. No additional cost is required for 'Missing Predicate' column in the
+	// 1. For 'Index only scans' cost component for 'Unused Index' columns
+	// in the predicate is required.
+	// 2. No additional cost is required for 'Unindexed Predicate' column in the
 	// index, as in that case, Index Only scan will not exist.
 	// 3. For Eg select a,b from t1 where a=1 and b = 'aa1' and c =17;
 	// Assuming only index idx_ab, exists, then since column 'c'
@@ -1972,9 +1923,8 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexCostConversionFactor)
 			->Get();
 
-	CDouble dTotalAdditionalCost =
-		ComputeAdditionalMissingIndexWeight(mp, exprhdl, pdrgpcrIndexColumns,
-											stats) *
+	CDouble dUnusedIndexCost =
+		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats) *
 		dIndexCostConversionFactor;
 
 	pdrgpcrIndexColumns->Release();
@@ -2006,7 +1956,7 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 
 	return CCost(pci->NumRebinds() *
 				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor +
-				  dTotalAdditionalCost));
+				  dUnusedIndexCost));
 }
 
 CCost

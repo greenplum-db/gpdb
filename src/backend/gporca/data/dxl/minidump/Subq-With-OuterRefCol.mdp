@@ -515,7 +515,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
     <dxl:Plan Id="0" SpaceSize="3984">
       <dxl:Limit>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1724.005314" Rows="10.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1724.005263" Rows="10.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -527,7 +527,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
         </dxl:ProjList>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1724.005234" Rows="10.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1724.005183" Rows="10.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -544,7 +544,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
           </dxl:SortingColumnList>
           <dxl:Limit>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1724.004936" Rows="10.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1724.004885" Rows="10.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -556,7 +556,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
             </dxl:ProjList>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1724.004909" Rows="20.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1724.004858" Rows="20.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -575,7 +575,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
               <dxl:LimitOffset/>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1724.004082" Rows="20.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1724.004030" Rows="20.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">
@@ -595,7 +595,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
                 </dxl:HashCondList>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000231" Rows="30.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000209" Rows="30.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="c">
@@ -618,7 +618,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
                 </dxl:TableScan>
                 <dxl:NestedLoopJoin JoinType="In" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1293.000555" Rows="20.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1293.000526" Rows="20.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="a">
@@ -631,7 +631,7 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
                   </dxl:JoinFilter>
                   <dxl:TableScan>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000154" Rows="20.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000139" Rows="20.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="a">
@@ -654,37 +654,37 @@ pivotal=# explain select a, c from r, s where a in (select c from r) order by a,
                   </dxl:TableScan>
                   <dxl:Materialize Eager="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000226" Rows="3.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000211" Rows="3.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
                     <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1,2">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000225" Rows="3.000000" Width="1"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000210" Rows="3.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList/>
                       <dxl:Filter/>
                       <dxl:SortingColumnList/>
                       <dxl:Limit>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000171" Rows="1.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000157" Rows="1.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000170" Rows="1.000000" Width="1"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000156" Rows="1.000000" Width="1"/>
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:Filter/>
                           <dxl:SortingColumnList/>
                           <dxl:Limit>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.000167" Rows="1.000000" Width="1"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000152" Rows="1.000000" Width="1"/>
                             </dxl:Properties>
                             <dxl:ProjList/>
                             <dxl:TableScan>
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="431.000154" Rows="20.000000" Width="1"/>
+                                <dxl:Cost StartupCost="0" TotalCost="431.000139" Rows="20.000000" Width="1"/>
                               </dxl:Properties>
                               <dxl:ProjList/>
                               <dxl:Filter/>

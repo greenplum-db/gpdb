@@ -1924,7 +1924,7 @@
     <dxl:Plan Id="0" SpaceSize="10">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1765476.121078" Rows="4.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="1765474.620713" Rows="4.000000" Width="36"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -1959,7 +1959,7 @@
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1765476.120541" Rows="4.000000" Width="36"/>
+            <dxl:Cost StartupCost="0" TotalCost="1765474.620176" Rows="4.000000" Width="36"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -2004,7 +2004,7 @@
           <dxl:OneTimeFilter/>
           <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1765476.120409" Rows="4.000000" Width="36"/>
+              <dxl:Cost StartupCost="0" TotalCost="1765474.620045" Rows="4.000000" Width="36"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -2154,7 +2154,7 @@
             </dxl:HashJoin>
             <dxl:Materialize Eager="true">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.020792" Rows="3.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.019327" Rows="3.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="a">
@@ -2170,7 +2170,7 @@
               <dxl:Filter/>
               <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.020780" Rows="3.000000" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.019315" Rows="3.000000" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="10" Alias="a">
@@ -2187,7 +2187,7 @@
                 <dxl:SortingColumnList/>
                 <dxl:TableScan>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.020136" Rows="1.000000" Width="12"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.018670" Rows="1.000000" Width="12"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="10" Alias="a">

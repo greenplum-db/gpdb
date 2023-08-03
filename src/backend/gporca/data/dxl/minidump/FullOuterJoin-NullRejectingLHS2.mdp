@@ -316,7 +316,7 @@
     <dxl:Plan Id="0" SpaceSize="7">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000725" Rows="3.500000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000721" Rows="3.500000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="10" Alias="d">
@@ -327,7 +327,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Right">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000673" Rows="3.500000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000669" Rows="3.500000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="10" Alias="d">
@@ -344,7 +344,7 @@
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="5.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000035" Rows="5.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="c">

@@ -392,7 +392,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000072" Rows="1.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -409,7 +409,7 @@ EXPLAIN SELECT * FROM listfoo WHERE b IS DISTINCT FROM NULL;
         <dxl:SortingColumnList/>
         <dxl:DynamicTableScan SelectorIds="">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

@@ -248,7 +248,7 @@ Optimizer status: PQO version 2.65.1
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000167" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000215" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="p">
@@ -259,7 +259,7 @@ Optimizer status: PQO version 2.65.1
         <dxl:SortingColumnList/>
         <dxl:IndexScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000137" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000186" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="p">
@@ -269,16 +269,16 @@ Optimizer status: PQO version 2.65.1
           <dxl:Filter>
             <dxl:Comparison ComparisonOperator="&lt;@" OperatorMdid="0.489.1.0">
               <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
-              <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAaAQAAAAAAAAAAAAUQAAAAAAAABRAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRAAAAAAAAAFEAAAAAAAAAUQAAA&#xA;AAAAABRAAAAAAAAAAAA="/>
+              <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAaAQAAAAAAAAAAAAUQAAAAAAAABRAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRAAAAAAAAAFEAAAAAAAAAUQAAA&#10;AAAAABRAAAAAAAAAAAA="/>
             </dxl:Comparison>
           </dxl:Filter>
           <dxl:IndexCondList>
             <dxl:Comparison ComparisonOperator="&lt;@" OperatorMdid="0.489.1.0">
               <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
-              <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAaAQAAAAAAAAAAAAUQAAAAAAAABRAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRAAAAAAAAAFEAAAAAAAAAUQAAA&#xA;AAAAABRAAAAAAAAAAAA="/>
+              <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAaAQAAAAAAAAAAAAUQAAAAAAAABRAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRAAAAAAAAAFEAAAAAAAAAUQAAA&#10;AAAAABRAAAAAAAAAAAA="/>
             </dxl:Comparison>
           </dxl:IndexCondList>
-          <dxl:Partitions/>
+	  <dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.566276.1.0" IndexName="gist_tbl_point_index"/>
           <dxl:TableDescriptor Mdid="6.566257.1.0" TableName="gist_tbl">
             <dxl:Columns>

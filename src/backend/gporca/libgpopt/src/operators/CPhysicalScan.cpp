@@ -255,19 +255,6 @@ CPhysicalScan::ComputeTableStats(CMemoryPool *mp)
 
 	CColRefSet *pcrsHist = GPOS_NEW(mp) CColRefSet(mp);
 	CColRefSet *pcrsWidth = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcrOutput);
-
-	// All table columns, excepts system columns are included
-	// for generation of Histogram.
-	CColRefSetIter crsiHist(*pcrsWidth);
-	while (crsiHist.Advance())
-	{
-		CColRef *colref = crsiHist.Pcr();
-		if (!colref->IsSystemCol())
-		{
-			pcrsHist->Include(colref);
-		}
-	}
-
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	m_pstatsBaseTable =
 		md_accessor->Pstats(mp, m_ptabdesc->MDId(), pcrsHist, pcrsWidth);

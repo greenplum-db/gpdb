@@ -263,7 +263,7 @@ explain select b,c, count(c) over (partition by b) from (select * from foo) s;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000699" Rows="7.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000694" Rows="7.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="b">
@@ -280,7 +280,7 @@ explain select b,c, count(c) over (partition by b) from (select * from foo) s;
         <dxl:SortingColumnList/>
         <dxl:Window PartitionColumns="1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000282" Rows="7.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000276" Rows="7.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="b">
@@ -298,7 +298,7 @@ explain select b,c, count(c) over (partition by b) from (select * from foo) s;
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000282" Rows="7.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000276" Rows="7.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="b">
@@ -316,7 +316,7 @@ explain select b,c, count(c) over (partition by b) from (select * from foo) s;
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000152" Rows="7.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000147" Rows="7.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="b">
@@ -335,7 +335,7 @@ explain select b,c, count(c) over (partition by b) from (select * from foo) s;
               </dxl:HashExprList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000059" Rows="7.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="7.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="b">

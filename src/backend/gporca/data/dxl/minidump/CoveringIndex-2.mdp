@@ -1042,7 +1042,7 @@
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.230771" Rows="957.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.217460" Rows="957.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -1054,9 +1054,9 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:IndexOnlyScan IndexScanDirection="Forward">
+        <dxl:IndexScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.202240" Rows="957.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.188929" Rows="957.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -1094,7 +1094,7 @@
               <dxl:Column ColId="11" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
             </dxl:Columns>
           </dxl:TableDescriptor>
-        </dxl:IndexOnlyScan>
+        </dxl:IndexScan>
       </dxl:GatherMotion>
     </dxl:Plan>
   </dxl:Thread>

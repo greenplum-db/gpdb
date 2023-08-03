@@ -316,7 +316,7 @@ select * from y where m in (select 1 union select n from x);
     <dxl:Plan Id="0" SpaceSize="24">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.000521" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.000516" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="m">
@@ -330,7 +330,7 @@ select * from y where m in (select 1 union select n from x);
         <dxl:SortingColumnList/>
         <dxl:TableScan>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.000449" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.000444" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="m">
@@ -353,7 +353,7 @@ select * from y where m in (select 1 union select n from x);
               </dxl:ParamList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000111" Rows="2.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="2.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="10"/>
@@ -366,7 +366,7 @@ select * from y where m in (select 1 union select n from x);
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000101" Rows="4.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000100" Rows="4.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="10" Alias="?column?">
@@ -381,7 +381,7 @@ select * from y where m in (select 1 union select n from x);
                   <dxl:LimitOffset/>
                   <dxl:Append IsTarget="false" IsZapped="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000056" Rows="4.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="4.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="10" Alias="?column?">
@@ -415,7 +415,7 @@ select * from y where m in (select 1 union select n from x);
                     </dxl:Result>
                     <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000043" Rows="2.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="2.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="19" Alias="n">
@@ -426,20 +426,20 @@ select * from y where m in (select 1 union select n from x);
                       <dxl:OneTimeFilter/>
                       <dxl:Materialize Eager="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="2.000000" Width="1"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000037" Rows="2.000000" Width="1"/>
                         </dxl:Properties>
                         <dxl:ProjList/>
                         <dxl:Filter/>
                         <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000038" Rows="2.000000" Width="1"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="2.000000" Width="1"/>
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:Filter/>
                           <dxl:SortingColumnList/>
                           <dxl:TableScan>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="1"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000009" Rows="1.000000" Width="1"/>
                             </dxl:Properties>
                             <dxl:ProjList/>
                             <dxl:Filter/>

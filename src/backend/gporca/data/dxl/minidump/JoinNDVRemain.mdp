@@ -3042,7 +3042,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
     <dxl:Plan Id="0" SpaceSize="6">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="908.678263" Rows="1061.180292" Width="969"/>
+          <dxl:Cost StartupCost="0" TotalCost="911.682395" Rows="1061.180292" Width="969"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="ca_address_sk">
@@ -3176,7 +3176,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="904.846192" Rows="1061.180292" Width="969"/>
+            <dxl:Cost StartupCost="0" TotalCost="907.850324" Rows="1061.180292" Width="969"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="ca_address_sk">
@@ -3320,7 +3320,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
           </dxl:HashCondList>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="435.543000" Rows="140000.000000" Width="248"/>
+              <dxl:Cost StartupCost="0" TotalCost="438.546000" Rows="140000.000000" Width="248"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="ca_address_sk">
@@ -3391,7 +3391,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
           </dxl:TableScan>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.187767" Rows="42.000000" Width="721"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.188899" Rows="42.000000" Width="721"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="s_store_sk">
@@ -3486,7 +3486,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000826" Rows="14.000000" Width="721"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.001958" Rows="14.000000" Width="721"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="20" Alias="s_store_sk">

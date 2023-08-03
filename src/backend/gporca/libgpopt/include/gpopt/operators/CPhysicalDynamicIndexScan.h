@@ -41,8 +41,8 @@ private:
 	// order
 	COrderSpec *m_pos;
 
-	// count of number of predicate not applicable on the index
-	ULONG m_ulResidualPredicateSize;
+	// Number of predicate not applicable on the index
+	ULONG m_ulUnindexedPredColCount;
 
 public:
 	CPhysicalDynamicIndexScan(const CPhysicalDynamicIndexScan &) = delete;
@@ -55,7 +55,7 @@ public:
 							  CColRef2dArray *pdrgpdrgpcrPart, COrderSpec *pos,
 							  IMdIdArray *partition_mdids,
 							  ColRefToUlongMapArray *root_col_mapping_per_part,
-							  ULONG m_ulResidualPredicateSize);
+							  ULONG ulUnindexedPredColCount);
 
 	// dtor
 	~CPhysicalDynamicIndexScan() override;
@@ -92,7 +92,7 @@ public:
 	ULONG
 	ResidualPredicateSize() const
 	{
-		return m_ulResidualPredicateSize;
+		return m_ulUnindexedPredColCount;
 	}
 
 	//-------------------------------------------------------------------------------------

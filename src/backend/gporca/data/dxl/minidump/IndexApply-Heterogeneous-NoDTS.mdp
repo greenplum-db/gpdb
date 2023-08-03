@@ -673,7 +673,7 @@ ORDER BY 1 asc ;
     <dxl:Plan Id="0" SpaceSize="60">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="437.000891" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.000991" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -686,7 +686,7 @@ ORDER BY 1 asc ;
         </dxl:SortingColumnList>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="437.000873" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.000973" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="1"/>
@@ -699,7 +699,7 @@ ORDER BY 1 asc ;
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.000864" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000964" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -714,7 +714,7 @@ ORDER BY 1 asc ;
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="437.000773" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="437.000873" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -730,7 +730,7 @@ ORDER BY 1 asc ;
               </dxl:HashExprList>
               <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="437.000757" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="437.000857" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="event_ts">
@@ -779,7 +779,7 @@ ORDER BY 1 asc ;
                 </dxl:BroadcastMotion>
                 <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="6.000506" Rows="1.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6.000605" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="11" Alias="ets">

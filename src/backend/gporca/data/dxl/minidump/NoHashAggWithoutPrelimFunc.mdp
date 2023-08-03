@@ -1091,6 +1091,10 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
           <dxl:LowerBound Closed="false" TypeMdid="0.25.1.0" Value="AAAAB04vQQ==" LintValue="826024748"/>
           <dxl:UpperBound Closed="false" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV8zMzE6YWxwaGE6I2F0&#10;dHJpYnV0ZV8zMzE6c2hvcnQ6" LintValue="633553702"/>
         </dxl:StatsBucket>
+        <dxl:StatsBucket Frequency="0.010106" DistinctValues="2.300000">
+          <dxl:LowerBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV8zMzE6YWxwaGE6I2F0&#10;dHJpYnV0ZV8zMzE6c2hvcnQ6" LintValue="633553702"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV81Mzg6YWxwaGE6I2F0&#10;dHJpYnV0ZV81Mzg6c2hvcnQ6" LintValue="633553702"/>
+        </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.010638" DistinctValues="1.000000">
           <dxl:LowerBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV81NDM6YWxwaGE6I2F0&#10;dHJpYnV0ZV81NDM6c2hvcnQ6" LintValue="633553702"/>
           <dxl:UpperBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV81NDM6YWxwaGE6I2F0&#10;dHJpYnV0ZV81NDM6c2hvcnQ6" LintValue="633553702"/>
@@ -1320,6 +1324,14 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
         <dxl:StatsBucket Frequency="0.010132" DistinctValues="1.190476">
           <dxl:LowerBound Closed="false" TypeMdid="0.25.1.0" Value="AAAAFmRhdGEgbm90IGF2YWlsYWJsZQ==" LintValue="302031670"/>
           <dxl:UpperBound Closed="false" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV8zMzE6YWxwaGE6I2F0&#10;dHJpYnV0ZV8zMzE6c2hvcnQ6" LintValue="633553702"/>
+        </dxl:StatsBucket>
+        <dxl:StatsBucket Frequency="0.010132" DistinctValues="2.190476">
+          <dxl:LowerBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV8zMzE6YWxwaGE6I2F0&#10;dHJpYnV0ZV8zMzE6c2hvcnQ6" LintValue="633553702"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV81Mzg6YWxwaGE6I2F0&#10;dHJpYnV0ZV81Mzg6c2hvcnQ6" LintValue="633553702"/>
+        </dxl:StatsBucket>
+        <dxl:StatsBucket Frequency="0.010132" DistinctValues="2.190476">
+          <dxl:LowerBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV81Mzg6YWxwaGE6I2F0&#10;dHJpYnV0ZV81Mzg6c2hvcnQ6" LintValue="633553702"/>
+          <dxl:UpperBound Closed="false" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV82NDg6YWxwaGE6I2F0&#10;dHJpYnV0ZV82NDg6c2hvcnQ6" LintValue="633553702"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.021277" DistinctValues="1.000000">
           <dxl:LowerBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAP3Rlcm06MXlyIFJldCBCYXNlI2F0dHJpYnV0ZV82NDg6YWxwaGE6I2F0&#10;dHJpYnV0ZV82NDg6c2hvcnQ6" LintValue="633553702"/>
@@ -1943,7 +1955,7 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.033403" Rows="22.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.034876" Rows="22.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="product_id">
@@ -1957,7 +1969,7 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.032217" Rows="22.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.033691" Rows="22.000000" Width="12"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>
@@ -1969,20 +1981,20 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
             <dxl:ProjElem ColId="17" Alias="attr">
               <dxl:AggFunc AggMdid="0.1553621.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                 <dxl:ValuesList ParamType="aggargs">
+                <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
                   <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
                     <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
-                      <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
-                        <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAADyNhdHRyaWJ1dGVf" LintValue="309584700"/>
-                        <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                          <dxl:FuncExpr FuncId="0.112.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0" FuncVariadic="false">
-                            <dxl:Ident ColId="1" ColName="attribute_id" TypeMdid="0.23.1.0"/>
-                          </dxl:FuncExpr>
-                        </dxl:Cast>
-                      </dxl:OpExpr>
-                      <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABTo=" LintValue="161169964"/>
+                      <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAADyNhdHRyaWJ1dGVf" LintValue="309584700"/>
+                      <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                        <dxl:FuncExpr FuncId="0.112.1.0" FuncRetSet="false" TypeMdid="0.1043.1.0">
+                          <dxl:Ident ColId="1" ColName="attribute_id" TypeMdid="0.23.1.0"/>
+                        </dxl:FuncExpr>
+                      </dxl:Cast>
                     </dxl:OpExpr>
-                    <dxl:Ident ColId="2" ColName="attribute" TypeMdid="0.25.1.0"/>
+                    <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABTo=" LintValue="161169964"/>
                   </dxl:OpExpr>
+                  <dxl:Ident ColId="2" ColName="attribute" TypeMdid="0.25.1.0"/>
+                </dxl:OpExpr>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -1993,7 +2005,7 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.031391" Rows="94.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.032865" Rows="94.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="product_id">
@@ -2014,7 +2026,7 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.007708" Rows="94.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.009181" Rows="94.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="product_id">
@@ -2036,7 +2048,7 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
               </dxl:HashExprList>
               <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.003955" Rows="94.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.005428" Rows="94.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="product_id">

@@ -230,7 +230,7 @@ update constraints_tab SET notnullcol = NULL, positivecol =-1;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLUpdate Columns="0,10,11" ActionCol="12" CtidCol="3" SegmentIdCol="9" IsSplitUpdate="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.033881" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.033880" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -260,7 +260,7 @@ update constraints_tab SET notnullcol = NULL, positivecol =-1;
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="26"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="1.000000" Width="26"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id">
@@ -283,7 +283,7 @@ update constraints_tab SET notnullcol = NULL, positivecol =-1;
           <dxl:OneTimeFilter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000009" Rows="1.000000" Width="14"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000008" Rows="1.000000" Width="14"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="id">

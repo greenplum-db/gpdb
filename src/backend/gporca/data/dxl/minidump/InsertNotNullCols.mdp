@@ -195,7 +195,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:DMLInsert Columns="0,1" ActionCol="9" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.031290" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.031288" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -221,7 +221,7 @@
         </dxl:TableDescriptor>
         <dxl:Assert ErrorCode="23502">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000040" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000038" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -245,7 +245,7 @@
           </dxl:AssertConstraintList>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000032" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000030" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -262,7 +262,7 @@
             <dxl:OneTimeFilter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000013" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

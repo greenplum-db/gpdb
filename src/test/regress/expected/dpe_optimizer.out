@@ -209,13 +209,12 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=2)
-               Index Cond: (pt1 = t.t1)
-               Filter: ((pt1 = t.t1) AND (ptid = t.tid))
+         ->  Dynamic Index Scan on ptid_pt1_idx on pt (actual rows=1 loops=2)
+               Index Cond: ((ptid = t.tid) AND (pt1 = t.t1))
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(10 rows)
 
 select * from t, pt where t1 = pt1 and ptid = tid;
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -269,9 +268,13 @@ select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
    48 | hello48 | world | drop this |    0
 (18 rows)
 
+-- With the updated Index scan costing, additional rows are added to enable DPE using
+-- dynamic index only scan on ptid_pt1_idx. These rows are deleted after this test.
+insert into pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(54,2500) i;
+vacuum analyze pt;
 explain (costs off, timing off, summary off, analyze) select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
    ->  Hash Semi Join (actual rows=1 loops=1)
          Hash Cond: (pt.ptid = t.tid)
@@ -287,7 +290,7 @@ explain (costs off, timing off, summary off, analyze) select ptid from pt where 
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
                                  Filter: (t1 = ('hello'::text || (tid)::text))
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (16 rows)
 
 select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
@@ -296,6 +299,8 @@ select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) 
     1
 (1 row)
 
+delete from pt where dist>53;
+vacuum analyze pt;
 -- start_ignore
 -- Known_opt_diff: MPP-21320
 -- end_ignore
@@ -995,9 +1000,8 @@ explain (costs off, timing off, summary off, analyze) select count(*) from pt, p
                            Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                            ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-                                       ->  Dynamic Index Only Scan on ptid_pt1_idx on pt (actual rows=1 loops=1)
+                                       ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=1)
                                              Index Cond: (pt1 = 'hello0'::text)
-                                             Heap Fetches: 0
                                              Number of partitions to scan: 6 (out of 6)
                                              Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)

@@ -297,7 +297,7 @@ select j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t;
             <dxl:OneTimeFilter/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="15"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000024" Rows="1.000000" Width="15"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="d">

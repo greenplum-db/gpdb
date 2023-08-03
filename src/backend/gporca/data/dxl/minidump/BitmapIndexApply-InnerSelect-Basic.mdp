@@ -331,7 +331,7 @@ select * from x, y where x.i > y.j and y.k = 10;
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="822.297061" Rows="1.000000" Width="48"/>
+          <dxl:Cost StartupCost="0" TotalCost="822.297052" Rows="1.000000" Width="48"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -363,7 +363,7 @@ select * from x, y where x.i > y.j and y.k = 10;
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="822.296882" Rows="1.000000" Width="48"/>
+            <dxl:Cost StartupCost="0" TotalCost="822.296873" Rows="1.000000" Width="48"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -397,7 +397,7 @@ select * from x, y where x.i > y.j and y.k = 10;
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.001145" Rows="3.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.001137" Rows="3.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -417,7 +417,7 @@ select * from x, y where x.i > y.j and y.k = 10;
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">

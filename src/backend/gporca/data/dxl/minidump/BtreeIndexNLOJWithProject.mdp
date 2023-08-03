@@ -624,7 +624,7 @@
     <dxl:Plan Id="0" SpaceSize="9">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="437.001036" Rows="1.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="437.001022" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="dist_e">
@@ -656,7 +656,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="437.000917" Rows="1.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="437.000902" Rows="1.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="dist_e">
@@ -721,7 +721,7 @@
           </dxl:TableScan>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000827" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000812" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="21" Alias="empty_col">
@@ -744,7 +744,7 @@
             <dxl:OneTimeFilter/>
             <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6.000820" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="6.000806" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="dist_a">

@@ -466,7 +466,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.062332" Rows="1.000000" Width="38"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.062337" Rows="1.000000" Width="38"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="c1">
@@ -516,7 +516,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.062190" Rows="1.000000" Width="38"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.062195" Rows="1.000000" Width="38"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c1">
@@ -568,7 +568,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.001078" Rows="3.000000" Width="19"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.001083" Rows="3.000000" Width="19"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="c1">
@@ -597,7 +597,7 @@ EXPLAIN SELECT * FROM s i1, t t2 where t2.c2 = i1.c2  and t2.c3 > i1.c3 or t2.c1
             <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000022" Rows="1.000000" Width="19"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="19"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="c1">
