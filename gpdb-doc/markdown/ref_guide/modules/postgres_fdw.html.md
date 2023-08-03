@@ -12,7 +12,7 @@ The `postgres_fdw` module is installed when you install Greenplum Database. Befo
 
 ## <a id="using_mrs"></a>Using postgres_fdw to Access Multiple Remote PostgreSQL Servers
 
-You can use a foreign table that you create with `postgres_fdw` to access data that is distributed across multiple remote PostgreSQL servers when you set certain [CREATE SERVER](../sql_commands/CREATE_SERVER.html) Greenplum and `postgres_fdw`-specific options:
+Before you create a foreign table using the `postgres_fdw` foreign-data wrapper, you must configure a server with the [CREATE SERVER](../sql_commands/CREATE_SERVER.html) command. You can use a `postgres_fdw` foreign table to access data that is distributed across multiple remote PostgreSQL servers when you set certain Greenplum and `postgres_fdw`-specific options on the `CREATE SERVER` command:
 
 | Option Name | Description | Value |
 |-------------|-----|-------------|
@@ -21,9 +21,17 @@ You can use a foreign table that you create with `postgres_fdw` to access data t
 | multi_hosts | Space-separated list of remote PostgreSQL server host names. | You must specify exactly `num_segments` number of hosts in the list. |
 | multi_ports | Space-separated list of port numbers for the PostgreSQL servers. | You must specify exactly one port number for each host specified in `multi_hosts`, in order. |
 
-<sup>1</sup> The Greenplum Query Optimizer (GPORCA) can not plan and optimize queries when `num_segments` is not equal to the number of segments in the local Greenplum cluster; such queries always fall back to the Postgres Planner.
+<sup>1</sup> The Greenplum Query Optimizer (GPORCA) can plan and optimize queries only when `num_segments` is equal to the number of segments in the local Greenplum cluster. When `num_segments` is any other value, a query always falls back to the Postgres Planner.
 
 Setting these options instructs `postgres_fdw` to treat a foreign table that you create that specifes this `SERVER` as a *distributed* foreign table. That is, a foreign table whose underlying data is stored on multiple remote PostgreSQL servers. `postgres_fdw` directs a query on such a foreign table to each PostgreSQL server specified in `multi_hosts`.
+
+An example `CREATE SERVER` command that configures access to PostgreSQL servers running on `pghost1` and `pghost2` follows:
+
+``` sql
+CREATE SERVER dist_pgserver
+  FOREIGN DATA WRAPPER postgres_fdw
+OPTIONS (multi_hosts 'pghost1 pghost2', multi_ports '5432 5555', num_segments '2', mpp_execute 'all segments');
+```
 
 ## <a id="pushdown"></a>About Aggregate Pushdown Support
 
@@ -37,7 +45,7 @@ Setting these options instructs `postgres_fdw` to treat a foreign table that you
 > **Note** `postgres_fdw` does not support partial aggregate pushdown when the Greenplum Query Optimizer (GPORCA) is enabled for a query.
 
 
-## <a id="topic_gp_limit"></a>Limitations 
+## <a id="topic_gp_limit"></a>Distributed postgres_fdw Limitations 
 
 When you use the foreign-data wrapper to access multiple remote PostgreSQL servers, Greenplum Database `postgres_fdw` has the following limitations:
 
