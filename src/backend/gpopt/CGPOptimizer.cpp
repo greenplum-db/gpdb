@@ -265,13 +265,32 @@ InitGPOPT()
 {
 	GPOS_TRY
 	{
-		return CGPOptimizer::InitGPOPT();
+		try
+		{
+			CGPOptimizer::InitGPOPT();
+		}
+		catch (CException ex)
+		{
+			throw ex;
+		}
+		catch (...)
+		{
+			// unexpected failure
+			GPOS_RAISE(CException::ExmaUnhandled, CException::ExmiUnhandled);
+		}
 	}
 	GPOS_CATCH_EX(ex)
 	{
 		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
 		{
 			PG_RE_THROW();
+		}
+
+		if (errstart(ERROR, TEXTDOMAIN))
+		{
+			errcode(ERRCODE_INTERNAL_ERROR);
+			errmsg("optimizer failed to init");
+			errfinish(ex.Filename(), ex.Line(), nullptr);
 		}
 	}
 	GPOS_CATCH_END;

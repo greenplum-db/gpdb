@@ -130,28 +130,10 @@ gpos_init(struct gpos_init_params *params)
 {
 	CWorker::abort_requested_by_system = params->abort_requested;
 
-	if (GPOS_OK != gpos::CMemoryPoolManager::Init())
-	{
-		return;
-	}
-
-	if (GPOS_OK != gpos::CWorkerPoolManager::Init())
-	{
-		CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
-		return;
-	}
-
-	if (GPOS_OK != gpos::CMessageRepository::Init())
-	{
-		CWorkerPoolManager::Shutdown();
-		CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
-		return;
-	}
-
-	if (GPOS_OK != gpos::CCacheFactory::Init())
-	{
-		return;
-	}
+	CMemoryPoolManager::Init();
+	CWorkerPoolManager::Init();
+	CMessageRepository::Init();
+	CCacheFactory::Init();
 
 #ifdef GPOS_DEBUG_COUNTERS
 	CDebugCounter::Init();

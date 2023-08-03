@@ -26,7 +26,7 @@ using namespace gpdxl;
 //		Message initialization for DXL exceptions
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 gpdxl::EresExceptionInit(CMemoryPool *mp)
 {
 	//---------------------------------------------------------------------------
@@ -279,32 +279,19 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 
 	};
 
-	GPOS_RESULT eres = GPOS_FAILED;
-
-	GPOS_TRY
+	// copy exception array into heap
+	CMessage *rgpmsg[ExmiDXLSentinel];
+	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
 	{
-		// copy exception array into heap
-		CMessage *rgpmsg[ExmiDXLSentinel];
-		for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
-		{
-			rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
-		}
-
-		CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
-
-		for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgmsg); i++)
-		{
-			pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
-		}
-
-		eres = GPOS_OK;
+		rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
 	}
-	GPOS_CATCH_EX(ex)
+
+	CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
+
+	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgmsg); i++)
 	{
+		pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
 	}
-	GPOS_CATCH_END;
-
-	return eres;
 }
 
 

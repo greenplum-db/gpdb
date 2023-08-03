@@ -24,7 +24,7 @@ using namespace gpos;
 //		Message initialization for GPOPT exceptions
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 gpopt::EresExceptionInit(CMemoryPool *mp)
 {
 	//---------------------------------------------------------------------------
@@ -113,30 +113,15 @@ gpopt::EresExceptionInit(CMemoryPool *mp)
 				 GPOS_WSZ_WSZLEN("Missing group stats")),
 	};
 
-	GPOS_RESULT eres = GPOS_FAILED;
+	// copy exception array into heap
+	CMessage *rgpmsg[gpopt::ExmiSentinel];
+	CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
 
-	GPOS_TRY
+	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
 	{
-		// copy exception array into heap
-		CMessage *rgpmsg[gpopt::ExmiSentinel];
-		CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
-
-		for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
-		{
-			rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
-			pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
-		}
-
-		eres = GPOS_OK;
+		rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
+		pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
 	}
-	GPOS_CATCH_EX(ex)
-	{
-		return GPOS_FAILED;
-	}
-
-	GPOS_CATCH_END;
-
-	return eres;
 }
 
 
