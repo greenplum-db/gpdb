@@ -174,7 +174,7 @@ test_HandleFtsWalRepPromoteMirror(void **state)
 	expect_value(ReplicationSlotCreate, db_specific, false);
 	expect_value(ReplicationSlotCreate, persistency, RS_PERSISTENT);
 	will_be_called_with_sideeffect(ReplicationSlotCreate,
-								   set_replication_slot, &ReplicationSlotCtl);
+								   set_replication_slot, ReplicationSlotCtl);
 
 	/* expect SignalPromote() */
 	expectSendFtsResponse(FTS_MSG_PROMOTE, &mockresponse);
