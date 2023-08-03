@@ -53,7 +53,7 @@ def run_exkeys(hosts, capture=False):
         subprocess.check_call(args)
         return
 
-    completed_proc = subprocess.run(args, capture_output=True)
+    completed_proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     ret = completed_proc.returncode
     stored_out = completed_proc.stdout.decode()
     stored_err = completed_proc.stderr.decode()
