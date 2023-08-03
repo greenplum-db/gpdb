@@ -449,6 +449,7 @@ enum Edxltoken
 	EdxltokenVersion,
 	EdxltokenMdid,
 	EdxltokenLockMode,
+	EdxltokenAclMode,
 	EdxltokenMDTypeRequest,
 	EdxltokenTypeInfo,
 	EdxltokenFuncInfo,
@@ -735,6 +736,7 @@ enum Edxltoken
 	EdxltokenIndexTypeBrin,
 
 	EdxltokenForeignServerOid,
+	EdxltokenPhysicalDynamicIndexOnlyScan,
 
 	EdxltokenSentinel
 };

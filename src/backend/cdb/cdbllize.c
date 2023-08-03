@@ -1177,7 +1177,8 @@ cdbllize_build_slice_table(PlannerInfo *root, Plan *top_plan,
 			 * list, because that would screw up the plan_id numbering of the
 			 * subplans).
 			 */
-			pfree(lfirst(lc));
+			if (lfirst(lc) != NULL)
+				pfree(lfirst(lc));
 			dummy_plan = (Plan *) make_result(NIL,
 											  (Node *) list_make1(makeBoolConst(false, false)),
 											  NULL);

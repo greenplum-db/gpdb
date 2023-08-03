@@ -72,6 +72,33 @@ def remove_dup_add_entries(lines, entries):
 
     return out_entries
 
+def remove_stale_replication_entries(existing_hba, entries):
+    final_entries = []
+    replication_entry = "replication" in entries
+
+    for line in existing_hba:
+        if line not in entries.split('\n'):
+            # check for stale replication entries on existing pg_hba.conf
+            if replication_entry and is_stale_replication_entry(line):
+                continue
+        final_entries.append(line.strip())
+
+    return final_entries
+
+def is_stale_replication_entry(line):
+    # Here considering all non-local replication entries as stale.
+    # This assumes 1:1 replication and will not work with 1:N replication.
+
+    localhost_entries = ["127.0.0.1/32", "::1/128", "local", "samehost"]
+    # return False if line is a comment or not a replication entry
+    if line.startswith('#') or "replication" not in line:
+        return False
+    # keep replication entries present for localhost
+    if any(entry in line for entry in localhost_entries):
+        return False
+
+    return True
+
 def run_pg_ctl_reload(datadir):
     name = "pg_ctl reload"
     cmd_str = "$GPHOME/bin/pg_ctl reload -D %s" % datadir
@@ -83,8 +110,10 @@ def main():
     hba_filename = options.datadir +'/pg_hba.conf'
     lines, temp_hba_filename = read_from_hba_file_and_get_empty_tempfile(hba_filename)
     out_entries = remove_dup_add_entries(lines, options.entries)
-    write_entries(out_entries, temp_hba_filename, hba_filename)
+    final_entries = remove_stale_replication_entries(out_entries, options.entries)
+    write_entries(final_entries, temp_hba_filename, hba_filename)
     run_pg_ctl_reload(options.datadir)
 
 if __name__ == "__main__":
     main()
+

@@ -10,10 +10,9 @@ import pwd
 import sys
 import re
 from contextlib import closing
-from distutils.version import LooseVersion
 from optparse import OptionParser
-import pgdb
-from gppylib.utils import formatInsertValuesList, Escape
+from gppylib.utils import formatInsertValuesList, escape_string
+import psycopg2
 
 gpsd_version = '%prog 1.0'
 
@@ -43,7 +42,7 @@ def get_num_segments(cursor):
     query = "select count(*) from gp_segment_configuration where role='p' and content >=0;"
     try:
         cursor.execute(query)
-    except pgdb.DatabaseError as e:
+    except psycopg2.DatabaseError as e:
         sys.stderr.write('\nError while trying to retrieve number of segments.\n\n' + str(e) + '\n\n')
         sys.exit(1)
     vals = cursor.fetchone()
@@ -83,7 +82,13 @@ def dumpTupleCount(cur):
 
 
 def dumpStats(cur, inclHLL):
-    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, pgs.* ' \
+    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, ' \
+        'pgs.starelid, pgs.staattnum, pgs.stainherit, pgs.stanullfrac, pgs.stawidth, pgs.stadistinct, ' \
+        'pgs.stakind1, pgs.stakind2, pgs.stakind3, pgs.stakind4, pgs.stakind5, ' \
+        'pgs.staop1, pgs.staop2, pgs.staop3, pgs.staop4, pgs.staop5, ' \
+        'pgs.stacoll1, pgs.stacoll2, pgs.stacoll3, pgs.stacoll4, pgs.stacoll5, ' \
+        'pgs.stanumbers1, pgs.stanumbers2, pgs.stanumbers3, pgs.stanumbers4, pgs.stanumbers5, ' \
+        'pgs.stavalues1::text::text[], pgs.stavalues2::text::text[], pgs.stavalues3::text::text[], pgs.stavalues4::text::text[], pgs.stavalues5::text::text[] ' \
         'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt, pg_namespace pgtn ' \
         'WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN ' + \
         sysnslist + \
@@ -102,7 +107,7 @@ def dumpStats(cur, inclHLL):
     cur.execute(query)
 
     for vals in ResultIter(cur):
-        starelid = "'%s.%s'::regclass" % (Escape(vals[1]), Escape(vals[0]))
+        starelid = "'%s.%s'::regclass" % (escape_string(vals[1]), escape_string(vals[0]))
         rowVals = formatInsertValuesList(vals, starelid, inclHLL)
         print(pstring.format(vals[0], vals[2], ',\n'.join(rowVals)))
 
@@ -177,7 +182,7 @@ def main():
     'options': pgoptions
     }
     num_segments = 0
-    with closing(pgdb.connect(**connectionInfo)) as connection:
+    with closing(psycopg2.connect(**connectionInfo)) as connection:
         with closing(connection.cursor()) as cursor:
             num_segments = get_num_segments(cursor)
     sys.stdout.writelines(['\n-- Greenplum database Statistics Dump',
@@ -212,7 +217,7 @@ def main():
     sys.stdout.flush()
 
     try:
-        with closing(pgdb.connect(**connectionInfo)) as connection:
+        with closing(psycopg2.connect(**connectionInfo)) as connection:
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)
                 dumpStats(cursor, inclHLL)
@@ -222,11 +227,11 @@ def main():
                                'which requires some data elements to be included in the output file.\n',
                                'Please review output file to ensure it is within corporate policy to transport the output file.\n'])
 
-    except pgdb.DatabaseError as err:  # catch *all* exceptions
+    except psycopg2.DatabaseError as err:  # catch *all* exceptions
         sys.stderr.write('Error while dumping statistics:\n')
         sys.stderr.write(err.message)
         sys.exit(1)
 
 
 if __name__ == "__main__":
-        main()
+    main()

@@ -30,47 +30,6 @@ platform_list = [LINUX, DARWIN, FREEBSD, OPENBSD]
 
 curr_platform = platform.uname()[0].lower()
 
-GPHOME = os.environ.get('GPHOME', None)
-
-# ---------------command path--------------------
-CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
-           '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
-CMDPATH = CMDPATH + os.environ['PATH'].split(os.pathsep)
-# remove duplicate paths
-CMDPATH = list(set(CMDPATH))
-
-if GPHOME:
-    CMDPATH.append(GPHOME)
-
-CMD_CACHE = {}
-
-
-# ----------------------------------
-class CommandNotFoundException(Exception):
-    def __init__(self, cmd, paths):
-        self.cmd = cmd
-        self.paths = paths
-
-    def __str__(self):
-        return "Could not locate command: '%s' in this set of paths: %s" % (self.cmd, repr(self.paths))
-
-
-def findCmdInPath(cmd):
-    global CMD_CACHE
-
-    if cmd not in CMD_CACHE:
-        for p in CMDPATH:
-            f = os.path.join(p, cmd)
-            if os.path.exists(f):
-                CMD_CACHE[cmd] = f
-                return f
-
-        logger.critical('Command %s not found' % cmd)
-        search_path = CMDPATH[:]
-        raise CommandNotFoundException(cmd, search_path)
-    else:
-        return CMD_CACHE[cmd]
-
 
 # For now we'll leave some generic functions outside of the Platform framework
 def getLocalHostname():
@@ -173,6 +132,38 @@ def kill_sequence(pid):
 
     # all else failed - try SIGABRT
     logandkill(pid, signal.SIGABRT)
+
+"""
+Terminate a process tree (including grandchildren) with signal 'sig'.
+'on_terminate', if specified, is a callback function which is
+called as soon as a child terminates.
+"""
+def terminate_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
+    parent = psutil.Process(pid)
+
+    children = list()
+    terminated = set()
+
+    if include_parent:
+        children.append(parent)
+
+    children.extend(parent.children(recursive=True))
+    while children:
+        process = children.pop()
+        
+        try:
+            # Update the list with any new process spawned after the initial list creation
+            children.extend(process.children(recursive=True))
+            process.send_signal(sig)
+            terminated.add(process)
+        except psutil.NoSuchProcess:
+            pass
+
+    _, alive = psutil.wait_procs(terminated, timeout=timeout, callback=on_terminate)
+
+    # Forcefully terminate any remaining processes
+    for process in alive:
+        process.kill()
 
 
 # ---------------Platform Framework--------------------
@@ -487,7 +478,7 @@ class Rsync(Command):
     def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False,
                  verbose=True, archive_mode=True, checksum=False, delete=False, progress=False,
                  stats=False, dry_run=False, bwlimit=None, exclude_list=[], ctxt=LOCAL,
-                 remoteHost=None, compress=False, progress_file=None):
+                 remoteHost=None, compress=False, progress_file=None, ignore_times=False, whole_file=False):
 
         """
             rsync options:
@@ -505,6 +496,8 @@ class Rsync(Command):
                 dry_run: perform a trial run with no changes made
                 compress: compress file data during the transfer
                 progress: to show the progress of rsync execution, like % transferred
+                ignore_times: Not skip files that match modification time and size
+                whole_file: Copy file without rsync's delta-transfer algorithm
         """
 
         cmd_tokens = [findCmdInPath('rsync')]
@@ -521,6 +514,14 @@ class Rsync(Command):
         # To skip the files based on checksum, not modification time and size
         if checksum:
             cmd_tokens.append('-c')
+
+        # To not skip files that match modification time and size
+        if ignore_times:
+            cmd_tokens.append('--ignore-times')
+
+        # Copy file without rsync's delta-transfer algorithm
+        if whole_file:
+            cmd_tokens.append('--whole-file')
 
         if progress:
             cmd_tokens.append('--progress')

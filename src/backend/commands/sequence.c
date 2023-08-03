@@ -1314,7 +1314,7 @@ init_sequence_internal(Oid _relid, SeqTable *p_elm, Relation *p_rel,
 	 * discard any cached-but-unissued values.  We do not touch the currval()
 	 * state, however.
 	 */
-	if (seqrel->rd_rel->relfilenode != elm->filenode && called_from_dispatcher)
+	if (seqrel->rd_rel->relfilenode != elm->filenode)
 	{
 		elm->filenode = seqrel->rd_rel->relfilenode;
 		elm->cached = elm->last;

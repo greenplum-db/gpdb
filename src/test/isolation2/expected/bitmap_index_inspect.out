@@ -3,8 +3,6 @@
 -- inspect functions run against a single node, as opposed to the entire GP cluster)
 
 -- Setup
-1U: CREATE EXTENSION pageinspect;
-CREATE EXTENSION
 1U: CREATE TABLE bmtest_t1(i int, bmfield int);
 CREATE TABLE
 1U: CREATE INDEX bmtest_i1 ON bmtest_t1 USING bitmap(bmfield);
@@ -64,5 +62,3 @@ ERROR:  block 1 is not a bitmap page, it is a LOV item page (bmfuncs.c:507)
 -- cleanup
 1U: DROP TABLE bmtest_t1;
 DROP TABLE
-1U: DROP EXTENSION pageinspect;
-DROP EXTENSION

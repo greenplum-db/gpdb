@@ -20,6 +20,14 @@ select groupname
     on s.hostname=c.hostname and c.content=-1 and role='p'
  where groupname='default_group';
 
+select groupname
+     , groupid
+     , segment_id
+     , vmem_usage
+  from gp_toolkit.gp_resgroup_status_per_segment
+ where groupname='default_group'
+ order by segment_id;
+
 select *
   from gp_toolkit.gp_resgroup_role
  where rrrolname='gpadmin';
@@ -31,4 +39,5 @@ select *
 select * from gp_toolkit.gp_resgroup_config;
 select * from gp_toolkit.gp_resgroup_status;
 select * from gp_toolkit.gp_resgroup_status_per_host;
+select * from gp_toolkit.gp_resgroup_status_per_segment;
 -- end_ignore

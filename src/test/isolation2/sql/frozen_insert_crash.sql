@@ -101,7 +101,6 @@
 
 
 -- Same set of tests for bitmap LOV insert.
-create extension if not exists pageinspect;
 
 -- Function to check the bitmap lov content regarding the column 'b'
 -- which is the table column that we will have bitmap created on.
@@ -192,8 +191,6 @@ $$ LANGUAGE plpgsql;
 0U: set enable_seqscan = on;
 0U: select insert_bm_lov_res();
 0U: select * from bm_lov_res;
-
-1: drop extension pageinspect;
 
 -- Test for aoseg: suspend the insert into aoseg table before we mark the row frozen.
 -- Another session should still be able to choose a different segno.

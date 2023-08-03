@@ -855,6 +855,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	Assert(config);
 	root->config = config;
 
+	root->hasPseudoConstantQuals = false;
+	root->hasAlternativeSubPlans = false;
 	root->hasRecursion = hasRecursion;
 	if (hasRecursion)
 		root->wt_param_id = assign_special_exec_param(root);
@@ -1011,9 +1013,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * an empty qual list ... but "HAVING TRUE" is not a semantic no-op.
 	 */
 	root->hasHavingQual = (parse->havingQual != NULL);
-
-	/* Clear this flag; might get set in distribute_qual_to_rels */
-	root->hasPseudoConstantQuals = false;
 
 	/*
 	 * Do expression preprocessing on targetlist and quals, as well as other
@@ -3007,9 +3006,15 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 	 */
 	if (final_rel->fdwroutine &&
 		final_rel->fdwroutine->GetForeignUpperPaths)
-		final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL,
-													current_rel, final_rel,
-													&extra);
+	{
+		if(final_rel->exec_location != FTEXECLOCATION_ALL_SEGMENTS ||
+		   !final_rel->fdwroutine->IsMPPPlanNeeded || final_rel->fdwroutine->IsMPPPlanNeeded() == 0)
+		{
+			final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL,
+														current_rel, final_rel,
+														&extra);
+		}
+	}
 
 	/* Let extensions possibly add some more paths */
 	if (create_upper_paths_hook)
@@ -4789,9 +4794,15 @@ create_ordinary_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel,
 	 */
 	if (grouped_rel->fdwroutine &&
 		grouped_rel->fdwroutine->GetForeignUpperPaths)
-		grouped_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_GROUP_AGG,
-													  input_rel, grouped_rel,
-													  extra);
+	{
+		if(grouped_rel->exec_location != FTEXECLOCATION_ALL_SEGMENTS ||
+		   !grouped_rel->fdwroutine->IsMPPPlanNeeded || grouped_rel->fdwroutine->IsMPPPlanNeeded() == 0)
+		{
+			grouped_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_GROUP_AGG,
+														  input_rel, grouped_rel,
+														  extra);
+		}
+	}
 
 	/* Let extensions possibly add some more paths */
 	if (create_upper_paths_hook)
@@ -7612,7 +7623,8 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 										   &extra->agg_final_costs,
 										   gd ? gd->rollups : NIL,
 										   new_rollups,
-										   strat);
+										   strat,
+										   extra);
 	}
 }
 

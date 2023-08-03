@@ -38,3 +38,22 @@
 3:SELECT gp_inject_fault_infinite('checkpoint', 'reset', dbid) FROM gp_segment_configuration WHERE role='p';
 
 3:SELECT gp_inject_fault('fts_probe', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+
+-- Test bitmap index replay XLog after crash
+-- More details could be found at https://github.com/greenplum-db/gpdb/issues/13517
+drop table if exists test_bitmap;
+create table test_bitmap(
+    id int, type int
+) distributed by (id);
+insert into test_bitmap (id, type)
+select 1, g % 1000 from generate_series(1, 3000000) g;
+create index on test_bitmap using bitmap(type);
+select count(*) from test_bitmap where type = 520;
+
+-- start_ignore
+! gpstop -rai;
+-- end_ignore
+
+0: select count(*) from test_bitmap where type = 520;
+0: drop table test_bitmap;
+

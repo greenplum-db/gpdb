@@ -428,6 +428,7 @@ struct PlannerInfo
 	bool		hasHavingQual;	/* true if havingQual was non-null */
 	bool		hasPseudoConstantQuals; /* true if any RestrictInfo has
 										 * pseudoconstant = true */
+	bool		hasAlternativeSubPlans; /* true if we've made any of those */
 	bool		hasRecursion;	/* true if planning a recursive WITH item */
 
 	/* These fields are used only when hasRecursion is true: */
@@ -453,6 +454,10 @@ struct PlannerInfo
 	 * instead, for performance.
 	 */
 	List	   *partition_selector_candidates;
+
+	/* These fields are workspace for setrefs.c */
+	bool	   *isAltSubplan;	/* array corresponding to glob->subplans */
+	bool	   *isUsedSubplan;	/* array corresponding to glob->subplans */
 
 	/* optional private data for join_search_hook, e.g., GEQO */
 	void	   *join_search_private;

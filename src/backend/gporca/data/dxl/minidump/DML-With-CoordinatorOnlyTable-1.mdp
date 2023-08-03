@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
- <dxl:Comment><![CDATA[
+  <dxl:Comment><![CDATA[
 	Objective: For a DML query with a limit on a coordinator Only table,
 	ensure that no Singleton Segment request is generated. 
 
@@ -19,8 +19,7 @@
                        ->  Broadcast Motion 1:3  (slice1)  (cost=0.00..431.00 rows=3 width=2)
                              ->  Limit  (cost=0.00..431.00 rows=1 width=2)
                                    ->  Table Scan on gp_segment_configuration  (cost=0.00..431.00 rows=1 width=2)
-	]]>
-  </dxl:Comment>
+	]]></dxl:Comment>
   <dxl:Thread Id="0">
     <dxl:OptimizerConfig>
       <dxl:EnumeratorConfig Id="0" PlanSamples="0" CostThreshold="0"/>
@@ -67,6 +66,17 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
+      <dxl:Index Mdid="7.7139.1.0" Name="gp_segment_config_content_preferred_role_index" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1,3" IncludedColumns="">
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+          <dxl:Opfamily Mdid="0.429.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:Index>
+      <dxl:Index Mdid="7.7140.1.0" Name="gp_segment_config_dbid_index" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.1976.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:Index>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="1" PassByValue="true">
         <dxl:EqualityOp Mdid="0.91.1.0"/>
         <dxl:InequalityOp Mdid="0.85.1.0"/>
@@ -285,8 +295,8 @@
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
-          <dxl:IndexInfo Mdid="0.6106.1.0" IsPartial="false"/>
-          <dxl:IndexInfo Mdid="0.6107.1.0" IsPartial="false"/>
+          <dxl:IndexInfo Mdid="7.7139.1.0" IsPartial="false"/>
+          <dxl:IndexInfo Mdid="7.7140.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>

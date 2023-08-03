@@ -1,0 +1,222 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE EXTENSION
+
+
+-- Two concurrent transactions on partitioned table
+--    1) dynamic scan
+--    2) truncate
+-- should not cause deadlock
+CREATE TABLE pt(a int, b text) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(10) every(2));
+CREATE TABLE
+INSERT INTO pt SELECT i%10, 'text'||i FROM generate_series(1, 10)i;
+INSERT 0 10
+VACUUM ANALYZE pt;
+VACUUM
+
+1: EXPLAIN (costs off) SELECT a, b FROM pt WHERE a<4;
+ QUERY PLAN                               
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) 
+   ->  Append                             
+         ->  Seq Scan on pt_1_prt_1       
+               Filter: (a < 4)            
+         ->  Seq Scan on pt_1_prt_2       
+               Filter: (a < 4)            
+ Optimizer: Postgres query optimizer      
+(7 rows)
+-- [ORCA] Fetch stats outside transaction so that we skip locking inside the transaction due to fetching stats.
+1: SELECT a, b FROM pt WHERE a<4;
+ a | b      
+---+--------
+ 2 | text2  
+ 3 | text3  
+ 1 | text1  
+ 0 | text10 
+(4 rows)
+1: BEGIN;
+BEGIN
+
+-- Ensure the order transaction 1 and transaction 2 arrive on segments is
+-- intertwined.
+
+-- Transaction 1: suspended on segment 1, processed on all other segments
+-- Transaction 2: blocked at coordinator until Transaction 1 releases the partition lock on coordinator
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT a, b FROM pt WHERE a<4;  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('exec_mpp_query_start', 1, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+2&: TRUNCATE pt_1_prt_1;  <waiting ...>
+
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- All transactions should complete without deadlock
+1<:  <... completed>
+ a | b      
+---+--------
+ 2 | text2  
+ 3 | text3  
+ 1 | text1  
+ 0 | text10 
+(4 rows)
+1: END;
+COMMIT
+2<:  <... completed>
+TRUNCATE TABLE
+
+
+-- Two concurrent transactions on partitioned table
+--    1) dynamic index scan
+--    2) truncate
+-- should not cause deadlock
+CREATE INDEX idx ON pt(a);
+CREATE INDEX
+VACUUM ANALYZE pt;
+VACUUM
+
+1: EXPLAIN (costs off) SELECT a, b FROM pt WHERE a<4;
+ QUERY PLAN                               
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) 
+   ->  Append                             
+         ->  Seq Scan on pt_1_prt_1       
+               Filter: (a < 4)            
+         ->  Seq Scan on pt_1_prt_2       
+               Filter: (a < 4)            
+ Optimizer: Postgres query optimizer      
+(7 rows)
+-- [ORCA] Fetch stats outside transaction so that we skip locking inside the transaction due to fetching stats.
+1: SELECT a, b FROM pt WHERE a<4;
+ a | b     
+---+-------
+ 2 | text2 
+ 3 | text3 
+(2 rows)
+1: BEGIN;
+BEGIN
+
+-- Ensure the order transaction 1 and transaction 2 arrive on segments is
+-- intertwined.
+
+-- Transaction 1: suspended on segment 1, processed on all other segments
+-- Transaction 2: blocked at coordinator until Transaction 1 releases the partition lock on coordinator
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT a, b FROM pt WHERE a<4;  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('exec_mpp_query_start', 1, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+2&: TRUNCATE pt_1_prt_1;  <waiting ...>
+
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- All transactions should complete without deadlock
+1<:  <... completed>
+ a | b     
+---+-------
+ 2 | text2 
+ 3 | text3 
+(2 rows)
+1: END;
+COMMIT
+2<:  <... completed>
+TRUNCATE TABLE
+
+
+-- Two concurrent transactions on partitioned table
+--    1) dynamic index only scan
+--    2) truncate
+-- should not cause deadlock
+VACUUM ANALYZE pt;
+VACUUM
+
+1: EXPLAIN (costs off) SELECT a FROM pt WHERE a<4;
+ QUERY PLAN                               
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) 
+   ->  Append                             
+         ->  Seq Scan on pt_1_prt_1       
+               Filter: (a < 4)            
+         ->  Seq Scan on pt_1_prt_2       
+               Filter: (a < 4)            
+ Optimizer: Postgres query optimizer      
+(7 rows)
+-- [ORCA] Fetch stats outside transaction so that we skip locking inside the transaction due to fetching stats.
+1: SELECT a FROM pt WHERE a<4;
+ a 
+---
+ 2 
+ 3 
+(2 rows)
+1: BEGIN;
+BEGIN
+
+-- Ensure the order transaction 1 and transaction 2 arrive on segments is
+-- intertwined.
+
+-- Transaction 1: suspended on segment 1, processed on all other segments
+-- Transaction 2: blocked at coordinator until Transaction 1 releases the partition lock on coordinator
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT a FROM pt WHERE a<4;  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('exec_mpp_query_start', 1, dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+2&: TRUNCATE pt_1_prt_1;  <waiting ...>
+
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: SELECT gp_inject_fault('exec_mpp_query_start', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- All transactions should complete without deadlock
+1<:  <... completed>
+ a 
+---
+ 2 
+ 3 
+(2 rows)
+1: END;
+COMMIT
+2<:  <... completed>
+TRUNCATE TABLE

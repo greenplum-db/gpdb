@@ -30,6 +30,7 @@ time install_gpdb
 # Set PIP Download cache directory
 export PIP_CACHE_DIR=${PWD}/pip-cache-dir
 
+pip3 uninstall -y urllib3
 pip3 --retries 10 install -r ./gpdb_src/gpMgmt/requirements-dev.txt
 
 # Save the JSON_KEY to a file, for later use by gsutil.
@@ -82,10 +83,7 @@ source =
 omit =
     */site-packages/*
     */bin/behave
-    */python/psutil/*
-    */python/pygresql/*
     */python/subprocess32.py
-    */python/yaml/*
     */bin/pythonSrc/ext/*
 EOF
 

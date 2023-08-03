@@ -1,6 +1,6 @@
 import unittest
 import mock
-import pgdb
+import psycopg2
 import tempfile
 
 from gppylib import gparray
@@ -228,7 +228,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
     def test_add_replication_info_adds_unknowns_if_connection_cannot_be_made(self, mock_connect):
         # Simulate a connection failure in dbconn.connect().
-        mock_connect.side_effect = pgdb.InternalError('connection failure forced by unit test')
+        mock_connect.side_effect = psycopg2.InternalError('connection failure forced by unit test')
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
         self.assertEqual('Unknown', self.data.getStrValue(self.mirror, VALUE__REPL_SENT_LSN))

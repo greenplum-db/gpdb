@@ -46,7 +46,7 @@ class ConnectTestCase(unittest.TestCase):
 
 
         for notice in notices:
-            if warning in notice.message:
+            if warning in notice:
                 return # found it!
 
         self.fail("Didn't find expected notice '{}' in {!r}".format(

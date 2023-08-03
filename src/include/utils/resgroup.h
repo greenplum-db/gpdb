@@ -37,6 +37,11 @@
 #define DefaultCpuset "-1"
 
 /*
+ * Default value of io_limit
+ */
+#define DefaultIOLimit "-1"
+
+/*
  * Default value of cpu weight
  */
 #define DefaultCPUWeight 100
@@ -71,6 +76,13 @@ typedef struct ResGroupCaps
 	ResGroupCap		cpuWeight;
 	ResGroupCap		memory_limit;
 	volatile ResGroupCap	min_cost;
+
+	/*
+	 * io_limit are local pointers,
+	 * do not use it for cross MemoryContext.
+	 */
+	char			*io_limit;
+
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
@@ -135,6 +147,8 @@ typedef struct
 	ResGroupCaps		caps;
 	ResGroupCaps		oldCaps;	/* last config value, alter operation need to
  										* check last config for recycling */
+
+	List				*ioLimit;
 } ResourceGroupCallbackContext;
 
 /* Shared memory and semaphores */

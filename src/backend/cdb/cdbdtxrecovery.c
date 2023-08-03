@@ -19,6 +19,7 @@
 #include "utils/ps_status.h"
 #include "postmaster/bgworker.h"
 #include "pgstat.h"
+#include "commands/progress.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/lwlock.h"
@@ -52,6 +53,10 @@ DistributedTransactionId *shmCommittedGxidArray;
 volatile int *shmNumCommittedGxacts;
 
 static volatile sig_atomic_t got_SIGHUP = false;
+
+static int64 in_doubt_tx_in_progress = 0;
+static int64 in_doubt_tx_aborted = 0;
+static int64 in_doubt_tx_total = 0;
 
 typedef struct InDoubtDtx
 {
@@ -190,6 +195,11 @@ recoverInDoubtTransactions(void)
 		 "Going to retry commit notification for distributed transactions (count = %d)",
 		 *shmNumCommittedGxacts);
 
+	pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_PHASE,
+								 PROGRESS_DTX_RECOVERY_PHASE_STARTUP_RECOVER_COMMITTED_DTX);
+	pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_COMITTED_DTX_TOTAL,
+								 *shmNumCommittedGxacts);
+
 	for (i = 0; i < *shmNumCommittedGxacts; i++)
 	{
 		DistributedTransactionId gxid = shmCommittedGxidArray[i];
@@ -204,9 +214,18 @@ recoverInDoubtTransactions(void)
 		doNotifyCommittedInDoubt(gid);
 
 		RecordDistributedForgetCommitted(gxid);
+
+		pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_COMITTED_DTX_COMPLETED,
+									 i+1);
 	}
 
+	SIMPLE_FAULT_INJECTOR("post_progress_recovery_comitted");
+
 	*shmNumCommittedGxacts = 0;
+
+
+	pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_PHASE,
+								 PROGRESS_DTX_RECOVERY_PHASE_STARTUP_GATHER_IN_DOUBT_TX);
 
 	/*
 	 * Any in-doubt transctions found will be for aborted
@@ -214,6 +233,8 @@ recoverInDoubtTransactions(void)
 	 */
 	htab = gatherRMInDoubtTransactions(0, true);
 
+	pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_PHASE,
+								 PROGRESS_DTX_RECOVERY_PHASE_STARTUP_ABORT_IN_DOUBT_TX);
 	/*
 	 * go through and resolve any remaining in-doubt transactions that the
 	 * RM's have AFTER recoverDTMInDoubtTransactions.  ALL of these in doubt
@@ -351,6 +372,9 @@ gatherRMInDoubtTransactions(int prepared_seconds, bool raiseError)
 				elog(DEBUG3, "Found in-doubt transaction with GID: %s on remote RM", gid);
 
 				strncpy(lastDtx->gid, gid, TMGIDSIZE);
+
+				pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_IN_DOUBT_TX_TOTAL,
+											 ++in_doubt_tx_total);
 			}
 		}
 	}
@@ -390,6 +414,9 @@ abortRMInDoubtTransactions(HTAB *htab)
 		elog(DTM_DEBUG3, "Aborting in-doubt transaction with gid = %s", entry->gid);
 
 		doAbortInDoubt(entry->gid);
+
+		pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_IN_DOUBT_TX_ABORTED,
+									 ++in_doubt_tx_aborted);
 	}
 }
 
@@ -416,10 +443,19 @@ abortOrphanedTransactions(HTAB *htab)
 
 		dtxDeformGid(entry->gid, &gxid);
 
-		if (!IsDtxInProgress(gxid))
+		if (IsDtxInProgress(gxid))
+		{
+			pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_IN_DOUBT_TX_IN_PROGRESS,
+										 ++in_doubt_tx_in_progress);
+			SIMPLE_FAULT_INJECTOR("post_in_doubt_tx_in_progress");
+		}
+		else
 		{
 			elog(LOG, "Aborting orphaned transactions with gid = %s", entry->gid);
 			doAbortInDoubt(entry->gid);
+
+			pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_IN_DOUBT_TX_ABORTED,
+										 ++in_doubt_tx_aborted);
 		}
 	}
 }
@@ -539,6 +575,14 @@ DtxRecoveryStartRule(Datum main_arg)
 }
 
 static void
+ResetInDoubtStatProgress()
+{
+	in_doubt_tx_total = 0;
+	in_doubt_tx_aborted = 0;
+	in_doubt_tx_in_progress = 0;
+}
+
+static void
 AbortOrphanedPreparedTransactions()
 {
 	HTAB	   *htab;
@@ -548,8 +592,14 @@ AbortOrphanedPreparedTransactions()
 		return;
 #endif
 
+	pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_PHASE,
+								 PROGRESS_DTX_RECOVERY_PHASE_GATHER_IN_DOUBT_TX);
+
 	StartTransactionCommand();
 	htab = gatherRMInDoubtTransactions(gp_dtx_recovery_prepared_period, false);
+
+	pgstat_progress_update_param(PROGRESS_DTX_RECOVERY_PHASE,
+								 PROGRESS_DTX_RECOVERY_PHASE_ABORT_IN_DOUBT_TX);
 
 	/* in case an error happens somehow. */
 	if (htab != NULL)
@@ -631,6 +681,9 @@ DtxRecoveryMain(Datum main_arg)
 	/* Connect to postgres */
 	BackgroundWorkerInitializeConnection(DB_FOR_COMMON_ACCESS, NULL, 0);
 
+	/* initialize progress */
+	pgstat_progress_start_command(PROGRESS_COMMAND_DTX_RECOVERY, InvalidOid);
+
 	/*
 	 * Do dtx recovery process.  It is possible that *shmDtmStarted is true
 	 * here if we terminate after this code block, e.g. due to error and then
@@ -647,6 +700,8 @@ DtxRecoveryMain(Datum main_arg)
 
 		set_ps_display("", false);
 	}
+
+	pgstat_progress_end_command();
 
 	/* Fetch the gxid batch in advance. */
 	bumpGxid();
@@ -692,7 +747,18 @@ DtxRecoveryMain(Datum main_arg)
 			 * cases so that it could respond promptly for gxid bumping given
 			 * the abort operation might be time-consuming.
 			 */
+
+			/*
+			 * The total amount of in doubt transactions are calculated per iteration
+			 * and are destroyed after use. Keeping the old statistics may be confusing,
+			 * so clear it up.
+			 */
+			ResetInDoubtStatProgress();
+			pgstat_progress_start_command(PROGRESS_COMMAND_DTX_RECOVERY, InvalidOid);
+
 			AbortOrphanedPreparedTransactions();
+
+			pgstat_progress_end_command();
 		}
 
 		rc = WaitLatch(&MyProc->procLatch,

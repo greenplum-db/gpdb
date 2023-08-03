@@ -14,6 +14,7 @@
 #include "postgres.h"
 
 #include "access/table.h"
+#include "access/tableam.h"
 #include "catalog/partition.h"
 #include "catalog/pg_collation.h"
 #include "catalog/gp_partition_template.h"
@@ -1814,10 +1815,15 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 		/* if WITH has "tablename" then it will be used as name for partition */
 		partcomp.tablename = extract_tablename_from_options(&elem->options);
 
-		if (elem->options == NIL)
-			elem->options = parentoptions ? copyObject(parentoptions) : NIL;
 		if (elem->accessMethod == NULL)
 			elem->accessMethod = parentaccessmethod ? pstrdup(parentaccessmethod) : NULL;
+
+		/* if no options are specified AND child has same access method as parent, use parent options */
+		if (elem->options == NIL &&
+			(!elem->accessMethod ||
+			(parentaccessmethod && strcmp(elem->accessMethod, parentaccessmethod) == 0) ||
+			(!parentaccessmethod && strcmp(elem->accessMethod, default_table_access_method) == 0)))
+			elem->options = parentoptions ? copyObject(parentoptions) : NIL;
 
 		if (elem->accessMethod && strcmp(elem->accessMethod, "ao_column") == 0)
 			elem->colencs = merge_partition_encoding(pstate, elem->colencs, penc_cls);

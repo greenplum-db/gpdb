@@ -16,6 +16,7 @@
 #define CGROUP_H
 
 #include "postgres.h"
+#include "nodes/pg_list.h"
 
 #define MAX_CGROUP_PATHLEN 256
 #define MAX_CGROUP_CONTENTLEN 1024  
@@ -64,6 +65,7 @@ typedef enum
 	CGROUP_COMPONENT_CPUACCT,
 	CGROUP_COMPONENT_CPUSET,
 	CGROUP_COMPONENT_MEMORY,
+	CGROUP_COMPONENT_IO,
 
 	CGROUP_COMPONENT_COUNT,
 } CGroupComponentType;
@@ -226,6 +228,10 @@ typedef void (*setcpuset_function) (Oid group, const char *cpuset);
 /* Convert the cpu usage to percentage within the duration. */
 typedef float (*convertcpuusage_function) (int64 usage, int64 duration);
 
+typedef List* (*parseio_function) (const char *io_limit);
+typedef void (*setio_function) (Oid group, List *limit_list);
+typedef void (*freeio_function) (List *limit_list);
+
 
 typedef struct CGroupOpsRoutine
 {
@@ -258,6 +264,10 @@ typedef struct CGroupOpsRoutine
 	setcpuset_function		setcpuset;
 
 	convertcpuusage_function convertcpuusage;
+
+	parseio_function		parseio;
+	setio_function			setio;
+	freeio_function			freeio;
 } CGroupOpsRoutine;
 
 /* The global function handler. */

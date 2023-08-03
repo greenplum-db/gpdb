@@ -61,15 +61,24 @@ Follow these steps for incremental recovery:
     ```
 
 2.  To recover a subset of segments:
-    1.  Manually create a `recover_config_file` file in a location of your choice, where each segment to recover has its own line with format `failedAddress|failedPort|failedDataDirectory`
+    1.  Manually create a `recover_config_file` file in a location of your choice, where each segment to recover has its own line with format `failedAddress|failedPort|failedDataDirectory` or `failedHostname|failedAddress|failedPort|failedDataDirectory`
 
-        For multiple segments, create a new line for each segment you want to recover, specifying the address, port number and data directory for each down segment. For example:
+        For multiple segments, create a new line for each segment you want to recover, specifying the hostname (optional), the address, port number and data directory for each down segment. For example:
 
         ```
         failedAddress1|failedPort1|failedDataDirectory1
         failedAddress2|failedPort2|failedDataDirectory2
         failedAddress3|failedPort3|failedDataDirectory3
         ```
+       
+        or
+
+        ```
+        failedHostname1|failedAddress1|failedPort1|failedDataDirectory1
+        failedHostname2|failedAddress2|failedPort2|failedDataDirectory2
+        failedHostname3|failedAddress3|failedPort3|failedDataDirectory3
+        ```
+
 
     2.  Alternatively, generate a sample recovery file using the following command; you may edit the resulting file if necessary:
 
@@ -100,6 +109,12 @@ Follow these steps for incremental recovery:
         failedAddress1|failedPort1|failedDataDirectory1<SPACE>failedAddress2|failedPort2|failedDataDirectory2
         ```
 
+        or
+
+        ```
+        failedHostname1|failedAddress1|failedPort1|failedDataDirectory1<SPACE>failedHostname2|failedAddress2|failedPort2|failedDataDirectory2
+        ```
+
         Note the literal **SPACE** separating the lines.
 
     2.  Alternatively, generate a sample recovery file using the following command and edit the resulting file to match your desired recovery configuration:
@@ -120,7 +135,7 @@ Follow these steps for incremental recovery:
 
 Follow these steps for differential recovery: 
 
-1. Run `gprecoverseg -F --differential`
+1. Run `gprecoverseg --differential`
 
 
 ### <a id="different_host"></a>Recover to A Different Host within the Cluster 
@@ -133,6 +148,12 @@ Follow these steps to recover all segments or just a subset of segments to a dif
 
     ```
     failedAddress|failedPort|failedDataDirectory<SPACE>newAddress|newPort|newDataDirectory
+    ```
+
+    or
+
+    ```
+    failedHostname|failedAddress|failedPort|failedDataDirectory<SPACE>newHostname|newAddress|newPort|newDataDirectory
     ```
 
     Note the literal **SPACE** separating the details of the down segment from the details of where the segment will be recovered to.

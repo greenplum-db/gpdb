@@ -2276,7 +2276,7 @@ typedef struct CopyStmt
 	List	   *options;		/* List of DefElem nodes */
 	Node	   *whereClause;	/* WHERE condition (or NULL) */
 
-	Node	   *sreh;			/* Single row error handling info */
+	List	   *sreh;			/* Single row error handling info */
 } CopyStmt;
 
 /* ----------------------

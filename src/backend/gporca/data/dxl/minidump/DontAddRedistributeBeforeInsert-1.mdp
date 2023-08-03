@@ -454,7 +454,7 @@ Physical plan:
     <dxl:Plan Id="0" SpaceSize="22212">
       <dxl:DMLInsert Columns="0,1" ActionCol="22" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1765376.357206" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1765376.357208" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -480,7 +480,7 @@ Physical plan:
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1765376.333768" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="1765376.333770" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -497,7 +497,7 @@ Physical plan:
           <dxl:OneTimeFilter/>
           <dxl:RandomMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1765376.333762" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1765376.333764" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -511,7 +511,7 @@ Physical plan:
             <dxl:SortingColumnList/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1765376.333750" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1765376.333752" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="0"/>
@@ -528,7 +528,7 @@ Physical plan:
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1765376.333739" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1765376.333742" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="a">
@@ -547,7 +547,7 @@ Physical plan:
                 <dxl:LimitOffset/>
                 <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1765376.333739" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1765376.333742" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="a">
@@ -569,7 +569,7 @@ Physical plan:
                   </dxl:HashExprList>
                   <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1765376.333724" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="1765376.333726" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="0"/>
@@ -635,7 +635,7 @@ Physical plan:
                               <dxl:Ident ColId="10" ColName="column2" TypeMdid="0.23.1.0"/>
                             </dxl:Comparison>
                           </dxl:JoinFilter>
-                          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+                          <dxl:DynamicTableScan SelectorIds="">
                             <dxl:Properties>
                               <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
                             </dxl:Properties>
@@ -701,7 +701,7 @@ Physical plan:
                               <dxl:Ident ColId="21" ColName="column2" TypeMdid="0.23.1.0"/>
                             </dxl:Comparison>
                           </dxl:JoinFilter>
-                          <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+                          <dxl:DynamicTableScan SelectorIds="">
                             <dxl:Properties>
                               <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
                             </dxl:Properties>

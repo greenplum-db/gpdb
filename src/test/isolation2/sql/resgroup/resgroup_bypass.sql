@@ -12,11 +12,6 @@ CREATE ROLE role_bypass RESOURCE GROUP rg_bypass;
 
 SET ROLE role_bypass;
 CREATE TABLE t_bypass(a int) distributed by (a);
-
--- gp_resource_group_bypass can only be set by super user
--- below set statement will error out
-set gp_resource_group_bypass = 1;
-
 RESET ROLE;
 
 -- Session1: pure-catalog query will be unassigned and bypassed.

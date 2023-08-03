@@ -690,14 +690,9 @@ _copyDynamicIndexScan(const DynamicIndexScan *from)
 	return newnode;
 }
 
-/*
- * _copyIndexOnlyScan
- */
-static IndexOnlyScan *
-_copyIndexOnlyScan(const IndexOnlyScan *from)
+static void
+CopyIndexOnlyScanFields(const IndexOnlyScan *from, IndexOnlyScan *newnode)
 {
-	IndexOnlyScan *newnode = makeNode(IndexOnlyScan);
-
 	/*
 	 * copy node superclass fields
 	 */
@@ -712,6 +707,34 @@ _copyIndexOnlyScan(const IndexOnlyScan *from)
 	COPY_NODE_FIELD(indexorderby);
 	COPY_NODE_FIELD(indextlist);
 	COPY_SCALAR_FIELD(indexorderdir);
+}
+
+/*
+ * _copyIndexOnlyScan
+ */
+static IndexOnlyScan *
+_copyIndexOnlyScan(const IndexOnlyScan *from)
+{
+	IndexOnlyScan *newnode = makeNode(IndexOnlyScan);
+
+	CopyIndexOnlyScanFields(from, newnode);
+
+	return newnode;
+}
+
+/*
+ * _copyDynamicIndexOnlyScan
+ */
+static DynamicIndexOnlyScan *
+_copyDynamicIndexOnlyScan(const DynamicIndexOnlyScan *from)
+{
+	DynamicIndexOnlyScan  *newnode = makeNode(DynamicIndexOnlyScan);
+
+	/* DynamicIndexScan has some content from IndexScan */
+	CopyIndexOnlyScanFields(&from->indexscan, &newnode->indexscan);
+	COPY_NODE_FIELD(partOids);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
 
 	return newnode;
 }
@@ -5883,6 +5906,9 @@ copyObjectImpl(const void *from)
 			break;
 		case T_DynamicIndexScan:
 			retval = _copyDynamicIndexScan(from);
+			break;
+		case T_DynamicIndexOnlyScan:
+			retval = _copyDynamicIndexOnlyScan(from);
 			break;
 		case T_IndexOnlyScan:
 			retval = _copyIndexOnlyScan(from);

@@ -257,6 +257,7 @@ public:
 
 		EopLogicalDynamicForeignGet,
 		EopPhysicalDynamicForeignScan,
+		EopPhysicalDynamicIndexOnlyScan,
 
 		EopSentinel
 	};

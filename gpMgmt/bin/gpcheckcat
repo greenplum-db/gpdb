@@ -16,6 +16,7 @@ Usage: gpcheckcat [<option>] [dbname]
     -R test | 'test1, test2' : run this particular test(s) (quoted, comma separated list for multiple tests)
     -s test | 'test1, test2' : skip this particular test(s) (quoted, comma separated list for multiple tests)
     -C catname               : run cross consistency, FK and ACL tests for this catalog table
+    -x                       : set session level GUCs
 
     Test subset options are mutually exclusive, use only one of '-R', '-s', or '-C'.
 
@@ -27,23 +28,20 @@ import re
 import sys
 import time
 from functools import reduce
-
+import psycopg2
+from psycopg2 import extras
+from contextlib import closing
 try:
     from gppylib import gplog
-    from gppylib.db import dbconn
     from gppylib.gpcatalog import *
     from gppylib.commands.unix import *
     from gppylib.commands.gp import conflict_with_gpexpand
     from gppylib.system.info import *
-    from pgdb import DatabaseError
     from gpcheckcat_modules.unique_index_violation_check import UniqueIndexViolationCheck
     from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
     from gpcheckcat_modules.repair import Repair
     from gpcheckcat_modules.foreign_key_check import ForeignKeyCheck
     from gpcheckcat_modules.orphaned_toast_tables_check import OrphanedToastTablesCheck
-
-    import pg
-
 except ImportError as e:
     sys.exit('Error: unable to import module: ' + str(e))
 
@@ -130,13 +128,14 @@ class Global():
         self.opt['-l'] = False
 
         self.opt['-E'] = False
+        self.opt['-x'] = []
 
         self.coordinator_dbid = None
         self.cfg = None
         self.dbname = None
         self.firstdb = None
         self.alldb = []
-        self.db = {}
+        self.conn = {}
         self.tmpdir = None
 
         self.reset_stmt_queues()
@@ -205,36 +204,33 @@ def usage(exitarg=None):
 ###############################
 
 def getversion():
-    db = connect()
-    curs = db.query('''
-    select regexp_replace(version(),
-       E'.*PostgreSQL [^ ]+ .Greenplum Database ([1-9]+.[0-9]+|main).*',
-       E'\\\\1') as ver;''')
-
-    row = curs.getresult()[0]
-    version = row[0]
-
-    logger.debug('got version %s' % version)
-    return version
-
+    with closing(connect()) as conn:
+        with conn.cursor() as curs:
+            curs.execute('''
+            select regexp_replace(version(),
+            E'.*PostgreSQL [^ ]+ .Greenplum Database ([1-9]+.[0-9]+|main).*',
+            E'\\\\1') as ver;''')
+            row = curs.fetchone()
+            version = row[0]
+            logger.debug('got version %s' % version)
+            return version
 
 ###############################
 def getalldbs():
     """
     get all connectable databases
     """
-    db = connect()
-    curs = db.query('''
-    select datname from pg_database where datallowconn order by datname ''')
-    row = curs.getresult()
-    return row
-
+    with closing(connect()) as conn:
+        with conn.cursor() as curs:
+            curs.execute('''select datname from pg_database where datallowconn order by datname''')
+            row = curs.fetchall()
+            return row
 
 ###############################
 def parseCommandLine():
     try:
         # A colon following the flag indicates an argument is expected
-        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:s:C:lE', 'help')
+        (options, args) = getopt.getopt(sys.argv[1:], '?x:p:P:U:B:vg:t:AOS:R:s:C:lE', 'help')
     except Exception as e:
         usage('Error: ' + str(e))
 
@@ -245,6 +241,8 @@ def parseCommandLine():
             GV.opt[switch] = val
         elif switch[1] in 'vtAOlE':
             GV.opt[switch] = True
+        elif switch[1] in 'x':
+            GV.opt[switch].append(val)
 
     def setdef(x, v):
         if not GV.opt[x]:
@@ -328,6 +326,8 @@ def connect(user=None, password=None, host=None, port=None,
     options = '-c search_path='
     if utilityMode:
         options += ' -c gp_role=utility'
+    for val in GV.opt['-x']:
+        options += ' -c {}'.format(val)
 
     if not user: user = GV.opt['-U']
     if not password: password = GV.opt['-P']
@@ -337,19 +337,21 @@ def connect(user=None, password=None, host=None, port=None,
 
     try:
         logger.debug('connecting to %s:%s %s' % (host, port, database))
-        db = pg.connect(host=host, port=port, user=user,
-                        passwd=password, dbname=database, opt=options)
-
-    except pg.InternalError as ex:
+        conn = psycopg2.connect(host=host, port=port, user=user,
+                                password=password, dbname=database, options=options)
+        ## Don't execute query in a transaction block.
+        conn.set_session(autocommit=True)
+    except (psycopg2.InternalError, psycopg2.OperationalError) as ex:
         logger.fatal('could not connect to %s: "%s"' %
                      (database, str(ex).strip()))
         exit(1)
 
     logger.debug('connected with %s:%s %s' % (host, port, database))
-    return db
+    return conn
 
 
-#############
+# NOTE: We cannot use connect2() with contextmanager, since we manage the connection
+# ourselves.
 def connect2(cfgrec, user=None, password=None, database=None, utilityMode=True):
     host = cfgrec['address']
     port = cfgrec['port']
@@ -361,22 +363,22 @@ def connect2(cfgrec, user=None, password=None, database=None, utilityMode=True):
 
     key = "%s.%s.%s.%s.%s.%s.%s" % (host, port, datadir, user, password, database,
                                     str(utilityMode))
-    conns = GV.db.get(key)
+    conns = GV.conn.get(key)
     if conns:
         return conns[0]
 
     conn = connect(host=host, port=port, user=user, password=password,
                    database=database, utilityMode=utilityMode)
     if conn:
-        GV.db[key] = [conn, cfgrec]
+        GV.conn[key] = [conn, cfgrec]
 
     return conn
 
 
 class execThread(Thread):
-    def __init__(self, cfg, db, qry):
+    def __init__(self, cfg, conn, qry):
         self.cfg = cfg
-        self.db = db
+        self.conn = conn
         self.qry = qry
         self.curs = None
         self.error = None
@@ -384,10 +386,10 @@ class execThread(Thread):
 
     def run(self):
         try:
-            self.curs = self.db.query(self.qry)
+            self.curs = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            self.curs.execute(self.qry)
         except BaseException as e:
             self.error = e
-
 
 def processThread(threads):
     batch = []
@@ -417,9 +419,9 @@ def connect2run(qry, col=None):
     # parallelize queries
     for dbid in GV.cfg:
         c = GV.cfg[dbid]
-        db = connect2(c)
+        conn = connect2(c)
 
-        thread = execThread(c, db, qry)
+        thread = execThread(c, conn, qry)
         thread.start()
         logger.debug('launching query thread %s for dbid %i' %
                      (thread.name, dbid))
@@ -439,8 +441,8 @@ def connect2run(qry, col=None):
     err = []
     for [cfg, curs] in batch:
         if col is None:
-            col = curs.listfields()
-        for row in curs.dictresult():
+            col = [desc[0] for desc in curs.description]
+        for row in curs.fetchall():
             err.append([cfg, col, row])
 
     return err
@@ -458,7 +460,6 @@ def formatErr(c, col, row):
 #############
 def getGPConfiguration():
     cfg = {}
-    db = connect()
     # note that in 4.0, sql commands cannot be run against the segment mirrors directly
     # so we filter out non-primary segment databases in the query
     qry = '''
@@ -468,13 +469,14 @@ def getGPConfiguration():
             FROM gp_segment_configuration
            WHERE (role = 'p' or content < 0 )
           '''
-    curs = db.query(qry)
-    for row in curs.dictresult():
-        if row['content'] == -1 and not row['isprimary']:
-            continue  # skip standby coordinator
-        cfg[row['dbid']] = row
-    db.close()
-    return cfg
+    with closing(connect()) as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+            curs.execute(qry)
+            for row in curs.fetchall():
+                if row['content'] == -1 and not row['isprimary']:
+                    continue  # skip standby coordinator
+                cfg[row['dbid']] = row
+            return cfg
 
 def checkDistribPolicy():
     logger.info('-----------------------------------')
@@ -488,27 +490,27 @@ def checkDistribPolicy():
     where pk.contype in('p', 'u') and d.policytype = 'p' and d.distkey = ''
     '''
 
-    db = connect2(GV.cfg[GV.coordinator_dbid])
     try:
-        curs = db.query(qry)
-        err = []
-        for row in curs.dictresult():
-            err.append([GV.cfg[GV.coordinator_dbid], ('nspname', 'relname', 'constraint'), row])
+        conn = connect2(GV.cfg[GV.coordinator_dbid])
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+            curs.execute(qry)
+            err = []
+            for row in curs.fetchall():
+                err.append([GV.cfg[GV.coordinator_dbid], ('nspname', 'relname', 'constraint'), row])
 
-        if not err:
-            logger.info('[OK] randomly distributed tables')
-        else:
-            GV.checkStatus = False
-            setError(ERROR_REMOVE)
-            logger.info('[FAIL] randomly distributed tables')
-            logger.error('pg_constraint has %d issue(s)' % len(err))
-            logger.error(qry)
-            for e in err:
-                logger.error(formatErr(e[0], e[1], e[2]))
-            for e in err:
-                cons = e[2]
-                removeIndexConstraint(cons['nspname'], cons['relname'],
-                                      cons['constraint'])
+            if not err:
+                logger.info('[OK] randomly distributed tables')
+            else:
+                GV.checkStatus = False
+                setError(ERROR_REMOVE)
+                logger.info('[FAIL] randomly distributed tables')
+                logger.error('pg_constraint has %d issue(s)' % len(err))
+                logger.error(qry)
+                for e in err:
+                    logger.error(formatErr(e[0], e[1], e[2]))
+                    cons = e[2]
+                    removeIndexConstraint(cons['nspname'], cons['relname'],
+                                          cons['constraint'])
     except Exception as e:
         setError(ERROR_NOREPAIR)
         myprint('[ERROR] executing test: checkDistribPolicy')
@@ -530,22 +532,23 @@ def checkDistribPolicy():
       and not d.distkey::int2[] operator(pg_catalog.<@) pk.conkey
     '''
     try:
-        curs = db.query(qry)
+        conn = connect2(GV.cfg[GV.coordinator_dbid])
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+            err = []
+            curs.execute(qry)
+            for row in curs.fetchall():
+                err.append([GV.cfg[GV.coordinator_dbid], ('nspname', 'relname', 'constraint'), row])
 
-        err = []
-        for row in curs.dictresult():
-            err.append([GV.cfg[GV.coordinator_dbid], ('nspname', 'relname', 'constraint'), row])
-
-        if not err:
-            logger.info('[OK] unique constraints')
-        else:
-            GV.checkStatus = False
-            setError(ERROR_REMOVE)
-            logger.info('[FAIL] unique constraints')
-            logger.error('pg_constraint has %d issue(s)' % len(err))
-            logger.error(qry)
-            for e in err: logger.error(formatErr(e[0], e[1], e[2]))
+            if not err:
+                logger.info('[OK] unique constraints')
+            else:
+                GV.checkStatus = False
+                setError(ERROR_REMOVE)
+                logger.info('[FAIL] unique constraints')
+                logger.error('pg_constraint has %d issue(s)' % len(err))
+                logger.error(qry)
             for e in err:
+                logger.error(formatErr(e[0], e[1], e[2]))
                 cons = e[2]
                 removeIndexConstraint(cons['nspname'], cons['relname'],
                                       cons['constraint'])
@@ -561,7 +564,6 @@ def checkPartitionIntegrity():
     logger.info('-----------------------------------')
     logger.info('Checking pg_partition ...')
     err = []
-    db = connect()
 
     # Check for the numsegments value of parent and child partition from the gp_distribution_policy table
     qry = '''
@@ -573,53 +575,55 @@ def checkPartitionIntegrity():
           and not (inhrelid in (select ftrelid from pg_catalog.pg_foreign_table) and child.numsegments = NULL);
     '''
     try:
-        curs = db.query(qry)
-        cols = ('inhparent', 'inhrelid', 'numsegments_parent', 'numsegments_child')
-        col_names = {
-            'inhparent': 'table',
-            'inhrelid': 'affected child',
-            'numsegments_parent': 'parent numsegments value',
-            'numsegments_child': 'child numsegments value',
-        }
+        with closing(connect()) as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+                curs.execute(qry)
+                cols = ('inhparent', 'inhrelid', 'numsegments_parent', 'numsegments_child')
+                col_names = {
+                    'inhparent': 'table',
+                    'inhrelid': 'affected child',
+                    'numsegments_parent': 'parent numsegments value',
+                    'numsegments_child': 'child numsegments value',
+                }
 
-        err = []
-        for row in curs.dictresult():
-            err.append([GV.cfg[GV.coordinator_dbid], cols, row])
+                err = []
+                for row in curs.fetchall():
+                    err.append([GV.cfg[GV.coordinator_dbid], cols, row])
 
-        if not err:
-            logger.info('[OK] partition numsegments check')
-        else:
-            err_count = len(err)
-            GV.checkStatus = False
-            setError(ERROR_REMOVE)
-            logger.info('[FAIL] partition numsegments check')
-            logger.error('partition numsegments check found %d issue(s)' % err_count)
-            if err_count > 100:
-                logger.error(qry)
+                if not err:
+                    logger.info('[OK] partition numsegments check')
+                else:
+                    err_count = len(err)
+                    GV.checkStatus = False
+                    setError(ERROR_REMOVE)
+                    logger.info('[FAIL] partition numsegments check')
+                    logger.error('partition numsegments check found %d issue(s)' % err_count)
+                    if err_count > 100:
+                        logger.error(qry)
 
-            myprint(
-                '[ERROR]: child partition(s) have different numsegments value '
-                'from the root partition. Check the gpcheckcat log for details.'
-            )
-            logger.error('The following tables have different numsegments value (showing at most 100 rows):')
+                    myprint(
+                        '[ERROR]: child partition(s) have different numsegments value '
+                        'from the root partition. Check the gpcheckcat log for details.'
+                    )
+                    logger.error('The following tables have different numsegments value (showing at most 100 rows):')
 
-            # report at most 100 rows, for brevity
-            err = err[:100]
+                    # report at most 100 rows, for brevity
+                    err = err[:100]
 
-            for index, e in enumerate(err):
-                cfg = e[0]
-                col = e[1]
-                row = e[2]
+                    for index, e in enumerate(err):
+                        cfg = e[0]
+                        col = e[1]
+                        row = e[2]
 
-                if index == 0:
-                    logger.error("--------")
-                    logger.error("  " + " | ".join(map(col_names.get, col)))
-                    logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
+                        if index == 0:
+                            logger.error("--------")
+                            logger.error("  " + " | ".join(map(col_names.get, col)))
+                            logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
 
-                logger.error("  " + " | ".join([str(row[x]) for x in col]))
+                            logger.error("  " + " | ".join([str(row[x]) for x in col]))
 
-            if err_count > 100:
-                logger.error(" ...")
+                    if err_count > 100:
+                        logger.error(" ...")
 
     except Exception as e:
         setError(ERROR_NOREPAIR)
@@ -642,73 +646,73 @@ def checkPartitionIntegrity():
                    and (select isleaf from pg_partition_tree(inhparent) where relid = inhrelid));
     '''
     try:
-        curs = db.query(qry)
-        cols = ('inhparent', 'inhrelid', 'dby_parent', 'dby_child')
-        col_names = {
-            'inhparent': 'table',
-            'inhrelid': 'affected child',
-            'dby_parent': 'table distribution key',
-            'dby_child': 'child distribution key',
-        }
+        with closing(connect()) as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+                curs.execute(qry)
+                cols = ('inhparent', 'inhrelid', 'dby_parent', 'dby_child')
+                col_names = {
+                    'inhparent': 'table',
+                    'inhrelid': 'affected child',
+                    'dby_parent': 'table distribution key',
+                    'dby_child': 'child distribution key',
+                }
 
-        err = []
-        for row in curs.dictresult():
-            err.append([GV.cfg[GV.coordinator_dbid], cols, row])
+                err = []
+                for row in curs.fetchall():
+                    err.append([GV.cfg[GV.coordinator_dbid], cols, row])
 
-        if not err:
-            logger.info('[OK] partition distribution policy check')
-        else:
-            GV.checkStatus = False
-            setError(ERROR_REMOVE)
-            logger.info('[FAIL] partition distribution policy check')
-            logger.error('partition distribution policy check found %d issue(s)' % len(err))
-            if len(err) > 100:
-                logger.error(qry)
+                if not err:
+                    logger.info('[OK] partition distribution policy check')
+                else:
+                    GV.checkStatus = False
+                    setError(ERROR_REMOVE)
+                    logger.info('[FAIL] partition distribution policy check')
+                    logger.error('partition distribution policy check found %d issue(s)' % len(err))
+                    if len(err) > 100:
+                        logger.error(qry)
 
-            myprint(
-                '[ERROR]: child partition(s) are distributed differently from '
-                'the root partition, and must be manually redistributed, for '
-                'some tables. Check the gpcheckcat log for details.'
-            )
-            logger.error('The following tables must be manually redistributed:')
+                    myprint(
+                        '[ERROR]: child partition(s) are distributed differently from '
+                        'the root partition, and must be manually redistributed, for '
+                        'some tables. Check the gpcheckcat log for details.'
+                    )
+                    logger.error('The following tables must be manually redistributed:')
 
-            count = 0
-            for e in err:
-                cfg = e[0]
-                col = e[1]
-                row = e[2]
+                    count = 0
+                    for e in err:
+                        cfg = e[0]
+                        col = e[1]
+                        row = e[2]
 
-                # TODO: generate a repair script for this row. This is
-                # difficult, since we can't redistribute child partitions
-                # directly.
+                        # TODO: generate a repair script for this row. This is
+                        # difficult, since we can't redistribute child partitions
+                        # directly.
 
-                # report at most 100 rows, for brevity
-                if count == 100:
-                    logger.error("...")
-                    count += 1
-                if count > 100:
-                    continue
+                        # report at most 100 rows, for brevity
+                        if count == 100:
+                            logger.error("...")
+                            count += 1
+                        if count > 100:
+                            continue
 
-                if count == 0:
-                    logger.error("--------")
-                    logger.error("  " + " | ".join(map(col_names.get, col)))
-                    logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
+                        if count == 0:
+                            logger.error("--------")
+                            logger.error("  " + " | ".join(map(col_names.get, col)))
+                            logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
 
-                logger.error("  " + " | ".join([str(row[x]) for x in col]))
-                count += 1
+                        logger.error("  " + " | ".join([str(row[x]) for x in col]))
+                        count += 1
 
-            logger.error(
-                'Execute an ALTER TABLE ... SET DISTRIBUTED BY statement, with '
-                'the desired distribution key, on the partition root for each '
-                'affected table.'
-            )
+                    logger.error(
+                        'Execute an ALTER TABLE ... SET DISTRIBUTED BY statement, with '
+                        'the desired distribution key, on the partition root for each '
+                        'affected table.'
+                    )
 
     except Exception as e:
         setError(ERROR_NOREPAIR)
         myprint('[ERROR] executing test: checkPartitionIntegrity')
         myprint('  Execution error: ' + str(e))
-
-    db.close()
 
     checkPoliciesRepair()
 
@@ -776,7 +780,7 @@ Produce repair scripts to remove dangling entries of gp_fastsequence:
 '''
 
 
-def removeFastSequence(db):
+def removeFastSequence(conn):
     '''
     MPP-14758: gp_fastsequence does not get cleanup after a failed transaction (AO/CO)
     Note: this is slightly different from the normal foreign key check
@@ -802,14 +806,15 @@ def removeFastSequence(db):
                   ON r.gp_segment_id = cfg.content
                WHERE cfg.role = 'p';
               """
-        curs = db.query(qry)
-        for row in curs.dictresult():
-            seg = row['dbid']  # dbid of targeted segment
-            name = 'gp_fastsequence tuple'  # for comment purposes
-            table = 'gp_fastsequence'  # table name
-            cols = {'objid': row['objid']}  # column name and value
-            objname = 'gp_fastsequence'  # for comment purposes
-            buildRemove(seg, name, table, cols, objname)
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+            curs.execute(qry)
+            for row in curs.fetchall():
+                seg = row['dbid']  # dbid of targeted segment
+                name = 'gp_fastsequence tuple'  # for comment purposes
+                table = 'gp_fastsequence'  # table name
+                cols = {'objid': row['objid']}  # column name and value
+                objname = 'gp_fastsequence'  # for comment purposes
+                buildRemove(seg, name, table, cols, objname)
     except Exception as e:
         logger.error('removeFastSequence: ' + str(e))
 
@@ -871,42 +876,41 @@ def drop_leaked_schemas(leaked_schema_dropper, dbname):
     logger.info('-----------------------------------')
     logger.info('Checking for leaked temporary schemas')
 
-    db_connection = connect(database=dbname)
     try:
-        dropped_schemas = leaked_schema_dropper.drop_leaked_schemas(db_connection)
-        if not dropped_schemas:
-            logger.info('[OK] temporary schemas')
-        else:
-            logger.info('[FAIL] temporary schemas')
-            myprint("Found and dropped %d unbound temporary schemas" % len(dropped_schemas))
-            logger.error('Dropped leaked schemas \'%s\' in the database \'%s\'' % (dropped_schemas, dbname))
+        with closing(connect(database=dbname)) as conn:
+                dropped_schemas = leaked_schema_dropper.drop_leaked_schemas(conn)
+                if not dropped_schemas:
+                    logger.info('[OK] temporary schemas')
+                else:
+                    logger.info('[FAIL] temporary schemas')
+                    myprint("Found and dropped %d unbound temporary schemas" % len(dropped_schemas))
+                    logger.error('Dropped leaked schemas \'%s\' in the database \'%s\'' % (dropped_schemas, dbname))
     except Exception as e:
         setError(ERROR_NOREPAIR)
         myprint('  Execution error: ' + str(e))
-    finally:
-        db_connection.close()
 
 def checkDepend():
     # Check for dependencies on non-existent objects
     logger.info('-----------------------------------')
     logger.info('Checking Object Dependencies')
 
-    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+    conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+    with conn.cursor() as curs:
 
-    # Catalogs that link up to pg_depend/pg_shdepend
-    qry = """
-             select relname from pg_class c
-              where relkind='r'
-                and relnamespace=%d
-                and exists (select 1 from pg_attribute a where attname = 'oid' and a.attrelid = c.oid)
-          """ % PG_CATALOG_OID
-    curs = db.query(qry)
-    catalogs = []
-    for row in curs.getresult():
-        catalogs.append(row[0])
+        # Catalogs that link up to pg_depend/pg_shdepend
+        qry = """
+        select relname from pg_class c
+        where relkind='r'
+        and relnamespace=%d
+        and exists (select 1 from pg_attribute a where attname = 'oid' and a.attrelid = c.oid)
+        """ % PG_CATALOG_OID
+        curs.execute(qry)
+        catalogs = []
+        for row in curs.fetchall():
+            catalogs.append(row[0])
 
-    checkDependJoinCatalog(catalogs)
-    checkCatalogJoinDepend(catalogs)
+        checkDependJoinCatalog(catalogs)
+        checkCatalogJoinDepend(catalogs)
 
 def checkDependJoinCatalog(catalogs):
     # Construct subquery that will verify that all (classid, objid)
@@ -1063,7 +1067,6 @@ def checkOwners():
     #
     #  - Between 3.3 and 4.0 the ao segment columns migrated from pg_class
     #    to pg_appendonly.
-    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     qry = '''
     select distinct n.nspname, coalesce(o.relname, c.relname) as relname,
                     a.rolname, m.rolname as coordinator_rolname
@@ -1083,20 +1086,21 @@ def checkOwners():
     where c.relowner <> r.relowner
     '''
     try:
-        curs = db.query(qry)
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+            curs.execute(qry)
+            rows = []
+            for row in curs.fetchall():
+                rows.append(row)
 
-        rows = []
-        for row in curs.dictresult():
-            rows.append(row)
-
-        if len(rows) == 0:
-            logger.info('[OK] table ownership')
-        else:
-            GV.checkStatus = False
-            setError(ERROR_REMOVE)
-            logger.info('[FAIL] table ownership')
-            logger.error('found %d table ownership issue(s)' % len(rows))
-            logger.error('%s' % qry)
+            if len(rows) == 0:
+                logger.info('[OK] table ownership')
+            else:
+                GV.checkStatus = False
+                setError(ERROR_REMOVE)
+                logger.info('[FAIL] table ownership')
+                logger.error('found %d table ownership issue(s)' % len(rows))
+                logger.error('%s' % qry)
             for row in rows[0:100]:
                 logger.error('  %s.%s relowner %s != %s'
                              % (row['nspname'], row['relname'], row['rolname'],
@@ -1120,7 +1124,6 @@ def checkOwners():
     #  - Ignore implementation types of pg_class entries - they should be
     #    in the check above since ALTER TABLE is required to fix them, not
     #    ALTER TYPE.
-    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     qry = '''
     select distinct n.nspname, t.typname, a.rolname, m.rolname as coordinator_rolname
     from gp_dist_random('pg_type') r
@@ -1131,27 +1134,28 @@ def checkOwners():
     where r.typowner <> t.typowner
     '''
     try:
-        curs = db.query(qry)
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+            curs.execute(qry)
 
-        rows = []
-        for row in curs.dictresult():
-            rows.append(row)
+            rows = []
+            for row in curs.fetchall():
+                rows.append(row)
 
-        if len(rows) == 0:
-            logger.info('[OK] type ownership')
-        else:
-            GV.checkStatus = False
-            setError(ERROR_NOREPAIR)
-            logger.info('[FAIL] type ownership')
-            logger.error('found %d type ownership issue(s)' % len(rows))
-            logger.error('%s' % qry)
+            if len(rows) == 0:
+                logger.info('[OK] type ownership')
+            else:
+                GV.checkStatus = False
+                setError(ERROR_NOREPAIR)
+                logger.info('[FAIL] type ownership')
+                logger.error('found %d type ownership issue(s)' % len(rows))
+                logger.error('%s' % qry)
             for row in rows[0:100]:
                 logger.error('  %s.%s typeowner %s != %s'
                              % (row['nspname'], row['typname'], row['rolname'],
                                 row['coordinator_rolname']))
             if len(rows) > 100:
                 logger.error("...")
-
     except Exception as e:
         setError(ERROR_NOREPAIR)
         myprint("[ERROR] executing test: check type ownership")
@@ -1175,15 +1179,14 @@ def checkOwners():
 
 
 def closeDbs():
-    for key, conns in GV.db.items():
-        db = conns[0]
-        db.close()
-    GV.db = {}  # remove everything
+    for key, conns in GV.conn.items():
+        conn = conns[0]
+        conn.close()
+    GV.conn = {}  # remove everything
 
 
 # -------------------------------------------------------------------------------
 def getCatObj(namestr):
-    db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     try:
         cat = GV.catalog.getCatalogTable(namestr)
     except Exception as e:
@@ -1253,25 +1256,25 @@ def checkTableACL(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
-        curs = db.query(qry)
-        nrows = curs.ntuples()
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        with conn.cursor() as curs:
+            curs = db.execute(qry)
+            nrows = curs.rowcount
 
-        if nrows == 0:
-            logger.info('[OK] Cross consistency acl check for ' + catname)
-        else:
-            GV.checkStatus = False
-            setError(ERROR_NOREPAIR)
-            GV.aclStatus = False
-            logger.info('[FAIL] Cross consistency acl check for ' + catname)
-            logger.error('  %s acl check has %d issue(s)' % (catname, nrows))
+            if nrows == 0:
+                logger.info('[OK] Cross consistency acl check for ' + catname)
+            else:
+                GV.checkStatus = False
+                setError(ERROR_NOREPAIR)
+                GV.aclStatus = False
+                logger.info('[FAIL] Cross consistency acl check for ' + catname)
+                logger.error('  %s acl check has %d issue(s)' % (catname, nrows))
 
-            fields = curs.listfields()
-            gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
-            for row in curs.getresult():
-                gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
-            processACLResult(catname, fields, curs.getresult())
-
+                fields = [desc[0] for desc in curs.description]
+                gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
+                for row in curs.getresult():
+                    gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
+                processACLResult(catname, fields, curs.getresult())
     except Exception as e:
         setError(ERROR_NOREPAIR)
         GV.aclStatus = False
@@ -1292,9 +1295,9 @@ def checkForeignKey(cat_tables=None):
     if not cat_tables:
         cat_tables = GV.catalog.getCatalogTables()
 
-    db_connection = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+    conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     try:
-        foreign_key_check = ForeignKeyCheck(db_connection, logger, GV.opt['-S'], autoCast)
+        foreign_key_check = ForeignKeyCheck(conn, logger, GV.opt['-S'], autoCast)
         foreign_key_issues = foreign_key_check.runCheck(cat_tables)
         if foreign_key_issues:
             GV.checkStatus = False
@@ -1304,13 +1307,14 @@ def checkForeignKey(cat_tables=None):
                     processForeignKeyResult(catname, pkcatname, fields, results)
                     if catname == 'gp_fastsequence' and pkcatname == 'pg_class':
                         setError(ERROR_REMOVE)
-                        removeFastSequence(db_connection)
+                        removeFastSequence(conn)
                     else:
                         setError(ERROR_NOREPAIR)
     except Exception as ex:
         setError(ERROR_NOREPAIR)
         GV.foreignKeyStatus = False
         myprint('  Execution error: ' + str(ex))
+
 # -------------------------------------------------------------------------------
 
 
@@ -1380,40 +1384,39 @@ def checkTableMissingEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
-        curs = db.query(qry)
-        nrows = curs.ntuples()
-        results = curs.getresult()
-        fields = curs.listfields()
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        with conn.cursor() as curs:
+            curs.execute(qry)
+            nrows = curs.rowcount
+            results = curs.fetchall()
+            fields = [desc[0] for desc in curs.description]
 
-        if nrows != 0:
-            results = filterSpuriousFailures(catname, fields, results)
-            nrows = len(results)
+            if nrows != 0:
+                results = filterSpuriousFailures(catname, fields, results)
+                nrows = len(results)
 
-        if nrows == 0:
-            logger.info('[OK] Checking for missing or extraneous entries for ' + catname)
-        else:
-            if catname in ['pg_constraint']:
-                logger_with_level = logger.warning
-                log_level = logging.WARNING
+            if nrows == 0:
+                logger.info('[OK] Checking for missing or extraneous entries for ' + catname)
             else:
-                GV.checkStatus = False
-                GV.missingEntryStatus = False
-                logger_with_level = logger.error
-                log_level = logging.ERROR
+                if catname in ['pg_constraint']:
+                    logger_with_level = logger.warning
+                    log_level = logging.WARNING
+                else:
+                    GV.checkStatus = False
+                    GV.missingEntryStatus = False
+                    logger_with_level = logger.error
+                    log_level = logging.ERROR
 
-            logger.info(('[%s] Checking for missing or extraneous entries for ' + catname) %
-                        ('WARNING' if log_level == logging.WARNING else 'FAIL'))
-            logger_with_level('  %s has %d issue(s)' % (catname, nrows))
-            gplog.log_literal(logger, log_level, "    " + " | ".join(fields))
+                logger.info(('[%s] Checking for missing or extraneous entries for ' + catname) %
+                            ('WARNING' if log_level == logging.WARNING else 'FAIL'))
+                logger_with_level('  %s has %d issue(s)' % (catname, nrows))
+                gplog.log_literal(logger, log_level, "    " + " | ".join(fields))
             for row in results:
                 gplog.log_literal(logger, log_level, "    " + " | ".join(map(str, row)))
             processMissingDuplicateEntryResult(catname, fields, results, "missing")
             if catname == 'pg_type':
                 generateVerifyFile(catname, fields, results, 'missing_extraneous')
-
             return results
-
     except Exception as e:
         setError(ERROR_NOREPAIR)
         GV.missingEntryStatus = False
@@ -1423,8 +1426,8 @@ def checkTableMissingEntry(cat):
 
 
 class checkAOSegVpinfoThread(execThread):
-    def __init__(self, cfg, db):
-        execThread.__init__(self, cfg, db, None)
+    def __init__(self, cfg, conn):
+        execThread.__init__(self, cfg, conn, None)
 
     def run(self):
         aoseg_query = """
@@ -1436,9 +1439,10 @@ class checkAOSegVpinfoThread(execThread):
 
         try:
             # Read the list of aoseg tables from the database
-            curs = self.db.query(aoseg_query)
+            curs = self.conn.cursor()
+            curs.execute(aoseg_query)
 
-            for relname, relid, segrelid, segrelname, attr_count in curs.getresult():
+            for relname, relid, segrelid, segrelname, attr_count in curs.fetchall():
                 # We check vpinfo consistency only for segs that are in state
                 # AOSEG_STATE_DEFAULT and which are not RESERVED_SEGNO.
                 # RESERVED_SEGNO can have a different number of attributes than
@@ -1448,8 +1452,8 @@ class checkAOSegVpinfoThread(execThread):
                 # The vpinfo for RESERVED_SEGNO will have more columns than
                 # relnatts in that case.
                 qry = "SELECT distinct(length(vpinfo)) FROM pg_aoseg.%s where state = 1 and segno <> 0;" % (segrelname)
-                vpinfo_curs = self.db.query(qry)
-                nrows = vpinfo_curs.ntuples()
+                curs.execute(qry)
+                nrows = curs.rowcount
                 if nrows == 0:
                     continue
                 elif nrows > 1:
@@ -1464,7 +1468,7 @@ class checkAOSegVpinfoThread(execThread):
                     logger.error(qry)
                     continue
 
-                vpinfo_length = vpinfo_curs.getresult()[0][0]
+                vpinfo_length = curs.fetchone()[0]
 
                 # vpinfo is bytea type, the length of the first 3 fields is 12 bytes, and the size of AOCSVPInfoEntry is 16
                 # typedef struct AOCSVPInfo
@@ -1497,8 +1501,8 @@ def checkAOSegVpinfo():
     # parallelise check
     for dbid in GV.cfg:
         cfg = GV.cfg[dbid]
-        db_connection = connect2(cfg)
-        thread = checkAOSegVpinfoThread(cfg, db_connection)
+        conn = connect2(cfg)
+        thread = checkAOSegVpinfoThread(cfg, conn)
         thread.start()
         logger.debug('launching check thread %s for dbid %i' %
                      (thread.name, dbid))
@@ -1513,8 +1517,8 @@ def checkAOSegVpinfo():
     processThread(threads)
 
 class checkAOLastrownumThread(execThread):
-    def __init__(self, cfg, db):
-        execThread.__init__(self, cfg, db, None)
+    def __init__(self, cfg, conn):
+        execThread.__init__(self, cfg, conn, None)
 
     # pg_attribute_encoding.lastrownums[segno], if exists, should have a corresponding entry in gp_fastsequence with
     # an objid same as segno. And the value of pg_attribute_encoding.lastrownums[segno] should fall in the range of
@@ -1543,8 +1547,9 @@ class checkAOLastrownumThread(execThread):
 
         try:
             # Execute the query
-            curs = self.db.query(aolastrownum_query)
-            nrows = curs.ntuples()
+            curs = self.conn.cursor()
+            curs.execute(aolastrownum_query)
+            nrows = curs.rowcount
 
             if nrows == 0:
                 logger.info('[OK] AO lastrownums check for pg_attribute_encoding')
@@ -1553,7 +1558,7 @@ class checkAOLastrownumThread(execThread):
                 # we could not fix this issue automatically
                 setError(ERROR_NOREPAIR)
                 logger.info('[FAIL] AO lastrownums check for pg_attribute_encoding')
-                for relname, relid, attnum, lastrownums, objmod, last_sequence, last_rownum in curs.getresult():
+                for relname, relid, attnum, lastrownums, objmod, last_sequence, last_rownum in curs.fetchall():
                     logger.error("   found inconsistent last_rownum {rownum} with last_sequence {seqnum} of aoseg {segno} for table '{relname}' attribute {attnum} on segment {content}"
                                  .format(rownum = last_rownum,
                                          seqnum = last_sequence,
@@ -1573,8 +1578,8 @@ def checkAOLastrownums():
     # parallelise check
     for dbid in GV.cfg:
         cfg = GV.cfg[dbid]
-        db_connection = connect2(cfg)
-        thread = checkAOLastrownumThread(cfg, db_connection)
+        conn = connect2(cfg)
+        thread = checkAOLastrownumThread(cfg, conn)
         thread.start()
         logger.debug('launching check thread %s for dbid %i' %
                      (thread.name, dbid))
@@ -1707,9 +1712,10 @@ def checkTableInconsistentEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
-        curs = db.query(qry)
-        nrows = curs.ntuples()
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        curs = conn.cursor()
+        curs.execute(qry)
+        nrows = curs.rowcount
 
         if nrows == 0:
             logger.info('[OK] Checking for inconsistent entries for ' + catname)
@@ -1720,16 +1726,14 @@ def checkTableInconsistentEntry(cat):
             logger.info('[FAIL] Checking for inconsistent entries for ' + catname)
             logger.error('  %s has %d issue(s)' % (catname, nrows))
 
-            fields = curs.listfields()
+            fields = [desc[0] for desc in curs.description]
             gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
-            for row in curs.getresult():
+            results = curs.fetchall()
+            for row in results:
                 gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
-            results = curs.getresult()
             processInconsistentEntryResult(catname, pkey, fields, results)
             if catname == 'pg_type':
                 generateVerifyFile(catname, fields, results, 'duplicate')
-
-
     except Exception as e:
         setError(ERROR_NOREPAIR)
         GV.inconsistentEntryStatus = False
@@ -1843,9 +1847,10 @@ def checkTableDuplicateEntry(cat):
 
     # Execute the query
     try:
-        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
-        curs = db.query(qry)
-        nrows = curs.ntuples()
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        curs = conn.cursor()
+        curs.execute(qry)
+        nrows = curs.rowcount
 
         if nrows == 0:
             logger.info('[OK] Checking for duplicate entries for ' + catname)
@@ -1857,7 +1862,7 @@ def checkTableDuplicateEntry(cat):
 
             fields = curs.listfields()
             gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
-            results = curs.getresult()
+            results = curs.fetchall()
             for row in results:
                 gplog.log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
             processMissingDuplicateEntryResult(catname, fields, results, "duplicate")
@@ -1906,9 +1911,9 @@ def duplicateEntryQuery(catname, pkey):
 def checkUniqueIndexViolation():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for violated unique indexes')
-    db_connection = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+    conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
 
-    violations = UniqueIndexViolationCheck().runCheck(db_connection)
+    violations = UniqueIndexViolationCheck().runCheck(conn)
 
     checkname = 'unique index violation(s)'
     if violations:
@@ -1945,9 +1950,9 @@ def checkOrphanedToastTables():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for orphaned TOAST tables')
 
-    db_connection = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+    conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
     checker = OrphanedToastTablesCheck()
-    check_passed = checker.runCheck(db_connection)
+    check_passed = checker.runCheck(conn)
 
     checkname = 'orphaned toast table(s)'
     if check_passed:
@@ -2475,12 +2480,14 @@ def getOidFromPK(catname, pkeys):
                      pkeystr=pkeystr)
 
     try:
-        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
-        curs = db.query(qry)
-        if (len(curs.dictresult()) == 0):
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        curs = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        curs.execute(qry)
+        results = curs.fetchall()
+        if (len(results) == 0):
             raise QueryException("No such entry '%s' in %s" % (pkeystr, catname))
 
-        return curs.dictresult().pop()['oid']
+        return results.pop()['oid']
 
     except Exception as e:
         setError(ERROR_NOREPAIR)
@@ -2492,10 +2499,11 @@ def getOidFromPK(catname, pkeys):
 def getClassOidForRelfilenode(relfilenode):
     qry = "SELECT oid FROM pg_class WHERE relfilenode = %d;" % (relfilenode)
     try:
-        dburl = dbconn.DbURL(hostname=GV.opt['-h'], port=GV.opt['-p'], dbname=GV.dbname)
-        conn = dbconn.connect(dburl)
-        oid = dbconn.queryRow(conn, qry)[0]
-        return oid
+        with closing(connect()) as conn:
+            with conn.cursor() as curs:
+                curs.execute(qry)
+                oid = curs.fetchone()[0]
+                return oid
     except Exception as e:
         setError(ERROR_NOREPAIR)
         myprint('  Execution error: ' + str(e))
@@ -2515,10 +2523,12 @@ def getResourceTypeOid(oid):
           """ % (oid, oid)
 
     try:
-        db = connect()
-        curs = db.query(qry)
-        if len(curs.dictresult()) == 0: return 0
-        return curs.dictresult().pop()['oid']
+        with closing(connect()) as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as curs:
+                curs.execute(qry)
+                results = curs.fetchall()
+                if len(results) == 0: return 0
+                return results.pop()['oid']
     except Exception as e:
         setError(ERROR_NOREPAIR)
         myprint('  Execution error: ' + str(e))
@@ -3113,7 +3123,7 @@ class GPObject:
 
         # Collect all tables with missing issues for later reporting
         if len(self.missingIssues):
-            db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+            conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
             oid_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where oid=%d"
             type_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where reltype=%d"
             for issues in self.missingIssues.values() :
@@ -3121,19 +3131,23 @@ class GPObject:
                     # Get schemaname.tablename corresponding to oid
                     for key in issue.pkeys:
                         if 'relid' in key or key in ['ev_class', 'reloid']:
-                            table_list = db.query(oid_query % issue.pkeys[key]).getresult()
+                            curs = conn.cursor()
+                            curs.execute(oid_query % issue.pkeys[key])
+                            table_list = curs.fetchone()
                             if table_list:
                                 if issue.type == 'missing':
-                                    GV.missing_attr_tables.append( (table_list[0][0], issue.segids) )
+                                    GV.missing_attr_tables.append( (table_list[0], issue.segids) )
                                 else:
-                                    GV.extra_attr_tables.append( (table_list[0][0], issue.segids) )
+                                    GV.extra_attr_tables.append( (table_list[0], issue.segids) )
                         elif key == 'oid':
-                            table_list = db.query(type_query % issue.pkeys[key]).getresult()
+                            curs = conn.cursor()
+                            curs.execute(type_query % issue.pkeys[key])
+                            table_list = curs.fetchone()
                             if table_list:
                                 if issue.type == 'missing':
-                                    GV.missing_attr_tables.append( (table_list[0][0], issue.segids) )
+                                    GV.missing_attr_tables.append( (table_list[0], issue.segids) )
                                 else:
-                                    GV.extra_attr_tables.append( (table_list[0][0], issue.segids) )
+                                    GV.extra_attr_tables.append( (table_list[0], issue.segids) )
 
 
     def __cmp__(self, other):
@@ -3282,9 +3296,11 @@ def getRelInfo(objects):
           """.format(oids=','.join(map(str, oids)))
 
     try:
-        db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
-        curs = db.query(qry)
-        for row in curs.getresult():
+        conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
+        curs = conn.cursor()
+        curs.execute(qry)
+        results = curs.fetchall()
+        for row in results:
             (oid, relname, nspname, relkind, paroid) = row
             objects[oid, 'pg_class'].setRelInfo(relname, nspname, relkind, paroid)
 

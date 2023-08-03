@@ -120,6 +120,10 @@ typedef struct
 #define HOST_NAME_SIZE 100
 #define FDIST_TIMEOUT  408
 #define MAX_TRY_WAIT_TIME 64
+
+#define DEFAULT_TCP_KEEPALIVE_TIME 7200
+#define DEFAULT_TCP_KEEPALIVE_INTVL 75
+#define DEFAULT_TCP_KEEPALIVE_PROBES 9
 /*
  * SSL support GUCs - should be added soon. Until then we will use stubs
  *
@@ -1331,6 +1335,22 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-USER", ev->GP_USER);
 		set_httpheader(file, "X-GP-SEG-PORT", ev->GP_SEG_PORT);
 		set_httpheader(file, "X-GP-SESSION-ID", ev->GP_SESSION_ID);
+
+		int	libcurl_tcp_keepalives_idle = DEFAULT_TCP_KEEPALIVE_TIME;
+		int	libcurl_tcp_keepalives_interval = DEFAULT_TCP_KEEPALIVE_INTVL;
+		int	libcurl_tcp_keepalives_count = DEFAULT_TCP_KEEPALIVE_PROBES;
+		if (tcp_keepalives_idle != 0)
+			libcurl_tcp_keepalives_idle = tcp_keepalives_idle;
+		if (tcp_keepalives_interval != 0)
+			libcurl_tcp_keepalives_interval = tcp_keepalives_interval;
+		if (tcp_keepalives_count != 0)
+			libcurl_tcp_keepalives_count = tcp_keepalives_count;
+		/* enable TCP keep-alive for this transfer, libcurl_tcp_keepalives_count probes */
+		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPALIVE, (long)libcurl_tcp_keepalives_count);
+		/* keep-alive idle time to libcurl_tcp_keepalives_idle seconds */
+		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPIDLE, (long)libcurl_tcp_keepalives_idle);
+		/* interval time between keep-alive probes: libcurl_tcp_keepalives_interval seconds */
+		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPINTVL, (long)libcurl_tcp_keepalives_interval);
 	}
 		
 	{

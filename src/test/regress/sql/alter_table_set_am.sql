@@ -853,3 +853,40 @@ ALTER TABLE atsetam_dropcol SET ACCESS METHOD heap;
 SELECT count(*) FROM pg_attribute WHERE attrelid = 'atsetam_dropcol'::regclass AND attnum > 0;
 SELECT count(*) FROM pg_attribute_encoding WHERE attrelid = 'atsetam_dropcol'::regclass;
 SELECT * FROM atsetam_dropcol;
+
+-- ATSETAM and AT SET reloptions with foreign tables.
+CREATE READABLE EXTERNAL TABLE at_external(i int, j int)
+    LOCATION ('gpfdist://host.invalid:8000/file') FORMAT 'text';
+
+-- Should be a no-op.
+ALTER TABLE at_external SET ACCESS METHOD ao_row;
+\d at_external
+-- Should be a no-op.
+ALTER TABLE at_external SET (compresstype=zlib);
+\d at_external
+
+-- Now make the table an external partition.
+CREATE TABLE at_part_w_external(i int, j int) DISTRIBUTED BY (i)
+    PARTITION BY RANGE(j) (START(1) END(3) EVERY(1));
+ALTER TABLE at_part_w_external ATTACH PARTITION at_external FOR VALUES FROM (3) TO (4);
+SELECT relname, a.amname, relkind, reloptions FROM pg_class c
+    LEFT OUTER JOIN pg_am a ON c.relam = a.oid
+    WHERE relname LIKE 'at_part_w_external%' OR relname = 'at_external';
+
+-- Should set the access method for all tables, except the foreign partition.
+ALTER TABLE at_part_w_external SET ACCESS METHOD ao_column;
+SELECT relname, a.amname, relkind, reloptions FROM pg_class c
+    LEFT OUTER JOIN pg_am a ON c.relam = a.oid
+    WHERE relname LIKE 'at_part_w_external%' OR relname = 'at_external';
+SELECT c.relname, a.attnum, attoptions
+    FROM pg_attribute_encoding a JOIN pg_class c ON a.attrelid = c.oid
+    WHERE c.relname LIKE 'at_part_w_external%' OR c.relname = 'at_external';
+
+-- Should set the reloptions for all tables, except the foreign partition.
+ALTER TABLE at_part_w_external SET (compresstype=zlib, compresslevel=8);
+SELECT relname, a.amname, relkind, reloptions FROM pg_class c
+    LEFT OUTER JOIN pg_am a ON c.relam = a.oid
+    WHERE relname LIKE 'at_part_w_external%' OR relname = 'at_external';
+SELECT c.relname, a.attnum, attoptions
+    FROM pg_attribute_encoding a JOIN pg_class c ON a.attrelid = c.oid
+    WHERE c.relname LIKE 'at_part_w_external%' OR c.relname = 'at_external';

@@ -982,18 +982,6 @@ typedef struct SubPlanState
 	Tuplestorestate *ts_state;
 } SubPlanState;
 
-/* ----------------
- *		AlternativeSubPlanState node
- * ----------------
- */
-typedef struct AlternativeSubPlanState
-{
-	NodeTag		type;
-	AlternativeSubPlan *subplan;	/* expression plan node */
-	List	   *subplans;		/* SubPlanStates of alternative subplans */
-	int			active;			/* list index of the one we're using */
-} AlternativeSubPlanState;
-
 /*
  * DomainConstraintState - one item to check during CoerceToDomain
  *
@@ -1608,37 +1596,6 @@ typedef struct IndexScanState
 	Oid			tableOid;
 } IndexScanState;
 
-/*
- * DynamicIndexScanState
- */
-typedef struct DynamicIndexScanState
-{
-	ScanState	ss;
-
-	int			scan_state; /* the stage of scanning */
-
-	int			eflags;
-	IndexScanState *indexScanState;
-	List	   *tuptable;
-	ExprContext *outer_exprContext;
-
-	/*
-	 * This memory context will be reset per-partition to free
-	 * up previous partition's memory
-	 */
-	MemoryContext partitionMemoryContext;
-
-	int			nOids; /* number of oids to scan in partitioned table */
-	Oid		   *partOids; /* list of oids to scan in partitioned table */
-	int			whichPart; /* index of current partition in partOids */
-	/* The partition oid for which the current varnos are mapped */
-	Oid columnLayoutOid;
-
-	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
-	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
-	bool 		did_pruning; /* flag that is set when */
-} DynamicIndexScanState;
-
 /* ----------------
  *	 IndexOnlyScanState information
  *
@@ -1676,6 +1633,43 @@ typedef struct IndexOnlyScanState
 	Buffer		ioss_VMBuffer;
 	Size		ioss_PscanLen;
 } IndexOnlyScanState;
+
+/*
+ * DynamicIndexScanState
+ */
+typedef struct DynamicIndexScanState
+{
+	ScanState	ss;
+
+	int			scan_state; /* the stage of scanning */
+
+	int			eflags;
+
+	/*
+	 * IndexScanState and IndexOnlyScanState are mutually exclusive fields used
+	 * set for dynamic index scan or dynamic index only scan.
+	 */
+	IndexScanState *indexScanState;
+	IndexOnlyScanState *indexOnlyScanState;
+	List	   *tuptable;
+	ExprContext *outer_exprContext;
+
+	/*
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
+	 */
+	MemoryContext partitionMemoryContext;
+
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
+	/* The partition oid for which the current varnos are mapped */
+	Oid columnLayoutOid;
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set when */
+} DynamicIndexScanState;
 
 /* ----------------
  *	 BitmapIndexScanState information

@@ -223,6 +223,11 @@ ALTER SYSTEM
 -----------------
  Success:        
 (1 row)
+11: select gp_inject_fault_infinite('before_orphaned_check', 'suspend', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
 -- statement to trigger fault after writing prepare record
 12&: DELETE FROM QE_panic_test_table;  <waiting ...>
 11: SELECT gp_wait_until_triggered_fault('end_prepare_two_phase', 1, dbid) from gp_segment_configuration where role='p' and content=0;
@@ -236,9 +241,26 @@ ALTER SYSTEM
  OK     
 (1 row)
 12<:  <... completed>
-ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=25361: server closed the connection unexpectedly
+ERROR:  Error on receive from seg0 127.0.0.1:7002 pid=5600: server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
+
+11: SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+11: select * from gp_stat_progress_dtx_recovery;
+ phase        | recover_commited_dtx_total | recover_commited_dtx_completed | in_doubt_tx_total | in_doubt_tx_in_progress | in_doubt_tx_aborted 
+--------------+----------------------------+--------------------------------+-------------------+-------------------------+---------------------
+ initializing | 0                          | 0                              | 0                 | 0                       | 0                   
+(1 row)
+11: SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid) from gp_segment_configuration where role='p' and content=-1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
 13: SELECT count(*) from QE_panic_test_table;
  count 
 -------
@@ -332,6 +354,11 @@ server closed the connection unexpectedly
 -------------------------------
  Success:                      
 (1 row)
+19: SELECT gp_inject_fault_infinite('after_orphaned_check', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
 
 -- let prepare finish else dtx recovery can not abort the prepared transaction.
 19: SELECT gp_inject_fault_infinite('before_xlog_xact_prepare', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 1;
@@ -361,6 +388,22 @@ server closed the connection unexpectedly
 -- the orphaned prepared transaction holds lock of the table that conflicts
 -- with required lock of the drop operation.
 19: SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+-- verify orphaned prepared transacion is aborted
+19: SELECT gp_wait_until_triggered_fault('after_orphaned_check', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+19: select * from gp_stat_progress_dtx_recovery;
+ phase                                   | recover_commited_dtx_total | recover_commited_dtx_completed | in_doubt_tx_total | in_doubt_tx_in_progress | in_doubt_tx_aborted 
+-----------------------------------------+----------------------------+--------------------------------+-------------------+-------------------------+---------------------
+ managing in-doubt orphaned transactions | 0                          | 0                              | 1                 | 0                       | 1                   
+(1 row)
+19: SELECT gp_inject_fault_infinite('after_orphaned_check', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
  gp_inject_fault_infinite 
 --------------------------
  Success:                 
@@ -414,6 +457,11 @@ CREATE TABLE
 --------------------------
  Success:                 
 (1 row)
+20: SELECT gp_inject_fault_infinite('post_in_doubt_tx_in_progress', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
 
 -- run two phase query.
 21: INSERT INTO test_retry_abort SELECT generate_series(1,10);
@@ -430,6 +478,22 @@ ERROR:  fault triggered, fault name:'dtm_broadcast_prepare' fault type:'error'
 -------
  1     
 (1 row)
+-- verify in-doubt transaction is in progress
+20: SELECT gp_wait_until_triggered_fault('post_in_doubt_tx_in_progress', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+20: select * from gp_stat_progress_dtx_recovery;
+ phase                                   | recover_commited_dtx_total | recover_commited_dtx_completed | in_doubt_tx_total | in_doubt_tx_in_progress | in_doubt_tx_aborted 
+-----------------------------------------+----------------------------+--------------------------------+-------------------+-------------------------+---------------------
+ managing in-doubt orphaned transactions | 0                          | 0                              | 1                 | 1                       | 0                   
+(1 row)
+19: SELECT gp_inject_fault_infinite('post_in_doubt_tx_in_progress', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
 
 -- dtx recovery ready to handle the orphaned prepared transaction.
 20: SELECT gp_inject_fault_infinite('before_orphaned_check', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
@@ -442,7 +506,7 @@ ERROR:  fault triggered, fault name:'dtm_broadcast_prepare' fault type:'error'
 -------------------------------
  Success:                      
 (1 row)
-20: SELECT gp_inject_fault_infinite('after_orphaned_check', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+20: SELECT gp_inject_fault_infinite('after_orphaned_check', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
  gp_inject_fault_infinite 
 --------------------------
  Success:                 
@@ -470,6 +534,11 @@ ERROR:  fault triggered, fault name:'dtm_broadcast_prepare' fault type:'error'
  transaction | gid | prepared | owner | database 
 -------------+-----+----------+-------+----------
 (0 rows)
+20: select * from gp_stat_progress_dtx_recovery;
+ phase                                   | recover_commited_dtx_total | recover_commited_dtx_completed | in_doubt_tx_total | in_doubt_tx_in_progress | in_doubt_tx_aborted 
+-----------------------------------------+----------------------------+--------------------------------+-------------------+-------------------------+---------------------
+ managing in-doubt orphaned transactions | 0                          | 0                              | 1                 | 0                       | 1                   
+(1 row)
 
 -- cleanup
 20: ALTER SYSTEM RESET gp_dtx_recovery_interval;

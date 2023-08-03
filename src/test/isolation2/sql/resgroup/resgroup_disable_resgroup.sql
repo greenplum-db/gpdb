@@ -1,7 +1,7 @@
 -- reset the GUC and restart cluster.
 -- start_ignore
 ! gpconfig -r gp_resource_manager;
-! gpstop -rai;
+! gpstop -ra;
 SHOW gp_resource_manager;
 -- end_ignore
 

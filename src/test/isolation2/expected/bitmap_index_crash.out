@@ -98,3 +98,32 @@ ALTER SYSTEM
 -----------------
  Success:        
 (1 row)
+
+-- Test bitmap index replay XLog after crash
+-- More details could be found at https://github.com/greenplum-db/gpdb/issues/13517
+drop table if exists test_bitmap;
+DROP TABLE
+create table test_bitmap( id int, type int ) distributed by (id);
+CREATE TABLE
+insert into test_bitmap (id, type) select 1, g % 1000 from generate_series(1, 3000000) g;
+INSERT 0 3000000
+create index on test_bitmap using bitmap(type);
+CREATE INDEX
+select count(*) from test_bitmap where type = 520;
+ count 
+-------
+ 3000  
+(1 row)
+
+-- start_ignore
+! gpstop -rai;
+-- end_ignore
+
+0: select count(*) from test_bitmap where type = 520;
+ count 
+-------
+ 3000  
+(1 row)
+0: drop table test_bitmap;
+DROP TABLE
+

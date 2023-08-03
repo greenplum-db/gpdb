@@ -822,6 +822,13 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 				MemoryContextResetAndDeleteChildren(col_context);
 				continue;
 			}
+			/*
+			 * if merge_stats is not set, it is still possible that we don't want to sample
+			 * (eg: in the case of autoanalyze). In this case, don't populate statistics
+			 * for this attribute
+			 */
+			if (!sample_needed)
+				continue;
 			Assert(sample_needed);
 
 			Bitmapset  *rowIndexes = colLargeRowIndexes[stats->attr->attnum - 1];
@@ -982,8 +989,17 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		 * For partitioned tables that's pointless (the non-leaf tables are
 		 * always empty), so we store stats representing the whole tree.
 		 */
-		build_ext_stats = (onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE) ? inh : (!inh);
 
+		/*
+		 * Don't build external stats for partitioned tables during autovacuum.
+		 * External stats cannot be merged and therefore would require sampling,
+		 * which is much more expensive. Users can instead explicitly run analyze
+		 * on the root partition to trigger sampling.
+		 */
+		if (onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+			build_ext_stats = IsAutoVacuumWorkerProcess() ? false : inh;
+		else
+			build_ext_stats = !inh;
 		/*
 		 * Build extended statistics (if there are any).
 		 *

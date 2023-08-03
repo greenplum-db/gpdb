@@ -121,7 +121,7 @@ class SyncPackages(Operation):
                 Rsync(name='Syncing {} to localhost'.format(package),
                       srcFile=remote_package_metadata,
                       dstFile=remove_package_metadata,
-                      srcHost=self.host).run(validateAfter=True)
+                      srcHost=self.host, ignore_times=True, whole_file=True).run(validateAfter=True)
                 remove_list = get_package_file_list(package)
                 for file_ in remove_list:
                     RemoveRemoteFile(os.path.join(GPHOME, file_), self.host).run()

@@ -2,7 +2,6 @@
 -- White-box tests are necessary to ensure that summarization is done
 -- successfully (to avoid cases where ranges have brin data tuples without
 -- values or where the range is not covered by the revmap etc)
-CREATE EXTENSION pageinspect;
 
 -- Turn off sequential scans to force usage of BRIN indexes for scans.
 SET enable_seqscan TO off;
@@ -141,4 +140,3 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
 FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 RESET enable_seqscan;
-DROP EXTENSION pageinspect;

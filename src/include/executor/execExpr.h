@@ -238,7 +238,6 @@ typedef enum ExprEvalOp
 	EEOP_ROWIDEXPR,
 	EEOP_WINDOW_FUNC,
 	EEOP_SUBPLAN,
-	EEOP_ALTERNATIVE_SUBPLAN,
 
 	/* aggregation related nodes */
 	EEOP_AGG_STRICT_DESERIALIZE,
@@ -653,13 +652,6 @@ typedef struct ExprEvalStep
 			SubPlanState *sstate;
 		}			subplan;
 
-		/* for EEOP_ALTERNATIVE_SUBPLAN */
-		struct
-		{
-			/* out-of-line state, created by nodeSubplan.c */
-			AlternativeSubPlanState *asstate;
-		}			alternative_subplan;
-
 		/* for EEOP_AGG_*DESERIALIZE */
 		struct
 		{
@@ -824,8 +816,6 @@ extern void ExecEvalXmlExpr(ExprState *state, ExprEvalStep *op);
 extern void ExecEvalGroupingFunc(ExprState *state, ExprEvalStep *op);
 extern void ExecEvalSubPlan(ExprState *state, ExprEvalStep *op,
 							ExprContext *econtext);
-extern void ExecEvalAlternativeSubPlan(ExprState *state, ExprEvalStep *op,
-									   ExprContext *econtext);
 extern void ExecEvalWholeRowVar(ExprState *state, ExprEvalStep *op,
 								ExprContext *econtext);
 extern void ExecEvalSysVar(ExprState *state, ExprEvalStep *op,

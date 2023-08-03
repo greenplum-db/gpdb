@@ -51,6 +51,7 @@
 GpRoleValue Gp_role;			/* Role paid by this Greenplum Database
 								 * backend */
 char	   *gp_role_string;		/* Staging area for guc.c */
+char	   *gp_session_role_string; /* Staging area for guc.c */
 
 bool		Gp_is_writer;		/* is this qExec a "writer" process. */
 

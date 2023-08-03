@@ -60,6 +60,8 @@ class CgroupValidationVersionTwo(CgroupValidation):
 
         self.validate_permission("gpdb/memory.current", "r")
 
+        self.validate_permission("gpdb/io.max", "rw")
+
     def die(self, msg):
         raise ValidationException("cgroup is not properly configured: {}".format(msg))
 

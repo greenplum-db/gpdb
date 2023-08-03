@@ -26,6 +26,7 @@ OBJS        = CDecorrelator.o \
               CXformDifference2LeftAntiSemiJoin.o \
               CXformDifferenceAll2LeftAntiSemiJoin.o \
               CXformDynamicGet2DynamicTableScan.o \
+              CXformDynamicIndexGet2DynamicIndexOnlyScan.o \
               CXformDynamicIndexGet2DynamicIndexScan.o \
               CXformEagerAgg.o \
               CXformExpandDynamicGetWithForeignPartitions.o \
@@ -55,7 +56,6 @@ OBJS        = CDecorrelator.o \
               CXformImplementDynamicBitmapTableGet.o \
               CXformImplementFullOuterMergeJoin.o \
               CXformImplementLimit.o \
-              CXformImplementPartitionSelector.o \
               CXformImplementSequence.o \
               CXformImplementSequenceProject.o \
               CXformImplementSplit.o \
@@ -102,6 +102,7 @@ OBJS        = CDecorrelator.o \
               CXformLeftSemiJoin2InnerJoin.o \
               CXformLeftSemiJoin2InnerJoinUnderGb.o \
               CXformLeftSemiJoin2NLJoin.o \
+              CXformLimit2IndexGet.o \
               CXformMaxOneRow2Assert.o \
               CXformDynamicForeignGet2DynamicForeignScan.o \
               CXformProject2Apply.o \

@@ -29,6 +29,7 @@ You can register the following modules in this manner:
 <li class="li"><a class="xref" href="../ref_guide/modules/diskquota.html">diskquota</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/fuzzystrmatch.html">fuzzystrmatch</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/gp_sparse_vector.html">gp_sparse_vector</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/greenplum_fdw.html">greenplum_fdw</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/hstore.html">hstore</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/ip4r.html">ip4r</a></li>
 </ul>

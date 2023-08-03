@@ -779,10 +779,8 @@ EXPLAIN select count(distinct ss.ten) from
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
 
 --
--- In case of simple exists query, planner can generate alternative
--- subplans and choose one of them during execution based on the cost.
--- The below test check that we are generating alternative subplans,
--- we should see 2 subplans in the explain
+-- Commit 41efb83 remove unused subplans in planner stage, it
+-- will shows only the subplan actually be used.
 --
 EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
 

@@ -93,6 +93,9 @@ typedef struct xl_bm_bitmapwords_perpage
 	uint16			bmp_start_cword_no;
 	uint16			bmp_num_cwords;
 
+	/* The next page number for the page. */
+	BlockNumber		bm_next_blkno;
+
 	/*
 	 * The following are arrays of content words and header
 	 * words, at next MAXALIGN boundary. They are located one after the other.

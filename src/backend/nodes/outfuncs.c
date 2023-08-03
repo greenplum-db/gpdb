@@ -769,10 +769,8 @@ _outIndexScan(StringInfo str, const IndexScan *node)
 }
 
 static void
-_outIndexOnlyScan(StringInfo str, const IndexOnlyScan *node)
+outIndexOnlyScanFields(StringInfo str, const IndexOnlyScan *node)
 {
-	WRITE_NODE_TYPE("INDEXONLYSCAN");
-
 	_outScanInfo(str, (const Scan *) node);
 
 	WRITE_OID_FIELD(indexid);
@@ -784,11 +782,30 @@ _outIndexOnlyScan(StringInfo str, const IndexOnlyScan *node)
 }
 
 static void
+_outIndexOnlyScan(StringInfo str, const IndexOnlyScan *node)
+{
+	WRITE_NODE_TYPE("INDEXONLYSCAN");
+
+	outIndexOnlyScanFields(str, node);
+}
+
+static void
 _outDynamicIndexScan(StringInfo str, const DynamicIndexScan *node)
 {
 	WRITE_NODE_TYPE("DYNAMICINDEXSCAN");
 
 	outIndexScanFields(str, &node->indexscan);
+	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
+}
+
+static void
+_outDynamicIndexOnlyScan(StringInfo str, const DynamicIndexOnlyScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICINDEXONLYSCAN");
+
+	outIndexOnlyScanFields(str, &node->indexscan);
 	WRITE_NODE_FIELD(partOids);
 	WRITE_NODE_FIELD(part_prune_info);
 	WRITE_NODE_FIELD(join_prune_paramids);
@@ -2762,6 +2779,7 @@ _outPlannerInfo(StringInfo str, const PlannerInfo *node)
 	WRITE_BOOL_FIELD(hasLateralRTEs);
 	WRITE_BOOL_FIELD(hasHavingQual);
 	WRITE_BOOL_FIELD(hasPseudoConstantQuals);
+	WRITE_BOOL_FIELD(hasAlternativeSubPlans);
 	WRITE_BOOL_FIELD(hasRecursion);
 	WRITE_INT_FIELD(wt_param_id);
 	WRITE_BITMAPSET_FIELD(curOuterRels);
@@ -3370,6 +3388,7 @@ _outTruncateStmt(StringInfo str, const TruncateStmt *node)
 	WRITE_NODE_TYPE("TRUNCATESTMT");
 
 	WRITE_NODE_FIELD(relations);
+	WRITE_BOOL_FIELD(restart_seqs);
 	WRITE_ENUM_FIELD(behavior, DropBehavior);
 }
 
@@ -5568,6 +5587,9 @@ outNode(StringInfo str, const void *obj)
 				break;
 			case T_DynamicIndexScan:
 				_outDynamicIndexScan(str,obj);
+				break;
+			case T_DynamicIndexOnlyScan:
+				_outDynamicIndexOnlyScan(str,obj);
 				break;
 			case T_IndexOnlyScan:
 				_outIndexOnlyScan(str, obj);

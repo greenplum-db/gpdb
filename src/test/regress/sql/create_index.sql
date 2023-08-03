@@ -81,6 +81,7 @@ CREATE INDEX gpolygonind ON polygon_tbl USING gist (f1);
 CREATE INDEX gcircleind ON circle_tbl USING gist (f1);
 
 INSERT INTO POINT_TBL(f1) VALUES (NULL);
+ANALYZE POINT_TBL;
 
 CREATE INDEX gpointind ON point_tbl USING gist (f1);
 

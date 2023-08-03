@@ -14,7 +14,11 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-08-10 14:56:46|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
 2021-08-10 14:56:46|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
 2021-08-10 14:56:46|INFO|reusing external table ext_gpload_reusable_2092c476_f9a8_11eb_b503_0050569e2380
-2021-08-10 14:56:46|ERROR|unexpected error -- backtrace written to log file
+2021-08-10 14:56:46|ERROR|column "列" does not exist
+LINE 1: ..." FROM (SELECT *, row_number() OVER (PARTITION BY 列#2) AS g...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "staging_gpload_reusable_77874e55aae34d59751eb574ff0f5cf7.列1" or the column "chinese表.列1".
+ encountered while running INSERT INTO public."chinese表" ("列1","列#2","lie3") (SELECT from_table."列1",from_table."列#2",from_table."lie3" FROM (SELECT *, row_number() OVER (PARTITION BY 列#2) AS gpload_row_number FROM staging_gpload_reusable_77874e55aae34d59751eb574ff0f5cf7) AS from_table WHERE gpload_row_number=1)
 2021-08-10 14:56:46|INFO|rows Inserted          = 0
 2021-08-10 14:56:46|INFO|rows Updated           = 8
 2021-08-10 14:56:46|INFO|data formatting errors = 0
@@ -33,7 +37,11 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-08-10 14:56:46|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
 2021-08-10 14:56:46|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_5171458efa83aaf8c5bc7004bae85d5b
 2021-08-10 14:56:46|INFO|reusing external table ext_gpload_reusable_2092c476_f9a8_11eb_b503_0050569e2380
-2021-08-10 14:56:46|ERROR|unexpected error -- backtrace written to log file
+2021-08-10 14:56:46|ERROR|column "列" does not exist
+LINE 1: ..." FROM (SELECT *, row_number() OVER (PARTITION BY 列#2) AS g...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "staging_gpload_reusable_77874e55aae34d59751eb574ff0f5cf7.列1" or the column "chinese表.列1".
+ encountered while running INSERT INTO public."chinese表" ("列1","列#2","lie3") (SELECT from_table."列1",from_table."列#2",from_table."lie3" FROM (SELECT *, row_number() OVER (PARTITION BY 列#2) AS gpload_row_number FROM staging_gpload_reusable_77874e55aae34d59751eb574ff0f5cf7) AS from_table WHERE gpload_row_number=1)
 2021-08-10 14:56:46|INFO|rows Inserted          = 0
 2021-08-10 14:56:46|INFO|rows Updated           = 8
 2021-08-10 14:56:46|INFO|data formatting errors = 0

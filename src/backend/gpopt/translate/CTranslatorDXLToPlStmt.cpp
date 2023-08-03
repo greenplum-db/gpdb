@@ -37,6 +37,7 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <limits>  // std::numeric_limits
 #include <numeric>
 #include <tuple>
 
@@ -63,6 +64,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLPhysicalCTEProducer.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicBitmapTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicForeignScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexOnlyScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalGatherMotion.h"
@@ -458,6 +460,12 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 										  ctxt_translation_prev_siblings);
 			break;
 		}
+		case EdxlopPhysicalDynamicIndexOnlyScan:
+		{
+			plan = TranslateDXLDynIdxOnlyScan(dxlnode, output_context,
+											  ctxt_translation_prev_siblings);
+			break;
+		}
 		case EdxlopPhysicalDynamicForeignScan:
 		{
 			plan = TranslateDXLDynForeignScan(dxlnode, output_context,
@@ -563,6 +571,39 @@ CTranslatorDXLToPlStmt::SetParamIds(Plan *plan)
 	plan->allParam = bitmapset;
 }
 
+List *
+CTranslatorDXLToPlStmt::TranslatePartOids(IMdIdArray *parts, INT lockmode)
+{
+	List *oids_list = NIL;
+
+	for (ULONG ul = 0; ul < parts->Size(); ul++)
+	{
+		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
+		oids_list = gpdb::LAppendOid(oids_list, part);
+		// Since parser locks only root partition, locking the leaf
+		// partitions which we have to scan.
+		gpdb::GPDBLockRelationOid(part, lockmode);
+	}
+	return oids_list;
+}
+
+List *
+CTranslatorDXLToPlStmt::TranslateJoinPruneParamids(
+	const ULongPtrArray *selector_ids, OID oid_type,
+	CContextDXLToPlStmt *dxl_to_plstmt_context)
+{
+	List *join_prune_paramids = NIL;
+
+	for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
+	{
+		ULONG selector_id = *(*selector_ids)[ul];
+		ULONG param_id =
+			dxl_to_plstmt_context->GetParamIdForSelector(oid_type, selector_id);
+		join_prune_paramids = gpdb::LAppendInt(join_prune_paramids, param_id);
+	}
+	return join_prune_paramids;
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -595,8 +636,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
-	Index index =
-		ProcessDXLTblDescr(dxl_table_descr, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(dxl_table_descr, &base_table_context);
 
 	// a table scan node must have 2 children: projection list and filter
 	GPOS_ASSERT(2 == tbl_scan_dxlnode->Arity());
@@ -752,6 +792,36 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 								 ctxt_translation_prev_siblings);
 }
 
+void
+CTranslatorDXLToPlStmt::TranslatePlan(
+	Plan *plan, const CDXLNode *dxlnode, CDXLTranslateContext *output_context,
+	CContextDXLToPlStmt *dxl_to_plstmt_context,
+	CDXLTranslateContextBaseTable *base_table_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
+{
+	plan->plan_node_id = dxl_to_plstmt_context->GetNextPlanId();
+
+	// translate operator costs
+	TranslatePlanCosts(dxlnode, plan);
+
+	// an index scan node must have 3 children: projection list, filter and index condition list
+	GPOS_ASSERT(3 == dxlnode->Arity());
+
+	// translate proj list and filter
+	CDXLNode *project_list_dxlnode = (*dxlnode)[EdxlisIndexProjList];
+	CDXLNode *filter_dxlnode = (*dxlnode)[EdxlisIndexFilter];
+
+	// translate proj list
+	plan->targetlist =
+		TranslateDXLProjList(project_list_dxlnode, base_table_context,
+							 nullptr /*child_contexts*/, output_context);
+
+	// translate index filter
+	plan->qual = TranslateDXLIndexFilter(filter_dxlnode, output_context,
+										 base_table_context,
+										 ctxt_translation_prev_siblings);
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLIndexScan
@@ -781,8 +851,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), dxl_table_descr->LockMode());
 
-	Index index =
-		ProcessDXLTblDescr(dxl_table_descr, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(dxl_table_descr, &base_table_context);
 
 	IndexScan *index_scan = nullptr;
 	index_scan = MakeNode(IndexScan);
@@ -800,29 +869,10 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	index_scan->indexid = index_oid;
 
 	Plan *plan = &(index_scan->scan.plan);
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
 
-	// translate operator costs
-	TranslatePlanCosts(index_scan_dxlnode, plan);
-
-	// an index scan node must have 3 children: projection list, filter and index condition list
-	GPOS_ASSERT(3 == index_scan_dxlnode->Arity());
-
-	// translate proj list and filter
-	CDXLNode *project_list_dxlnode = (*index_scan_dxlnode)[EdxlisIndexProjList];
-	CDXLNode *filter_dxlnode = (*index_scan_dxlnode)[EdxlisIndexFilter];
-	CDXLNode *index_cond_list_dxlnode =
-		(*index_scan_dxlnode)[EdxlisIndexCondition];
-
-	// translate proj list
-	plan->targetlist =
-		TranslateDXLProjList(project_list_dxlnode, &base_table_context,
-							 nullptr /*child_contexts*/, output_context);
-
-	// translate index filter
-	plan->qual = TranslateDXLIndexFilter(filter_dxlnode, output_context,
-										 &base_table_context,
-										 ctxt_translation_prev_siblings);
+	TranslatePlan(plan, index_scan_dxlnode, output_context,
+				  m_dxl_to_plstmt_context, &base_table_context,
+				  ctxt_translation_prev_siblings);
 
 	index_scan->indexorderdir = CTranslatorUtils::GetScanDirection(
 		physical_idx_scan_dxlop->GetIndexScanDir());
@@ -833,12 +883,19 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexScan(
 	List *index_strategy_list = NIL;
 	List *index_subtype_list = NIL;
 
-	TranslateIndexConditions(
-		index_cond_list_dxlnode, physical_idx_scan_dxlop->GetDXLTableDescr(),
-		false,	// is_bitmap_index_probe
-		md_index, md_rel, output_context, &base_table_context,
-		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
-		&index_strategy_list, &index_subtype_list);
+	// Translate Index Conditions if Index isn't used for order by.
+	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
+						   output_context,
+						   (*index_scan_dxlnode)[EdxlisIndexCondition]))
+	{
+		TranslateIndexConditions(
+			(*index_scan_dxlnode)[EdxlisIndexCondition],
+			physical_idx_scan_dxlop->GetDXLTableDescr(),
+			false,	// is_bitmap_index_probe
+			md_index, md_rel, output_context, &base_table_context,
+			ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+			&index_strategy_list, &index_subtype_list);
+	}
 
 	index_scan->indexqual = index_cond;
 	index_scan->indexqualorig = index_orig_cond;
@@ -947,8 +1004,7 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(
 		physical_idx_scan_dxlop->GetDXLTableDescr()->MDId());
 
-	Index index =
-		ProcessDXLTblDescr(table_desc, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(table_desc, &base_table_context);
 
 	IndexOnlyScan *index_scan = MakeNode(IndexOnlyScan);
 	index_scan->scan.scanrelid = index;
@@ -961,36 +1017,16 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 	GPOS_ASSERT(InvalidOid != index_oid);
 	index_scan->indexid = index_oid;
 
-	Plan *plan = &(index_scan->scan.plan);
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
-
-	// translate operator costs
-	TranslatePlanCosts(index_scan_dxlnode, plan);
-
-	// an index scan node must have 3 children: projection list, filter and index condition list
-	GPOS_ASSERT(3 == index_scan_dxlnode->Arity());
-
-	// translate proj list and filter
-	CDXLNode *project_list_dxlnode = (*index_scan_dxlnode)[EdxlisIndexProjList];
-	CDXLNode *filter_dxlnode = (*index_scan_dxlnode)[EdxlisIndexFilter];
-	CDXLNode *index_cond_list_dxlnode =
-		(*index_scan_dxlnode)[EdxlisIndexCondition];
-
 	CDXLTranslateContextBaseTable index_context(m_mp);
 
 	// translate index targetlist
 	index_scan->indextlist = TranslateDXLIndexTList(md_rel, md_index, index,
 													table_desc, &index_context);
 
-	// translate target list
-	plan->targetlist =
-		TranslateDXLProjList(project_list_dxlnode, &index_context,
-							 nullptr /*child_contexts*/, output_context);
-
-	// translate index filter
-	plan->qual =
-		TranslateDXLIndexFilter(filter_dxlnode, output_context, &index_context,
-								ctxt_translation_prev_siblings);
+	Plan *plan = &(index_scan->scan.plan);
+	TranslatePlan(plan, index_scan_dxlnode, output_context,
+				  m_dxl_to_plstmt_context, &index_context,
+				  ctxt_translation_prev_siblings);
 
 	index_scan->indexorderdir = CTranslatorUtils::GetScanDirection(
 		physical_idx_scan_dxlop->GetIndexScanDir());
@@ -1001,12 +1037,19 @@ CTranslatorDXLToPlStmt::TranslateDXLIndexOnlyScan(
 	List *index_strategy_list = NIL;
 	List *index_subtype_list = NIL;
 
-	TranslateIndexConditions(
-		index_cond_list_dxlnode, physical_idx_scan_dxlop->GetDXLTableDescr(),
-		false,	// is_bitmap_index_probe
-		md_index, md_rel, output_context, &base_table_context,
-		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
-		&index_strategy_list, &index_subtype_list);
+	// Translate Index Conditions if Index isn't used for order by.
+	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
+						   output_context,
+						   (*index_scan_dxlnode)[EdxlisIndexCondition]))
+	{
+		TranslateIndexConditions(
+			(*index_scan_dxlnode)[EdxlisIndexCondition],
+			physical_idx_scan_dxlop->GetDXLTableDescr(),
+			false,	// is_bitmap_index_probe
+			md_index, md_rel, output_context, &base_table_context,
+			ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+			&index_strategy_list, &index_subtype_list);
+	}
 
 	index_scan->indexqual = index_cond;
 	SetParamIds(plan);
@@ -3919,21 +3962,14 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 		CDXLTranslateContextBaseTable base_table_context(m_mp);
 
 		(void) ProcessDXLTblDescr(phy_append_dxlop->GetDXLTableDesc(),
-								  &base_table_context, ACL_SELECT);
+								  &base_table_context);
 
-		append->join_prune_paramids = NIL;
-		const ULongPtrArray *selector_ids = phy_append_dxlop->GetSelectorIds();
 		OID oid_type =
 			CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
 				->Oid();
-		for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
-		{
-			ULONG selector_id = *(*selector_ids)[ul];
-			ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
-				oid_type, selector_id);
-			append->join_prune_paramids =
-				gpdb::LAppendInt(append->join_prune_paramids, param_id);
-		}
+		append->join_prune_paramids =
+			TranslateJoinPruneParamids(phy_append_dxlop->GetSelectorIds(),
+									   oid_type, m_dxl_to_plstmt_context);
 	}
 
 	// translate children
@@ -4285,49 +4321,27 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
 	Index index = ProcessDXLTblDescr(dyn_tbl_scan_dxlop->GetDXLTableDescr(),
-									 &base_table_context, ACL_SELECT);
+									 &base_table_context);
 
 	// create dynamic scan node
 	DynamicSeqScan *dyn_seq_scan = MakeNode(DynamicSeqScan);
 
 	dyn_seq_scan->seqscan.scanrelid = index;
 
-	IMdIdArray *parts = dyn_tbl_scan_dxlop->GetParts();
-
-	List *oids_list = NIL;
-
 	const CDXLTableDescr *dxl_table_descr =
 		dyn_tbl_scan_dxlop->GetDXLTableDescr();
 	GPOS_ASSERT(dxl_table_descr->LockMode() != -1);
 
-	for (ULONG ul = 0; ul < parts->Size(); ul++)
-	{
-		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
-		oids_list = gpdb::LAppendOid(oids_list, part);
-		// Since parser locks only root partition, locking the leaf
-		// partitions which we have to scan.
-		gpdb::GPDBLockRelationOid(part, dxl_table_descr->LockMode());
-	}
-
-	dyn_seq_scan->partOids = oids_list;
-
-	dyn_seq_scan->join_prune_paramids = NIL;
+	dyn_seq_scan->partOids = TranslatePartOids(dyn_tbl_scan_dxlop->GetParts(),
+											   dxl_table_descr->LockMode());
 
 	OID oid_type =
 		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
 			->Oid();
 
-	const ULongPtrArray *selector_ids = dyn_tbl_scan_dxlop->GetSelectorIds();
-
-	for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
-	{
-		ULONG selector_id = *(*selector_ids)[ul];
-		ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
-			oid_type, selector_id);
-		dyn_seq_scan->join_prune_paramids =
-			gpdb::LAppendInt(dyn_seq_scan->join_prune_paramids, param_id);
-	}
-
+	dyn_seq_scan->join_prune_paramids =
+		TranslateJoinPruneParamids(dyn_tbl_scan_dxlop->GetSelectorIds(),
+								   oid_type, m_dxl_to_plstmt_context);
 
 	Plan *plan = &(dyn_seq_scan->seqscan.plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
@@ -4356,103 +4370,69 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan
+//		CTranslatorDXLToPlStmt::TranslateDXLDynIdxOnlyScan
 //
 //	@doc:
-//		Translates a DXL dynamic index scan node into a DynamicIndexScan node
+//		Translates a DXL dynamic index scan node into a DynamicIndexOnlyScan
+//		node
 //
 //---------------------------------------------------------------------------
 Plan *
-CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
-	const CDXLNode *dyn_idx_scan_dxlnode, CDXLTranslateContext *output_context,
+CTranslatorDXLToPlStmt::TranslateDXLDynIdxOnlyScan(
+	const CDXLNode *dyn_idx_only_scan_dxlnode,
+	CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	CDXLPhysicalDynamicIndexScan *dyn_index_scan_dxlop =
-		CDXLPhysicalDynamicIndexScan::Cast(dyn_idx_scan_dxlnode->GetOperator());
+	CDXLPhysicalDynamicIndexOnlyScan *dyn_index_only_scan_dxlop =
+		CDXLPhysicalDynamicIndexOnlyScan::Cast(
+			dyn_idx_only_scan_dxlnode->GetOperator());
 
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
-	const CDXLTableDescr *table_desc = dyn_index_scan_dxlop->GetDXLTableDescr();
+	const CDXLTableDescr *table_desc =
+		dyn_index_only_scan_dxlop->GetDXLTableDescr();
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_desc->MDId());
 
-	Index index =
-		ProcessDXLTblDescr(table_desc, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(table_desc, &base_table_context);
 
-	DynamicIndexScan *dyn_idx_scan = MakeNode(DynamicIndexScan);
+	DynamicIndexOnlyScan *dyn_idx_only_scan = MakeNode(DynamicIndexOnlyScan);
 
-	dyn_idx_scan->indexscan.scan.scanrelid = index;
+	dyn_idx_only_scan->indexscan.scan.scanrelid = index;
 
-	IMdIdArray *parts = dyn_index_scan_dxlop->GetParts();
-
-	List *oids_list = NIL;
-
-	GPOS_ASSERT(table_desc->LockMode() != -1);
-
-	for (ULONG ul = 0; ul < parts->Size(); ul++)
-	{
-		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
-		oids_list = gpdb::LAppendOid(oids_list, part);
-		// Since parser locks only root partition, locking the leaf
-		// partitions which we have to scan.
-		gpdb::GPDBLockRelationOid(part, table_desc->LockMode());
-	}
-
-	dyn_idx_scan->partOids = oids_list;
-
-	dyn_idx_scan->join_prune_paramids = NIL;
+	dyn_idx_only_scan->partOids = TranslatePartOids(
+		dyn_index_only_scan_dxlop->GetParts(), table_desc->LockMode());
 
 	OID oid_type =
 		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
 			->Oid();
-	const ULongPtrArray *selector_ids = dyn_index_scan_dxlop->GetSelectorIds();
+	dyn_idx_only_scan->join_prune_paramids =
+		TranslateJoinPruneParamids(dyn_index_only_scan_dxlop->GetSelectorIds(),
+								   oid_type, m_dxl_to_plstmt_context);
 
-	for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
-	{
-		ULONG selector_id = *(*selector_ids)[ul];
-		ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
-			oid_type, selector_id);
-		dyn_idx_scan->join_prune_paramids =
-			gpdb::LAppendInt(dyn_idx_scan->join_prune_paramids, param_id);
-	}
-
-	CMDIdGPDB *mdid_index =
-		CMDIdGPDB::CastMdid(dyn_index_scan_dxlop->GetDXLIndexDescr()->MDId());
+	CMDIdGPDB *mdid_index = CMDIdGPDB::CastMdid(
+		dyn_index_only_scan_dxlop->GetDXLIndexDescr()->MDId());
 	const IMDIndex *md_index = m_md_accessor->RetrieveIndex(mdid_index);
 	Oid index_oid = mdid_index->Oid();
 
 	GPOS_ASSERT(InvalidOid != index_oid);
-	dyn_idx_scan->indexscan.indexid = index_oid;
+	dyn_idx_only_scan->indexscan.indexid = index_oid;
 
-	Plan *plan = &(dyn_idx_scan->indexscan.scan.plan);
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	Plan *plan = &(dyn_idx_only_scan->indexscan.scan.plan);
 
-	// translate operator costs
-	TranslatePlanCosts(dyn_idx_scan_dxlnode, plan);
+	CDXLTranslateContextBaseTable index_context(m_mp);
 
-	// an index scan node must have 3 children: projection list, filter and index condition list
-	GPOS_ASSERT(3 == dyn_idx_scan_dxlnode->Arity());
+	// translate index targetlist
+	dyn_idx_only_scan->indexscan.indextlist = TranslateDXLIndexTList(
+		md_rel, md_index, index, table_desc, &index_context);
 
-	// translate proj list and filter
-	CDXLNode *project_list_dxlnode = (*dyn_idx_scan_dxlnode)
-		[CDXLPhysicalDynamicIndexScan::EdxldisIndexProjList];
-	CDXLNode *filter_dxlnode = (*dyn_idx_scan_dxlnode)
-		[CDXLPhysicalDynamicIndexScan::EdxldisIndexFilter];
-	CDXLNode *index_cond_list_dxlnode = (*dyn_idx_scan_dxlnode)
-		[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition];
+	TranslatePlan(plan, dyn_idx_only_scan_dxlnode, output_context,
+				  m_dxl_to_plstmt_context, &index_context,
+				  ctxt_translation_prev_siblings);
 
-	// translate proj list
-	plan->targetlist =
-		TranslateDXLProjList(project_list_dxlnode, &base_table_context,
-							 nullptr /*child_contexts*/, output_context);
-
-	// translate index filter
-	plan->qual = TranslateDXLIndexFilter(filter_dxlnode, output_context,
-										 &base_table_context,
-										 ctxt_translation_prev_siblings);
-
-	dyn_idx_scan->indexscan.indexorderdir = CTranslatorUtils::GetScanDirection(
-		dyn_index_scan_dxlop->GetIndexScanDir());
+	dyn_idx_only_scan->indexscan.indexorderdir =
+		CTranslatorUtils::GetScanDirection(
+			dyn_index_only_scan_dxlop->GetIndexScanDir());
 
 	// translate index condition list
 	List *index_cond = NIL;
@@ -4461,19 +4441,104 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 	List *index_subtype_list = NIL;
 
 	TranslateIndexConditions(
-		index_cond_list_dxlnode, dyn_index_scan_dxlop->GetDXLTableDescr(),
+		(*dyn_idx_only_scan_dxlnode)
+			[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition],
+		dyn_index_only_scan_dxlop->GetDXLTableDescr(),
 		false,	// is_bitmap_index_probe
 		md_index, md_rel, output_context, &base_table_context,
 		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
 		&index_strategy_list, &index_subtype_list);
 
 
-	dyn_idx_scan->indexscan.indexqual = index_cond;
-	dyn_idx_scan->indexscan.indexqualorig = index_orig_cond;
+	dyn_idx_only_scan->indexscan.indexqual = index_cond;
 
 	SetParamIds(plan);
 
-	return (Plan *) dyn_idx_scan;
+	return (Plan *) dyn_idx_only_scan;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan
+//
+//	@doc:
+//		Translates a DXL dynamic index scan node into a DynamicIndexScan node
+//
+//---------------------------------------------------------------------------
+Plan *
+CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
+	const CDXLNode *dyn_idx_only_scan_dxlnode,
+	CDXLTranslateContext *output_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
+{
+	CDXLPhysicalDynamicIndexScan *dyn_index_scan_dxlop =
+		CDXLPhysicalDynamicIndexScan::Cast(
+			dyn_idx_only_scan_dxlnode->GetOperator());
+
+	// translation context for column mappings in the base relation
+	CDXLTranslateContextBaseTable base_table_context(m_mp);
+
+	const CDXLTableDescr *table_desc = dyn_index_scan_dxlop->GetDXLTableDescr();
+	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_desc->MDId());
+
+	Index index = ProcessDXLTblDescr(table_desc, &base_table_context);
+
+	DynamicIndexScan *dyn_idx_only_scan = MakeNode(DynamicIndexScan);
+
+	dyn_idx_only_scan->indexscan.scan.scanrelid = index;
+
+	GPOS_ASSERT(table_desc->LockMode() != -1);
+
+	dyn_idx_only_scan->partOids = TranslatePartOids(
+		dyn_index_scan_dxlop->GetParts(), table_desc->LockMode());
+
+	OID oid_type =
+		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
+			->Oid();
+	dyn_idx_only_scan->join_prune_paramids =
+		TranslateJoinPruneParamids(dyn_index_scan_dxlop->GetSelectorIds(),
+								   oid_type, m_dxl_to_plstmt_context);
+
+	CMDIdGPDB *mdid_index =
+		CMDIdGPDB::CastMdid(dyn_index_scan_dxlop->GetDXLIndexDescr()->MDId());
+	const IMDIndex *md_index = m_md_accessor->RetrieveIndex(mdid_index);
+	Oid index_oid = mdid_index->Oid();
+
+	GPOS_ASSERT(InvalidOid != index_oid);
+	dyn_idx_only_scan->indexscan.indexid = index_oid;
+
+	Plan *plan = &(dyn_idx_only_scan->indexscan.scan.plan);
+
+	TranslatePlan(plan, dyn_idx_only_scan_dxlnode, output_context,
+				  m_dxl_to_plstmt_context, &base_table_context,
+				  ctxt_translation_prev_siblings);
+
+	dyn_idx_only_scan->indexscan.indexorderdir =
+		CTranslatorUtils::GetScanDirection(
+			dyn_index_scan_dxlop->GetIndexScanDir());
+
+	// translate index condition list
+	List *index_cond = NIL;
+	List *index_orig_cond = NIL;
+	List *index_strategy_list = NIL;
+	List *index_subtype_list = NIL;
+
+	TranslateIndexConditions(
+		(*dyn_idx_only_scan_dxlnode)
+			[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition],
+		dyn_index_scan_dxlop->GetDXLTableDescr(),
+		false,	// is_bitmap_index_probe
+		md_index, md_rel, output_context, &base_table_context,
+		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+		&index_strategy_list, &index_subtype_list);
+
+
+	dyn_idx_only_scan->indexscan.indexqual = index_cond;
+	dyn_idx_only_scan->indexscan.indexqualorig = index_orig_cond;
+
+	SetParamIds(plan);
+
+	return (Plan *) dyn_idx_only_scan;
 }
 
 // remaps varnos qual and targetlist from one tuple descriptor to another.
@@ -4525,7 +4590,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynForeignScan(
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
 	Index index = ProcessDXLTblDescr(dyn_foreign_scan_dxlop->GetDXLTableDescr(),
-									 &base_table_context, ACL_SELECT);
+									 &base_table_context);
 	// rte of root dynamic scan
 	RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
 	Oid oid_root = rte->relid;
@@ -4542,23 +4607,13 @@ CTranslatorDXLToPlStmt::TranslateDXLDynForeignScan(
 	}
 
 	dyn_foreign_scan->partOids = oids_list;
-	dyn_foreign_scan->join_prune_paramids = NIL;
 
 	OID oid_type =
 		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
 			->Oid();
-
-	const ULongPtrArray *selector_ids =
-		dyn_foreign_scan_dxlop->GetSelectorIds();
-	// populate selector ids for dynamic partition elimination
-	for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
-	{
-		ULONG selector_id = *(*selector_ids)[ul];
-		ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
-			oid_type, selector_id);
-		dyn_foreign_scan->join_prune_paramids =
-			gpdb::LAppendInt(dyn_foreign_scan->join_prune_paramids, param_id);
-	}
+	dyn_foreign_scan->join_prune_paramids =
+		TranslateJoinPruneParamids(dyn_foreign_scan_dxlop->GetSelectorIds(),
+								   oid_type, m_dxl_to_plstmt_context);
 
 	GPOS_ASSERT(2 == dyn_foreign_scan_dxlnode->Arity());
 
@@ -4668,7 +4723,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// create ModifyTable node
 	ModifyTable *dml = MakeNode(ModifyTable);
 	Plan *plan = &(dml->plan);
-	AclMode acl_mode = ACL_NO_RIGHTS;
 	BOOL isSplit = phy_dml_dxlop->FSplit();
 
 	switch (phy_dml_dxlop->GetDmlOpType())
@@ -4676,19 +4730,16 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 		case gpdxl::Edxldmldelete:
 		{
 			m_cmd_type = CMD_DELETE;
-			acl_mode = ACL_DELETE;
 			break;
 		}
 		case gpdxl::Edxldmlupdate:
 		{
 			m_cmd_type = CMD_UPDATE;
-			acl_mode = ACL_UPDATE;
 			break;
 		}
 		case gpdxl::Edxldmlinsert:
 		{
 			m_cmd_type = CMD_INSERT;
-			acl_mode = ACL_INSERT;
 			break;
 		}
 		case gpdxl::EdxldmlSentinel:
@@ -4730,8 +4781,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 
 	CDXLTableDescr *table_descr = phy_dml_dxlop->GetDXLTableDescr();
 
-	Index index =
-		ProcessDXLTblDescr(table_descr, &base_table_context, acl_mode);
+	Index index = ProcessDXLTblDescr(table_descr, &base_table_context);
 
 	m_result_rel_list = gpdb::LAppendInt(m_result_rel_list, index);
 
@@ -5171,13 +5221,15 @@ CTranslatorDXLToPlStmt::TranslateDXLAssert(
 Index
 CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	const CDXLTableDescr *table_descr,
-	CDXLTranslateContextBaseTable *base_table_context, AclMode acl_mode)
+	CDXLTranslateContextBaseTable *base_table_context)
 {
 	GPOS_ASSERT(nullptr != table_descr);
 
 	BOOL rte_was_translated = false;
-	Index index = m_dxl_to_plstmt_context->GetRTEIndexByTableDescr(
-		table_descr, &rte_was_translated);
+
+	ULONG assigned_query_id = table_descr->GetAssignedQueryIdForTargetRel();
+	Index index = m_dxl_to_plstmt_context->GetRTEIndexByAssignedQueryId(
+		assigned_query_id, &rte_was_translated);
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 	const ULONG num_of_non_sys_cols =
@@ -5204,13 +5256,18 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 		(void) base_table_context->InsertMapping(dxl_col_descr->Id(), attno);
 	}
 
+	ULONG acl_mode = table_descr->GetAclMode();
+	GPOS_ASSERT(acl_mode >= 0 &&
+				acl_mode <= std::numeric_limits<AclMode>::max());
+	AclMode required_perms = static_cast<AclMode>(acl_mode);
+
 	// descriptor was already processed, and translated RTE is stored at
 	// context rtable list (only update required perms of this rte is needed)
 	if (rte_was_translated)
 	{
 		RangeTblEntry *rte = m_dxl_to_plstmt_context->GetRTEByIndex(index);
 		GPOS_ASSERT(nullptr != rte);
-		rte->requiredPerms |= acl_mode;
+		rte->requiredPerms |= required_perms;
 		return index;
 	}
 
@@ -5219,7 +5276,7 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	rte->rtekind = RTE_RELATION;
 	rte->relid = oid;
 	rte->checkAsUser = table_descr->GetExecuteAsUserId();
-	rte->requiredPerms |= acl_mode;
+	rte->requiredPerms |= required_perms;
 	rte->rellockmode = table_descr->LockMode();
 
 	Alias *alias = MakeNode(Alias);
@@ -5268,7 +5325,16 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 
 	rte->eref = alias;
 
+	// A new RTE is added to the range table entries list if it's not found in the look
+	// up table. However, it is only added to the look up table if it's a result relation
+	// This is because the look up table is our way of merging duplicate result relations
 	m_dxl_to_plstmt_context->AddRTE(rte);
+	GPOS_ASSERT(gpdb::ListLength(
+					m_dxl_to_plstmt_context->GetRTableEntriesList()) == index);
+	if (UNASSIGNED_QUERYID != assigned_query_id)
+	{
+		m_dxl_to_plstmt_context->InsertUsedRTEIndexes(assigned_query_id, index);
+	}
 
 	return index;
 }
@@ -6228,8 +6294,7 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	GPOS_ASSERT(table_descr->LockMode() != -1);
 	gpdb::GPDBLockRelationOid(mdid->Oid(), table_descr->LockMode());
 
-	Index index =
-		ProcessDXLTblDescr(table_descr, &base_table_context, ACL_SELECT);
+	Index index = ProcessDXLTblDescr(table_descr, &base_table_context);
 
 	DynamicBitmapHeapScan *dscan;
 	BitmapHeapScan *bitmap_tbl_scan;
@@ -6254,23 +6319,13 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 
 		dscan->partOids = oids_list;
 
-		dscan->join_prune_paramids = NIL;
-
 		OID oid_type =
 			CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
 				->Oid();
 
-		const ULongPtrArray *selector_ids =
-			phy_dyn_bitmap_tblscan_dxlop->GetSelectorIds();
-
-		for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
-		{
-			ULONG selector_id = *(*selector_ids)[ul];
-			ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
-				oid_type, selector_id);
-			dscan->join_prune_paramids =
-				gpdb::LAppendInt(dscan->join_prune_paramids, param_id);
-		}
+		dscan->join_prune_paramids = TranslateJoinPruneParamids(
+			phy_dyn_bitmap_tblscan_dxlop->GetSelectorIds(), oid_type,
+			m_dxl_to_plstmt_context);
 	}
 	else
 	{
@@ -6564,5 +6619,32 @@ CTranslatorDXLToPlStmt::TranslateNestLoopParamList(
 			gpdb::LAppend(nest_params_list, (void *) nest_params);
 	}
 	return nest_params_list;
+}
+
+// A bool Const expression is used as index condition if index column is used
+// as part of ORDER BY clause. Because ORDER BY doesn't have any index conditions.
+// This function checks if index is used for Order by.
+bool
+CTranslatorDXLToPlStmt::IsIndexForOrderBy(
+	CDXLTranslateContextBaseTable *base_table_context,
+	CDXLTranslationContextArray *ctxt_translation_prev_siblings,
+	CDXLTranslateContext *output_context, CDXLNode *index_cond_list_dxlnode)
+{
+	const ULONG arity = index_cond_list_dxlnode->Arity();
+	CMappingColIdVarPlStmt colid_var_mapping(
+		m_mp, base_table_context, ctxt_translation_prev_siblings,
+		output_context, m_dxl_to_plstmt_context);
+	if (arity == 1)
+	{
+		Expr *index_cond_expr =
+			m_translator_dxl_to_scalar->TranslateDXLToScalar(
+				(*index_cond_list_dxlnode)[0], &colid_var_mapping);
+		if (IsA(index_cond_expr, Const))
+		{
+			return true;
+		}
+		return false;
+	}
+	return false;
 }
 // EOF

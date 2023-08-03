@@ -271,3 +271,83 @@ $$ LANGUAGE plpython3u;
     return True
 
 $$ LANGUAGE plpython3u;
+
+0: CREATE OR REPLACE FUNCTION check_cgroup_io_max(groupname text, tablespace_name text, parameters text) RETURNS BOOL AS $$
+    import ctypes
+    import os
+
+    postgres = ctypes.CDLL(None)
+    get_bdi_of_path = postgres['get_bdi_of_path']
+    get_tablespace_path = postgres['get_tablespace_path']
+    get_tablespace_oid = postgres['get_tablespace_oid']
+
+    # get group oid
+    sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname = '%s'" % groupname
+    result = plpy.execute(sql)
+    groupid = result[0]['groupid']
+
+    cgroup_path = "/sys/fs/cgroup/gpdb/%d" % groupid
+
+    # get path of tablespace
+    spcoid = get_tablespace_oid(tablespace_name.encode('utf-8'), False)
+    location = ctypes.cast(get_tablespace_path(spcoid), ctypes.c_char_p).value
+
+    if location == "":
+        return False
+
+    bdi = get_bdi_of_path(location)
+    major = os.major(bdi)
+    minor = os.minor(bdi)
+
+    match_string = "{}:{} {}".format(major, minor, parameters)
+    match = False
+    with open(os.path.join(cgroup_path, "io.max")) as f:
+        for line in f.readlines():
+            line = line.strip()
+            if match_string == line:
+                match = True
+                break
+
+    return match
+
+$$ LANGUAGE plpython3u;
+
+0: CREATE OR REPLACE FUNCTION mkdir(dirname text) RETURNS BOOL AS $$
+    import os
+
+    if os.path.exists(dirname):
+        return True
+
+    try:
+        os.makedirs(dirname)
+    except Exception as e:
+        plpy.error("cannot create dir {}".format(e))
+    else:
+        return True
+$$ LANGUAGE plpython3u;
+
+0: CREATE OR REPLACE FUNCTION rmdir(dirname text) RETURNS BOOL AS $$
+    import shutil
+    import fcntl
+    import os
+
+    try:
+        f = os.open(dirname, os.O_RDONLY)
+    except FileNotFoundError:
+        return True
+
+    fcntl.flock(f, fcntl.LOCK_EX)
+
+    if not os.path.exists(dirname):
+        os.close(f)
+        return True
+
+    try:
+        shutil.rmtree(dirname)
+    except Exception as e:
+        plpy.error("cannot remove dir {}".format(e))
+    else:
+        return True
+    finally:
+        os.close(f)
+$$ LANGUAGE plpython3u;

@@ -11,7 +11,7 @@ from .gp_unittest import *
 class GpCheckCatTestCase(GpTestCase):
     def setUp(self):
         self.logger = Mock(spec=['log', 'info', 'debug', 'error'])
-        self.db_connection = Mock(spec=['close', 'query'])
+        self.db_connection = Mock(spec=['close', 'cursor'])
         self.autoCast = {'regproc': '::oid',
                          'regprocedure': '::oid',
                          'regoper': '::oid',
@@ -25,9 +25,10 @@ class GpCheckCatTestCase(GpTestCase):
         self.full_join_cat_tables = set(['pg_attribute','gp_distribution_policy','pg_appendonly','pg_constraint','pg_index'])
         self.foreign_key_check= Mock(spec=['runCheck'])
         self.foreign_key_check.runCheck.return_value = []
-        self.db_connection.query.return_value.ntuples.return_value = 2
-        self.db_connection.query.return_value.listfields.return_value = ['pkey1', 'pkey2']
-        self.db_connection.query.return_value.getresult.return_value = [('r1','r2'), ('r3','r4')]
+
+        self.db_connection.cursor.return_value.rowcount = 2
+        self.db_connection.cursor.return_value.description = [('pkey1',), ('pkey2',)]
+        self.db_connection.cursor.return_value.fetchall.return_value = [('r1','r2'), ('r3','r4')]
 
 
     def test_get_fk_query_left_join_returns_the_correct_query(self):
@@ -127,7 +128,7 @@ class GpCheckCatTestCase(GpTestCase):
             self.assertEqual(len(issue_list) , 2)
             self.assertEqual(issue_list[0], ('pg_class', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]))
             self.assertEqual(issue_list[1], ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]))
-            self.assertEqual(self.db_connection.query.call_count, 2)
+            self.assertEqual(self.db_connection.cursor.call_count, 2)
 
             def __generate_pg_class_call(table, primary_key_cat_name, col_type, with_filter=True):
                 if with_filter:
@@ -168,7 +169,7 @@ class GpCheckCatTestCase(GpTestCase):
                 self.assertEqual(fk_query_full_join_mock.call_count, 0)
                 fk_query_left_join_mock.assert_has_calls(foreign_key_mock_calls_left, any_order=False)
 
-            self.db_connection.query.call_count = 0
+            self.db_connection.cursor.call_count = 0
             fk_query_full_join_mock.call_count = 0
             fk_query_left_join_mock.call_count = 0
 

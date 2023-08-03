@@ -3,6 +3,12 @@
 -- exists in cdbunit.
 --
 set optimizer_print_missing_stats = off;
+show writable_external_table_bufsize;
+ writable_external_table_bufsize 
+---------------------------------
+ 1MB
+(1 row)
+
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 -- start_ignore
 -- end_ignore

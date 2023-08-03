@@ -1697,15 +1697,11 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
                            Sort Key: barjoinpruning.t
                            ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                  Hash Key: barjoinpruning.t
-                                 ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                       Group Key: barjoinpruning.t
-                                       ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                             Sort Key: barjoinpruning.t
-                                             ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on barjoinpruning  (cost=0.00..431.00 rows=1 width=4)
          ->  Index Scan using idx2 on foojoinpruning  (cost=0.00..6.00 rows=1 width=28)
                Index Cond: (c = barjoinpruning.t)
  Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
+(14 rows)
 
 explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.g=barJoinPruning.p and fooJoinPruning.a=barJoinPruning.q where fooJoinPruning.c > ANY (select barJoinPruning.t from barJoinPruning );
                                                                    QUERY PLAN                                                                    
@@ -1861,15 +1857,11 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
                                        Sort Key: foojoinpruning.b
                                        ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                                              Hash Key: foojoinpruning.b
-                                             ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                                   Group Key: foojoinpruning.b
-                                                   ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                                         Sort Key: foojoinpruning.b
-                                                         ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=4)
+                                             ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=4)
                            ->  Index Scan using idx2 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
                                  Index Cond: (p = foojoinpruning.b)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(19 rows)
 
 -- Unique key of inner relation ie 'p' is present in the join condition and is equal to a column from outer relation and filter contains corelated subquery referencing inner relation column--
 explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on fooJoinPruning.c=barJoinPruning.p  where fooJoinPruning.b in (select barJoinPruning.q from fooJoinPruning);

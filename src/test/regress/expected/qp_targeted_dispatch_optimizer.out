@@ -498,12 +498,11 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 explain select count(*) from mpp7638 where a =1;
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
-         ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=8)
-               ->  Dynamic Seq Scan on mpp7638  (cost=0.00..431.00 rows=1 width=4)
-                     Number of partitions to scan: 9 (out of 9)
-                     Filter: (a = 1)
+ Aggregate  (cost=0.00..431.00 rows=1 width=8)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Dynamic Seq Scan on mpp7638  (cost=0.00..431.00 rows=1 width=4)
+               Number of partitions to scan: 9 (out of 9)
+               Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
@@ -741,14 +740,13 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a);
          Hash Cond: ((max(table_a.a1)) = table_a_1.a0)
          ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
                Hash Key: (max(table_a.a1))
-               ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=4)
+               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
                      ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                                 ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(11 rows)
 
 select a0 from table_a where a0 in (select max(a1) from table_a);
 INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
@@ -780,15 +778,14 @@ explain select a0 from table_a where a0 in (select max(a1) from table_a where a0
          Hash Cond: ((max(table_a.a1)) = table_a_1.a0)
          ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
                Hash Key: (max(table_a.a1))
-               ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=4)
+               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
                      ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                                 ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
-                                       Filter: (a0 = 1)
+                           ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+                                 Filter: (a0 = 1)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(13 rows)
+(12 rows)
 
 reset test_print_direct_dispatch_info;
 -- the filter is over a window, do not direct dispatch

@@ -290,7 +290,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
     <dxl:Plan Id="0" SpaceSize="2958">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001805" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001808" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="f3">
@@ -301,7 +301,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.001776" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.001779" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="2"/>
@@ -314,7 +314,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.001766" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.001769" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="f3">
@@ -329,7 +329,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.001766" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.001769" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="2" Alias="f3">
@@ -345,7 +345,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.001753" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="862.001756" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="2"/>

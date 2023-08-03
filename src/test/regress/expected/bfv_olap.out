@@ -454,8 +454,85 @@ where g in (
 (1 row)
 
 --
+-- Test to check the query plan for a ROLLUP query.
+--
+explain (costs off) select cn, vn, pn, sum(qty*prc) from sale group by rollup(cn,vn,pn);
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Finalize HashAggregate
+         Group Key: cn, vn, pn, (GROUPINGSET_ID())
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: cn, vn, pn, (GROUPINGSET_ID())
+               ->  Partial MixedAggregate
+                     Hash Key: cn, vn, pn
+                     Hash Key: cn, vn
+                     Hash Key: cn
+                     Group Key: ()
+                     ->  Seq Scan on sale
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select cn, vn, pn, sum(qty*prc) from sale group by rollup(cn,vn,pn);
+ cn | vn | pn  |   sum   
+----+----+-----+---------
+  1 | 50 | 400 |       0
+  1 | 10 |     |       0
+  2 | 40 |     | 2640000
+  2 | 40 | 100 | 2640000
+  3 | 40 | 200 |       0
+  1 | 30 | 500 |      60
+  3 | 40 |     |       0
+  4 | 40 | 800 |       1
+  4 |    |     |       2
+  1 | 50 |     |       0
+  1 | 20 | 100 |       0
+  3 | 30 | 500 |      60
+  3 | 30 | 600 |      60
+  2 | 50 | 400 |       0
+  2 | 50 |     |       0
+  3 |    |     |     120
+  1 | 30 |     |      60
+  1 | 20 |     |       0
+  2 |    |     | 2640000
+  3 | 30 |     |     120
+  4 | 40 |     |       2
+  4 | 40 | 700 |       1
+  1 | 30 | 300 |       0
+  1 | 10 | 200 |       0
+  1 |    |     |      60
+    |    |     | 2640182
+(26 rows)
+
+--
 -- This caused a crash in ROLLUP planning at one point.
 --
+EXPLAIN (costs off)
+SELECT sale.vn
+FROM sale,vendor
+WHERE sale.vn=vendor.vn
+GROUP BY ROLLUP( (sale.dt,sale.cn),(sale.pn),(sale.vn));
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: sale.dt, sale.cn, sale.pn, sale.vn, (GROUPINGSET_ID())
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: sale.dt, sale.cn, sale.pn, sale.vn, (GROUPINGSET_ID())
+               ->  Partial MixedAggregate
+                     Hash Key: sale.dt, sale.cn, sale.pn, sale.vn
+                     Hash Key: sale.dt, sale.cn, sale.pn
+                     Hash Key: sale.dt, sale.cn
+                     Group Key: ()
+                     ->  Hash Join
+                           Hash Cond: (sale.vn = vendor.vn)
+                           ->  Seq Scan on sale
+                           ->  Hash
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                       ->  Seq Scan on vendor
+ Optimizer: Postgres query optimizer
+(17 rows)
+
 SELECT sale.vn
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
@@ -497,6 +574,36 @@ GROUP BY ROLLUP( (sale.dt,sale.cn),(sale.pn),(sale.vn));
  40
    
 (34 rows)
+
+EXPLAIN (costs off)
+SELECT DISTINCT sale.vn
+FROM sale,vendor
+WHERE sale.vn=vendor.vn
+GROUP BY ROLLUP( (sale.dt,sale.cn),(sale.pn),(sale.vn));
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: sale.vn
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: sale.vn
+               ->  HashAggregate
+                     Group Key: sale.dt, sale.cn, sale.pn, sale.vn, (GROUPINGSET_ID())
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: sale.dt, sale.cn, sale.pn, sale.vn, (GROUPINGSET_ID())
+                           ->  Partial MixedAggregate
+                                 Hash Key: sale.dt, sale.cn, sale.pn, sale.vn
+                                 Hash Key: sale.dt, sale.cn, sale.pn
+                                 Hash Key: sale.dt, sale.cn
+                                 Group Key: ()
+                                 ->  Hash Join
+                                       Hash Cond: (sale.vn = vendor.vn)
+                                       ->  Seq Scan on sale
+                                       ->  Hash
+                                             ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                   ->  Seq Scan on vendor
+ Optimizer: Postgres query optimizer
+(21 rows)
 
 SELECT DISTINCT sale.vn
 FROM sale,vendor

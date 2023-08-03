@@ -68,6 +68,7 @@ typedef enum
 
 extern GpRoleValue Gp_role;	/* GUC var - server operating mode.  */
 extern char *gp_role_string;	/* Use by guc.c as staging area for value. */
+extern char *gp_session_role_string; /* Use by guc.c as staging area for value. */
 
 extern bool gp_reraise_signal; /* try to force a core dump ?*/
 

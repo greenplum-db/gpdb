@@ -242,6 +242,199 @@ SELECT n_live_tup, n_dead_tup, last_vacuum is not null as has_last_vacuum, vacuu
  50000      | 0          | t               | 2            
 (1 row)
 
+1q: ... <quitting>
+-- Test vacuum worker process is changed at post-cleanup phase due to mirror down.
+-- Current behavior is it will clear previous compact phase num_dead_tuples in post-cleanup
+-- phase (at injecting point vacuum_ao_post_cleanup_end), which is different from above case
+-- in which vacuum worker isn't changed.
+DROP TABLE IF EXISTS vacuum_progress_ao_column;
+DROP TABLE
+CREATE TABLE vacuum_progress_ao_column(i int, j int);
+CREATE TABLE
+CREATE INDEX on vacuum_progress_ao_column(i);
+CREATE INDEX
+CREATE INDEX on vacuum_progress_ao_column(j);
+CREATE INDEX
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO vacuum_progress_ao_column SELECT i, i FROM generate_series(1, 100000) i;
+INSERT 0 100000
+2: INSERT INTO vacuum_progress_ao_column SELECT i, i FROM generate_series(1, 100000) i;
+INSERT 0 100000
+2: COMMIT;
+COMMIT
+2: BEGIN;
+BEGIN
+2: INSERT INTO vacuum_progress_ao_column SELECT i, i FROM generate_series(1, 100000) i;
+INSERT 0 100000
+2: ABORT;
+ROLLBACK
+2q: ... <quitting>
+1: ABORT;
+ROLLBACK
+DELETE FROM vacuum_progress_ao_column where j % 2 = 0;
+DELETE 50000
+
+-- Suspend execution at the end of compact phase.
+2: SELECT gp_inject_fault('vacuum_ao_after_compact', 'suspend', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+
+1: set debug_appendonly_print_compaction to on;
+SET
+1&: vacuum vacuum_progress_ao_column;  <waiting ...>
+
+2: SELECT gp_wait_until_triggered_fault('vacuum_ao_after_compact', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+(3 rows)
+
+-- Non-zero progressing data num_dead_tuples is showed up.
+select gp_segment_id, relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum where gp_segment_id > -1;
+ gp_segment_id | relname                   | phase                    | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+---------------+---------------------------+--------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ 1             | vacuum_progress_ao_column | append-optimized compact | 25              | 9                 | 17                 | 0                  | 33327           | 16621           
+ 0             | vacuum_progress_ao_column | append-optimized compact | 25              | 9                 | 17                 | 0                  | 33462           | 16726           
+ 2             | vacuum_progress_ao_column | append-optimized compact | 25              | 9                 | 17                 | 0                  | 33211           | 16653           
+(3 rows)
+select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum_summary;
+ relname                   | phase                    | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+---------------------------+--------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_column | append-optimized compact | 75              | 27                | 51                 | 0                  | 100000          | 50000           
+(1 row)
+
+-- Resume execution of compact phase and block at syncrep on one segment.
+2: SELECT gp_inject_fault_infinite('wal_sender_loop', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+2: SELECT gp_inject_fault('vacuum_ao_after_compact', 'reset', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- stop the mirror should turn off syncrep
+2: SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content = 1 AND role = 'm';
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- Resume walsender to detect mirror down and suspend at the beginning
+-- of post-cleanup taken over by a new vacuum worker.
+2: SELECT gp_inject_fault('vacuum_worker_changed', 'suspend', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- resume walsender and let it exit so that mirror stop can be detected
+2: SELECT gp_inject_fault_infinite('wal_sender_loop', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+-- Ensure we enter into the target logic which stops cumulative data but
+-- initializes a new vacrelstats at the beginning of post-cleanup phase.
+-- Also all segments should reach to the same "vacuum_worker_changed" point
+-- due to FTS version being changed.
+2: SELECT gp_wait_until_triggered_fault('vacuum_worker_changed', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+(3 rows)
+-- now seg1's mirror is marked as down
+2: SELECT content, role, preferred_role, mode, status FROM gp_segment_configuration WHERE content > -1;
+ content | role | preferred_role | mode | status 
+---------+------+----------------+------+--------
+ 2       | p    | p              | s    | u      
+ 2       | m    | m              | s    | u      
+ 0       | p    | p              | s    | u      
+ 0       | m    | m              | s    | u      
+ 1       | p    | p              | n    | u      
+ 1       | m    | m              | n    | d      
+(6 rows)
+
+-- Resume execution and entering post_cleaup phase, suspend at the end of it.
+2: SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'suspend', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+2: SELECT gp_inject_fault('vacuum_worker_changed', 'reset', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+2: SELECT gp_wait_until_triggered_fault('vacuum_ao_post_cleanup_end', 1, dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+ Success:                      
+ Success:                      
+(3 rows)
+
+-- The previous collected num_dead_tuples in compact phase is zero.
+select gp_segment_id, relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum where gp_segment_id > -1;
+ gp_segment_id | relname                   | phase                         | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+---------------+---------------------------+-------------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ 2             | vacuum_progress_ao_column | append-optimized post-cleanup | 0               | 0                 | 0                  | 0                  | 0               | 0               
+ 0             | vacuum_progress_ao_column | append-optimized post-cleanup | 0               | 0                 | 0                  | 0                  | 0               | 0               
+ 1             | vacuum_progress_ao_column | append-optimized post-cleanup | 0               | 0                 | 0                  | 0                  | 0               | 0               
+(3 rows)
+select relid::regclass as relname, phase, heap_blks_total, heap_blks_scanned, heap_blks_vacuumed, index_vacuum_count, max_dead_tuples, num_dead_tuples from gp_stat_progress_vacuum_summary;
+ relname                   | phase                         | heap_blks_total | heap_blks_scanned | heap_blks_vacuumed | index_vacuum_count | max_dead_tuples | num_dead_tuples 
+---------------------------+-------------------------------+-----------------+-------------------+--------------------+--------------------+-----------------+-----------------
+ vacuum_progress_ao_column | append-optimized post-cleanup | 0               | 0                 | 0                  | 0                  | 0               | 0               
+(1 row)
+
+2: SELECT gp_inject_fault('vacuum_ao_post_cleanup_end', 'reset', dbid) FROM gp_segment_configuration WHERE content > -1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+
+1<:  <... completed>
+VACUUM
+
+-- restore environment
+1: reset debug_appendonly_print_compaction;
+RESET
+
+2: SELECT pg_ctl_start(datadir, port) FROM gp_segment_configuration WHERE role = 'm' AND content = 1;
+ pg_ctl_start                                     
+--------------------------------------------------
+ waiting for server to start done
+server started
+ 
+(1 row)
+2: SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
 -- Cleanup
 SELECT gp_inject_fault_infinite('all', 'reset', dbid) FROM gp_segment_configuration;
  gp_inject_fault_infinite 

@@ -42,6 +42,12 @@ extern void cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 							  double       *tuples,
 							  double       *allvisfrac);
 extern double cdb_estimate_partitioned_numtuples(Relation rel);
+typedef struct PageEstimate
+{
+	BlockNumber		totalpages;
+	BlockNumber		totalallvisiblepages;
+} PageEstimate;
+extern PageEstimate cdb_estimate_partitioned_numpages(Relation rel);
 
 extern int32 get_rel_data_width(Relation rel, int32 *attr_widths);
 extern int32 get_relation_data_width(Oid relid, int32 *attr_widths);

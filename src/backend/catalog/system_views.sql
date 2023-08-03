@@ -1433,6 +1433,22 @@ CREATE VIEW pg_stat_progress_copy AS
     FROM pg_stat_get_progress_info('COPY') AS S
         LEFT JOIN pg_database D ON S.datid = D.oid;
 
+CREATE VIEW gp_stat_progress_dtx_recovery AS
+    SELECT
+        CASE S.param1 WHEN 0 THEN 'initializing'
+                      WHEN 1 THEN 'recovering commited distributed transactions'
+                      WHEN 2 THEN 'gathering in-doubt transactions'
+                      WHEN 3 THEN 'aborting in-doubt transactions'
+                      WHEN 4 THEN 'gathering in-doubt orphaned transactions'
+                      WHEN 5 THEN 'managing in-doubt orphaned transactions'
+                      END AS phase,
+        S.param2 AS recover_commited_dtx_total, -- total commited transactions found to recover
+        S.param3 AS recover_commited_dtx_completed, -- recover completed, this is always 0 after startup.
+        S.param4 AS in_doubt_tx_total,  -- total in doubt tx found, used in startup and non-startup phase
+        S.param5 AS in_doubt_tx_in_progress, -- in-progress in-doubt tx, this is always 0 for startup
+        S.param6 AS in_doubt_tx_aborted -- aborted in-doubt tx, this can be >0 for both
+    FROM pg_stat_get_progress_info('DTX RECOVERY') AS S;
+
 CREATE VIEW pg_user_mappings AS
     SELECT
         U.oid       AS umid,

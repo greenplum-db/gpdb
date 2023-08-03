@@ -91,7 +91,9 @@ static void form_and_insert_tuple(BrinBuildState *state);
 static void union_tuples(BrinDesc *bdesc, BrinMemTuple *a,
 						 BrinTuple *b);
 static void brin_vacuum_scan(Relation idxrel, BufferAccessStrategy strategy);
-
+static void brin_empty_range(Relation idxrel, BrinDesc *bdesc,
+							 BrinRevmap *revmap, BlockNumber heapBlk,
+							 MemoryContext perRangeCxt);
 
 /*
  * BRIN handler function: return IndexAmRoutine with access method parameters
@@ -896,7 +898,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 	Assert(BufferGetBlockNumber(meta) == BRIN_METAPAGE_BLKNO);
 	LockBuffer(meta, BUFFER_LOCK_EXCLUSIVE);
 
-	brin_metapage_init(BufferGetPage(meta), BrinGetPagesPerRange(index),
+	brin_metapage_init(BufferGetPage(meta), BrinGetPagesPerRange(index, isAO),
 					   BRIN_CURRENT_VERSION, RelationStorageIsAO(heap));
 	MarkBufferDirty(meta);
 
@@ -907,7 +909,7 @@ brinbuild(Relation heap, Relation index, IndexInfo *indexInfo)
 		Page		page;
 
 		xlrec.version = BRIN_CURRENT_VERSION;
-		xlrec.pagesPerRange = BrinGetPagesPerRange(index);
+		xlrec.pagesPerRange = BrinGetPagesPerRange(index, isAO);
 		xlrec.isAO          = isAO;
 
 		XLogBeginInsert();
@@ -968,7 +970,9 @@ void
 brinbuildempty(Relation index)
 {
 	Buffer		metabuf;
+	bool		isAO;
 
+	isAO = IsIndexOnAORel(index);
 	/* An empty BRIN index has a metapage only. */
 	metabuf =
 		ReadBufferExtended(index, INIT_FORKNUM, P_NEW, RBM_NORMAL, NULL);
@@ -976,7 +980,7 @@ brinbuildempty(Relation index)
 
 	/* Initialize and xlog metabuffer. */
 	START_CRIT_SECTION();
-	brin_metapage_init(BufferGetPage(metabuf), BrinGetPagesPerRange(index),
+	brin_metapage_init(BufferGetPage(metabuf), BrinGetPagesPerRange(index, isAO),
 					   BRIN_CURRENT_VERSION, false);
 	MarkBufferDirty(metabuf);
 	log_newpage_buffer(metabuf, true);
@@ -993,16 +997,151 @@ brinbuildempty(Relation index)
  * XXX we could mark item tuples as "dirty" (when a minimum or maximum heap
  * tuple is deleted), meaning the need to re-run summarization on the affected
  * range.  Would need to add an extra flag in brintuples for that.
+ *
+ * GPDB: For BRIN indexes on AO/CO tables, we exploit a property of exhausted
+ * logical block ranges (fast sequence numbers used up) belonging to a segment
+ * that undergoes VACUUM (i.e. a segment awaiting drop). The property is that
+ * these ranges will never be reused for future inserts.
+ *
+ * This is because we don't reset gp_fastsequence when we VACUUM AO/CO tables
+ * and gp_fastsequence is always increasing.
+ *
+ * So, these ranges are effectively dead and can thus be marked as empty. Doing
+ * so brings about a couple of benefits:
+ * (1) These dead ranges will never result in false positives when their summaries
+ * match scan keys - we will not bloat the output tidbitmap unnecessarily.
+ * (2) Cycles will not be spent trying to summarize them, as empty ranges are not
+ * summarized. This saves cycles for both the summarization call at the end of
+ * VACUUM and for all future summarization calls.
  */
 IndexBulkDeleteResult *
 brinbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 			   IndexBulkDeleteCallback callback, void *callback_state)
 {
+
+	Relation 	heapRel;
+
+	heapRel = table_open(IndexGetRelation(RelationGetRelid(info->index), false),
+						 AccessShareLock);
+
+	if (RelationIsAppendOptimized(heapRel))
+	{
+		Bitmapset 	*dead_segs = (Bitmapset *) callback_state;
+
+		if (!bms_is_empty(dead_segs))
+		{
+			int			 	segno = -1;
+			BrinRevmap 	 	*revmap;
+			BlockNumber	 	pagesPerRange;
+			BrinDesc	 	*bdesc;
+			MemoryContext 	perRangeCxt;
+
+			revmap = brinRevmapInitialize(info->index, &pagesPerRange, NULL);
+			bdesc = brin_build_desc(info->index);
+
+			/*
+			 * Setup and use a per-range memory context, which is reset every time we
+			 * loop below.  This avoids having to free the tuples within the loop.
+			 */
+			perRangeCxt = AllocSetContextCreate(CurrentMemoryContext,
+												"bringetbitmap cxt",
+												ALLOCSET_DEFAULT_SIZES);
+
+			while ((segno = bms_next_member(dead_segs, segno)) >= 0)
+			{
+				BlockSequence sequence;
+				BlockNumber   heapBlk;
+				BlockNumber   startblknum;
+				BlockNumber   endblknum;
+
+				brinRevmapAOPositionAtStart(revmap, segno);
+				table_relation_get_block_sequence(heapRel,
+												  AOSegmentGet_startHeapBlock(segno),
+												  &sequence);
+
+				startblknum = sequence.startblknum;
+				endblknum = sequence.startblknum + sequence.nblocks;
+				for (heapBlk = startblknum; heapBlk < endblknum; heapBlk += pagesPerRange)
+				{
+					CHECK_FOR_INTERRUPTS();
+					brin_empty_range(info->index, bdesc, revmap, heapBlk, perRangeCxt);
+				}
+			}
+
+			brinRevmapTerminate(revmap);
+			MemoryContextDelete(perRangeCxt);
+		}
+	}
+
+	table_close(heapRel, AccessShareLock);
+
 	/* allocate stats if first time through, else re-use existing struct */
 	if (stats == NULL)
 		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
 
 	return stats;
+}
+
+/*
+ * Mark the range represented by 'heapBlk' as empty in the data page, if the
+ * range exists. This is currently in use only for AO/CO vacuum-time cleanup.
+ */
+static void
+brin_empty_range(Relation idxrel, BrinDesc *bdesc,
+				 BrinRevmap *revmap, BlockNumber heapBlk,
+				 MemoryContext perRangeCxt)
+{
+	BrinTuple  		*oldtup;
+	Size			origsz;
+	BrinTuple 		*origtup;
+	Size 			newsz;
+	BrinTuple       *emptytup;
+	Buffer			buf = InvalidBuffer;
+	OffsetNumber 	off;
+	BlockNumber 	pagesPerRange = BrinGetPagesPerRange(idxrel, /*isAO*/ true);
+	MemoryContext 	oldcxt;
+
+	oldcxt = MemoryContextSwitchTo(perRangeCxt);
+
+	for (;;)
+	{
+		bool samepage;
+
+		MemoryContextResetAndDeleteChildren(perRangeCxt);
+
+		oldtup = brinGetTupleForHeapBlock(revmap, heapBlk, &buf, &off,
+										  &origsz, BUFFER_LOCK_SHARE, NULL);
+		/* We are done if range doesn't exist or is already empty. */
+		if (!oldtup || BrinTupleIsEmptyRange(oldtup))
+			break;
+
+		origtup = brin_copy_tuple(oldtup, origsz, NULL, NULL);
+		emptytup = brin_form_empty_tuple(bdesc, heapBlk, &newsz);
+		LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+		/*
+		 * Note: An empty tuple will always be smaller or equal in size to the
+		 * existing one, so we will always be attempting a samepage update. We
+		 * still do the check here to follow convention and for future-proofing.
+		 */
+		samepage = brin_can_do_samepage_update(buf, origsz, newsz);
+		if (brin_doupdate(idxrel, pagesPerRange, revmap, heapBlk,
+						  buf, off, origtup, origsz, emptytup, newsz,
+						  samepage))
+		{
+			/*
+			 * We expect this to be successful every time. However, there can be
+			 * cases (if not now, but in the future) like if the old tuple is
+			 * concurrently updated (since there is a small window where we give
+			 * up the buffer lock above).
+			 */
+			break;
+		}
+	}
+
+	MemoryContextSwitchTo(oldcxt);
+
+	if (BufferIsValid(buf))
+		ReleaseBuffer(buf);
 }
 
 /*

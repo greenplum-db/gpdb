@@ -768,14 +768,9 @@ explain (costs off, verbose) update mv_15719 set a = 6;
                        Output: t2_15719_1.a
                        ->  Seq Scan on public.t2_15719 t2_15719_1
                              Output: t2_15719_1.a
-   SubPlan 2
-     ->  Broadcast Motion 3:3  (slice3; segments: 3)
-           Output: t2_15719_2.a
-           ->  Seq Scan on public.t2_15719 t2_15719_2
-                 Output: t2_15719_2.a
  Optimizer: Postgres query optimizer
  Settings: optimizer = 'off'
-(34 rows)
+(29 rows)
 
 update mv_15719 set a = 6;
 drop view mv_15719 cascade;

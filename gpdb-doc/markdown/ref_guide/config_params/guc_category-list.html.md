@@ -298,9 +298,14 @@ These configuration parameters control Greenplum Database logging.
 These parameters pertain to auto-vacuuming databases.
 
 - [autovacuum](guc-list.html#autovacuum)
+- [autovacuum_analyze_scale_factor](guc-list.html#autovacuum_analyze_scale_factor)
+- [autovacuum_analyze_threshold](guc-list.html#autovacuum_analyze_threshold)
 - [autovacuum_freeze_max_age](guc-list.html#autovacuum_freeze_max_age)
+- [autovacuum_max_workers](guc-list.html#autovacuum_max_workers)
+- [autovacuum_multixact_freeze_max_age](guc-list.html#autovacuum_multixact_freeze_max_age)
 - [autovacuum_naptime](guc-list.html#autovacuum_naptime)
 - [autovacuum_vacuum_cost_delay](guc-list.html#autovacuum_vacuum_cost_delay)
+- [autovacuum_vacuum_cost_limit](guc-list.html#autovacuum_vacuum_cost_limit)
 - [autovacuum_vacuum_scale_factor](guc-list.html#autovacuum_vacuum_scale_factor)
 - [autovacuum_vacuum_threshold](guc-list.html#autovacuum_vacuum_threshold)
 - [gp_autovacuum_scope](guc-list.html#gp_autovacuum_scope)
@@ -530,6 +535,7 @@ These parameters control the configuration of the replication between Greenplum 
 - [replication_timeout](guc-list.html#replication_timeout)
 - [track_wal_io_timing](guc-list.html#track_wal_io_timing)
 - [wait_for_replication_threshold](guc-list.html#wait_for_replication_threshold)
+- [wal_compression](guc-list.html#wal_compression)
 - [wal_keep_size](guc-list.html#wal_keep_size)
 - [wal_receiver_status_interval](guc-list.html#wal_receiver_status_interval)
 

@@ -1586,7 +1586,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	{
 		rel = relation_open(r1, AccessShareLock);
 
-		vac_send_relstats_to_qd(rel,
+		vac_send_relstats_to_qd(rel->rd_id,
 								relform1->relpages,
 								relform1->reltuples,
 								relform1->relallvisible);
