@@ -2416,6 +2416,22 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|off|coordinator, session, reload|
 
+## <a id="optimizer_enable_push_join_below_union_all"></a>optimizer\_enable\_push\_join\_below\_union\_all
+
+When GPORCA is enabled \(the default\), the `optimizer_enable_push_join_below_union_all` parameter controls GPORCA's behaviour when it encounters a query that includes a `JOIN` of a `UNION ALL`.
+
+The default value is `off`, GPORCA performs no transforms when a query includes a `JOIN` of a `UNION ALL`.
+
+When set to `on` and the plan cost makes it eligible, GPORCA transforms a `JOIN` of `UNION ALL` to a `UNION ALL` of `JOIN`s. This transform may improve join performance when the `UNION ALL` children can benefit from join operations for which they are not eligible. Such an example is an indexed nested loop join, which is highly performant when the inner side is large and indexed, and the outer side is small. When the `UNION ALL` of multiple indexed large tables is joined with a small table, this transform pushes the join condition down as the index condition, and generates a more performant query than that utilizing a hash join.
+
+Enabling this transform could signficantly increase planning time, so be sure to run and examine `EXPLAIN` output for the query with both parameter settings.
+
+The `optimizer_enable_push_join_below_union_all` parameter can be set for a database system, an individual database, or a session or query.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, reload|
+
 ## <a id="optimizer_enable_replicated_table"></a>optimizer\_enable\_replicated\_table 
 
 When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a replicated table.
