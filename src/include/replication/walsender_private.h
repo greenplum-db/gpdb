@@ -108,7 +108,12 @@ typedef struct WalSnd
 
 extern WalSnd *MyWalSnd;
 
+/*
+ * GPDB: Meant to hold persistent state about a walsender<->walreceiver
+ * connection, on the walsender side, even if the walsender has died.
+ */
 typedef enum
+
 {
 	WALSNDERROR_NONE = 0,
 	WALSNDERROR_WALREAD
