@@ -21,7 +21,7 @@ You can use a foreign table that you create with `postgres_fdw` to access data t
 | multi_hosts | Space-separated list of remote PostgreSQL server host names. | You must specify exactly `num_segments` number of hosts in the list. |
 | multi_ports | Space-separated list of port numbers for the PostgreSQL servers. | You must specify exactly one port number for each host specified in `multi_hosts`, in order. |
 
-<sup>1</sup> The Greenplum Query Optimizer (GPORCA) can not plan and optimize queries when `num_segments` is larger than the number of segments in the local Greenplum cluster; such queries always fall back to the Postgres Planner.
+<sup>1</sup> The Greenplum Query Optimizer (GPORCA) can not plan and optimize queries when `num_segments` is not equal to the number of segments in the local Greenplum cluster; such queries always fall back to the Postgres Planner.
 
 Setting these options instructs `postgres_fdw` to treat a foreign table that you create that specifes this `SERVER` as a *distributed* foreign table. That is, a foreign table whose underlying data is stored on multiple remote PostgreSQL servers. `postgres_fdw` directs a query on such a foreign table to each PostgreSQL server specified in `multi_hosts`.
 
