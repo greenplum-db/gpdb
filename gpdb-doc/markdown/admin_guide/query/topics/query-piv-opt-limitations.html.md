@@ -51,7 +51,6 @@ These features are unsupported when GPORCA is enabled \(the default\):
 -   Unsupported index-related features include:
 
     - Index scan on AO tables
-    - Dynamic index-only scan
     - Partial dynamic index scan
     - Index-only scan on GIST indexes
     - Partial indexes
