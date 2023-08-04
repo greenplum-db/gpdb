@@ -375,9 +375,10 @@ AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt
 static void
 AppendOnlySegmentFileFullCompaction(Relation aorel,
 									AppendOnlyInsertDesc insertDesc,
-									FileSegInfo *fsinfo,
+									FileSegTotals *fstotal,
 									Snapshot	appendOnlyMetaDataSnapshot,
-									AOVacuumRelStats *vacrelstats)
+									AOVacuumRelStats *vacrelstats,
+							  		List *compact_segno_list)
 {
 	const char *relname;
 	AppendOnlyVisimap visiMap;
@@ -385,7 +386,6 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	TupleDesc	tupDesc;
 	TupleTableSlot *slot;
 	MemTupleBinding *mt_bind;
-	int			compact_segno;
 	int64		movedTupleCount = 0;
 	ResultRelInfo *resultRelInfo;
 	EState	   *estate;
@@ -395,15 +395,25 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
     Oid         visimaprelid;
     Oid         blkdirrelid;
 	int64		heap_blks_scanned = 0;
+	int		   *compact_segnos;
+	int			compact_seg_num = list_length(compact_segno_list);
+	int			segno_idx = 0;
+	ListCell   *lc;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationStorageIsAoRows(aorel));
 	Assert(insertDesc);
 
-	compact_segno = fsinfo->segno;
-	if (fsinfo->varblockcount > 0)
+	compact_segnos = (int *) palloc0(sizeof(int) * compact_seg_num);
+	foreach (lc, compact_segno_list)
 	{
-		tuplePerPage = fsinfo->total_tupcount / fsinfo->varblockcount;
+		compact_segnos[segno_idx] = lfirst_int(lc);
+		segno_idx++;
+	}
+
+	if (fstotal->totalvarblocks > 0)
+	{
+		tuplePerPage = fstotal->totaltuples / fstotal->totalvarblocks;
 	}
 	relname = RelationGetRelationName(aorel);
 
@@ -417,8 +427,8 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 						   appendOnlyMetaDataSnapshot);
 
 	if (Debug_appendonly_print_compaction)
-		elog(LOG, "Compact AO segno %d, relation %s, insert segno %d",
-			 compact_segno, relname, insertDesc->storageWrite.segmentFileNum);
+		elog(LOG, "Starting Compact relation %s, insert segno %d",
+			 relname, insertDesc->storageWrite.segmentFileNum);
 
 	/*
 	 * Todo: We need to limit the scan to one file and we need to avoid to
@@ -428,7 +438,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	 */
 	scanDesc = appendonly_beginrangescan(aorel,
 										 SnapshotAny, appendOnlyMetaDataSnapshot,
-										 &compact_segno, 1, 0, NULL);
+										 compact_segnos, compact_seg_num, 0, NULL);
 
 	tupDesc = RelationGetDescr(aorel);
 	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
@@ -496,22 +506,25 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 	}
 
 	/* Report progress after compacting a segment file. */
-	heap_blks_scanned += RelationGuessNumberOfBlocksFromSize(fsinfo->eof);
+	heap_blks_scanned += RelationGuessNumberOfBlocksFromSize(fstotal->totalbytes);
 	pgstat_progress_update_param(PROGRESS_VACUUM_HEAP_BLKS_SCANNED,
 								 heap_blks_scanned);
 
-	MarkFileSegInfoAwaitingDrop(aorel, compact_segno);
+	for(segno_idx = 0; segno_idx < compact_seg_num; segno_idx++)
+	{
+		MarkFileSegInfoAwaitingDrop(aorel, compact_segnos[segno_idx]);
 
-	AppendOnlyVisimap_DeleteSegmentFile(&visiMap, compact_segno);
+		AppendOnlyVisimap_DeleteSegmentFile(&visiMap, compact_segnos[segno_idx]);
 
-	/* Delete all mini pages of the segment files if block directory exists */
-	AppendOnlyBlockDirectory_DeleteSegmentFiles(blkdirrelid,
-												appendOnlyMetaDataSnapshot,
-												compact_segno);
+		/* Delete all mini pages of the segment files if block directory exists */
+		AppendOnlyBlockDirectory_DeleteSegmentFiles(blkdirrelid,
+													appendOnlyMetaDataSnapshot,
+													compact_segnos[segno_idx]);
+	}
 
 	if (Debug_appendonly_print_compaction)
-		elog(LOG, "Finished compaction: AO segfile %d, relation %s, moved tuple count " INT64_FORMAT,
-			 compact_segno, relname, movedTupleCount);
+		elog(LOG, "Finished compaction: relation %s, moved tuple count " INT64_FORMAT,
+			 relname, movedTupleCount);
 
 	AppendOnlyVisimap_Finish(&visiMap, NoLock);
 
@@ -772,72 +785,58 @@ AppendOptimizedTruncateToEOF(Relation aorel, AOVacuumRelStats *vacrelstats)
 /*
  * Performs a compaction of an append-only relation.
  *
- * The compaction segment file should be marked as in-use/in-compaction in
+ * The compaction segment files should be marked as in-use/in-compaction in
  * the appendonlywriter.c code.
  *
- * On exit, *insert_segno will be set to the the segment that was used as the
- * insertion target. The segfiles listed in 'avoid_segnos' will not be used
- * for insertion.
+ * insert_segno is set to the segment that used as the insertion target.
  *
  * The caller is required to hold either an AccessExclusiveLock (vacuum full)
  * or a ShareLock on the relation.
  */
 void
 AppendOnlyCompact(Relation aorel,
-				  int compaction_segno,
-				  int *insert_segno,
-				  bool isFull,
-				  List *avoid_segnos,
+				  List *compaction_segnos,
+				  int insert_segno,
 				  AOVacuumRelStats *vacrelstats)
 {
 	const char *relname;
 	AppendOnlyInsertDesc insertDesc = NULL;
-	FileSegInfo *fsinfo;
+	FileSegTotals *fstotal;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	Assert(RelationStorageIsAoRows(aorel));
-	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 
 	relname = RelationGetRelationName(aorel);
 
-	/* Fetch under the write lock to get latest committed eof. */
-	fsinfo = GetFileSegInfo(aorel, appendOnlyMetaDataSnapshot, compaction_segno, true);
+	/* Get segment file total info. */
+	fstotal = GetSegFilesTotals(aorel, appendOnlyMetaDataSnapshot);
 
-	if (AppendOnlyCompaction_ShouldCompact(aorel,
-										   fsinfo->segno, fsinfo->total_tupcount, isFull,
-										   appendOnlyMetaDataSnapshot))
+	if (insert_segno != -1)
 	{
-		if (*insert_segno == -1)
-		{
-			/* get the insertion segment on first call. */
-			*insert_segno = ChooseSegnoForCompactionWrite(aorel, avoid_segnos);
-		}
-		if (*insert_segno != -1)
-		{
-			/*
-			 * Note: since we don't know how many rows will actually be inserted,
-			 * we provide the default number of rows to bump gp_fastsequence by.
-			 */
-			insertDesc = appendonly_insert_init(aorel, *insert_segno, NUM_FAST_SEQUENCES);
-			AppendOnlySegmentFileFullCompaction(aorel,
-												insertDesc,
-												fsinfo,
-												appendOnlyMetaDataSnapshot,
-												vacrelstats);
+		/*
+		 * Note: since we don't know how many rows will actually be inserted,
+		 * we provide the default number of rows to bump gp_fastsequence by.
+		 */
+		insertDesc = appendonly_insert_init(aorel, insert_segno, NUM_FAST_SEQUENCES);
+		AppendOnlySegmentFileFullCompaction(aorel,
+											insertDesc,
+											fstotal,
+											appendOnlyMetaDataSnapshot,
+											vacrelstats,
+											compaction_segnos);
 
-			insertDesc->skipModCountIncrement = true;
-			appendonly_insert_finish(insertDesc);
-		}
-		else
-		{
-			/* Could not find a target segment. Give up */
-			ereport(WARNING,
-					(errmsg("could not find a free segment file to use for compacting segfile %d of relation %s",
-							compaction_segno, RelationGetRelationName(aorel))));
-		}
+		insertDesc->skipModCountIncrement = true;
+		appendonly_insert_finish(insertDesc);
+	}
+	else
+	{
+		/* Could not find a target segment. Give up */
+		ereport(WARNING,
+				(errmsg("could not find a free segment file to use for compacting relation %s",
+						RelationGetRelationName(aorel))));
 	}
 
-	pfree(fsinfo);
+	pfree(fstotal);
 
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
