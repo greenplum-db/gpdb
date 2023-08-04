@@ -1384,8 +1384,6 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 		/* cert is stored PEM coded in file... */
 		CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLCERTTYPE, "PEM");
-
-		
 		/* set the cert for client authentication */
 		if (extssl_cert != NULL)
 		{
@@ -1430,8 +1428,18 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 
 			if (!is_file_exists(extssl_cas_full))
 			{
-				elog(LOG, "could not open private key file \"%s\": %m", extssl_cas_full);
-				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_CAINFO, NULL);
+				if (verify_gpfdists_cert)
+				{
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							errmsg("could not open CA certificate file \"%s\": %m",
+									extssl_cas_full)));
+				}
+				else 
+				{
+					elog(LOG, "could not open CA certificate file \"%s\": %m", extssl_cas_full);
+					CURL_EASY_SETOPT(file->curl->handle, CURLOPT_CAINFO, NULL);
+				}
 			}
 			else
 				CURL_EASY_SETOPT(file->curl->handle, CURLOPT_CAINFO, extssl_cas_full);

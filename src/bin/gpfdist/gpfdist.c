@@ -690,7 +690,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ NULL, 'S', 0, "use O_SYNC when opening files for write" },
 	{ NULL, 'z', 1, "internal - queue size for listen call" },
 	{ "ssl", 257, 1, "ssl - certificates files under this directory" },
-	{ "ssl_verify_peer", 260, 1, "ssl_server_verify - enable the certification for gpdb identity" },
+	{ "ssl_verify_peer", 260, 1, "ssl_verify_peer - enable or disable the authentication for gpdb identity" },
 #ifdef GPFXDIST
 	{ NULL, 'c', 1, "transform configuration file" },
 #endif
@@ -779,10 +779,10 @@ static void parse_command_line(int argc, const char* const argv[],
 			break;
 #else
 		case 257:
-			usage_error("SSL is not supported by this build", 0);
+			usage_error("Flag ssl is not supported by this build", 0);
 			break;
 		case 260:
-			usage_error("SSL is not supported by this build", 0);
+			usage_error("Flag ssl_verify_peer is not supported by this build", 0);
 			break;
 #endif
 		case 256:

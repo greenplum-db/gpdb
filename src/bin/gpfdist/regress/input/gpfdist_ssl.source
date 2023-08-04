@@ -316,6 +316,7 @@ SET verify_gpfdists_cert=off;
 SELECT * FROM tbl;
 
 -- start_ignore
+\! bash change_cert.bash recover_gpdb_root
 \! bash change_cert.bash clear_gpdb_client
 SET verify_gpfdists_cert=on;
 -- end_ignore

@@ -285,7 +285,7 @@ CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, 
 LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 SELECT * FROM tbl;
-ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg1 slice1 127.0.0.1:7001 pid=6426)
+ERROR:  could not open CA certificate file root.crt: No such file or directory  (seg0 slice1 127.0.0.1:7000 pid=23827)
 -- start_ignore
 SET verify_gpfdists_cert=off;
 WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
@@ -400,10 +400,9 @@ select * from gpfdist_ssl_start_no_ca_verify;
 SET verify_gpfdists_cert=on;
 -- end_ignore
 SELECT * FROM tbl;
-ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg1 slice1 127.0.0.1:7001 pid=28366)
+ERROR:  could not open CA certificate file root.crt: No such file or directory  (seg0 slice1 127.0.0.1:7000 pid=23827)
 -- start_ignore
 SET verify_gpfdists_cert=off;
-WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
 -- end_ignore
 SELECT * FROM tbl;
  s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
@@ -555,10 +554,9 @@ client.crt client.key root.crt.bak server.crt server.key
 SET verify_gpfdists_cert=on;
 -- end_ignore
 SELECT * FROM tbl;
-ERROR:  connection with gpfdist failed for "gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl", effective url: "https://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl": ; SSL certificate problem: self signed certificate  (seg0 slice1 127.0.0.1:7000 pid=1504)
+ERROR:  could not open CA certificate file root.crt: No such file or directory  (seg0 slice1 127.0.0.1:7000 pid=23827)
 -- start_ignore
 SET verify_gpfdists_cert=off;
-WARNING:  verify_gpfdists_cert=off. Greenplum Database will stop validating the gpfdists SSL certificate for connections between segments and gpfdists
 -- end_ignore
 SELECT * FROM tbl;
  s1  |  s2  |   s3   |            dt            | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
