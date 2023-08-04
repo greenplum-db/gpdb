@@ -62,8 +62,8 @@ def run_exkeys(hosts, capture=False):
     sys.stderr.write(stored_err)
     # Write to temporary files.
     with tempfile.NamedTemporaryFile() as temp_out, tempfile.NamedTemporaryFile() as temp_err:
-        temp_out.write(stored_out)
-        temp_err.write(stored_err)
+        temp_out.write(stored_out.encode())
+        temp_err.write(stored_err.encode())
 
     return ret, stored_out, stored_err
 
