@@ -545,7 +545,7 @@ def ModifyOutFile(file,old_str,new_str):
     os.remove(file)
     os.rename("%s.bak" % file, file)
 
-Modify_Output_Case = [44,46,51,57,65,219,260,259]
+Modify_Output_Case = [44,46,51,57,65,219,260,259,609]
 
 
 def doTest(num):
@@ -564,7 +564,7 @@ def doTest(num):
         newpat2 = 'pathto/data_file'
         pat3 = r', SSL off$'
         newpat3 = ''
-        pat4 = r'ext_gpload_.*'
+        pat4 = r'ext_gpload_.*' # external table name
         newpat4='ext_gpload_table'
         pat5 = r'[a-zA-Z0-9/\_-]*/gpload.py'  # file location
         newpat5 = 'pathto/gpload.py'

@@ -2965,7 +2965,7 @@ class gpload:
         truncate = False
         self.reuse_tables = False
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             self.db.query("BEGIN")
 
         self.extSchemaName = self.getconfig('gpload:external:schema', unicode, None)
@@ -3031,7 +3031,7 @@ class gpload:
                     self.log(self.ERROR, 'could not execute SQL in sql:after "%s": %s' %
                              (after, str(e)))
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             self.db.query("COMMIT")
 
 

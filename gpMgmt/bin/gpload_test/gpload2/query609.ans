@@ -1,0 +1,15 @@
+2023-08-04 14:31:51|INFO|gpload session started 2023-08-04 14:31:51
+2023-08-04 14:31:51|INFO|setting schema 'public' for table 'testtruncate'
+2023-08-04 14:31:51|INFO|started gpfdist -p 8081 -P 8082 -f "pathto/data_file.csv" -t 30
+2023-08-04 14:31:51|ERROR|ERROR:  missing data for column "s2"  (seg0 slice1 *:6002 pid=4857)
+CONTEXT:  External table ext_gpload_table
+ encountered while running INSERT INTO public."testtruncate" ("s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7") SELECT "s1","s2","s3","dt","n1","n2","n3","n4","n5","n6","n7" FROM ext_gpload_table
+2023-08-04 14:31:51|INFO|rows Inserted          = 0
+2023-08-04 14:31:51|INFO|rows Updated           = 0
+2023-08-04 14:31:51|INFO|data formatting errors = 0
+2023-08-04 14:31:51|INFO|gpload failed
+ count 
+-------
+     1
+(1 row)
+

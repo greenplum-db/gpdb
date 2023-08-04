@@ -84,3 +84,17 @@ def test_608_gpload_ext_staging_table():
     copy_data('external_file_13.csv','data_file.csv')
     write_config_file(reuse_tables=False, format='csv', file='data_file.csv', table='csvtable', delimiter="','", log_errors=True,error_limit=10,staging_table='"Staging_table"')
     write_config_file(reuse_tables=False, config='config/config_file1', format='csv', file='data_file.csv', table='csvtable', delimiter="','", log_errors=True,error_limit=10,staging_table='staging_table')
+
+
+@pytest.mark.order(609)
+@prepare_before_test(num=609, times=2)
+def test_609_gpload_fail_preload_truncate_rollback():
+    "609T gpload set preload truncate, but gpload fail, truncate should rollback together"
+    file = mkpath('setup.sql')
+    runfile(file)
+    f = open(mkpath('query609.sql'), 'w')
+    f.write("\\!  gpload -f "+mkpath('config/config_file')+"\n")
+    f.write("\\!  psql -d reuse_gptest -c \"SELECT count(*) from  testtruncate;\"\n")
+    f.close()
+    copy_data('external_file_13.csv','data_file.csv')
+    write_config_file(reuse_tables=False, format='csv', file='data_file.csv', table='testtruncate', delimiter="';'", truncate=True )
