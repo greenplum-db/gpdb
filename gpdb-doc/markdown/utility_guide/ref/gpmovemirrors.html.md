@@ -7,7 +7,7 @@ Moves mirror segment instances to new locations.
 ```
 gpmovemirrors -i <move_config_file> [-d <coordinator_data_directory>] 
           [-l <logfile_directory>] [-b <segment_batch_size>]
-          [-B <batch_size>] [-v] [--hba-hostnames <boolean>] 
+          [-B <batch_size>] [-v] [--hba-hostnames <boolean>] [-a]
 
 gpmovemirrors -? 
 
@@ -23,6 +23,9 @@ By default, the utility will prompt you for the file system location\(s\) where 
 You must make sure that the user who runs `gpmovemirrors` \(the `gpadmin` user\) has permissions to write to the data directory locations specified. You may want to create these directories on the segment hosts and `chown` them to the appropriate user before running `gpmovemirrors`.
 
 ## <a id="section4"></a>Options 
+
+-a \(do not prompt\)
+:   Do not prompt the user for confirmation.
 
 -b segment\_batch\_size
 :   The maximum number of segments per host to operate on in parallel. Valid values are `1` to `128`. If not specified, the utility will start recovering up to 64 segments in parallel on each host.

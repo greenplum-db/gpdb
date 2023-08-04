@@ -18,7 +18,6 @@ class CalculateDiskFreeTestCase(GpTestCase):
                         /tmp/disk1               124     0         124       0% /data/seg1\n"
         mock1.return_value = cmd
 
-
         ret = calculate_disk_free(['/data/seg1'])
         self.assertIsInstance(ret[0], FileSystem)
         self.assertEqual(ret[0].name, "/tmp/disk1")

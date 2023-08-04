@@ -22,6 +22,7 @@ try:
     from gppylib.userinput import *
     from gppylib.operations.startSegments import *
     from gppylib import gparray, gplog, pgconf, userinput, utils
+    from gppylib.operations.validate_disk_space import RelocateSegmentPair, RelocateDiskUsage, InsufficientDiskSpaceError
     from gppylib.parseutils import line_reader, check_values, canonicalize_address
     from gppylib.operations.segment_tablespace_locations import get_tablespace_locations
     from gppylib.operations.update_pg_hba_on_segments import update_pg_hba_for_new_mirrors
@@ -82,6 +83,8 @@ def parseargs():
                      help='use hostnames instead of CIDR in pg_hba.conf')
     parser.add_option('-h', '-?', '--help', action='help',
                       help='show this help message and exit.')
+    parser.add_option('-a', dest="interactive", action='store_false', default=True,
+                      help="quiet mode, do not require user input for confirmations")
     parser.add_option('--usage', action="briefhelp")
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
@@ -345,6 +348,7 @@ try:
     newConfig.read_input_file(options.input_filename)
 
     PgHbaEntriesToUpdate = []
+    pairs = []
     """ Do some sanity checks on the input. """
     for oldMirror, newMirror in zip(newConfig.oldMirrorList, newConfig.newMirrorList):
         seg = lookupGpdb(oldMirror.address, oldMirror.port, oldMirror.dataDirectory)
@@ -368,6 +372,13 @@ try:
                 if segment.getSegmentContentId() == seg.getSegmentContentId() and segment.getSegmentRole() != seg.getSegmentRole():
                     PgHbaEntriesToUpdate.append((segment.getSegmentDataDirectory(), segment.getSegmentHostName(), newMirror.address))
 
+        pair = RelocateSegmentPair(oldMirror.address, oldMirror.dataDirectory, newMirror.address, newMirror.dataDirectory)
+        pairs.append(pair)
+
+    """ Validating Disk Space requirement """
+    disk_usage = RelocateDiskUsage(pairs, options.batch_size, options)
+    if not disk_usage.validate_disk_space():
+        raise InsufficientDiskSpaceError("Insufficient disk space on target mirror hosts.")
 
     """ Prepare common execution steps for running commands on segments """
     oldMirrorsToMove = [mirror for mirror in newConfig.oldMirrorList if not mirror.inPlace]

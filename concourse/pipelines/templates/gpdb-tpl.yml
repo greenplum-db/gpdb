@@ -1,7 +1,8 @@
 {% set CLI_BEHAVE_TESTS = [
                       {'name': 'gpmovemirrors',
                        'use_concourse_cluster': true,
-                       'additional_ccp_vars': 'number_of_nodes: 4'},
+                       'additional_ccp_vars': 'number_of_nodes: 4',
+                       'sudo_access_on_hosts': true},
                       {'name': 'analyzedb',
                        'use_concourse_cluster': false},
                       {'name': 'gpreload',
