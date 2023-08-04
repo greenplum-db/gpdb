@@ -123,6 +123,12 @@ GET_COLUMN_NAMES_SQL = """
 SELECT attname FROM pg_attribute WHERE attrelid = %s AND attnum > 0 AND NOT attisdropped
 """
 
+GET_SCHEMA_WITH_TEMP_TABLE_SQL = """
+SELECT n.nspname
+FROM pg_class c, pg_namespace n
+WHERE c.relnamespace = n.oid AND c.relpersistence = 't';
+"""
+
 GET_INCLUDED_COLUMNS_FROM_EXCLUDE_SQL = """
 SELECT attname FROM pg_attribute WHERE attrelid = %s AND attname NOT IN (%s) AND attnum > 0 AND NOT attisdropped
 """
@@ -635,10 +641,15 @@ class AnalyzeDb(Operation):
             tup = (schema_tbl[0], schema_tbl[1])
             mid_level_partitions.append(tup)
 
+        qresult = run_sql(self.conn, GET_SCHEMA_WITH_TEMP_TABLE_SQL)
+        temp_schema_set = set([x[0] for x in qresult])
+
         ret = set()
         for can in candidates:
             schema = can[0]
             table = can[1]
+            if schema in temp_schema_set:
+                continue
             if '\n' in schema or ',' in schema or ':' in schema:
                 raise Exception('Schema name has an invalid character "\\n", ":", "," : "%s"' % schema)
             if '\n' in table or ',' in table or ':' in table:
@@ -1334,7 +1345,6 @@ def create_parser():
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Print debug messages.')
     parser.add_option('-a', action='store_true', dest='silent', default=False,
                       help="Quiet mode. Do not prompt for user confirmation.")
-
     return parser
 
 

@@ -1767,3 +1767,13 @@ Feature: Incrementally analyze the database
         When the user runs "analyzedb -a -d incr_analyze -t public.jazz"
         Then analyzedb should print "There are no tables or partitions to be analyzed" to stdout
         And the user runs "psql -d incr_analyze -c 'drop table jazz'"
+
+    Scenario: analyzedb ignores temp table
+        Given database "schema_with_temp_table" is dropped and recreated
+        And the user connects to "schema_with_temp_table" with named connection "default"
+        And the user executes "CREATE TEMP TABLE temp_t1 (c1 int) DISTRIBUTED BY (c1)" with named connection "default"
+        When the user runs "analyzedb -a -d schema_with_temp_table"
+        Then output should not contain "temp_t1"
+        And the user runs "dropdb schema_with_temp_table"
+        And the user drops the named connection "default"
+
