@@ -25,18 +25,18 @@ SUBPARTITION BY list(c)
 		DEFAULT SUBPARTITION others
 	)
 );
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('partrl') pt join pg_class c on pt.relid = c.oid;
-            relid             | level | rank |         relpartbound         | range_from | range_to 
-------------------------------+-------+------+------------------------------+------------+----------
- partrl                       |     0 |      |                              |            | 
- partrl_1_prt_p1_1            |     1 |    2 | FOR VALUES FROM (10) TO (15) | 10         | 15
- partrl_1_prt_p1_2            |     1 |    3 | FOR VALUES FROM (15) TO (20) | 15         | 20
- partrl_1_prt_p2              |     1 |    1 | FOR VALUES FROM (0) TO (10)  | 0          | 10
- partrl_1_prt_p1_1_2_prt_sp1  |     2 |      | FOR VALUES IN (1, 2)         |            | 
- partrl_1_prt_p1_2_2_prt_sp1  |     2 |      | FOR VALUES IN (1, 2)         |            | 
- partrl_1_prt_p2_2_prt_others |     2 |      | DEFAULT                      |            | 
- partrl_1_prt_p2_2_prt_sp2    |     2 |      | FOR VALUES IN (3, 4)         |            | 
- partrl_1_prt_p2_2_prt_sp1    |     2 |      | FOR VALUES IN (1, 2)         |            | 
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('partrl') pt join pg_class c on pt.relid = c.oid;
+            relid             | level | rank |         relpartbound         | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+------------------------------+-------+------+------------------------------+------------+----------+---------------------------+----------------------------
+ partrl                       |     0 |      |                              |            |          | partrl_1_prt_p2           | partrl_1_prt_p1_2
+ partrl_1_prt_p1_1            |     1 |    2 | FOR VALUES FROM (10) TO (15) | 10         | 15       |                           | 
+ partrl_1_prt_p1_2            |     1 |    3 | FOR VALUES FROM (15) TO (20) | 15         | 20       |                           | 
+ partrl_1_prt_p2              |     1 |    1 | FOR VALUES FROM (0) TO (10)  | 0          | 10       |                           | 
+ partrl_1_prt_p1_1_2_prt_sp1  |     2 |      | FOR VALUES IN (1, 2)         |            |          |                           | 
+ partrl_1_prt_p1_2_2_prt_sp1  |     2 |      | FOR VALUES IN (1, 2)         |            |          |                           | 
+ partrl_1_prt_p2_2_prt_others |     2 |      | DEFAULT                      |            |          |                           | 
+ partrl_1_prt_p2_2_prt_sp2    |     2 |      | FOR VALUES IN (3, 4)         |            |          |                           | 
+ partrl_1_prt_p2_2_prt_sp1    |     2 |      | FOR VALUES IN (1, 2)         |            |          |                           | 
 (9 rows)
 
 -- Classic Syntax
@@ -57,16 +57,16 @@ SUBPARTITION BY range(c)
 		DEFAULT SUBPARTITION other_c
 	)
 );
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('partrr') pt join pg_class c on pt.relid = c.oid;
-             relid             | level | rank |          relpartbound          | range_from | range_to 
--------------------------------+-------+------+--------------------------------+------------+----------
- partrr                        |     0 |      |                                |            | 
- partrr_1_prt_p1               |     1 |    1 | FOR VALUES FROM (0) TO (10)    | 0          | 10
- partrr_1_prt_p2               |     1 |    2 | FOR VALUES FROM (10) TO (20)   | 10         | 20
- partrr_1_prt_p1_2_prt_other_c |     2 |      | DEFAULT                        |            | 
- partrr_1_prt_p2_2_prt_other_c |     2 |      | DEFAULT                        |            | 
- partrr_1_prt_p2_2_prt_sp2     |     2 |    2 | FOR VALUES FROM (300) TO (600) | 300        | 600
- partrr_1_prt_p2_2_prt_sp1     |     2 |    1 | FOR VALUES FROM (100) TO (300) | 100        | 300
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid)  from pg_partition_tree('partrr') pt join pg_class c on pt.relid = c.oid;
+             relid             | level | rank |          relpartbound          | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+-------------------------------+-------+------+--------------------------------+------------+----------+---------------------------+----------------------------
+ partrr                        |     0 |      |                                |            |          | partrr_1_prt_p1           | partrr_1_prt_p2
+ partrr_1_prt_p1               |     1 |    1 | FOR VALUES FROM (0) TO (10)    | 0          | 10       |                           | 
+ partrr_1_prt_p2               |     1 |    2 | FOR VALUES FROM (10) TO (20)   | 10         | 20       | partrr_1_prt_p2_2_prt_sp1 | partrr_1_prt_p2_2_prt_sp2
+ partrr_1_prt_p1_2_prt_other_c |     2 |      | DEFAULT                        |            |          |                           | 
+ partrr_1_prt_p2_2_prt_other_c |     2 |      | DEFAULT                        |            |          |                           | 
+ partrr_1_prt_p2_2_prt_sp2     |     2 |    2 | FOR VALUES FROM (300) TO (600) | 300        | 600      |                           | 
+ partrr_1_prt_p2_2_prt_sp1     |     2 |    1 | FOR VALUES FROM (100) TO (300) | 100        | 300      |                           | 
 (7 rows)
 
 -- w/ minvalue and maxvalue
@@ -89,17 +89,17 @@ CREATE TABLE part6 PARTITION OF range_parted2 FOR VALUES FROM (60) TO (maxvalue)
 NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE part7 PARTITION OF range_parted2 FOR VALUES FROM (minvalue) TO (1);
 NOTICE:  table has parent, setting distribution columns to match parent table
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('range_parted2') pt join pg_class c on pt.relid = c.oid;
-     relid     | level | rank |            relpartbound            | range_from | range_to 
----------------+-------+------+------------------------------------+------------+----------
- range_parted2 |     0 |      |                                    |            | 
- part1         |     1 |    2 | FOR VALUES FROM (1) TO (10)        | 1          | 10
- part2         |     1 |    3 | FOR VALUES FROM (10) TO (20)       | 10         | 20
- part3         |     1 |    4 | FOR VALUES FROM (20) TO (30)       | 20         | 30
- part4         |     1 |    5 | FOR VALUES FROM (30) TO (40)       | 30         | 40
- part5         |     1 |    6 | FOR VALUES FROM (40) TO (50)       | 40         | 50
- part6         |     1 |    7 | FOR VALUES FROM (60) TO (MAXVALUE) | 60         | MAXVALUE
- part7         |     1 |    1 | FOR VALUES FROM (MINVALUE) TO (1)  | MINVALUE   | 1
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('range_parted2') pt join pg_class c on pt.relid = c.oid;
+     relid     | level | rank |            relpartbound            | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+---------------+-------+------+------------------------------------+------------+----------+---------------------------+----------------------------
+ range_parted2 |     0 |      |                                    |            |          | part7                     | part6
+ part1         |     1 |    2 | FOR VALUES FROM (1) TO (10)        | 1          | 10       |                           | 
+ part2         |     1 |    3 | FOR VALUES FROM (10) TO (20)       | 10         | 20       |                           | 
+ part3         |     1 |    4 | FOR VALUES FROM (20) TO (30)       | 20         | 30       |                           | 
+ part4         |     1 |    5 | FOR VALUES FROM (30) TO (40)       | 30         | 40       |                           | 
+ part5         |     1 |    6 | FOR VALUES FROM (40) TO (50)       | 40         | 50       |                           | 
+ part6         |     1 |    7 | FOR VALUES FROM (60) TO (MAXVALUE) | 60         | MAXVALUE |                           | 
+ part7         |     1 |    1 | FOR VALUES FROM (MINVALUE) TO (1)  | MINVALUE   | 1        |                           | 
 (8 rows)
 
 -- w/ expressions
@@ -123,17 +123,17 @@ CREATE TABLE range_parted3_part6 PARTITION OF range_parted3 FOR VALUES FROM (60)
 NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE range_parted3_part7 PARTITION OF range_parted3 FOR VALUES FROM (minvalue) TO (1);
 NOTICE:  table has parent, setting distribution columns to match parent table
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('range_parted3') pt join pg_class c on pt.relid = c.oid;
-        relid        | level | rank |            relpartbound            | range_from | range_to 
----------------------+-------+------+------------------------------------+------------+----------
- range_parted3       |     0 |      |                                    |            | 
- range_parted3_part1 |     1 |    2 | FOR VALUES FROM (1) TO (10)        | 1          | 10
- range_parted3_part2 |     1 |    3 | FOR VALUES FROM (10) TO (20)       | 10         | 20
- range_parted3_part3 |     1 |    4 | FOR VALUES FROM (20) TO (30)       | 20         | 30
- range_parted3_part4 |     1 |    5 | FOR VALUES FROM (30) TO (40)       | 30         | 40
- range_parted3_part5 |     1 |    6 | FOR VALUES FROM (40) TO (50)       | 40         | 50
- range_parted3_part6 |     1 |    7 | FOR VALUES FROM (60) TO (MAXVALUE) | 60         | MAXVALUE
- range_parted3_part7 |     1 |    1 | FOR VALUES FROM (MINVALUE) TO (1)  | MINVALUE   | 1
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('range_parted3') pt join pg_class c on pt.relid = c.oid;
+        relid        | level | rank |            relpartbound            | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+---------------------+-------+------+------------------------------------+------------+----------+---------------------------+----------------------------
+ range_parted3       |     0 |      |                                    |            |          | range_parted3_part7       | range_parted3_part6
+ range_parted3_part1 |     1 |    2 | FOR VALUES FROM (1) TO (10)        | 1          | 10       |                           | 
+ range_parted3_part2 |     1 |    3 | FOR VALUES FROM (10) TO (20)       | 10         | 20       |                           | 
+ range_parted3_part3 |     1 |    4 | FOR VALUES FROM (20) TO (30)       | 20         | 30       |                           | 
+ range_parted3_part4 |     1 |    5 | FOR VALUES FROM (30) TO (40)       | 30         | 40       |                           | 
+ range_parted3_part5 |     1 |    6 | FOR VALUES FROM (40) TO (50)       | 40         | 50       |                           | 
+ range_parted3_part6 |     1 |    7 | FOR VALUES FROM (60) TO (MAXVALUE) | 60         | MAXVALUE |                           | 
+ range_parted3_part7 |     1 |    1 | FOR VALUES FROM (MINVALUE) TO (1)  | MINVALUE   | 1        |                           | 
 (8 rows)
 
 -- date partitioned table
@@ -144,29 +144,29 @@ CREATE TABLE sales (trans_id int, date date, amount
         (START (date '2023-01-01')
         END (date '2023-05-01') EVERY (INTERVAL '7 day'),
         DEFAULT PARTITION other_date);
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('sales') pt join pg_class c on pt.relid = c.oid order by rank;
-         relid          | level | rank |                   relpartbound                   |  range_from  |   range_to   
-------------------------+-------+------+--------------------------------------------------+--------------+--------------
- sales_1_prt_2          |     1 |    1 | FOR VALUES FROM ('01-01-2023') TO ('01-08-2023') | '01-01-2023' | '01-08-2023'
- sales_1_prt_3          |     1 |    2 | FOR VALUES FROM ('01-08-2023') TO ('01-15-2023') | '01-08-2023' | '01-15-2023'
- sales_1_prt_4          |     1 |    3 | FOR VALUES FROM ('01-15-2023') TO ('01-22-2023') | '01-15-2023' | '01-22-2023'
- sales_1_prt_5          |     1 |    4 | FOR VALUES FROM ('01-22-2023') TO ('01-29-2023') | '01-22-2023' | '01-29-2023'
- sales_1_prt_6          |     1 |    5 | FOR VALUES FROM ('01-29-2023') TO ('02-05-2023') | '01-29-2023' | '02-05-2023'
- sales_1_prt_7          |     1 |    6 | FOR VALUES FROM ('02-05-2023') TO ('02-12-2023') | '02-05-2023' | '02-12-2023'
- sales_1_prt_8          |     1 |    7 | FOR VALUES FROM ('02-12-2023') TO ('02-19-2023') | '02-12-2023' | '02-19-2023'
- sales_1_prt_9          |     1 |    8 | FOR VALUES FROM ('02-19-2023') TO ('02-26-2023') | '02-19-2023' | '02-26-2023'
- sales_1_prt_10         |     1 |    9 | FOR VALUES FROM ('02-26-2023') TO ('03-05-2023') | '02-26-2023' | '03-05-2023'
- sales_1_prt_11         |     1 |   10 | FOR VALUES FROM ('03-05-2023') TO ('03-12-2023') | '03-05-2023' | '03-12-2023'
- sales_1_prt_12         |     1 |   11 | FOR VALUES FROM ('03-12-2023') TO ('03-19-2023') | '03-12-2023' | '03-19-2023'
- sales_1_prt_13         |     1 |   12 | FOR VALUES FROM ('03-19-2023') TO ('03-26-2023') | '03-19-2023' | '03-26-2023'
- sales_1_prt_14         |     1 |   13 | FOR VALUES FROM ('03-26-2023') TO ('04-02-2023') | '03-26-2023' | '04-02-2023'
- sales_1_prt_15         |     1 |   14 | FOR VALUES FROM ('04-02-2023') TO ('04-09-2023') | '04-02-2023' | '04-09-2023'
- sales_1_prt_16         |     1 |   15 | FOR VALUES FROM ('04-09-2023') TO ('04-16-2023') | '04-09-2023' | '04-16-2023'
- sales_1_prt_17         |     1 |   16 | FOR VALUES FROM ('04-16-2023') TO ('04-23-2023') | '04-16-2023' | '04-23-2023'
- sales_1_prt_18         |     1 |   17 | FOR VALUES FROM ('04-23-2023') TO ('04-30-2023') | '04-23-2023' | '04-30-2023'
- sales_1_prt_19         |     1 |   18 | FOR VALUES FROM ('04-30-2023') TO ('05-01-2023') | '04-30-2023' | '05-01-2023'
- sales_1_prt_other_date |     1 |      | DEFAULT                                          |              | 
- sales                  |     0 |      |                                                  |              | 
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('sales') pt join pg_class c on pt.relid = c.oid order by rank;
+         relid          | level | rank |                   relpartbound                   |  range_from  |   range_to   | pg_partition_lowest_child | pg_partition_highest_child 
+------------------------+-------+------+--------------------------------------------------+--------------+--------------+---------------------------+----------------------------
+ sales_1_prt_2          |     1 |    1 | FOR VALUES FROM ('01-01-2023') TO ('01-08-2023') | '01-01-2023' | '01-08-2023' |                           | 
+ sales_1_prt_3          |     1 |    2 | FOR VALUES FROM ('01-08-2023') TO ('01-15-2023') | '01-08-2023' | '01-15-2023' |                           | 
+ sales_1_prt_4          |     1 |    3 | FOR VALUES FROM ('01-15-2023') TO ('01-22-2023') | '01-15-2023' | '01-22-2023' |                           | 
+ sales_1_prt_5          |     1 |    4 | FOR VALUES FROM ('01-22-2023') TO ('01-29-2023') | '01-22-2023' | '01-29-2023' |                           | 
+ sales_1_prt_6          |     1 |    5 | FOR VALUES FROM ('01-29-2023') TO ('02-05-2023') | '01-29-2023' | '02-05-2023' |                           | 
+ sales_1_prt_7          |     1 |    6 | FOR VALUES FROM ('02-05-2023') TO ('02-12-2023') | '02-05-2023' | '02-12-2023' |                           | 
+ sales_1_prt_8          |     1 |    7 | FOR VALUES FROM ('02-12-2023') TO ('02-19-2023') | '02-12-2023' | '02-19-2023' |                           | 
+ sales_1_prt_9          |     1 |    8 | FOR VALUES FROM ('02-19-2023') TO ('02-26-2023') | '02-19-2023' | '02-26-2023' |                           | 
+ sales_1_prt_10         |     1 |    9 | FOR VALUES FROM ('02-26-2023') TO ('03-05-2023') | '02-26-2023' | '03-05-2023' |                           | 
+ sales_1_prt_11         |     1 |   10 | FOR VALUES FROM ('03-05-2023') TO ('03-12-2023') | '03-05-2023' | '03-12-2023' |                           | 
+ sales_1_prt_12         |     1 |   11 | FOR VALUES FROM ('03-12-2023') TO ('03-19-2023') | '03-12-2023' | '03-19-2023' |                           | 
+ sales_1_prt_13         |     1 |   12 | FOR VALUES FROM ('03-19-2023') TO ('03-26-2023') | '03-19-2023' | '03-26-2023' |                           | 
+ sales_1_prt_14         |     1 |   13 | FOR VALUES FROM ('03-26-2023') TO ('04-02-2023') | '03-26-2023' | '04-02-2023' |                           | 
+ sales_1_prt_15         |     1 |   14 | FOR VALUES FROM ('04-02-2023') TO ('04-09-2023') | '04-02-2023' | '04-09-2023' |                           | 
+ sales_1_prt_16         |     1 |   15 | FOR VALUES FROM ('04-09-2023') TO ('04-16-2023') | '04-09-2023' | '04-16-2023' |                           | 
+ sales_1_prt_17         |     1 |   16 | FOR VALUES FROM ('04-16-2023') TO ('04-23-2023') | '04-16-2023' | '04-23-2023' |                           | 
+ sales_1_prt_18         |     1 |   17 | FOR VALUES FROM ('04-23-2023') TO ('04-30-2023') | '04-23-2023' | '04-30-2023' |                           | 
+ sales_1_prt_19         |     1 |   18 | FOR VALUES FROM ('04-30-2023') TO ('05-01-2023') | '04-30-2023' | '05-01-2023' |                           | 
+ sales_1_prt_other_date |     1 |      | DEFAULT                                          |              |              |                           | 
+ sales                  |     0 |      |                                                  |              |              | sales_1_prt_2             | sales_1_prt_19
 (20 rows)
 
 -- Multi-column range partitioned table
@@ -192,18 +192,18 @@ create table mc3p6 partition of mc3p for values from (20, 10, 10) to (20, 20, 20
 NOTICE:  table has parent, setting distribution columns to match parent table
 create table mc3p7 partition of mc3p for values from (20, 20, 20) to (maxvalue, maxvalue, maxvalue);
 NOTICE:  table has parent, setting distribution columns to match parent table
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_bound_value(c.oid, 'tto') as range_to from pg_partition_tree('mc3p') pt join pg_class c on pt.relid = c.oid;
-    relid     | level | rank |                          relpartbound                          | range_to 
---------------+-------+------+----------------------------------------------------------------+----------
- mc3p         |     0 |      |                                                                | 
- mc3p_default |     1 |      | DEFAULT                                                        | 
- mc3p0        |     1 |    1 | FOR VALUES FROM (MINVALUE, MINVALUE, MINVALUE) TO (1, 1, 1)    | 
- mc3p1        |     1 |    2 | FOR VALUES FROM (1, 1, 1) TO (10, 5, 10)                       | 
- mc3p2        |     1 |    3 | FOR VALUES FROM (10, 5, 10) TO (10, 10, 10)                    | 
- mc3p3        |     1 |    4 | FOR VALUES FROM (10, 10, 10) TO (10, 10, 20)                   | 
- mc3p4        |     1 |    5 | FOR VALUES FROM (10, 10, 20) TO (10, MAXVALUE, MAXVALUE)       | 
- mc3p5        |     1 |    6 | FOR VALUES FROM (11, 1, 1) TO (20, 10, 10)                     | 
- mc3p6        |     1 |    7 | FOR VALUES FROM (20, 10, 10) TO (20, 20, 20)                   | 
- mc3p7        |     1 |    8 | FOR VALUES FROM (20, 20, 20) TO (MAXVALUE, MAXVALUE, MAXVALUE) | 
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_bound_value(c.oid, 'tto') as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('mc3p') pt join pg_class c on pt.relid = c.oid;
+    relid     | level | rank |                          relpartbound                          | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+--------------+-------+------+----------------------------------------------------------------+----------+---------------------------+----------------------------
+ mc3p         |     0 |      |                                                                |          | mc3p0                     | mc3p7
+ mc3p_default |     1 |      | DEFAULT                                                        |          |                           | 
+ mc3p0        |     1 |    1 | FOR VALUES FROM (MINVALUE, MINVALUE, MINVALUE) TO (1, 1, 1)    |          |                           | 
+ mc3p1        |     1 |    2 | FOR VALUES FROM (1, 1, 1) TO (10, 5, 10)                       |          |                           | 
+ mc3p2        |     1 |    3 | FOR VALUES FROM (10, 5, 10) TO (10, 10, 10)                    |          |                           | 
+ mc3p3        |     1 |    4 | FOR VALUES FROM (10, 10, 10) TO (10, 10, 20)                   |          |                           | 
+ mc3p4        |     1 |    5 | FOR VALUES FROM (10, 10, 20) TO (10, MAXVALUE, MAXVALUE)       |          |                           | 
+ mc3p5        |     1 |    6 | FOR VALUES FROM (11, 1, 1) TO (20, 10, 10)                     |          |                           | 
+ mc3p6        |     1 |    7 | FOR VALUES FROM (20, 10, 10) TO (20, 20, 20)                   |          |                           | 
+ mc3p7        |     1 |    8 | FOR VALUES FROM (20, 20, 20) TO (MAXVALUE, MAXVALUE, MAXVALUE) |          |                           | 
 (10 rows)
 

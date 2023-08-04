@@ -56,9 +56,10 @@ PG_MODULE_MAGIC;
 #endif
 
 extern Datum pg_partition_rank(PG_FUNCTION_ARGS);
+extern Datum pg_partition_lowest_child(PG_FUNCTION_ARGS);
+extern Datum pg_partition_highest_child(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(pg_partition_rank);
-
 Datum
 pg_partition_rank(PG_FUNCTION_ARGS)
 {
@@ -90,4 +91,77 @@ pg_partition_rank(PG_FUNCTION_ARGS)
 		}
 	}
 	elog(ERROR, "partition not found in parent");
+}
+
+PG_FUNCTION_INFO_V1(pg_partition_lowest_child);
+Datum
+pg_partition_lowest_child(PG_FUNCTION_ARGS)
+{
+	Oid					relid = PG_GETARG_OID(0);
+	Relation			rel = NULL;
+	PartitionDesc		partdesc = NULL;
+	PartitionKey		partkey = NULL;
+	Oid					childrelid = InvalidOid;
+
+	// TODO: avoid relation_open for trivial checks
+	rel = relation_open(relid, AccessShareLock);
+	partkey = RelationGetPartitionKey(rel);
+	partdesc = RelationGetPartitionDesc(rel);
+	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE &&
+		partkey->strategy == PARTITION_STRATEGY_RANGE &&
+		partdesc->nparts > 0)
+	{
+		/*
+		 * Child oids are already sorted by range bounds in ascending order.
+		 * If default partition exists, it is the last partition.
+		 */
+		if (partdesc->nparts > 1 || !OidIsValid(get_default_partition_oid(relid)))
+			childrelid = partdesc->oids[0];
+	}
+
+	relation_close(rel, AccessShareLock);
+	if (OidIsValid(childrelid))
+		PG_RETURN_OID(childrelid);
+	else
+		PG_RETURN_NULL();
+}
+
+PG_FUNCTION_INFO_V1(pg_partition_highest_child);
+Datum
+pg_partition_highest_child(PG_FUNCTION_ARGS)
+{
+	Oid					relid = PG_GETARG_OID(0);
+	Relation			rel = NULL;
+	PartitionDesc		partdesc = NULL;
+	PartitionKey		partkey = NULL;
+	Oid					default_relid = InvalidOid;
+	Oid					highest_relid = InvalidOid;
+
+	// TODO: avoid relation_open for trivial checks
+	rel = relation_open(relid, AccessShareLock);
+	partkey = RelationGetPartitionKey(rel);
+	partdesc = RelationGetPartitionDesc(rel);
+	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE &&
+		partkey->strategy == PARTITION_STRATEGY_RANGE &&
+		partdesc->nparts > 0)
+	{
+		/*
+		 * Child oids are already sorted by range bounds in ascending order.
+		 * If default partition exists, it is the last partition.
+		 */
+		default_relid = get_default_partition_oid(relid);
+		if (!OidIsValid(default_relid))
+			highest_relid = partdesc->oids[partdesc->nparts - 1];
+		else if (partdesc->nparts > 1)
+		{
+			Assert (default_relid == partdesc->oids[partdesc->nparts - 1]);
+			highest_relid = partdesc->oids[partdesc->nparts - 2];
+		}
+	}
+
+	relation_close(rel, AccessShareLock);
+	if (OidIsValid(highest_relid))
+		PG_RETURN_OID(highest_relid);
+	else
+		PG_RETURN_NULL();
 }

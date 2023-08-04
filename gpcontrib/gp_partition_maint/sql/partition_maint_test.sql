@@ -25,7 +25,7 @@ SUBPARTITION BY list(c)
 	)
 );
 
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('partrl') pt join pg_class c on pt.relid = c.oid;
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('partrl') pt join pg_class c on pt.relid = c.oid;
 
 -- Classic Syntax
 -- Multi-level range-range partitioned table
@@ -46,7 +46,7 @@ SUBPARTITION BY range(c)
 	)
 );
 
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('partrr') pt join pg_class c on pt.relid = c.oid;
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid)  from pg_partition_tree('partrr') pt join pg_class c on pt.relid = c.oid;
 
 -- w/ minvalue and maxvalue
 CREATE TABLE range_parted2 (
@@ -60,7 +60,7 @@ CREATE TABLE part5 PARTITION OF range_parted2 FOR VALUES FROM (40) TO (50);
 CREATE TABLE part6 PARTITION OF range_parted2 FOR VALUES FROM (60) TO (maxvalue);
 CREATE TABLE part7 PARTITION OF range_parted2 FOR VALUES FROM (minvalue) TO (1);
 
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('range_parted2') pt join pg_class c on pt.relid = c.oid;
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('range_parted2') pt join pg_class c on pt.relid = c.oid;
 
 -- w/ expressions
 CREATE TABLE range_parted3 (
@@ -75,7 +75,7 @@ CREATE TABLE range_parted3_part5 PARTITION OF range_parted3 FOR VALUES FROM (40)
 CREATE TABLE range_parted3_part6 PARTITION OF range_parted3 FOR VALUES FROM (60) TO (maxvalue);
 CREATE TABLE range_parted3_part7 PARTITION OF range_parted3 FOR VALUES FROM (minvalue) TO (1);
 
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('range_parted3') pt join pg_class c on pt.relid = c.oid;
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('range_parted3') pt join pg_class c on pt.relid = c.oid;
 
 -- date partitioned table
 CREATE TABLE sales (trans_id int, date date, amount
@@ -85,7 +85,7 @@ CREATE TABLE sales (trans_id int, date date, amount
         (START (date '2023-01-01')
         END (date '2023-05-01') EVERY (INTERVAL '7 day'),
         DEFAULT PARTITION other_date);
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to from pg_partition_tree('sales') pt join pg_class c on pt.relid = c.oid order by rank;
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_range_from(c.oid) as range_from, pg_partition_range_to(c.oid) as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('sales') pt join pg_class c on pt.relid = c.oid order by rank;
 
 -- Multi-column range partitioned table
 -- multi-column keys
@@ -100,4 +100,4 @@ create table mc3p5 partition of mc3p for values from (11, 1, 1) to (20, 10, 10);
 create table mc3p6 partition of mc3p for values from (20, 10, 10) to (20, 20, 20);
 create table mc3p7 partition of mc3p for values from (20, 20, 20) to (maxvalue, maxvalue, maxvalue);
 
-SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_bound_value(c.oid, 'tto') as range_to from pg_partition_tree('mc3p') pt join pg_class c on pt.relid = c.oid;
+SELECT relid, level, pg_partition_rank(relid) as rank, pg_get_expr(relpartbound, c.oid) as relpartbound, pg_partition_bound_value(c.oid, 'tto') as range_to, pg_partition_lowest_child(c.oid),pg_partition_highest_child(c.oid) from pg_partition_tree('mc3p') pt join pg_class c on pt.relid = c.oid;

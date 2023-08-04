@@ -91,3 +91,13 @@ JOIN pg_catalog.pg_partitioned_table part ON part.partrelid = i.inhparent
 WHERE c.relname = childrelname;
 $$
 LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION @extschema@.pg_partition_lowest_child(rp regclass)
+RETURNS regclass
+AS 'MODULE_PATHNAME'
+LANGUAGE C VOLATILE STRICT NO SQL;
+
+CREATE OR REPLACE FUNCTION @extschema@.pg_partition_highest_child(rp regclass)
+RETURNS regclass
+AS 'MODULE_PATHNAME'
+LANGUAGE C VOLATILE STRICT NO SQL;
