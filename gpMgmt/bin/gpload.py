@@ -2879,7 +2879,7 @@ class gpload:
         truncate = False
         self.reuse_tables = False
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             with self.conn.cursor() as cur:
                 cur.execute("BEGIN")
 
@@ -2947,9 +2947,10 @@ class gpload:
                     self.log(self.ERROR, 'could not execute SQL in sql:after "%s": %s' %
                              (after, str(e)))
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             with self.conn.cursor() as cur:
                 cur.execute("COMMIT")
+
 
     def stop_gpfdists(self):
         if self.subprocesses:
