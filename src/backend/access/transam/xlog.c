@@ -5583,7 +5583,14 @@ validateRecoveryParameters(void)
 		TimeLineID	rtli = recoveryTargetTLIRequested;
 
 		/* Timeline 1 does not have a history file, all else should */
-		if (rtli != 1 && !existsTimeLineHistory(rtli))
+		/*
+		 * GPDB: If the recovery_target_timeline is the same as the
+		 * timeline ID retrieved from the control file, do not FATAL when
+		 * the timeline history file cannot be retrieved. It's not
+		 * actually required for recovering on the same timeline but is
+		 * nice to have for timeline switch history completeness.
+		 */
+		if (rtli != 1 && !existsTimeLineHistory(rtli) && recoveryTargetTLI != rtli)
 			ereport(FATAL,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("recovery target timeline %u does not exist",
