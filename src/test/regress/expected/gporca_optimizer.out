@@ -14774,3 +14774,93 @@ SELECT * FROM index_confusion WHERE l = '1';
  1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 1
 (1 row)
 
+-- Test that the preprocessor step where
+-- IN subquery is converted to EXIST subquery with a predicate,
+-- is not happening if inner sub query is SRF
+-- Fixed as part of github issue #15644
+explain verbose SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Result  (cost=0.00..441357.57 rows=1 width=1)
+   Output: (SubPlan 1)
+   ->  Result  (cost=0.00..0.00 rows=1 width=4)
+         Output: generate_series(1, 3)
+         ->  Result  (cost=0.00..0.00 rows=1 width=1)
+               Output: true
+   SubPlan 1
+     ->  Result  (cost=0.00..0.00 rows=1 width=5)
+           Output: (generate_series(1, (generate_series(1, 3))))
+           ->  Result  (cost=0.00..0.00 rows=1 width=5)
+                 Output: true, generate_series(1, (generate_series(1, 3)))
+                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                       Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: optimizer=on
+(15 rows)
+
+SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+ x 
+---
+ t
+ t
+ t
+(3 rows)
+
+SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+ a 
+---
+ 1
+ 2
+ 3
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Result
+   Output: column1
+   Filter: (SubPlan 1)
+   ->  Values Scan on "Values"
+         Output: column1
+   SubPlan 1
+     ->  Result
+           Output: generate_series(1, "Values".column1)
+           ->  Result
+                 Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: optimizer=on
+(12 rows)
+
+CREATE TABLE t_outer_srf (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_outer_srf SELECT i, i+1 FROM generate_series(1,3) as i;  
+CREATE TABLE t_inner_srf (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_inner_srf SELECT i, i+1 FROM generate_series(1,3) as i;
+SELECT * FROM t_outer_srf WHERE t_outer_srf.b IN (SELECT generate_series(1, t_outer_srf.b) FROM t_inner_srf);
+ a | b 
+---+---
+ 1 | 2
+ 2 | 3
+ 3 | 4
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer_srf WHERE t_outer_srf.b IN (SELECT generate_series(1, t_outer_srf.b)  FROM t_inner_srf);
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: t_outer_srf.a, t_outer_srf.b
+   ->  Seq Scan on orca.t_outer_srf
+         Output: t_outer_srf.a, t_outer_srf.b
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Result
+                 Output: generate_series(1, t_outer_srf.b)
+                 ->  Materialize
+                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                             ->  Seq Scan on orca.t_inner_srf
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: optimizer=on
+(13 rows)
+
+DROP TABLE t_outer_srf, t_inner_srf;

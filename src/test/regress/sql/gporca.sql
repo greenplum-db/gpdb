@@ -3325,6 +3325,28 @@ CREATE INDEX i_ab ON index_confusion_1_prt_2 (a, b);
 EXPLAIN (COSTS OFF) SELECT * FROM index_confusion WHERE l = '1';
 SELECT * FROM index_confusion WHERE l = '1';
 
+-- Test that the preprocessor step where
+-- IN subquery is converted to EXIST subquery with a predicate,
+-- is not happening if inner sub query is SRF
+-- Fixed as part of github issue #15644
+
+explain verbose SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+
+SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+
+CREATE TABLE t_outer_srf (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_outer_srf SELECT i, i+1 FROM generate_series(1,3) as i;  
+CREATE TABLE t_inner_srf (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_inner_srf SELECT i, i+1 FROM generate_series(1,3) as i;
+
+SELECT * FROM t_outer_srf WHERE t_outer_srf.b IN (SELECT generate_series(1, t_outer_srf.b) FROM t_inner_srf);
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer_srf WHERE t_outer_srf.b IN (SELECT generate_series(1, t_outer_srf.b)  FROM t_inner_srf);
+DROP TABLE t_outer_srf, t_inner_srf;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
