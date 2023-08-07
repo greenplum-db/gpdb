@@ -1223,12 +1223,12 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 CREATE INDEX bfv_index_only_ao_a_b on bfv_index_only_ao(a) include (b);
 insert into bfv_index_only_ao select i,i from generate_series(1, 10000) i;
 explain select count(*) from bfv_index_only_ao where a < 100;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
-         ->  Seq Scan on bfv_index_only_ao  (cost=0.00..431.00 rows=1 width=1)
-               Filter: (a < 100)
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..6.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=1 width=1)
+         ->  Index Only Scan using bfv_index_only_ao_a_b on bfv_index_only_ao  (cost=0.00..6.01 rows=1 width=1)
+               Index Cond: (a < 100)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1239,12 +1239,12 @@ select count(*) from bfv_index_only_ao where a < 100;
 (1 row)
 
 explain select count(*) from bfv_index_only_ao where a < 1000;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
-         ->  Seq Scan on bfv_index_only_ao  (cost=0.00..431.00 rows=1 width=1)
-               Filter: (a < 1000)
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..6.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=1 width=1)
+         ->  Index Only Scan using bfv_index_only_ao_a_b on bfv_index_only_ao  (cost=0.00..6.01 rows=1 width=1)
+               Index Cond: (a < 1000)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1260,12 +1260,12 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 CREATE INDEX bfv_index_only_aocs_a_b on bfv_index_only_aocs(a) include (b);
 insert into bfv_index_only_aocs select i,i from generate_series(1, 10000) i;
 explain select count(*) from bfv_index_only_aocs where a < 100;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
-         ->  Seq Scan on bfv_index_only_aocs  (cost=0.00..431.00 rows=1 width=1)
-               Filter: (a < 100)
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..6.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=1 width=1)
+         ->  Index Only Scan using bfv_index_only_aocs_a_b on bfv_index_only_aocs  (cost=0.00..6.01 rows=1 width=1)
+               Index Cond: (a < 100)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1276,12 +1276,12 @@ select count(*) from bfv_index_only_aocs where a < 100;
 (1 row)
 
 explain select count(*) from bfv_index_only_aocs where a < 1000;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1)
-         ->  Seq Scan on bfv_index_only_aocs  (cost=0.00..431.00 rows=1 width=1)
-               Filter: (a < 1000)
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..6.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=1 width=1)
+         ->  Index Only Scan using bfv_index_only_aocs_a_b on bfv_index_only_aocs  (cost=0.00..6.01 rows=1 width=1)
+               Index Cond: (a < 1000)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1349,30 +1349,24 @@ insert into part_tbl select 'abc' from generate_series(1,20) i;
 analyze part_tbl;
 -- identical plans
 explain select * from part_tbl where path_hash = 'ABC'; 
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..387.97 rows=1 width=4)
-   ->  Dynamic Bitmap Heap Scan on part_tbl  (cost=0.00..387.97 rows=1 width=4)
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=4)
+   ->  Dynamic Index Only Scan on part_idx on part_tbl  (cost=0.00..6.00 rows=1 width=4)
+         Index Cond: (path_hash = 'ABC'::text)
          Number of partitions to scan: 1 (out of 2)
-         Recheck Cond: ((path_hash)::text = 'ABC'::text)
-         Filter: ((path_hash)::text = 'ABC'::text)
-         ->  Dynamic Bitmap Index Scan on part_idx  (cost=0.00..0.00 rows=0 width=0)
-               Index Cond: ((path_hash)::text = 'ABC'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(5 rows)
 
 explain select * from part_tbl where 'ABC' = path_hash; 
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..387.97 rows=1 width=4)
-   ->  Dynamic Bitmap Heap Scan on part_tbl  (cost=0.00..387.97 rows=1 width=4)
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=4)
+   ->  Dynamic Index Only Scan on part_idx on part_tbl  (cost=0.00..6.00 rows=1 width=4)
+         Index Cond: (path_hash = 'ABC'::text)
          Number of partitions to scan: 1 (out of 2)
-         Recheck Cond: ((path_hash)::text = 'ABC'::text)
-         Filter: ((path_hash)::text = 'ABC'::text)
-         ->  Dynamic Bitmap Index Scan on part_idx  (cost=0.00..0.00 rows=0 width=0)
-               Index Cond: ((path_hash)::text = 'ABC'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
-(8 rows)
+(5 rows)
 
 -- Test table indexed on two columns
 -- Two indices allow ORCA to generate the bitmap scan alternative

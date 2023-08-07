@@ -255,7 +255,6 @@ SELECT a, b, c FROM test_replicated WHERE c>42;
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
--- ORCA_FEATURE_NOT_SUPPORTED: enable index scans on AO tables
 CREATE TABLE test_ao(a int, b int, c int) WITH (appendonly=true) DISTRIBUTED BY (a);
 CREATE INDEX i_test_ao ON test_ao(a) INCLUDE (b);
 INSERT INTO test_ao SELECT i, i+i, i*i FROM generate_series(1, 100)i;
@@ -263,14 +262,16 @@ VACUUM ANALYZE test_ao;
 -- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_ao WHERE a<42 AND b>42;
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=20 loops=1)
-   ->  Seq Scan on test_ao (actual rows=8 loops=1)
-         Filter: ((a < 42) AND (b > 42))
-         Rows Removed by Filter: 30
+   ->  Index Only Scan using i_test_ao on test_ao (actual rows=8 loops=1)
+         Index Cond: (a < 42)
+         Filter: (b > 42)
+         Rows Removed by Filter: 8
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(7 rows)
 
 -- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)

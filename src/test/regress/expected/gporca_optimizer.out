@@ -13299,36 +13299,32 @@ select * from tpart_ao_btree where a = 3 and b = 3;
 (1 row)
 
 explain (costs off) select * from tpart_dim d join t_ao_btree f on d.a=f.a where d.b=1;
-                      QUERY PLAN                      
-------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
-         ->  Seq Scan on tpart_dim
-               Filter: (b = 1)
-         ->  Bitmap Heap Scan on t_ao_btree
-               Recheck Cond: (a = tpart_dim.a)
-               ->  Bitmap Index Scan on t_ao_btree_ix
-                     Index Cond: (a = tpart_dim.a)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on tpart_dim
+                     Filter: (b = 1)
+         ->  Index Only Scan using t_ao_btree_ix on t_ao_btree
+               Index Cond: (a = tpart_dim.a)
  Optimizer: Pivotal Optimizer (GPORCA)
-(10 rows)
+(9 rows)
 
 explain (costs off) select * from tpart_dim d join tpart_ao_btree f on d.a=f.a where d.b=1;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
          ->  Seq Scan on tpart_dim
                Filter: (b = 1)
-         ->  Dynamic Bitmap Heap Scan on tpart_ao_btree
+         ->  Dynamic Index Only Scan on tpart_ao_btree_ix on tpart_ao_btree
+               Index Cond: (a = tpart_dim.a)
                Number of partitions to scan: 2 (out of 2)
-               Recheck Cond: (a = tpart_dim.a)
-               Filter: (a = tpart_dim.a)
-               ->  Dynamic Bitmap Index Scan on tpart_ao_btree_ix
-                     Index Cond: (a = tpart_dim.a)
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(9 rows)
 
 -- negative test, make sure we don't use a btree scan on an AO table
 -- start_ignore
@@ -13356,36 +13352,31 @@ set optimizer_enable_nljoin=off;
 -- We disabled hash join, and bitmap index joins, NLJs, so this should leave ORCA no other choices
 -- other than an index-only scan or sequential scan.
 explain (costs off) select * from t_ao_btree where a = 3 and b = 3;
-                QUERY PLAN                
-------------------------------------------
+                       QUERY PLAN                        
+---------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Seq Scan on t_ao_btree
-         Filter: ((a = 3) AND (b = 3))
+   ->  Index Only Scan using t_ao_btree_ix on t_ao_btree
+         Index Cond: ((a = 3) AND (b = 3))
  Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
 
 explain (costs off) select * from tpart_ao_btree where a = 3 and b = 3;
-                QUERY PLAN                
-------------------------------------------
+                              QUERY PLAN                              
+----------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Dynamic Seq Scan on tpart_ao_btree
+   ->  Dynamic Index Only Scan on tpart_ao_btree_ix on tpart_ao_btree
+         Index Cond: ((a = 3) AND (b = 3))
          Number of partitions to scan: 1 (out of 2)
-         Filter: ((a = 3) AND (b = 3))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
--- expect a fallback for all four of these queries
 select * from tpart_dim d join t_ao_btree f on d.a=f.a where d.b=1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
  a | b | a | b 
 ---+---+---+---
  1 | 1 | 1 | 1
 (1 row)
 
 select * from tpart_dim d join tpart_ao_btree f on d.a=f.a where d.b=1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
  a | b | a | b 
 ---+---+---+---
  1 | 1 | 1 | 1

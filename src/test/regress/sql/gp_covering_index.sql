@@ -147,7 +147,6 @@ SELECT b, c FROM test_replicated WHERE a<42 AND b>42;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c FROM test_replicated WHERE c>42;
 
--- ORCA_FEATURE_NOT_SUPPORTED: enable index scans on AO tables
 CREATE TABLE test_ao(a int, b int, c int) WITH (appendonly=true) DISTRIBUTED BY (a);
 CREATE INDEX i_test_ao ON test_ao(a) INCLUDE (b);
 INSERT INTO test_ao SELECT i, i+i, i*i FROM generate_series(1, 100)i;

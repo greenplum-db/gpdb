@@ -22,14 +22,15 @@ VACUUM ANALYZE test_basic_cover_index_@amname@;
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_basic_cover_index_@amname@ WHERE a>42 AND b>42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Seq Scan on test_basic_cover_index_@amname@ (actual rows=25 loops=1)
-         Filter: ((a > 42) AND (b > 42))
-         Rows Removed by Filter: 12
+   ->  Index Only Scan using i_test_basic_index_@amname@ on test_basic_cover_index_@amname@ (actual rows=25 loops=1)
+         Index Cond: (a > 42)
+         Filter: (b > 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(6 rows)
 
 -- Test CTE with cover indexes
 --
@@ -42,16 +43,15 @@ WITH cte AS
     SELECT b FROM test_basic_cover_index_@amname@ WHERE a < 42
 )
 SELECT b FROM cte WHERE b%2=0;
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Result (actual rows=16 loops=1)
+   ->  Index Only Scan using i_test_basic_index_@amname@ on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
+         Index Cond: (a < 42)
          Filter: ((b % 2) = 0)
-         ->  Seq Scan on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
-               Filter: (a < 42)
-               Rows Removed by Filter: 22
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(6 rows)
 
 -- ORCA_FEATURE_NOT_SUPPORTED: allow index-only-scan over CTE
 -- KEYS: [a]    INCLUDED: [b]
@@ -61,12 +61,12 @@ WITH cte AS
     SELECT a, b FROM test_basic_cover_index_@amname@
 )
 SELECT b FROM cte WHERE a<42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Seq Scan on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
-         Filter: (a < 42)
-         Rows Removed by Filter: 22
+   ->  Index Only Scan using i_test_basic_index_@amname@ on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
+         Index Cond: (a < 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -78,24 +78,24 @@ SELECT a, b FROM test_basic_cover_index_@amname@;
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM view_test_cover_indexes_with_filter_@amname@;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Seq Scan on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
-         Filter: (a < 42)
-         Rows Removed by Filter: 22
+   ->  Index Only Scan using i_test_basic_index_@amname@ on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
+         Index Cond: (a < 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM view_test_cover_indexes_without_filter_@amname@ WHERE a<42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Seq Scan on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
-         Filter: (a < 42)
-         Rows Removed by Filter: 22
+   ->  Index Only Scan using i_test_basic_index_@amname@ on test_basic_cover_index_@amname@ (actual rows=16 loops=1)
+         Index Cond: (a < 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -111,31 +111,28 @@ CREATE INDEX i_test_various_col_types_@amname@ ON test_various_col_types_@amname
 VACUUM ANALYZE test_various_col_types_@amname@;
 -- KEYS: [inttype] INCLUDED: [texttype]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT texttype FROM test_various_col_types_@amname@ WHERE inttype<42;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
- Result (actual rows=41 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-         ->  Bitmap Heap Scan on test_various_col_types_@amname@ (actual rows=16 loops=1)
-               Recheck Cond: (inttype < 42)
-               ->  Bitmap Index Scan on i_test_various_col_types_@amname@ (actual rows=16 loops=1)
-                     Index Cond: (inttype < 42)
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
+   ->  Index Only Scan using i_test_various_col_types_@amname@ on test_various_col_types_@amname@ (actual rows=16 loops=1)
+         Index Cond: (inttype < 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(5 rows)
 
 DROP INDEX i_test_various_col_types_@amname@;
 CREATE INDEX i_test_various_col_types_@amname@ ON test_various_col_types_@amname@(decimaltype) INCLUDE (inttype);
 VACUUM ANALYZE test_various_col_types_@amname@;
 -- KEYS: [decimaltype] INCLUDED: [inttype]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT decimaltype, inttype FROM test_various_col_types_@amname@ WHERE decimaltype<42;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Bitmap Heap Scan on test_various_col_types_@amname@ (actual rows=16 loops=1)
-         Recheck Cond: (decimaltype < '42'::numeric)
-         ->  Bitmap Index Scan on i_test_various_col_types_@amname@ (actual rows=16 loops=1)
-               Index Cond: (decimaltype < '42'::numeric)
+   ->  Index Only Scan using i_test_various_col_types_@amname@ on test_various_col_types_@amname@ (actual rows=16 loops=1)
+         Index Cond: (decimaltype < '42'::numeric)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+(5 rows)
 
 ALTER TABLE test_various_col_types_@amname@ ADD COLUMN boxtype box;
 DROP INDEX i_test_various_col_types_@amname@;
@@ -143,15 +140,14 @@ CREATE INDEX i_test_various_col_types_@amname@ ON test_various_col_types_@amname
 VACUUM ANALYZE test_various_col_types_@amname@;
 -- KEYS: [decimaltype] INCLUDED: [boxtype]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT decimaltype, boxtype FROM test_various_col_types_@amname@ WHERE decimaltype<42;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=41 loops=1)
-   ->  Bitmap Heap Scan on test_various_col_types_@amname@ (actual rows=16 loops=1)
-         Recheck Cond: (decimaltype < '42'::numeric)
-         ->  Bitmap Index Scan on i_test_various_col_types_@amname@ (actual rows=16 loops=1)
-               Index Cond: (decimaltype < '42'::numeric)
+   ->  Index Only Scan using i_test_various_col_types_@amname@ on test_various_col_types_@amname@ (actual rows=16 loops=1)
+         Index Cond: (decimaltype < '42'::numeric)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+(5 rows)
 
 -- Test drop/add columns before and after creation of the index
 --
@@ -170,26 +166,27 @@ VACUUM ANALYZE test_add_drop_columns_@amname@;
 -- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=20 loops=1)
-   ->  Seq Scan on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
-         Filter: ((a < 42) AND (b > 42))
-         Rows Removed by Filter: 30
+   ->  Index Only Scan using i_test_add_drop_columns_@amname@ on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
+         Index Cond: ((a < 42) AND (b > 42))
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 -- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42 AND c>42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=20 loops=1)
-   ->  Seq Scan on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
-         Filter: ((a < 42) AND (b > 42) AND (c > 42))
-         Rows Removed by Filter: 30
+   ->  Index Only Scan using i_test_add_drop_columns_@amname@ on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
+         Index Cond: ((a < 42) AND (b > 42))
+         Filter: (c > 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(6 rows)
 
 -- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
@@ -214,14 +211,16 @@ VACUUM ANALYZE test_replicated_@amname@;
 -- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_replicated_@amname@ WHERE a<42 AND b>42;
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1) (actual rows=20 loops=1)
-   ->  Seq Scan on test_replicated_@amname@ (actual rows=20 loops=1)
-         Filter: ((a < 42) AND (b > 42))
-         Rows Removed by Filter: 80
+   ->  Index Only Scan using i_test_replicated_@amname@ on test_replicated_@amname@ (actual rows=20 loops=1)
+         Index Cond: (a < 42)
+         Filter: (b > 42)
+         Rows Removed by Filter: 21
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(7 rows)
 
 -- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
@@ -271,12 +270,12 @@ VACUUM ANALYZE test_select_best_cover_@amname@;
 -- KEYS: [a]    INCLUDED: [b, c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a FROM test_select_best_cover_@amname@ WHERE a>42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Seq Scan on test_select_best_cover_@amname@ (actual rows=25 loops=1)
-         Filter: (a > 42)
-         Rows Removed by Filter: 12
+   ->  Index Only Scan using i_test_select_best_cover_a_@amname@ on test_select_best_cover_@amname@ (actual rows=25 loops=1)
+         Index Cond: (a > 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -288,12 +287,12 @@ SELECT a FROM test_select_best_cover_@amname@ WHERE a>42;
 -- KEYS: [a]    INCLUDED: [b, c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover_@amname@ WHERE b>42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=79 loops=1)
-   ->  Seq Scan on test_select_best_cover_@amname@ (actual rows=33 loops=1)
-         Filter: (b > 42)
-         Rows Removed by Filter: 4
+   ->  Index Only Scan using i_test_select_best_cover_b_@amname@ on test_select_best_cover_@amname@ (actual rows=33 loops=1)
+         Index Cond: (b > 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -306,14 +305,15 @@ SELECT b FROM test_select_best_cover_@amname@ WHERE b>42;
 -- ORCA_FEATURE_NOT_SUPPORTED: use i_test_select_best_cover_ab_@amname@
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover_@amname@ WHERE a>42 AND b>42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Seq Scan on test_select_best_cover_@amname@ (actual rows=25 loops=1)
-         Filter: ((a > 42) AND (b > 42))
-         Rows Removed by Filter: 12
+   ->  Index Only Scan using i_test_select_best_cover_a_b_@amname@ on test_select_best_cover_@amname@ (actual rows=25 loops=1)
+         Index Cond: (a > 42)
+         Filter: (b > 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(6 rows)
 
 -- KEYS: [a]    INCLUDED: []
 -- KEYS: [a]    INCLUDED: [b]
@@ -323,14 +323,15 @@ SELECT b FROM test_select_best_cover_@amname@ WHERE a>42 AND b>42;
 -- KEYS: [a]    INCLUDED: [b, c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover_@amname@ WHERE a>42 AND b>42 AND c>42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Seq Scan on test_select_best_cover_@amname@ (actual rows=25 loops=1)
-         Filter: ((a > 42) AND (b > 42) AND (c > 42))
-         Rows Removed by Filter: 12
+   ->  Index Only Scan using i_test_select_best_cover_a_bc_@amname@ on test_select_best_cover_@amname@ (actual rows=25 loops=1)
+         Index Cond: (a > 42)
+         Filter: ((b > 42) AND (c > 42))
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(6 rows)
 
 -- Test DML operations
 --
@@ -344,12 +345,12 @@ VACUUM ANALYZE test_dml_using_cover_index_@amname@;
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 INSERT INTO test_dml_using_cover_index_@amname@ (SELECT a, a, a FROM test_dml_using_cover_index_@amname@ WHERE a>42);
-                                                    QUERY PLAN                                                    
-------------------------------------------------------------------------------------------------------------------
+                                                                            QUERY PLAN                                                                             
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Insert on test_dml_using_cover_index_@amname@ (actual rows=0 loops=1)
-   ->  Seq Scan on test_dml_using_cover_index_@amname@ test_dml_using_cover_index_@amname@_1 (actual rows=25 loops=1)
-         Filter: (a > 42)
-         Rows Removed by Filter: 12
+   ->  Index Only Scan using i_test_dml_using_cover_index_@amname@ on test_dml_using_cover_index_@amname@ test_dml_using_cover_index_@amname@_1 (actual rows=25 loops=1)
+         Index Cond: (a > 42)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -372,15 +373,16 @@ VACUUM ANALYZE test_cover_index_on_pt_@amname@;
 -- ORCA_FEATURE_NOT_SUPPORTED: dynamic index only scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt_@amname@ WHERE a<10;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=4 loops=1)
-   ->  Dynamic Seq Scan on test_cover_index_on_pt_@amname@ (actual rows=3 loops=1)
+   ->  Dynamic Index Only Scan on i_test_cover_index_scan_on_partition_table_@amname@ on test_cover_index_on_pt_@amname@ (actual rows=3 loops=1)
+         Index Cond: (a < 10)
+         Heap Fetches: 0
          Number of partitions to scan: 4 (out of 4)
-         Filter: (a < 10)
          Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+(7 rows)
 
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
@@ -417,15 +419,16 @@ VACUUM ANALYZE test_cover_index_on_pt_@amname@;
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt_@amname@ WHERE a<10;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=4 loops=1)
-   ->  Dynamic Seq Scan on test_cover_index_on_pt_@amname@ (actual rows=3 loops=1)
+   ->  Dynamic Index Only Scan on i_test_cover_index_scan_on_partition_table_@amname@ on test_cover_index_on_pt_@amname@ (actual rows=3 loops=1)
+         Index Cond: (a < 10)
+         Heap Fetches: 0
          Number of partitions to scan: 4 (out of 4)
-         Filter: (a < 10)
          Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+(7 rows)
 
 DROP INDEX i_test_cover_index_scan_on_partition_table_@amname@;
 -- with explicit index declared on leaf_part_@amname@
@@ -500,19 +503,19 @@ VACUUM ANALYZE test_backward_index_scan_@amname@;
 -- ORCA_FEATURE_NOT_SUPPORTED enable backward index scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_backward_index_scan_@amname@ WHERE a>42 AND b>42 ORDER BY a DESC;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
  Result (actual rows=58 loops=1)
    ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
          Merge Key: a
-         ->  Result (actual rows=25 loops=1)
-               ->  Sort (actual rows=25 loops=1)
-                     Sort Key: a DESC
-                     Sort Method:  quicksort  Memory: 77kB
-                     Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
-                     ->  Seq Scan on test_backward_index_scan_@amname@ (actual rows=25 loops=1)
-                           Filter: ((a > 42) AND (b > 42))
-                           Rows Removed by Filter: 12
+         ->  Sort (actual rows=25 loops=1)
+               Sort Key: a DESC
+               Sort Method:  quicksort  Memory: 77kB
+               Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
+               ->  Index Only Scan using i_test_backward_index_scan_@amname@ on test_backward_index_scan_@amname@ (actual rows=25 loops=1)
+                     Index Cond: (a > 42)
+                     Filter: (b > 42)
+                     Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
 
@@ -582,12 +585,12 @@ VACUUM ANALYZE test_unique_index_include_@amname@;
 -- ORCA_FEATURE_NOT_SUPPORTED enable index-only scan on AO/CO tables
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_unique_index_include_@amname@ WHERE a > 5;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=6 loops=1)
-   ->  Seq Scan on test_unique_index_include_@amname@ (actual rows=4 loops=1)
-         Filter: (a > 5)
-         Rows Removed by Filter: 1
+   ->  Index Only Scan using i_test_unique_index_include_@amname@_a on test_unique_index_include_@amname@ (actual rows=4 loops=1)
+         Index Cond: (a > 5)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -596,12 +599,12 @@ SELECT b FROM test_unique_index_include_@amname@ WHERE a > 5;
 -- ORCA_FEATURE_NOT_SUPPORTED enable index-only scan on AO/CO tables
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT c FROM test_unique_index_include_@amname@ WHERE a > 5;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=6 loops=1)
-   ->  Seq Scan on test_unique_index_include_@amname@ (actual rows=4 loops=1)
-         Filter: (a > 5)
-         Rows Removed by Filter: 1
+   ->  Index Only Scan using test_unique_index_include_@amname@_a_c_key on test_unique_index_include_@amname@ (actual rows=4 loops=1)
+         Index Cond: (a > 5)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -631,12 +634,12 @@ VACUUM ANALYZE test_cover_index_drop_@amname@;
 -- ORCA_FEATURE_NOT_SUPPORTED enable index-only scan on AO/CO tables
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a FROM test_cover_index_drop_@amname@ WHERE a > 5;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
-   ->  Seq Scan on test_cover_index_drop_@amname@ (actual rows=3 loops=1)
-         Filter: (a > 5)
-         Rows Removed by Filter: 1
+   ->  Index Only Scan using i_test_cover_index_drop_@amname@ on test_cover_index_drop_@amname@ (actual rows=3 loops=1)
+         Index Cond: (a > 5)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
