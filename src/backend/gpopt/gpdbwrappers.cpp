@@ -33,6 +33,7 @@
 
 #include "catalog/pg_collation.h"
 extern "C" {
+#include "access/amapi.h"
 #include "access/external.h"
 #include "catalog/pg_inherits.h"
 #include "foreign/fdwapi.h"
@@ -2688,4 +2689,14 @@ gpdb::IsTypeRange(Oid typid)
 	return false;
 }
 
+char *
+gpdb::GetRelAmName(Oid reloid)
+{
+	GP_WRAP_START;
+	{
+		return GetAmName(reloid);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
 // EOF

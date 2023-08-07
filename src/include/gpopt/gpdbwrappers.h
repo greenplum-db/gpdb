@@ -668,6 +668,8 @@ TargetEntry *FlatCopyTargetEntry(TargetEntry *src_tle);
 
 bool IsTypeRange(Oid typid);
 
+char *GetRelAmName(Oid reloid);
+
 }  //namespace gpdb
 
 #define ForEach(cell, l) \
