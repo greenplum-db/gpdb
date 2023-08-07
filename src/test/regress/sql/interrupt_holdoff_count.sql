@@ -1,11 +1,13 @@
 -- test for Github Issue 15278
 -- QD should reset InterruptHoldoffCount
-create table t_15278(a int, b int);
-insert into t_15278 values (-1,1);
+-- start_ignore
+create extension if not exists gp_inject_fault;
+-- end_ignore
 
-begin;
-declare c1 cursor for select count(*) from t_15278 group by sqrt(a);
-abort;
+select gp_inject_fault('start_prepare', 'error', dbid, current_setting('gp_session_id')::int)
+	from gp_segment_configuration where content = 0 and role = 'p';
+
+create table t_15278(a int, b int);
 
 -- Without fix, the above transaction will lead
 -- QD's global var InterruptHoldoffCount not reset to 0
@@ -14,5 +16,5 @@ abort;
 -- the correct behavior.
 select pg_cancel_backend(pg_backend_pid());
 
-drop table t_15278;
-
+select gp_inject_fault('start_prepare', 'reset', dbid, current_setting('gp_session_id')::int)
+	from gp_segment_configuration where content = 0 and role = 'p';

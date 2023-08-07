@@ -163,7 +163,8 @@ test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_ca
 test: rle rle_delta dsp not_out_of_shmem_exit_slots
 
 # direct dispatch tests
-test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types interrupt_holdoff_count
+test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
+test: interrupt_holdoff_count
 
 # catalog test uses pg_get_constraintdef which may report ERROR when executed
 # concurrently with other tests. Cause pg_get_constraintdef() looks up
