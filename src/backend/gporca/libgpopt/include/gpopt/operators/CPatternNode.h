@@ -31,6 +31,7 @@ public:
 	enum EMatchType
 	{
 		EmtMatchInnerOrLeftOuterJoin,
+		EmtMatchGetOrDynamicGet,
 		EmtSentinel
 	};
 
@@ -95,6 +96,10 @@ public:
 			case EmtMatchInnerOrLeftOuterJoin:
 				return COperator::EopLogicalInnerJoin == opid ||
 					   COperator::EopLogicalLeftOuterJoin == opid;
+
+			case EmtMatchGetOrDynamicGet:
+				return COperator::EopLogicalGet == opid ||
+					   COperator::EopLogicalDynamicGet == opid;
 
 			default:
 				return false;

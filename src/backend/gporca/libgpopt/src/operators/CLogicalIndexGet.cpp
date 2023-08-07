@@ -45,7 +45,7 @@ CLogicalIndexGet::CLogicalIndexGet(CMemoryPool *mp)
 	  m_pcrsOutput(nullptr),
 	  m_pos(nullptr),
 	  m_pcrsDist(nullptr),
-	  m_scan_direction(EisdForward)
+	  m_scan_direction(EForwardScan)
 {
 	m_fPattern = true;
 }
@@ -304,7 +304,7 @@ CLogicalIndexGet::OsPrint(IOstream &os) const
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "]";
 	os << ", Index ScanDirection: (";
-	(m_scan_direction == EisdForward) ? os << "Forward" : os << "Backward";
+	(m_scan_direction == EForwardScan) ? os << "Forward" : os << "Backward";
 	os << ")";
 
 	return os;

@@ -144,7 +144,10 @@ DynamicIndexScan-DefaultPartition DynamicIndexScan-DefaultPartition-2
 DynamicIndexScan-Homogenous-UnsupportedConstraint DynamicIndexScan-Heterogenous-UnsupportedConstraint
 DynamicIndexScan-Heterogenous-PartSelectEquality
 DynamicIndexScan-Heterogenous-PartSelectRange DynamicIndexScan-OpenEndedPartitions
-DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols;
+DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols Forward-DynamicIndexScan-OrderBy-on-Single-IndexCol
+Backward-DynamicIndexScan-OrderBy-on-Single-IndexCol
+Forward-DynamicIndexScan-OrderBy-on-Multi-IndexCol Backward-DynamicIndexScan-OrderBy-on-Multi-IndexCol
+DynamicIndexScan-OrderBy-on-Multi-NonIndexCol;
 
 CDynamicIndexOnlyScanTest:
 DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin;

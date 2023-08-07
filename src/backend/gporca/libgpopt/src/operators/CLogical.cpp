@@ -191,7 +191,7 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 		COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
 		// if scan direction is forward, order spec computed should match the index's
 		// sort and nulls order.
-		if (scan_direction == EisdForward)
+		if (scan_direction == EForwardScan)
 		{
 			// if sort direction of key is 0(ASC), choose MDID for less than type and vice-versa
 			mdid =
@@ -207,7 +207,7 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 		}
 		// if scan direction is backward, order spec computed should be commutative to index's
 		// sort and nulls order.
-		else if (scan_direction == EisdBackward)
+		else if (scan_direction == EBackwardScan)
 		{
 			// if sort order of key is 0(ASC), choose MDID for greater than type and vice-versa
 			mdid =

@@ -146,7 +146,7 @@ CPhysicalIndexScan::OsPrint(IOstream &os) const
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "]";
 	os << ", Index ScanDirection: (";
-	(m_scan_direction == EisdForward) ? os << "Forward" : os << "Backward";
+	(m_scan_direction == EForwardScan) ? os << "Forward" : os << "Backward";
 	os << ")";
 
 	return os;

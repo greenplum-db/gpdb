@@ -186,32 +186,28 @@ private:
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-		BOOL indexForOrderBy = false,
-		EIndexScanDirection indexScanDirection =
-			EisdForward /*Default direction if unspecified*/);
+		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy = false);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
-	PopDynamicBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
-									  CTableDescriptor *ptabdesc,
-									  ULONG ulOriginOpId, CName *pname,
-									  ULONG ulPartIndex,
-									  CColRefArray *pdrgpcrOutput,
-									  CColRef2dArray *pdrgpdrgpcrPart,
-									  IMdIdArray *partition_mdids)
+	PopDynamicBtreeIndexOpConstructor(
+		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
+		ULONG ulOriginOpId, CName *pname, ULONG ulPartIndex,
+		CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
+		IMdIdArray *partition_mdids, EIndexScanDirection scan_direction)
 	{
 		return GPOS_NEW(mp) CLogicalDynamicIndexGet(
 			mp, pmdindex, ptabdesc, ulOriginOpId, pname, ulPartIndex,
-			pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids);
+			pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids, scan_direction);
 	}
 
 	//	create a static operator for a btree index plan
 	static CLogical *
-	PopStaticBtreeIndexOpConstructor(
-		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
-		ULONG ulOriginOpId, CName *pname, CColRefArray *pdrgpcrOutput,
-		EIndexScanDirection indexScanDirection =
-			EisdForward /*Default direction if unspecified*/)
+	PopStaticBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
+									 CTableDescriptor *ptabdesc,
+									 ULONG ulOriginOpId, CName *pname,
+									 CColRefArray *pdrgpcrOutput,
+									 EIndexScanDirection indexScanDirection)
 	{
 		return GPOS_NEW(mp)
 			CLogicalIndexGet(mp, pmdindex, ptabdesc, ulOriginOpId, pname,
@@ -452,12 +448,12 @@ public:
 						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
 						 BOOL indexForOrderBy = false,
 						 EIndexScanDirection indexScanDirection =
-							 EisdForward /*Default direction if unspecified*/)
+							 EForwardScan /*Default direction if unspecified*/)
 	{
 		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
 										pdrgpexprConds, pcrsScalarExpr,
 										outer_refs, pmdindex, pmdrel,
-										indexForOrderBy, indexScanDirection);
+										indexScanDirection, indexForOrderBy);
 	}
 
 	// helper for creating bitmap bool op expressions

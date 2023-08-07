@@ -45,6 +45,9 @@ private:
 	// order spec
 	COrderSpec *m_pos;
 
+	// index scan direction
+	EIndexScanDirection m_scan_direction;
+
 public:
 	CLogicalDynamicIndexGet(const CLogicalDynamicIndexGet &) = delete;
 
@@ -56,7 +59,8 @@ public:
 							const CName *pnameAlias, ULONG ulPartIndex,
 							CColRefArray *pdrgpcrOutput,
 							CColRef2dArray *pdrgpdrgpcrPart,
-							IMdIdArray *partition_mdids);
+							IMdIdArray *partition_mdids,
+							EIndexScanDirection scan_direction);
 
 	// dtor
 	~CLogicalDynamicIndexGet() override;
@@ -110,6 +114,12 @@ public:
 		return m_pos;
 	}
 
+	// index scan direction
+	EIndexScanDirection
+	PScanDirection() const
+	{
+		return m_scan_direction;
+	}
 	// operator specific hash function
 	ULONG HashValue() const override;
 

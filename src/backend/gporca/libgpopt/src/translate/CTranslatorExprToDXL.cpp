@@ -811,10 +811,11 @@ CTranslatorExprToDXL::PdxlnIndexScan(CExpression *pexprIndexScan,
 	CDXLIndexDescr *dxl_index_descr =
 		GPOS_NEW(m_mp) CDXLIndexDescr(pmdidIndex, pmdnameIndex);
 
-	// create the physical index scan operator
+	// get scan direction from PhysicalIndexScan operator
 	EdxlIndexScanDirection scan_direction =
-		(popIs->PIndexScanDirection() == EisdForward) ? EdxlisdForward
-													  : EdxlisdBackward;
+		(popIs->PIndexScanDirection() == EForwardScan) ? EdxlisdForward
+													   : EdxlisdBackward;
+	// create the physical index scan operator
 	CDXLPhysicalIndexScan *dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexScan(
 		m_mp, table_descr, dxl_index_descr, scan_direction);
 	CDXLNode *pdxlnIndexScan = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
@@ -917,9 +918,10 @@ CTranslatorExprToDXL::PdxlnIndexOnlyScan(CExpression *pexprIndexOnlyScan,
 	CDXLIndexDescr *dxl_index_descr =
 		GPOS_NEW(m_mp) CDXLIndexDescr(pmdidIndex, pmdnameIndex);
 
+	// get scan direction from PhysicalIndexOnlyScan operator
 	EdxlIndexScanDirection scan_direction =
-		(popIs->PIndexScanDirection() == EisdForward) ? EdxlisdForward
-													  : EdxlisdBackward;
+		(popIs->PIndexScanDirection() == EForwardScan) ? EdxlisdForward
+													   : EdxlisdBackward;
 	// create the physical index scan operator
 	CDXLPhysicalIndexOnlyScan *dxl_op =
 		GPOS_NEW(m_mp) CDXLPhysicalIndexOnlyScan(
@@ -1581,8 +1583,28 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 
 
 	// construct dynamic table scan operator
-	IMdIdArray *part_mdids = popDIS->GetPartitionMdids();
-	part_mdids->AddRef();
+	// get scan direction from PhysicalDynamicIndexScan operator
+	EdxlIndexScanDirection scan_direction;
+	IMdIdArray *part_mdids = nullptr;
+	if (popDIS->PScanDirection() == EForwardScan)
+	{
+		scan_direction = EdxlisdForward;
+		part_mdids = popDIS->GetPartitionMdids();
+		part_mdids->AddRef();
+	}
+	else
+	{
+		scan_direction = EdxlisdBackward;
+		part_mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
+		IMdIdArray *current_mdids = popDIS->GetPartitionMdids();
+		// If ScanDirection is backward, reverse the partitions order
+		for (INT i = current_mdids->Size() - 1; i >= 0; i--)
+		{
+			IMDId *mdid = (*current_mdids)[i];
+			mdid->AddRef();
+			part_mdids->Append(mdid);
+		}
+	}
 
 	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 	CPartitionPropagationSpec *pps_reqd = prpp->Pepp()->PppsRequired();
@@ -1596,22 +1618,20 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 		}
 	}
 
-	// TODO: we assume that the index are always forward access.
-
 	CDXLNode *pdxlnDIS = nullptr;
 	if (indexOnly)
 	{
 		pdxlnDIS = GPOS_NEW(m_mp)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalDynamicIndexOnlyScan(
 							   m_mp, table_descr, dxl_index_descr,
-							   EdxlisdForward, part_mdids, selector_ids));
+							   scan_direction, part_mdids, selector_ids));
 	}
 	else
 	{
 		pdxlnDIS = GPOS_NEW(m_mp)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalDynamicIndexScan(
 							   m_mp, table_descr, dxl_index_descr,
-							   EdxlisdForward, part_mdids, selector_ids));
+							   scan_direction, part_mdids, selector_ids));
 	}
 
 	// set plan costs

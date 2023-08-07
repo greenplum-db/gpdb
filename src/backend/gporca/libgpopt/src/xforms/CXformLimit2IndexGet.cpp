@@ -14,9 +14,11 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/operators/CPatternNode.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/CMDIndexGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
@@ -39,7 +41,11 @@ CXformLimit2IndexGet::CXformLimit2IndexGet(CMemoryPool *mp)
 		  GPOS_NEW(mp) CExpression(
 			  mp, GPOS_NEW(mp) CLogicalLimit(mp),
 			  GPOS_NEW(mp) CExpression(
-				  mp, GPOS_NEW(mp) CLogicalGet(mp)),  // relational child
+				  mp,
+				  GPOS_NEW(mp) CPatternNode(
+					  mp,
+					  CPatternNode::
+						  EmtMatchGetOrDynamicGet) /*matches both logical, dynamic get operators */),  // relational child
 			  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(
 											   mp)),  // scalar child for offset
 			  GPOS_NEW(mp) CExpression(
@@ -93,14 +99,6 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CExpression *pexprScalarOffset = (*pexpr)[1];
 	CExpression *pexprScalarRows = (*pexpr)[2];
 
-	CLogicalGet *popGet = CLogicalGet::PopConvert(pexprRelational->Pop());
-	// get the indices count of this relation
-	const ULONG ulIndices = popGet->Ptabdesc()->IndexCount();
-	// Ignore xform if relation doesn't have any indices
-	if (0 == ulIndices)
-	{
-		return;
-	}
 	COrderSpec *pos = popLimit->Pos();
 	// Ignore xform if query only specifies limit but no order expressions
 	if (0 == pos->UlSortColumns())
@@ -108,23 +106,51 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		return;
 	}
 
+	ULONG ulIndices = 0;
+	CExpression *pexprUpdtdRltn = nullptr;
+	IMDId *rel_mdid = nullptr;
+	CColRefArray *ouput_cols_array = nullptr;
 	CExpression *boolConstExpr = nullptr;
-	boolConstExpr = CUtils::PexprScalarConstBool(mp, true);
 
+	boolConstExpr = CUtils::PexprScalarConstBool(mp, true);
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 	boolConstExpr->AddRef();
 	pdrgpexpr->Append(boolConstExpr);
-
-	popGet->AddRef();
-	CExpression *pexprUpdtdRltn =
-		GPOS_NEW(mp) CExpression(mp, popGet, boolConstExpr);
-
 	CColRefSet *pcrsScalarExpr = popLimit->PcrsLocalUsed();
+
+	if (pexprRelational->Pop()->Eopid() == COperator::EopLogicalGet)
+	{
+		CLogicalGet *popGet = CLogicalGet::PopConvert(pexprRelational->Pop());
+		// get the b-tree indices count of this relation
+		ulIndices = popGet->Ptabdesc()->IndexCount();
+		popGet->AddRef();
+		pexprUpdtdRltn = GPOS_NEW(mp) CExpression(mp, popGet, boolConstExpr);
+		ouput_cols_array = popGet->PdrgpcrOutput();
+		rel_mdid = popGet->Ptabdesc()->MDId();
+	}
+	else
+	{
+		CLogicalDynamicGet *popDynGet =
+			CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
+		// get the b-tree indices count of this relation
+		ulIndices = popDynGet->Ptabdesc()->IndexCount();
+		popDynGet->AddRef();
+		pexprUpdtdRltn = GPOS_NEW(mp) CExpression(mp, popDynGet, boolConstExpr);
+		ouput_cols_array = popDynGet->PdrgpcrOutput();
+		rel_mdid = popDynGet->Ptabdesc()->MDId();
+	}
+
+	// Ignore xform if relation doesn't have any b-tree indices
+	if (0 == ulIndices)
+	{
+		pdrgpexpr->Release();
+		pexprUpdtdRltn->Release();
+		return;
+	}
 
 	// find the indexes whose included columns meet the required columns
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel =
-		md_accessor->RetrieveRel(popGet->Ptabdesc()->MDId());
+	const IMDRelation *pmdrel = md_accessor->RetrieveRel(rel_mdid);
 	CColRefArray *pdrgpcrIndexColumns = nullptr;
 
 	for (ULONG ul = 0; ul < ulIndices; ul++)
@@ -133,7 +159,7 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
 		// get columns in the index
 		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
-			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
+			mp, ouput_cols_array, pmdindex, pmdrel);
 		if (FIndexApplicableForOrderBy(mp, pos, pdrgpcrIndexColumns, pmdindex))
 		{
 			// get Scan direction
@@ -282,8 +308,8 @@ CXformLimit2IndexGet::FGetIndexScanDirection(COrderSpec *pos,
 			pmdindex->KeySortDirectionAt(0) == 1) ||
 				   (!pos_mdid->Equals(greater_than_mdid) &&
 					pmdindex->KeySortDirectionAt(0) == 0)
-			   ? EisdForward
-			   : EisdBackward;
+			   ? EForwardScan
+			   : EBackwardScan;
 }
 
 

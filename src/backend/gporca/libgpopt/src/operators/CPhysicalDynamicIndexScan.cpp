@@ -39,12 +39,14 @@ CPhysicalDynamicIndexScan::CPhysicalDynamicIndexScan(
 	ULONG ulOriginOpId, const CName *pnameAlias, CColRefArray *pdrgpcrOutput,
 	ULONG scan_id, CColRef2dArray *pdrgpdrgpcrPart, COrderSpec *pos,
 	IMdIdArray *partition_mdids,
-	ColRefToUlongMapArray *root_col_mapping_per_part)
+	ColRefToUlongMapArray *root_col_mapping_per_part,
+	EIndexScanDirection scan_direction)
 	: CPhysicalDynamicScan(mp, ptabdesc, ulOriginOpId, pnameAlias, scan_id,
 						   pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
 						   root_col_mapping_per_part),
 	  m_pindexdesc(pindexdesc),
-	  m_pos(pos)
+	  m_pos(pos),
+	  m_scan_direction(scan_direction)
 {
 	GPOS_ASSERT(nullptr != pindexdesc);
 	GPOS_ASSERT(nullptr != pos);
@@ -149,6 +151,9 @@ CPhysicalDynamicIndexScan::OsPrint(IOstream &os) const
 	os << ", Columns: [";
 	CUtils::OsPrintDrgPcr(os, PdrgpcrOutput());
 	os << "] Scan Id: " << ScanId();
+	os << ", Index ScanDirection: (";
+	(m_scan_direction == EForwardScan) ? os << "Forward" : os << "Backward";
+	os << ")";
 
 
 	return os;

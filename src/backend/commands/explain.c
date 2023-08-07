@@ -1984,14 +1984,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_DynamicIndexScan:
 			{
 				DynamicIndexScan *dynamicIndexScan = (DynamicIndexScan *) plan;
-				Oid indexoid = dynamicIndexScan->indexscan.indexid;
-				const char *indexname =
-						explain_get_index_name(indexoid);
 
-				if (es->format == EXPLAIN_FORMAT_TEXT)
-					appendStringInfo(es->str, " on %s", indexname);
-				else
-					ExplainPropertyText("Index Name", indexname, es);
+				ExplainIndexScanDetails(dynamicIndexScan->indexscan.indexid,
+										dynamicIndexScan->indexscan.indexorderdir,
+										es);
 
 				ExplainScanTarget((Scan *) plan, es);
 			}
@@ -1999,14 +1995,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_DynamicIndexOnlyScan:
 			{
 				DynamicIndexOnlyScan *dynamicIndexScan = (DynamicIndexOnlyScan *) plan;
-				Oid indexoid = dynamicIndexScan->indexscan.indexid;
-				const char *indexname =
-						explain_get_index_name(indexoid);
 
-				if (es->format == EXPLAIN_FORMAT_TEXT)
-					appendStringInfo(es->str, " on %s", indexname);
-				else
-					ExplainPropertyText("Index Name", indexname, es);
+				ExplainIndexScanDetails(dynamicIndexScan->indexscan.indexid,
+										dynamicIndexScan->indexscan.indexorderdir,
+										es);
 
 				ExplainScanTarget((Scan *) plan, es);
 			}

@@ -35,9 +35,8 @@ using namespace gpos;
 // Scan direction of the index
 enum EIndexScanDirection
 {
-	EisdBackward = 0,
-	EisdForward,
-	EisdNoMovement,
+	EBackwardScan = 0,
+	EForwardScan,
 	EisdSentinel
 };
 // forward declaration
@@ -165,7 +164,7 @@ protected:
 	static COrderSpec *PosFromIndex(
 		CMemoryPool *mp, const IMDIndex *pmdindex, CColRefArray *colref_array,
 		const CTableDescriptor *ptabdesc,
-		EIndexScanDirection scan_direction = EisdForward);
+		EIndexScanDirection scan_direction = EForwardScan);
 
 	// derive function properties using data access property of scalar child
 	static CFunctionProp *PfpDeriveFromScalar(CMemoryPool *mp,
