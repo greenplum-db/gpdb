@@ -579,7 +579,8 @@ select b from test_index_with_orderby_limit order by b limit 10;
 -- re-enable indexscan
 set optimizer_enable_indexscan to on;
 DROP TABLE test_index_with_orderby_limit;
--- Tests for queries with order by and limit considering sort & null directions.
+-- Test Case: Test on a regular table with mixed data type columns.
+-- Purpose: Validate if IndexScan with correct scan direction is used on expected index for queries with order by and limit.
 CREATE TABLE test_index_with_sort_directions_on_orderby_limit (a int, b text, c float, d int, e text, f int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -589,18 +590,21 @@ CREATE INDEX dir_index_a on test_index_with_sort_directions_on_orderby_limit usi
 CREATE INDEX dir_index_b on test_index_with_sort_directions_on_orderby_limit using btree(b desc);
 -- single col index with opp nulls direction
 CREATE INDEX dir_index_c on test_index_with_sort_directions_on_orderby_limit using btree(c nulls first);
--- multi col index all with asc
+-- multi col index all with all index keys asc
 CREATE INDEX dir_index_bcd on test_index_with_sort_directions_on_orderby_limit using btree(b,c,d);
--- multi col index all with desc
+-- multi col index all with all index keys desc
 CREATE INDEX dir_index_fde on test_index_with_sort_directions_on_orderby_limit using btree(f desc,d desc,e desc);
--- multi col index mixed case
+-- multi col index with mixed index keys properties
 CREATE INDEX dir_index_eda on test_index_with_sort_directions_on_orderby_limit using btree(e, d desc nulls last,a);
--- Covering index
-CREATE INDEX dir_covering_index_eb ON test_index_with_sort_directions_on_orderby_limit(e desc) INCLUDE (b);
+-- Covering index with descending and one include column
+CREATE INDEX dir_covering_index_db ON test_index_with_sort_directions_on_orderby_limit(d desc) INCLUDE (b);
 INSERT INTO test_index_with_sort_directions_on_orderby_limit select i, CONCAT('col_b', i)::text, i/3.2, i+1, CONCAT('col_e', i)::text, i+3 from generate_series(1,10000) i;
+-- Inserting nulls to verify results match when index key specifies nulls first or desc
 INSERT INTO test_index_with_sort_directions_on_orderby_limit values (null, null, null, null, null);
 ANALYZE test_index_with_sort_directions_on_orderby_limit;
--- should use Forward IndexScan
+-- Positive tests: Validate if IndexScan Forward/Backward is chosen.
+-- Validate if 'dir_index_a' is used for order by cols matching/commutative to the index cols
+-- Expected to use Forward IndexScan
 explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a limit 3;
                                                QUERY PLAN
 ---------------------------------------------------------------------------------------------------------
@@ -620,7 +624,7 @@ select a from test_index_with_sort_directions_on_orderby_limit order by a limit 
  3
 (3 rows)
 
--- should use Backward IndexScan
+-- Expected to use Backward IndexScan
 explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a desc limit 3;
                                                     QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------
@@ -640,7 +644,435 @@ select a from test_index_with_sort_directions_on_orderby_limit order by a desc l
   9999
 (3 rows)
 
--- should use SeqScan with Sort
+-- Validate if 'dir_index_b' is used for order by cols matching/commutative to the index cols
+-- Expected to use Forward IndexScan
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Index Only Scan using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+     b     
+-----------
+ 
+ col_b9999
+ col_b9998
+(3 rows)
+
+-- Expected to use Backward IndexScan
+explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+                                                    QUERY PLAN
+------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+    b     
+----------
+ col_b1
+ col_b10
+ col_b100
+(3 rows)
+
+-- Validate if 'dir_index_c' is used for order by cols matching/commutative to the index cols
+-- Expected to use Forward IndexScan
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Index Only Scan using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+   c    
+--------
+       
+ 0.3125
+  0.625
+(3 rows)
+
+-- Expected to use Backward IndexScan
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+                                                    QUERY PLAN
+------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+     c     
+-----------
+      3125
+ 3124.6875
+  3124.375
+(3 rows)
+
+-- Validate if 'dir_index_bcd' is used for order by cols matching/commutative to the index cols
+-- Testing various permutations of order by columns that are expected to choose Forward IndexScan
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
+    b     |   c    |  d  
+----------+--------+-----
+ col_b1   | 0.3125 |   2
+ col_b10  |  3.125 |  11
+ col_b100 |  31.25 | 101
+(3 rows)
+
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c
+         ->  Limit
+               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
+    b     |   c    
+----------+--------
+ col_b1   | 0.3125
+ col_b10  |  3.125
+ col_b100 |  31.25
+(3 rows)
+
+-- Testing various permutations of order by columns that are expected to choose Backward IndexScan
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
+     b     |     c     |   d   
+-----------+-----------+-------
+           |           |      
+ col_b9999 | 3124.6875 | 10000
+ col_b9998 |  3124.375 |  9999
+(3 rows)
+
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
+     b     |     c     
+-----------+-----------
+           |          
+ col_b9999 | 3124.6875
+ col_b9998 |  3124.375
+(3 rows)
+
+-- Validate if 'dir_index_fde' is used for order by cols matching/commutative to the index cols
+-- Testing various permutations of order by columns that are expected to choose Forward IndexScan
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+   f   |   d   |     e      
+-------+-------+------------
+       |       | 
+ 10003 | 10001 | col_e10000
+ 10002 | 10000 | col_e9999
+(3 rows)
+
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d
+         ->  Limit
+               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
+   f   |   d   
+-------+-------
+       |      
+ 10003 | 10001
+ 10002 | 10000
+(3 rows)
+
+-- Testing various permutations of order by columns that are expected to choose Backward IndexScan
+explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
+ f | d |   e    
+---+---+--------
+ 4 | 2 | col_e1
+ 5 | 3 | col_e2
+ 6 | 4 | col_e3
+(3 rows)
+
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
+ f | d 
+---+---
+ 4 | 2
+ 5 | 3
+ 6 | 4
+(3 rows)
+
+-- Validate if 'dir_index_eda' is used for order by cols matching/commutative to the index cols
+-- Testing various permutations of order by columns that are expected to choose Forward IndexScan
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
+    e     |  d  |  a  
+----------+-----+-----
+ col_e1   |   2 |   1
+ col_e10  |  11 |  10
+ col_e100 | 101 | 100
+(3 rows)
+
+explain (costs off) select e,d from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d
+         ->  Limit
+               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select e,d from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+    e     |  d  
+----------+-----
+ col_e1   |   2
+ col_e10  |  11
+ col_e100 | 101
+(3 rows)
+
+-- Testing various permutations of order by columns that are expected to choose Backward IndexScan
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+     e     |   d   |  a   
+-----------+-------+------
+           |       |     
+ col_e9999 | 10000 | 9999
+ col_e9998 |  9999 | 9998
+(3 rows)
+
+explain (costs off) select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+     e     |   d   
+-----------+-------
+           |      
+ col_e9999 | 10000
+ col_e9998 |  9999
+(3 rows)
+
+-- Validate if IndexScan is chosen and on covering index
+-- Expected to use Forward IndexScan
+explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d desc limit 3;
+                                                    QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: d
+         ->  Limit
+               ->  Index Only Scan using dir_covering_index_db on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select d from test_index_with_sort_directions_on_orderby_limit order by d desc limit 3;
+   d   
+-------
+      
+ 10001
+ 10000
+(3 rows)
+
+-- Expected to use Backward IndexScan
+explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+                                                         QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: d
+         ->  Limit
+               ->  Index Only Scan Backward using dir_covering_index_db on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+ d 
+---
+ 2
+ 3
+ 4
+(3 rows)
+
+-- Validate if Backward IndexScan is chosen for query with offset and without limit
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9990;
+                                                  QUERY PLAN
+--------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9997;
+     e     |  d   |  a   
+-----------+------+------
+ col_e1000 | 1001 | 1000
+ col_e100  |  101 |  100
+ col_e10   |   11 |   10
+ col_e1    |    2 |    1
+(4 rows)
+
+-- Validate if Backward IndexScan is chosen for query with offset value in subquery
+-- ORCA_FEATURE_NOT_SUPPORTED: ORCA doesn't support limit or offset values specified as part of a subquery
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Limit
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Result
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
+         ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+   c    
+--------
+ 0.9375
+  0.625
+ 0.3125
+       
+(4 rows)
+
+-- Validate if Backward IndexScan is chosen for query with limit value in subquery
+-- ORCA_FEATURE_NOT_SUPPORTED: ORCA doesn't support limit or offset values specified as part of a subquery
+explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+                                                    QUERY PLAN
+------------------------------------------------------------------------------------------------------------------
+ Limit
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Result
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+     c     
+-----------
+      3125
+ 3124.6875
+  3124.375
+(3 rows)
+
+-- Negative tests: Validate if a SeqScan is chosen if order by cols directions do not matching indices keys directions.
+--                 Expected to choose SeqScan with Sort
+-- Testing various permutations that are not matching keys in 'dir_index_a'
 explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a nulls first limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
@@ -683,47 +1115,7 @@ select a from test_index_with_sort_directions_on_orderby_limit order by a desc n
   9998
 (3 rows)
 
--- should use Forward IndexScan
-explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
-                                               QUERY PLAN
----------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: b
-         ->  Limit
-               ->  Index Only Scan using dir_index_b on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
-     b     
------------
- 
- col_b9999
- col_b9998
-(3 rows)
-
--- should use Backward IndexScan
-explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
-                                                    QUERY PLAN
-------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: b
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_b on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
-    b     
-----------
- col_b1
- col_b10
- col_b100
-(3 rows)
-
--- should use SeqScan with Sort
+-- Testing various permutations that are not matching keys in 'dir_index_b'
 explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b nulls first limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
@@ -766,47 +1158,7 @@ select b from test_index_with_sort_directions_on_orderby_limit order by b desc n
  col_b9997
 (3 rows)
 
--- should use Forward IndexScan
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
-                                               QUERY PLAN
----------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: c
-         ->  Limit
-               ->  Index Only Scan using dir_index_c on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
-   c    
---------
-       
- 0.3125
-  0.625
-(3 rows)
-
--- should use Backward IndexScan
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
-                                                    QUERY PLAN
-------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: c
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
-     c     
------------
-      3125
- 3124.6875
-  3124.375
-(3 rows)
-
--- should use SeqScan with Sort
+-- Testing various permutations that are not matching keys in 'dir_index_c'
 explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
@@ -849,85 +1201,7 @@ select c from test_index_with_sort_directions_on_orderby_limit order by c desc l
  3124.6875
 (3 rows)
 
--- should use Forward IndexScan
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: b, c, d
-         ->  Limit
-               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
-    b     |   c    |  d  
-----------+--------+-----
- col_b1   | 0.3125 |   2
- col_b10  |  3.125 |  11
- col_b100 |  31.25 | 101
-(3 rows)
-
-explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: b, c
-         ->  Limit
-               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
-    b     |   c    
-----------+--------
- col_b1   | 0.3125
- col_b10  |  3.125
- col_b100 |  31.25
-(3 rows)
-
--- should use Backward IndexScan
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: b, c, d
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
-     b     |     c     |   d   
------------+-----------+-------
-           |           |      
- col_b9999 | 3124.6875 | 10000
- col_b9998 |  3124.375 |  9999
-(3 rows)
-
-explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: b, c
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
-     b     |     c     
------------+-----------
-           |          
- col_b9999 | 3124.6875
- col_b9998 |  3124.375
-(3 rows)
-
--- should use SeqScan with Sort
+-- Testing various permutations that are not matching keys in 'dir_index_bcd'
 explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c desc,d desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
@@ -991,85 +1265,7 @@ select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b de
  col_b9998 |  3124.375 |  9999
 (3 rows)
 
--- should use Forward IndexScan
-explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: f, d, e
-         ->  Limit
-               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
-   f   |   d   |     e      
--------+-------+------------
-       |       | 
- 10003 | 10001 | col_e10000
- 10002 | 10000 | col_e9999
-(3 rows)
-
-explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: f, d
-         ->  Limit
-               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
-   f   |   d   
--------+-------
-       |      
- 10003 | 10001
- 10002 | 10000
-(3 rows)
-
--- should use Backward IndexScan
-explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: f, d, e
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
- f | d |   e    
----+---+--------
- 4 | 2 | col_e1
- 5 | 3 | col_e2
- 6 | 4 | col_e3
-(3 rows)
-
-explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: f, d
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
- f | d 
----+---
- 4 | 2
- 5 | 3
- 6 | 4
-(3 rows)
-
--- should use SeqScan with Sort
+-- Testing various permutations that are not matching keys in 'dir_index_fde'
 explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d desc,e desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
@@ -1133,85 +1329,7 @@ select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f de
  10002 | 10000 | col_e9999
 (3 rows)
 
--- should use Forward IndexScan
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: e, d, a
-         ->  Limit
-               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
-    e     |  d  |  a  
-----------+-----+-----
- col_e1   |   2 |   1
- col_e10  |  11 |  10
- col_e100 | 101 | 100
-(3 rows)
-
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: e, d
-         ->  Limit
-               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
-    e     |  d  |  a  
-----------+-----+-----
- col_e1   |   2 |   1
- col_e10  |  11 |  10
- col_e100 | 101 | 100
-(3 rows)
-
--- should use Backward IndexScan
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: e, d, a
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
-     e     |   d   |  a   
------------+-------+------
-           |       |     
- col_e9999 | 10000 | 9999
- col_e9998 |  9999 | 9998
-(3 rows)
-
-explain (costs off) select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: e, d
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
-     e     |   d   
------------+-------
-           |      
- col_e9999 | 10000
- col_e9998 |  9999
-(3 rows)
-
--- should use SeqScan with Sort
+-- Testing various permutations that are not matching keys in 'dir_index_eda'
 explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc,a desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
@@ -1275,90 +1393,26 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d
  col_e100 | 101 | 100
 (3 rows)
 
--- Backward indexscan with offset and without limit
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9990;
-                                                  QUERY PLAN
---------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: e, d, a
-         ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(5 rows)
-
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9997;
-     e     |  d   |  a   
------------+------+------
- col_e1000 | 1001 | 1000
- col_e100  |  101 |  100
- col_e10   |   11 |   10
- col_e1    |    2 |    1
-(4 rows)
-
--- Backward indexscan with offset value in subquery
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
-                                                 QUERY PLAN
-------------------------------------------------------------------------------------------------------------
- Limit
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Result
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
-         ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(7 rows)
-
-select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
-   c    
---------
- 0.9375
-  0.625
- 0.3125
-       
-(4 rows)
-
--- Backward indexscan with limit value in subquery
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
-                                                    QUERY PLAN
-------------------------------------------------------------------------------------------------------------------
- Limit
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Result
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(8 rows)
-
-select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
-     c     
------------
-      3125
- 3124.6875
-  3124.375
-(3 rows)
-
--- order by on a non-index columns, should use SeqScan
-explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+-- Testing various permutations of order by on non-index columns. Expected to choose SeqScan with Sort
+explain (costs off) select d, f from test_index_with_sort_directions_on_orderby_limit order by d, f limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: d
+         Merge Key: d, f
          ->  Limit
                ->  Sort
-                     Sort Key: d
+                     Sort Key: d, f
                      ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
- d 
----
- 2
- 3
- 4
+select d, f from test_index_with_sort_directions_on_orderby_limit order by d, f limit 3;
+ d | f 
+---+---
+ 2 | 4
+ 3 | 5
+ 4 | 6
 (3 rows)
 
 explain (costs off) select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e limit 3;
@@ -1424,27 +1478,7 @@ select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc
  10000 | 3124.6875
 (3 rows)
 
--- order by on covering index, should use Backward IndexScan
-explain (costs off) select e from test_index_with_sort_directions_on_orderby_limit order by e desc limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: e
-         ->  Limit
-               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
- Optimizer: Postgres query optimizer
-(6 rows)
-
-select e from test_index_with_sort_directions_on_orderby_limit order by e desc limit 3;
-     e     
------------
- 
- col_e9999
- col_e9998
-(3 rows)
-
--- order by on covering index with included column, should use SeqScan
+-- Validate if SeqScan is chosen if order by cols also have the Included Column of covering index
 explain (costs off) select e,b from test_index_with_sort_directions_on_orderby_limit order by e, b limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
@@ -1466,9 +1500,10 @@ select e,b from test_index_with_sort_directions_on_orderby_limit order by e,b li
  col_e100 | col_b100
 (3 rows)
 
--- check if IndexOnlyScan Forward/Backward is picked when required
-set optimizer_enable_indexscan to off;
--- should use IndexOnlyScan Forward
+-- Purpose: Validate if IndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
+-- Vacuum table to Ensure IndexOnlyScan is chosen
+vacuum test_index_with_sort_directions_on_orderby_limit;
+-- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Forward
 explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
                                                QUERY PLAN
 ---------------------------------------------------------------------------------------------------------
@@ -1507,7 +1542,26 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d
  col_e100 | 101 | 100
 (3 rows)
 
--- should use IndexOnlyScan Backward
+-- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Backward
+explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+     e     |   d   |  a   
+-----------+-------+------
+           |       |     
+ col_e9999 | 10000 | 9999
+ col_e9998 |  9999 | 9998
+(3 rows)
+
 explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
                                                      QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------
@@ -1527,15 +1581,637 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e de
  col_e9998 |  9999 | 9998
 (3 rows)
 
--- reset index scan
-set optimizer_enable_indexscan to on;
+-- Clean Up
 DROP TABLE test_index_with_sort_directions_on_orderby_limit;
--- check if DynamicSeqScan is used for partition tables.
-CREATE TABLE test_partition_table(a int, b int, c float) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(100) every(20));
-CREATE INDEX part_index_a ON test_partition_table using btree(a);
-INSERT INTO test_partition_table SELECT i, i+3, i/4.2 from generate_series(1,99) i;
+-- Test Case: Test on a Partition table with mixed data type columns.
+-- Purpose: Validate if DynamicIndexScan/DynamicIndexOnlyScan with correct scan direction is used on expected index for queries with order by and limit.
+CREATE TABLE test_partition_table(a int, b int, c float, d text, e numeric, f int) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(10000) every(2000));
+-- single col index with opp nulls direction on partition column
+CREATE INDEX part_index_a on test_partition_table using btree(a nulls first);
+-- multi col index all with all index keys asc
+CREATE INDEX part_index_bcd on test_partition_table using btree(b,c,d);
+-- multi col index all with all index keys desc
+CREATE INDEX part_index_fde on test_partition_table using btree(f desc,d desc,e desc);
+-- multi col index with mixed index keys properties
+CREATE INDEX part_index_eda on test_partition_table using btree(e desc nulls last, d,a desc);
+-- Covering index on partition column
+CREATE INDEX part_covering_index_cb ON test_partition_table(c desc) INCLUDE (b);
+INSERT INTO test_partition_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5, i from generate_series(1,9998) i;
+-- Inserting nulls to verify results match when index key specifies nulls first or desc
+INSERT INTO test_partition_table values (9999, null, null, null, null, null);
 ANALYZE test_partition_table;
-explain (costs off) select a from test_partition_table order by a limit 3;
+-- Positive tests: Validate if DynamicIndexScan Forward/Backward is chosen.
+-- Using explain analyze to validate number of partitions scanned
+-- Validate if 'part_index_a' is used for order by cols matching/commutative to the index cols
+-- Expected to use Forward DynamicIndexScan
+explain analyze select a from test_partition_table order by a nulls first limit 3;
+                                                                                           QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.22..29.34 rows=3 width=4) (actual time=0.469..0.471 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.22..29.59 rows=9 width=4) (actual time=0.468..0.469 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.a
+         ->  Limit  (cost=29.22..29.47 rows=3 width=4) (actual time=0.122..0.125 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..284.80 rows=3333 width=4) (actual time=0.121..0.124 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.a NULLS FIRST
+                     ->  Index Only Scan using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1  (cost=0.15..45.87 rows=666 width=4) (actual time=0.023..0.025 rows=3 loops=1)
+                           Heap Fetches: 3
+                     ->  Index Only Scan using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2  (cost=0.15..45.88 rows=667 width=4) (actual time=0.026..0.026 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3  (cost=0.15..45.88 rows=667 width=4) (actual time=0.022..0.022 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4  (cost=0.15..45.88 rows=667 width=4) (actual time=0.022..0.022 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5  (cost=0.15..45.88 rows=667 width=4) (actual time=0.027..0.027 rows=1 loops=1)
+                           Heap Fetches: 1
+ Optimizer: Postgres query optimizer
+ Planning Time: 5.278 ms
+   (slice0)    Executor memory: 49K bytes.
+   (slice1)    Executor memory: 504K bytes avg x 3 workers, 504K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.925 ms
+(22 rows)
+
+select a from test_partition_table order by a nulls first limit 3;
+ a 
+---
+ 1
+ 2
+ 3
+(3 rows)
+
+-- Expected to use Backward DynamicIndexScan
+explain analyze select a from test_partition_table order by a desc nulls last limit 3;
+                                                                                                QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.22..29.34 rows=3 width=4) (actual time=0.434..0.436 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.22..29.59 rows=9 width=4) (actual time=0.434..0.435 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.a
+         ->  Limit  (cost=29.22..29.47 rows=3 width=4) (actual time=0.105..0.107 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..284.80 rows=3333 width=4) (actual time=0.104..0.107 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.a DESC NULLS LAST
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1  (cost=0.15..45.87 rows=666 width=4) (actual time=0.018..0.018 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2  (cost=0.15..45.88 rows=667 width=4) (actual time=0.021..0.021 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3  (cost=0.15..45.88 rows=667 width=4) (actual time=0.022..0.022 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4  (cost=0.15..45.88 rows=667 width=4) (actual time=0.021..0.021 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5  (cost=0.15..45.88 rows=667 width=4) (actual time=0.022..0.023 rows=3 loops=1)
+                           Heap Fetches: 3
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.104 ms
+   (slice0)    Executor memory: 49K bytes.
+   (slice1)    Executor memory: 504K bytes avg x 3 workers, 504K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.822 ms
+(22 rows)
+
+select a from test_partition_table order by a desc nulls last limit 3;
+  a   
+------
+ 9999
+ 9998
+ 9997
+(3 rows)
+
+-- Validate if 'part_index_bcd' is used for order by cols matching/commutative to the index cols
+-- Testing various permutations of order by columns that are expected to choose Forward DynamicIndexScan
+explain analyze select b,c,d from test_partition_table order by b,c,d limit 3;
+                                                                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=38.65..38.80 rows=3 width=29) (actual time=0.380..0.382 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=38.65..39.11 rows=9 width=29) (actual time=0.380..0.381 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Limit  (cost=38.65..38.99 rows=3 width=29) (actual time=0.089..0.091 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..379.07 rows=3333 width=29) (actual time=0.089..0.091 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+                     ->  Index Only Scan using test_partition_table_1_prt_1_b_c_d_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=28) (actual time=0.023..0.024 rows=3 loops=1)
+                           Heap Fetches: 3
+                     ->  Index Only Scan using test_partition_table_1_prt_2_b_c_d_idx on test_partition_table_1_prt_2  (cost=0.15..71.13 rows=667 width=29) (actual time=0.017..0.017 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_b_c_d_idx on test_partition_table_1_prt_3  (cost=0.15..71.13 rows=667 width=29) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_b_c_d_idx on test_partition_table_1_prt_4  (cost=0.15..71.13 rows=667 width=29) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_b_c_d_idx on test_partition_table_1_prt_5  (cost=0.15..63.13 rows=667 width=29) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.704 ms
+   (slice0)    Executor memory: 54K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.780 ms
+(22 rows)
+
+select b,c,d from test_partition_table order by b,c,d limit 3;
+ b |          c          |       d       
+---+---------------------+---------------
+ 4 | 0.23809523809523808 | sample_text 1
+ 5 | 0.47619047619047616 | sample_text 2
+ 6 |  0.7142857142857143 | sample_text 3
+(3 rows)
+
+explain analyze select b,c from test_partition_table order by b,c limit 13;
+                                                                                              QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=38.65..39.31 rows=13 width=12) (actual time=0.744..0.749 rows=13 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=38.65..40.64 rows=39 width=12) (actual time=0.744..0.747 rows=13 loops=1)
+         Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c
+         ->  Limit  (cost=38.65..40.12 rows=13 width=12) (actual time=0.082..0.090 rows=13 loops=1)
+               ->  Merge Append  (cost=0.82..379.07 rows=3333 width=12) (actual time=0.081..0.089 rows=13 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c
+                     ->  Index Only Scan using test_partition_table_1_prt_1_b_c_d_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=12) (actual time=0.018..0.024 rows=13 loops=1)
+                           Heap Fetches: 13
+                     ->  Index Only Scan using test_partition_table_1_prt_2_b_c_d_idx on test_partition_table_1_prt_2  (cost=0.15..71.13 rows=667 width=12) (actual time=0.015..0.015 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_b_c_d_idx on test_partition_table_1_prt_3  (cost=0.15..71.13 rows=667 width=12) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_b_c_d_idx on test_partition_table_1_prt_4  (cost=0.15..71.13 rows=667 width=12) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_b_c_d_idx on test_partition_table_1_prt_5  (cost=0.15..63.13 rows=667 width=12) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.120 ms
+   (slice0)    Executor memory: 56K bytes.
+   (slice1)    Executor memory: 512K bytes avg x 3 workers, 512K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.181 ms
+(22 rows)
+
+select b,c from test_partition_table order by b,c limit 13;
+ b  |          c          
+----+---------------------
+  4 | 0.23809523809523808
+  5 | 0.47619047619047616
+  6 |  0.7142857142857143
+  7 |  0.9523809523809523
+  8 |  1.1904761904761905
+  9 |  1.4285714285714286
+ 10 |  1.6666666666666667
+ 11 |  1.9047619047619049
+ 12 |   2.142857142857143
+ 13 |   2.380952380952381
+ 14 |   2.619047619047619
+ 15 |   2.857142857142857
+ 16 |  3.0952380952380953
+(13 rows)
+
+-- Testing various permutations of order by columns that are expected to choose Backward DynamicIndexScan
+explain analyze select b,c,d from test_partition_table order by b desc,c desc,d desc limit 3;
+                                                                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=38.65..38.80 rows=3 width=29) (actual time=0.391..0.393 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=38.65..39.11 rows=9 width=29) (actual time=0.386..0.387 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Limit  (cost=38.65..38.99 rows=3 width=29) (actual time=0.066..0.068 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..379.07 rows=3333 width=29) (actual time=0.065..0.067 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.b DESC, test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_b_c_d_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=28) (actual time=0.022..0.022 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_b_c_d_idx on test_partition_table_1_prt_2  (cost=0.15..71.13 rows=667 width=29) (actual time=0.008..0.008 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_b_c_d_idx on test_partition_table_1_prt_3  (cost=0.15..71.13 rows=667 width=29) (actual time=0.011..0.011 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_b_c_d_idx on test_partition_table_1_prt_4  (cost=0.15..71.13 rows=667 width=29) (actual time=0.010..0.010 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_b_c_d_idx on test_partition_table_1_prt_5  (cost=0.15..63.13 rows=667 width=29) (actual time=0.013..0.014 rows=3 loops=1)
+                           Heap Fetches: 3
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.128 ms
+   (slice0)    Executor memory: 54K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.875 ms
+(22 rows)
+
+select b,c,d from test_partition_table order by b desc,c desc,d desc limit 3;
+   b   |         c          |        d         
+-------+--------------------+------------------
+       |                    | 
+ 10001 | 2380.4761904761904 | sample_text 9998
+ 10000 | 2380.2380952380954 | sample_text 9997
+(3 rows)
+
+explain analyze select b,c from test_partition_table order by b desc,c desc limit 3;
+                                                                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=38.65..38.80 rows=3 width=12) (actual time=0.395..0.396 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=38.65..39.11 rows=9 width=12) (actual time=0.395..0.395 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c
+         ->  Limit  (cost=38.65..38.99 rows=3 width=12) (actual time=0.069..0.072 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..379.07 rows=3333 width=12) (actual time=0.069..0.071 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.b DESC, test_partition_table_1_prt_1.c DESC
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_b_c_d_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=12) (actual time=0.025..0.025 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_b_c_d_idx on test_partition_table_1_prt_2  (cost=0.15..71.13 rows=667 width=12) (actual time=0.010..0.010 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_b_c_d_idx on test_partition_table_1_prt_3  (cost=0.15..71.13 rows=667 width=12) (actual time=0.010..0.010 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_b_c_d_idx on test_partition_table_1_prt_4  (cost=0.15..71.13 rows=667 width=12) (actual time=0.009..0.009 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_b_c_d_idx on test_partition_table_1_prt_5  (cost=0.15..63.13 rows=667 width=12) (actual time=0.015..0.017 rows=3 loops=1)
+                           Heap Fetches: 3
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.124 ms
+   (slice0)    Executor memory: 56K bytes.
+   (slice1)    Executor memory: 512K bytes avg x 3 workers, 512K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.808 ms
+(22 rows)
+
+select b,c from test_partition_table order by b desc,c desc limit 3;
+   b   |         c          
+-------+--------------------
+       |                   
+ 10001 | 2380.4761904761904
+ 10000 | 2380.2380952380954
+(3 rows)
+
+-- Validate if 'part_index_fde' is used for order by cols matching/commutative to the index cols. Average partitions scanned
+-- for this query are more as the limit value is higher.
+-- Testing various permutations of order by columns that expected to choose Forward DynamicIndexScan
+explain analyze select f,d,e from test_partition_table order by f desc,d desc,e desc limit 23;
+                                                                                              QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..30.82 rows=23 width=26) (actual time=0.462..0.470 rows=23 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..32.77 rows=69 width=26) (actual time=0.462..0.468 rows=23 loops=1)
+         Merge Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e
+         ->  Limit  (cost=29.85..31.85 rows=23 width=26) (actual time=0.091..0.106 rows=23 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=26) (actual time=0.091..0.105 rows=23 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.f DESC, test_partition_table_1_prt_1.d DESC, test_partition_table_1_prt_1.e DESC
+                     ->  Index Only Scan using test_partition_table_1_prt_1_f_d_e_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=24) (actual time=0.019..0.019 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_2_f_d_e_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=26) (actual time=0.017..0.017 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_f_d_e_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=26) (actual time=0.018..0.018 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_f_d_e_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=26) (actual time=0.020..0.020 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_f_d_e_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=26) (actual time=0.017..0.027 rows=23 loops=1)
+                           Heap Fetches: 23
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.362 ms
+   (slice0)    Executor memory: 58K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.941 ms
+(22 rows)
+
+select f,d,e from test_partition_table order by f desc,d desc,e desc limit 23;
+  f   |        d         |  e   
+------+------------------+------
+      |                  |     
+ 9998 | sample_text 9998 | 1999
+ 9997 | sample_text 9997 | 1999
+ 9996 | sample_text 9996 | 1999
+ 9995 | sample_text 9995 | 1999
+ 9994 | sample_text 9994 | 1998
+ 9993 | sample_text 9993 | 1998
+ 9992 | sample_text 9992 | 1998
+ 9991 | sample_text 9991 | 1998
+ 9990 | sample_text 9990 | 1998
+ 9989 | sample_text 9989 | 1997
+ 9988 | sample_text 9988 | 1997
+ 9987 | sample_text 9987 | 1997
+ 9986 | sample_text 9986 | 1997
+ 9985 | sample_text 9985 | 1997
+ 9984 | sample_text 9984 | 1996
+ 9983 | sample_text 9983 | 1996
+ 9982 | sample_text 9982 | 1996
+ 9981 | sample_text 9981 | 1996
+ 9980 | sample_text 9980 | 1996
+ 9979 | sample_text 9979 | 1995
+ 9978 | sample_text 9978 | 1995
+ 9977 | sample_text 9977 | 1995
+(23 rows)
+
+explain analyze select f,d from test_partition_table order by f desc,d desc limit 3;
+                                                                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..29.97 rows=3 width=21) (actual time=1.042..1.044 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..30.23 rows=9 width=21) (actual time=1.042..1.043 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d
+         ->  Limit  (cost=29.85..30.11 rows=3 width=21) (actual time=0.100..0.102 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=21) (actual time=0.100..0.102 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.f DESC, test_partition_table_1_prt_1.d DESC
+                     ->  Index Only Scan using test_partition_table_1_prt_1_f_d_e_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=20) (actual time=0.024..0.024 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_2_f_d_e_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=21) (actual time=0.015..0.015 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_f_d_e_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=21) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_f_d_e_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=21) (actual time=0.017..0.017 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_f_d_e_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=21) (actual time=0.024..0.025 rows=3 loops=1)
+                           Heap Fetches: 3
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.095 ms
+   (slice0)    Executor memory: 56K bytes.
+   (slice1)    Executor memory: 514K bytes avg x 3 workers, 514K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.516 ms
+(22 rows)
+
+select f,d from test_partition_table order by f desc,d desc limit 3;
+  f   |        d         
+------+------------------
+      | 
+ 9998 | sample_text 9998
+ 9997 | sample_text 9997
+(3 rows)
+
+-- Testing various permutations of order by columns that should pick Backward DynamicIndexScan
+explain analyze select f,d,e from test_partition_table order by f,d,e limit 3;
+                                                                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..29.97 rows=3 width=26) (actual time=0.829..0.838 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..30.23 rows=9 width=26) (actual time=0.829..0.830 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e
+         ->  Limit  (cost=29.85..30.11 rows=3 width=26) (actual time=0.114..0.116 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=26) (actual time=0.113..0.115 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_f_d_e_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=24) (actual time=0.018..0.019 rows=3 loops=1)
+                           Heap Fetches: 3
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_f_d_e_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=26) (actual time=0.024..0.024 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_f_d_e_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=26) (actual time=0.024..0.024 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_f_d_e_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=26) (actual time=0.023..0.023 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_f_d_e_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=26) (actual time=0.024..0.025 rows=1 loops=1)
+                           Heap Fetches: 1
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.172 ms
+   (slice0)    Executor memory: 54K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.291 ms
+(22 rows)
+
+select f,d,e from test_partition_table order by f,d,e limit 3;
+ f |       d       | e 
+---+---------------+---
+ 1 | sample_text 1 | 0
+ 2 | sample_text 2 | 0
+ 3 | sample_text 3 | 0
+(3 rows)
+
+explain analyze select f,d from test_partition_table order by f,d limit 3;
+                                                                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..29.97 rows=3 width=21) (actual time=0.533..0.535 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..30.23 rows=9 width=21) (actual time=0.533..0.534 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d
+         ->  Limit  (cost=29.85..30.11 rows=3 width=21) (actual time=0.106..0.108 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=21) (actual time=0.105..0.107 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_f_d_e_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=20) (actual time=0.028..0.029 rows=3 loops=1)
+                           Heap Fetches: 3
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_f_d_e_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=21) (actual time=0.016..0.016 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_f_d_e_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=21) (actual time=0.017..0.017 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_f_d_e_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=21) (actual time=0.023..0.023 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_f_d_e_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=21) (actual time=0.021..0.021 rows=1 loops=1)
+                           Heap Fetches: 1
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.155 ms
+   (slice0)    Executor memory: 56K bytes.
+   (slice1)    Executor memory: 514K bytes avg x 3 workers, 514K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.965 ms
+(22 rows)
+
+select f,d from test_partition_table order by f,d limit 3;
+ f |       d       
+---+---------------
+ 1 | sample_text 1
+ 2 | sample_text 2
+ 3 | sample_text 3
+(3 rows)
+
+-- Validate if 'part_index_eda' is used for order by cols matching/commutative to the index cols
+-- Testing various permutations of order by columns that expected to choose Forward DynamicIndexScan
+explain analyze select e,d,a from test_partition_table order by e desc nulls last, d, a desc limit 3;
+                                                                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..29.97 rows=3 width=26) (actual time=0.446..0.449 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..30.23 rows=9 width=26) (actual time=0.445..0.448 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+         ->  Limit  (cost=29.85..30.11 rows=3 width=26) (actual time=0.099..0.102 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=26) (actual time=0.099..0.101 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.e DESC NULLS LAST, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a DESC
+                     ->  Index Only Scan using test_partition_table_1_prt_1_e_d_a_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=24) (actual time=0.019..0.019 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_2_e_d_a_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=26) (actual time=0.018..0.018 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_e_d_a_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=26) (actual time=0.020..0.020 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_e_d_a_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=26) (actual time=0.021..0.021 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_e_d_a_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=26) (actual time=0.019..0.020 rows=3 loops=1)
+                           Heap Fetches: 3
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.141 ms
+   (slice0)    Executor memory: 54K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 0.871 ms
+(22 rows)
+
+select e,d,a from test_partition_table order by e desc nulls last, d, a desc limit 3;
+  e   |        d         |  a   
+------+------------------+------
+ 1999 | sample_text 9995 | 9995
+ 1999 | sample_text 9996 | 9996
+ 1999 | sample_text 9997 | 9997
+(3 rows)
+
+explain analyze select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
+                                                                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..29.97 rows=3 width=26) (actual time=3.260..3.267 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..30.23 rows=9 width=26) (actual time=3.260..3.267 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d
+         ->  Limit  (cost=29.85..30.11 rows=3 width=26) (actual time=0.315..0.324 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=26) (actual time=0.314..0.321 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.e DESC NULLS LAST, test_partition_table_1_prt_1.d
+                     ->  Index Only Scan using test_partition_table_1_prt_1_e_d_a_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=24) (actual time=0.057..0.058 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_2_e_d_a_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=26) (actual time=0.065..0.065 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_e_d_a_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=26) (actual time=0.062..0.062 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_e_d_a_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=26) (actual time=0.068..0.069 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_e_d_a_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=26) (actual time=0.053..0.057 rows=3 loops=1)
+                           Heap Fetches: 3
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.133 ms
+   (slice0)    Executor memory: 53K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 3.810 ms
+(22 rows)
+
+select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
+  e   |        d         |  a   
+------+------------------+------
+ 1999 | sample_text 9995 | 9995
+ 1999 | sample_text 9996 | 9996
+ 1999 | sample_text 9997 | 9997
+(3 rows)
+
+-- Testing various permutations of order by columns that expected to choose Backward DynamicIndexScan
+explain analyze select e,d,a from test_partition_table order by e nulls first, d desc, a limit 3;
+                                                                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..29.97 rows=3 width=26) (actual time=0.988..0.992 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..30.23 rows=9 width=26) (actual time=0.988..0.991 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+         ->  Limit  (cost=29.85..30.11 rows=3 width=26) (actual time=0.329..0.339 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=26) (actual time=0.329..0.337 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.e NULLS FIRST, test_partition_table_1_prt_1.d DESC, test_partition_table_1_prt_1.a
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_e_d_a_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=24) (actual time=0.050..0.055 rows=3 loops=1)
+                           Heap Fetches: 3
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_e_d_a_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=26) (actual time=0.077..0.077 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_e_d_a_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=26) (actual time=0.051..0.051 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_e_d_a_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=26) (actual time=0.065..0.065 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_e_d_a_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=26) (actual time=0.064..0.068 rows=2 loops=1)
+                           Heap Fetches: 2
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.283 ms
+   (slice0)    Executor memory: 54K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.506 ms
+(22 rows)
+
+select e,d,a from test_partition_table order by e nulls first, d desc, a limit 3;
+ e |       d       |  a   
+---+---------------+------
+   |               | 9999
+ 0 | sample_text 4 |    4
+ 0 | sample_text 3 |    3
+(3 rows)
+
+explain analyze select e,d from test_partition_table order by e nulls first, d desc limit 3;
+                                                                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.85..29.97 rows=3 width=22) (actual time=1.020..1.023 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.85..30.23 rows=9 width=22) (actual time=1.020..1.022 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d
+         ->  Limit  (cost=29.85..30.11 rows=3 width=22) (actual time=0.325..0.335 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..291.07 rows=3333 width=22) (actual time=0.324..0.333 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.e NULLS FIRST, test_partition_table_1_prt_1.d DESC
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_e_d_a_idx on test_partition_table_1_prt_1  (cost=0.15..47.12 rows=666 width=20) (actual time=0.053..0.058 rows=3 loops=1)
+                           Heap Fetches: 3
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_e_d_a_idx on test_partition_table_1_prt_2  (cost=0.15..47.13 rows=667 width=22) (actual time=0.051..0.051 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_e_d_a_idx on test_partition_table_1_prt_3  (cost=0.15..47.13 rows=667 width=22) (actual time=0.052..0.052 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_e_d_a_idx on test_partition_table_1_prt_4  (cost=0.15..47.13 rows=667 width=22) (actual time=0.080..0.080 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_e_d_a_idx on test_partition_table_1_prt_5  (cost=0.15..47.13 rows=667 width=22) (actual time=0.068..0.072 rows=2 loops=1)
+                           Heap Fetches: 2
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.134 ms
+   (slice0)    Executor memory: 56K bytes.
+   (slice1)    Executor memory: 514K bytes avg x 3 workers, 514K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.498 ms
+(22 rows)
+
+select e,d from test_partition_table order by e nulls first, d desc limit 3;
+ e |       d       
+---+---------------
+   | 
+ 0 | sample_text 4
+ 0 | sample_text 3
+(3 rows)
+
+-- Validate if DynamicIndexScan works on covering index
+-- Expected to choose Forward DynamicIndexScan
+explain analyze select c from test_partition_table order by c desc limit 3;
+                                                                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.22..29.34 rows=3 width=8) (actual time=1.094..1.095 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.22..29.59 rows=9 width=8) (actual time=1.093..1.095 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.c
+         ->  Limit  (cost=29.22..29.47 rows=3 width=8) (actual time=0.252..0.258 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..284.80 rows=3333 width=8) (actual time=0.251..0.256 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.c DESC
+                     ->  Index Only Scan using test_partition_table_1_prt_1_c_b_idx on test_partition_table_1_prt_1  (cost=0.15..45.87 rows=666 width=8) (actual time=0.050..0.050 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_2_c_b_idx on test_partition_table_1_prt_2  (cost=0.15..45.88 rows=667 width=8) (actual time=0.041..0.041 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_3_c_b_idx on test_partition_table_1_prt_3  (cost=0.15..45.88 rows=667 width=8) (actual time=0.052..0.052 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_4_c_b_idx on test_partition_table_1_prt_4  (cost=0.15..45.88 rows=667 width=8) (actual time=0.051..0.051 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan using test_partition_table_1_prt_5_c_b_idx on test_partition_table_1_prt_5  (cost=0.15..45.88 rows=667 width=8) (actual time=0.055..0.058 rows=3 loops=1)
+                           Heap Fetches: 3
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.086 ms
+   (slice0)    Executor memory: 55K bytes.
+   (slice1)    Executor memory: 511K bytes avg x 3 workers, 511K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.547 ms
+(22 rows)
+
+select c from test_partition_table order by c desc limit 3;
+         c          
+--------------------
+                   
+ 2380.4761904761904
+ 2380.2380952380954
+(3 rows)
+
+-- Expected to choose Backward DynamicIndexScan
+explain analyze select c from test_partition_table order by c limit 3;
+                                                                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=29.22..29.34 rows=3 width=8) (actual time=0.908..0.909 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=29.22..29.59 rows=9 width=8) (actual time=0.908..0.908 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.c
+         ->  Limit  (cost=29.22..29.47 rows=3 width=8) (actual time=0.246..0.264 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..284.80 rows=3333 width=8) (actual time=0.245..0.253 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.c
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_c_b_idx on test_partition_table_1_prt_1  (cost=0.15..45.87 rows=666 width=8) (actual time=0.052..0.058 rows=3 loops=1)
+                           Heap Fetches: 3
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_c_b_idx on test_partition_table_1_prt_2  (cost=0.15..45.88 rows=667 width=8) (actual time=0.047..0.047 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_c_b_idx on test_partition_table_1_prt_3  (cost=0.15..45.88 rows=667 width=8) (actual time=0.038..0.039 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_c_b_idx on test_partition_table_1_prt_4  (cost=0.15..45.88 rows=667 width=8) (actual time=0.039..0.039 rows=1 loops=1)
+                           Heap Fetches: 1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_c_b_idx on test_partition_table_1_prt_5  (cost=0.15..45.88 rows=667 width=8) (actual time=0.066..0.066 rows=1 loops=1)
+                           Heap Fetches: 1
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.093 ms
+   (slice0)    Executor memory: 55K bytes.
+   (slice1)    Executor memory: 511K bytes avg x 3 workers, 511K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.331 ms
+(22 rows)
+
+select c from test_partition_table order by c limit 3;
+          c          
+---------------------
+ 0.23809523809523808
+ 0.47619047619047616
+  0.7142857142857143
+(3 rows)
+
+-- Negative tests: Validate if a DynamicSeqScan is chosen if order by cols directions do not matching indices keys directions.
+--                 Expected to choose DynamicSeqScan with Sort
+-- Testing various permutations that are not matching keys in 'part_index_a'
+explain(costs off) select a from test_partition_table order by a limit 3;
                                QUERY PLAN
 ------------------------------------------------------------------------
  Limit
@@ -1553,7 +2229,7 @@ explain (costs off) select a from test_partition_table order by a limit 3;
  Optimizer: Postgres query optimizer
 (13 rows)
 
-select a from test_partition_table order by a limit 3;
+select a from test_partition_table order by a  limit 3;
  a 
 ---
  1
@@ -1561,3 +2237,1699 @@ select a from test_partition_table order by a limit 3;
  3
 (3 rows)
 
+-- Testing various permutations that are not matching keys in 'part_index_bcd'
+explain(costs off) select b,c,d from test_partition_table order by b ,c desc,d desc limit 3;
+                                                               QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select b,c,d from test_partition_table order by b ,c desc,d desc limit 3;
+ b |          c          |       d       
+---+---------------------+---------------
+ 4 | 0.23809523809523808 | sample_text 1
+ 5 | 0.47619047619047616 | sample_text 2
+ 6 |  0.7142857142857143 | sample_text 3
+(3 rows)
+
+explain(costs off) select b,c,d from test_partition_table order by b ,c ,d desc limit 3;
+                                                            QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select b,c,d from test_partition_table order by b ,c ,d desc limit 3;
+ b |          c          |       d       
+---+---------------------+---------------
+ 4 | 0.23809523809523808 | sample_text 1
+ 5 | 0.47619047619047616 | sample_text 2
+ 6 |  0.7142857142857143 | sample_text 3
+(3 rows)
+
+explain(costs off) select b,c,d from test_partition_table order by b desc, c ,d desc limit 3;
+                                                               QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.b DESC, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select b,c,d from test_partition_table order by b desc, c ,d desc limit 3;
+   b   |         c          |        d         
+-------+--------------------+------------------
+       |                    | 
+ 10001 | 2380.4761904761904 | sample_text 9998
+ 10000 | 2380.2380952380954 | sample_text 9997
+(3 rows)
+
+-- Testing various permutations that are not matching keys in 'part_index_fde'
+explain(costs off) select f,d,e from test_partition_table order by f ,d desc,e desc limit 3;
+                                                               QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d DESC, test_partition_table_1_prt_1.e DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select f,d,e from test_partition_table order by f ,d desc,e desc limit 3;
+ f |       d       | e 
+---+---------------+---
+ 1 | sample_text 1 | 0
+ 2 | sample_text 2 | 0
+ 3 | sample_text 3 | 0
+(3 rows)
+
+explain(costs off) select f,d,e from test_partition_table order by f,d ,e desc limit 3;
+                                                            QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select f,d,e from test_partition_table order by f,d ,e desc limit 3;
+ f |       d       | e 
+---+---------------+---
+ 1 | sample_text 1 | 0
+ 2 | sample_text 2 | 0
+ 3 | sample_text 3 | 0
+(3 rows)
+
+explain(costs off) select f,d,e from test_partition_table order by f desc, d ,e desc limit 3;
+                                                               QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.f, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.f DESC, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.e DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select f,d,e from test_partition_table order by f desc, d ,e desc limit 3;
+  f   |        d         |  e   
+------+------------------+------
+      |                  |     
+ 9998 | sample_text 9998 | 1999
+ 9997 | sample_text 9997 | 1999
+(3 rows)
+
+-- Testing various permutations that are not matching keys in 'part_index_eda'
+explain(costs off) select e,d,a from test_partition_table order by e, d desc,a desc limit 3;
+                                                               QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d DESC, test_partition_table_1_prt_1.a DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select e,d,a from test_partition_table order by e, d desc,a desc limit 3;
+ e |       d       | a 
+---+---------------+---
+ 0 | sample_text 4 | 4
+ 0 | sample_text 3 | 3
+ 0 | sample_text 2 | 2
+(3 rows)
+
+explain(costs off) select e,d,a from test_partition_table order by e desc,d desc,a desc limit 3;
+                                                                 QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.e DESC, test_partition_table_1_prt_1.d DESC, test_partition_table_1_prt_1.a DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select e,d,a from test_partition_table order by e desc,d desc,a desc limit 3;
+  e   |        d         |  a   
+------+------------------+------
+      |                  | 9999
+ 1999 | sample_text 9998 | 9998
+ 1999 | sample_text 9997 | 9997
+(3 rows)
+
+explain(costs off) select e,d,a from test_partition_table order by e ,d ,a  limit 3;
+                                                          QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select e,d,a from test_partition_table order by e ,d ,a  limit 3;
+ e |       d       | a 
+---+---------------+---
+ 0 | sample_text 1 | 1
+ 0 | sample_text 2 | 2
+ 0 | sample_text 3 | 3
+(3 rows)
+
+-- -- Testing various permutations of order by on non-index columns. Expected to choose DynamicSeqScan with Sort
+explain(costs off) select d from test_partition_table order by d limit 3;
+                               QUERY PLAN
+------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.d
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.d
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select d from test_partition_table order by d limit 3;
+        d        
+-----------------
+ sample_text 1
+ sample_text 10
+ sample_text 100
+(3 rows)
+
+explain(costs off) select a,e from test_partition_table order by a,e limit 3;
+                                          QUERY PLAN
+----------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.a, test_partition_table_1_prt_1.e
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.a, test_partition_table_1_prt_1.e
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select a,e from test_partition_table order by a,e limit 3;
+ a | e 
+---+---
+ 1 | 0
+ 2 | 0
+ 3 | 0
+(3 rows)
+
+explain(costs off) select d,a from test_partition_table order by d,a desc limit 3;
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a DESC
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select d,a from test_partition_table order by d,a desc limit 3;
+        d        |  a  
+-----------------+-----
+ sample_text 1   |   1
+ sample_text 10  |  10
+ sample_text 100 | 100
+(3 rows)
+
+explain(costs off) select d,c from test_partition_table order by d desc,c limit 3;
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.c
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_partition_table_1_prt_1.d DESC, test_partition_table_1_prt_1.c
+                     ->  Append
+                           ->  Seq Scan on test_partition_table_1_prt_1
+                           ->  Seq Scan on test_partition_table_1_prt_2
+                           ->  Seq Scan on test_partition_table_1_prt_3
+                           ->  Seq Scan on test_partition_table_1_prt_4
+                           ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select d,c from test_partition_table order by d desc,c limit 3;
+        d         |         c          
+------------------+--------------------
+                  |                   
+ sample_text 9998 | 2380.4761904761904
+ sample_text 9997 | 2380.2380952380954
+(3 rows)
+
+-- Purpose: Validate if DynamicIndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
+-- Vacuum table to ensure DynamicIndexOnlyScans are choosen
+vacuum test_partition_table;
+-- Testing various permutations of order by columns that are expected to choose DynamicIndexOnlyScan Forward
+explain analyze select a from test_partition_table order by a nulls first limit 3;
+                                                                                           QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=26.69..26.81 rows=3 width=4) (actual time=1.133..1.136 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=26.69..27.04 rows=9 width=4) (actual time=1.132..1.133 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.a
+         ->  Limit  (cost=26.69..26.92 rows=3 width=4) (actual time=0.770..0.775 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..259.51 rows=3333 width=4) (actual time=0.769..0.773 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.a NULLS FIRST
+                     ->  Index Only Scan using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1  (cost=0.15..40.81 rows=666 width=4) (actual time=0.176..0.178 rows=3 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2  (cost=0.15..40.82 rows=667 width=4) (actual time=0.193..0.193 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3  (cost=0.15..40.82 rows=667 width=4) (actual time=0.135..0.135 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4  (cost=0.15..40.82 rows=667 width=4) (actual time=0.101..0.101 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5  (cost=0.15..40.82 rows=667 width=4) (actual time=0.135..0.135 rows=1 loops=1)
+                           Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.745 ms
+   (slice0)    Executor memory: 49K bytes.
+   (slice1)    Executor memory: 504K bytes avg x 3 workers, 504K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.801 ms
+(22 rows)
+
+select a from test_partition_table order by a nulls first limit 3;
+ a 
+---
+ 1
+ 2
+ 3
+(3 rows)
+
+explain analyze select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
+                                                                                              QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=26.69..26.81 rows=3 width=26) (actual time=1.609..1.612 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=26.69..27.04 rows=9 width=26) (actual time=1.609..1.611 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d
+         ->  Limit  (cost=26.69..26.92 rows=3 width=26) (actual time=0.732..0.738 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..259.51 rows=3333 width=26) (actual time=0.731..0.736 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.e DESC NULLS LAST, test_partition_table_1_prt_1.d
+                     ->  Index Only Scan using test_partition_table_1_prt_1_e_d_a_idx on test_partition_table_1_prt_1  (cost=0.15..40.81 rows=666 width=24) (actual time=0.189..0.190 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_2_e_d_a_idx on test_partition_table_1_prt_2  (cost=0.15..40.82 rows=667 width=26) (actual time=0.138..0.138 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_3_e_d_a_idx on test_partition_table_1_prt_3  (cost=0.15..40.82 rows=667 width=26) (actual time=0.123..0.123 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_4_e_d_a_idx on test_partition_table_1_prt_4  (cost=0.15..40.82 rows=667 width=26) (actual time=0.134..0.134 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan using test_partition_table_1_prt_5_e_d_a_idx on test_partition_table_1_prt_5  (cost=0.15..40.82 rows=667 width=26) (actual time=0.136..0.138 rows=3 loops=1)
+                           Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.130 ms
+   (slice0)    Executor memory: 53K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.315 ms
+(22 rows)
+
+select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
+  e   |        d         |  a   
+------+------------------+------
+ 1999 | sample_text 9995 | 9995
+ 1999 | sample_text 9996 | 9996
+ 1999 | sample_text 9997 | 9997
+(3 rows)
+
+-- Testing various permutations of order by columns that are expected to choose DynamicIndexOnlyScan Backward
+explain analyze select a from test_partition_table order by a desc nulls last limit 3;
+                                                                                                QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=26.69..26.81 rows=3 width=4) (actual time=1.511..1.512 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=26.69..27.04 rows=9 width=4) (actual time=1.511..1.512 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.a
+         ->  Limit  (cost=26.69..26.92 rows=3 width=4) (actual time=0.710..0.714 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..259.51 rows=3333 width=4) (actual time=0.709..0.712 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.a DESC NULLS LAST
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1  (cost=0.15..40.81 rows=666 width=4) (actual time=0.161..0.161 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2  (cost=0.15..40.82 rows=667 width=4) (actual time=0.139..0.139 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3  (cost=0.15..40.82 rows=667 width=4) (actual time=0.138..0.138 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4  (cost=0.15..40.82 rows=667 width=4) (actual time=0.137..0.137 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5  (cost=0.15..40.82 rows=667 width=4) (actual time=0.130..0.131 rows=3 loops=1)
+                           Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.111 ms
+   (slice0)    Executor memory: 49K bytes.
+   (slice1)    Executor memory: 504K bytes avg x 3 workers, 504K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.140 ms
+(22 rows)
+
+select a from test_partition_table order by a desc nulls last limit 3;
+  a   
+------
+ 9999
+ 9998
+ 9997
+(3 rows)
+
+explain analyze select e,d,a from test_partition_table order by e nulls first, d desc, a limit 3;
+                                                                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=26.69..26.81 rows=3 width=26) (actual time=1.467..1.470 rows=3 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=26.69..27.04 rows=9 width=26) (actual time=1.466..1.469 rows=3 loops=1)
+         Merge Key: test_partition_table_1_prt_1.e, test_partition_table_1_prt_1.d, test_partition_table_1_prt_1.a
+         ->  Limit  (cost=26.69..26.92 rows=3 width=26) (actual time=0.683..0.691 rows=3 loops=1)
+               ->  Merge Append  (cost=0.82..259.51 rows=3333 width=26) (actual time=0.682..0.688 rows=3 loops=1)
+                     Sort Key: test_partition_table_1_prt_1.e NULLS FIRST, test_partition_table_1_prt_1.d DESC, test_partition_table_1_prt_1.a
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_e_d_a_idx on test_partition_table_1_prt_1  (cost=0.15..40.81 rows=666 width=24) (actual time=0.179..0.181 rows=3 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_e_d_a_idx on test_partition_table_1_prt_2  (cost=0.15..40.82 rows=667 width=26) (actual time=0.134..0.134 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_e_d_a_idx on test_partition_table_1_prt_3  (cost=0.15..40.82 rows=667 width=26) (actual time=0.123..0.123 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_e_d_a_idx on test_partition_table_1_prt_4  (cost=0.15..40.82 rows=667 width=26) (actual time=0.123..0.124 rows=1 loops=1)
+                           Heap Fetches: 0
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_e_d_a_idx on test_partition_table_1_prt_5  (cost=0.15..40.82 rows=667 width=26) (actual time=0.113..0.114 rows=2 loops=1)
+                           Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+ Planning Time: 1.131 ms
+   (slice0)    Executor memory: 54K bytes.
+   (slice1)    Executor memory: 510K bytes avg x 3 workers, 510K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 2.076 ms
+(22 rows)
+
+select f,d,e from test_partition_table order by e nulls first, d desc, a limit 3;
+ f |       d       | e 
+---+---------------+---
+   |               |  
+ 4 | sample_text 4 | 0
+ 3 | sample_text 3 | 0
+(3 rows)
+
+-- Clean Up
+DROP TABLE test_partition_table;
+-- Test Case: Test on a Replicated table with mixed data type columns.
+-- Purpose: Validate if Forward/Backward IndexScan works on Replicated table
+CREATE TABLE test_replicated_table(a int, b int, c float, d text, e numeric) DISTRIBUTED REPLICATED;
+-- multi col index with mixed index keys properties
+CREATE INDEX rep_index_eda on test_replicated_table using btree(e desc nulls last, d,a desc);
+INSERT INTO test_replicated_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5 from generate_series(1,100) i;
+-- Inserting nulls to verify results match when index key specifies nulls first or desc
+INSERT INTO test_replicated_table values (null, null, null, null, null);
+-- Positive tests: Validate if IndexScan Forward/Backward is chosen.
+-- Validate if 'rep_index_eda' is used for order by matching to the index
+explain(costs off) select e,d,a from test_replicated_table order by e desc nulls last, d, a desc limit 3;
+                                QUERY PLAN
+--------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   Merge Key: e, d, a
+   ->  Limit
+         ->  Index Only Scan using rep_index_eda on test_replicated_table
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select e,d,a from test_replicated_table order by e desc nulls last, d, a desc limit 3;
+ e  |        d        |  a  
+----+-----------------+-----
+ 20 | sample_text 100 | 100
+ 19 | sample_text 95  |  95
+ 19 | sample_text 96  |  96
+(3 rows)
+
+-- Validate if 'rep_index_eda' is used for order by commutative to the index
+explain(costs off) select e,d,a from test_replicated_table order by e nulls first, d desc, a limit 3;
+                                    QUERY PLAN
+-----------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   Merge Key: e, d, a
+   ->  Limit
+         ->  Index Only Scan Backward using rep_index_eda on test_replicated_table
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select e,d,a from test_replicated_table order by e nulls first, d desc, a limit 3;
+ e |       d       | a 
+---+---------------+---
+   |               |  
+ 0 | sample_text 4 | 4
+ 0 | sample_text 3 | 3
+(3 rows)
+
+-- Negative tests: Validate if a SeqScan is chosen for order by cols not matching any indices. Expected to choose SeqScan with Sort
+explain(costs off) select d,a from test_replicated_table order by d,a desc limit 3;
+                     QUERY PLAN
+-----------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   Merge Key: d, a
+   ->  Limit
+         ->  Sort
+               Sort Key: d, a DESC
+               ->  Seq Scan on test_replicated_table
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select d,a from test_replicated_table order by d,a desc limit 3;
+        d        |  a  
+-----------------+-----
+ sample_text 1   |   1
+ sample_text 10  |  10
+ sample_text 100 | 100
+(3 rows)
+
+-- Clean Up
+DROP TABLE test_replicated_table;
+-- Test Case: Test on AO table with mixed data type columns.
+-- ORCA_FEATURE_NOT_SUPPORTED: IndexScans not supported on AO tables
+CREATE TABLE test_ao_table(a int, b int, c float, d text, e numeric) WITH (appendonly=true) DISTRIBUTED BY (a);
+-- multi col index with mixed index keys properties
+CREATE INDEX ao_index_eda on test_ao_table using btree(e desc nulls last, d,a desc);
+INSERT INTO test_ao_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5 from generate_series(1,100) i;
+-- Expected to choose SeqScan with a Sort as it is an AO table
+explain(costs off) select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
+                              QUERY PLAN
+-----------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Index Only Scan using ao_index_eda on test_ao_table
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
+ e  |        d        |  a  
+----+-----------------+-----
+ 20 | sample_text 100 | 100
+ 19 | sample_text 95  |  95
+ 19 | sample_text 96  |  96
+(3 rows)
+
+-- Clean Up
+DROP TABLE test_ao_table;
+-- Test Case: Test on table with all other types of indexes apart from btree(bitmap, hash, brin, spgist, gist, gin)
+-- Purpose: Evaluate if Forward/Backward IndexScan works on query with order by and limit, with other type of indices
+-- Note: No other index type apart from btree support IndexScans
+CREATE TABLE test_multi_index_types_table(a int, b int, c float, d text, e tsquery, f tsvector);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- create a bitmap index
+create index bitmap_a on test_multi_index_types_table using bitmap(a);
+-- create a hash index
+create index hash_b on test_multi_index_types_table using hash(b);
+-- create a brin index
+create index brin_c on test_multi_index_types_table using brin(c);
+-- create a spgist index
+create index spgist_d on test_multi_index_types_table using spgist(d);
+-- create a gin index
+create index gist_e on test_multi_index_types_table using gist(e);
+-- create a gin index
+create index gin_f on test_multi_index_types_table using gin(f);
+-- All of the below queries are expected to use SeqScan with a Sort as only btree index supports IndexScan
+explain(costs off) select a from test_multi_index_types_table order by a limit 3;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a
+                     ->  Seq Scan on test_multi_index_types_table
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain(costs off) select b from test_multi_index_types_table order by b limit 3;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Sort
+                     Sort Key: b
+                     ->  Seq Scan on test_multi_index_types_table
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain(costs off) select c from test_multi_index_types_table order by c limit 3;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Sort
+                     Sort Key: c
+                     ->  Seq Scan on test_multi_index_types_table
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain(costs off) select d from test_multi_index_types_table order by d limit 3;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: d
+         ->  Limit
+               ->  Sort
+                     Sort Key: d
+                     ->  Seq Scan on test_multi_index_types_table
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain(costs off) select e from test_multi_index_types_table order by e limit 3;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e
+         ->  Limit
+               ->  Sort
+                     Sort Key: e
+                     ->  Seq Scan on test_multi_index_types_table
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain(costs off) select f from test_multi_index_types_table order by f limit 3;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f
+         ->  Limit
+               ->  Sort
+                     Sort Key: f
+                     ->  Seq Scan on test_multi_index_types_table
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Clean Up
+DROP TABLE test_multi_index_types_table;
+-- Purpose: Test Forward/Backward IndexScan over views
+create table test_on_views(a int, b int, c float);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO test_on_views SELECT i+3, i, i/4.2 from generate_series(1,100) i;
+-- create a index on column b
+create index view_index on test_on_views using btree(b);
+analyze test_on_views;
+-- create view
+create view test_view as select b from test_on_views;
+-- Expected to use IndexScan Forward
+explain(costs off) select * from test_view order by b limit 3;
+                    QUERY PLAN
+---------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_on_views.b
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_on_views.b
+                     ->  Seq Scan on test_on_views
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from test_view order by b limit 3;
+ b 
+---
+ 1
+ 2
+ 3
+(3 rows)
+
+-- Expected to use IndexScan Backwards
+explain(costs off) select * from test_view order by b desc limit 3;
+                     QUERY PLAN
+----------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_on_views.b
+         ->  Limit
+               ->  Sort
+                     Sort Key: test_on_views.b DESC
+                     ->  Seq Scan on test_on_views
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from test_view order by b desc limit 3;
+  b  
+-----
+ 100
+  99
+  98
+(3 rows)
+
+-- Clean Up
+DROP VIEW test_view;
+DROP TABLE test_on_views;
+-- Purpose: Test Forward/Backward IndexScan over partial indices
+-- ORCA_FEATURE_NOT_SUPPORTED: partial indexes are not supported
+create table test_on_partial_indices(a int, b int, c float);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- create a partial index on column b
+create index partial_index on test_on_partial_indices(b desc) where b<54;
+analyze test_on_partial_indices;
+-- Expected to use SeqScan with Sort
+explain(costs off) select b from test_on_partial_indices order by b desc limit 3;
+                         QUERY PLAN
+-------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Sort
+                     Sort Key: b DESC
+                     ->  Seq Scan on test_on_partial_indices
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Clean Up
+DROP TABLE test_on_partial_indices;
+-- Purpose: Test Forward/Backward IndexScan over primary key
+create table test_on_pk_column(a int primary key , b int, c float);
+INSERT INTO test_on_pk_column SELECT i+3, i, i/4.2 from generate_series(1,100) i;
+analyze test_on_pk_column;
+-- Expected to use Forward IndexScan
+explain(costs off) select a from test_on_pk_column order by a limit 3;
+                      QUERY PLAN
+-------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a
+                     ->  Seq Scan on test_on_pk_column
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select a from test_on_pk_column order by a limit 3;
+ a 
+---
+ 4
+ 5
+ 6
+(3 rows)
+
+-- Expected to use Backward IndexScan
+explain(costs off) select a from test_on_pk_column order by a desc limit 3;
+                      QUERY PLAN
+-------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Sort
+                     Sort Key: a DESC
+                     ->  Seq Scan on test_on_pk_column
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select a from test_on_pk_column order by a desc limit 3;
+  a  
+-----
+ 103
+ 102
+ 101
+(3 rows)
+
+-- Clean Up
+DROP TABLE test_on_pk_column;
+-- Purpose: Test Forward/Backward IndexScan over column with unique constraint
+create table test_on_unique_column(a int, b int unique, c float);
+INSERT INTO test_on_unique_column SELECT i+3, i, i/4.2 from generate_series(1,100) i;
+analyze test_on_unique_column;
+-- Expected to use Forward IndexScan
+explain(costs off) select a from test_on_unique_column order by b limit 3;
+                        QUERY PLAN
+-----------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Sort
+                     Sort Key: b
+                     ->  Seq Scan on test_on_unique_column
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select a from test_on_unique_column order by b limit 3;
+ a 
+---
+ 4
+ 5
+ 6
+(3 rows)
+
+-- Expected to use Backward IndexScan
+explain(costs off) select a from test_on_unique_column order by b desc limit 3;
+                        QUERY PLAN
+-----------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b
+         ->  Limit
+               ->  Sort
+                     Sort Key: b DESC
+                     ->  Seq Scan on test_on_unique_column
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select a from test_on_unique_column order by b desc limit 3;
+  a  
+-----
+ 103
+ 102
+ 101
+(3 rows)
+
+-- Clean Up
+DROP TABLE test_on_unique_column;
+-- Purpose: Test Forward/Backward IndexScan with order by on Index Expressions
+-- ORCA_FEATURE_NOT_SUPPORTED: Indexes on Expressions are not supported by ORCA
+create table test_on_index_expressions(a int, b int, c float);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX expr_index_a on test_on_index_expressions using btree(a);
+analyze test_on_index_expressions;
+-- Expected to use SeqScan with Sort
+explain(costs off) select a,b from test_on_index_expressions order by a*b desc limit 3;
+                          QUERY PLAN
+---------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a * b))
+         ->  Limit
+               ->  Sort
+                     Sort Key: ((a * b)) DESC
+                     ->  Seq Scan on test_on_index_expressions
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Expected to use SeqScan with Sort
+explain(costs off) select a from test_on_index_expressions order by a|2 limit 3;
+                          QUERY PLAN
+---------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a | 2))
+         ->  Limit
+               ->  Sort
+                     Sort Key: ((a | 2))
+                     ->  Seq Scan on test_on_index_expressions
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Expected to use SeqScan with Sort
+explain(costs off) select a from test_on_index_expressions order by a is not null desc limit 3;
+                          QUERY PLAN
+---------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a IS NOT NULL))
+         ->  Limit
+               ->  Sort
+                     Sort Key: ((a IS NOT NULL)) DESC
+                     ->  Seq Scan on test_on_index_expressions
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Expected to use SeqScan with Sort
+explain(costs off) select a from test_on_index_expressions order by a>3 limit 3;
+                          QUERY PLAN
+---------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a > 3))
+         ->  Limit
+               ->  Sort
+                     Sort Key: ((a > 3))
+                     ->  Seq Scan on test_on_index_expressions
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- define a simple multiplication function
+CREATE OR REPLACE FUNCTION multiply_by_two(integer)
+RETURNS INTEGER
+LANGUAGE 'plpgsql'
+AS $$
+BEGIN
+RETURN $1 * 2;
+END;
+$$;
+-- Order by using multiplication function. Expected to use SeqScan with Sort
+explain(costs off) select a from test_on_index_expressions order by multiply_by_two(a) limit 3;
+                          QUERY PLAN
+---------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: (multiply_by_two(a))
+         ->  Limit
+               ->  Sort
+                     Sort Key: (multiply_by_two(a))
+                     ->  Seq Scan on test_on_index_expressions
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Clean Up
+DROP TABLE test_on_index_expressions;
+-- Purpose: Test Forward/Backward IndexScan with order by on custom data type
+-- create a custom type
+CREATE TYPE person_type AS (
+    name VARCHAR,
+    age INTEGER);
+create table test_on_custom_data_type(a int, b float, c person_type);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create index index_on_custom_type on test_on_custom_data_type using btree(c);
+insert into test_on_custom_data_type select i, i/3, (concat('person', i), i)::person_type from generate_series(1,100)i;
+analyze test_on_custom_data_type;
+-- Expected to use Forward IndexScan
+explain(costs off) select c from test_on_custom_data_type order by c limit 3;
+                          QUERY PLAN
+--------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Sort
+                     Sort Key: c
+                     ->  Seq Scan on test_on_custom_data_type
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select c from test_on_custom_data_type order by c limit 3;
+        c        
+-----------------
+ (person1,1)
+ (person10,10)
+ (person100,100)
+(3 rows)
+
+-- Expected to use Backward IndexScan
+explain(costs off) select c from test_on_custom_data_type order by c desc limit 3;
+                          QUERY PLAN
+--------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c
+         ->  Limit
+               ->  Sort
+                     Sort Key: c DESC
+                     ->  Seq Scan on test_on_custom_data_type
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select c from test_on_custom_data_type order by c desc limit 3;
+       c       
+---------------
+ (person99,99)
+ (person98,98)
+ (person97,97)
+(3 rows)
+
+-- Clean Up
+DROP TABLE test_on_custom_data_type;
+-- Purpose: This section includes tests on general table where backward index scan could be used, but is not used currently since
+--          those cases are not supported as part of this initial addition of backward index support.
+CREATE TABLE test_yet_unsupported_backwrd_idxscan_cases (a int, b text, c float, d int, e int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- single col index with default order
+CREATE INDEX index_a on test_yet_unsupported_backwrd_idxscan_cases using btree(a);
+-- single col index with reverse order
+CREATE INDEX index_b on test_yet_unsupported_backwrd_idxscan_cases using btree(b desc);
+CREATE INDEX index_cd on test_yet_unsupported_backwrd_idxscan_cases using btree(c, d);
+-- Inserting data to demonstrate that Planner chooses IndexScans for these cases
+INSERT INTO test_yet_unsupported_backwrd_idxscan_cases select i, concat('sample_text', i), i/3.3, i,i-2 from generate_series(1,10000)i;
+ANALYZE test_yet_unsupported_backwrd_idxscan_cases;
+-- Cases with just order by without limit
+explain(costs off) select a from test_yet_unsupported_backwrd_idxscan_cases order by a desc;
+                                         QUERY PLAN
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: a
+   ->  Index Only Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+explain(costs off) select c,d from test_yet_unsupported_backwrd_idxscan_cases order by c desc, d desc;
+                                         QUERY PLAN
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: c, d
+   ->  Index Only Scan Backward using index_cd on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+-- Since col a is asc in index, max(a) could use a backward index scan
+explain(costs off) select max(a) from test_yet_unsupported_backwrd_idxscan_cases;
+                                                QUERY PLAN
+----------------------------------------------------------------------------------------------------------
+ Result
+   InitPlan 1 (returns $0)  (slice1)
+     ->  Limit
+           ->  Gather Motion 3:1  (slice2; segments: 3)
+                 Merge Key: test_yet_unsupported_backwrd_idxscan_cases.a
+                 ->  Index Only Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+                       Index Cond: (a IS NOT NULL)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Cases with a predicate and order by (with/without limit). Order by columns commutating index column
+explain(costs off) select * from test_yet_unsupported_backwrd_idxscan_cases where a>997 order by c desc, d desc;
+                                       QUERY PLAN
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: c, d
+   ->  Index Scan Backward using index_cd on test_yet_unsupported_backwrd_idxscan_cases
+         Filter: (a > 997)
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain(costs off) select * from test_yet_unsupported_backwrd_idxscan_cases where a>997 order by c desc, d desc limit 3;
+                                             QUERY PLAN
+----------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c, d
+         ->  Limit
+               ->  Index Scan Backward using index_cd on test_yet_unsupported_backwrd_idxscan_cases
+                     Filter: (a > 997)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+-- Cases with group by, order by (with/without limit). Order by cols commutating index column
+explain(costs off) select  a, sum(d) from test_yet_unsupported_backwrd_idxscan_cases group by a order by a desc;
+                                         QUERY PLAN
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: a
+   ->  GroupAggregate
+         Group Key: a
+         ->  Index Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+explain(costs off) select  a, sum(d) from test_yet_unsupported_backwrd_idxscan_cases group by a order by a desc limit 3;
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  GroupAggregate
+                     Group Key: a
+                     ->  Index Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Case with group by, order by and a having clause (with/without limit). Order by cols commutating index.
+explain(costs off) select  a, sum(d) from test_yet_unsupported_backwrd_idxscan_cases group by a having a>30 order by a desc;
+                                         QUERY PLAN
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: a
+   ->  GroupAggregate
+         Group Key: a
+         ->  Index Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+               Index Cond: (a > 30)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain(costs off) select  a, sum(d) from test_yet_unsupported_backwrd_idxscan_cases group by a having a>30 order by a desc;
+                                         QUERY PLAN
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: a
+   ->  GroupAggregate
+         Group Key: a
+         ->  Index Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+               Index Cond: (a > 30)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+-- Case with ordering via over() using window aggregates (with/without limit): rank(), row_number(), percent_rank() etc...
+explain(costs off) select c,d, rank() over (order by c desc, d desc) from test_yet_unsupported_backwrd_idxscan_cases;
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ WindowAgg
+   Order By: c, d
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c, d
+         ->  Index Only Scan Backward using index_cd on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+explain(costs off) select c,d, rank() over (order by c desc, d desc) from test_yet_unsupported_backwrd_idxscan_cases limit 3;
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Limit
+   ->  WindowAgg
+         Order By: c, d
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: c, d
+               ->  Index Only Scan Backward using index_cd on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+-- Case with distinct and order by (with/without limit)
+explain(costs off) select distinct(a) from test_yet_unsupported_backwrd_idxscan_cases order by a desc;
+                                            QUERY PLAN
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: a
+   ->  Unique
+         Group Key: a
+         ->  Index Only Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+explain(costs off) select distinct(a) from test_yet_unsupported_backwrd_idxscan_cases order by a desc limit 3;
+                                                  QUERY PLAN
+--------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: a
+         ->  Limit
+               ->  Unique
+                     Group Key: a
+                     ->  Index Only Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Order by within a CTE without limit
+explain(costs off) with sorted_by_cd as (select c,d from test_yet_unsupported_backwrd_idxscan_cases order by c desc, d desc) select c from sorted_by_cd;
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on sorted_by_cd
+         ->  Index Only Scan Backward using index_cd on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+-- Order by within a CTE, with limit outside CTE expression
+explain(costs off) with sorted_by_cd as (select c,d from test_yet_unsupported_backwrd_idxscan_cases order by c desc, d desc) select c from sorted_by_cd limit 3;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Limit
+               ->  Subquery Scan on sorted_by_cd
+                     ->  Index Only Scan Backward using index_cd on test_yet_unsupported_backwrd_idxscan_cases
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+-- Clean Up
+DROP TABLE test_yet_unsupported_backwrd_idxscan_cases;
+-- Test Case: NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't generate IndexScan alternatives
+--            for NL joins. This tests the case where IndexScan's order property could be used for joining two tables
+CREATE TABLE employee(id int, name text, dep_id int, salary int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE department(dep_id int, dep_name text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dep_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX index_salary on employee using btree(salary);
+ANALYZE employee;
+ANALYZE department;
+-- Forcing planner, ORCA to use a NL join
+set enable_hashjoin to off;
+set optimizer_enable_hashjoin to off;
+-- Planner uses NL Join with IndexScan Backwards and the sort property of index 'index_salary',
+-- but ORCA, since it doesn't generate IndexScan alternative uses NL join with a Sort operator.
+explain(costs off) select e.id, e.name, e.salary, d.dep_name from employee e join department d on e.id=d.dep_id order by e.salary desc;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: e.salary
+   ->  Nested Loop
+         Join Filter: (e.id = d.dep_id)
+         ->  Index Scan Backward using index_salary on employee e
+         ->  Seq Scan on department d
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain(costs off) select e.id, e.name, e.salary, d.dep_name from employee e join department d on e.id=d.dep_id order by e.salary desc limit 3;
+                                  QUERY PLAN
+------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e.salary
+         ->  Limit
+               ->  Nested Loop
+                     Join Filter: (e.id = d.dep_id)
+                     ->  Index Scan Backward using index_salary on employee e
+                     ->  Seq Scan on department d
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- Clean up
+reset enable_hashjoin;
+reset optimizer_enable_hashjoin;
+DROP TABLE employee;
+DROP TABLE department;
+-- Test Case: Union all of two tables with order by on their indexed column uses IndexScan's sort property with MergeAppend node
+--            in Planner. However in ORCA we don't generate IndexScan alternative for union all, also we don't support MergeAppend.
+--            But documenting this case for reference
+CREATE TABLE table1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE table2(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX tab1_idx on table1 using btree(b);
+CREATE INDEX tab2_idx on table2 using btree(b);
+-- inserting data and disabling seq_scan to avoid Planner generating a plan with Sort operator and Append node
+-- instead of IndexScan with MergeAppend
+set enable_seqscan to off;
+INSERT INTO table1 select i, i from generate_series(1,99)i;
+INSERT INTO table2 select i, i from generate_series(1,99)i;
+ANALYZE table1;
+ANALYZE table2;
+explain(costs off) select b from table1 union all select b from table2 order by b desc;
+                          QUERY PLAN
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: table1.b
+   ->  Merge Append
+         Sort Key: table1.b DESC
+         ->  Index Only Scan Backward using tab1_idx on table1
+         ->  Index Only Scan Backward using tab2_idx on table2
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+reset enable_seqscan;
+DROP TABLE table1;
+DROP TABLE table2;
+-- Purpose: This section includes tests on partition table where backward DynamicIndexScan could be used, but is not used currently since
+--          those cases are not supported as part of this initial addition of backward index support.
+CREATE TABLE test_partition_table(a int, b text, c float, d int, e int) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(10000) every(2000));
+-- single col index with opp nulls direction on partition column
+CREATE INDEX part_index_a on test_partition_table using btree(a);
+-- multi col index all with all index keys asc
+CREATE INDEX part_index_b on test_partition_table using btree(b desc);
+-- multi col index all with all index keys desc
+CREATE INDEX part_index_cd on test_partition_table using btree(c,d);
+-- Inserting data to demonstrate that Planner chooses IndexScans for these cases
+INSERT INTO test_partition_table select i, concat('sample_text', i), i/3.3, i,i-2 from generate_series(1,9999)i;
+ANALYZE test_partition_table;
+-- Cases with just order by without limit
+explain(costs off) select a from test_partition_table order by a desc;
+                                                  QUERY PLAN
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_5.a
+   ->  Append
+         ->  Index Only Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+         ->  Index Only Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+         ->  Index Only Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+         ->  Index Only Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+         ->  Index Only Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain(costs off) select c,d from test_partition_table order by c desc, d desc;
+                                         QUERY PLAN
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+   ->  Sort
+         Sort Key: test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+         ->  Append
+               ->  Seq Scan on test_partition_table_1_prt_1
+               ->  Seq Scan on test_partition_table_1_prt_2
+               ->  Seq Scan on test_partition_table_1_prt_3
+               ->  Seq Scan on test_partition_table_1_prt_4
+               ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+-- Since col a is asc in index, max(a) could use a backward index scan
+explain(costs off) select max(a) from test_partition_table;
+                                                         QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------
+ Result
+   InitPlan 1 (returns $0)  (slice1)
+     ->  Limit
+           ->  Gather Motion 3:1  (slice2; segments: 3)
+                 Merge Key: test_partition_table_1_prt_5.a
+                 ->  Append
+                       ->  Index Only Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+                             Index Cond: (a IS NOT NULL)
+                       ->  Index Only Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+                             Index Cond: (a IS NOT NULL)
+                       ->  Index Only Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+                             Index Cond: (a IS NOT NULL)
+                       ->  Index Only Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+                             Index Cond: (a IS NOT NULL)
+                       ->  Index Only Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+                             Index Cond: (a IS NOT NULL)
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+-- Cases with a predicate and order by (with/without limit). Order by columns commutating index column
+explain(costs off) select * from test_partition_table where a BETWEEN 40 and 4000 or c not between 4000 and 6000 order by c desc, d desc;
+                                                          QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+   ->  Sort
+         Sort Key: test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+         ->  Append
+               ->  Seq Scan on test_partition_table_1_prt_1
+                     Filter: (((a >= 40) AND (a <= 4000)) OR (c < '4000'::double precision) OR (c > '6000'::double precision))
+               ->  Seq Scan on test_partition_table_1_prt_2
+                     Filter: (((a >= 40) AND (a <= 4000)) OR (c < '4000'::double precision) OR (c > '6000'::double precision))
+               ->  Seq Scan on test_partition_table_1_prt_3
+                     Filter: (((a >= 40) AND (a <= 4000)) OR (c < '4000'::double precision) OR (c > '6000'::double precision))
+               ->  Seq Scan on test_partition_table_1_prt_4
+                     Filter: (((a >= 40) AND (a <= 4000)) OR (c < '4000'::double precision) OR (c > '6000'::double precision))
+               ->  Seq Scan on test_partition_table_1_prt_5
+                     Filter: (((a >= 40) AND (a <= 4000)) OR (c < '4000'::double precision) OR (c > '6000'::double precision))
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+explain(costs off) select * from test_partition_table where a>7 order by c desc, d desc limit 4;
+                                                       QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Limit
+               ->  Merge Append
+                     Sort Key: test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+                     ->  Index Scan Backward using test_partition_table_1_prt_1_c_d_idx on test_partition_table_1_prt_1
+                           Filter: (a > 7)
+                     ->  Index Scan Backward using test_partition_table_1_prt_2_c_d_idx on test_partition_table_1_prt_2
+                           Filter: (a > 7)
+                     ->  Index Scan Backward using test_partition_table_1_prt_3_c_d_idx on test_partition_table_1_prt_3
+                           Filter: (a > 7)
+                     ->  Index Scan Backward using test_partition_table_1_prt_4_c_d_idx on test_partition_table_1_prt_4
+                           Filter: (a > 7)
+                     ->  Index Scan Backward using test_partition_table_1_prt_5_c_d_idx on test_partition_table_1_prt_5
+                           Filter: (a > 7)
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+-- Cases with group by, order by (with/without limit). Order by cols commutating index column
+explain(costs off) select  a, sum(d) from test_partition_table group by a order by a desc;
+                                                   QUERY PLAN
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_5.a
+   ->  GroupAggregate
+         Group Key: test_partition_table_1_prt_5.a
+         ->  Append
+               ->  Index Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+               ->  Index Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+               ->  Index Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+               ->  Index Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+               ->  Index Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+explain(costs off) select  a, sum(d) from test_partition_table group by a order by a desc limit 3;
+                                                         QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_5.a
+         ->  Limit
+               ->  GroupAggregate
+                     Group Key: test_partition_table_1_prt_5.a
+                     ->  Append
+                           ->  Index Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+                           ->  Index Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+                           ->  Index Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+                           ->  Index Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+                           ->  Index Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+-- Case with group by, order by and a having clause (with/without limit). Order by cols commutating index.
+explain(costs off) select  a, sum(d) from test_partition_table group by a having a>30 order by a desc;
+                                                   QUERY PLAN
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_5.a
+   ->  GroupAggregate
+         Group Key: test_partition_table_1_prt_5.a
+         ->  Append
+               ->  Index Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+                     Index Cond: (a > 30)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+explain(costs off) select  a, sum(d) from test_partition_table group by a having a>30 order by a desc;
+                                                   QUERY PLAN
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_5.a
+   ->  GroupAggregate
+         Group Key: test_partition_table_1_prt_5.a
+         ->  Append
+               ->  Index Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+                     Index Cond: (a > 30)
+               ->  Index Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+                     Index Cond: (a > 30)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+-- Case with ordering via over() using window aggregates (with/without limit): rank(), row_number(), percent_rank() etc...
+explain(costs off) select c,d, rank() over (order by c desc, d desc) from test_partition_table;
+                                            QUERY PLAN
+--------------------------------------------------------------------------------------------------
+ WindowAgg
+   Order By: test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Sort
+               Sort Key: test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+               ->  Append
+                     ->  Seq Scan on test_partition_table_1_prt_1
+                     ->  Seq Scan on test_partition_table_1_prt_2
+                     ->  Seq Scan on test_partition_table_1_prt_3
+                     ->  Seq Scan on test_partition_table_1_prt_4
+                     ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+explain(costs off) select c,d, rank() over (order by c desc, d desc) from test_partition_table limit 3;
+                                                         QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  WindowAgg
+         Order By: test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+               ->  Merge Append
+                     Sort Key: test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_1_c_d_idx on test_partition_table_1_prt_1
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_2_c_d_idx on test_partition_table_1_prt_2
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_3_c_d_idx on test_partition_table_1_prt_3
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_4_c_d_idx on test_partition_table_1_prt_4
+                     ->  Index Only Scan Backward using test_partition_table_1_prt_5_c_d_idx on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+-- Case with distinct and order by (with/without limit)
+explain(costs off) select distinct(a) from test_partition_table order by a desc;
+                                                     QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_5.a
+   ->  Unique
+         Group Key: test_partition_table_1_prt_5.a
+         ->  Append
+               ->  Index Only Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+               ->  Index Only Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+               ->  Index Only Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+               ->  Index Only Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+               ->  Index Only Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+explain(costs off) select distinct(a) from test_partition_table order by a desc limit 3;
+                                                           QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_partition_table_1_prt_5.a
+         ->  Limit
+               ->  Unique
+                     Group Key: test_partition_table_1_prt_5.a
+                     ->  Append
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_5_a_idx on test_partition_table_1_prt_5
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_4_a_idx on test_partition_table_1_prt_4
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_3_a_idx on test_partition_table_1_prt_3
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_2_a_idx on test_partition_table_1_prt_2
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_1_a_idx on test_partition_table_1_prt_1
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+-- Order by within a CTE without limit
+explain(costs off) with sorted_by_cd as (select c,d from test_partition_table order by c desc, d desc) select c from sorted_by_cd;
+                                            QUERY PLAN
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on sorted_by_cd
+         ->  Sort
+               Sort Key: test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+               ->  Append
+                     ->  Seq Scan on test_partition_table_1_prt_1
+                     ->  Seq Scan on test_partition_table_1_prt_2
+                     ->  Seq Scan on test_partition_table_1_prt_3
+                     ->  Seq Scan on test_partition_table_1_prt_4
+                     ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+-- Order by within a CTE, with limit outside CTE expression
+explain(costs off) with sorted_by_cd as (select c,d from test_partition_table order by c desc, d desc) select c from sorted_by_cd limit 3;
+                                                            QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Limit
+               ->  Subquery Scan on sorted_by_cd
+                     ->  Merge Append
+                           Sort Key: test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_1_c_d_idx on test_partition_table_1_prt_1
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_2_c_d_idx on test_partition_table_1_prt_2
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_3_c_d_idx on test_partition_table_1_prt_3
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_4_c_d_idx on test_partition_table_1_prt_4
+                           ->  Index Only Scan Backward using test_partition_table_1_prt_5_c_d_idx on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+-- Clean Up
+DROP TABLE test_partition_table;
+-- Test Case: NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't generate IndexScan alternatives for NL joins.
+--            This tests the case where IndexScan's order property could be used for joining two partition tables
+CREATE TABLE part_employee(id int, name text, dep_id int, salary int) PARTITION BY range(id) (start (0) end(10000) every(2000));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE part_department(dep_id int, dep_name text) PARTITION BY range(dep_id) (start (0) end(10000) every(2000));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dep_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX part_index_salary on part_employee using btree(salary);
+ANALYZE part_employee;
+ANALYZE part_department;
+-- Forcing planner, ORCA to use a NL join
+set enable_hashjoin to off;
+set optimizer_enable_hashjoin to off;
+-- Planner uses NL Join with IndexScan Backwards and the sort property of index 'index_salary',
+-- but ORCA since doesn't generate IndexScan alternative uses NL join with a Sort operator.
+explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.salary desc;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: e.salary
+   ->  Nested Loop
+         Join Filter: (e.id = d.dep_id)
+         ->  Merge Append
+               Sort Key: e.salary DESC
+               ->  Index Scan Backward using part_employee_1_prt_1_salary_idx on part_employee_1_prt_1 e
+               ->  Index Scan Backward using part_employee_1_prt_2_salary_idx on part_employee_1_prt_2 e_1
+               ->  Index Scan Backward using part_employee_1_prt_3_salary_idx on part_employee_1_prt_3 e_2
+               ->  Index Scan Backward using part_employee_1_prt_4_salary_idx on part_employee_1_prt_4 e_3
+               ->  Index Scan Backward using part_employee_1_prt_5_salary_idx on part_employee_1_prt_5 e_4
+         ->  Materialize
+               ->  Partition Selector (selector id: $0)
+                     ->  Append
+                           ->  Seq Scan on part_department_1_prt_1 d
+                           ->  Seq Scan on part_department_1_prt_2 d_1
+                           ->  Seq Scan on part_department_1_prt_3 d_2
+                           ->  Seq Scan on part_department_1_prt_4 d_3
+                           ->  Seq Scan on part_department_1_prt_5 d_4
+ Optimizer: Postgres query optimizer
+(20 rows)
+
+explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.salary desc limit 3;
+                                                      QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e.salary
+         ->  Limit
+               ->  Nested Loop
+                     Join Filter: (e.id = d.dep_id)
+                     ->  Merge Append
+                           Sort Key: e.salary DESC
+                           ->  Index Scan Backward using part_employee_1_prt_1_salary_idx on part_employee_1_prt_1 e
+                           ->  Index Scan Backward using part_employee_1_prt_2_salary_idx on part_employee_1_prt_2 e_1
+                           ->  Index Scan Backward using part_employee_1_prt_3_salary_idx on part_employee_1_prt_3 e_2
+                           ->  Index Scan Backward using part_employee_1_prt_4_salary_idx on part_employee_1_prt_4 e_3
+                           ->  Index Scan Backward using part_employee_1_prt_5_salary_idx on part_employee_1_prt_5 e_4
+                     ->  Materialize
+                           ->  Partition Selector (selector id: $0)
+                                 ->  Append
+                                       ->  Seq Scan on part_department_1_prt_1 d
+                                       ->  Seq Scan on part_department_1_prt_2 d_1
+                                       ->  Seq Scan on part_department_1_prt_3 d_2
+                                       ->  Seq Scan on part_department_1_prt_4 d_3
+                                       ->  Seq Scan on part_department_1_prt_5 d_4
+ Optimizer: Postgres query optimizer
+(22 rows)
+
+-- Clean up
+reset enable_hashjoin;
+reset optimizer_enable_hashjoin;
+DROP TABLE part_employee;
+DROP TABLE part_department;
+-- Test Case: Union all of two partition tables with order by on their indexed column uses IndexScan's sort property with MergeAppend node
+--            in Planner. However in ORCA we don't generate DynamicIndexScan alternative for union all, also we don't support MergeAppend.
+--            But documenting this case for reference
+CREATE TABLE part_table1(a int, b int) PARTITION BY range(a) (start (0) end(100) every(20));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE part_table2(a int, b int) PARTITION BY range(a) (start (0) end(100) every(20));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX part_tab1_idx on part_table1 using btree(b);
+CREATE INDEX part_tab2_idx on part_table2 using btree(b);
+-- inserting data and disabling seq_scan to avoid Planner generating a plan with Sort operator and Append node
+-- instead of IndexScan with MergeAppend
+set enable_seqscan to off;
+INSERT INTO part_table1 select i, i from generate_series(1,99)i;
+INSERT INTO part_table2 select i, i from generate_series(1,99)i;
+ANALYZE part_table1;
+ANALYZE part_table2;
+explain(costs off) select b from part_table1 union all select b from part_table2 order by b desc;
+                                         QUERY PLAN
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: part_table1_1_prt_1.b
+   ->  Merge Append
+         Sort Key: part_table1_1_prt_1.b DESC
+         ->  Index Only Scan Backward using part_table1_1_prt_1_b_idx on part_table1_1_prt_1
+         ->  Index Only Scan Backward using part_table1_1_prt_2_b_idx on part_table1_1_prt_2
+         ->  Index Only Scan Backward using part_table1_1_prt_3_b_idx on part_table1_1_prt_3
+         ->  Index Only Scan Backward using part_table1_1_prt_4_b_idx on part_table1_1_prt_4
+         ->  Index Only Scan Backward using part_table1_1_prt_5_b_idx on part_table1_1_prt_5
+         ->  Index Only Scan Backward using part_table2_1_prt_1_b_idx on part_table2_1_prt_1
+         ->  Index Only Scan Backward using part_table2_1_prt_2_b_idx on part_table2_1_prt_2
+         ->  Index Only Scan Backward using part_table2_1_prt_3_b_idx on part_table2_1_prt_3
+         ->  Index Only Scan Backward using part_table2_1_prt_4_b_idx on part_table2_1_prt_4
+         ->  Index Only Scan Backward using part_table2_1_prt_5_b_idx on part_table2_1_prt_5
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+-- Clean Up
+reset enable_seqscan;
+DROP TABLE part_table1;
+DROP TABLE part_table2;
