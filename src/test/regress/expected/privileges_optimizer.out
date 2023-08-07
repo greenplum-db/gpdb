@@ -5,9 +5,6 @@
 -- m/DETAIL:  Failing row contains \(.*\) = \(.*\)/
 -- s/DETAIL:  Failing row contains \(.*\) = \(.*\)/DETAIL:  Failing row contains (#####)/
 -- end_matchsubs
--- We use "discard plans" to reset the plan cache, to re-plan
--- prepared statements and log ORCA fallbacks. This should help
--- prevent flakes when we create multiple views.
 set optimizer_trace_fallback = on;
 set enable_nestloop=on;
 set optimizer_enable_nljoin = on;
@@ -267,12 +264,10 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
 
 -- This should also be a nestloop, but the security barrier forces the inner
 -- scan to be materialized
-discard plans;
+-- set optimizer_trace_fallback for below queries, as the "Query Parameter not supported"
+-- fallback message may appear multiple times and is not deterministic
+set optimizer_trace_fallback=off;
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: views with security_barrier ON
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -316,12 +311,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y WHERE x.a = y.b;
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
-discard plans;
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: views with security_barrier ON
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -356,13 +346,8 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y
 (11 rows)
 
 -- But a security barrier view isolates the leaky operator.
-discard plans;
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y
   WHERE x.a = y.b and abs(y.a) <<< 5;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: views with security_barrier ON
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -380,6 +365,7 @@ DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
  Optimizer: Postgres query optimizer
 (13 rows)
 
+set optimizer_trace_fallback=on;
 -- Now regress_priv_user1 grants sufficient access to regress_priv_user2.
 SET SESSION AUTHORIZATION regress_priv_user1;
 GRANT SELECT (a, b) ON atest12 TO PUBLIC;
