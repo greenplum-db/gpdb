@@ -1,5 +1,5 @@
 -- start_ignore
-\! gpconfig -c shared_preload_libraries -v "$(echo $(gpconfig -s shared_preload_libraries | grep value: | head -n 1 | awk -F ': ' '{print $2}'),auto_explain | sed 's/^,//g')"
+\! gpconfig -c shared_preload_libraries -v "$(psql -At -c "SELECT array_to_string(array_append(string_to_array(current_setting('shared_preload_libraries'), ','), 'auto_explain'), ',')" postgres)"
 \! gpconfig -c auto_explain.log_min_duration -v 0 --skipvalidation;
 \! gpconfig -c auto_explain.log_analyze -v true --skipvalidation;
 \! gpstop -raiq;
@@ -27,6 +27,6 @@ DROP TABLE t2;
 -- start_ignore
 \! gpconfig -r auto_explain.log_min_duration;
 \! gpconfig -r auto_explain.log_analyze;
-\! gpconfig -c shared_preload_libraries -v "$(gpconfig -s shared_preload_libraries | grep value: | head -n 1 | awk -F ': ' '{print $2}' | awk -F ',' -v OFS=, 'NF-=1')"
+\! gpconfig -c shared_preload_libraries -v "$(psql -At -c "SELECT array_to_string(array_remove(string_to_array(current_setting('shared_preload_libraries'), ','), 'auto_explain'), ',')" postgres)"
 \! gpstop -raiq;
 -- end_ignore

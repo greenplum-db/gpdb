@@ -4,6 +4,6 @@
 -- 'pgcrypto.fips' immediately after creating the extension on master.
 
 -- start_ignore
-\! gpconfig -c shared_preload_libraries -v "$(echo $(gpconfig -s shared_preload_libraries | grep value: | head -n 1 | awk -F ': ' '{print $2}'),pgcrypto.so | sed 's/^,//g')"
+\! gpconfig -c shared_preload_libraries -v "$(psql -At -c "SELECT array_to_string(array_append(string_to_array(current_setting('shared_preload_libraries'), ','), 'pgcrypto.so'), ',')" postgres)"
 \! gpstop -air
 -- end_ignore
