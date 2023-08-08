@@ -252,10 +252,10 @@ CLogicalDynamicIndexGet::OsPrint(IOstream &os) const
 	os << "Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "] Scan Id: " << m_scan_id;
-	os << ", Index ScanDirection: (";
-	(m_scan_direction == EForwardScan) ? os << "Forward" : os << "Backward";
-	os << ")";
-
+	if (m_scan_direction == EBackwardScan)
+	{
+		os << ", Backward Scan";
+	}
 	return os;
 }
 

@@ -4445,6 +4445,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxOnlyScan(
 	CDXLNode *index_cond_list_dxlnode = (*dyn_idx_only_scan_dxlnode)
 		[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition];
 	// Translate Index Conditions if Index isn't used for order by.
+	// If an index is used just as part of ORDER BY clause and query doesn't
+	// have any predicates, skip translating conditions as predicate doesn't exist.
 	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
 						   output_context, index_cond_list_dxlnode))
 	{
@@ -4533,6 +4535,9 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 
 	CDXLNode *index_cond_list_dxlnode = (*dyn_idx_only_scan_dxlnode)
 		[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition];
+	// Translate Index Conditions if Index isn't used for order by.
+	// If an index is used just as part of ORDER BY clause and query doesn't
+	// have any predicates, skip translating conditions as predicate doesn't exist.
 	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
 						   output_context, index_cond_list_dxlnode))
 	{

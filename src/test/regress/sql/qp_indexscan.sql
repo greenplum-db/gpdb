@@ -250,11 +250,19 @@ explain (costs off) select b from test_index_with_sort_directions_on_orderby_lim
 select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
 explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
 select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b, c, d limit 3;
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b, c, d limit 3;
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
 -- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Backward
 explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
 select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
 explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
 select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc, c desc, d desc limit 3;
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc, c desc, d desc limit 3;
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d limit 3;
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d limit 3;
 
 -- Clean Up
 DROP TABLE test_index_with_sort_directions_on_orderby_limit;
@@ -717,6 +725,16 @@ explain(costs off) with sorted_by_cd as (select c,d from test_partition_table or
 
 -- Order by within a CTE, with limit outside CTE expression
 explain(costs off) with sorted_by_cd as (select c,d from test_partition_table order by c desc, d desc) select c from sorted_by_cd limit 3;
+
+-- Case where DynamicIndexOnlyScan Backwards could be picked, but ORCA fails to produce DynamicIndexOnlyScan alternative.
+-- This is because, in FCoverIndex() function while determining output columns for the query we also consider partition
+-- column as part of the output cols(though query doesn't project it) since partition colum is always marked as Used.
+-- Due to this, for every index that doesn't include partition column as its key, index cols doesn't match
+-- the output cols and hence alternative isn't added.
+vacuum test_partition_table;
+
+explain(costs off) select b,c,d from test_partition_table order by b desc, c desc, d desc;
+
 -- Clean Up
 DROP TABLE test_partition_table;
 

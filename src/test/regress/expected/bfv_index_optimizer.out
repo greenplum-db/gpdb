@@ -963,7 +963,7 @@ SELECT * FROM hash_prt_tbl WHERE b=3;
                       QUERY PLAN                       
 -------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Index Scan on hash_idx3 on hash_prt_tbl
+   ->  Dynamic Index Scan using hash_idx3 on hash_prt_tbl
          Index Cond: (b = 3)
          Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -974,7 +974,7 @@ SELECT * FROM hash_prt_tbl WHERE b=3 and a=3;
                       QUERY PLAN                       
 -------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Dynamic Index Scan on hash_idx3 on hash_prt_tbl
+   ->  Dynamic Index Scan using hash_idx3 on hash_prt_tbl
          Index Cond: (b = 3)
          Filter: ((b = 3) AND (a = 3))
          Number of partitions to scan: 1 (out of 2)
@@ -1139,7 +1139,7 @@ ORDER BY key1;
    Merge Key: key1
    ->  Sort
          Sort Key: key1
-         ->  Dynamic Index Scan on multikey_idx on pt_with_multikey_index
+         ->  Dynamic Index Scan using multikey_idx on pt_with_multikey_index
                Index Cond: (key1 = ANY ('{KEY55,KEY65,KEY5}'::bpchar[]))
                Number of partitions to scan: 3 (out of 3)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -1171,7 +1171,7 @@ ORDER BY key2;
    Merge Key: key2
    ->  Sort
          Sort Key: key2
-         ->  Dynamic Index Scan on multikey_idx on pt_with_multikey_index
+         ->  Dynamic Index Scan using multikey_idx on pt_with_multikey_index
                Index Cond: (key1 = 'KEY55'::bpchar)
                Filter: ((key1 = 'KEY55'::bpchar) AND (key2 = ANY ('{R,G}'::bpchar[])))
                Number of partitions to scan: 2 (out of 3)
@@ -1197,7 +1197,7 @@ ORDER BY key1;
    Merge Key: key1
    ->  Sort
          Sort Key: key1
-         ->  Dynamic Index Scan on multikey_idx on pt_with_multikey_index
+         ->  Dynamic Index Scan using multikey_idx on pt_with_multikey_index
                Index Cond: ((key1 = ANY ('{KEY55,KEY65}'::bpchar[])) AND (key2 = 'R'::bpchar))
                Number of partitions to scan: 1 (out of 3)
  Optimizer: Pivotal Optimizer (GPORCA)

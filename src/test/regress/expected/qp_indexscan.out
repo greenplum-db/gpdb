@@ -1542,6 +1542,44 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d
  col_e100 | 101 | 100
 (3 rows)
 
+explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b, c, d limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b, c, d limit 3;
+    b     |   c    |  d  
+----------+--------+-----
+ col_b1   | 0.3125 |   2
+ col_b10  |  3.125 |  11
+ col_b100 |  31.25 | 101
+(3 rows)
+
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+                                                QUERY PLAN
+-----------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d, e
+         ->  Limit
+               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+   f   |   d   
+-------+-------
+       |      
+ 10003 | 10001
+ 10002 | 10000
+(3 rows)
+
 -- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Backward
 explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
                                                      QUERY PLAN
@@ -1579,6 +1617,44 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e de
            |       |     
  col_e9999 | 10000 | 9999
  col_e9998 |  9999 | 9998
+(3 rows)
+
+explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc, c desc, d desc limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc, c desc, d desc limit 3;
+     b     |     c     
+-----------+-----------
+           |          
+ col_b9999 | 3124.6875
+ col_b9998 |  3124.375
+(3 rows)
+
+explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d limit 3;
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: f, d
+         ->  Limit
+               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d limit 3;
+ f | d 
+---+---
+ 4 | 2
+ 5 | 3
+ 6 | 4
 (3 rows)
 
 -- Clean Up
@@ -3817,6 +3893,28 @@ explain(costs off) with sorted_by_cd as (select c,d from test_partition_table or
                            ->  Index Only Scan Backward using test_partition_table_1_prt_5_c_d_idx on test_partition_table_1_prt_5
  Optimizer: Postgres query optimizer
 (12 rows)
+
+-- Case where DynamicIndexOnlyScan Backwards could be picked, but ORCA fails to produce DynamicIndexOnlyScan alternative.
+-- This is because, in FCoverIndex() function while determining output columns for the query we also consider partition
+-- column as part of the output cols(though query doesn't project it) since partition colum is always marked as Used.
+-- Due to this, for every index that doesn't include partition column as its key, index cols doesn't match
+-- the output cols and hence alternative isn't added.
+vacuum test_partition_table;
+explain(costs off) select b,c,d from test_partition_table order by b desc, c desc, d desc;
+                                                           QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: test_partition_table_1_prt_1.b, test_partition_table_1_prt_1.c, test_partition_table_1_prt_1.d
+   ->  Sort
+         Sort Key: test_partition_table_1_prt_1.b DESC, test_partition_table_1_prt_1.c DESC, test_partition_table_1_prt_1.d DESC
+         ->  Append
+               ->  Seq Scan on test_partition_table_1_prt_1
+               ->  Seq Scan on test_partition_table_1_prt_2
+               ->  Seq Scan on test_partition_table_1_prt_3
+               ->  Seq Scan on test_partition_table_1_prt_4
+               ->  Seq Scan on test_partition_table_1_prt_5
+ Optimizer: Postgres query optimizer
+(11 rows)
 
 -- Clean Up
 DROP TABLE test_partition_table;

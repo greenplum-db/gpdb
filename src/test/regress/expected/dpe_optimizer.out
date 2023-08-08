@@ -94,7 +94,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+         ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                Index Cond: (ptid = t.tid)
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -132,7 +132,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+         ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                Index Cond: (ptid = (t.tid + 1))
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -171,7 +171,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
                      Filter: (t1 = ('hello'::text || (tid)::text))
-         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+         ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                Index Cond: (ptid = t.tid)
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -209,7 +209,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=2)
+         ->  Dynamic Index Scan using pt1_idx on pt (actual rows=1 loops=2)
                Index Cond: (pt1 = t.t1)
                Filter: ((pt1 = t.t1) AND (ptid = t.tid))
                Number of partitions to scan: 6 (out of 6)
@@ -276,7 +276,7 @@ explain (costs off, timing off, summary off, analyze) select ptid from pt where 
    ->  Hash Semi Join (actual rows=1 loops=1)
          Hash Cond: (pt.ptid = t.tid)
          Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 524288 buckets.
-         ->  Dynamic Index Only Scan on ptid_pt1_idx on pt (actual rows=1 loops=1)
+         ->  Dynamic Index Only Scan using ptid_pt1_idx on pt (actual rows=1 loops=1)
                Index Cond: (pt1 = 'hello1'::text)
                Heap Fetches: 0
                Number of partitions to scan: 6 (out of 6)
@@ -355,7 +355,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from t, pt
                      Join Filter: true
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
-                     ->  Dynamic Index Only Scan on ptid_idx on pt (actual rows=4 loops=2)
+                     ->  Dynamic Index Only Scan using ptid_idx on pt (actual rows=4 loops=2)
                            Index Cond: (ptid = t.tid)
                            Heap Fetches: 0
                            Number of partitions to scan: 6 (out of 6)
@@ -387,7 +387,7 @@ explain (costs off, timing off, summary off, analyze) select *, rank() over (ord
                      Join Filter: true
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
-                     ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                     ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                            Index Cond: (ptid = t.tid)
                            Number of partitions to scan: 6 (out of 6)
                            Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -431,7 +431,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                      ->  Seq Scan on t (actual rows=2 loops=1)
-               ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+               ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                      Index Cond: (ptid = t.tid)
                      Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -439,7 +439,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
                      ->  Seq Scan on t t_1 (actual rows=2 loops=1)
-               ->  Dynamic Index Scan on ptid_idx on pt pt_1 (actual rows=4 loops=2)
+               ->  Dynamic Index Scan using ptid_idx on pt pt_1 (actual rows=4 loops=2)
                      Index Cond: (ptid = (t_1.tid + 2))
                      Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -507,7 +507,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from
                            Join Filter: true
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                                  ->  Seq Scan on t (actual rows=2 loops=1)
-                           ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                           ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                                  Index Cond: (ptid = t.tid)
                                  Number of partitions to scan: 6 (out of 6)
                                  Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -515,7 +515,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from
                            Join Filter: true
                            ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
                                  ->  Seq Scan on t t_1 (actual rows=2 loops=1)
-                           ->  Dynamic Index Scan on ptid_idx on pt pt_1 (actual rows=4 loops=2)
+                           ->  Dynamic Index Scan using ptid_idx on pt pt_1 (actual rows=4 loops=2)
                                  Index Cond: (ptid = (t_1.tid + 2))
                                  Number of partitions to scan: 6 (out of 6)
                                  Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -546,7 +546,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+         ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                Index Cond: (ptid = t.tid)
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -598,7 +598,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
    ->  Hash (actual rows=1 loops=1)
          Buckets: 262144  Batches: 1  Memory Usage: 2049kB
          ->  Gather Motion 3:1  (slice2; segments: 3) (actual rows=1 loops=1)
-               ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=1)
+               ->  Dynamic Index Scan using pt1_idx on pt (actual rows=1 loops=1)
                      Index Cond: (pt1 = 'hello0'::text)
                      Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
@@ -626,7 +626,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+         ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                Index Cond: (ptid = t.tid)
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -671,7 +671,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=2)
+         ->  Dynamic Index Scan using pt1_idx on pt (actual rows=1 loops=2)
                Index Cond: (pt1 = t.t1)
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -693,7 +693,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=16 loops=2)
+         ->  Dynamic Index Scan using ptid_idx on pt (actual rows=16 loops=2)
                Index Cond: (ptid > t.tid)
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -805,7 +805,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, t1, pt wh
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                      ->  Seq Scan on t1 (actual rows=1 loops=1)
-               ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+               ->  Dynamic Index Scan using ptid_idx on pt (actual rows=4 loops=2)
                      Index Cond: (ptid = t1.tid)
                      Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
@@ -883,7 +883,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, t1, pt wh
                            Join Filter: true
                            ->  Broadcast Motion 3:3  (slice4; segments: 3) (actual rows=12 loops=1)
                                  ->  Seq Scan on t1 (actual rows=6 loops=1)
-                           ->  Dynamic Index Scan on ptid_idx on pt (actual rows=1 loops=12)
+                           ->  Dynamic Index Scan using ptid_idx on pt (actual rows=1 loops=12)
                                  Index Cond: (ptid = t1.tid)
                                  Number of partitions to scan: 6 (out of 6)
                                  Partitions scanned:  Avg 6.0 x 3 workers of 12 scans.  Max 6 parts (seg0).
@@ -921,12 +921,12 @@ explain (costs off, timing off, summary off, analyze) select * from t1 inner joi
          ->  Nested Loop (actual rows=1 loops=1)
                Join Filter: true
                ->  Seq Scan on t1 (actual rows=1 loops=1)
-               ->  Dynamic Index Scan on ptid_idx on pt (actual rows=1 loops=1)
+               ->  Dynamic Index Scan using ptid_idx on pt (actual rows=1 loops=1)
                      Index Cond: (ptid = t1.tid)
                      Filter: ((ptid = t1.tid) AND (t1.dist = dist))
                      Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 2 workers.  Max 6 parts (seg0).
-         ->  Dynamic Index Scan on ptid_idx on pt pt_1 (actual rows=1 loops=1)
+         ->  Dynamic Index Scan using ptid_idx on pt pt_1 (actual rows=1 loops=1)
                Index Cond: ((ptid <= pt.ptid) AND (ptid = pt.ptid))
                Filter: ((ptid <= pt.ptid) AND (ptid = pt.ptid) AND (dist = pt.dist))
                Number of partitions to scan: 6 (out of 6)
@@ -958,7 +958,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt, pt1 wher
                      Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-                                 ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=1)
+                                 ->  Dynamic Index Scan using pt1_idx on pt (actual rows=1 loops=1)
                                        Index Cond: (pt1 = 'hello0'::text)
                                        Number of partitions to scan: 6 (out of 6)
                                        Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
@@ -995,7 +995,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from pt, p
                            Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                            ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-                                       ->  Dynamic Index Only Scan on ptid_pt1_idx on pt (actual rows=1 loops=1)
+                                       ->  Dynamic Index Only Scan using ptid_pt1_idx on pt (actual rows=1 loops=1)
                                              Index Cond: (pt1 = 'hello0'::text)
                                              Heap Fetches: 0
                                              Number of partitions to scan: 6 (out of 6)

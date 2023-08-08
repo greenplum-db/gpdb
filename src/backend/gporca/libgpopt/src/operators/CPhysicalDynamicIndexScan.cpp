@@ -151,9 +151,10 @@ CPhysicalDynamicIndexScan::OsPrint(IOstream &os) const
 	os << ", Columns: [";
 	CUtils::OsPrintDrgPcr(os, PdrgpcrOutput());
 	os << "] Scan Id: " << ScanId();
-	os << ", Index ScanDirection: (";
-	(m_scan_direction == EForwardScan) ? os << "Forward" : os << "Backward";
-	os << ")";
+	if (m_scan_direction == EBackwardScan)
+	{
+		os << ", Backward Scan";
+	}
 
 
 	return os;

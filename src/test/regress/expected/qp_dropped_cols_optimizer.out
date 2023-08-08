@@ -14706,7 +14706,7 @@ EXPLAIN SELECT * FROM table_with_leaf_partition_containing_dropped_column WHERE 
                                                                                    QUERY PLAN                                                                                    
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Dynamic Index Scan on table_with_leaf_partition_containing_dropped_column_index on table_with_leaf_partition_containing_dropped_column  (cost=0.00..6.00 rows=1 width=12)
+   ->  Dynamic Index Scan using table_with_leaf_partition_containing_dropped_column_index on table_with_leaf_partition_containing_dropped_column  (cost=0.00..6.00 rows=1 width=12)
          Index Cond: (a > 42)
          Filter: ((a > 42) AND (z < 42))
          Number of partitions to scan: 2 
@@ -14771,7 +14771,7 @@ EXPLAIN SELECT * FROM table_with_leaf_containing_dropped_column_between_index_co
                                                                                             QUERY PLAN                                                                                            
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Dynamic Index Scan on table_with_leaf_partition_dropped_col_between_index_cols_index on table_with_leaf_containing_dropped_column_between_index_columns  (cost=0.00..6.00 rows=1 width=12)
+   ->  Dynamic Index Scan using table_with_leaf_partition_dropped_col_between_index_cols_index on table_with_leaf_containing_dropped_column_between_index_columns  (cost=0.00..6.00 rows=1 width=12)
          Index Cond: (a > 42)
          Filter: ((a > 42) AND (z < 42))
          Number of partitions to scan: 2 
@@ -14836,7 +14836,7 @@ EXPLAIN SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and 
                                                                           QUERY PLAN                                                                           
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Dynamic Index Scan on table_with_root_containing_dropped_columns_index on table_with_root_containing_dropped_columns  (cost=0.00..6.00 rows=1 width=12)
+   ->  Dynamic Index Scan using table_with_root_containing_dropped_columns_index on table_with_root_containing_dropped_columns  (cost=0.00..6.00 rows=1 width=12)
          Index Cond: (a > 42)
          Filter: ((a > 42) AND (z < 42))
          Number of partitions to scan: 2 
@@ -14902,7 +14902,7 @@ EXPLAIN SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z
                                                                          QUERY PLAN                                                                          
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Dynamic Index Scan on table_with_both_containing_dropped_column_index on table_with_both_containing_dropped_column  (cost=0.00..6.00 rows=1 width=12)
+   ->  Dynamic Index Scan using table_with_both_containing_dropped_column_index on table_with_both_containing_dropped_column  (cost=0.00..6.00 rows=1 width=12)
          Index Cond: (a > 42)
          Filter: ((a > 42) AND (z < 42))
          Number of partitions to scan: 2 

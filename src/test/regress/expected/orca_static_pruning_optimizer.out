@@ -255,7 +255,7 @@ EXPLAIN (COSTS OFF, VERBOSE) SELECT * FROM foo JOIN bar on foo.a = bar.a AND foo
          Join Filter: true
          ->  Seq Scan on orca_static_pruning.bar
                Output: bar.a
-         ->  Dynamic Index Scan on foo_idx on orca_static_pruning.foo
+         ->  Dynamic Index Scan using foo_idx on orca_static_pruning.foo
                Output: foo.a, foo.b
                Index Cond: (foo.a = bar.a)
                Filter: ((foo.a = bar.a) AND (foo.b = 11))

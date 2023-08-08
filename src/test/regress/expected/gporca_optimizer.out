@@ -13482,7 +13482,7 @@ explain (costs off) select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on x
-               ->  Dynamic Index Scan on y_idx on y
+               ->  Dynamic Index Scan using y_idx on y
                      Index Cond: (j < x.i)
                      Filter: ((j < x.i) AND (x.j <= i))
                      Number of partitions to scan: 5 (out of 5)

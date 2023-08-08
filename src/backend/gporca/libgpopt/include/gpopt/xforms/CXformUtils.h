@@ -186,7 +186,7 @@ private:
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy = false);
+		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
@@ -446,9 +446,8 @@ public:
 						 CExpressionArray *pdrgpexprConds,
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-						 BOOL indexForOrderBy = false,
-						 EIndexScanDirection indexScanDirection =
-							 EForwardScan /*Default direction if unspecified*/)
+						 BOOL indexForOrderBy,
+						 EIndexScanDirection indexScanDirection)
 	{
 		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
 										pdrgpexprConds, pcrsScalarExpr,

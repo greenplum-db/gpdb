@@ -755,7 +755,7 @@ EXPLAIN SELECT * FROM geometricTypesPartition
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=68)
-   ->  Dynamic Index Scan on gt_index_c_part on geometrictypespartition  (cost=0.00..6.00 rows=1 width=68)
+   ->  Dynamic Index Scan using gt_index_c_part on geometrictypespartition  (cost=0.00..6.00 rows=1 width=68)
          Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
          Filter: (c ~= '<(8479,-3121),8441>'::circle)
          Number of partitions to scan: 2 

@@ -74,6 +74,10 @@ extern "C" {
 using namespace gpdxl;
 using namespace gpopt;
 
+#define SORT_ASC 0
+#define SORT_DESC 1
+#define NULLS_LAST 0
+#define NULLS_FIRST 1
 
 static const ULONG cmp_type_mappings[][2] = {
 	{IMDType::EcmptEq, CmptEq},	  {IMDType::EcmptNEq, CmptNEq},
@@ -1126,23 +1130,23 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 			if (rel_indoption & INDOPTION_DESC)
 			{
 				// Sort DESC: represented by 1
-				sort_direction->Append(GPOS_NEW(mp) ULONG(1));
+				sort_direction->Append(GPOS_NEW(mp) ULONG(SORT_DESC));
 			}
 			else
 			{
 				// Sort ASC: represented by 0
-				sort_direction->Append(GPOS_NEW(mp) ULONG(0));
+				sort_direction->Append(GPOS_NEW(mp) ULONG(SORT_ASC));
 			}
 			// Check if the Nulls direction is FIRST
 			if (rel_indoption & INDOPTION_NULLS_FIRST)
 			{
 				// Nulls FIRST: represented by 1
-				nulls_direction->Append(GPOS_NEW(mp) ULONG(1));
+				nulls_direction->Append(GPOS_NEW(mp) ULONG(NULLS_FIRST));
 			}
 			else
 			{
 				// Nulls LAST: represented by 0
-				nulls_direction->Append(GPOS_NEW(mp) ULONG(0));
+				nulls_direction->Append(GPOS_NEW(mp) ULONG(NULLS_LAST));
 			}
 		}
 	}

@@ -5064,7 +5064,7 @@ where ss.a = ss.phv and f1 = 0;
          Join Filter: true
          ->  Result
                Filter: (((12) = 12) AND (parttbl.a = (12)))
-               ->  Dynamic Index Scan on parttbl_pkey on parttbl
+               ->  Dynamic Index Scan using parttbl_pkey on parttbl
                      Index Cond: (a = 12)
                      Number of partitions to scan: 1 (out of 1)
          ->  Materialize

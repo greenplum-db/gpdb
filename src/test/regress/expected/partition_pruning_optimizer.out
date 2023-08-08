@@ -172,7 +172,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
          ->  Limit  (cost=0.00..6.00 rows=2 width=12)
                ->  Sort  (cost=0.00..6.00 rows=4 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=4 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=4 width=12)
                            Index Cond: (col1 < 10)
                            Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -191,7 +191,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: (col1 > 50)
                      Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -211,7 +211,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 = 25 ORDER BY col2,col3 LIMIT 5;
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: (col1 = 25)
                      Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -261,7 +261,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 10 AND col1 < 50 ORDER BY col2,col3
          ->  Limit  (cost=0.00..6.01 rows=2 width=12)
                ->  Sort  (cost=0.00..6.01 rows=13 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=13 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=13 width=12)
                            Index Cond: ((col1 > 10) AND (col1 < 50))
                            Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -311,7 +311,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 
          ->  Limit  (cost=0.00..6.00 rows=2 width=12)
                ->  Sort  (cost=0.00..6.00 rows=6 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=6 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=6 width=12)
                            Index Cond: ((col1 >= 10) AND (col1 <= 25))
                            Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -339,7 +339,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 < 10 ORDER BY col2,col3 LIMIT 5;
          ->  Limit  (cost=0.00..6.00 rows=2 width=12)
                ->  Sort  (cost=0.00..6.00 rows=4 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=4 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=4 width=12)
                            Index Cond: (col2 < '10'::numeric)
                            Number of partitions to scan: 1 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -376,7 +376,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: (col2 = '25'::numeric)
                      Number of partitions to scan: 1 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -426,7 +426,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col2 < 50 ORDER BY col2,col3
          ->  Limit  (cost=0.00..6.01 rows=2 width=12)
                ->  Sort  (cost=0.00..6.01 rows=12 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=13 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=13 width=12)
                            Index Cond: ((col2 > '10'::numeric) AND (col2 < '50'::numeric))
                            Number of partitions to scan: 4 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -476,7 +476,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
          ->  Limit  (cost=0.00..6.01 rows=2 width=12)
                ->  Sort  (cost=0.00..6.01 rows=13 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=14 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=14 width=12)
                            Index Cond: ((col2 >= '10'::numeric) AND (col2 <= '50'::numeric))
                            Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -504,7 +504,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
          ->  Limit  (cost=0.00..6.00 rows=2 width=12)
                ->  Sort  (cost=0.00..6.00 rows=4 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=4 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=4 width=12)
                            Index Cond: (col1 < 10)
                            Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -523,7 +523,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: (col1 > 50)
                      Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -543,7 +543,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: (col2 = '25'::numeric)
                      Number of partitions to scan: 1 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -587,7 +587,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col1 = 10 ORDER BY col2,col3
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: ((col1 = 10) AND (col2 > '10'::numeric))
                      Number of partitions to scan: 4 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -637,7 +637,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
          ->  Limit  (cost=0.00..6.01 rows=2 width=12)
                ->  Sort  (cost=0.00..6.01 rows=13 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.01 rows=14 width=12)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.01 rows=14 width=12)
                            Index Cond: ((col2 >= '10'::numeric) AND (col2 <= '50'::numeric))
                            Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -667,7 +667,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
          ->  Limit  (cost=0.00..6.00 rows=2 width=12)
                ->  Sort  (cost=0.00..6.00 rows=4 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=4 width=12)
+                     ->  Dynamic Index Scan using col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=4 width=12)
                            Index Cond: (col1 < 10)
                            Number of partitions to scan: 6 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -692,7 +692,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
          ->  Limit  (cost=0.00..6.00 rows=2 width=12)
                ->  Sort  (cost=0.00..6.00 rows=4 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=4 width=12)
+                     ->  Dynamic Index Scan using col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=4 width=12)
                            Index Cond: (col1 > 50)
                            Number of partitions to scan: 6 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -712,7 +712,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: (col2 = '25'::numeric)
                      Number of partitions to scan: 1 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -756,7 +756,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 10 AND col1 = 10 ORDER BY col2,c
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..6.00 rows=1 width=12)
                Sort Key: col2, col3
-               ->  Dynamic Index Scan on col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=1 width=12)
+               ->  Dynamic Index Scan using col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.00 rows=1 width=12)
                      Index Cond: ((col2 > '10'::numeric) AND (col1 = 10))
                      Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -806,7 +806,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 between 10 AND 50 ORDER BY col2,co
          ->  Limit  (cost=0.00..6.01 rows=2 width=12)
                ->  Sort  (cost=0.00..6.01 rows=14 width=12)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.01 rows=14 width=12)
+                     ->  Dynamic Index Scan using col2_col1_unique on pt_lt_tab_df  (cost=0.00..6.01 rows=14 width=12)
                            Index Cond: ((col2 >= '10'::numeric) AND (col2 <= '50'::numeric))
                            Number of partitions to scan: 6 
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -1402,7 +1402,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col4 = False ORDER BY col2,col3 LIMIT 5;
          ->  Limit  (cost=0.00..6.01 rows=2 width=8)
                ->  Sort  (cost=0.00..6.01 rows=10 width=8)
                      Sort Key: col2, col3
-                     ->  Dynamic Index Scan on idx1 on pt_lt_tab  (cost=0.00..6.00 rows=10 width=8)
+                     ->  Dynamic Index Scan using idx1 on pt_lt_tab  (cost=0.00..6.00 rows=10 width=8)
                            Index Cond: (col4 = false)
                            Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
