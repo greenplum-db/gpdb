@@ -590,6 +590,23 @@ SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
+-- ORCA_FEATURE_NOT_SUPPORTED: support dynamic-index-only-scan on GIST indexes
+ALTER TABLE test_cover_index_on_pt ADD COLUMN a_box box;
+CREATE INDEX i_pt_a_box ON test_cover_index_on_pt USING GIST (a_box);
+VACUUM ANALYZE test_cover_index_on_pt;
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a_box FROM test_cover_index_on_pt WHERE a_box<@ box '(0,0,3,3)';
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
+   ->  Dynamic Index Scan on i_pt_a_box on test_cover_index_on_pt (actual rows=0 loops=1)
+         Index Cond: (a_box <@ '(3,3),(0,0)'::box)
+         Filter: (a_box <@ '(3,3),(0,0)'::box)
+         Number of partitions to scan: 4 (out of 4)
+         Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
 -- 8) Test partial indexes
 --
 -- Check that partial cover indexes may be used

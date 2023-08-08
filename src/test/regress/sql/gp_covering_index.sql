@@ -309,6 +309,13 @@ VACUUM ANALYZE test_index_types;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
 
+-- ORCA_FEATURE_NOT_SUPPORTED: support dynamic-index-only-scan on GIST indexes
+ALTER TABLE test_cover_index_on_pt ADD COLUMN a_box box;
+CREATE INDEX i_pt_a_box ON test_cover_index_on_pt USING GIST (a_box);
+VACUUM ANALYZE test_cover_index_on_pt;
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a_box FROM test_cover_index_on_pt WHERE a_box<@ box '(0,0,3,3)';
+
 
 -- 8) Test partial indexes
 --

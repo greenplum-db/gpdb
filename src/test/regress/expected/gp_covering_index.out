@@ -622,6 +622,31 @@ SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
  Optimizer: Postgres query optimizer
 (5 rows)
 
+-- ORCA_FEATURE_NOT_SUPPORTED: support dynamic-index-only-scan on GIST indexes
+ALTER TABLE test_cover_index_on_pt ADD COLUMN a_box box;
+CREATE INDEX i_pt_a_box ON test_cover_index_on_pt USING GIST (a_box);
+VACUUM ANALYZE test_cover_index_on_pt;
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a_box FROM test_cover_index_on_pt WHERE a_box<@ box '(0,0,3,3)';
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
+   ->  Append (actual rows=0 loops=1)
+         ->  Index Only Scan using test_cover_index_on_pt_1_prt_1_a_box_idx on test_cover_index_on_pt_1_prt_1 (actual rows=0 loops=1)
+               Index Cond: (a_box <@ '(3,3),(0,0)'::box)
+               Heap Fetches: 0
+         ->  Index Only Scan using test_cover_index_on_pt_1_prt_2_a_box_idx on test_cover_index_on_pt_1_prt_2 (actual rows=0 loops=1)
+               Index Cond: (a_box <@ '(3,3),(0,0)'::box)
+               Heap Fetches: 0
+         ->  Index Only Scan using test_cover_index_on_pt_1_prt_3_a_box_idx on test_cover_index_on_pt_1_prt_3 (actual rows=0 loops=1)
+               Index Cond: (a_box <@ '(3,3),(0,0)'::box)
+               Heap Fetches: 0
+         ->  Index Only Scan using test_cover_index_on_pt_1_prt_4_a_box_idx on test_cover_index_on_pt_1_prt_4 (actual rows=0 loops=1)
+               Index Cond: (a_box <@ '(3,3),(0,0)'::box)
+               Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+(15 rows)
+
 -- 8) Test partial indexes
 --
 -- Check that partial cover indexes may be used
