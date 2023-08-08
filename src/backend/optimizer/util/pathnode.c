@@ -31,6 +31,7 @@
 #include "parser/parse_oper.h"
 #include "parser/parsetree.h"
 #include "utils/faultinjector.h"
+#include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/selfuncs.h"
 #include "utils/lsyscache.h"
@@ -620,16 +621,22 @@ cdb_set_cheapest_dedup(PlannerInfo *root, RelOptInfo *rel)
                 distinct_relids =
                     bms_difference(rel->relids, dedup->prejoin_dedup_subqrelids);
 
-            /*
-             * Top off the subpath with DISTINCT ON the non-subquery row ids.
-             * Add to rel's main pathlist.
-             */
-			if (!root->disallow_unique_rowid_path)
+			/*
+			 * Top off the subpath with DISTINCT ON the non-subquery row ids.
+			 * Add to rel's main pathlist.
+			 *
+			 * Greenplum has a special path to handle semjoin, the planner might add a
+			 * unique_row_id path to the first inner join and then de-duplicate.
+			 *
+			 * Table function scan has no corresponding dedup workflow. Here we
+			 * introduce a switch to turn off it when there is a table function scan.
+			 */
+			if (!gp_disallow_unique_rowid_path)
 				upath = create_unique_rowid_path(root, subpath, distinct_relids);
 			else
 				return;
 			add_path(root, rel, (Path *)upath);
-        }
+		}
 
         /* Verify that our new paths haven't gone into the wrong pathlist. */
         Insist(!dedup->later_dedup_pathlist);
@@ -2374,17 +2381,6 @@ create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte
 	Path	   *pathnode = makeNode(Path);
 
 	Assert(rte->rtekind == RTE_TABLEFUNCTION);
-
-	/*
-	 * Greenplum specific behavior
-	 *
-	 * Greenplum has a special path to handle semjoin, the planner might add a
-	 * unique_row_id path to the first inner join and then de-duplicate.
-	 *
-	 * Table function scan has no corresponding dedup workflow. Here we
-	 * introduce a switch to turn off it when there is a table function scan.
-	 */
-	root->disallow_unique_rowid_path = true;
 
 	/* Setup the basics of the TableFunction path */
 	pathnode->pathtype	   = T_TableFunctionScan;

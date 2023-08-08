@@ -424,9 +424,11 @@ SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (selec
 -- end equivalent
 
 -- Don't generate unique rowid path if there is a table function scan
+SET gp_disallow_unique_rowid_path = true;
 SELECT gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
 SELECT count(*) FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (select a,b from example);
 SELECT gp_inject_fault('low_unique_rowid_path_cost', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+RESET gp_disallow_unique_rowid_path;
 
 -- Explain a couple interesting cases
 explain SELECT * FROM multiset_5( TABLE (SELECT dbid, gpname FROM gp_id) );

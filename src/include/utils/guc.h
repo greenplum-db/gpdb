@@ -185,6 +185,7 @@ extern bool gp_appendonly_verify_block_checksums;
 extern bool gp_appendonly_verify_write_block;
 extern bool gp_appendonly_verify_eof;
 extern bool gp_appendonly_compaction;
+extern bool gp_disallow_unique_rowid_path;
 
 /*
  * Threshold of the ratio of dirty data in a segment file

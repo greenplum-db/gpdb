@@ -1550,6 +1550,7 @@ SELECT * FROM multiset_5( TABLE(SELECT a, b from example)) where (a,b) in (selec
 
 -- end equivalent
 -- Don't generate unique rowid path if there is a table function scan
+SET gp_disallow_unique_rowid_path = true;
 SELECT gp_inject_fault('low_unique_rowid_path_cost', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
 NOTICE:  Success:
  gp_inject_fault 
@@ -1570,6 +1571,7 @@ NOTICE:  Success:
  t
 (1 row)
 
+RESET gp_disallow_unique_rowid_path;
 -- Explain a couple interesting cases
 explain SELECT * FROM multiset_5( TABLE (SELECT dbid, gpname FROM gp_id) );
                               QUERY PLAN                               
