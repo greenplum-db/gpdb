@@ -1,5 +1,5 @@
 ---
-title: Using a Custom Protocol 
+title: Creating a Custom Protocol
 ---
 
 A custom protocol allows you to connect Greenplum Database to a data source that cannot be accessed with the `file://`, `gpfdist://`, or `pxf://` protocols.
