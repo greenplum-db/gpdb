@@ -3216,19 +3216,19 @@ static void handle_post_request(request_t *r, int header_end)
 
 done_processing_request:
 
+	/* 
+	 * To ensure that retry works well,
+	 * there are two cases where seq_segs will be updated.
+	 * 1. Data has been written successfully.
+	 * 2. Request is OPEN_SEQ.
+	 */
+	session->seq_segs[r->segid] = r->seq;
+
 	/* send our success response and end the request */
 	if (0 != http_ok(r))
 		request_end(r, 1, 0);
 	else
-	{
 		request_end(r, 0, 0); /* we're done! */
-		/* 
-		 * Only when send http_ok successfully will we set
-		 * OPEN_SEQ and normal seq, we just add 1.
-		 * For duplicate case, we set it unchanged.
-		 */
-		session->seq_segs[r->segid] = r->seq;
-	}
 }
 
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path)
