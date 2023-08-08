@@ -1884,6 +1884,12 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_host TO public;
 
+CREATE TYPE gp_toolkit.__iostats AS (segindex int4, rsgname text, groupid oid, tablespace text, "rbps (MB_read/s)" int8, "wbps (MB_wrtn/s)" int8, "riops (r/s)" int8, "wiops (w/s)" int8);
+
+CREATE FUNCTION gp_toolkit.__gp_resgroup_iostats() RETURNS SETOF gp_toolkit.__iostats AS 'gp_toolkit.so','pg_resgroup_get_iostats' LANGUAGE C STRICT;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_resgroup_iostats TO public;
+
 --------------------------------------------------------------------------------
 -- @view:
 --              gp_toolkit.gp_resgroup_iostats_per_host
@@ -1896,7 +1902,7 @@ GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_host TO public;
 CREATE VIEW gp_toolkit.gp_resgroup_iostats_per_host AS
     WITH iostats AS (
         select * from
-        (select (pg_resgroup_get_iostats()).* from gp_id union all select (pg_resgroup_get_iostats()).* from gp_dist_random('gp_id')) as stats
+        (select (gp_toolkit.__gp_resgroup_iostats()).* from gp_id union all select (gp_toolkit.__gp_resgroup_iostats()).* from gp_dist_random('gp_id')) as stats
         join
         (select content,hostname from gp_segment_configuration) as segs
         on stats.segindex = segs.content
