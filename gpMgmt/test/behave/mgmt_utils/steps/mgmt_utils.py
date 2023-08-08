@@ -2170,14 +2170,20 @@ def impl(context):
 
 @given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with "{numrows}" rows')
 def impl(context, tabletype, tablename, dbname, numrows):
-    populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True, rowcount=int(numrows))
+    populate_regular_table_data(context, tabletype, tablename, dbname, compression_type=None, with_data=True, rowcount=int(numrows))
 
 
 @given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 @then('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 @when('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 def impl(context, tabletype, tablename, dbname):
-    populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True)
+    populate_regular_table_data(context, tabletype, tablename, dbname, compression_type=None, with_data=True)
+
+@given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data and description')
+@then('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data and description')
+@when('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data and description')
+def impl(context, tabletype, tablename, dbname):
+	populate_regular_table_data(context, tabletype, tablename, dbname, compression_type=None, with_data=True, with_desc=True)
 
 
 @given('there is a "{tabletype}" partition table "{table_name}" in "{dbname}" with data')

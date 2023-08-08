@@ -3355,6 +3355,7 @@ TableMainColumn['pg_proc_callback'] = ['profnoid', 'pg_proc']
 TableMainColumn['pg_type_encoding'] = ['typid', 'pg_type']
 TableMainColumn['pg_window'] = ['winfnoid', 'pg_proc']
 TableMainColumn['gp_distribution_policy'] = ['localoid', 'pg_class']
+TableMainColumn['pg_description'] = ['objoid', 'pg_description']
 
 # Table with OID (special case), these OIDs are known to be inconsistent
 TableMainColumn['pg_attrdef'] = ['adrelid', 'pg_class']
