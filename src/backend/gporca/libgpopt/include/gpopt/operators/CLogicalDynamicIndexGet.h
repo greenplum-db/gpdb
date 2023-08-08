@@ -116,7 +116,7 @@ public:
 
 	// index scan direction
 	EIndexScanDirection
-	PScanDirection() const
+	ScanDirection() const
 	{
 		return m_scan_direction;
 	}

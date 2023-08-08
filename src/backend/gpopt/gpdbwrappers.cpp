@@ -2699,4 +2699,16 @@ gpdb::GetRelAmName(Oid reloid)
 	GP_WRAP_END;
 	return nullptr;
 }
+
+// Get IndexAmRoutine struct for the given access method handler.
+IndexAmRoutine *
+gpdb::GetIndexAmRoutineFromAmHandler(Oid am_handler)
+{
+	GP_WRAP_START;
+	{
+		return GetIndexAmRoutine(am_handler);
+	}
+	GP_WRAP_END;
+}
+
 // EOF

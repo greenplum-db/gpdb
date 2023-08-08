@@ -87,7 +87,6 @@ CXformIndexGet2IndexScan::Transform(CXformContext *pxfctxt,
 	CMemoryPool *mp = pxfctxt->Pmp();
 	CIndexDescriptor *pindexdesc = pop->Pindexdesc();
 	CTableDescriptor *ptabdesc = pop->Ptabdesc();
-	EIndexScanDirection scan_direction = pop->PScanDirection();
 
 	// extract components
 	CExpression *pexprIndexCond = (*pexpr)[0];
@@ -115,7 +114,7 @@ CXformIndexGet2IndexScan::Transform(CXformContext *pxfctxt,
 		GPOS_NEW(mp)
 			CPhysicalIndexScan(mp, pindexdesc, ptabdesc, pexpr->Pop()->UlOpId(),
 							   GPOS_NEW(mp) CName(mp, pop->NameAlias()),
-							   pdrgpcrOutput, pos, scan_direction),
+							   pdrgpcrOutput, pos, pop->ScanDirection()),
 		pexprIndexCond);
 	pxfres->Add(pexprAlt);
 }

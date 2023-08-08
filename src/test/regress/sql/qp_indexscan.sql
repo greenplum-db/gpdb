@@ -548,16 +548,17 @@ $$;
 -- Order by using multiplication function. Expected to use SeqScan with Sort
 explain(costs off) select a from test_on_index_expressions order by multiply_by_two(a) limit 3;
 -- Clean Up
+DROP FUNCTION multiply_by_two;
 DROP TABLE test_on_index_expressions;
 
 -- Purpose: Test Forward/Backward IndexScan with order by on custom data type
 -- create a custom type
-CREATE TYPE person_type AS (
+CREATE TYPE custom_data_type AS (
     name VARCHAR,
     age INTEGER);
-create table test_on_custom_data_type(a int, b float, c person_type);
+create table test_on_custom_data_type(a int, b float, c custom_data_type);
 create index index_on_custom_type on test_on_custom_data_type using btree(c);
-insert into test_on_custom_data_type select i, i/3, (concat('person', i), i)::person_type from generate_series(1,100)i;
+insert into test_on_custom_data_type select i, i/3, (concat('person', i), i)::custom_data_type from generate_series(1,100)i;
 analyze test_on_custom_data_type;
 -- Expected to use Forward IndexScan
 explain(costs off) select c from test_on_custom_data_type order by c limit 3;
@@ -567,6 +568,7 @@ explain(costs off) select c from test_on_custom_data_type order by c desc limit 
 select c from test_on_custom_data_type order by c desc limit 3;
 -- Clean Up
 DROP TABLE test_on_custom_data_type;
+DROP TYPE custom_data_type;
 
 
 -- Purpose: This section includes tests on general table where backward index scan could be used, but is not used currently since

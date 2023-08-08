@@ -116,7 +116,7 @@ CXformDynamicIndexGet2DynamicIndexScan::Transform(
 						pdrgpcrOutput, popIndexGet->ScanId(), pdrgpdrgpcrPart,
 						pos, popIndexGet->GetPartitionMdids(),
 						popIndexGet->GetRootColMappingPerPart(),
-						popIndexGet->PScanDirection()),
+						popIndexGet->ScanDirection()),
 					pexprIndexCond);
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);

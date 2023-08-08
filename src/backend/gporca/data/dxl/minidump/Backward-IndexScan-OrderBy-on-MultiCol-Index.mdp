@@ -12,7 +12,7 @@
             create index index_dbea on test_index_with_sort_directions_on_orderby_limit using btree(d, b desc, e nulls first, a desc);
             ANALYZE test_index_with_sort_directions_on_orderby_limit;
 
-            Query: explain select * from test_index_with_orderby_limit order by b, d limit 10;
+            Query: explain select * from test_index_with_sort_directions_on_orderby_limit order by d desc, b, e desc nulls last, a limit 10;
 
             Plan:
                                                                                QUERY PLAN

@@ -813,8 +813,8 @@ CTranslatorExprToDXL::PdxlnIndexScan(CExpression *pexprIndexScan,
 
 	// get scan direction from PhysicalIndexScan operator
 	EdxlIndexScanDirection scan_direction =
-		(popIs->PIndexScanDirection() == EForwardScan) ? EdxlisdForward
-													   : EdxlisdBackward;
+		(popIs->IndexScanDirection() == EForwardScan) ? EdxlisdForward
+													  : EdxlisdBackward;
 	// create the physical index scan operator
 	CDXLPhysicalIndexScan *dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexScan(
 		m_mp, table_descr, dxl_index_descr, scan_direction);
@@ -920,8 +920,8 @@ CTranslatorExprToDXL::PdxlnIndexOnlyScan(CExpression *pexprIndexOnlyScan,
 
 	// get scan direction from PhysicalIndexOnlyScan operator
 	EdxlIndexScanDirection scan_direction =
-		(popIs->PIndexScanDirection() == EForwardScan) ? EdxlisdForward
-													   : EdxlisdBackward;
+		(popIs->IndexScanDirection() == EForwardScan) ? EdxlisdForward
+													  : EdxlisdBackward;
 	// create the physical index scan operator
 	CDXLPhysicalIndexOnlyScan *dxl_op =
 		GPOS_NEW(m_mp) CDXLPhysicalIndexOnlyScan(
@@ -1586,7 +1586,7 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 	// get scan direction from PhysicalDynamicIndexScan operator
 	EdxlIndexScanDirection scan_direction;
 	IMdIdArray *part_mdids = nullptr;
-	if (popDIS->PScanDirection() == EForwardScan)
+	if (popDIS->ScanDirection() == EForwardScan)
 	{
 		scan_direction = EdxlisdForward;
 		part_mdids = popDIS->GetPartitionMdids();

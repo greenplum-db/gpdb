@@ -164,7 +164,7 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		{
 			// get Scan direction
 			EIndexScanDirection scan_direction =
-				FGetIndexScanDirection(pos, pmdindex);
+				GetIndexScanDirection(pos, pmdindex);
 			// build IndexGet expression
 			CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 				mp, md_accessor, pexprUpdtdRltn, popLimit->UlOpId(), pdrgpexpr,
@@ -268,10 +268,10 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 		// If the derived, required sort directions and nulls directions are not equal or not commutative, then the index is not applicable.
 		if (!(req_sort_direction->Equals(derived_sort_direction) &&
 			  req_nulls_direction->Equals(derived_nulls_direction)) &&
-			!(FAreIndicesCommutative(req_sort_direction, derived_sort_direction,
-									 i) &&
-			  FAreIndicesCommutative(req_nulls_direction,
-									 derived_nulls_direction, i)))
+			!(FIndicesCommutative(req_sort_direction, derived_sort_direction,
+								  i) &&
+			  FIndicesCommutative(req_nulls_direction, derived_nulls_direction,
+								  i)))
 		{
 			indexApplicable = false;
 			break;
@@ -288,7 +288,7 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformLimit2IndexGet::FGetIndexScanDirection
+//		CXformLimit2IndexGet::GetIndexScanDirection
 //
 //	@doc:
 //		Function to determine index scan direction given required order spec and index information.
@@ -296,8 +296,8 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 //	    	2. Picks Backward if ORDER BY columns and index keys sort and nulls directions are commutative.
 //---------------------------------------------------------------------------
 EIndexScanDirection
-CXformLimit2IndexGet::FGetIndexScanDirection(COrderSpec *pos,
-											 const IMDIndex *pmdindex)
+CXformLimit2IndexGet::GetIndexScanDirection(COrderSpec *pos,
+											const IMDIndex *pmdindex)
 {
 	const CColRef *colref = pos->Pcr(0);
 	IMDId *greater_than_mdid =
@@ -315,15 +315,15 @@ CXformLimit2IndexGet::FGetIndexScanDirection(COrderSpec *pos,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformLimit2IndexGet::FAreIndicesCommutative
+//		CXformLimit2IndexGet::FIndicesCommutative
 //
 //	@doc:
 //        Function to validate if indices sort, nulls direction is commutative.
 //-----------------------------------------------------------------------------
 BOOL
-CXformLimit2IndexGet::FAreIndicesCommutative(CBitVector *first_index_props,
-											 CBitVector *second_index_props,
-											 ULONG keys_size)
+CXformLimit2IndexGet::FIndicesCommutative(CBitVector *first_index_props,
+										  CBitVector *second_index_props,
+										  ULONG keys_size)
 {
 	for (ULONG i = 0; i <= keys_size; i++)
 	{

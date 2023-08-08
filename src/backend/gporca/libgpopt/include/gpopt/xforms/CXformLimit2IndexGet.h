@@ -40,13 +40,13 @@ private:
 										   const IMDIndex *pmdindex);
 
 	// function to determine index scan direction given required order spec and index information.
-	static EIndexScanDirection FGetIndexScanDirection(COrderSpec *pos,
-													  const IMDIndex *pmdindex);
+	static EIndexScanDirection GetIndexScanDirection(COrderSpec *pos,
+													 const IMDIndex *pmdindex);
 
 	// function to validate if indices sort and nulls direction are commutative.
-	static BOOL FAreIndicesCommutative(CBitVector *first_index_props,
-									   CBitVector *second_index_props,
-									   ULONG keys_size);
+	static BOOL FIndicesCommutative(CBitVector *first_index_props,
+									CBitVector *second_index_props,
+									ULONG keys_size);
 
 public:
 	CXformLimit2IndexGet(const CXformLimit2IndexGet &) = delete;

@@ -44,6 +44,9 @@ using namespace gpnaucrates;
 using namespace gpopt;
 using namespace gpmd;
 
+#define SORT_ASC 0
+#define NULLS_LAST 0
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogical::CLogical
@@ -195,13 +198,13 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 		{
 			// if sort direction of key is 0(ASC), choose MDID for less than type and vice-versa
 			mdid =
-				(pmdindex->KeySortDirectionAt(ul) == 0)
+				(pmdindex->KeySortDirectionAt(ul) == SORT_ASC)
 					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL)
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptG);
 
 			// if nulls direction of key is 0(LAST), choose ENTLast and vice-versa
-			ent = (pmdindex->KeyNullsDirectionAt(ul) == 0)
+			ent = (pmdindex->KeyNullsDirectionAt(ul) == NULLS_LAST)
 					  ? COrderSpec::EntLast
 					  : COrderSpec::EntFirst;
 		}
@@ -211,13 +214,13 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 		{
 			// if sort order of key is 0(ASC), choose MDID for greater than type and vice-versa
 			mdid =
-				(pmdindex->KeySortDirectionAt(ul) == 0)
+				(pmdindex->KeySortDirectionAt(ul) == SORT_ASC)
 					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG)
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptL);
 
 			// if nulls direction of key is 0(LAST), choose ENTFirst and vice-versa
-			ent = (pmdindex->KeyNullsDirectionAt(ul) == 0)
+			ent = (pmdindex->KeyNullsDirectionAt(ul) == NULLS_LAST)
 					  ? COrderSpec::EntFirst
 					  : COrderSpec::EntLast;
 		}

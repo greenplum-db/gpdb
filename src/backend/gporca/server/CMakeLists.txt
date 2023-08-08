@@ -107,9 +107,9 @@ IndexScan-AOTable IndexScan-DroppedColumns IndexScan-BoolTrue IndexScan-BoolFals
 IndexScan-Relabel IndexGet-OuterRefs LogicalIndexGetDroppedCols
 IndexScan-ORPredsNonPart IndexScan-ORPredsAOPart IndexScan-AndedIn SubqInIndexPred Hash-IndexScan
 IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols IndexScan-OrderBy-on-NonIndexCol
-Forward-IndexScan-OrderBy-on-Single-IndexCol Backward-IndexScan-OrderBy-on-Single-IndexCol
-Forward-IndexScan-OrderBy-on-Multi-IndexCol Backward-IndexScan-OrderBy-on-Multi-IndexCol
-IndexScan-OrderBy-on-Multi-NonIndexCol;
+Forward-IndexScan-OrderBy-on-SingleCol-Index Backward-IndexScan-OrderBy-on-SingleCol-Index
+Forward-IndexScan-OrderBy-on-MultiCol-Index Backward-IndexScan-OrderBy-on-MultiCol-Index
+IndexScan-OrderBy-on-MultiCol-NonIndex;
 
 CBitmapScanTest:
 IndexedNLJBitmap BitmapIndex-ChooseHashJoin BitmapTableScan-AO-Btree-PickOnlyHighNDV
@@ -144,13 +144,15 @@ DynamicIndexScan-DefaultPartition DynamicIndexScan-DefaultPartition-2
 DynamicIndexScan-Homogenous-UnsupportedConstraint DynamicIndexScan-Heterogenous-UnsupportedConstraint
 DynamicIndexScan-Heterogenous-PartSelectEquality
 DynamicIndexScan-Heterogenous-PartSelectRange DynamicIndexScan-OpenEndedPartitions
-DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols Forward-DynamicIndexScan-OrderBy-on-Single-IndexCol
-Backward-DynamicIndexScan-OrderBy-on-Single-IndexCol
-Forward-DynamicIndexScan-OrderBy-on-Multi-IndexCol Backward-DynamicIndexScan-OrderBy-on-Multi-IndexCol
-DynamicIndexScan-OrderBy-on-Multi-NonIndexCol;
+DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols Forward-DynamicIndexScan-OrderBy-on-SingleCol-Index
+Backward-DynamicIndexScan-OrderBy-on-SingleCol-Index
+Forward-DynamicIndexScan-OrderBy-on-MultiCol-Index Backward-DynamicIndexScan-OrderBy-on-MultiCol-Index
+DynamicIndexScan-OrderBy-on-MultiCol-NonIndex;
 
 CDynamicIndexOnlyScanTest:
-DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin;
+DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin
+Forward-DynamicIndexOnlyScan-OrderBy-on-MultiCol-Index Backward-DynamicIndexOnlyScan-OrderBy-on-MultiCol-Index
+DynamicIndexOnlyScan-OrderBy-on-MultiCol-NonIndex;
 
 CIndexScanOnLeafTest:
 IndexOnLeaf-AddNewPartitionToRootTableContainingHeterogenousIndex
@@ -387,6 +389,9 @@ AllowIndexOnlyScanOnMixedAppendOnlyPartitionedTable AllowIndexOnlyScanOnMixedPar
 PreventIndexOnlyScanOnMixedAppendOnlyPartitionedTableContainingAppendOnlyVersion6Child
 PreventIndexOnlyScanOnMixedPartitionedTableContainingAppendOnlyVersion6Child
 PreventIndexOnlyScanOnAppendOnlyVersion6UpgradedTable;
+IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache IndexOnlyScan-CTE
+Forward-IndexOnlyScan-OrderBy-on-MultiCol-Index Backward-IndexOnlyScan-OrderBy-on-MultiCol-Index
+IndexOnlyScan-OrderBy-on-MultiCol-NonIndex;
 
 CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF

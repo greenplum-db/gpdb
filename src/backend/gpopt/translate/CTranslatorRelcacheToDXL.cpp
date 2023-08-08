@@ -1112,28 +1112,37 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	sort_direction = GPOS_NEW(mp) ULongPtrArray(mp);
 	nulls_direction = GPOS_NEW(mp) ULongPtrArray(mp);
 
-	// No other index type except B-tree support sort and nulls direction for key columns.
-	if (index_type == IMDIndex::EmdindBtree)
+	// Get IndexAmRoutine Struct
+	IndexAmRoutine *am_routine =
+		gpdb::GetIndexAmRoutineFromAmHandler(index_rel->rd_amhandler);
+	// Check if index can order and supports backwards scans
+	if (am_routine->amcanorder && am_routine->amcanbackward)
 	{
 		for (int i = 0; i < form_pg_index->indnkeyatts; i++)
 		{
-			// ASC: represented by 0 and DESC with 1
-			sort_direction->Append(GPOS_NEW(mp) ULONG(0));
-			// NULLS LAST: represented by 0 and NULLS FIRST with 1
-			nulls_direction->Append(GPOS_NEW(mp) ULONG(0));
 			// indoption value represents sort and nulls direction using 2 bits
 			ULONG rel_indoption = index_rel->rd_indoption[i];
-			// First bit being set represents Sort DESC and unset represents Sort ASC
-			if (rel_indoption & 1)
+			// Check if the Sort direction is DESC
+			if (rel_indoption & INDOPTION_DESC)
 			{
-				// Sort DESC
-				sort_direction->Replace(i, GPOS_NEW(mp) ULONG(1));
+				// Sort DESC: represented by 1
+				sort_direction->Append(GPOS_NEW(mp) ULONG(1));
 			}
-			// Second bit being set represents Nulls FIRST and unset represents Nulls LAST
-			if (rel_indoption & 2)
+			else
 			{
-				// Nulls FIRST
-				nulls_direction->Replace(i, GPOS_NEW(mp) ULONG(1));
+				// Sort ASC: represented by 0
+				sort_direction->Append(GPOS_NEW(mp) ULONG(0));
+			}
+			// Check if the Nulls direction is FIRST
+			if (rel_indoption & INDOPTION_NULLS_FIRST)
+			{
+				// Nulls FIRST: represented by 1
+				nulls_direction->Append(GPOS_NEW(mp) ULONG(1));
+			}
+			else
+			{
+				// Nulls LAST: represented by 0
+				nulls_direction->Append(GPOS_NEW(mp) ULONG(0));
 			}
 		}
 	}

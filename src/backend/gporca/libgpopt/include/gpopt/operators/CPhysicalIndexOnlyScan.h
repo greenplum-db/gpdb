@@ -88,7 +88,7 @@ public:
 
 	// index scan direction
 	EIndexScanDirection
-	PIndexScanDirection() const
+	IndexScanDirection() const
 	{
 		return m_scan_direction;
 	}
