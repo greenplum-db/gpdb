@@ -10,17 +10,16 @@ LINE 1: INSERT INTO test_665_after VALUES('a')
 2021-06-02 16:22:07|INFO|rows Updated           = 0
 2021-06-02 16:22:07|INFO|data formatting errors = 0
 2021-06-02 16:22:07|INFO|gpload failed
- c1 
-----
-  1
-(1 row)
-
- c1 
+ c1
 ----
 (0 rows)
 
- count 
+ c1
+----
+(0 rows)
+
+ count
 -------
-    16
+     0
 (1 row)
 

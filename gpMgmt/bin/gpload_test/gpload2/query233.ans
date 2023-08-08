@@ -5,6 +5,8 @@
 2021-06-01 15:56:51|ERROR|could not run SQL "create external table ext_gpload_reusable_ecd5c1b8_c2ae_11eb_848f_0050569ea4ff("s1" text,"s2" text)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format 'text' (delimiter '|' null 'E''\x08E'\'' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "\"
 LINE 1: ...txt') format 'text' (delimiter '|' null 'E''\x08E'\'' escape...
                                                              ^
+ could not get standard_conforming_strings, ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ if standard_conforming_strings is set to 'off', please set it to 'on' and try again 
 
 2021-06-01 15:56:51|INFO|rows Inserted          = 0
 2021-06-01 15:56:51|INFO|rows Updated           = 0

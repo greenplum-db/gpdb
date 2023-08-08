@@ -3,6 +3,8 @@
 2021-06-01 15:56:30|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
 2021-06-01 15:56:30|INFO|did not find an external table to reuse. creating ext_gpload_reusable_e041fa16_c2ae_11eb_abd4_0050569ea4ff
 2021-06-01 15:56:30|ERROR|could not run SQL "create external table ext_gpload_reusable_e041fa16_c2ae_11eb_abd4_0050569ea4ff("s1" text,"s2" text)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format 'text' (delimiter '' null '\N' escape '\') encoding'UTF8' ": ERROR:  COPY delimiter must be a single one-byte character, or 'off'
+ could not get standard_conforming_strings, ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ if standard_conforming_strings is set to 'off', please set it to 'on' and try again
 
 2021-06-01 15:56:30|INFO|rows Inserted          = 0
 2021-06-01 15:56:30|INFO|rows Updated           = 0

@@ -4,6 +4,8 @@
 2021-11-25 16:14:25|INFO|did not find an external table to reuse. creating ext_gpload_table
 2021-11-25 16:14:25|ERROR|could not run SQL "create external table ext_gpload_table
 HINT:  valid options are: 'LF', 'CRLF', 'CR'
+ could not get standard_conforming_strings, ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ if standard_conforming_strings is set to 'off', please set it to 'on' and try again
 
 2021-11-25 16:14:25|INFO|rows Inserted          = 0
 2021-11-25 16:14:25|INFO|rows Updated           = 0

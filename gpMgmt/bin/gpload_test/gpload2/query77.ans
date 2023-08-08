@@ -5,7 +5,8 @@
 2021-07-29 21:08:35|ERROR|could not run SQL "create external table ext_gpload_reusable_15099ac8_f06e_11eb_abc1_0050569ea4ff("Field1" text,"Field#2" text)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' ": ERROR:  syntax error at or near "UTF8"
 LINE 1: ... 'text' (delimiter ';' null '\N' escape '\') encoding'UTF8' 
                                                                  ^
- standard_conforming_strings is set to 'off', please set it to 'on' and try again 
+ could not get standard_conforming_strings, ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ if standard_conforming_strings is set to 'off', please set it to 'on' and try again
 
 2021-07-29 21:08:35|INFO|rows Inserted          = 0
 2021-07-29 21:08:35|INFO|rows Updated           = 0

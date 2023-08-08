@@ -13,7 +13,7 @@ CONTEXT:  External table ext_gpload_reusable_5b93e204_4141_11ec_bca6_005056a051b
 2021-11-09 09:42:31|INFO|gpload session started 2021-11-09 09:42:31
 2021-11-09 09:42:31|INFO|setting schema 'public' for table 'texttable2'
 2021-11-09 09:42:31|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/project/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-11-09 09:42:31|INFO|reusing external table ext_gpload_reusable_5b93e204_4141_11ec_bca6_005056a051b2
+2021-11-09 09:42:31|INFO|did not find an external table to reuse. creating ext_gpload_reusable_5b93e204_4141_11ec_bca6_005056a051b2
 2021-11-09 09:42:31|ERROR|ERROR:  segment reject limit reached, aborting operation  (seg2 slice1 127.0.0.1:6004 pid=22383)
 DETAIL:  Last error was: missing data for column "s2"
 CONTEXT:  External table ext_gpload_reusable_5b93e204_4141_11ec_bca6_005056a051b2, line 2 of gpfdist://127.0.0.1:8081//home/gpadmin/project/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt: "est1"
