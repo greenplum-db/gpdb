@@ -381,7 +381,7 @@ def main():
     if args.pipeline_target in ['prod', 'dev', 'cm']:
         args.use_ICW_workers = True
 
-    if args.pipeline_target in ['prod'] and args.os_type not in ["rhel9", "oel9", "rocky9"]:
+    if args.pipeline_target in ['prod'] :
         args.test_sections = [
             'icw',
             'cli',
