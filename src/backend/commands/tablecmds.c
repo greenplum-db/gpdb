@@ -13734,9 +13734,68 @@ ATPostAlterTypeParse(Oid oldId, Oid oldRelId, Oid refRelId, char *cmd,
 	/*
 	 * In the QE, don't add items to the work queues. They were already
 	 * added in the QD, and we don't want to do them twice.
+	 *
+	 * However, we need to check if we are to reuse the relfilenode of an
+	 * existing index. This information is unique to QD and each QE. If so,
+	 * we need to replace that with QE's own relfilenode. Note that this is
+	 * not a problem for foreign key operator oids (see TryReuseForeignKey)
+	 * since those are the same among QD/QEs.
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		ListCell 		*lc;
+		Relation 		rel;
+		Relation 		irel = NULL;
+		AlteredTableInfo 	*tab;
+
+		/* Caller should already have acquired whatever lock we need. */
+		rel = relation_open(oldRelId, NoLock);
+		tab = ATGetQueueEntry(wqueue, rel);
+
+		/* Check the commands I got from QD for any re-used index. */
+		foreach (lc, tab->subcmds[AT_PASS_OLD_INDEX])
+		{
+			AlterTableCmd 	*cmd = castNode(AlterTableCmd, lfirst(lc));
+			IndexStmt 	*stmt;
+
+			Assert(cmd->subtype == AT_ReAddIndex);
+
+			stmt = (IndexStmt *) cmd->def;
+
+			/* if we are not reusing this index, continue */
+			if (!OidIsValid(stmt->oldNode))
+				continue;
+
+			if (irel == NULL)
+			{
+				Oid 		indoid = InvalidOid;
+				HeapTuple 	tup;
+
+				tup = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(oldId));
+				if (HeapTupleIsValid(tup))
+					indoid = oldId;
+				else
+					/* not an index, them it must be a constraint */
+					indoid = get_constraint_index(oldId);
+
+				if (HeapTupleIsValid(tup))
+					ReleaseSysCache(tup);
+
+				Assert(OidIsValid(indoid));
+
+				/* We might not open index on QE, so acquire a valid lock */
+				irel = index_open(indoid, AccessShareLock);
+			}
+
+			/* replace it with my own */
+			stmt->oldNode = irel->rd_node.relNode;
+		}
+
+		if (irel != NULL)
+			index_close(irel, AccessShareLock);
+		relation_close(rel, NoLock);
 		return;
+	}
 
 	/*
 	 * We expect that we will get only ALTER TABLE and CREATE INDEX
