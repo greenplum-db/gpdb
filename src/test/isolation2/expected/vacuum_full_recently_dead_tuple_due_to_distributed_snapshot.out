@@ -78,4 +78,4 @@ SET
 -- Ensure that we ERROR out if gp_disable_dtx_visibility_check is set in
 -- non-utility mode.
 3: set gp_disable_dtx_visibility_check to on;
-ERROR:  gp_disable_dtx_visibility_check can only be set in utility mode (guc_gp.c:6347)
+ERROR:  gp_disable_dtx_visibility_check can only be set in utility mode (guc_gp.c:6358)
