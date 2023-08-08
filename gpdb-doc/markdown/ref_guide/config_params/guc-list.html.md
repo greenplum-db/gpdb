@@ -2460,7 +2460,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|coordinator, session, reload|
+|Boolean|false|coordinator, session, reload|
 
 ## <a id="optimizer_force_three_stage_scalar_dqa"></a>optimizer\_force\_three\_stage\_scalar\_dqa 
 
