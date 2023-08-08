@@ -16,20 +16,16 @@
 #include "libpq-fe.h"
 #include "miscadmin.h"
 #include "catalog/pg_resgroup.h"
-#include "catalog/pg_resgroupcapability_d.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbvars.h"
 #include "commands/resgroupcmds.h"
-#include "commands/tablespace.h"
 #include "storage/procarray.h"
 #include "utils/builtins.h"
 #include "utils/datetime.h"
-#include "utils/rel.h"
 #include "utils/resgroup.h"
 #include "utils/cgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/cgroup_io_limit.h"
 
 typedef struct ResGroupStat
 {
