@@ -1751,6 +1751,7 @@ FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_
 CREATE TABLE at_part_w_external(i int, j int) DISTRIBUTED BY (i)
     PARTITION BY RANGE(j) (START(1) END(3) EVERY(1));
 ALTER TABLE at_part_w_external ATTACH PARTITION at_external FOR VALUES FROM (3) TO (4);
+NOTICE:  partition constraints are not validated when attaching a readable external table
 SELECT relname, a.amname, relkind, reloptions FROM pg_class c
     LEFT OUTER JOIN pg_am a ON c.relam = a.oid
     WHERE relname LIKE 'at_part_w_external%' OR relname = 'at_external';
