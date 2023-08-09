@@ -5343,7 +5343,10 @@ get_variable_numdistinct(VariableStatData *vardata, bool *isdefault)
 					stadistinct = getgpsegmentCount();
 					break;
 				default:
-					stadistinct = 0.0;	/* means "unknown" */
+					if (vardata->rel->rtekind == RTE_CTE)
+						stadistinct = -1.0;
+					else
+						stadistinct = 0.0;	/* means "unknown" */
 					break;
 			}
 		}
