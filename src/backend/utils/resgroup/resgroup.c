@@ -1366,7 +1366,7 @@ addTotalQueueDuration(ResGroupData *group)
 	if (group == NULL)
 		return;
 
-	group->totalQueuedTimeMs += (groupWaitEnd - groupWaitEnd);
+	group->totalQueuedTimeMs += (groupWaitEnd - groupWaitStart);
 }
 
 /*
@@ -1857,6 +1857,7 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 	PG_END_TRY();
 
 	groupAwaited = NULL;
+	groupWaitEnd = GetCurrentTimestamp();
 
 	/* reset ps status */
 	if (update_process_title)
