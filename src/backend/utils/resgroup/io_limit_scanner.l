@@ -1,15 +1,19 @@
 %{
 #include "postgres.h"
-#include "io_limit_gram.h"
-
-#define YYSTYPE IO_LIMIT_YYSTYPE
 %}
 
-%option noinput nounput noyywrap
-%option noyyalloc noyyfree noyyrealloc
+%option never-interactive
+%option nodefault
+%option noinput
+%option nounput
+%option noyywrap
+%option warn
 %option prefix="io_limit_yy"
-%option reentrant bison-bridge
-%option warn never-interactive nodefault
+%option bison-bridge
+%option reentrant
+%option noyyalloc
+%option noyyrealloc
+%option noyyfree
 
 id  [a-zA-Z_][a-zA-Z0-9_]*
 wildcard \*

@@ -19,7 +19,6 @@ ifeq ($(PORTNAME),linux)
 OBJS += cgroup.o
 OBJS += cgroup-ops-linux-v1.o
 OBJS += cgroup-ops-linux-v2.o
-OBJS += io_limit_scanner.o
 OBJS += io_limit_gram.o
 OBJS += cgroup_io_limit.o
 
@@ -34,7 +33,7 @@ io_limit_scanner.c: FLEXFLAGS = -CF -p -p
 io_limit_scanner.c: FLEX_NO_BACKUP=yes
 io_limit_scanner.c: FLEX_FIX_WARNING=yes
 
-io_limit_gram.o io_limit_scanner.o cgroup-ops-linux-v2.o: io_limit_gram.h
+io_limit_gram.o cgroup-ops-linux-v2.o: io_limit_scanner.c
 else
 OBJS += cgroup-ops-dummy.o
 
