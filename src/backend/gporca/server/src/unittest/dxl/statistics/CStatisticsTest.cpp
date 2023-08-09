@@ -317,6 +317,7 @@ CStatisticsTest::PtabdescTwoColumnSource(CMemoryPool *mp,
 		nameTable,
 		false,	// convert_hash_to_random
 		IMDRelation::EreldistrRandom, IMDRelation::ErelstorageHeap,
+		IMDRelation::GetCurrentAOVersion(),
 		0,	 // ulExecuteAsUser
 		-1,	 // lockmode
 		2,	 // aclmode SELECT

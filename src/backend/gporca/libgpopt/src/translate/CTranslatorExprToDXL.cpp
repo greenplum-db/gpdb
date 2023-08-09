@@ -1260,8 +1260,9 @@ CTranslatorExprToDXL::MakeTableDescForPart(const IMDRelation *part,
 	CTableDescriptor *table_descr = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, part_mdid, part->Mdname().GetMDName(),
 		part->ConvertHashToRandom(), part->GetRelDistribution(),
-		part->RetrieveRelStorageType(), root_table_desc->GetExecuteAsUserId(),
-		root_table_desc->LockMode(), root_table_desc->GetAclMode(),
+		part->RetrieveRelStorageType(), root_table_desc->RetrieveRelAOVersion(),
+		root_table_desc->GetExecuteAsUserId(), root_table_desc->LockMode(),
+		root_table_desc->GetAclMode(),
 		root_table_desc->GetAssignedQueryIdForTargetRel());
 
 	for (ULONG ul = 0; ul < part->ColumnCount(); ++ul)

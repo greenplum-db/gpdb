@@ -143,9 +143,13 @@ CIndexDescriptor::Pindexdesc(CMemoryPool *mp, const CTableDescriptor *ptabdesc,
 }
 
 BOOL
-CIndexDescriptor::SupportsIndexOnlyScan() const
+CIndexDescriptor::SupportsIndexOnlyScan(CTableDescriptor *ptabdesc) const
 {
-	return m_index_type == IMDIndex::EmdindBtree;
+	// index only scan is not supported on GPDB 6 append-only tables.
+	return m_index_type == IMDIndex::EmdindBtree &&
+		   !(ptabdesc->IsAORowOrColTable() &&
+			 ptabdesc->RetrieveRelAOVersion() ==
+				 IMDRelation::AORelationVersion_GP6);
 }
 
 //---------------------------------------------------------------------------

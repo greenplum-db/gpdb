@@ -50,8 +50,9 @@ CXformDynamicIndexGet2DynamicIndexOnlyScan::Exfp(
 	CLogicalDynamicIndexGet *popGet =
 		CLogicalDynamicIndexGet::PopConvert(exprhdl.Pop());
 	CIndexDescriptor *pindexdesc = popGet->Pindexdesc();
+	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
 
-	if (!pindexdesc->SupportsIndexOnlyScan())
+	if (!pindexdesc->SupportsIndexOnlyScan(ptabdesc))
 	{
 		// FIXME: relax btree requirement. GiST and SP-GiST indexes can support some operator classes, but Gin cannot
 		return CXform::ExfpNone;

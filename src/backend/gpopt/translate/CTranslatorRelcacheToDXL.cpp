@@ -498,6 +498,8 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	CMDName *mdname = nullptr;
 	IMDRelation::Erelstoragetype rel_storage_type =
 		IMDRelation::ErelstorageSentinel;
+	IMDRelation::Erelaoversion rel_ao_version =
+		IMDRelation::AORelationVersion_None;
 	CMDColumnArray *mdcol_array = nullptr;
 	IMDRelation::Ereldistrpolicy dist = IMDRelation::EreldistrSentinel;
 	ULongPtrArray *distr_cols = nullptr;
@@ -519,6 +521,20 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	// get storage type
 	rel_storage_type = RetrieveRelStorageType(rel.get());
+
+	// get append only table version
+	if (rel->rd_rel->relam == AO_ROW_TABLE_AM_OID)
+	{
+		if (nullptr != rel->rd_appendonly)
+		{
+			rel_ao_version = static_cast<IMDRelation::Erelaoversion>(
+				AORelationVersion_Get(rel.get()));
+		}
+		else
+		{
+			rel_ao_version = IMDRelation::IMDRelation::GetCurrentAOVersion();
+		}
+	}
 
 	// get relation columns
 	mdcol_array = RetrieveRelColumns(mp, md_accessor, rel.get());
@@ -612,10 +628,11 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	}
 
 	md_rel = GPOS_NEW(mp) CMDRelationGPDB(
-		mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
-		distr_cols, distr_op_families, part_keys, part_types, partition_oids,
-		convert_hash_to_random, keyset_array, md_index_info_array,
-		check_constraint_mdids, mdpart_constraint, foreign_server_mdid);
+		mp, mdid, mdname, is_temporary, rel_storage_type, rel_ao_version, dist,
+		mdcol_array, distr_cols, distr_op_families, part_keys, part_types,
+		partition_oids, convert_hash_to_random, keyset_array,
+		md_index_info_array, check_constraint_mdids, mdpart_constraint,
+		foreign_server_mdid);
 
 	return md_rel;
 }

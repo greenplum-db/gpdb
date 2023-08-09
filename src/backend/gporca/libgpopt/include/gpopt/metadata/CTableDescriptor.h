@@ -63,6 +63,9 @@ private:
 	// storage type
 	IMDRelation::Erelstoragetype m_erelstoragetype;
 
+	// append only table version
+	IMDRelation::Erelaoversion m_erelaoversion;
+
 	// distribution columns for hash distribution
 	CColumnDescriptorArray *m_pdrgpcoldescDist;
 
@@ -105,6 +108,7 @@ public:
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
+					 IMDRelation::Erelaoversion erelaoversion,
 					 ULONG ulExecuteAsUser, INT lockmode, ULONG acl_mode,
 					 ULONG assigned_query_id_for_target_rel);
 
@@ -211,6 +215,13 @@ public:
 	RetrieveRelStorageType() const
 	{
 		return m_erelstoragetype;
+	}
+
+	// append only table version
+	IMDRelation::Erelaoversion
+	RetrieveRelAOVersion() const
+	{
+		return m_erelaoversion;
 	}
 
 	BOOL
