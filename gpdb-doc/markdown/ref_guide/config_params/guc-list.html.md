@@ -2424,7 +2424,7 @@ The default value is `off`, GPORCA performs no transforms when a query includes 
 
 When set to `on` and the plan cost makes it eligible, GPORCA transforms a `JOIN` of `UNION ALL` to a `UNION ALL` of `JOIN`s. This transform may improve join performance when the `UNION ALL` children can benefit from join operations for which they are not eligible. Such an example is an indexed nested loop join, which is highly performant when the inner side is large and indexed, and the outer side is small. When the `UNION ALL` of multiple indexed large tables is joined with a small table, this transform pushes the join condition down as the index condition, and generates a more performant query than that utilizing a hash join.
 
-Enabling this transform could signficantly increase planning time, so be sure to run and examine `EXPLAIN` output for the query with both parameter settings.
+Enabling this transform may increase planning time, so be sure to run and examine `EXPLAIN` output for the query with both parameter settings.
 
 The `optimizer_enable_push_join_below_union_all` parameter can be set for a database system, an individual database, or a session or query.
 
