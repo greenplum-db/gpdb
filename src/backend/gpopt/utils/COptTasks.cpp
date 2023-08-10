@@ -619,7 +619,6 @@ COptTasks::OptimizeTask(void *ptr)
 
 		IErrorContext *errctxt = CTask::Self()->GetErrCtxt();
 
-		opt_ctxt->m_should_error_out = ShouldErrorOut(ex);
 		opt_ctxt->m_is_unexpected_failure = IsLoggableFailure(ex);
 		opt_ctxt->m_error_msg =
 			CreateMultiByteCharStringFromWCString(errctxt->GetErrorMsg());

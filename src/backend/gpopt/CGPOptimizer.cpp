@@ -69,55 +69,11 @@ CGPOptimizer::GPOPTOptimizedPlan(
 
 		// Special handler for a few common user-facing errors. In particular,
 		// we want to use the correct error code for these, in case an application
-		// tries to do something smart with them. Also, ERRCODE_INTERNAL_ERROR
-		// is handled specially in elog.c, and we don't want that for "normal"
-		// application errors.
-		if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL,
-						  gpdxl::ExmiQuery2DXLNotNullViolation))
-		{
-			if (errstart(ERROR, TEXTDOMAIN))
-			{
-				errcode(ERRCODE_NOT_NULL_VIOLATION);
-				errmsg("%s", serialized_error_msg);
-				errfinish(ex.Filename(), ex.Line(), nullptr);
-			}
-		}
+		// tries to do something smart with them.
 
-		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL, gpdxl::ExmiOptimizerError) ||
-				 gpopt_context.m_should_error_out)
-		{
-			Assert(nullptr != serialized_error_msg);
-			if (errstart(ERROR, TEXTDOMAIN))
-			{
-				errcode(ERRCODE_INTERNAL_ERROR);
-				errmsg("%s", serialized_error_msg);
-				errfinish(ex.Filename(), ex.Line(), nullptr);
-			}
-		}
-		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
+		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
 		{
 			PG_RE_THROW();
-		}
-		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL,
-							   gpdxl::ExmiNoAvailableMemory))
-		{
-			if (errstart(ERROR, TEXTDOMAIN))
-			{
-				errcode(ERRCODE_INTERNAL_ERROR);
-				errmsg("no available memory to allocate string buffer");
-				errfinish(ex.Filename(), ex.Line(), nullptr);
-			}
-		}
-		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL,
-							   gpdxl::ExmiInvalidComparisonTypeCode))
-		{
-			if (errstart(ERROR, TEXTDOMAIN))
-			{
-				errcode(ERRCODE_INTERNAL_ERROR);
-				errmsg(
-					"invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq.");
-				errfinish(ex.Filename(), ex.Line(), nullptr);
-			}
 		}
 
 		// Failed to produce a plan, but it wasn't an error that should

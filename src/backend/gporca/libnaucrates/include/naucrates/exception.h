@@ -43,13 +43,8 @@ enum ExMinor
 	ExmiDXLIncorrectNumberOfChildren,
 	ExmiPlStmt2DXLConversion,
 	ExmiDXL2PlStmtConversion,
-	ExmiDXL2PlStmtForeignScanError,
-	ExmiDXL2PlStmtMissingPlanForSubPlanTranslation,
 	ExmiQuery2DXLAttributeNotFound,
 	ExmiQuery2DXLUnsupportedFeature,
-	ExmiQuery2DXLDuplicateRTE,
-	ExmiQuery2DXLMissingValue,
-	ExmiQuery2DXLNotNullViolation,
 	ExmiQuery2DXLError,
 	ExmiExpr2DXLUnsupportedFeature,
 	ExmiExpr2DXLAttributeNotFound,
@@ -61,20 +56,11 @@ enum ExMinor
 	ExmiMDCacheEntryNotFound,
 	ExmiMDObjUnsupported,
 
-	// communication related errors
-	ExmiCommPropagateError,
-	ExmiCommUnexpectedMessage,
-
 	// GPDB-related exceptions
 	ExmiGPDBError,
 
 	// exceptions related to constant expression evaluation
 	ExmiConstExprEvalNonConst,
-
-	// ORCA Exceptions that need to be reported as ERROR to GPDB
-	ExmiOptimizerError,
-	ExmiNoAvailableMemory,
-	ExmiInvalidComparisonTypeCode,
 
 	ExmiDXLSentinel
 };

@@ -102,27 +102,11 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			GPOS_WSZ_WSZLEN("GPDB Expression type not supported in DXL")),
 
 		CMessage(
-			CException(gpdxl::ExmaDXL,
-					   gpdxl::ExmiDXL2PlStmtMissingPlanForSubPlanTranslation),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN(
-				"DXL-to-PlStmt: Missing Plan During SubPlan Translation"),
-			0,	//
-			GPOS_WSZ_WSZLEN(
-				"DXL-to-PlStmt: Missing Plan During SubPlan Translation")),
-
-		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion),
 			CException::ExsevError,
 			GPOS_WSZ_WSZLEN("DXL-to-PlStmt Translation: %ls not supported"),
 			1,	//
 			GPOS_WSZ_WSZLEN("DXL-to-PlStmt Translation not supported")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtForeignScanError),
-			CException::ExsevError, GPOS_WSZ_WSZLEN("Foreign scan error: %ls"),
-			1,	//
-			GPOS_WSZ_WSZLEN("Foreign scan error")),
 
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLAttributeNotFound),
@@ -139,29 +123,6 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
 			1,	//
 			GPOS_WSZ_WSZLEN("Feature not supported")),
-
-		CMessage(CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLMissingValue),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN("Query-to-DXL Translation: Missing %ls value"),
-				 1,	 //
-				 GPOS_WSZ_WSZLEN("Query-to-DXL Translation: Missing value")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLNotNullViolation),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN(
-				"null value in column \"%ls\" violates not-null constraint"),
-			1,	//
-			GPOS_WSZ_WSZLEN(
-				"null value in column violates not-null constraint")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLDuplicateRTE),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN(
-				"DXL-to-Query: Duplicate range table entry at query level %d at position %d"),
-			2,	// query level and var no
-			GPOS_WSZ_WSZLEN("DXL-to-Query: Duplicate range table entry")),
 
 		// MD related messages
 		CMessage(
@@ -183,18 +144,6 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 				 GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
 				 1,	 // md obj
 				 GPOS_WSZ_WSZLEN("Feature not supported")),
-
-		CMessage(CException(gpdxl::ExmaComm, gpdxl::ExmiCommPropagateError),
-				 CException::ExsevError, GPOS_WSZ_WSZLEN("%S"),
-				 1,	 // message
-				 GPOS_WSZ_WSZLEN("Propagate remote exception")),
-
-		CMessage(
-			CException(gpdxl::ExmaComm, gpdxl::ExmiCommPropagateError),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("Received unexpected message type from OPT: %d"),
-			1,	// type
-			GPOS_WSZ_WSZLEN("Received unexpected message type from OPT")),
 
 		CMessage(CException(gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError),
 				 CException::ExsevError, GPOS_WSZ_WSZLEN("PG exception raised"),
@@ -253,29 +202,6 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			1,	// attno
 			GPOS_WSZ_WSZLEN(
 				"DXL-to-Expr Translation: Attribute number not found in project list")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiOptimizerError),
-			CException::ExsevError, GPOS_WSZ_WSZLEN("%s"),
-			1,	// attno
-			GPOS_WSZ_WSZLEN(
-				"PQO unable to generate a plan, please see the above message for details.")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiNoAvailableMemory),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("No available memory to allocate string buffer."),
-			0,
-			GPOS_WSZ_WSZLEN("No available memory to allocate string buffer.")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiInvalidComparisonTypeCode),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN(
-				"Invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq."),
-			0,
-			GPOS_WSZ_WSZLEN(
-				"Invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq."))
 
 	};
 
