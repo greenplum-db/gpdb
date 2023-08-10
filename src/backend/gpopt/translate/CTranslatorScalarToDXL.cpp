@@ -288,7 +288,7 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 			CHAR *str = (CHAR *) gpdb::NodeToString(const_cast<Expr *>(expr));
 			CWStringDynamic *wcstr =
 				CDXLUtils::CreateDynamicStringFromCharArray(m_mp, str);
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   wcstr->GetBuffer());
 		}
 		case T_Param:
@@ -296,7 +296,7 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 			// Note: The choose_custom_plan() function in plancache.c
 			// knows that GPORCA doesn't support Params. If you lift this
 			// limitation, adjust choose_custom_plan() accordingly!
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("Query Parameter"));
 		}
 		case T_Var:
