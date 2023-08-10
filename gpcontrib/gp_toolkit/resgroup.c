@@ -102,8 +102,6 @@ PG_FUNCTION_INFO_V1(pg_resgroup_get_iostats);
 Datum
 pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 {
-	const int INTERVAL = 1000000;
-
 	FuncCallContext *funcctx;
 
 	if (SRF_IS_FIRSTCALL())
@@ -113,6 +111,11 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 		TupleDesc tupdesc;
 
 		funcctx = SRF_FIRSTCALL_INIT();
+		if (!IsResGroupActivated())
+		{
+			SRF_RETURN_DONE(funcctx);
+		}
+
 
 		oldContext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
@@ -128,44 +131,43 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
-		if (IsResGroupActivated())
-		{
-			IOStat *stats = NULL;
-			IOStat *newStats = NULL;
-			int     numStats;
-			int     newNumStats;
-			int		i;
-			Relation rel_resgroup_caps;
+		IOStat *stats = NULL;
+	  	IOStat *newStats = NULL;
+	  	int     numStats;
+	  	int     newNumStats;
+	  	int		i;
+	  	Relation rel_resgroup_caps;
 
-			/* collect stats */
-			rel_resgroup_caps = table_open(ResGroupCapabilityRelationId, ExclusiveLock);
-			numStats = getIOLimitStats(rel_resgroup_caps, &stats);
-			pg_usleep(INTERVAL);
-			newNumStats = getIOLimitStats(rel_resgroup_caps, &newStats);
-			table_close(rel_resgroup_caps, ExclusiveLock);
+	  	/* collect stats */
+	  	rel_resgroup_caps = table_open(ResGroupCapabilityRelationId, AccessShareLock);
+	  	numStats = getIOLimitStats(rel_resgroup_caps, &stats);
+	  	pg_usleep(1000000L);
+	  	newNumStats = getIOLimitStats(rel_resgroup_caps, &newStats);
+	  	table_close(rel_resgroup_caps, AccessShareLock);
 
-			Assert(numStats == newNumStats);
+	  	if (numStats != newNumStats)
+	  		ereport(ERROR, (errmsg("stats count differs between runs")));
 
-			funcctx->max_calls = numStats;
-			funcctx->user_fctx = (void *)stats;
+	  	funcctx->max_calls = numStats;
+	  	funcctx->user_fctx = (void *)stats;
 
-			/* oldStat and newStats maybe have different orders, so it need sort */
-			qsort(stats, numStats, sizeof(IOStat), compare_iostat);
-			qsort(newStats, newNumStats, sizeof(IOStat), compare_iostat);
+	  	/* oldStat and newStats maybe have different orders, so it need sort */
+	  	qsort(stats, numStats, sizeof(IOStat), compare_iostat);
+	  	qsort(newStats, newNumStats, sizeof(IOStat), compare_iostat);
 
-			for (i = 0; i < numStats; ++i)
-			{
-				IOStat *newStat = &newStats[i];
-				IOStat *stat = &stats[i];
+	  	for (i = 0; i < numStats; ++i)
+	  	{
+	  		IOStat *newStat = &newStats[i];
+	  		IOStat *stat = &stats[i];
 
-				stat->items.rios = newStat->items.rios - stat->items.rios;
-				stat->items.wios = newStat->items.wios - stat->items.wios;
+	  		stat->items.rios = newStat->items.rios - stat->items.rios;
+	  		stat->items.wios = newStat->items.wios - stat->items.wios;
 
-				/* convert bytes to Megabytes */
-				stat->items.rbytes = (newStat->items.rbytes - stat->items.rbytes) / (1024 * 1024);
-				stat->items.wbytes = (newStat->items.wbytes - stat->items.wbytes) / (1024 * 1024);
-			}
-		}
+	  		/* convert bytes to Megabytes */
+	  		stat->items.rbytes = (newStat->items.rbytes - stat->items.rbytes);
+	  		stat->items.wbytes = (newStat->items.wbytes - stat->items.wbytes);
+	  	}
+
 
 		MemoryContextSwitchTo(oldContext);
 	}

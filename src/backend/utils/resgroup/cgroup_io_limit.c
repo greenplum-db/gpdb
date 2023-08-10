@@ -14,6 +14,7 @@
 #include "catalog/pg_resgroup_d.h"
 #include "catalog/pg_resgroupcapability_d.h"
 #include "catalog/indexing.h"
+#include "storage/fd.h"
 #include "utils/fmgroids.h"
 #include "utils/hsearch.h"
 #include "utils/relcache.h"
@@ -390,7 +391,7 @@ get_iostat(Oid groupid, List *io_limit, IOStat *result)
 
 
 	buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.stat", io_stat_path, sizeof(io_stat_path));
-	f = fopen(io_stat_path, "r");
+	f = AllocateFile(io_stat_path, "r");
 	if (f == NULL)
 	{
 		ereport(ERROR,
@@ -410,7 +411,7 @@ get_iostat(Oid groupid, List *io_limit, IOStat *result)
 			initStringInfo(line);
 		}
 	}
-	fclose(f);
+	FreeFile(f);
 
 	/*
 	 * parse file content.
@@ -442,13 +443,6 @@ get_iostat(Oid groupid, List *io_limit, IOStat *result)
 
 		bdi = make_bdi(maj, min);
 		entry = hash_search(io_stat_hash, (void *) &bdi, HASH_ENTER, NULL);
-		if (entry == NULL)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-					errmsg("io limit: cannot insert into hash table")));
-		}
-
 		entry->id = bdi;
 		entry->items.rbytes = rbytes;
 		entry->items.wbytes = wbytes;

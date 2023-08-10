@@ -103,7 +103,7 @@ GROUP BY datname, pid, sess_id, command_cnt, usename, query, segid;
 
 GRANT SELECT ON gp_toolkit.gp_workfile_usage_per_query TO public;
 
-CREATE TYPE gp_toolkit.__iostats AS (segindex int4, rsgname text, groupid oid, tablespace text, "rbps (MB_read/s)" int8, "wbps (MB_wrtn/s)" int8, "riops (r/s)" int8, "wiops (w/s)" int8);
+CREATE TYPE gp_toolkit.__iostats AS (segindex int4, rsgname text, groupid oid, tablespace text, "rbps" int8, "wbps" int8, "riops" int8, "wiops" int8);
 
 CREATE FUNCTION gp_toolkit.__gp_resgroup_iostats() RETURNS SETOF gp_toolkit.__iostats AS 'gp_toolkit.so','pg_resgroup_get_iostats' LANGUAGE C STRICT;
 
@@ -129,10 +129,10 @@ CREATE VIEW gp_toolkit.gp_resgroup_iostats_per_host AS
     select rsgname,
            hostname,
            tablespace,
-           avg("rbps (MB_read/s)")::bigint "rbps (MB_read/s)",
-           avg("wbps (MB_wrtn/s)")::bigint "wbps (MB_wrtn/s)",
-           avg("riops (r/s)")::bigint "riops (r/s)",
-           avg("wiops (w/s)")::bigint "wiops (w/s)"
+           pg_size_pretty(avg("rbps")::bigint) "read (per second)",
+           pg_size_pretty(avg("wbps")::bigint) "write (per second)",
+           avg("riops")::bigint "riops",
+           avg("wiops")::bigint "wiops"
     from iostats group by (hostname, rsgname, tablespace);
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_iostats_per_host TO public;
