@@ -323,7 +323,7 @@ If your table is large enough that a single index really is a bad idea, you shou
 
 ## <a id="scan_cover"></a>Understanding Index-Only Scans and Covering Indexes
 
-> **Note** Greenplum Database selects index-only scan options for a query plan only for new tables that you create in Greenplum 7. Greenplum does not select this plan type for tables that you have upgraded from Greenplum 6.
+> **Note** Greenplum Database selects index-only and covering index scan options for a query plan only for new tables that you create in Greenplum 7. Greenplum does not select these plan types for tables that you have upgraded from Greenplum 6.
 
 All indexes in Greenplum Database are secondary indexes, meaning that each index is stored separately from the table's main data area (which is called the table's heap). In an ordinary index scan, each row retrieval requires fetching data from both the index and the heap. While the index entries that match a given indexable `WHERE` condition are often close together in the index, the table rows they reference might reside anywhere in the heap. The heap-access portion of an index scan can involve a lot of random access into the heap, which can be slow, particularly on traditional rotating media. Bitmap scans try to alleviate this cost by doing the heap accesses in sorted order, but that only goes so far.
 
