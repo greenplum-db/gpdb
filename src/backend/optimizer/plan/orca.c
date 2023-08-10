@@ -71,11 +71,11 @@ log_optimizer(PlannedStmt *plan, bool fUnexpectedFailure)
 	{
 		if (fUnexpectedFailure)
 		{
-			elog(LOG, "Pivotal Optimizer (GPORCA) failed to produce plan (unexpected)");
+			elog(LOG, "GPORCA failed to produce plan (unexpected)");
 		}
 		else
 		{
-			elog(LOG, "Pivotal Optimizer (GPORCA) failed to produce plan");
+			elog(LOG, "GPORCA failed to produce plan");
 		}
 		return;
 	}

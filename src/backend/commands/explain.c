@@ -982,10 +982,10 @@ ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 	 * don't match the built-in defaults.
 	 */
 	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
-		ExplainPropertyStringInfo("Optimizer", es, "Postgres query optimizer");
+		ExplainPropertyStringInfo("Optimizer", es, "Postgres-based planner");
 #ifdef USE_ORCA
 	else
-		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA)");
+		ExplainPropertyStringInfo("Optimizer", es, "GPORCA");
 #endif
 
 	ExplainPrintSettings(es);

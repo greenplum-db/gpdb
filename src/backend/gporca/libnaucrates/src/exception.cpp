@@ -153,7 +153,7 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiExpr2DXLUnsupportedFeature),
-			CException::ExsevError,
+			CException::ExsevNotice,
 			GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
 			1,	// feature name
 			GPOS_WSZ_WSZLEN("Feature not supported")),

@@ -68,20 +68,20 @@ gpopt::EresExceptionInit(CMemoryPool *mp)
 					   gpopt::ExmiUnsupportedCompositePartKey),
 			CException::ExsevNotice,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: composite partitioning keys"),
+				"Feature not supported by GPORCA: composite partitioning keys"),
 			0,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: composite partitioning keys")),
+				"Feature not supported by GPORCA: composite partitioning keys")),
 
 		CMessage(
 			CException(gpopt::ExmaGPOPT,
 					   gpopt::ExmiUnsupportedNonDeterministicUpdate),
 			CException::ExsevNotice,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: non-deterministic DML statements"),
+				"Feature not supported by GPORCA: non-deterministic DML statements"),
 			0,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: non-deterministic DML statements")),
+				"Feature not supported by GPORCA: non-deterministic DML statements")),
 
 		CMessage(CException(gpopt::ExmaGPOPT,
 							gpopt::ExmiUnsatisfiedRequiredProperties),

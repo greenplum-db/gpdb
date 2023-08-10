@@ -87,7 +87,7 @@ CGPOptimizer::GPOPTOptimizedPlan(
 			{
 				errcode(ERRCODE_FEATURE_NOT_SUPPORTED);
 				errmsg(
-					"GPORCA failed to produce a plan, falling back to planner");
+					"GPORCA failed to produce a plan, falling back to Postgres-based planner");
 				if (serialized_error_msg)
 				{
 					errdetail("%s", serialized_error_msg);
