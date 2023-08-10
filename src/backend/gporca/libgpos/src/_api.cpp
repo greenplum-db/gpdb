@@ -53,8 +53,6 @@ const ULONG expected_dxl_fallback[] = {
 	gpdxl::
 		ExmiQuery2DXLUnsupportedFeature,  // unsupported feature during algebrization
 	gpdxl::
-		ExmiPlStmt2DXLConversion,  // unsupported feature during plan freezing
-	gpdxl::
 		ExmiDXL2PlStmtConversion,  // unsupported feature during planned statement translation
 	gpdxl::ExmiDXL2ExprAttributeNotFound,
 	gpdxl::ExmiDXLMissingAttribute,

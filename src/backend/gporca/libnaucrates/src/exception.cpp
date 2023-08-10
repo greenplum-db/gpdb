@@ -94,19 +94,11 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			0,	//
 			GPOS_WSZ_WSZLEN("Incorrect Number of children")),
 
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("GPDB Expression type: %ls not supported in DXL"),
-			1,	//
-			GPOS_WSZ_WSZLEN("GPDB Expression type not supported in DXL")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("DXL-to-PlStmt Translation: %ls not supported"),
-			1,	//
-			GPOS_WSZ_WSZLEN("DXL-to-PlStmt Translation not supported")),
+		CMessage(CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion),
+				 CException::ExsevNotice,
+				 GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
+				 1,	 //
+				 GPOS_WSZ_WSZLEN("Feature not supported")),
 
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLAttributeNotFound),
@@ -164,7 +156,7 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			CException::ExsevError,
 			GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
 			1,	// feature name
-			GPOS_WSZ_WSZLEN("Feature not supported: %ls")),
+			GPOS_WSZ_WSZLEN("Feature not supported")),
 
 		CMessage(
 			CException(gpdxl::ExmaConstExprEval,

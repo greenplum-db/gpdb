@@ -455,7 +455,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCompToScalar(
 
 		default:
 			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				GPOS_WSZ_LIT(
 					"Scalar Array Comparison: Specified operator type is invalid"));
 	}
@@ -585,7 +585,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			break;
 		default:
 			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				GPOS_WSZ_LIT("AGGREF: Specified AggStage value is invalid"));
 	}
 

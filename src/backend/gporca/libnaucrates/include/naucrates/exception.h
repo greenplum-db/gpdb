@@ -41,7 +41,6 @@ enum ExMinor
 	ExmiDXLValidationError,
 	ExmiDXLXercesParseError,
 	ExmiDXLIncorrectNumberOfChildren,
-	ExmiPlStmt2DXLConversion,
 	ExmiDXL2PlStmtConversion,
 	ExmiQuery2DXLAttributeNotFound,
 	ExmiQuery2DXLUnsupportedFeature,

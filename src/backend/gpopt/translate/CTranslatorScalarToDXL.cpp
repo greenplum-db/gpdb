@@ -769,14 +769,14 @@ CTranslatorScalarToDXL::TranslateBoolExprToDXL(
 	if ((NOT_EXPR != bool_expr->boolop) && (2 > count))
 	{
 		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT(
 				"Boolean Expression (OR / AND): Incorrect Number of Children "));
 	}
 	else if ((NOT_EXPR == bool_expr->boolop) && (1 != count))
 	{
 		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT(
 				"Boolean Expression (NOT): Incorrect Number of Children "));
 	}
@@ -988,8 +988,8 @@ CTranslatorScalarToDXL::TranslateCaseExprToDXL(
 
 	if (nullptr == case_expr->args)
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-				   GPOS_WSZ_LIT("Do not support SIMPLE CASE STATEMENT"));
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Case statement with no arguments"));
 		return nullptr;
 	}
 
@@ -1591,7 +1591,7 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	}
 	else
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("Unrecognized window frame option"));
 	}
 
